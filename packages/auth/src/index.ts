@@ -10,6 +10,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma"
 import { APIError } from "better-auth/api"
 import { hashPassword, verifyPassword } from "better-auth/crypto"
 import { nextCookies } from "better-auth/next-js"
+import { emailOTP } from "better-auth/plugins"
 
 export * from "./roles"
 
@@ -223,7 +224,7 @@ export function parseCookieHeader(cookieHeader: string | null | undefined) {
   )
 }
 
-export function initAuth(options: InitAuthOptions = {}) {
+function createAuthConfig(options: InitAuthOptions = {}) {
   const platformDomain = getPlatformDomain()
   const baseUrl = options.baseUrl ?? getDefaultBaseUrl()
   const productionUrl =
@@ -326,7 +327,70 @@ export function initAuth(options: InitAuthOptions = {}) {
       }),
   } satisfies BetterAuthOptions
 
-  return betterAuth(config)
+  return config
+}
+
+export function initAuth(options: InitAuthOptions = {}) {
+  return betterAuth(createAuthConfig(options))
+}
+
+export function initStaffOnboardingAuth(
+  sendVerificationOTP: (input: {
+    email: string
+    otp: string
+    type: string
+  }) => Promise<void>,
+) {
+  const onboardingAuth = betterAuth({
+    ...createAuthConfig(),
+    plugins: [
+      emailOTP({
+        sendVerificationOTP,
+        disableSignUp: true,
+        storeOTP: "hashed",
+        expiresIn: 300,
+        allowedAttempts: 3,
+      }),
+    ],
+  })
+  return {
+    api: {
+      async createVerificationOTP(input: {
+        body: { email: string; type: "sign-in" }
+      }): Promise<string> {
+        return onboardingAuth.api.createVerificationOTP(input)
+      },
+      async setPassword(input: {
+        body: { newPassword: string }
+        headers: Headers
+      }): Promise<void> {
+        await onboardingAuth.api.setPassword(input)
+      },
+      async sendVerificationOTP(input: {
+        body: { email: string; type: "sign-in" }
+        headers: Headers
+      }): Promise<void> {
+        await onboardingAuth.api.sendVerificationOTP(input)
+      },
+      async checkVerificationOTP(input: {
+        body: { email: string; type: "sign-in"; otp: string }
+        headers: Headers
+      }): Promise<void> {
+        await onboardingAuth.api.checkVerificationOTP(input)
+      },
+      async signInEmailOTP(input: {
+        body: { email: string; otp: string }
+        headers: Headers
+        returnHeaders: true
+      }): Promise<{ response: { user: { id: string } }; headers: Headers }> {
+        const result = await onboardingAuth.api.signInEmailOTP(input)
+        return {
+          response: { user: { id: result.response.user.id } },
+          headers: result.headers,
+        }
+      },
+    },
+  }
 }
 
 export const auth = initAuth()

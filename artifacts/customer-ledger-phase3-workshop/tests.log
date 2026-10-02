@@ -1,0 +1,66 @@
+bun test v1.3.0 (b0a6feca)
+
+apps/api/src/schemas/customer-ledger-allocation-history.test.ts:
+(pass) allocation release history is strict and always revision-pinned [5.53ms]
+
+apps/api/src/schemas/customer-ledger.test.ts:
+(pass) customer ledger inputs reject caller actor and tenant overrides [1.14ms]
+(pass) receipt method is allowlisted and effective time remains server-owned [0.43ms]
+(pass) money and reviewed revisions reject malformed or out-of-range values [1.37ms]
+(pass) held-credit refund requires a valid method, reason, sequence and date [0.56ms]
+(pass) customer entry reversal requires a strict stable command and finite reviewed date [0.54ms]
+(pass) read inputs keep account, currency and bounded cursor fields strict [0.65ms]
+(pass) opening and customer identity schemas require exact valid values [0.20ms]
+(pass) entry detail pagination pins allocation continuation to reviewed revision [0.07ms]
+
+apps/dashboard/src/lib/customer-ledger/command-input.test.ts:
+(pass) receipt and applying credit remain different commands and exact minor amounts [0.86ms]
+(pass) method guards exclude archived accounts and cash from card collection [0.12ms]
+(pass) source caps use exact integers and reject missing or exhausted credits [0.08ms]
+(pass) refund retains the exact UTC time so same-day receipts can be corrected [0.10ms]
+(pass) applying credit preserves net balance while a receipt only increases held credit [0.13ms]
+
+apps/dashboard/src/lib/customer-ledger/command-runner.test.ts:
+(pass) uncertain receipt saves identity and safe metadata only; exact retry reuses it [1.88ms]
+(pass) NOT_FOUND cannot clear an uncertain attempt; committed acknowledgement never writes [0.19ms]
+(pass) account namespaces cannot recover another account's command [0.17ms]
+(pass) first definitive rejection needs acknowledgement and never permits a changed retry [0.18ms]
+(pass) storage failure prevents the network write [0.07ms]
+
+apps/dashboard/src/lib/customer-ledger/statement-export.test.ts:
+(pass) whole export reads each page at the original snapshot, preserving exact integers [0.49ms]
+(pass) changed snapshot, cyclic cursor and oversize exports refuse a partial file [0.19ms]
+
+apps/mobile/src/lib/customer-ledger/command-input.test.ts:
+(pass) receipt and applying credit remain different commands and exact minor amounts [0.75ms]
+(pass) method guards exclude archived accounts and cash from card collection
+(pass) source caps use exact integers and reject missing or exhausted credits
+(pass) refund retains the exact UTC time so same-day receipts can be corrected [0.19ms]
+(pass) applying credit preserves net balance while a receipt only increases held credit [0.04ms]
+
+apps/mobile/src/lib/customer-ledger/command-runner.test.ts:
+(pass) uncertain receipt saves identity and safe metadata only; exact retry reuses it [1.17ms]
+(pass) NOT_FOUND cannot clear an uncertain attempt; committed acknowledgement never writes [0.26ms]
+(pass) account namespaces cannot recover another account's command
+(pass) first definitive rejection needs acknowledgement and never permits a changed retry
+(pass) storage failure prevents the network write [0.09ms]
+
+apps/api/src/trpc/routers/customer-ledger.test.ts:
+(pass) ledger router loads implemented repository procedures [0.95ms]
+(pass) all ledger reads and writes reject unauthenticated callers before DB effects [1.34ms]
+(pass) all ledger reads and writes reject non-owner/admin roles before DB effects [2.96ms]
+(pass) strict runtime input rejects actor and tenant overrides before DB effects [4.10ms]
+(pass) repository refuses a continuation cursor without its pinned snapshot [0.23ms]
+(pass) account read derives repository actor and tenant from the authenticated context [0.82ms]
+(pass) repository rechecks active management membership and FinanceError maps to tRPC [0.53ms]
+(pass) Owner reversal derives actor and Tenant then rechecks live membership before effects [0.54ms]
+
+packages/db/src/queries/customer-ledger/allocation-history.test.ts:
+(pass) release history rejects unbounded and noncanonical pages before persistence [0.32ms]
+(pass) allocation history scopes tenant/account and keeps total releases independent of page
+(pass) revoked manager, foreign account and stale revision refuse release reads
+
+ 42 pass
+ 0 fail
+ 261 expect() calls
+Ran 42 tests across 9 files. [956.00ms]

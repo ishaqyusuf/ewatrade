@@ -1,0 +1,532 @@
+[
+  {
+    "file": "03-existing-draft-options.png",
+    "label": "Original draft \u00b7 Size / Kg",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "04-draft-top.png",
+    "label": "Original essentials and disabled base price",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "05-quick-setup.png",
+    "label": "Product recipes \u00b7 farming recommendations",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "06-setup-search-keyboard.png",
+    "label": "Recipe search \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "Search product setups",
+        "bounds": "[151,395][1002,530]"
+      }
+    ]
+  },
+  {
+    "file": "07-recipe-replacement.png",
+    "label": "Replacement confirmation \u00b7 invisible explanation",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "08-description-reveal.png",
+    "label": "Intermediate capture \u00b7 08-description-reveal",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "09-description-open.png",
+    "label": "Description reveal",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "10-description-keyboard.png",
+    "label": "Description \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "Optional notes",
+        "bounds": "[82,912][998,1115]"
+      }
+    ]
+  },
+  {
+    "file": "11-description-dismiss.png",
+    "label": "Intermediate capture \u00b7 11-description-dismiss",
+    "curated": false,
+    "focusedNodes": [
+      {
+        "text": "Optional notes",
+        "bounds": "[82,912][998,1115]"
+      }
+    ]
+  },
+  {
+    "file": "12-description-restored.png",
+    "label": "Intermediate capture \u00b7 12-description-restored",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "13-bottom-sections.png",
+    "label": "Choices, units, stock/pricing in one form",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "14-selling-unit-editor.png",
+    "label": "Selling unit \u00b7 relationships and stock behavior",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "15-unit-name-keyboard.png",
+    "label": "Selling-unit name \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "e.g. Half bag, Carton, Pack",
+        "bounds": "[92,553][988,688]"
+      }
+    ]
+  },
+  {
+    "file": "16-unit-conversion-keyboard.png",
+    "label": "Intermediate capture \u00b7 16-unit-conversion-keyboard",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "17-option-compact-editor.png",
+    "label": "Option quantity and price editor",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "18-option-stock-keyboard.png",
+    "label": "Option opening quantity \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "0",
+        "bounds": "[92,599][482,734]"
+      }
+    ]
+  },
+  {
+    "file": "19-option-price-keyboard.png",
+    "label": "Option price \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "0.00",
+        "bounds": "[649,579][988,714]"
+      }
+    ]
+  },
+  {
+    "file": "20-option-image-details.png",
+    "label": "Intermediate capture \u00b7 20-option-image-details",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "21-more-details.png",
+    "label": "Intermediate capture \u00b7 21-more-details",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "22-expanded-option-settings.png",
+    "label": "Image URL, codes and Store availability",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "23-image-link-keyboard.png",
+    "label": "Image URL \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "https://example.com/image.jpg",
+        "bounds": "[165,689][987,824]"
+      }
+    ]
+  },
+  {
+    "file": "24-sku-keyboard.png",
+    "label": "Intermediate capture \u00b7 24-sku-keyboard",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "25-cancel-option-editor.png",
+    "label": "Intermediate capture \u00b7 25-cancel-option-editor",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "26-return-home.png",
+    "label": "Intermediate capture \u00b7 26-return-home",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "27-create-chooser.png",
+    "label": "Product / Service entry chooser",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "28-service-essentials.png",
+    "label": "Service essentials and optional detail choices",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "29-service-tracked-work.png",
+    "label": "Service tracked work and work-start policies",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "30-service-quote-mode.png",
+    "label": "Service quote mode \u00b7 starting-price label",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "31-service-restored-close.png",
+    "label": "Intermediate capture \u00b7 31-service-restored-close",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "32-create-product.png",
+    "label": "Intermediate capture \u00b7 32-create-product",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "33-product-blank.png",
+    "label": "Fresh Product \u00b7 simple essentials",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "34-product-name-keyboard.png",
+    "label": "Product name \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "e.g. Fresh eggs",
+        "bounds": "[82,837][998,972]"
+      }
+    ]
+  },
+  {
+    "file": "35-main-unit-keyboard.png",
+    "label": "Intermediate capture \u00b7 35-main-unit-keyboard",
+    "curated": false,
+    "focusedNodes": [
+      {
+        "text": "e.g. Fresh eggs",
+        "bounds": "[82,837][998,972]"
+      }
+    ]
+  },
+  {
+    "file": "36-main-unit-keyboard-confirmed.png",
+    "label": "Stock unit \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "e.g. Egg, Bird, Kilogram, Bag",
+        "bounds": "[82,897][482,1032]"
+      }
+    ]
+  },
+  {
+    "file": "37-main-price-keyboard.png",
+    "label": "Simple Product price \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "0.00",
+        "bounds": "[648,897][997,1032]"
+      }
+    ]
+  },
+  {
+    "file": "38-opening-stock-reveal.png",
+    "label": "Opening-stock reveal",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "0.00",
+        "bounds": "[648,897][997,1032]"
+      }
+    ]
+  },
+  {
+    "file": "39-opening-stock-keyboard.png",
+    "label": "Opening-stock input \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "0",
+        "bounds": "[82,898][998,1033]"
+      }
+    ]
+  },
+  {
+    "file": "40-opening-stock-dismiss.png",
+    "label": "Intermediate capture \u00b7 40-opening-stock-dismiss",
+    "curated": false,
+    "focusedNodes": [
+      {
+        "text": "0",
+        "bounds": "[82,898][998,1033]"
+      }
+    ]
+  },
+  {
+    "file": "41-simple-state-restored.png",
+    "label": "Intermediate capture \u00b7 41-simple-state-restored",
+    "curated": false,
+    "focusedNodes": []
+  },
+  {
+    "file": "42-options-empty-reveal.png",
+    "label": "Different prices/options \u00b7 empty setup",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "43-option-name-composer.png",
+    "label": "Option name \u00b7 inline composer",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "e.g. Bird type, Egg size, Grade",
+        "bounds": "[81,1191][861,1294]"
+      }
+    ]
+  },
+  {
+    "file": "44-option-name-added.png",
+    "label": "Custom Size option committed",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "45-option-value-composer.png",
+    "label": "Option values \u00b7 explicit completion composer",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "e.g. Small, Medium, Large",
+        "bounds": "[81,1191][861,1294]"
+      }
+    ]
+  },
+  {
+    "file": "46-original-draft-restored.png",
+    "label": "Concurrent Metro error \u00b7 not restoration proof",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "Kg",
+        "bounds": "[81,1192][861,1295]"
+      }
+    ]
+  },
+  {
+    "file": "47-complete-original-value.png",
+    "label": "Size / Kg original structure restored",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "48-restored-draft-bottom.png",
+    "label": "Original draft \u00b7 full lower sections restored",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "49-unit-editor-final.png",
+    "label": "Final unit relationship and stock-source view",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "50-unit-conversion-keyboard.png",
+    "label": "Exact conversion input \u00b7 keyboard open",
+    "curated": true,
+    "focusedNodes": [
+      {
+        "text": "e.g. 50",
+        "bounds": "[92,964][482,1099]"
+      }
+    ]
+  },
+  {
+    "file": "51-unit-price-disabled.png",
+    "label": "Unit default-price attempted focus in option mode",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "52-unit-cancelled.png",
+    "label": "Final device state \u00b7 original draft restored",
+    "curated": true,
+    "focusedNodes": []
+  },
+  {
+    "file": "53-service-audit-start.png",
+    "label": "Service audit start",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "54-service-quote-enabled.png",
+    "label": "Service quote enabled",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "55-service-work-revealed.png",
+    "label": "Service work revealed",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "56-service-work-start-policies.png",
+    "label": "Service work start policies",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "57-service-after-payment.png",
+    "label": "Service after payment",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "58-service-manager-release.png",
+    "label": "Service manager release",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "59-service-guidance-keyboard.png",
+    "label": "Service guidance keyboard",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "60-service-keyboard-dismissed.png",
+    "label": "Service keyboard dismissed",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "61-service-package-composer.png",
+    "label": "Service package composer",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "62-service-option-name.png",
+    "label": "Service option name",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "63-service-value-composer.png",
+    "label": "Service value composer",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "64-service-value-selected.png",
+    "label": "Service value selected",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "65-service-choice-confirmed.png",
+    "label": "Service choice confirmed",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "66-service-choice-pricing-list.png",
+    "label": "Service choice pricing list",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "67-service-offering-editor.png",
+    "label": "Service offering editor",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "68-service-offering-fixed.png",
+    "label": "Service offering fixed",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "69-service-offering-more.png",
+    "label": "Service offering more",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "70-service-editor-cancelled.png",
+    "label": "Service editor cancelled",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "71-service-choices-removed.png",
+    "label": "Remove choices confirmation \u00b7 invisible explanation and stock-copy defect",
+    "curated": true,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  },
+  {
+    "file": "72-service-empty-options-restored.png",
+    "label": "Metro connection lost \u00b7 cleanup not verified",
+    "curated": false,
+    "focusedNodes": [],
+    "session": "Service companion audit"
+  }
+]

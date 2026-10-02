@@ -26,17 +26,18 @@ export function QrCodeCard({ url }: { url: string }) {
   }
 
   return (
-    <div className="grid place-items-center gap-3 rounded-lg border border-border bg-background p-4">
+    <div className="grid place-items-center gap-3 rounded-none border border-border bg-background p-4">
       {image ? (
         <img alt="Customer entry QR code" className="size-48" src={image} />
       ) : (
-        <div className="size-48 animate-pulse rounded-lg bg-muted" />
+        <div className="size-48 animate-pulse rounded-none bg-muted" />
       )}
       <Button
         disabled={!image}
         onClick={download}
         type="button"
         variant="outline"
+        appearance="form"
       >
         Download QR
       </Button>

@@ -1,19 +1,17 @@
+import { CatalogIllustrationPreview } from "@/components/catalog-item/catalog-illustration-preview"
+import { CatalogPhotoPreview } from "@/components/catalog-item/catalog-photo-preview"
+import { CatalogSavedPhotos } from "@/components/catalog-item/catalog-saved-photos"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
 import { Package01Icon, ToolsIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import type { ReactNode } from "react"
+import type { ColumnDef } from "@tanstack/react-table"
 
 import { catalogItemDetail } from "./catalog-display"
 
-export type CatalogRow = RouterOutputs["catalog"]["listItems"][number]
-
-export type CatalogColumn = {
-  header: string
-  key: string
-  render: (item: CatalogRow) => ReactNode
-}
+export type CatalogRow =
+  RouterOutputs["catalog"]["listItemsPage"]["items"][number]
 
 function primaryOffering(item: CatalogRow) {
   const variant =
@@ -36,8 +34,13 @@ function itemDetail(item: CatalogRow) {
   })
 }
 
-function formatPrice(value: number | null, currencyCode: string) {
-  if (value === null) return "Quote"
+function formatPrice(
+  value: number | null,
+  currencyCode: string,
+  pricingPolicy: string,
+) {
+  if (value === null)
+    return pricingPolicy === "quote_required" ? "Quote" : "Price not set"
   return new Intl.NumberFormat("en-NG", {
     currency: currencyCode,
     style: "currency",
@@ -46,86 +49,181 @@ function formatPrice(value: number | null, currencyCode: string) {
 
 export function createCatalogColumns(
   openUnits: (productId: string) => void,
-): CatalogColumn[] {
+  storeId = "",
+): ColumnDef<CatalogRow>[] {
   return [
     {
+      id: "item",
+      accessorKey: "name",
       header: "Item",
-      key: "item",
-      render: (item) => (
+      size: 320,
+      minSize: 240,
+      maxSize: 500,
+      enableHiding: false,
+      meta: {
+        headerLabel: "Item",
+        sticky: true,
+        reorderable: false,
+        sortField: "name",
+        className: "z-20 bg-background md:sticky",
+        skeleton: { type: "avatar-text", width: "w-32" },
+      },
+      cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-            <HugeiconsIcon
-              icon={item.kind === "service" ? ToolsIcon : Package01Icon}
-              className="size-4 text-muted-foreground"
-            />
+          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+            {row.original.photos.find((photo) => photo.storeId === storeId) ? (
+              <CatalogPhotoPreview
+                compact
+                assetId={
+                  row.original.photos.find((photo) => photo.storeId === storeId)
+                    ?.assetId ?? ""
+                }
+                storeId={storeId}
+                label={row.original.name}
+              />
+            ) : row.original.illustrations.find(
+                (entry) => entry.storeId === storeId,
+              ) ? (
+              <CatalogIllustrationPreview
+                compact
+                illustrationId={
+                  row.original.illustrations.find(
+                    (entry) => entry.storeId === storeId,
+                  )?.illustrationId ?? ""
+                }
+              />
+            ) : (
+              <HugeiconsIcon
+                icon={
+                  row.original.kind === "service" ? ToolsIcon : Package01Icon
+                }
+                className="size-4 text-muted-foreground"
+              />
+            )}
           </div>
           <div className="min-w-0">
-            <p className="truncate font-medium">{item.name}</p>
+            <p className="truncate font-medium">{row.original.name}</p>
             <p className="truncate text-xs text-muted-foreground">
-              {itemDetail(item)}
+              {itemDetail(row.original)}
             </p>
           </div>
         </div>
       ),
     },
     {
+      id: "kind",
+      accessorKey: "kind",
       header: "Type",
-      key: "type",
-      render: (item) => (
+      size: 130,
+      minSize: 110,
+      maxSize: 180,
+      meta: {
+        headerLabel: "Type",
+        sortField: "kind",
+        skeleton: { type: "badge", width: "w-20" },
+      },
+      cell: ({ row }) => (
         <Badge
           className={cn(
             "rounded-full",
-            item.kind === "service"
-              ? "bg-blue-50 text-blue-700"
-              : "bg-violet-50 text-violet-700",
+            row.original.kind === "service"
+              ? "bg-accent text-accent-foreground"
+              : "bg-secondary text-secondary-foreground",
           )}
         >
-          {item.kind === "service" ? "Service" : "Product"}
+          {row.original.kind === "service" ? "Service" : "Product"}
         </Badge>
       ),
     },
     {
+      id: "price",
       header: "Price",
-      key: "price",
-      render: (item) => {
-        const offering = primaryOffering(item)
+      size: 180,
+      minSize: 140,
+      maxSize: 240,
+      meta: {
+        headerLabel: "Price",
+        skeleton: { type: "text", width: "w-24" },
+      },
+      cell: ({ row }) => {
+        const offering = primaryOffering(row.original)
         return offering
-          ? formatPrice(offering.fixedPriceMinor, offering.currencyCode)
+          ? formatPrice(
+              offering.fixedPriceMinor,
+              offering.currencyCode,
+              offering.pricingPolicy,
+            )
           : "—"
       },
     },
     {
+      id: "stock",
       header: "Stock",
-      key: "stock",
-      render: (item) => {
-        const balance = item.product?.stockBalances[0]
+      size: 180,
+      minSize: 140,
+      maxSize: 240,
+      meta: {
+        headerLabel: "Stock",
+        skeleton: { type: "text", width: "w-20" },
+      },
+      cell: ({ row }) => {
+        const balance = row.original.product?.stockBalances[0]
         return balance
           ? `${balance.onHandQuantity} ${balance.inventoryUnitName}`
           : "—"
       },
     },
     {
+      id: "status",
+      accessorKey: "status",
       header: "Status",
-      key: "status",
-      render: (item) => (
-        <span className="capitalize text-muted-foreground">{item.status}</span>
+      size: 140,
+      minSize: 120,
+      maxSize: 180,
+      meta: {
+        headerLabel: "Status",
+        sortField: "status",
+        skeleton: { type: "badge", width: "w-20" },
+      },
+      cell: ({ row }) => (
+        <span className="capitalize text-muted-foreground">
+          {row.original.status}
+        </span>
       ),
     },
     {
-      header: "",
-      key: "actions",
-      render: (item) => {
-        const product = item.product
-
-        return product ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => openUnits(product.id)}
-          >
-            Configure units
-          </Button>
-        ) : null
+      id: "actions",
+      size: 170,
+      minSize: 170,
+      maxSize: 170,
+      enableHiding: false,
+      enableResizing: false,
+      meta: {
+        headerLabel: "Actions",
+        sticky: true,
+        reorderable: false,
+        className: "z-20 border-l bg-background md:sticky",
+        skeleton: { type: "icon" },
+      },
+      cell: ({ row }) => {
+        const productId = row.original.product?.id
+        return (
+          <div className="flex items-center">
+            <CatalogSavedPhotos item={row.original} storeId={storeId} />
+            {productId ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="rounded-none"
+                data-row-interactive="true"
+                onClick={() => openUnits(productId)}
+              >
+                Configure units
+              </Button>
+            ) : null}
+          </div>
+        )
       },
     },
   ]

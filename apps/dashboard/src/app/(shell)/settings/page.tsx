@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/page-header"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { redirect } from "next/navigation"
@@ -13,17 +14,12 @@ export default async function SettingsPage() {
   const store = ctx.activeStore ?? ctx.stores[0]
 
   return (
-    <div className="grid gap-6 p-6 lg:p-8">
-      <header>
-        <p className="text-sm text-muted-foreground">{ctx.tenant.name}</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          General settings
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Review the business identity used across your dashboard and
-          storefront.
-        </p>
-      </header>
+    <div className="grid min-w-0 gap-6">
+      <PageHeader
+        eyebrow={ctx.tenant.name}
+        title="General settings"
+        description="Review the business identity used across your dashboard and storefront."
+      />
       <section className="max-w-2xl rounded-xl border border-border bg-background p-6">
         <dl className="grid gap-5 sm:grid-cols-2">
           <div>

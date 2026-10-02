@@ -1,16 +1,17 @@
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
 import {
-  businessInitials,
   type MoreFrameProps,
   type MoreHeaderProps,
   type MoreRowProps,
   type MoreWorkspaceProps,
+  businessInitials,
 } from "@/components/mobile/more/more-presentation"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
 import { StatusBar } from "expo-status-bar"
@@ -24,6 +25,7 @@ export function MarketDayMoreFrame({
   onScroll,
   showCanvasStatusBar,
 }: MoreFrameProps) {
+  const edgeFeedback = useScrollEdgeFeedback()
   const insets = useSafeAreaInsets()
   const palette = useMarketDayPalette()
   const { colorScheme } = useColorScheme()
@@ -50,6 +52,7 @@ export function MarketDayMoreFrame({
           )}
         />
         <ScrollView
+          {...edgeFeedback}
           className="flex-1"
           contentContainerClassName="px-5 pb-[var(--more-list-bottom)]"
           onScroll={onScroll}

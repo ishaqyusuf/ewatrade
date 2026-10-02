@@ -1,5 +1,6 @@
 "use client"
 
+import { PageHeader } from "@/components/page-header"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
@@ -54,27 +55,22 @@ export function PrescriptionWorkspaceGate({
 
   if (accessState === "loading") {
     return (
-      <div className="grid flex-1 gap-4 p-6 lg:p-8" aria-busy="true">
-        <div className="h-24 animate-pulse rounded-xl bg-muted" />
-        <div className="h-72 animate-pulse rounded-xl bg-muted" />
+      <div className="grid min-w-0 flex-1 gap-4 pt-6" aria-busy="true">
+        <div className="h-24 animate-pulse bg-muted" />
+        <div className="h-72 animate-pulse bg-muted" />
       </div>
     )
   }
 
   if (accessState === "setup_required") {
     return (
-      <main className="grid flex-1 content-start gap-6 p-6 lg:p-8">
-        <header>
-          <p className="text-sm text-muted-foreground">{store.name}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Pharmacy compliance setup
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Complete the pharmacy policy and professional role checks before
-            opening the private prescription queue.
-          </p>
-        </header>
-        <section className="max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
+      <div className="grid min-w-0 flex-1 content-start gap-6 pt-6">
+        <PageHeader
+          eyebrow={store.name}
+          title="Pharmacy compliance setup"
+          description="Complete the pharmacy policy and professional role checks before opening the private prescription queue."
+        />
+        <section className="max-w-2xl rounded-none border border-amber-200 bg-amber-50 p-6 text-amber-950">
           <h2 className="font-semibold">Professional access is not ready</h2>
           <p className="mt-2 text-sm leading-6">
             Assign a verified pharmacist and an attendant, configure pickup or
@@ -82,20 +78,21 @@ export function PrescriptionWorkspaceGate({
             closed until those checks pass.
           </p>
           <Button
+            appearance="form"
             className="mt-5"
             render={<Link href="/settings/compliance" />}
           >
             Continue compliance setup
           </Button>
         </section>
-      </main>
+      </div>
     )
   }
 
   if (accessState !== "ready") {
     return (
-      <main className="flex min-h-[60vh] items-center justify-center p-6">
-        <section className="w-full max-w-md rounded-2xl border bg-background p-6 text-center shadow-sm">
+      <div className="flex min-h-[60vh] min-w-0 items-center justify-center pt-6">
+        <section className="w-full max-w-md rounded-none border bg-background p-6 text-center">
           <p className="text-sm font-medium text-muted-foreground">
             Prescription workspace unavailable
           </p>
@@ -110,12 +107,12 @@ export function PrescriptionWorkspaceGate({
               : "Your data has not been changed. Try loading the workspace again."}
           </p>
           {accessState === "error" ? (
-            <Button className="mt-6" onClick={retryWorkspace}>
+            <Button appearance="form" className="mt-6" onClick={retryWorkspace}>
               Try again
             </Button>
           ) : null}
         </section>
-      </main>
+      </div>
     )
   }
 

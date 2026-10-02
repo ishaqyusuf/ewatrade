@@ -1,37 +1,48 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import {
+  parseAsArrayOf,
+  parseAsString,
+  parseAsStringEnum,
+  useQueryStates,
+} from "nuqs"
+
+export const DOMAIN_CONNECTION_STATUSES = [
+  "OWNERSHIP_PENDING",
+  "DNS_CONFIGURING",
+  "VERIFYING",
+  "ACTIVE",
+  "FAILED",
+  "DISCONNECTED",
+] as const
+
+export type DomainConnectionStatus = (typeof DOMAIN_CONNECTION_STATUSES)[number]
+
+const domainFilterParams = {
+  domainQuery: parseAsString,
+  domainStatuses: parseAsArrayOf(
+    parseAsStringEnum([...DOMAIN_CONNECTION_STATUSES]),
+  ),
+}
 
 export function useDomainFilterParams() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const query = searchParams.get("domainQuery") ?? ""
-  const statuses = (searchParams.get("domainStatuses") ?? "")
-    .split(",")
-    .filter(Boolean)
+  const [params, setParams] = useQueryStates(domainFilterParams)
+  const query = params.domainQuery ?? ""
+  const statuses = params.domainStatuses ?? []
 
   function setFilters(values: {
     domainQuery?: string | null
-    domainStatuses?: string[] | null
+    domainStatuses?: DomainConnectionStatus[] | null
   }) {
-    const next = new URLSearchParams(searchParams.toString())
-
-    if (values.domainQuery !== undefined) {
-      if (values.domainQuery) next.set("domainQuery", values.domainQuery)
-      else next.delete("domainQuery")
-    }
-    if (values.domainStatuses !== undefined) {
-      if (values.domainStatuses?.length) {
-        next.set("domainStatuses", values.domainStatuses.join(","))
-      } else {
-        next.delete("domainStatuses")
-      }
-    }
-
-    const queryString = next.toString()
-    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-      scroll: false,
+    return setParams({
+      ...values,
+      ...(values.domainStatuses !== undefined
+        ? {
+            domainStatuses: values.domainStatuses?.length
+              ? values.domainStatuses
+              : null,
+          }
+        : {}),
     })
   }
 

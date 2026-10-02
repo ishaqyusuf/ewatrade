@@ -146,6 +146,31 @@ function request(
   })
 }
 
+test("production QA signup checks, persists and returns only the suffixed identity", async () => {
+  const response = await POST(request("owner@ishaq.qa.test"))
+  expect(response.status).toBe(200)
+  expect(findTenant.mock.lastCall?.[0]).toMatchObject({
+    where: { slug: "hello-qa" },
+  })
+  expect(createTenant.mock.lastCall?.[0].data).toMatchObject({
+    slug: "hello-qa",
+    dataClassification: "QA",
+    qaSourceDomain: "ishaq.qa.test",
+  })
+  expect(await response.json()).toMatchObject({
+    tenantSlug: "hello-qa",
+    storefrontUrl: "https://hello-qa.ewatrade.com",
+    posUrl: "https://hello-qa-pos.ewatrade.com",
+    dashboardUrl: "https://ewatrade.com/dashboard",
+  })
+  expect(createHostnames.mock.lastCall?.[0]).toMatchObject({
+    data: [
+      { surface: "STOREFRONT", hostname: "hello-qa.ewatrade.com" },
+      { surface: "POS", hostname: "hello-qa-pos.ewatrade.com" },
+    ],
+  })
+})
+
 test("ordinary signup preserves its original business identity", async () => {
   const response = await POST(request("owner@example.com"))
   expect(response.status).toBe(200)
@@ -157,6 +182,76 @@ test("ordinary signup preserves its original business identity", async () => {
     tenantSlug: "hello",
     storefrontUrl: "https://hello.ewatrade.com",
   })
+})
+
+test("unknown QA domains cannot create an account or claim an ordinary name", async () => {
+  const response = await POST(request("owner@unknown.test"))
+  expect(response.status).toBe(503)
+  expect(signUp).not.toHaveBeenCalled()
+  expect(findTenant).not.toHaveBeenCalled()
+  expect(createTenant).not.toHaveBeenCalled()
+})
+
+test("signup without an address choice generates an ordinary business identity", async () => {
+  const response = await POST(request("owner@example.com", null))
+  expect(response.status).toBe(200)
+  const body = await response.json()
+  expect(body.tenantSlug).toMatch(/^hello-[a-f0-9]{8}$/)
+  expect(createTenant.mock.lastCall?.[0].data.slug).toBe(body.tenantSlug)
+  expect(body.dashboardUrl).toBe("https://ewatrade.com/dashboard")
+})
+
+test("automatic QA identity keeps its namespace on collision retries", async () => {
+  findTenant.mockResolvedValueOnce({ id: "occupied-identity" })
+  const response = await POST(request("owner@ishaq.qa.test", null))
+  expect(response.status).toBe(200)
+  const body = await response.json()
+  expect(body.tenantSlug).toMatch(/^hello-[a-f0-9]{8}-qa$/)
+  expect(findTenant).toHaveBeenCalledTimes(2)
+  for (const call of findTenant.mock.calls) {
+    expect(call[0]).toMatchObject({
+      where: { slug: expect.stringMatching(/-qa$/) },
+    })
+  }
+  expect(findTenant.mock.calls[0]?.[0]).not.toEqual(
+    findTenant.mock.calls[1]?.[0],
+  )
+  expect(createTenant.mock.lastCall?.[0].data).toMatchObject({
+    slug: body.tenantSlug,
+    dataClassification: "QA",
+    qaSourceDomain: "ishaq.qa.test",
+  })
+})
+
+test("repeated automatic identity collisions stop before account creation", async () => {
+  findTenant.mockImplementation(async () => ({ id: "occupied-identity" }))
+  const response = await POST(request("owner@example.com", null))
+  expect(response.status).toBe(503)
+  expect(findTenant).toHaveBeenCalledTimes(5)
+  expect(signUp).not.toHaveBeenCalled()
+  expect(createTenant).not.toHaveBeenCalled()
+})
+
+test("unknown QA domain cannot bypass routing by omitting its address", async () => {
+  const response = await POST(request("owner@unknown.test", null))
+  expect(response.status).toBe(503)
+  expect(signUp).not.toHaveBeenCalled()
+  expect(findTenant).not.toHaveBeenCalled()
+})
+
+test("an explicitly supplied legacy address still requires validation", async () => {
+  const response = await POST(request("owner@example.com", "Invalid Address"))
+  expect(response.status).toBe(400)
+  expect(findTenant).not.toHaveBeenCalled()
+  expect(signUp).not.toHaveBeenCalled()
+})
+
+test("an occupied explicit legacy address is not silently replaced", async () => {
+  findTenant.mockResolvedValueOnce({ id: "occupied-identity" })
+  const response = await POST(request("owner@example.com", "hello"))
+  expect(response.status).toBe(409)
+  expect(findTenant).toHaveBeenCalledTimes(1)
+  expect(signUp).not.toHaveBeenCalled()
 })
 
 test("public signup cannot bypass the early-access request", async () => {

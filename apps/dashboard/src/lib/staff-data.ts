@@ -11,14 +11,13 @@ function serializeStaffDate(value: Date | null) {
 }
 
 export async function getDashboardStaff(input: {
-  limit?: number
   role?: StaffRoleFilter
   search?: string
   status?: StaffStatusFilter
   tenantId: string
 }) {
   const staff = await listRetailOpsStaff(prisma, {
-    limit: input.limit ?? 75,
+    all: true,
     role: input.role,
     search: input.search,
     status: input.status,

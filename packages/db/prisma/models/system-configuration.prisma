@@ -1,0 +1,17 @@
+// Shared platform configuration. Credentials are never persisted here.
+model SystemConfiguration {
+  key       String   @id
+  value     Json
+  revision  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// One rolling provider-call budget per Tenant/actor; scopeKey is a SHA-256 hash.
+// A stable row is reused, rather than accumulating a row for every title/request.
+model CatalogCategorySuggestionBudget {
+  scopeKey        String   @id
+  windowStartedAt DateTime
+  requests        Int      @default(0)
+  updatedAt       DateTime @updatedAt
+}

@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "email dev -p 3003",
+    "dev": "node ../../scripts/with-workspace-env.mjs email dev -p ${EMAIL_PORT:-3003}",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },

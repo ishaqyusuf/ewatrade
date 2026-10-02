@@ -10,8 +10,8 @@ import {
 import { LEGAL_DOCUMENTS, LEGAL_DOCUMENT_VERSION } from "./legal-documents"
 
 describe("legal acceptance publication boundary", () => {
-  test("draft text cannot be recorded as an effective agreement", () => {
-    expect(canAcceptLegalVersion(LEGAL_DOCUMENT_VERSION)).toBe(false)
+  test("the approved current version can be accepted", () => {
+    expect(canAcceptLegalVersion(LEGAL_DOCUMENT_VERSION)).toBe(true)
   })
   test("production signup needs an effective publication", () => {
     expect(
@@ -32,7 +32,7 @@ describe("legal acceptance publication boundary", () => {
         APP_ENV: "local",
         NODE_ENV: "production",
       }),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       isSignupAvailableForLegalPublication(false, { APP_ENV: "preview" }),
     ).toBe(true)
@@ -146,6 +146,12 @@ describe("legal acceptance publication boundary", () => {
     expect(matchesApprovedLegalPublication(lateApproval, effectiveNow)).toBe(
       false,
     )
+    expect(
+      matchesApprovedLegalPublication(
+        lateApproval,
+        new Date("2026-10-01T12:00:00.000Z"),
+      ),
+    ).toBe(true)
     const invalidDate = { ...approved, effectiveDate: "2026-02-30" }
     invalidDate.approvedSha256 = legalPublicationDigest(invalidDate)
     expect(matchesApprovedLegalPublication(invalidDate)).toBe(false)

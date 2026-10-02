@@ -1,12 +1,38 @@
 import { expect, test } from "bun:test"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { isLegalSignupSessionBlockedForPublication } from "./legal-session-access"
+import {
+  currentEffectiveLegalPublication,
+  LEGAL_DOCUMENT_APPROVED_AT,
+} from "@ewatrade/utils/legal-approval"
 
 const publication = {
   version: "approved-v1",
   documentHash: "a".repeat(64),
   effectiveDate: "2026-10-01",
 }
+
+test("same-day draft signup before actual approval can still sign in to accept Terms", async () => {
+  const current = currentEffectiveLegalPublication()
+  if (!current || !LEGAL_DOCUMENT_APPROVED_AT)
+    throw new Error("Missing approved publication")
+  const { db, acceptanceReads } = fakeDb(
+    new Date(Date.parse(LEGAL_DOCUMENT_APPROVED_AT) - 1),
+    null,
+  )
+  expect(
+    await isLegalSignupSessionBlockedForPublication(db, "user-1", current),
+  ).toBe(false)
+  expect(acceptanceReads()).toBe(0)
+  const afterApproval = fakeDb(new Date(LEGAL_DOCUMENT_APPROVED_AT), null)
+  expect(
+    await isLegalSignupSessionBlockedForPublication(
+      afterApproval.db,
+      "user-2",
+      current,
+    ),
+  ).toBe(true)
+})
 
 function fakeDb(createdAt: Date | null, documentHash: string | null) {
   let acceptanceReads = 0

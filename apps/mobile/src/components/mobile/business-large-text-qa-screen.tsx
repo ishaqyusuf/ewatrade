@@ -49,10 +49,22 @@ import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { buildAdminMoreSections } from "@/lib/admin-navigation"
 import type { BusinessLargeTextQaState } from "@/lib/business-large-text-qa"
+import {
+  getCatalogOptionValueHint,
+  resolveCatalogFormGuidance,
+} from "@ewatrade/utils/business-catalog-guidance"
 import { useEffect, useLayoutEffect, useState } from "react"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 
 const inert = () => undefined
+const productQaGuidance = resolveCatalogFormGuidance({
+  businessProfileKey: "fashion-apparel",
+  kind: "product",
+})
+const serviceQaGuidance = resolveCatalogFormGuidance({
+  businessProfileKey: "professional-services",
+  kind: "service",
+})
 
 export function BusinessLargeTextQaScreen({
   qaState,
@@ -145,7 +157,11 @@ function BusinessProductOptionsEmptySizeQaScreen() {
           </View>
 
           <View className="mt-3 gap-5 border-t border-border pt-7">
-            <ProductOptionsSectionHeader hasOptions onAddOption={inert} />
+            <ProductOptionsSectionHeader
+              helperText={productQaGuidance.options.helperText}
+              hasOptions
+              onAddOption={inert}
+            />
 
             <View className="border-t border-border">
               <View className="gap-3 border-b border-border py-4">
@@ -169,6 +185,10 @@ function BusinessProductOptionsEmptySizeQaScreen() {
                   </Pressable>
                 </View>
                 <ProductFirstOptionValueAction
+                  helperText={getCatalogOptionValueHint(
+                    productQaGuidance,
+                    "Size",
+                  )}
                   groupName="Size"
                   onPress={() => setComposerOpen(true)}
                 />
@@ -248,11 +268,15 @@ function BusinessProductOptionsEmptyQaScreen() {
 
           <View className="mt-3 gap-5 border-t border-border pt-7">
             <ProductOptionsSectionHeader
+              helperText={productQaGuidance.options.helperText}
               hasOptions={false}
               onAddOption={inert}
             />
             <View className="border-t border-border">
-              <ProductFirstOptionAction onPress={() => setComposerOpen(true)} />
+              <ProductFirstOptionAction
+                helperText={productQaGuidance.options.helperText}
+                onPress={() => setComposerOpen(true)}
+              />
             </View>
             <ProductUseOnePriceAction onPress={inert} />
           </View>
@@ -547,6 +571,7 @@ function BusinessProductSetupQaScreen({
           </Pressable>
 
           <CatalogEssentialsFields
+            guidance={productQaGuidance}
             currencyCode="NGN"
             defaultQuoteRequired={false}
             kind="product"
@@ -640,6 +665,7 @@ function BusinessServiceSetupQaScreen() {
           </Pressable>
 
           <CatalogEssentialsFields
+            guidance={serviceQaGuidance}
             currencyCode="NGN"
             defaultQuoteRequired={false}
             kind="service"
@@ -925,7 +951,10 @@ function BusinessServiceChoicesEmptyQaScreen() {
           </View>
 
           <View className="mt-3 gap-5 border-t border-border pt-7">
-            <ServiceChoicesSectionHeader onAddOption={inert} />
+            <ServiceChoicesSectionHeader
+              helperText={serviceQaGuidance.options.helperText}
+              onAddOption={inert}
+            />
 
             <View className="border-t border-border">
               <View className="gap-3 border-b border-border py-4">
@@ -1121,8 +1150,8 @@ function BusinessServiceChoicePricingQaScreen({
             />
             <View className="border-l-2 border-primary bg-muted px-3 py-3">
               <Text className="text-xs leading-5 text-muted-foreground">
-                A fixed price is optional. Use Quote when the final amount
-                depends on the customer request.
+                Set an amount for each fixed-price choice. Use Quote when the
+                amount depends on the customer request.
               </Text>
             </View>
           </View>

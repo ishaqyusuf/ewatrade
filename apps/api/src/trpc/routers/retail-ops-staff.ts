@@ -14,6 +14,7 @@ import {
 } from "@ewatrade/db/queries"
 import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
+import { buildStaffInvitationLinks } from "@ewatrade/utils/staff-invitation-links"
 import { TRPCError } from "@trpc/server"
 import {
   retailOpsCompleteStaffOnboardingSchema,
@@ -65,32 +66,6 @@ function assertCanManageRetailOpsStaff(role: string) {
   }
 }
 
-function getRetailOpsAppUrl() {
-  return (
-    process.env.MOBILE_APP_URL ??
-    process.env.NEXT_PUBLIC_MOBILE_APP_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "https://ewatrade.com/download"
-  )
-}
-
-function getRetailOpsStaffInviteUrl(token: string | null | undefined) {
-  const appUrl = getRetailOpsAppUrl()
-
-  if (!token) return appUrl
-
-  try {
-    const url = new URL(appUrl)
-    url.pathname = "/staff-onboarding"
-    url.searchParams.set("inviteToken", token)
-    return url.toString()
-  } catch {
-    return `${appUrl.replace(/\/$/, "")}/staff-onboarding?inviteToken=${encodeURIComponent(
-      token,
-    )}`
-  }
-}
-
 async function enqueueStaffInviteNotification(input: {
   businessName: string
   invitedByName: string
@@ -98,12 +73,14 @@ async function enqueueStaffInviteNotification(input: {
 }) {
   if (!input.invitedStaff.notification.shouldSend) return
 
+  const links = buildStaffInvitationLinks(
+    process.env,
+    input.invitedStaff.invite.acceptanceToken,
+  )
   await enqueueRetailOpsStaffInviteNotification({
-    appUrl: getRetailOpsAppUrl(),
+    appUrl: links.appUrl,
     businessName: input.businessName,
-    inviteUrl: getRetailOpsStaffInviteUrl(
-      input.invitedStaff.invite.acceptanceToken,
-    ),
+    inviteUrl: links.inviteUrl,
     invitedByName: input.invitedByName,
     inviteeEmail: input.invitedStaff.staff.email,
     inviteeName:

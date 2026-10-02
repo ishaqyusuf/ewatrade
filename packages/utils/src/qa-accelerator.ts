@@ -63,7 +63,7 @@ export function normalizeQaDomain(value: string) {
     candidate.includes(":") ||
     candidate.startsWith("*.")
   ) {
-    throw new Error("Enter a valid QA Domain without a protocol or path.")
+    throw new Error("Enter a valid domain without a protocol or path.")
   }
 
   const labels = candidate.split(".")
@@ -76,7 +76,7 @@ export function normalizeQaDomain(value: string) {
         !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label),
     )
   ) {
-    throw new Error("Enter a valid QA Domain without a protocol or path.")
+    throw new Error("Enter a valid domain without a protocol or path.")
   }
   return candidate
 }

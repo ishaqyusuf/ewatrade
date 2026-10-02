@@ -1,7 +1,9 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { Button, Checkbox, CheckboxField } from "@ewatrade/ui"
 
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
@@ -33,7 +35,7 @@ export function ConversationAccountTerms({
 
   return (
     <section
-      className="grid gap-3 rounded-lg border border-border bg-muted/30 p-4"
+      className="grid gap-3 rounded-none border border-border bg-muted/30 p-4"
       aria-label="Terms required before posting"
     >
       <h3 className="font-medium">Before you reply</h3>
@@ -62,22 +64,18 @@ export function ConversationAccountTerms({
               Read Privacy Notice
             </a>
           </div>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input
+          <CheckboxField label={<>I agree to the current EwaTrade Terms.</>}>
+            <Checkbox
               checked={agreed}
-              onChange={(event) => setAgreed(event.target.checked)}
-              type="checkbox"
+              onCheckedChange={(checked) => setAgreed(checked)}
             />
-            I agree to the current EwaTrade Terms.
-          </label>
-          <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input
+          </CheckboxField>
+          <CheckboxField label={<>I acknowledge the Privacy Notice.</>}>
+            <Checkbox
               checked={privacyAcknowledged}
-              onChange={(event) => setPrivacyAcknowledged(event.target.checked)}
-              type="checkbox"
+              onCheckedChange={(checked) => setPrivacyAcknowledged(checked)}
             />
-            I acknowledge the Privacy Notice.
-          </label>
+          </CheckboxField>
           <Button
             disabled={!agreed || !privacyAcknowledged || accept.isPending}
             onClick={async () => {
@@ -99,6 +97,7 @@ export function ConversationAccountTerms({
               }
             }}
             type="button"
+            appearance="form"
           >
             {accept.isPending ? "Recording…" : "Agree and continue"}
           </Button>
@@ -110,9 +109,9 @@ export function ConversationAccountTerms({
         </p>
       )}
       {status.isError || error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <FormFeedback appearance="dashboard">
           {error ?? "Terms status is unavailable."}
-        </p>
+        </FormFeedback>
       ) : null}
     </section>
   )

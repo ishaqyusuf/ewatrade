@@ -27,6 +27,8 @@ const contracts = [
       "hideOnScroll",
       "isHidden={isHidden}",
       'testID="admin-root-tab-dock"',
+      "StyleSheet.absoluteFillObject",
+      'pointerEvents="box-none"',
     ],
   },
   {

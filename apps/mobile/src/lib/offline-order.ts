@@ -18,6 +18,7 @@ export type OfflineOrderPayment = {
 export function buildOfflineOrderCommand(input: {
   clientCommandId: string
   customer?: {
+    directoryId?: string
     email?: string
     name: string
     phone?: string
@@ -32,6 +33,9 @@ export function buildOfflineOrderCommand(input: {
     dependencyClientIds: [],
     eventVersion: 1,
     payload: {
+      ...(input.customer?.directoryId
+        ? { customerId: input.customer.directoryId }
+        : {}),
       customerEmail: input.customer?.email,
       customerName: input.customer?.name,
       customerPhone: input.customer?.phone,

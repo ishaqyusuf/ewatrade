@@ -1,18 +1,44 @@
+import { workspaceSchema } from "@/lib/signup-schemas"
+import { resolveSignupWorkspace } from "@/lib/signup-workspace"
 import { prisma } from "@ewatrade/db"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { z } from "zod"
+
+const checkSchema = z.object({
+  slug: workspaceSchema.shape.subdomain,
+  email: z.email().optional(),
+})
 
 export async function GET(request: NextRequest) {
-  const slug = request.nextUrl.searchParams.get("slug")?.trim().toLowerCase()
+  return checkAvailability({
+    slug: request.nextUrl.searchParams.get("slug")?.trim().toLowerCase(),
+  })
+}
 
-  if (!slug || slug.length < 3) {
+export async function POST(request: NextRequest) {
+  return checkAvailability(await request.json().catch(() => null))
+}
+
+async function checkAvailability(input: unknown) {
+  const parsed = checkSchema.safeParse(input)
+  if (!parsed.success) {
     return NextResponse.json({ available: false }, { status: 400 })
   }
-
-  // Basic slug format validation
-  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(slug)) {
-    return NextResponse.json({ available: false })
+  let workspace: ReturnType<typeof resolveSignupWorkspace>
+  try {
+    workspace = resolveSignupWorkspace(parsed.data)
+  } catch {
+    return NextResponse.json(
+      {
+        available: false,
+        message:
+          "QA email routing is unavailable or this QA domain is not configured.",
+      },
+      { status: 503 },
+    )
   }
+  const slug = workspace.slug
 
   // Reserved slugs that should not be registered
   const RESERVED = new Set([
@@ -45,5 +71,8 @@ export async function GET(request: NextRequest) {
     select: { id: true },
   })
 
-  return NextResponse.json({ available: !existing })
+  return NextResponse.json(
+    { available: !existing, slug, isQa: Boolean(workspace.qaSourceDomain) },
+    { headers: { "Cache-Control": "no-store" } },
+  )
 }

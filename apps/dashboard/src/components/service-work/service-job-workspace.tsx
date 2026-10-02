@@ -1,4 +1,16 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  Badge,
+  Button,
+  ControlField,
+  DateControl,
+  Input,
+  MoneyInput,
+  SelectControl,
+  SubmitButton,
+  Textarea,
+} from "@ewatrade/ui"
 
 import {
   availableActions,
@@ -6,13 +18,9 @@ import {
   label,
 } from "@/components/service-work/service-utils"
 import { useTRPC } from "@/trpc/client"
-import { Badge, Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-const areaClass = `${fieldClass} min-h-24 py-2`
 
 export function ServiceJobWorkspace({
   canManage,
@@ -65,6 +73,9 @@ export function ServiceJobWorkspace({
       }),
       queryClient.invalidateQueries({
         queryKey: trpc.services.queue.queryKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.services.queuePage.queryKey(),
       }),
     ])
   }
@@ -185,13 +196,30 @@ export function ServiceJobWorkspace({
         {Array.from({ length: 5 }, (_, index) => (
           <div
             key={`job-skeleton-${index + 1}`}
-            className="h-14 animate-pulse rounded bg-muted"
+            className="h-14 animate-pulse bg-muted"
           />
         ))}
       </div>
     )
   }
   const job = jobQuery.data
+  if (jobQuery.isError) {
+    return (
+      <div className="grid gap-3">
+        <FormFeedback appearance="dashboard">
+          {jobQuery.error.message}
+        </FormFeedback>
+        <Button
+          appearance="form"
+          variant="outline"
+          className="w-fit"
+          onClick={() => void jobQuery.refetch()}
+        >
+          Try again
+        </Button>
+      </div>
+    )
+  }
   if (!job) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -203,15 +231,10 @@ export function ServiceJobWorkspace({
   return (
     <div className="grid gap-5">
       {error ? (
-        <p
-          role="alert"
-          className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
       {publicUrl ? (
-        <div className="rounded-lg bg-primary/10 px-4 py-3 text-sm">
+        <div className="bg-primary/10 px-4 py-3 text-sm">
           <p className="font-medium">Customer tracking link ready</p>
           <a
             className="mt-2 block break-all text-primary underline"
@@ -238,33 +261,40 @@ export function ServiceJobWorkspace({
         </div>
         {job.balanceDueMinor > 0 ? (
           <div className="grid gap-2 sm:grid-cols-[1fr_150px]">
-            <input
-              className={fieldClass}
-              inputMode="decimal"
-              placeholder="Amount received"
-              value={paymentAmount}
-              onChange={(event) => setPaymentAmount(event.target.value)}
-            />
-            <select
-              className={fieldClass}
-              value={paymentMethod}
-              onChange={(event) =>
-                setPaymentMethod(event.target.value as typeof paymentMethod)
-              }
-            >
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank transfer</option>
-              <option value="pos">POS</option>
-              <option value="card">Card</option>
-              <option value="other">Other</option>
-            </select>
-            <input
-              className={fieldClass}
-              placeholder="Reference (optional)"
-              value={paymentReference}
-              onChange={(event) => setPaymentReference(event.target.value)}
-            />
-            <Button
+            <ControlField label="Amount received">
+              <MoneyInput
+                currencyCode={job.currencyCode}
+                inputMode="decimal"
+                placeholder="Amount received"
+                value={paymentAmount}
+                onChange={(event) => setPaymentAmount(event.target.value)}
+              />
+            </ControlField>
+            <ControlField label="Payment method">
+              <SelectControl
+                value={paymentMethod}
+                onValueChange={(value) =>
+                  setPaymentMethod(value as typeof paymentMethod)
+                }
+                options={[
+                  { value: "cash", label: <>Cash</> },
+                  { value: "bank_transfer", label: <>Bank transfer</> },
+                  { value: "pos", label: <>POS</> },
+                  { value: "card", label: <>Card</> },
+                  { value: "other", label: <>Other</> },
+                ]}
+              />
+            </ControlField>
+            <ControlField label="Reference (optional)">
+              <Input
+                placeholder="Reference (optional)"
+                value={paymentReference}
+                onChange={(event) => setPaymentReference(event.target.value)}
+              />
+            </ControlField>
+            <SubmitButton
+              type="button"
+              isSubmitting={paymentMutation.isPending}
               size="sm"
               variant="outline"
               disabled={!paymentAmount || paymentMutation.isPending}
@@ -279,11 +309,13 @@ export function ServiceJobWorkspace({
               }
             >
               Record payment
-            </Button>
+            </SubmitButton>
           </div>
         ) : null}
         {job.summary === "ready_for_handoff" && !job.handedOffAt ? (
-          <Button
+          <SubmitButton
+            type="button"
+            isSubmitting={handoffMutation.isPending}
             disabled={
               handoffMutation.isPending ||
               (job.balanceDueMinor > 0 && !paymentAmount)
@@ -308,7 +340,7 @@ export function ServiceJobWorkspace({
             {job.balanceDueMinor > 0
               ? "Collect balance and hand over"
               : "Mark collected"}
-          </Button>
+          </SubmitButton>
         ) : job.handedOffAt ? (
           <p className="text-sm text-muted-foreground">
             Collected {new Date(job.handedOffAt).toLocaleString("en-NG")}.
@@ -331,13 +363,19 @@ export function ServiceJobWorkspace({
               </Badge>
             </div>
             {line.authorizationStatus !== "AUTHORIZED" ? (
-              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              <FormFeedback appearance="dashboard" variant="default">
                 Work is waiting for {label(line.authorizationStatus)}.
-              </p>
+              </FormFeedback>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               {availableActions(line.status).map((action) => (
-                <Button
+                <SubmitButton
+                  type="button"
+                  isSubmitting={
+                    transitionMutation.isPending &&
+                    transitionMutation.variables?.lineId === line.id &&
+                    transitionMutation.variables?.toStatus === action
+                  }
                   key={action}
                   size="sm"
                   variant={
@@ -363,7 +401,7 @@ export function ServiceJobWorkspace({
                   }
                 >
                   {label(action)}
-                </Button>
+                </SubmitButton>
               ))}
             </div>
           </div>
@@ -371,15 +409,15 @@ export function ServiceJobWorkspace({
       </section>
       <section className="grid gap-3 border-t border-border pt-4">
         <h3 className="font-medium">Work record</h3>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Internal note</span>
-          <textarea
-            className={areaClass}
+        <ControlField label={<>Internal note</>}>
+          <Textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
-        </label>
-        <Button
+        </ControlField>
+        <SubmitButton
+          type="button"
+          isSubmitting={noteMutation.isPending}
           size="sm"
           variant="outline"
           disabled={!note.trim() || noteMutation.isPending}
@@ -392,33 +430,38 @@ export function ServiceJobWorkspace({
           }
         >
           Add note
-        </Button>
+        </SubmitButton>
         {job.notes.map((entry) => (
-          <p className="rounded-lg bg-muted px-3 py-2 text-sm" key={entry.id}>
+          <p className="bg-muted px-3 py-2 text-sm" key={entry.id}>
             {entry.body}
           </p>
         ))}
         <div className="grid gap-2 sm:grid-cols-[180px_1fr_auto]">
-          <select
-            className={fieldClass}
-            value={exceptionType}
-            onChange={(event) =>
-              setExceptionType(event.target.value as typeof exceptionType)
-            }
-          >
-            <option value="delay">Delay</option>
-            <option value="quality">Quality</option>
-            <option value="failed_attempt">Failed attempt</option>
-            <option value="customer_rejection">Customer rejection</option>
-            <option value="other">Other</option>
-          </select>
-          <input
-            className={fieldClass}
-            placeholder="Exception details"
-            value={managerReason}
-            onChange={(event) => setManagerReason(event.target.value)}
-          />
-          <Button
+          <ControlField label="Exception type">
+            <SelectControl
+              value={exceptionType}
+              onValueChange={(value) =>
+                setExceptionType(value as typeof exceptionType)
+              }
+              options={[
+                { value: "delay", label: <>Delay</> },
+                { value: "quality", label: <>Quality</> },
+                { value: "failed_attempt", label: <>Failed attempt</> },
+                { value: "customer_rejection", label: <>Customer rejection</> },
+                { value: "other", label: <>Other</> },
+              ]}
+            />
+          </ControlField>
+          <ControlField label="Exception details">
+            <Input
+              placeholder="Exception details"
+              value={managerReason}
+              onChange={(event) => setManagerReason(event.target.value)}
+            />
+          </ControlField>
+          <SubmitButton
+            type="button"
+            isSubmitting={exceptionMutation.isPending}
             size="sm"
             variant="outline"
             disabled={!managerReason.trim() || exceptionMutation.isPending}
@@ -431,7 +474,7 @@ export function ServiceJobWorkspace({
             }
           >
             Record
-          </Button>
+          </SubmitButton>
         </div>
         {job.exceptions.map((entry) => (
           <p className="text-sm text-muted-foreground" key={entry.id}>
@@ -452,20 +495,24 @@ export function ServiceJobWorkspace({
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <input
-            className={fieldClass}
-            placeholder="Label"
-            value={evidenceLabel}
-            onChange={(event) => setEvidenceLabel(event.target.value)}
-          />
-          <input
-            className={fieldClass}
-            placeholder="Private asset reference (optional)"
-            value={evidenceReference}
-            onChange={(event) => setEvidenceReference(event.target.value)}
-          />
+          <ControlField label="Label">
+            <Input
+              placeholder="Label"
+              value={evidenceLabel}
+              onChange={(event) => setEvidenceLabel(event.target.value)}
+            />
+          </ControlField>
+          <ControlField label="Private asset reference (optional)">
+            <Input
+              placeholder="Private asset reference (optional)"
+              value={evidenceReference}
+              onChange={(event) => setEvidenceReference(event.target.value)}
+            />
+          </ControlField>
         </div>
-        <Button
+        <SubmitButton
+          type="button"
+          isSubmitting={evidenceMutation.isPending}
           size="sm"
           variant="outline"
           disabled={evidenceMutation.isPending}
@@ -483,10 +530,10 @@ export function ServiceJobWorkspace({
           }
         >
           Add private evidence
-        </Button>
+        </SubmitButton>
         {job.evidence.map((entry) => (
           <div
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2 text-sm"
+            className="flex flex-wrap items-center justify-between gap-2 bg-muted px-3 py-2 text-sm"
             key={entry.id}
           >
             <span>
@@ -497,6 +544,7 @@ export function ServiceJobWorkspace({
             entry.uploadStatus === "AVAILABLE" &&
             entry.visibility !== "PUBLISHED" ? (
               <Button
+                appearance="form"
                 size="sm"
                 variant="outline"
                 onClick={() =>
@@ -507,6 +555,7 @@ export function ServiceJobWorkspace({
               </Button>
             ) : canManage && entry.visibility === "PUBLISHED" ? (
               <Button
+                appearance="form"
                 size="sm"
                 variant="ghost"
                 onClick={() =>
@@ -530,22 +579,22 @@ export function ServiceJobWorkspace({
               Assignment and promises retain their complete history.
             </p>
           </div>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Assignee</span>
-            <select
-              className={fieldClass}
+          <ControlField label={<>Assignee</>}>
+            <SelectControl
               value={assigneeId || job.currentAssigneeUserId || ""}
-              onChange={(event) => setAssigneeId(event.target.value)}
-            >
-              <option value="">Choose team member</option>
-              {assigneesQuery.data?.map((person) => (
-                <option value={person.id} key={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button
+              onValueChange={(value) => setAssigneeId(value)}
+              options={[
+                { value: "", label: <>Choose team member</> },
+                ...(assigneesQuery.data?.map((person) => ({
+                  value: person.id,
+                  label: person.name,
+                })) ?? []),
+              ]}
+            />
+          </ControlField>
+          <SubmitButton
+            type="button"
+            isSubmitting={assignMutation.isPending}
             size="sm"
             variant="outline"
             disabled={!assigneeId || assignMutation.isPending}
@@ -559,21 +608,25 @@ export function ServiceJobWorkspace({
             }
           >
             Assign
-          </Button>
+          </SubmitButton>
           <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-            <input
-              type="datetime-local"
-              className={fieldClass}
-              value={rescheduleAt}
-              onChange={(event) => setRescheduleAt(event.target.value)}
-            />
-            <input
-              className={fieldClass}
-              placeholder="Reason for new promise"
-              value={managerReason}
-              onChange={(event) => setManagerReason(event.target.value)}
-            />
-            <Button
+            <ControlField label="New promise">
+              <DateControl
+                type="datetime-local"
+                value={rescheduleAt}
+                onValueChange={(value) => setRescheduleAt(value)}
+              />
+            </ControlField>
+            <ControlField label="Reason for new promise">
+              <Input
+                placeholder="Reason for new promise"
+                value={managerReason}
+                onChange={(event) => setManagerReason(event.target.value)}
+              />
+            </ControlField>
+            <SubmitButton
+              type="button"
+              isSubmitting={rescheduleMutation.isPending}
               size="sm"
               variant="outline"
               disabled={
@@ -591,7 +644,7 @@ export function ServiceJobWorkspace({
               }
             >
               Reschedule
-            </Button>
+            </SubmitButton>
           </div>
           <div className="grid gap-3 border-t border-border pt-3">
             {job.lines.map((line) => (
@@ -603,7 +656,12 @@ export function ServiceJobWorkspace({
                   {line.catalogItemName} · {line.allocatedQuantity}
                 </p>
                 {line.authorizationStatus !== "AUTHORIZED" ? (
-                  <Button
+                  <SubmitButton
+                    type="button"
+                    isSubmitting={
+                      authorizeMutation.isPending &&
+                      authorizeMutation.variables?.lineId === line.id
+                    }
                     size="sm"
                     variant="outline"
                     disabled={
@@ -623,22 +681,28 @@ export function ServiceJobWorkspace({
                     }
                   >
                     Authorize work
-                  </Button>
+                  </SubmitButton>
                 ) : null}
                 <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                  <input
-                    className={fieldClass}
-                    inputMode="decimal"
-                    placeholder="Quantity"
-                    value={lineQuantities[line.id] ?? ""}
-                    onChange={(event) =>
-                      setLineQuantities((current) => ({
-                        ...current,
-                        [line.id]: event.target.value,
-                      }))
+                  <ControlField label="Quantity">
+                    <Input
+                      inputMode="decimal"
+                      placeholder="Quantity"
+                      value={lineQuantities[line.id] ?? ""}
+                      onChange={(event) =>
+                        setLineQuantities((current) => ({
+                          ...current,
+                          [line.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </ControlField>
+                  <SubmitButton
+                    type="button"
+                    isSubmitting={
+                      splitMutation.isPending &&
+                      splitMutation.variables?.lineId === line.id
                     }
-                  />
-                  <Button
                     size="sm"
                     variant="outline"
                     disabled={
@@ -659,8 +723,13 @@ export function ServiceJobWorkspace({
                     }}
                   >
                     Split
-                  </Button>
-                  <Button
+                  </SubmitButton>
+                  <SubmitButton
+                    type="button"
+                    isSubmitting={
+                      reworkMutation.isPending &&
+                      reworkMutation.variables?.lineId === line.id
+                    }
                     size="sm"
                     variant="outline"
                     disabled={
@@ -680,12 +749,14 @@ export function ServiceJobWorkspace({
                     }}
                   >
                     Rework
-                  </Button>
+                  </SubmitButton>
                 </div>
               </div>
             ))}
           </div>
-          <Button
+          <SubmitButton
+            type="button"
+            isSubmitting={trackingMutation.isPending}
             variant="outline"
             disabled={trackingMutation.isPending}
             onClick={() =>
@@ -696,34 +767,37 @@ export function ServiceJobWorkspace({
             }
           >
             Create customer tracking link
-          </Button>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Customer update</span>
-            <textarea
-              className={areaClass}
+          </SubmitButton>
+          <ControlField label={<>Customer update</>}>
+            <Textarea
               value={customerMessage}
               onChange={(event) => setCustomerMessage(event.target.value)}
             />
-          </label>
+          </ControlField>
           <div className="grid gap-2 sm:grid-cols-2">
-            <select
-              className={fieldClass}
-              value={messageChannel}
-              onChange={(event) =>
-                setMessageChannel(event.target.value as typeof messageChannel)
-              }
-            >
-              <option value="whatsapp">WhatsApp</option>
-              <option value="sms">SMS</option>
-            </select>
-            <input
-              type="datetime-local"
-              className={fieldClass}
-              value={messageSchedule}
-              onChange={(event) => setMessageSchedule(event.target.value)}
-            />
+            <ControlField label="Message channel">
+              <SelectControl
+                value={messageChannel}
+                onValueChange={(value) =>
+                  setMessageChannel(value as typeof messageChannel)
+                }
+                options={[
+                  { value: "whatsapp", label: <>WhatsApp</> },
+                  { value: "sms", label: <>SMS</> },
+                ]}
+              />
+            </ControlField>
+            <ControlField label="Schedule for (optional)">
+              <DateControl
+                type="datetime-local"
+                value={messageSchedule}
+                onValueChange={(value) => setMessageSchedule(value)}
+              />
+            </ControlField>
           </div>
-          <Button
+          <SubmitButton
+            type="button"
+            isSubmitting={messageMutation.isPending}
             variant="outline"
             disabled={!customerMessage.trim() || messageMutation.isPending}
             onClick={() =>
@@ -741,7 +815,7 @@ export function ServiceJobWorkspace({
             }
           >
             {messageSchedule ? "Schedule customer update" : "Send update"}
-          </Button>
+          </SubmitButton>
         </section>
       ) : null}
     </div>

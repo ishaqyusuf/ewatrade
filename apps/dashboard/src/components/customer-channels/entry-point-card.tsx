@@ -47,7 +47,7 @@ export function EntryPointCard({
   }
 
   return (
-    <section className="grid gap-5 rounded-xl border border-border bg-card p-5 lg:grid-cols-[1fr_auto]">
+    <section className="grid gap-5 rounded-none border border-border bg-card p-5 lg:grid-cols-[1fr_auto]">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Publish
@@ -79,7 +79,7 @@ export function EntryPointCard({
         {published && url ? (
           <div className="mt-5 grid gap-3">
             <a
-              className="break-all rounded-lg bg-muted px-4 py-3 text-sm text-primary underline"
+              className="break-all rounded-none bg-muted px-4 py-3 text-sm text-primary underline"
               href={url}
               rel="noreferrer"
               target="_blank"
@@ -87,7 +87,11 @@ export function EntryPointCard({
               {url}
             </a>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void copy()} type="button">
+              <Button
+                onClick={() => void copy()}
+                type="button"
+                appearance="form"
+              >
                 {copied ? "Copied" : "Copy link"}
               </Button>
               <Button
@@ -95,6 +99,7 @@ export function EntryPointCard({
                 onClick={onRevoke}
                 type="button"
                 variant="outline"
+                appearance="form"
               >
                 Revoke link
               </Button>
@@ -106,6 +111,7 @@ export function EntryPointCard({
             disabled={!canManage || isPending}
             onClick={onPublish}
             type="button"
+            appearance="form"
           >
             {isPending ? "Publishing…" : "Publish customer entry point"}
           </Button>

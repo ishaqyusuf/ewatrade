@@ -1,39 +1,43 @@
 "use client"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
-
+import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
+import { Sheet, type SheetContent } from "@ewatrade/ui"
+import type { ComponentProps } from "react"
 import { CatalogItemContent } from "./catalog-item-content"
 import { CatalogItemFormProvider } from "./form-context"
 
 type CatalogItemSheetProps = {
+  finalFocus?: ComponentProps<typeof SheetContent>["finalFocus"]
+  allowKindChange?: boolean
+  businessProfileKey?: string | null
   currencyCode: string
   onCreated: (name: string) => void
   storeId: string
 }
 
-export function CatalogItemSheet({
-  currencyCode,
-  onCreated,
-  storeId,
-}: CatalogItemSheetProps) {
-  const { catalogItemMode, setCatalogItemMode } = useCatalogItemParams()
+export function CatalogItemSheet(props: CatalogItemSheetProps) {
+  const { catalogItemMode, catalogCreateKind, setCatalogItemMode } =
+    useCatalogItemParams()
   const open = catalogItemMode === "create"
-
+  const { closeError, requestClose } = useSheetDismissal(() =>
+    setCatalogItemMode(null),
+  )
   return (
-    <DashboardSheet
+    <Sheet
       open={open}
-      onClose={() => setCatalogItemMode(null)}
-      title="Add item"
-      description="Start with the essentials."
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) void requestClose()
+      }}
     >
-      <CatalogItemFormProvider key={open ? "open" : "closed"}>
-        <CatalogItemContent
-          currencyCode={currencyCode}
-          onCreated={onCreated}
-          storeId={storeId}
-        />
-      </CatalogItemFormProvider>
-    </DashboardSheet>
+      {open ? (
+        <CatalogItemFormProvider
+          key={props.storeId}
+          initialKind={catalogCreateKind}
+        >
+          <CatalogItemContent {...props} closeError={closeError} />
+        </CatalogItemFormProvider>
+      ) : null}
+    </Sheet>
   )
 }

@@ -19,6 +19,8 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   inputClassName?: string
   label: string
   leadingIcon?: IconKeys
+  leadingActionLabel?: string
+  onLeadingActionPress?: () => void
   leadingText?: string
   onActionPress?: () => void
   trailingIcon?: IconKeys
@@ -33,6 +35,8 @@ export function FormField({
   inputClassName,
   label,
   leadingIcon,
+  leadingActionLabel,
+  onLeadingActionPress,
   leadingText,
   onBlur,
   onFocus,
@@ -178,7 +182,20 @@ export function FormField({
         }}
       >
         {leadingIcon ? (
-          <Icon className={iconClassName} name={leadingIcon} />
+          onLeadingActionPress && leadingActionLabel ? (
+            <Pressable
+              accessibilityLabel={leadingActionLabel}
+              accessibilityRole="button"
+              className="min-h-11 min-w-11 items-center justify-center rounded-full active:bg-accent"
+              disabled={inputProps.editable === false}
+              haptic
+              onPress={onLeadingActionPress}
+            >
+              <Icon className={iconClassName} name={leadingIcon} />
+            </Pressable>
+          ) : (
+            <Icon className={iconClassName} name={leadingIcon} />
+          )
         ) : leadingText ? (
           <Text className={cn("font-semibold", iconClassName)}>
             {leadingText}

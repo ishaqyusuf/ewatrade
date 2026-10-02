@@ -1,4 +1,6 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { Button, ControlField, SelectControl } from "@ewatrade/ui"
 
 import { usePrescriptionReportParams } from "@/hooks/use-prescription-report-params"
 import { useTRPC } from "@/trpc/client"
@@ -15,7 +17,11 @@ export function PrescriptionReport({
   to: Date
 }) {
   const trpc = useTRPC()
-  const { setStoreId, storeId } = usePrescriptionReportParams()
+  const { setStoreId, storeId: requestedStoreId } =
+    usePrescriptionReportParams()
+  const storeId = stores.some((store) => store.id === requestedStoreId)
+    ? requestedStoreId
+    : null
   const report = useQuery(
     trpc.prescriptions.report.queryOptions({ from, storeId, to }),
   )
@@ -25,16 +31,18 @@ export function PrescriptionReport({
   if (report.isError) {
     return (
       <div className="grid gap-3">
-        <p role="alert" className="text-sm text-destructive">
+        <FormFeedback appearance="dashboard">
           {report.error.message}
-        </p>
-        <button
-          className="h-10 w-fit rounded-lg border border-border bg-background px-3 text-sm font-medium"
+        </FormFeedback>
+        <Button
+          appearance="form"
+          className="w-fit"
+          variant="outline"
           onClick={() => report.refetch()}
           type="button"
         >
           Retry report
-        </button>
+        </Button>
       </div>
     )
   }
@@ -58,21 +66,19 @@ export function PrescriptionReport({
   ]
   return (
     <div className="grid gap-6">
-      <label className="grid max-w-sm gap-1 text-sm">
-        Reporting scope
-        <select
-          className="h-10 rounded-lg border border-border bg-background px-3"
+      <ControlField label={<>Reporting scope</>}>
+        <SelectControl
           value={storeId ?? ""}
-          onChange={(event) => setStoreId(event.target.value || null)}
-        >
-          <option value="">All tenant stores</option>
-          {stores.map((store) => (
-            <option key={store.id} value={store.id}>
-              {store.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          onValueChange={(value) => setStoreId(value || null)}
+          options={[
+            { value: "", label: <>All tenant stores</> },
+            ...(stores.map((store) => ({
+              value: store.id,
+              label: store.name,
+            })) ?? []),
+          ]}
+        />
+      </ControlField>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map(([label, value]) => (
           <div className="border border-border bg-card p-5" key={String(label)}>

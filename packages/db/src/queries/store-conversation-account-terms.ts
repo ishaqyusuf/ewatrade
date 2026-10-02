@@ -1,4 +1,8 @@
-import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
+import {
+  type LegalRuntimeEnvironment,
+  currentEffectiveLegalPublication,
+  isLegalTestingEnvironment,
+} from "@ewatrade/utils/legal-approval"
 
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import { StoreConversationError } from "./store-conversations-core"
@@ -12,7 +16,9 @@ export async function assertAccountStoreConversationTermsAccepted(
   db: DbClient,
   userId: string,
   publication: EffectivePublication | null = currentEffectiveLegalPublication(),
+  env: LegalRuntimeEnvironment = process.env,
 ) {
+  if (isLegalTestingEnvironment(env)) return
   if (!publication) {
     throw new StoreConversationError(
       "NOT_READY",

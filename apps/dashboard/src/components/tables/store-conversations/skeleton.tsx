@@ -1,8 +1,23 @@
-export function StoreConversationTableSkeleton() {
+"use client"
+
+import { TableSkeleton } from "@/components/tables/core"
+import type { TableSettings } from "@/utils/table-settings"
+import { createStoreConversationColumns } from "./columns"
+
+export function StoreConversationTableSkeleton({
+  initialSettings,
+}: {
+  initialSettings?: Partial<TableSettings>
+}) {
   return (
-    <div
-      aria-label="Loading conversations"
-      className="h-72 animate-pulse rounded-xl bg-muted"
+    <TableSkeleton
+      columns={createStoreConversationColumns("UTC", () => {})}
+      rowCount={6}
+      rowHeight={57}
+      stickyColumnIds={["conversation"]}
+      columnVisibility={initialSettings?.columns}
+      columnSizing={initialSettings?.sizing}
+      columnOrder={initialSettings?.order}
     />
   )
 }

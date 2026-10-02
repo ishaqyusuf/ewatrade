@@ -1,0 +1,82 @@
+[
+  {
+    "check": "Add item advances to unfinished catalog",
+    "pass": true,
+    "evidence": "interaction-01-unfinished"
+  },
+  {
+    "check": "Complete catalog advances to first-order guidance",
+    "pass": true,
+    "evidence": "interaction-02-ready"
+  },
+  {
+    "check": "Order creation exits essential setup",
+    "pass": true,
+    "evidence": "interaction-03-first-order"
+  },
+  {
+    "check": "Optional solo control reachable",
+    "pass": true,
+    "evidence": "interaction-04-team-prompt"
+  },
+  {
+    "check": "Saved solo hides optional nudge",
+    "pass": true,
+    "evidence": "interaction-05-solo"
+  },
+  {
+    "check": "Solo choice survives app cold start",
+    "pass": true,
+    "evidence": "interaction-06-solo-cold-start"
+  },
+  {
+    "check": "Solo preference isolated: account-b",
+    "pass": true,
+    "evidence": "interaction-07-scope-account-b"
+  },
+  {
+    "check": "Solo preference isolated: business-b",
+    "pass": true,
+    "evidence": "interaction-07-scope-business-b"
+  },
+  {
+    "check": "Solo preference isolated: store-b",
+    "pass": true,
+    "evidence": "interaction-07-scope-store-b"
+  },
+  {
+    "check": "Invite action enters pending acknowledgement",
+    "pass": true,
+    "evidence": "interaction-08-pending"
+  },
+  {
+    "check": "Member joining removes pending acknowledgement",
+    "pass": true,
+    "evidence": "interaction-09-active"
+  },
+  {
+    "check": "Recovery action renders available Home",
+    "pass": true,
+    "evidence": "interaction-10-retry"
+  },
+  {
+    "check": "Reachable distinct state: returning-empty",
+    "pass": true,
+    "evidence": "interaction-11-returning-empty"
+  },
+  {
+    "check": "Reachable distinct state: queued",
+    "pass": true,
+    "evidence": "interaction-11-queued"
+  },
+  {
+    "check": "Reachable distinct state: orders-unavailable",
+    "pass": true,
+    "evidence": "interaction-11-orders-unavailable"
+  },
+  {
+    "check": "Reachable distinct state: invitation-pending",
+    "pass": true,
+    "evidence": "interaction-11-invitation-pending"
+  }
+]

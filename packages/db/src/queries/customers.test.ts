@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
 
-import { ensureOrderCustomerInTransaction } from "./customers"
+import {
+  ensureOrderCustomerInTransaction,
+  listCustomerOrderDirectory,
+} from "./customers"
 import type { DbClient } from "./types"
 
 function createMockDb(existing: unknown = null) {
@@ -35,6 +38,72 @@ function createMockDb(existing: unknown = null) {
 }
 
 describe("Order customer directory projection", () => {
+  test("loads an unbounded, store-scoped aggregate and maps its last order", async () => {
+    const queryCalls: unknown[] = []
+    const timestamp = new Date("2026-07-24T10:00:00.000Z")
+    const db = {
+      $queryRaw: async (query: unknown) => {
+        queryCalls.push(query)
+        return [
+          {
+            email: "ada@example.com",
+            firstSeenAt: new Date("2026-01-01T10:00:00.000Z"),
+            id: "08000000000",
+            identityType: "phone",
+            lastOrderCreatedAt: timestamp,
+            lastOrderNumber: "ORD-2",
+            lastOrderPaymentStatus: "PAID",
+            lastOrderStatus: "COMPLETED",
+            lastOrderTotalMinor: 2500,
+            lastSeenAt: timestamp,
+            name: "Ada Okafor",
+            orderCount: 2,
+            phone: "0800 000 0000",
+            totalMinor: "9007199254740993",
+          },
+        ]
+      },
+    }
+
+    const result = await listCustomerOrderDirectory(
+      db as unknown as Parameters<typeof listCustomerOrderDirectory>[0],
+      {
+        query: "ada",
+        storeId: "store_123",
+        tenantId: "tenant_123",
+      },
+    )
+
+    expect(queryCalls).toHaveLength(1)
+    const queryValues = (queryCalls[0] as { values: unknown[] }).values
+    expect(queryValues).toContain("tenant_123")
+    expect(queryValues).toContain("store_123")
+    expect(queryValues).toContain("%ada%")
+    const querySql = (queryCalls[0] as { sql: string }).sql
+    expect(querySql).toContain('SUM("totalMinor")::text')
+    expect(querySql).not.toContain('SUM("totalMinor")::integer')
+    expect(result).toEqual([
+      {
+        email: "ada@example.com",
+        firstSeenAt: new Date("2026-01-01T10:00:00.000Z"),
+        id: "08000000000",
+        identityType: "phone",
+        lastOrder: {
+          createdAt: timestamp,
+          orderNumber: "ORD-2",
+          paymentStatus: "PAID",
+          status: "COMPLETED",
+          totalMinor: 2500,
+        },
+        lastSeenAt: timestamp,
+        name: "Ada Okafor",
+        orderCount: 2,
+        phone: "0800 000 0000",
+        totalMinor: "9007199254740993",
+      },
+    ])
+  })
+
   test("creates a normalized tenant customer from Order facts", async () => {
     const db = createMockDb()
 

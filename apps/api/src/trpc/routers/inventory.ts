@@ -5,6 +5,7 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import { StockOperationType } from "@ewatrade/db/enums"
+import { FinanceError } from "@ewatrade/db/queries"
 import {
   CatalogError,
   commitCatalogStockReservation,
@@ -20,6 +21,7 @@ import {
   getStockOperationAudit,
   listInventoryBalanceReport,
   listInventoryOperationHistory,
+  listStockOperationCategoryNames,
   listStockTransfers,
   moveInventoryCustody,
   postSingleBalanceStockOperation,
@@ -33,6 +35,7 @@ import { TRPCError } from "@trpc/server"
 import {
   inventoryAuditExportSchema,
   inventoryBalanceReportSchema,
+  inventoryCategorySuggestionsSchema,
   inventoryCommitReservationSchema,
   inventoryCorrectOperationSchema,
   inventoryCreateCloseoutSchema,
@@ -99,7 +102,21 @@ function resolveStoreId(
   return storeId
 }
 
-function inventoryError(error: CatalogError) {
+function inventoryError(error: CatalogError | FinanceError) {
+  if (error instanceof FinanceError) {
+    return new TRPCError({
+      cause: error,
+      code:
+        error.code === "FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "NOT_FOUND"
+            ? "NOT_FOUND"
+            : error.code === "CONFLICT" || error.code === "CLOSED_PERIOD"
+              ? "CONFLICT"
+              : "BAD_REQUEST",
+      message: error.message,
+    })
+  }
   if (
     error.code === "CATALOG_ITEM_NOT_FOUND" ||
     error.code === "CATALOG_OFFERING_NOT_FOUND" ||
@@ -134,6 +151,16 @@ function inventoryError(error: CatalogError) {
 }
 
 export const inventoryRouter = createTRPCRouter({
+  categorySuggestions: protectedProcedure
+    .input(inventoryCategorySuggestionsSchema)
+    .query(({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext.membership.role)
+      return listStockOperationCategoryNames(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
   transfers: protectedProcedure
     .input(inventoryListTransfersSchema)
     .query(({ ctx, input }) => {
@@ -209,7 +236,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -225,7 +253,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -247,7 +276,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -272,7 +302,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -288,7 +319,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -304,7 +336,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -320,7 +353,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -341,7 +375,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -357,7 +392,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -379,7 +415,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -394,7 +431,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -415,7 +453,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -437,7 +476,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),
@@ -453,7 +493,8 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw inventoryError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
         throw error
       }
     }),

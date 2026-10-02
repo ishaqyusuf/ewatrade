@@ -1,3 +1,9 @@
+import {
+  type LegalRuntimeEnvironment,
+  isLegalTestingEnvironment,
+  isSignupAvailableForLegalPublication,
+} from "@ewatrade/utils/legal-approval"
+
 export type SignupLegalInput = {
   legalVersion?: string
   acceptedTerms?: true
@@ -13,8 +19,9 @@ export type LegalPublicationSnapshot = {
 export function resolveSignupLegalAcceptance(
   input: SignupLegalInput,
   publication: LegalPublicationSnapshot,
-  env: { APP_ENV?: string; NODE_ENV?: string } = process.env,
+  env: LegalRuntimeEnvironment = process.env,
 ) {
+  if (isLegalTestingEnvironment(env)) return null
   if (!publication.approved) {
     if (!isSignupAvailableForLegalPublication(false, env))
       throw new Error(
@@ -41,4 +48,3 @@ export function resolveSignupLegalAcceptance(
     documentHash: publication.documentHash,
   }
 }
-import { isSignupAvailableForLegalPublication } from "@ewatrade/utils/legal-approval"

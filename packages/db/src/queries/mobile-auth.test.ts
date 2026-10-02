@@ -687,6 +687,35 @@ describe("mobile auth queries", () => {
     },
   )
 
+  test("QA owners create suffixed business names without claiming ordinary slugs", async () => {
+    const previousRoutes = process.env.EMAIL_QA_DOMAIN_ROUTES
+    process.env.EMAIL_QA_DOMAIN_ROUTES =
+      '{"ishaq.qa.test":"tester@example.com"}'
+    try {
+      const db = createMockMobileAuthDb({
+        users: [
+          {
+            ageBand: "ADULT",
+            email: "owner@ishaq.qa.test",
+            id: "qa_owner",
+            name: "QA Owner",
+          },
+        ],
+      })
+      const business = await createOwnerBusiness(db.client, {
+        businessName: "Hello",
+        currencyCode: "NGN",
+        userId: "qa_owner",
+      })
+      expect(business.slug).toBe("hello-qa")
+      expect(db.tenants.map((tenant) => tenant.slug)).not.toContain("hello")
+    } finally {
+      if (previousRoutes === undefined)
+        Reflect.deleteProperty(process.env, "EMAIL_QA_DOMAIN_ROUTES")
+      else process.env.EMAIL_QA_DOMAIN_ROUTES = previousRoutes
+    }
+  })
+
   test("does not create a business for an undeclared account", async () => {
     const db = createMockMobileAuthDb({
       users: [

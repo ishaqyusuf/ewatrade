@@ -24,7 +24,7 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
 
   return (
     <div className="grid gap-4">
-      <dl className="grid gap-5 rounded-xl border border-border p-5 text-sm">
+      <dl className="grid gap-5 border border-border p-5 text-sm">
         <div>
           <dt className="text-muted-foreground">Domain</dt>
           <dd className="mt-1 text-base font-semibold">{domain.hostname}</dd>
@@ -78,6 +78,7 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
         {(domain.status === "FAILED" ||
           domain.status === "OWNERSHIP_PENDING") && (
           <Button
+            appearance="form"
             disabled={retry.isPending}
             variant="outline"
             onClick={() => retry.mutate({ connectionId: domain.id })}
@@ -86,6 +87,7 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
           </Button>
         )}
         <Button
+          appearance="form"
           variant="outline"
           onClick={() =>
             navigator.clipboard.writeText(`https://${domain.hostname}`)

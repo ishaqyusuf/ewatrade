@@ -200,7 +200,7 @@ export function ConversationAttachment({
       ) : grantUsable && grant ? (
         <object
           aria-label={`Authorized private ${attachment.label.toLowerCase()}`}
-          className="h-80 w-full rounded-lg border bg-muted/30"
+          className="h-80 w-full rounded-none border bg-muted/30"
           data={grant.url}
           onError={() => setLoadFailed(true)}
         >

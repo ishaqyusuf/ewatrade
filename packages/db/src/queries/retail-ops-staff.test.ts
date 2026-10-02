@@ -254,7 +254,10 @@ function createMockStaffTokenDb(input?: {
   }
 }
 
-function createMockStaffOnboardingDb(ageBand = "ADULT") {
+function createMockStaffOnboardingDb(
+  ageBand = "ADULT",
+  invitation?: { status?: string; expiresAt?: Date; role?: string },
+) {
   const calls: StaffCall[] = []
   const invitedMembership = createInvitedMembership()
   invitedMembership.user.ageBand = ageBand
@@ -289,6 +292,22 @@ function createMockStaffOnboardingDb(ageBand = "ADULT") {
       },
     },
     retailOpsStaffInviteToken: {
+      findUnique: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "retailOpsStaffInviteToken.findUnique", where })
+        return {
+          email: invitedMembership.user.email,
+          expiresAt: invitation?.expiresAt ?? new Date(Date.now() + 86400000),
+          id: "invite_token_123",
+          membershipId: invitedMembership.id,
+          role: invitation?.role ?? "CASHIER",
+          status: invitation?.status ?? "ACTIVE",
+          tenant: invitedMembership.tenant,
+        }
+      },
+      update: async ({ data, where }: { data: unknown; where: unknown }) => {
+        calls.push({ data, kind: "retailOpsStaffInviteToken.update", where })
+        return { id: "invite_token_123" }
+      },
       updateMany: async ({
         data,
         where,
@@ -611,4 +630,51 @@ describe("retail ops staff queries", () => {
       false,
     )
   })
+
+  test("web acceptance rechecks token and binds the exact membership transactionally", async () => {
+    const db = createMockStaffOnboardingDb()
+    await completeRetailOpsStaffOnboarding(db.client, {
+      userId: "user_staff",
+      tenantSlug: "rice-store",
+      inviteToken: "fixture-token",
+    })
+    expect(getCall(db.calls, "membership.findMany")).toMatchObject({
+      where: {
+        id: "membership_staff",
+        userId: "user_staff",
+        tenant: { slug: "rice-store", isActive: true },
+      },
+    })
+    expect(getCall(db.calls, "membership.update")).toMatchObject({
+      where: {
+        id: "membership_staff",
+        status: "INVITED",
+        role: "CASHIER",
+        tenant: { isActive: true },
+      },
+    })
+  })
+
+  test.each([
+    { status: "REVOKED" },
+    { status: "ACCEPTED" },
+    { expiresAt: new Date(0) },
+    { role: "MANAGER" },
+  ])(
+    "web acceptance refuses changed or expired token %# before activation",
+    async (invitation) => {
+      const db = createMockStaffOnboardingDb("ADULT", invitation)
+      await expect(
+        completeRetailOpsStaffOnboarding(db.client, {
+          userId: "user_staff",
+          tenantSlug: "rice-store",
+          inviteToken: "fixture-token",
+        }),
+      ).rejects.toThrow()
+      expect(db.calls.some((call) => call.kind === "membership.update")).toBe(
+        false,
+      )
+      expect(db.calls.some((call) => call.kind === "user.update")).toBe(false)
+    },
+  )
 })

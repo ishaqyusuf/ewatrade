@@ -19,7 +19,6 @@ export function QaAuthorizationSheet() {
   const segments = useSegments()
   const modal = useModal()
   const [qaDomain, setQaDomain] = useState(qa.authorization?.qaDomain ?? "")
-  const [credential, setCredential] = useState("")
   const appVariant = getAppVariant()
   const modeLabel =
     appVariant === "preview"
@@ -83,10 +82,9 @@ export function QaAuthorizationSheet() {
 
   const submit = useCallback(() => {
     const normalizedDomain = qaDomain.trim().toLowerCase()
-    if (!normalizedDomain || !credential.trim()) return
-    qa.authorize({ credential: credential.trim(), qaDomain: normalizedDomain })
-    setCredential("")
-  }, [credential, qa, qaDomain])
+    if (!normalizedDomain) return
+    qa.authorize({ qaDomain: normalizedDomain })
+  }, [qa, qaDomain])
 
   if (!qa.clientEnabled || !isBusinessShell) return null
 
@@ -175,7 +173,7 @@ export function QaAuthorizationSheet() {
             <View className="gap-3">
               <StatusBanner
                 icon="TriangleAlert"
-                message="This preview server has not enabled the QA accelerator. Update its QA configuration, then retry."
+                message={`This ${modeNoun} has not enabled the QA accelerator. Update its QA configuration, then retry.`}
                 title="QA access is not configured"
                 tone="warning"
               />
@@ -205,37 +203,26 @@ export function QaAuthorizationSheet() {
                   label="QA domain"
                   leadingIcon="Globe"
                   onChangeText={setQaDomain}
-                  placeholder="ishack.qa.test"
+                  placeholder="Enter your QA domain"
                   value={qaDomain}
-                />
-                <FormField
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  label="Tester credential"
-                  leadingIcon="Lock"
-                  onChangeText={setCredential}
-                  placeholder="Enter tester credential"
-                  secureTextEntry
-                  value={credential}
                 />
               </View>
               <View className="flex-row items-start gap-2 rounded-2xl bg-muted/70 px-3.5 py-3">
                 <Text className="text-xs text-muted-foreground">◆</Text>
                 <View className="min-w-0 flex-1 gap-0.5">
                   <Text className="text-xs font-bold text-foreground">
-                    Protected access.
+                    QA businesses only.
                   </Text>
                   <Text className="text-xs leading-5 text-muted-foreground">
-                    The domain is only a scope; the credential authorizes it.
+                    Choose an account from the QA businesses registered to this
+                    domain.
                   </Text>
                 </View>
               </View>
               <Button
                 accessibilityLabel="Load QA businesses"
                 className="h-12 rounded-2xl"
-                disabled={
-                  !qaDomain.trim() || !credential.trim() || qa.isAuthorizing
-                }
+                disabled={!qaDomain.trim() || qa.isAuthorizing}
                 onPress={submit}
               >
                 <Text>

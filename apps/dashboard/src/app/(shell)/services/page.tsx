@@ -1,34 +1,45 @@
 import { ServiceJobsPage } from "@/components/dashboard/service-jobs-page"
 import { ServiceWorkTableSkeleton } from "@/components/tables/service-work/skeleton"
 import {
+  getTableSort,
+  loadSortParams,
+  serviceWorkSortFields,
+} from "@/hooks/sort-params"
+import {
+  getServiceWorkQueuePageInput,
+  loadServiceWorkFilterParams,
+} from "@/hooks/use-service-work-filter-params"
+import {
   canManageSalesReports,
   canUseSalesOperations,
 } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
-import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
+import { getInitialTableSettings } from "@/utils/columns"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
-
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 
 export const metadata: Metadata = {
   title: "Service Work | EwaTrade",
 }
 
-export default async function ServicesRoutePage() {
+export default async function ServicesRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await getServerSession()
 
   if (!session) {
-    redirect(`${MARKETING_URL}/login`)
+    redirect("/login")
   }
 
   const ctx = await getActiveTenant(session.user.id)
 
   if (!ctx) {
-    redirect(`${MARKETING_URL}/login?error=no_tenant`)
+    redirect("/login?error=no_tenant")
   }
 
   if (!canUseSalesOperations(ctx.membership.role)) {
@@ -40,11 +51,30 @@ export default async function ServicesRoutePage() {
   if (!store) {
     redirect("/setup")
   }
+  const params = await searchParams
+  const filter = await loadServiceWorkFilterParams(params)
+  const sort = getTableSort(
+    (await loadSortParams(params)).sort,
+    serviceWorkSortFields,
+  )
+  const initialSettings = await getInitialTableSettings("service-work", {
+    userId: session.user.id,
+    tenantId: ctx.tenant.id,
+  })
+  const queryClient = getQueryClient()
   const canManage = canManageSalesReports(ctx.membership.role)
-  await Promise.allSettled([
-    prefetch(trpc.catalog.listItems.queryOptions({ kind: "service" })),
-    prefetch(
-      trpc.services.queue.queryOptions({ limit: 200, storeId: store.id }),
+  void Promise.allSettled([
+    ...(params.serviceSheet === "intake" || params.serviceSheet === "request"
+      ? [prefetch(trpc.catalog.listItems.queryOptions({ kind: "service" }))]
+      : []),
+    queryClient.prefetchInfiniteQuery(
+      trpc.services.queuePage.infiniteQueryOptions(
+        { ...getServiceWorkQueuePageInput(filter), storeId: store.id, sort },
+        {
+          getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+          retry: false,
+        },
+      ),
     ),
     ...(canManage
       ? [
@@ -63,8 +93,16 @@ export default async function ServicesRoutePage() {
 
   return (
     <HydrateClient>
-      <Suspense fallback={<ServiceWorkTableSkeleton />}>
+      <Suspense
+        fallback={
+          <ServiceWorkTableSkeleton
+            initialSettings={initialSettings}
+            canManage={canManage}
+          />
+        }
+      >
         <ServiceJobsPage
+          initialSettings={initialSettings}
           canManage={canManage}
           timeZone={ctx.tenant.timezone}
           store={{

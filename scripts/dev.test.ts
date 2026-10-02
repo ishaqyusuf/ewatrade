@@ -9,8 +9,13 @@ describe("dev script profile router", () => {
       "node",
       "./scripts/with-workspace-env.mjs",
       "DEV_PROFILE=local",
+      "EWATRADE_ENV_MODE=local",
       "bun",
-      "scripts/dev-run.ts",
+      "--env-file=/dev/null",
+      "../local-infra-kit/bin/dev-run.ts",
+      "--profile",
+      "ewatrade",
+      "--",
     ])
   })
 
@@ -26,8 +31,13 @@ describe("dev script profile router", () => {
       "./scripts/with-workspace-env.mjs",
       "APP_ENV=dev",
       "DEV_PROFILE=dev",
+      "EWATRADE_ENV_MODE=dev",
       "bun",
-      "scripts/dev-run.ts",
+      "--env-file=/dev/null",
+      "../local-infra-kit/bin/dev-run.ts",
+      "--profile",
+      "ewatrade",
+      "--",
     ])
   })
 
@@ -38,8 +48,13 @@ describe("dev script profile router", () => {
       "./scripts/with-workspace-env.mjs",
       "APP_ENV=preview",
       "DEV_PROFILE=preview",
+      "EWATRADE_ENV_MODE=preview",
       "bun",
-      "scripts/dev-run.ts",
+      "--env-file=/dev/null",
+      "../local-infra-kit/bin/dev-run.ts",
+      "--profile",
+      "ewatrade",
+      "--",
     ])
   })
 
@@ -60,6 +75,22 @@ describe("dev script profile router", () => {
     expect(() => parseArgs(["--local", "--preview"])).toThrow(
       "Conflicting dev flags",
     )
+  })
+
+  test("passes arguments after -- to the shared Turbo launcher", () => {
+    const options = parseArgs(["--preview", "-f", "api", "--", "--ui=stream"])
+    expect(options.passthroughArgs).toEqual(["--ui=stream"])
+    expect(
+      commandForProfile(
+        options.profile,
+        options.filters,
+        options.passthroughArgs,
+      ).slice(-3),
+    ).toEqual(["--filter", "@ewatrade/api", "--ui=stream"])
+  })
+
+  test("rejects GND-only Redis flags instead of silently ignoring them", () => {
+    expect(() => parseArgs(["--redis-local"])).toThrow("does not support Redis")
   })
 
   test("passes exact monorepo package filters through", () => {
@@ -84,8 +115,13 @@ describe("dev script profile router", () => {
       "node",
       "./scripts/with-workspace-env.mjs",
       "DEV_PROFILE=local",
+      "EWATRADE_ENV_MODE=local",
       "bun",
-      "scripts/dev-run.ts",
+      "--env-file=/dev/null",
+      "../local-infra-kit/bin/dev-run.ts",
+      "--profile",
+      "ewatrade",
+      "--",
       "--filter",
       "@ewatrade/marketing",
       "--filter",
@@ -148,6 +184,46 @@ describe("dev script profile router", () => {
         targets: ["@ewatrade/api", "@ewatrade/jobs", "!@ewatrade/mobile"],
       },
     })
+  })
+
+  test("includes the API when the actual mobile dev stack omits it", () => {
+    const options = parseArgs([
+      "--f",
+      "dashboard",
+      "marketing",
+      "jobs",
+      "email",
+      "mobile",
+    ])
+
+    expect(options.filters?.targets).toEqual([
+      "@ewatrade/dashboard",
+      "@ewatrade/marketing",
+      "@ewatrade/jobs",
+      "@ewatrade/email",
+      "@ewatrade/mobile",
+      "@ewatrade/api",
+    ])
+    expect(
+      commandForProfile(options.profile, options.filters).slice(-2),
+    ).toEqual(["--filter", "@ewatrade/api"])
+  })
+
+  test("does not duplicate an explicitly selected API", () => {
+    expect(parseArgs(["-f", "mobile", "api"]).filters?.targets).toEqual([
+      "@ewatrade/mobile",
+      "@ewatrade/api",
+    ])
+  })
+
+  test("respects an explicit API exclusion for mobile UI-only work", () => {
+    expect(parseArgs(["-f", "mobile", "api!"]).filters?.targets).toEqual([
+      "@ewatrade/mobile",
+      "!@ewatrade/api",
+    ])
+    expect(parseArgs(["-f", "mobile!"]).filters?.targets).toEqual([
+      "!@ewatrade/mobile",
+    ])
   })
 
   test("passes complex turbo selectors through without package validation", () => {

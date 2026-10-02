@@ -1,14 +1,12 @@
+import type { CatalogItemKind } from "@/components/mobile/catalog-setup/catalog-setup-model"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import type { CatalogFormGuidance } from "@ewatrade/utils/business-catalog-guidance"
 import { View } from "react-native"
-import {
-  getEmptyProductOptionHint,
-  type CatalogItemKind,
-} from "@/components/mobile/catalog-setup/catalog-setup-model"
 
 export function KindChoice({
   description,
@@ -276,8 +274,10 @@ export function ServiceWorkTrackingSwitch({
 }
 
 export function ServiceChoicesSectionHeader({
+  helperText,
   onAddOption,
 }: {
+  helperText: string
   onAddOption: () => void
 }) {
   const largeTextLayout = useLargeTextLayout()
@@ -292,9 +292,7 @@ export function ServiceChoicesSectionHeader({
         <Text className="text-lg font-extrabold text-foreground">
           Service choices
         </Text>
-        <Text className="text-xs text-muted-foreground">
-          Offer packages, turnaround times, visit types, or add-ons.
-        </Text>
+        <Text className="text-xs text-muted-foreground">{helperText}</Text>
       </View>
       <Pressable
         accessibilityLabel="Add option"
@@ -424,12 +422,14 @@ export function ToggleRow({
 }
 
 export function CatalogEssentialsFields({
+  guidance,
   currencyCode,
   defaultQuoteRequired,
   kind,
   multiplePriceOptions,
   name,
   onNameChange,
+  onNameBlur,
   onPriceChange,
   onUnitNameChange,
   price,
@@ -442,9 +442,11 @@ export function CatalogEssentialsFields({
   multiplePriceOptions: boolean
   name: string
   onNameChange: (value: string) => void
+  onNameBlur?: () => void
   onPriceChange: (value: string) => void
   onUnitNameChange: (value: string) => void
   price: string
+  guidance: CatalogFormGuidance
   showProductEssentials: boolean
   unitName: string
 }) {
@@ -457,11 +459,8 @@ export function CatalogEssentialsFields({
         label={kind === "product" ? "Product name" : "Service name"}
         maxLength={160}
         onChangeText={onNameChange}
-        placeholder={
-          kind === "product"
-            ? "e.g. Ankara tote bag"
-            : "e.g. Interior consultation"
-        }
+        onBlur={onNameBlur}
+        placeholder={guidance.name.placeholder}
         returnKeyType="next"
         value={name}
       />
@@ -470,10 +469,10 @@ export function CatalogEssentialsFields({
           <FormField
             autoCapitalize="words"
             containerClassName={largeTextLayout ? undefined : "min-w-0 flex-1"}
-            label="Stock unit"
+            label="Main unit"
             maxLength={80}
             onChangeText={onUnitNameChange}
-            placeholder="Piece, bag, kg"
+            placeholder={guidance.stockUnit?.placeholder}
             value={unitName}
           />
           <MoneyField
@@ -491,28 +490,26 @@ export function CatalogEssentialsFields({
             value={price}
           />
         </View>
-      ) : (
+      ) : !defaultQuoteRequired ? (
         <MoneyField
           currencyCode={currencyCode}
-          helper="Leave blank when the price depends on the job."
-          label={
-            defaultQuoteRequired
-              ? "Starting price (optional)"
-              : "Fixed price (optional)"
-          }
+          helper="Set the amount customers pay for this service. Choose Quote each job when the amount depends on the request."
+          label="Fixed price"
           onChangeValue={onPriceChange}
           placeholder="0.00"
           value={price}
         />
-      )}
+      ) : null}
     </>
   )
 }
 
 export function ProductOptionsSectionHeader({
+  helperText,
   hasOptions,
   onAddOption,
 }: {
+  helperText: string
   hasOptions: boolean
   onAddOption: () => void
 }) {
@@ -541,8 +538,7 @@ export function ProductOptionsSectionHeader({
               : "text-xs text-muted-foreground"
           }
         >
-          Add customer choices like Size or Color. Each combination can have its
-          own price.
+          {helperText}
         </Text>
       </View>
       {hasOptions ? (
@@ -568,8 +564,10 @@ export function ProductOptionsSectionHeader({
 }
 
 export function ProductFirstOptionAction({
+  helperText,
   onPress,
 }: {
+  helperText: string
   onPress: () => void
 }) {
   const largeTextLayout = useLargeTextLayout()
@@ -600,7 +598,7 @@ export function ProductFirstOptionAction({
             Add first option
           </Text>
           <Text className="text-xs leading-5 text-muted-foreground">
-            Start with Size, Color, Material, or your own name.
+            {helperText}
           </Text>
         </View>
         <Icon
@@ -623,9 +621,11 @@ export function ProductFirstOptionAction({
 }
 
 export function ProductFirstOptionValueAction({
+  helperText,
   groupName,
   onPress,
 }: {
+  helperText: string
   groupName: string
   onPress: () => void
 }) {
@@ -657,7 +657,7 @@ export function ProductFirstOptionValueAction({
             Add first {groupName || "option"} value
           </Text>
           <Text className="text-xs leading-5 text-muted-foreground">
-            {getEmptyProductOptionHint(groupName)}
+            {helperText}
           </Text>
         </View>
         <Icon

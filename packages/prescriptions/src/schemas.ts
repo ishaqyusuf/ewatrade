@@ -94,6 +94,19 @@ export const prescriptionStoreSettingsFields = {
   servicePolicy: z.string().trim().min(1).max(4_000),
 } as const
 
+export const prescriptionComplianceSettingsFormSchema = z
+  .object(prescriptionStoreSettingsFields)
+  .strict()
+  .omit({ deliveryEnabled: true, pickupEnabled: true })
+  .refine(
+    (value) =>
+      value.operatingHours.length === PRESCRIPTION_OPERATING_DAYS.length,
+    {
+      message: "Configure operating hours for all seven days.",
+      path: ["operatingHours"],
+    },
+  )
+
 export const prescriptionStoreSettingsFormSchema = z
   .object(prescriptionStoreSettingsFields)
   .strict()

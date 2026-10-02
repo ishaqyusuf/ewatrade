@@ -6,7 +6,6 @@ const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
 const MARKETING_URL =
   process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
-const LOGIN_URL = `${MARKETING_URL}/login`
 const BETTER_AUTH_SESSION_COOKIE_NAMES = [
   "better-auth.session_token",
   "__Secure-better-auth.session_token",
@@ -17,7 +16,7 @@ const BETTER_AUTH_SESSION_COOKIE_NAMES = [
  *
  * 1. Validates the hostname resolves to the dashboard surface.
  * 2. Enforces authentication: if no Better Auth session cookie is present,
- *    redirects to the marketing login page.
+ *    redirects to the dashboard login page.
  * 3. Sets tenant and path context headers for downstream route handlers.
  *
  * Note: Session validity is not checked here; it is a presence-only check.
@@ -31,7 +30,7 @@ export function middleware(request: NextRequest) {
   })
 
   // Non-dashboard hostnames redirect to marketing.
-  if (result.kind !== "tenant" || result.surface !== "dashboard") {
+  if (result.kind === "tenant" && result.surface !== "dashboard") {
     // Allow localhost through in dev
     if (!result.isLocalhost) {
       return NextResponse.redirect(new URL(MARKETING_URL))
@@ -43,9 +42,15 @@ export function middleware(request: NextRequest) {
     request.cookies.has(cookieName),
   )
 
-  if (!hasSessionCookie) {
-    const loginUrl = new URL(LOGIN_URL)
-    loginUrl.searchParams.set("next", request.nextUrl.pathname)
+  if (
+    !hasSessionCookie &&
+    !["/login", "/staff-onboarding"].includes(request.nextUrl.pathname)
+  ) {
+    const loginUrl = new URL("/login", request.nextUrl.origin)
+    loginUrl.searchParams.set(
+      "next",
+      request.nextUrl.pathname + request.nextUrl.search,
+    )
     return NextResponse.redirect(loginUrl)
   }
 

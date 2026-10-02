@@ -87,3 +87,99 @@ test("storage failures and disabled tracking never send or throw", async () => {
   }
   expect(sent).toBe(0)
 })
+
+test("native captures proof immutably, drops old-account queue and stops capture after expiry", async () => {
+  const batches: NativeBatch[] = []
+  let time = 1000
+  let fail = true
+  const client = createNativeAnalytics({
+    endpoint: "https://example.com",
+    enabled: true,
+    createId: () => crypto.randomUUID(),
+    now: () => new Date(time),
+    storage: undefined,
+    send: async (batch) => {
+      batches.push(structuredClone(batch))
+      if (fail) throw new Error("offline")
+    },
+  })
+  try {
+    client.init()
+    const context = {
+      identityKey: "first",
+      token: "proof-one",
+      expiresAt: 3000,
+    }
+    client.setContext(context)
+    client.trackPageView({ route: "/orders" })
+    await client.flush()
+    context.token = "changed"
+    await client.flush()
+    expect(batches[1]?.events[0]?.analyticsContext).toBe("proof-one")
+    client.setContext({
+      identityKey: "second",
+      token: "proof-two",
+      expiresAt: 3000,
+    })
+    fail = false
+    client.trackPageView({ route: "/orders" })
+    await client.flush()
+    expect(
+      batches[2]?.events.every(
+        (event) => event.analyticsContext === "proof-two",
+      ),
+    ).toBe(true)
+    time = 4000
+    client.trackPageView({ route: "/inventory" })
+    await client.flush()
+    expect(batches).toHaveLength(3)
+  } finally {
+    client.destroy()
+  }
+})
+
+test("native relaunch preserves same-account visitor and rotates for different persisted owner", async () => {
+  const values = new Map<string, string>()
+  const batches: NativeBatch[] = []
+  const create = () =>
+    createNativeAnalytics({
+      endpoint: "https://example.com",
+      enabled: true,
+      createId: () => crypto.randomUUID(),
+      storage: {
+        getItem: (key) => values.get(key) ?? null,
+        setItem: (key, value) => {
+          values.set(key, value)
+        },
+        removeItem: (key) => {
+          values.delete(key)
+        },
+      },
+      send: async (batch) => {
+        batches.push(batch)
+      },
+    })
+  const context = {
+    token: "proof",
+    identityKey: "account-one",
+    expiresAt: Date.now() + 60000,
+  }
+  for (const identityKey of ["account-one", "account-one", "account-two"]) {
+    const client = create()
+    try {
+      client.init()
+      client.setContext({ ...context, identityKey })
+      client.trackPageView({ route: "/orders" })
+      await client.flush()
+    } finally {
+      client.destroy()
+    }
+  }
+  expect(batches[1]?.events[0]?.visitorId).toBe(
+    batches[0]?.events[0]?.visitorId,
+  )
+  expect(batches[1]?.events.map((event) => event.name)).toEqual(["screen_view"])
+  expect(batches[2]?.events[0]?.visitorId).not.toBe(
+    batches[0]?.events[0]?.visitorId,
+  )
+})

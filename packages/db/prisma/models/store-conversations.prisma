@@ -710,20 +710,20 @@ model StoreConversation {
 /// A customer safety report is retained for human review. Details are bounded
 /// and never projected into Store conversation timelines or operator queues.
 model StoreConversationCustomerReport {
-  id                 String   @id @default(cuid())
-  tenantId           String
-  storeId            String
-  conversationId     String
-  messageId          String?
-  principalKind      String
-  principalId        String
-  clientOperationId  String
-  reason             String
-  details            String?
-  status             String   @default("OPEN")
-  createdAt          DateTime @default(now())
-  reviewedByUserId   String?
-  resolvedAt         DateTime?
+  id                String    @id @default(cuid())
+  tenantId          String
+  storeId           String
+  conversationId    String
+  messageId         String?
+  principalKind     String
+  principalId       String
+  clientOperationId String
+  reason            String
+  details           String?
+  status            String    @default("OPEN")
+  createdAt         DateTime  @default(now())
+  reviewedByUserId  String?
+  resolvedAt        DateTime?
 
   @@unique([conversationId, principalKind, principalId, clientOperationId])
   @@index([status, createdAt])
@@ -732,14 +732,14 @@ model StoreConversationCustomerReport {
 
 /// Replay receipt for the customer's separate block switch.
 model StoreConversationCustomerBlockCommand {
-  id                 String   @id @default(cuid())
+  id                 String            @id @default(cuid())
   conversationId     String
   principalKind      String
   principalId        String
   clientOperationId  String
   blocked            Boolean
   resultingBlockedAt DateTime?
-  createdAt          DateTime @default(now())
+  createdAt          DateTime          @default(now())
   conversation       StoreConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, principalKind, principalId, clientOperationId])

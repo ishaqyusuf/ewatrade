@@ -253,18 +253,20 @@ export function ServiceWorkTrackingSwitch({
 }
 
 export function ServiceChoicesSectionHeader({
+  helperText,
   onAddOption,
 }: Props<"ServiceChoicesSectionHeader">) {
   return (
     <SectionHeading
       number="03"
       title="Service choices"
-      description="Offer packages, turnaround times, visit types or add-ons."
+      description={helperText}
       onAdd={onAddOption}
     />
   )
 }
 export function ProductOptionsSectionHeader({
+  helperText,
   hasOptions,
   onAddOption,
 }: Props<"ProductOptionsSectionHeader">) {
@@ -272,24 +274,26 @@ export function ProductOptionsSectionHeader({
     <SectionHeading
       number="03"
       title="Product options"
-      description="Choices such as Size and Color can have their own prices."
+      description={helperText}
       onAdd={hasOptions ? onAddOption : undefined}
     />
   )
 }
 export function ProductFirstOptionAction({
+  helperText,
   onPress,
 }: Props<"ProductFirstOptionAction">) {
   return (
     <OptionalDetailAction
       icon="Plus"
       label="Add first option"
-      description="Start with Size, Color, Material or your own name."
+      description={helperText}
       onPress={onPress}
     />
   )
 }
 export function ProductFirstOptionValueAction({
+  helperText,
   groupName,
   onPress,
 }: Props<"ProductFirstOptionValueAction">) {
@@ -297,7 +301,7 @@ export function ProductFirstOptionValueAction({
     <OptionalDetailAction
       icon="Plus"
       label={`Add first ${groupName || "option"} value`}
-      description="Pricing appears when every option has at least one value."
+      description={helperText}
       onPress={onPress}
     />
   )
@@ -367,12 +371,14 @@ export function SectionHeaderActions({
 }
 
 export function CatalogEssentialsFields({
+  guidance,
   currencyCode,
   defaultQuoteRequired,
   kind,
   multiplePriceOptions,
   name,
   onNameChange,
+  onNameBlur,
   onPriceChange,
   onUnitNameChange,
   price,
@@ -395,12 +401,9 @@ export function CatalogEssentialsFields({
         label={kind === "product" ? "Product name" : "Service name"}
         maxLength={160}
         onChangeText={onNameChange}
+        onBlur={onNameBlur}
         value={name}
-        placeholder={
-          kind === "product"
-            ? "e.g. Ankara tote bag"
-            : "e.g. Interior consultation"
-        }
+        placeholder={guidance.name.placeholder}
         inputClassName="bg-market-field text-market-ink"
       />
       {kind === "product" ? (
@@ -408,11 +411,11 @@ export function CatalogEssentialsFields({
           <FormField
             containerClassName={large ? undefined : "min-w-0 flex-1"}
             autoCapitalize="words"
-            label="Stock unit"
+            label="Main unit"
             maxLength={80}
             onChangeText={onUnitNameChange}
             value={unitName}
-            placeholder="Piece, bag, kg"
+            placeholder={guidance.stockUnit?.placeholder}
             inputClassName="bg-market-field text-market-ink"
           />
           <MoneyField
@@ -430,13 +433,11 @@ export function CatalogEssentialsFields({
             value={price}
           />
         </View>
-      ) : (
+      ) : !defaultQuoteRequired ? (
         <MoneyField
           currencyCode={currencyCode}
           inputClassName="bg-market-field text-market-ink"
-          label={
-            defaultQuoteRequired ? "Starting price · Optional" : "Fixed price"
-          }
+          label="Fixed price"
           helper={
             defaultQuoteRequired
               ? "The final amount is agreed in a quote."
@@ -445,7 +446,7 @@ export function CatalogEssentialsFields({
           onChangeValue={onPriceChange}
           value={price}
         />
-      )}
+      ) : null}
     </View>
   )
 }

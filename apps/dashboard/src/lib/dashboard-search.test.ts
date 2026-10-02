@@ -3,10 +3,31 @@ import {
   filterDashboardCommands,
   filterSearchablePages,
   getDashboardCommands,
+  getDashboardRecordHref,
 } from "@/lib/dashboard-search"
 import type { DashboardNavItem } from "@/lib/navigation"
 
 const navItems: DashboardNavItem[] = [
+  {
+    description: "Analytics, reports, exports, and sync review",
+    href: "/analytics",
+    icon: "analytics",
+    label: "Reports",
+    children: [
+      {
+        description: "Analytics and sync review",
+        href: "/analytics",
+        icon: "analytics",
+        label: "Overview",
+      },
+      {
+        description: "Service Commerce metrics",
+        href: "/service-commerce/reports",
+        icon: "analytics",
+        label: "Service commerce",
+      },
+    ],
+  },
   {
     description: "Product and service item setup",
     href: "/catalog",
@@ -28,10 +49,38 @@ const navItems: DashboardNavItem[] = [
 ]
 
 describe("dashboard command search helpers", () => {
+  test("record links use each destination's actual typed filter key", () => {
+    const query = "Rice & beans / 5 kg"
+    for (const [group, path, key] of [
+      ["products", "/catalog", "catalogQuery"],
+      ["sales", "/sales", "orderQuery"],
+      ["customers", "/customers", "customerQuery"],
+      ["staff", "/staff", "staffQuery"],
+    ] as const) {
+      const href = new URL(
+        getDashboardRecordHref(group, query),
+        "https://dashboard.test",
+      )
+      expect(href.pathname).toBe(path)
+      expect(href.searchParams.get(key)).toBe(query)
+      expect(href.searchParams.has("search")).toBe(false)
+    }
+    expect(
+      getDashboardCommands(navItems).find(
+        (command) => command.id === "record-stock-intake",
+      )?.href,
+    ).toBe("/inventory?inventoryOperation=receipt")
+  })
   test("filters permitted pages by label, description, and href", () => {
-    expect(filterSearchablePages(navItems, "stock")).toEqual([navItems[1]])
-    expect(filterSearchablePages(navItems, "/staff")).toEqual([navItems[2]])
-    expect(filterSearchablePages(navItems, "")).toHaveLength(3)
+    expect(filterSearchablePages(navItems, "stock")).toEqual([navItems[2]])
+    expect(filterSearchablePages(navItems, "/staff")).toEqual([navItems[3]])
+    expect(filterSearchablePages(navItems, "service commerce")).toEqual([
+      navItems[0].children?.[1],
+    ])
+    expect(filterSearchablePages(navItems, "overview")).toEqual([
+      navItems[0].children?.[0],
+    ])
+    expect(filterSearchablePages(navItems, "")).toHaveLength(5)
   })
 
   test("only creates commands for permitted navigation targets", () => {
@@ -42,6 +91,21 @@ describe("dashboard command search helpers", () => {
       "invite-staff",
       "record-stock-intake",
     ])
+  })
+
+  test("searches nested child pages and returns a duplicate href once", () => {
+    const allPages = filterSearchablePages(navItems, "")
+    const analyticsPages = filterSearchablePages(navItems, "/analytics")
+
+    expect(allPages.map((item) => item.href)).toEqual([
+      "/analytics",
+      "/service-commerce/reports",
+      "/catalog",
+      "/inventory",
+      "/staff",
+    ])
+    expect(analyticsPages).toHaveLength(1)
+    expect(analyticsPages[0]?.label).toBe("Reports")
   })
 
   test("filters commands by action copy", () => {

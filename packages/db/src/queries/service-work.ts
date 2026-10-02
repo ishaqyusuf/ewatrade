@@ -37,13 +37,30 @@ import {
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import {
+  isCommercialOrderFulfillmentAllowed,
+  readCommercialOrderLinesComplete,
+} from "./commercial-order-completion"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import {
   type CommercialPaymentMethodValue,
   effectiveCommercialAmountPaid,
   recordCommercialOrderPaymentInTransaction,
 } from "./commercial-payments"
+import {
+  lockCommerceFinancialContext,
+  lockCommerceFinancialOrder,
+} from "./customer-ledger/commerce-locks"
+import {
+  type ListSortKey,
+  buildScopedListCursorWhere,
+  buildScopedListPageWhere,
+} from "./list-sort"
 import { calculateServiceChargeMinor } from "./service-settings"
+import {
+  DEFAULT_SERVICE_WORK_QUEUE_ID_DIRECTION,
+  DEFAULT_SERVICE_WORK_QUEUE_SORT,
+} from "./service-work-sort"
 
 export type ServiceIntakeLineInput = {
   approvedQuotePriceMinor?: number
@@ -787,9 +804,7 @@ export async function confirmServiceIntake(
       },
       where: {
         orderId: order.id,
-        offering: {
-          serviceOffering: { workPolicy: ServiceWorkPolicy.TRACKED },
-        },
+        snapshot: { serviceWorkPolicy: ServiceWorkPolicy.TRACKED },
       },
     })
     const jobs: JobGraph[] = []
@@ -808,14 +823,13 @@ export async function confirmServiceIntake(
         },
       })
       for (const orderLine of trackedOrderLines) {
-        const serviceOffering = orderLine.offering.serviceOffering
-        if (!serviceOffering) {
+        const policy = orderLine.snapshot?.serviceAuthorizationPolicy
+        if (!policy) {
           throw new CatalogError(
             "INVALID_SERVICE_TRANSITION",
             "Tracked work is missing its Service Offering policy.",
           )
         }
-        const policy = serviceOffering.authorizationPolicy
         const authorizedByPayment =
           policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT &&
           intake.initialPaymentMinor >= order.totalMinor
@@ -988,6 +1002,70 @@ function lineStatus(value: string) {
   return ServiceJobLineStatus.QUEUED
 }
 
+async function lockServiceLineMutation(
+  tx: Prisma.TransactionClient,
+  input: { lineId: string; tenantId: string },
+) {
+  const source = await tx.serviceJobLine.findFirst({
+    select: {
+      commercialOrderLineId: true,
+      serviceJobId: true,
+      serviceJob: { select: { commercialOrderId: true, storeId: true } },
+      commercialOrderLine: {
+        select: {
+          orderId: true,
+          order: { select: { storeId: true, tenantId: true } },
+        },
+      },
+    },
+    where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
+  })
+  if (!source)
+    throw new CatalogError(
+      "SERVICE_JOB_NOT_FOUND",
+      "Service Job Line not found.",
+    )
+  if (
+    source.commercialOrderLine.orderId !==
+      source.serviceJob.commercialOrderId ||
+    source.commercialOrderLine.order.storeId !== source.serviceJob.storeId ||
+    source.commercialOrderLine.order.tenantId !== input.tenantId
+  )
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Service allocation does not belong to this Order.",
+    )
+  const locked = await lockCommerceFinancialOrder(tx, {
+    orderId: source.serviceJob.commercialOrderId,
+    tenantId: input.tenantId,
+  })
+  if (!locked || locked.order.storeId !== source.serviceJob.storeId)
+    throw new CatalogError("INVALID_ORDER", "Service Order not found.")
+  const jobs = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "ServiceJob"
+    WHERE "id" = ${source.serviceJobId} AND "tenantId" = ${input.tenantId}
+      AND "storeId" = ${source.serviceJob.storeId}
+      AND "commercialOrderId" = ${locked.order.id}
+    FOR UPDATE
+  `
+  if (jobs.length !== 1)
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Service Job linkage changed. Reload before retrying.",
+    )
+  const lines = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "ServiceJobLine"
+    WHERE "id" = ${input.lineId} AND "serviceJobId" = ${source.serviceJobId}
+      AND "commercialOrderLineId" = ${source.commercialOrderLineId}
+    FOR UPDATE
+  `
+  if (lines.length !== 1)
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Service allocation linkage changed. Reload before retrying.",
+    )
+}
+
 export async function transitionServiceJobLine(
   db: PrismaClient,
   input: {
@@ -1027,6 +1105,7 @@ export async function transitionServiceJobLine(
         }),
       )
     }
+    await lockServiceLineMutation(tx, input)
     const line = await tx.serviceJobLine.findFirst({
       include: { serviceJob: true },
       where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
@@ -1117,6 +1196,7 @@ export async function authorizeServiceJobLine(
   },
 ) {
   return db.$transaction(async (tx) => {
+    await lockServiceLineMutation(tx, input)
     const line = await tx.serviceJobLine.findFirst({
       include: {
         commercialOrderLine: { include: { order: true } },
@@ -1190,6 +1270,7 @@ export async function splitServiceJobLine(
   },
 ) {
   return db.$transaction(async (tx) => {
+    await lockServiceLineMutation(tx, input)
     const line = await tx.serviceJobLine.findFirst({
       include: { serviceJob: true },
       where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
@@ -1898,6 +1979,7 @@ export async function listServiceWorkQueuePage(
     limit?: number
     priority?: "normal" | "urgent"
     query?: string
+    sort?: { direction: "asc" | "desc"; field: "createdAt" | "priority" }
     storeId?: string
     tenantId: string
   },
@@ -1983,10 +2065,26 @@ export async function listServiceWorkQueuePage(
                 commercialOrderLine: {
                   snapshot: {
                     is: {
-                      catalogItemName: {
-                        contains: normalizedQuery,
-                        mode: "insensitive",
-                      },
+                      OR: [
+                        {
+                          catalogItemName: {
+                            contains: normalizedQuery,
+                            mode: "insensitive",
+                          },
+                        },
+                        {
+                          variantName: {
+                            contains: normalizedQuery,
+                            mode: "insensitive",
+                          },
+                        },
+                        {
+                          offeringName: {
+                            contains: normalizedQuery,
+                            mode: "insensitive",
+                          },
+                        },
+                      ],
                     },
                   },
                 },
@@ -1996,14 +2094,62 @@ export async function listServiceWorkQueuePage(
         ],
       }
     : baseWhere
+  const sortFields: Array<{
+    direction: "asc" | "desc"
+    field: "createdAt" | "priority"
+  }> = input.sort
+    ? [
+        {
+          field: input.sort.field,
+          direction: input.sort.direction,
+        },
+      ]
+    : [...DEFAULT_SERVICE_WORK_QUEUE_SORT]
+  const cursor = input.cursor
+    ? await db.serviceJob.findFirst({
+        where: buildScopedListCursorWhere(
+          where,
+          input.cursor,
+        ) as Prisma.ServiceJobWhereInput,
+      })
+    : null
+  if (input.cursor && !cursor) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "The service queue changed. Refresh to continue.",
+    )
+  }
+  const orderBy = [
+    ...sortFields.map(({ field, direction }) => ({ [field]: direction })),
+    { id: DEFAULT_SERVICE_WORK_QUEUE_ID_DIRECTION },
+  ] as Prisma.ServiceJobOrderByWithRelationInput[]
+  const continuationKeys: ListSortKey[] = cursor
+    ? [
+        ...sortFields.map(({ field, direction }) => ({
+          field,
+          direction,
+          value: cursor[field],
+          enumValues:
+            field === "priority" ? Object.values(ServicePriority) : undefined,
+        })),
+        {
+          field: "id",
+          direction: DEFAULT_SERVICE_WORK_QUEUE_ID_DIRECTION,
+          value: cursor.id,
+        },
+      ]
+    : []
   const [records, totalCount] = await Promise.all([
     db.serviceJob.findMany({
-      cursor: input.cursor ? { id: input.cursor } : undefined,
       include: jobGraph,
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }, { id: "asc" }],
-      skip: input.cursor ? 1 : 0,
+      orderBy,
       take: limit + 1,
-      where,
+      where: cursor
+        ? (buildScopedListPageWhere(
+            where,
+            continuationKeys,
+          ) as Prisma.ServiceJobWhereInput)
+        : where,
     }),
     db.serviceJob.count({ where: baseWhere }),
   ])
@@ -2113,23 +2259,76 @@ export async function recordServiceHandoff(
   },
 ) {
   return db.$transaction(async (tx) => {
+    const discoveredJob = await tx.serviceJob.findFirst({
+      select: { commercialOrderId: true, id: true, storeId: true },
+      where: { id: input.jobId, tenantId: input.tenantId },
+    })
+    if (!discoveredJob) {
+      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
+    }
+    const financialOrder = await lockCommerceFinancialOrder(tx, {
+      orderId: discoveredJob.commercialOrderId,
+      tenantId: input.tenantId,
+    })
+    if (!financialOrder) {
+      throw new CatalogError("INVALID_ORDER", "Commercial Order not found.")
+    }
+    if (financialOrder.order.storeId !== discoveredJob.storeId) {
+      throw new CatalogError("INVALID_ORDER", "Commercial Order not found.")
+    }
+    await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "ServiceBooking"
+      WHERE "commercialOrderId" = ${discoveredJob.commercialOrderId}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${financialOrder.order.storeId}
+      ORDER BY "id"
+      FOR UPDATE
+    `
+    const lockedJobs = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "ServiceJob"
+      WHERE "id" = ${input.jobId}
+        AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${discoveredJob.storeId}
+      FOR UPDATE
+    `
+    if (lockedJobs.length !== 1) {
+      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
+    }
     const job = await loadJob(tx, {
       jobId: input.jobId,
       tenantId: input.tenantId,
     })
+    if (job.commercialOrderId !== discoveredJob.commercialOrderId) {
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Service Job Order linkage changed. Reload the Service Job before retrying.",
+      )
+    }
     if (job.handedOffAt) return serializeJob(job)
+    if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "This Order cannot be handed over in its current state.",
+      )
     if (job.revision !== input.expectedRevision) {
       throw new CatalogError(
         "REVISION_CONFLICT",
         "Service Job changed before customer collection.",
       )
     }
-    const canHandoff = job.lines.every(
-      (line) =>
-        line.status === ServiceJobLineStatus.READY_FOR_HANDOFF ||
-        line.status === ServiceJobLineStatus.COMPLETED ||
-        line.status === ServiceJobLineStatus.CANCELLED,
+    const activeLines = job.lines.filter(
+      (line) => line.status !== ServiceJobLineStatus.CANCELLED,
     )
+    const canHandoff =
+      activeLines.length > 0 &&
+      activeLines.every(
+        (line) =>
+          line.authorizationStatus === WorkAuthorizationStatus.AUTHORIZED &&
+          (line.status === ServiceJobLineStatus.READY_FOR_HANDOFF ||
+            line.status === ServiceJobLineStatus.COMPLETED),
+      )
     if (!canHandoff) {
       throw new CatalogError(
         "INVALID_SERVICE_TRANSITION",
@@ -2211,8 +2410,18 @@ export async function recordServiceHandoff(
       },
       where: { id: job.id },
     })
+    const orderComplete = await readCommercialOrderLinesComplete(tx, {
+      orderId: job.commercialOrderId,
+      storeId: job.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.commercialOrder.update({
-      data: { completedAt: handedOffAt, status: OrderStatus.COMPLETED },
+      data: {
+        completedAt: orderComplete
+          ? (financialOrder.order.completedAt ?? handedOffAt)
+          : undefined,
+        status: orderComplete ? OrderStatus.COMPLETED : OrderStatus.FULFILLING,
+      },
       where: { id: job.commercialOrderId },
     })
     await cancelOutstandingDueReminders(tx, job.id)
@@ -2240,6 +2449,76 @@ export async function batchUpdateServiceJobs(
     )
   }
   return db.$transaction(async (tx) => {
+    const discovered = await tx.serviceJob.findMany({
+      select: { id: true, commercialOrderId: true, storeId: true },
+      where: {
+        id: { in: input.jobs.map((job) => job.jobId) },
+        tenantId: input.tenantId,
+      },
+    })
+    if (discovered.length !== input.jobs.length)
+      throw new CatalogError(
+        "SERVICE_JOB_NOT_FOUND",
+        "Select distinct existing Service Jobs.",
+      )
+    const orders = await tx.commercialOrder.findMany({
+      select: { id: true, currencyCode: true, customerId: true, storeId: true },
+      where: {
+        id: { in: discovered.map((job) => job.commercialOrderId) },
+        tenantId: input.tenantId,
+      },
+      orderBy: [{ currencyCode: "asc" }, { id: "asc" }],
+    })
+    // All books/accounts precede every Order/job lock, including mixed-currency batches.
+    for (const order of orders)
+      await lockCommerceFinancialContext(tx, {
+        ...order,
+        tenantId: input.tenantId,
+      })
+    for (const order of [...orders].sort((left, right) =>
+      left.id.localeCompare(right.id),
+    )) {
+      const locked = await lockCommerceFinancialOrder(tx, {
+        expectedIdentity: {
+          currencyCode: order.currencyCode,
+          customerId: order.customerId,
+        },
+        orderId: order.id,
+        tenantId: input.tenantId,
+      })
+      if (
+        !locked ||
+        locked.order.storeId !== order.storeId ||
+        locked.order.currencyCode !== order.currencyCode ||
+        locked.order.customerId !== order.customerId
+      )
+        throw new CatalogError(
+          "REVISION_CONFLICT",
+          "Service Order identity changed. Reload the batch.",
+        )
+    }
+    for (const job of [...discovered].sort((left, right) =>
+      left.id.localeCompare(right.id),
+    )) {
+      if (
+        !orders.some(
+          (order) =>
+            order.id === job.commercialOrderId && order.storeId === job.storeId,
+        )
+      )
+        throw new CatalogError("INVALID_ORDER", "Service Order not found.")
+      const rows = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "ServiceJob"
+        WHERE "id" = ${job.id} AND "tenantId" = ${input.tenantId}
+          AND "storeId" = ${job.storeId} AND "commercialOrderId" = ${job.commercialOrderId}
+        FOR UPDATE
+      `
+      if (rows.length !== 1)
+        throw new CatalogError(
+          "REVISION_CONFLICT",
+          "Service Job linkage changed. Reload the batch.",
+        )
+    }
     const results: ReturnType<typeof serializeJob>[] = []
     for (const requested of input.jobs) {
       const job = await loadJob(tx, {

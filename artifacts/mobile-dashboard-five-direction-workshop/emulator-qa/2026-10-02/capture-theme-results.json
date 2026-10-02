@@ -1,0 +1,386 @@
+[
+  {
+    "capture": "matrix-100-light-new-business",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-unfinished-catalog",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-catalog-ready",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-first-order",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-solo",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-invitation-pending",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-team-active",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-everyday",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-returning-empty",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-queued",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-offline-cached",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-offline-empty",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-loading",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-unavailable",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-orders-unavailable",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-light-stock-work",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-new-business",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-unfinished-catalog",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-catalog-ready",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-first-order",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-solo",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-invitation-pending",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-team-active",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-everyday",
+    "theme": "dark",
+    "brightness": 243.0,
+    "pass": false
+  },
+  {
+    "capture": "matrix-100-dark-returning-empty",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-queued",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-offline-cached",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-offline-empty",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-loading",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-unavailable",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-orders-unavailable",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-100-dark-stock-work",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-new-business",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-unfinished-catalog",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-catalog-ready",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-first-order",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-solo",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-invitation-pending",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-team-active",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-everyday",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-returning-empty",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-queued",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-offline-cached",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-offline-empty",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-loading",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-unavailable",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-orders-unavailable",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-light-stock-work",
+    "theme": "light",
+    "brightness": 243.0,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-new-business",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-unfinished-catalog",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-catalog-ready",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-first-order",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-solo",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-invitation-pending",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-team-active",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-everyday",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-returning-empty",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-queued",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-offline-cached",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-offline-empty",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-loading",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-unavailable",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-orders-unavailable",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  },
+  {
+    "capture": "matrix-200-fresh-dark-stock-work",
+    "theme": "dark",
+    "brightness": 20.333333333333332,
+    "pass": true
+  }
+]

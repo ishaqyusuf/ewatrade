@@ -1,0 +1,182 @@
+enum FinanceAccountKind {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum FinanceAccountPurpose {
+  CASH
+  BANK
+  CLEARING
+  RECEIVABLE
+  PAYABLE
+  CUSTOMER_ADVANCE
+  SUPPLIER_ADVANCE
+  INVENTORY
+  SALES
+  COST_OF_SALES
+  OPERATING_EXPENSE
+  CAPITAL
+  DRAWINGS
+  OPENING_EQUITY
+  RETAINED_EARNINGS
+  OTHER
+}
+
+model FinanceBook {
+  fiscalCalendar FinanceFiscalCalendar?
+  fiscalYears FinanceFiscalYear[]
+  fiscalCloseEvents FinanceFiscalCloseEvent[]
+  expenseReceiptAssets FinanceExpenseReceiptAsset[]
+  purchaseRecognitions       FinancePurchaseRecognition[]
+  purchaseRecognitionEvents  FinancePurchaseRecognitionEvent[]
+  inventoryCostReviews       FinanceInventoryCostReview[]
+  inventoryPools             FinanceInventoryPool[]
+  inventoryValuationEvents   FinanceInventoryValuationEvent[]
+  productReturnCosts         FinanceProductReturnCost[]
+  suppliers                  FinanceSupplierAccount[]
+  supplierEntries            FinanceSupplierEntry[]
+  bills                      FinanceBill[]
+  purchaseReceipts           FinancePurchaseReceiptLine[]
+  supplierAllocations        FinanceSupplierAllocation[]
+  supplierAllocationReleases FinanceSupplierAllocationRelease[]
+  id                         String                             @id @default(cuid())
+  tenantId                   String
+  currencyCode               String
+  timezone                   String
+  startsAt                   DateTime
+  closedThrough              DateTime?
+  lastSequence               BigInt                             @default(0)
+  createdById                String
+  createdAt                  DateTime                           @default(now())
+  tenant                     Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  accounts                   FinanceAccount[]
+  entries                    FinanceJournalEntry[]
+  commands                   FinanceCommand[]
+  periods                    FinancePeriod[]
+  reconciliations            FinanceReconciliation[]
+
+  @@unique([tenantId, currencyCode])
+  @@unique([tenantId, id])
+}
+
+model FinanceAccount {
+  fiscalCalendars FinanceFiscalCalendar[]
+  fiscalCloseEvents FinanceFiscalCloseEvent[]
+  purchaseRecognitionDebits   FinancePurchaseRecognitionEvent[] @relation("PurchaseRecognitionDebit")
+  purchaseRecognitionCredits FinancePurchaseRecognitionEvent[] @relation("PurchaseRecognitionCredit")
+  inventoryCostReviewEvidence FinanceInventoryCostReviewEvidence[]
+  supplierEntries             FinanceSupplierEntry[]
+  customerReceipts            CustomerLedgerReceipt[]
+  billLines                   FinanceBillLine[]
+  billPayments                FinanceBillPayment[]
+  id                          String                               @id @default(cuid())
+  bookId                      String
+  code                        String
+  name                        String
+  kind                        FinanceAccountKind
+  purpose                     FinanceAccountPurpose                @default(OTHER)
+  archivedAt                  DateTime?
+  createdAt                   DateTime                             @default(now())
+  book                        FinanceBook                          @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  lines                       FinanceJournalLine[]
+  reconciliations             FinanceReconciliation[]
+
+  @@unique([bookId, code])
+  @@unique([bookId, id])
+  @@index([bookId, purpose])
+}
+
+model FinanceJournalEntry {
+  fiscalCloseJournal FinanceFiscalCloseJournal?
+  purchaseRecognitionEvent           FinancePurchaseRecognitionEvent?
+  inventoryCostReviewOriginalEvidence FinanceInventoryCostReviewEvidence[] @relation("InventoryCostReviewOriginalJournal")
+  inventoryCostReviewAdjustment       FinanceInventoryCostReviewJournal?   @relation("InventoryCostReviewAdjustmentJournal")
+  supplierEntries                     FinanceSupplierEntry[]
+  id                                  String                               @id @default(cuid())
+  bookId                              String
+  sequence                            BigInt
+  sourceKind                          String
+  sourceId                            String
+  payloadHash                         String
+  description                         String
+  storeId                             String?
+  actorUserId                         String
+  effectiveAt                         DateTime
+  recordedAt                          DateTime                             @default(now())
+  reversalOfId                        String?                              @unique
+  book                                FinanceBook                          @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  store                               Store?                               @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  lines                               FinanceJournalLine[]
+  reversalOf                          FinanceJournalEntry?                 @relation("FinanceReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal                            FinanceJournalEntry?                 @relation("FinanceReversal")
+
+  @@unique([bookId, id])
+  @@unique([bookId, sequence])
+  @@unique([bookId, sourceKind, sourceId])
+  @@index([bookId, effectiveAt, sequence])
+  @@index([bookId, storeId, effectiveAt])
+}
+
+model FinanceJournalLine {
+  id          String              @id @default(cuid())
+  bookId      String
+  entryId     String
+  accountId   String
+  debitMinor  BigInt              @default(0)
+  creditMinor BigInt              @default(0)
+  description String?
+  entry       FinanceJournalEntry @relation(fields: [bookId, entryId], references: [bookId, id], onDelete: Restrict)
+  account     FinanceAccount      @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict)
+
+  @@index([bookId, accountId, entryId])
+}
+
+model FinanceCommand {
+  id              String      @id @default(cuid())
+  bookId          String
+  clientCommandId String
+  kind            String
+  payloadHash     String
+  actorUserId     String
+  result          Json
+  createdAt       DateTime    @default(now())
+  book            FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+
+  @@unique([bookId, clientCommandId])
+}
+
+model FinancePeriod {
+  id           String      @id @default(cuid())
+  bookId       String
+  startsAt     DateTime
+  endsAt       DateTime
+  closedAt     DateTime?
+  closedById   String?
+  reopenedAt   DateTime?
+  reopenedById String?
+  reason       String?
+  book         FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+
+  @@unique([bookId, startsAt])
+  @@index([bookId, endsAt])
+}
+
+model FinanceReconciliation {
+  id                   String         @id @default(cuid())
+  bookId               String
+  accountId            String
+  asOf                 DateTime
+  snapshotSequence     BigInt
+  expectedBalanceMinor BigInt
+  observedBalanceMinor BigInt
+  reference            String
+  actorUserId          String
+  createdAt            DateTime       @default(now())
+  book                 FinanceBook    @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  account              FinanceAccount @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict)
+
+  @@index([bookId, accountId, asOf])
+}

@@ -1,7 +1,19 @@
 "use client"
+import {
+  Button,
+  Checkbox,
+  CheckboxField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SelectControl,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
@@ -68,16 +80,15 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
   )
 
   if (pickup.isLoading || delivery.isLoading) {
-    return <div className="h-48 animate-pulse rounded-xl bg-muted" />
+    return <div className="h-48 animate-pulse bg-muted" />
   }
   const queryError = pickup.error ?? delivery.error
   if (queryError) {
     return (
       <div className="grid gap-3 border border-destructive/30 p-5">
-        <p role="alert" className="text-sm text-destructive">
-          {queryError.message}
-        </p>
+        <FormFeedback appearance="dashboard">{queryError.message}</FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() =>
             void Promise.all([pickup.refetch(), delivery.refetch()])
@@ -97,9 +108,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
       </summary>
       <div className="grid gap-6 border-t border-border p-5 xl:grid-cols-2">
         {error ? (
-          <p role="alert" className="text-sm text-destructive xl:col-span-2">
-            {error}
-          </p>
+          <FormFeedback appearance="dashboard">{error}</FormFeedback>
         ) : null}
         <section className="grid content-start gap-3">
           <h2 className="font-semibold">Paid pickup preparation</h2>
@@ -123,7 +132,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                 </div>
                 {item.status === "PREPARING" || item.status === "EXCEPTION" ? (
                   <form
-                    className="grid gap-2"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const data = new FormData(event.currentTarget)
@@ -141,37 +149,36 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                       })
                     }}
                   >
-                    {[
-                      [
-                        "contentsMatched",
-                        "Packed contents match the released order",
-                      ],
-                      ["packagingIntact", "Packaging and labels are intact"],
-                      [
-                        "pharmacistReleaseConfirmed",
-                        "Pharmacist release is confirmed",
-                      ],
-                    ].map(([name, label]) => (
-                      <label
-                        className="flex items-start gap-2 text-xs"
-                        key={name}
-                      >
-                        <input
-                          name={name}
-                          required
-                          type="checkbox"
-                          value="yes"
-                        />
-                        <span>{label}</span>
-                      </label>
-                    ))}
-                    <Button disabled={ready.isPending} size="sm" type="submit">
-                      Confirm checks and mark ready
-                    </Button>
+                    <FieldGroup className="min-w-0 grid gap-2">
+                      {[
+                        [
+                          "contentsMatched",
+                          "Packed contents match the released order",
+                        ],
+                        ["packagingIntact", "Packaging and labels are intact"],
+                        [
+                          "pharmacistReleaseConfirmed",
+                          "Pharmacist release is confirmed",
+                        ],
+                      ].map(([name, label]) => (
+                        <CheckboxField key={name} label={<span>{label}</span>}>
+                          <Checkbox name={name} required value="yes" />
+                        </CheckboxField>
+                      ))}
+                      <FormActions>
+                        <SubmitButton
+                          isSubmitting={ready.isPending}
+                          disabled={ready.isPending}
+                          size="sm"
+                          type="submit"
+                        >
+                          Confirm checks and mark ready
+                        </SubmitButton>
+                      </FormActions>
+                    </FieldGroup>
                   </form>
                 ) : item.status === "READY" ? (
                   <form
-                    className="grid gap-2"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const data = new FormData(event.currentTarget)
@@ -187,26 +194,27 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                       })
                     }}
                   >
-                    <input
-                      className="h-10 border border-border bg-background px-3 text-sm"
-                      name="pickupCode"
-                      placeholder="Pickup code"
-                      required
-                    />
-                    <input
-                      className="h-10 border border-border bg-background px-3 text-sm"
-                      name="collectorName"
-                      placeholder="Verified collector name"
-                      required
-                    />
-                    <input
-                      className="h-10 border border-border bg-background px-3 text-sm"
-                      name="collectorRelationship"
-                      placeholder="Relationship (optional)"
-                    />
-                    <Button size="sm" type="submit">
-                      Record handoff
-                    </Button>
+                    <FieldGroup className="min-w-0 grid gap-2">
+                      <Input
+                        name="pickupCode"
+                        placeholder="Pickup code"
+                        required
+                      />
+                      <Input
+                        name="collectorName"
+                        placeholder="Verified collector name"
+                        required
+                      />
+                      <Input
+                        name="collectorRelationship"
+                        placeholder="Relationship (optional)"
+                      />
+                      <FormActions>
+                        <Button appearance="form" size="sm" type="submit">
+                          Record handoff
+                        </Button>
+                      </FormActions>
+                    </FieldGroup>
                   </form>
                 ) : null}
                 {item.status !== "HANDED_OFF" && item.status !== "CANCELLED" ? (
@@ -215,7 +223,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                       Record pickup exception
                     </summary>
                     <form
-                      className="mt-2 grid gap-2"
+                      className="mt-2"
                       onSubmit={(event) => {
                         event.preventDefault()
                         const data = new FormData(event.currentTarget)
@@ -242,32 +250,40 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         })
                       }}
                     >
-                      <select
-                        className="h-10 border border-border bg-background px-3 text-sm"
-                        name="exceptionCode"
-                      >
-                        <option value="missing_item">Missing item</option>
-                        <option value="damaged_item">Damaged item</option>
-                        <option value="incorrect_collector">
-                          Incorrect collector
-                        </option>
-                        <option value="abandoned">Abandoned pickup</option>
-                        <option value="cancelled">Cancel pickup</option>
-                      </select>
-                      <input
-                        className="h-10 border border-border bg-background px-3 text-sm"
-                        name="reason"
-                        placeholder="Required exception reason"
-                        required
-                      />
-                      <Button
-                        disabled={pickupException.isPending}
-                        size="sm"
-                        type="submit"
-                        variant="outline"
-                      >
-                        Record exception
-                      </Button>
+                      <FieldGroup className="min-w-0 grid gap-2">
+                        <SelectControl
+                          name="exceptionCode"
+                          options={[
+                            { value: "missing_item", label: <>Missing item</> },
+                            { value: "damaged_item", label: <>Damaged item</> },
+                            {
+                              value: "incorrect_collector",
+                              label: <>Incorrect collector</>,
+                            },
+                            {
+                              value: "abandoned",
+                              label: <>Abandoned pickup</>,
+                            },
+                            { value: "cancelled", label: <>Cancel pickup</> },
+                          ]}
+                        />
+                        <Input
+                          name="reason"
+                          placeholder="Required exception reason"
+                          required
+                        />
+                        <FormActions>
+                          <SubmitButton
+                            isSubmitting={pickupException.isPending}
+                            disabled={pickupException.isPending}
+                            size="sm"
+                            type="submit"
+                            variant="outline"
+                          >
+                            Record exception
+                          </SubmitButton>
+                        </FormActions>
+                      </FieldGroup>
                     </form>
                   </details>
                 ) : null}
@@ -298,7 +314,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                 </div>
                 {!order.prescriptionDeliveryAssignment ? (
                   <form
-                    className="grid gap-2"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const data = new FormData(event.currentTarget)
@@ -316,44 +331,42 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                       })
                     }}
                   >
-                    {[
-                      [
-                        "contentsMatched",
-                        "Packed contents match the released order",
-                      ],
-                      ["packagingIntact", "Tamper-evident packaging is intact"],
-                      [
-                        "pharmacistReleaseConfirmed",
-                        "Pharmacist release is confirmed",
-                      ],
-                    ].map(([name, label]) => (
-                      <label
-                        className="flex items-start gap-2 text-xs"
-                        key={name}
-                      >
-                        <input
-                          name={name}
-                          required
-                          type="checkbox"
-                          value="yes"
-                        />
-                        <span>{label}</span>
-                      </label>
-                    ))}
-                    <Button
-                      disabled={deliveryReady.isPending}
-                      size="sm"
-                      type="submit"
-                    >
-                      Mark packed and ready
-                    </Button>
+                    <FieldGroup className="min-w-0 grid gap-2">
+                      {[
+                        [
+                          "contentsMatched",
+                          "Packed contents match the released order",
+                        ],
+                        [
+                          "packagingIntact",
+                          "Tamper-evident packaging is intact",
+                        ],
+                        [
+                          "pharmacistReleaseConfirmed",
+                          "Pharmacist release is confirmed",
+                        ],
+                      ].map(([name, label]) => (
+                        <CheckboxField key={name} label={<span>{label}</span>}>
+                          <Checkbox name={name} required value="yes" />
+                        </CheckboxField>
+                      ))}
+                      <FormActions>
+                        <SubmitButton
+                          isSubmitting={deliveryReady.isPending}
+                          disabled={deliveryReady.isPending}
+                          size="sm"
+                          type="submit"
+                        >
+                          Mark packed and ready
+                        </SubmitButton>
+                      </FormActions>
+                    </FieldGroup>
                   </form>
                 ) : order.prescriptionDeliveryAssignment.status ===
                     "READY_FOR_ASSIGNMENT" ||
                   order.prescriptionDeliveryAssignment.status ===
                     "RESCHEDULED" ? (
                   <form
-                    className="grid gap-2"
                     onSubmit={(event) => {
                       event.preventDefault()
                       const data = new FormData(event.currentTarget)
@@ -369,26 +382,27 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                       })
                     }}
                   >
-                    <input
-                      className="h-10 border border-border bg-background px-3 text-sm"
-                      name="courierDisplayName"
-                      placeholder="Courier display name"
-                      required
-                    />
-                    <input
-                      className="h-10 border border-border bg-background px-3 text-sm"
-                      name="courierReference"
-                      placeholder="Courier reference"
-                      required
-                    />
-                    <Button size="sm" type="submit">
-                      Assign courier
-                    </Button>
+                    <FieldGroup className="min-w-0 grid gap-2">
+                      <Input
+                        name="courierDisplayName"
+                        placeholder="Courier display name"
+                        required
+                      />
+                      <Input
+                        name="courierReference"
+                        placeholder="Courier reference"
+                        required
+                      />
+                      <FormActions>
+                        <Button appearance="form" size="sm" type="submit">
+                          Assign courier
+                        </Button>
+                      </FormActions>
+                    </FieldGroup>
                   </form>
                 ) : (
                   <div className="grid gap-3">
                     <form
-                      className="grid gap-2"
                       onSubmit={(event) => {
                         event.preventDefault()
                         const data = new FormData(event.currentTarget)
@@ -412,42 +426,50 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         })
                       }}
                     >
-                      <select
-                        className="h-10 border border-border bg-background px-3 text-sm"
-                        name="status"
-                      >
-                        <option value="collected">
-                          Collected from pharmacy
-                        </option>
-                        <option value="in_transit">In transit</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="failed">
-                          Failed contact / unsafe / refusal / damage
-                        </option>
-                        <option value="rescheduled">Rescheduled</option>
-                        <option value="returned_to_pharmacy">
-                          Returned to pharmacy
-                        </option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                      <input
-                        className="h-10 border border-border bg-background px-3 text-sm"
-                        name="proofReference"
-                        placeholder="Delivery proof reference (required for delivered)"
-                      />
-                      <input
-                        className="h-10 border border-border bg-background px-3 text-sm"
-                        name="reason"
-                        placeholder="Outcome reason (required for failure/recovery)"
-                      />
-                      <Button
-                        disabled={transition.isPending}
-                        size="sm"
-                        type="submit"
-                        variant="outline"
-                      >
-                        Record delivery update
-                      </Button>
+                      <FieldGroup className="min-w-0 grid gap-2">
+                        <SelectControl
+                          name="status"
+                          options={[
+                            {
+                              value: "collected",
+                              label: <>Collected from pharmacy</>,
+                            },
+                            { value: "in_transit", label: <>In transit</> },
+                            { value: "delivered", label: <>Delivered</> },
+                            {
+                              value: "failed",
+                              label: (
+                                <>Failed contact / unsafe / refusal / damage</>
+                              ),
+                            },
+                            { value: "rescheduled", label: <>Rescheduled</> },
+                            {
+                              value: "returned_to_pharmacy",
+                              label: <>Returned to pharmacy</>,
+                            },
+                            { value: "cancelled", label: <>Cancelled</> },
+                          ]}
+                        />
+                        <Input
+                          name="proofReference"
+                          placeholder="Delivery proof reference (required for delivered)"
+                        />
+                        <Input
+                          name="reason"
+                          placeholder="Outcome reason (required for failure/recovery)"
+                        />
+                        <FormActions>
+                          <SubmitButton
+                            isSubmitting={transition.isPending}
+                            disabled={transition.isPending}
+                            size="sm"
+                            type="submit"
+                            variant="outline"
+                          >
+                            Record delivery update
+                          </SubmitButton>
+                        </FormActions>
+                      </FieldGroup>
                     </form>
                     {order.prescriptionDeliveryAssignment.status ===
                     "ASSIGNED" ? (
@@ -456,7 +478,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                           Reassign courier
                         </summary>
                         <form
-                          className="mt-2 grid gap-2"
+                          className="mt-2"
                           onSubmit={(event) => {
                             event.preventDefault()
                             const data = new FormData(event.currentTarget)
@@ -472,26 +494,29 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                             })
                           }}
                         >
-                          <input
-                            className="h-10 border border-border bg-background px-3 text-sm"
-                            name="courierDisplayName"
-                            placeholder="New courier display name"
-                            required
-                          />
-                          <input
-                            className="h-10 border border-border bg-background px-3 text-sm"
-                            name="courierReference"
-                            placeholder="New courier reference"
-                            required
-                          />
-                          <Button
-                            disabled={assign.isPending}
-                            size="sm"
-                            type="submit"
-                            variant="outline"
-                          >
-                            Record reassignment
-                          </Button>
+                          <FieldGroup className="min-w-0 grid gap-2">
+                            <Input
+                              name="courierDisplayName"
+                              placeholder="New courier display name"
+                              required
+                            />
+                            <Input
+                              name="courierReference"
+                              placeholder="New courier reference"
+                              required
+                            />
+                            <FormActions>
+                              <SubmitButton
+                                isSubmitting={assign.isPending}
+                                disabled={assign.isPending}
+                                size="sm"
+                                type="submit"
+                                variant="outline"
+                              >
+                                Record reassignment
+                              </SubmitButton>
+                            </FormActions>
+                          </FieldGroup>
                         </form>
                       </details>
                     ) : null}

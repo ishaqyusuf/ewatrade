@@ -1,0 +1,86 @@
+enum FinancePurchaseRecognitionStage {
+  INVOICE
+  OWNERSHIP
+  RECEIPT
+}
+
+// Immutable agreed goods/cost facts. Actual invoices are separate PURCHASE bills.
+model FinancePurchaseRecognition {
+  id           String @id @default(cuid())
+  tenantId     String
+  bookId       String
+  supplierId   String
+  storeId      String
+  costBillId   String @unique
+  agreedAt     DateTime
+  actorUserId  String
+  createdAt    DateTime @default(now())
+  book         FinanceBook @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  supplier     FinanceSupplierAccount @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  costBill     FinanceBill @relation("PurchaseRecognitionCosts", fields: [bookId, supplierId, costBillId], references: [bookId, supplierId, id], onDelete: Restrict)
+  lines        FinancePurchaseRecognitionLine[]
+  events       FinancePurchaseRecognitionEvent[]
+
+  @@unique([bookId, id])
+  @@unique([bookId, supplierId, id])
+  @@unique([bookId, costBillId, id])
+  @@unique([bookId, supplierId, costBillId])
+  @@index([bookId, supplierId, agreedAt])
+}
+
+model FinancePurchaseRecognitionLine {
+  id                     String @id @default(cuid())
+  tenantId               String
+  bookId                 String
+  recognitionId          String
+  costBillId             String
+  costBillLineId         String @unique
+  balanceSourceId        String
+  enteredInventoryUnitId String
+  configurationVersionId String
+  enteredQuantity        Decimal @db.Decimal(38, 18)
+  categories             Json
+  recognition            FinancePurchaseRecognition @relation(fields: [bookId, costBillId, recognitionId], references: [bookId, costBillId, id], onDelete: Restrict)
+  costBillLine           FinanceBillLine @relation(fields: [bookId, costBillId, costBillLineId], references: [bookId, billId, id], onDelete: Restrict)
+  balanceSource          StockBalanceSource @relation(fields: [tenantId, balanceSourceId], references: [tenantId, id], onDelete: Restrict)
+  enteredInventoryUnit   InventoryUnit @relation(fields: [enteredInventoryUnitId], references: [id], onDelete: Restrict)
+  configurationVersion  UnitConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([recognitionId, balanceSourceId])
+  @@unique([bookId, costBillId, costBillLineId])
+}
+
+model FinancePurchaseRecognitionEvent {
+  id              String @id @default(cuid())
+  bookId          String
+  supplierId      String
+  recognitionId   String
+  stage           FinancePurchaseRecognitionStage
+  // NULL on reversal: only one original of each stage, multiple linked reversals.
+  originalStage   FinancePurchaseRecognitionStage?
+  journalEntryId  String @unique
+  debitAccountId  String
+  creditAccountId String
+  invoiceBillId   String? @unique
+  effectiveAt     DateTime
+  reference       String
+  actorUserId     String
+  reversalOfId    String? @unique
+  reason          String?
+  createdAt       DateTime @default(now())
+  book            FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  recognition     FinancePurchaseRecognition @relation(fields: [bookId, supplierId, recognitionId], references: [bookId, supplierId, id], onDelete: Restrict)
+  journalEntry    FinanceJournalEntry @relation(fields: [bookId, journalEntryId], references: [bookId, id], onDelete: Restrict)
+  debitAccount    FinanceAccount @relation("PurchaseRecognitionDebit", fields: [bookId, debitAccountId], references: [bookId, id], onDelete: Restrict)
+  creditAccount   FinanceAccount @relation("PurchaseRecognitionCredit", fields: [bookId, creditAccountId], references: [bookId, id], onDelete: Restrict)
+  invoiceBill     FinanceBill? @relation("PurchaseRecognitionInvoice", fields: [bookId, supplierId, invoiceBillId], references: [bookId, supplierId, id], onDelete: Restrict)
+  reversalOf      FinancePurchaseRecognitionEvent? @relation("PurchaseRecognitionReversal", fields: [bookId, recognitionId, reversalOfId], references: [bookId, recognitionId, id], onDelete: Restrict)
+  reversal        FinancePurchaseRecognitionEvent? @relation("PurchaseRecognitionReversal")
+
+  @@unique([recognitionId, originalStage])
+  @@unique([bookId, recognitionId, id])
+  @@unique([bookId, journalEntryId])
+  @@unique([bookId, supplierId, invoiceBillId])
+  @@unique([bookId, recognitionId, reversalOfId])
+  @@index([bookId, recognitionId, effectiveAt])
+}

@@ -1,7 +1,8 @@
+import type { SellingUnitEditorFieldsProps } from "@/components/mobile/catalog-setup/catalog-setup-model"
+import { SellingUnitReferenceSelector } from "@/components/mobile/catalog-setup/selling-unit-reference-selector"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import type { SellingUnitEditorFieldsProps } from "@/components/mobile/catalog-setup/catalog-setup-model"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -53,6 +54,7 @@ function Choice({
 }
 
 export function MarketSellingUnitFields({
+  referenceUnits,
   currencyCode,
   multiplePriceOptions,
   onChangeDirection,
@@ -61,7 +63,12 @@ export function MarketSellingUnitFields({
   unitEditorError,
   unitName,
 }: SellingUnitEditorFieldsProps) {
-  const mainName = unitName.trim() || "main unit"
+  const referenceName =
+    referenceUnits
+      ?.find((unit) => unit.id === draft.referenceUnitId)
+      ?.name.trim() ||
+    unitName.trim() ||
+    "main unit"
   const sellingName = draft.name.trim() || "selling unit"
   return (
     <View className="gap-5 px-5 pb-5">
@@ -87,35 +94,44 @@ export function MarketSellingUnitFields({
         placeholder="e.g. Carton or Pack"
         inputClassName="bg-market-field text-market-ink"
       />
+      <SellingUnitReferenceSelector
+        fields={{
+          referenceUnits,
+          unitEditorDraft: draft,
+          onChangeDraft,
+          unitName,
+        }}
+        market
+      />
       <View className="gap-3">
         <Text className="font-market-mono text-[11px] uppercase tracking-[1px] text-market-muted-ink">
-          01 / How it converts
+          01 / Relationship
         </Text>
         <Choice
           selected={draft.relationDirection === "units_per_canonical"}
-          label="Inside main unit"
-          description="A smaller unit taken from one main unit."
+          label="Inside selected unit"
+          description="A smaller unit taken from one selected unit."
           onPress={() => onChangeDirection("units_per_canonical")}
         />
         <Choice
           selected={draft.relationDirection === "canonical_per_unit"}
-          label="Contains main units"
-          description="A larger pack made from main units."
+          label="Contains selected units"
+          description="A larger pack made from selected units."
           onPress={() => onChangeDirection("canonical_per_unit")}
         />
         <View className="rounded-xl bg-market-marigold px-4 py-4">
           <Text className="text-sm font-bold text-market-on-marigold [-rn-line-height:21]">
             {draft.relationDirection === "units_per_canonical"
-              ? `1 ${mainName} contains ${draft.relationCount.trim() || "…"} ${sellingName}`
-              : `1 ${sellingName} contains ${draft.relationCount.trim() || "…"} ${mainName}`}
+              ? `1 ${referenceName} contains ${draft.relationCount.trim() || "…"} ${sellingName}`
+              : `1 ${sellingName} contains ${draft.relationCount.trim() || "…"} ${referenceName}`}
           </Text>
         </View>
         <FormField
           keyboardType="decimal-pad"
           label={
             draft.relationDirection === "units_per_canonical"
-              ? `Units in 1 ${mainName}`
-              : `Main units in 1 ${sellingName}`
+              ? `Units in 1 ${referenceName}`
+              : `Reference units in 1 ${sellingName}`
           }
           helper="Use a positive number that converts exactly."
           onChangeText={(relationCount) => onChangeDraft({ relationCount })}

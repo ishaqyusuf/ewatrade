@@ -545,6 +545,7 @@ export function DashboardRecentOrderRow({
 
   return (
     <Pressable
+      accessibilityLabel={`${customer}, ${detail}, ${status}, ${amount}`}
       accessibilityRole={onPress ? "button" : undefined}
       className="flex-row items-start gap-3 border-b border-border/70 py-4 active:bg-accent"
       disabled={!onPress}

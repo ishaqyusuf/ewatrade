@@ -92,6 +92,7 @@ export function camel(value?: string | null) {
 export * from "./currency"
 export * from "./customer-chat"
 export * from "./domain"
+export * from "./qa-workspace-slug"
 export * from "./exact-decimal"
 export * from "./catalog-options"
 export * from "./catalog-setup-helpers"

@@ -1,0 +1,189 @@
+"use client"
+
+import { VirtualRow } from "@/components/tables/core"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
+import { useStickyColumns } from "@/hooks/use-sticky-columns"
+import { useTableDnd } from "@/hooks/use-table-dnd"
+import { useTableScroll } from "@/hooks/use-table-scroll"
+import { DndContext, closestCenter } from "@dnd-kit/core"
+import { Button, Table, TableBody } from "@ewatrade/ui"
+import type { Table as ReactTable } from "@tanstack/react-table"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import type { CatalogRow } from "./columns"
+import { CatalogEmptyState } from "./empty-states"
+import { CatalogTableHeader, CatalogTableSettings } from "./table-header"
+
+const ROW_HEIGHT = 57
+const STICKY_COLUMNS = [
+  { id: "item", width: 320 },
+  { id: "actions", side: "right" as const, width: 170 },
+]
+const FIXED_COLUMN_IDS = ["item"]
+
+export function CatalogTableView({
+  table,
+  hasFilters,
+  hasNextPage,
+  isFetchingNextPage,
+  isFetchNextPageError,
+  isRefetchError,
+  errorMessage,
+  persistenceError,
+  retryPersistence,
+  refetch,
+  fetchNextPage,
+}: {
+  table: ReactTable<CatalogRow>
+  hasFilters: boolean
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  isFetchNextPageError: boolean
+  isRefetchError: boolean
+  errorMessage: string
+  persistenceError: string | null
+  retryPersistence: () => void
+  refetch: () => Promise<unknown>
+  fetchNextPage: () => Promise<unknown>
+}) {
+  const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
+    fixedColumnIds: FIXED_COLUMN_IDS,
+  })
+  const { getStickyStyle, getStickyClassName, isVisible } = useStickyColumns({
+    table,
+    stickyColumns: STICKY_COLUMNS,
+  })
+  const tableScroll = useTableScroll({ useColumnWidths: true })
+  const rows = table.getRowModel().rows
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableScroll.containerRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  })
+  const { retry: retryNextPage } = useInfiniteScroll({
+    scrollRef: tableScroll.containerRef,
+    rowVirtualizer,
+    rowCount: rows.length,
+    hasNextPage,
+    isFetchingNextPage,
+    isError: isFetchNextPageError,
+    fetchNextPage,
+  })
+  return (
+    <div className="grid gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {rows.length} items loaded
+        </p>
+        <div className="flex items-center gap-2">
+          <CatalogTableSettings table={table} />
+        </div>
+      </div>
+
+      {persistenceError ? (
+        <div className="flex items-center justify-between gap-3" role="alert">
+          <p className="text-sm text-destructive">{persistenceError}</p>
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={retryPersistence}
+          >
+            Retry saving columns
+          </Button>
+        </div>
+      ) : null}
+
+      {isRefetchError ? (
+        <div className="flex items-center justify-between gap-3" role="alert">
+          <p className="text-sm text-destructive">
+            {errorMessage || "Catalog items could not be refreshed."}
+          </p>
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={() => void refetch()}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
+
+      {isFetchNextPageError ? (
+        <div className="flex items-center justify-between gap-3" role="alert">
+          <p className="text-sm text-destructive">
+            {errorMessage || "Catalog items could not be loaded."}
+          </p>
+          <Button appearance="form" variant="outline" onClick={retryNextPage}>
+            Retry loading items
+          </Button>
+        </div>
+      ) : null}
+
+      {!rows.length ? (
+        <CatalogEmptyState filtered={hasFilters} />
+      ) : (
+        <section
+          ref={tableScroll.setContainerRef}
+          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          aria-label="Catalog items"
+        >
+          <DndContext
+            id="catalog-table-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <Table
+              className="block text-sm"
+              style={{ width: table.getTotalSize(), minWidth: "100%" }}
+            >
+              <CatalogTableHeader
+                table={table}
+                sortableColumnIds={sortableColumnIds}
+                getStickyStyle={getStickyStyle}
+                getStickyClassName={getStickyClassName}
+                isVisible={isVisible}
+                tableScroll={tableScroll}
+              />
+              <TableBody
+                className="relative block w-full border-0"
+                style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = rows[virtualRow.index]
+                  if (!row) return null
+                  return (
+                    <VirtualRow
+                      key={row.id}
+                      row={row}
+                      virtualStart={virtualRow.start}
+                      rowHeight={ROW_HEIGHT}
+                      getStickyStyle={getStickyStyle}
+                      getStickyClassName={getStickyClassName}
+                      columnSizing={table.getState().columnSizing}
+                      columnOrder={table.getState().columnOrder}
+                      columnVisibility={table.getState().columnVisibility}
+                    />
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </DndContext>
+          <div aria-hidden="true" className="h-1" />
+        </section>
+      )}
+
+      {hasNextPage && !isFetchNextPageError ? (
+        <Button
+          appearance="form"
+          className="w-fit"
+          variant="outline"
+          disabled={isFetchingNextPage}
+          onClick={() => void fetchNextPage()}
+        >
+          {isFetchingNextPage ? "Loading…" : "Load more items"}
+        </Button>
+      ) : null}
+    </div>
+  )
+}

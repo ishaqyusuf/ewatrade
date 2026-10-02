@@ -206,7 +206,11 @@ export async function getServiceCommerceReportDrilldown(
     wantsLifecycle
       ? db.commercialOrderPayment.findMany({
           select: { recordedAt: true, type: true },
-          where: { ...scope, recordedAt: occurrence },
+          where: {
+            ...scope,
+            recordedAt: occurrence,
+            method: { not: "CUSTOMER_CREDIT" },
+          },
           take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
         })
       : Promise.resolve([]),

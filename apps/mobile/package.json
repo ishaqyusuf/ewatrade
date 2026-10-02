@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "dev": "bun run with-env node ./scripts/run-expo-cli.cjs start --port ${EXPO_PORT:-3096}",
+    "dev": "bun run with-env node ./scripts/run-expo-cli.cjs start --port ${MOBILE_PORT:-${EXPO_PORT:-3096}}",
     "qa:action-primitives": "node ./scripts/check-action-primitives.mjs",
     "qa:app-lock-flow": "node ./scripts/check-app-lock-flow.mjs",
     "qa:app-shell": "node ./scripts/check-app-shell.mjs",
@@ -62,7 +62,7 @@
     "qa:domain-flow": "node ./scripts/check-domain-flow.mjs",
     "qa:theme-colors": "node ./scripts/check-theme-color-guard.mjs",
     "eas:update": "node ./scripts/eas-update.mjs",
-    "start": "bun run with-env node ./scripts/run-expo-cli.cjs start --port ${EXPO_PORT:-3096}",
+    "start": "bun run with-env node ./scripts/run-expo-cli.cjs start --port ${MOBILE_PORT:-${EXPO_PORT:-3096}}",
     "web": "bun run with-env node ./scripts/run-expo-cli.cjs start --web",
     "with-env": "node ../../scripts/with-workspace-env.mjs",
     "with-env:prod": "node ../../scripts/with-workspace-env.mjs APP_ENV=production",
@@ -71,6 +71,7 @@
   },
   "dependencies": {
     "@ewatrade/api": "workspace:*",
+    "@ewatrade/catalog": "workspace:*",
     "@ewatrade/errors": "workspace:*",
     "@ewatrade/events": "workspace:*",
     "@ewatrade/observability": "workspace:*",
@@ -103,6 +104,7 @@
     "expo-asset": "~12.0.13",
     "expo-audio": "~1.1.1",
     "expo-auth-session": "~7.0.11",
+    "expo-camera": "~17.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.14",
     "expo-crypto": "~15.0.9",

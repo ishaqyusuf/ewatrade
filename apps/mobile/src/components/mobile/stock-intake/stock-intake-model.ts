@@ -6,6 +6,11 @@ import {
   EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import {
+  type StockCategoryDraft,
+  collectStockCategoryDraft,
+  stockCategorySelectors,
+} from "@ewatrade/utils/inventory-categories"
 
 export type StockBalance =
   RouterOutputs["inventory"]["balanceReport"]["rows"][number]
@@ -28,7 +33,7 @@ export const STOCK_MODES = [
   {
     key: "adjustment",
     label: "Adjust",
-    description: "Increase or decrease an exact balance with a reason.",
+    description: "Increase or decrease an exact balance with categories.",
   },
   {
     key: "custody",
@@ -42,6 +47,8 @@ export type StockDraft = {
   balanceId: string
   quantity: string
   reason: string
+  categories: StockCategoryDraft[]
+  categoryInput: string
   direction: "increase" | "decrease"
   targetCustodyType: "staff" | "store"
   targetCustodyReferenceId: string
@@ -51,6 +58,8 @@ export const INITIAL_STOCK_DRAFT: StockDraft = {
   balanceId: "",
   quantity: "",
   reason: "",
+  categories: [],
+  categoryInput: "",
   direction: "increase",
   targetCustodyType: "staff",
   targetCustodyReferenceId: "",
@@ -103,7 +112,16 @@ export function stockDraftReadiness(
 ) {
   if (!balance)
     return { error: "Choose an exact stock balance.", quantity: null }
-  if (!draft.reason.trim() || draft.reason.trim().length > 500)
+  if (draft.mode === "receipt" || draft.mode === "adjustment") {
+    try {
+      collectStockCategoryDraft(draft.categories, draft.categoryInput)
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Choose categories.",
+        quantity: null,
+      }
+    }
+  } else if (!draft.reason.trim() || draft.reason.trim().length > 500)
     return { error: "Add a reason of 1–500 characters.", quantity: null }
   if (draft.mode === "custody") {
     if (
@@ -205,7 +223,9 @@ export function stockCommand(
       enteredQuantity: quantity,
       expectedBalanceRevision: balance.revision,
       expectedConfigurationVersionId: balance.configurationVersionId,
-      reason: draft.reason,
+      categories: stockCategorySelectors(
+        collectStockCategoryDraft(draft.categories, draft.categoryInput),
+      ),
       type: draft.mode,
       direction: draft.mode === "receipt" ? "increase" : draft.direction,
     },

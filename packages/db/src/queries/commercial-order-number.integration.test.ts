@@ -29,7 +29,9 @@ const describeWithDatabase =
 
 function getDatabaseUrl() {
   if (!databaseUrl) {
-    throw new Error("EWATRADE_DATABASE_URL is required for database integration tests.")
+    throw new Error(
+      "EWATRADE_DATABASE_URL is required for database integration tests.",
+    )
   }
 
   return databaseUrl
@@ -221,6 +223,85 @@ describeWithDatabase("commercial order number database allocation", () => {
       await db.tenant.delete({ where: { id: tenant.id } })
     }
   })
+
+  test("preserves explicit customer ownership without inferring it from contact snapshots", async () => {
+    const fixture = await createCommercialOrderFixture(db)
+    const foreignTenant = await db.tenant.create({
+      data: {
+        name: "Foreign customer scope",
+        slug: `foreign-customer-${randomUUID()}`,
+        type: TenantType.MERCHANT,
+        enabledModes: [TenantMode.MERCHANT],
+      },
+    })
+    try {
+      const selected = await db.customer.create({
+        data: {
+          tenantId: fixture.tenant.id,
+          name: "Same-name customer",
+        },
+      })
+      const foreign = await db.customer.create({
+        data: {
+          tenantId: foreignTenant.id,
+          name: "Same-name customer",
+        },
+      })
+      const input: CreateCommercialOrderInput = {
+        actorUserId: "customer-link-test-actor",
+        clientOrderId: `linked-${randomUUID()}`,
+        tenantId: fixture.tenant.id,
+        storeId: fixture.firstStore.id,
+        schemaVersion: 1,
+        createTrackedServiceWork: false,
+        customerId: selected.id,
+        customerName: "Immutable sale contact",
+        lines: [{ offeringId: fixture.offering.id, quantity: "1" }],
+      }
+      const linked = await createCommercialOrder(db, input)
+      expect(linked.customerId).toBe(selected.id)
+      expect(linked.customerName).toBe("Immutable sale contact")
+      expect((await createCommercialOrder(db, input)).id).toBe(linked.id)
+      expect(
+        await db.customer.count({ where: { tenantId: fixture.tenant.id } }),
+      ).toBe(1)
+      await expect(
+        createCommercialOrder(db, { ...input, customerId: foreign.id }),
+      ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+      await expect(
+        createCommercialOrder(db, {
+          ...input,
+          clientOrderId: `foreign-${randomUUID()}`,
+          customerId: foreign.id,
+        }),
+      ).rejects.toMatchObject({ code: "INVALID_ORDER" })
+      const legacyInput = {
+        ...input,
+        clientOrderId: `legacy-contact-${randomUUID()}`,
+        customerId: undefined,
+        customerName: selected.name,
+      }
+      const legacy = await createCommercialOrder(db, legacyInput)
+      expect(legacy.customerId).toBeNull()
+      expect((await createCommercialOrder(db, legacyInput)).id).toBe(legacy.id)
+      await db.customer.update({
+        where: { id: selected.id },
+        data: { name: "Renamed customer" },
+      })
+      const read = await getCommercialOrder(db, {
+        tenantId: fixture.tenant.id,
+        orderId: linked.id,
+      })
+      expect(read?.customerId).toBe(selected.id)
+      expect(read?.customerName).toBe("Immutable sale contact")
+    } finally {
+      await db.commercialOrder.deleteMany({
+        where: { tenantId: fixture.tenant.id },
+      })
+      await db.tenant.delete({ where: { id: fixture.tenant.id } })
+      await db.tenant.delete({ where: { id: foreignTenant.id } })
+    }
+  }, 120_000)
 
   test("creates tenant-wide numbers and recovers a concurrent idempotent replay", async () => {
     const fixture = await createCommercialOrderFixture(db)

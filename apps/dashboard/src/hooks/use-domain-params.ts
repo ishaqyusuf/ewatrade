@@ -1,49 +1,49 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useQueryStates } from "nuqs"
+import { parseAsString, parseAsStringLiteral } from "nuqs/server"
 
-export type DomainSheetMode = "buy" | "connect" | "details" | "progress"
+export const domainSheetModes = [
+  "buy",
+  "connect",
+  "details",
+  "progress",
+] as const
+export type DomainSheetMode = (typeof domainSheetModes)[number]
+
+export const domainPurchaseSteps = ["search", "owner", "review"] as const
+export type DomainPurchaseStep = (typeof domainPurchaseSteps)[number]
+
+const domainParams = {
+  domainId: parseAsString,
+  domainMode: parseAsStringLiteral(domainSheetModes),
+  domainOrderId: parseAsString,
+  domainStep: parseAsStringLiteral(domainPurchaseSteps).withDefault("search"),
+}
+
+const resetParams = {
+  domainId: null,
+  domainMode: null,
+  domainOrderId: null,
+  domainStep: null,
+}
+
+type DomainParamValues = Partial<{
+  domainId: string | null
+  domainMode: DomainSheetMode | null
+  domainOrderId: string | null
+  domainStep: DomainPurchaseStep | null
+}>
 
 export function useDomainParams() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const mode = searchParams.get("domainMode") as DomainSheetMode | null
-  const domainId = searchParams.get("domainId")
-  const domainOrderId = searchParams.get("domainOrderId")
-  const step = searchParams.get("domainStep") ?? "search"
+  const [params, updateParams] = useQueryStates(domainParams)
 
-  function setParams(
-    values: {
-      domainId?: string | null
-      domainMode?: DomainSheetMode | null
-      domainOrderId?: string | null
-      domainStep?: string | null
-    } | null,
-  ) {
-    const next = new URLSearchParams(searchParams.toString())
-
-    if (values === null) {
-      for (const key of [
-        "domainId",
-        "domainMode",
-        "domainOrderId",
-        "domainStep",
-      ]) {
-        next.delete(key)
-      }
-    } else {
-      for (const [key, value] of Object.entries(values)) {
-        if (value) next.set(key, value)
-        else next.delete(key)
-      }
-    }
-
-    const query = next.toString()
-    router.replace(query ? `${pathname}?${query}` : pathname, {
-      scroll: false,
-    })
+  return {
+    domainId: params.domainId,
+    domainOrderId: params.domainOrderId,
+    mode: params.domainMode,
+    setParams: (values: DomainParamValues | null) =>
+      updateParams(values ?? resetParams, { shallow: false }),
+    step: params.domainStep,
   }
-
-  return { domainId, domainOrderId, mode, setParams, step }
 }

@@ -7,6 +7,25 @@ import {
 } from "./offline"
 
 describe("offline command payload", () => {
+  test("preserves explicit customer identity while keeping old payloads unchanged", () => {
+    const legacy = {
+      kind: "commercial_order",
+      lines: [{ offeringId: "offering_123", quantity: "1" }],
+    }
+    expect(offlineCommandPayloadSchema.parse(legacy)).not.toHaveProperty(
+      "customerId",
+    )
+    expect(
+      offlineCommandPayloadSchema.parse({
+        ...legacy,
+        customerId: "customer_123",
+      }),
+    ).toHaveProperty("customerId", "customer_123")
+    expect(
+      offlineCommandPayloadSchema.safeParse({ ...legacy, customerId: " " })
+        .success,
+    ).toBe(false)
+  })
   test("accepts an Order with customer facts and an initial payment", () => {
     const result = offlineCommandPayloadSchema.parse({
       customerName: "Ada Okafor",

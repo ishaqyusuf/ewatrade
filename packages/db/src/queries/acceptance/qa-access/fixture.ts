@@ -224,7 +224,15 @@ export function trackQaAccessExchangeClient(
 export async function disposeQaAccessAcceptanceFixture(
   fixture: QaAccessAcceptanceFixture,
 ): Promise<QaAccessAcceptanceResidue> {
-  const grantIds = [...fixture.grantIds]
+  // The domain is unique to this disposable fixture. Domain-only browser entry
+  // can create grants after fixture setup, so collect those before cleanup too.
+  const domainGrants = await fixture.db.qaTesterGrant.findMany({
+    where: { qaDomain: fixture.domain },
+    select: { id: true },
+  })
+  const grantIds = [
+    ...new Set([...fixture.grantIds, ...domainGrants.map((grant) => grant.id)]),
+  ]
   const authorizationIds = (
     await fixture.db.qaClientAuthorization.findMany({
       select: { id: true },

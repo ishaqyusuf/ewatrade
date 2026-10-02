@@ -46,6 +46,7 @@ export type NormalizedPaymentEvent = {
   currencyCode: string
   eventId: string
   providerReference: string
+  providerRefundId?: string
   status: "failed" | "paid" | "refund_failed" | "refund_succeeded"
 }
 
@@ -148,8 +149,21 @@ export class PaystackHostedPaymentProvider implements HostedPaymentProvider {
     if (!response.ok || !payload.status) {
       throw new Error(payload.message ?? `Refund failed (${response.status}).`)
     }
+    const refundId = payload.data?.id
+    if (
+      !(typeof refundId === "string" && refundId.trim()) &&
+      !(
+        typeof refundId === "number" &&
+        Number.isSafeInteger(refundId) &&
+        refundId > 0
+      )
+    ) {
+      throw new Error(
+        "Refund outcome has no valid provider refund identity; reconcile before retrying.",
+      )
+    }
     return {
-      providerRefundId: String(payload.data?.id ?? input.providerReference),
+      providerRefundId: String(refundId).trim(),
       status:
         payload.data?.status === "processed" ||
         payload.data?.status === "success"
@@ -258,6 +272,14 @@ export class PaystackWebhookAdapter implements PaymentWebhookAdapter {
       data.currency ?? transaction.currency ?? "NGN",
     ).toUpperCase()
     const refundId = String(data.refund_reference ?? data.id ?? "").trim()
+    const providerRefundId =
+      typeof data.id === "string"
+        ? data.id.trim() || undefined
+        : typeof data.id === "number" &&
+            Number.isSafeInteger(data.id) &&
+            data.id > 0
+          ? String(data.id)
+          : undefined
     const status = String(data.status ?? "").toLowerCase()
 
     if (event === "charge.success" && status === "success") {
@@ -284,6 +306,7 @@ export class PaystackWebhookAdapter implements PaymentWebhookAdapter {
         currencyCode,
         eventId: `${event}:${refundId || providerReference}`,
         providerReference,
+        providerRefundId,
         status: "refund_succeeded",
       }
     }
@@ -293,6 +316,7 @@ export class PaystackWebhookAdapter implements PaymentWebhookAdapter {
         currencyCode,
         eventId: `${event}:${refundId || providerReference}`,
         providerReference,
+        providerRefundId,
         status: "refund_failed",
       }
     }

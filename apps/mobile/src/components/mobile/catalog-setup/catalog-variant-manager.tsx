@@ -1,6 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
@@ -15,12 +15,12 @@ import { Modal as NativeModal, View, useWindowDimensions } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
 import { CatalogVariantFields } from "./catalog-variant-fields"
+import { CatalogVariantList } from "./catalog-variant-list"
 import {
-  catalogVariantRows,
   type CatalogVariantManagerProps,
+  catalogVariantRows,
 } from "./catalog-variant-model"
 import { useCatalogVariants } from "./use-catalog-variants"
-import { CatalogVariantList } from "./catalog-variant-list"
 
 export type { CatalogVariantDraft } from "./catalog-variant-model"
 

@@ -1,11 +1,9 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupUnits({
@@ -20,8 +18,6 @@ export function CatalogSetupUnits({
     currencyCode,
     openUnitEditor,
   } = model
-  const largeTextLayout = useLargeTextLayout()
-  const { SectionHeaderActions } = market ? Market : Classic
   if (!kind) return null
   return (
     <>
@@ -32,13 +28,7 @@ export function CatalogSetupUnits({
             market,
           )}
         >
-          <View
-            className={
-              largeTextLayout
-                ? "gap-3"
-                : "flex-row items-center justify-between gap-3"
-            }
-          >
+          <View className="gap-3">
             <View
               className={catalogSetupClassName("min-w-0 flex-1 gap-1", market)}
             >
@@ -59,15 +49,6 @@ export function CatalogSetupUnits({
                 Add cartons, packs, or other ways customers buy this Product.
               </Text>
             </View>
-            <SectionHeaderActions
-              addLabel="Add unit"
-              canRemove={additionalUnits.length > 0}
-              onAdd={() => openUnitEditor()}
-              onRemove={() =>
-                model.requestConfirmation({ kind: "remove-units" })
-              }
-              removeLabel="Remove all additional units"
-            />
           </View>
 
           {additionalUnits.length > 0 ? (
@@ -106,8 +87,8 @@ export function CatalogSetupUnits({
                       )}
                     >
                       {unit.relationDirection === "units_per_canonical"
-                        ? `${unit.relationCount} ${unit.name} in 1 ${unitName.trim() || "main unit"}`
-                        : `1 ${unit.name} contains ${unit.relationCount} ${unitName.trim() || "main units"}`}{" "}
+                        ? `${unit.relationCount} ${unit.name} in 1 ${additionalUnits.find((parent) => parent.id === unit.referenceUnitId)?.name || unitName.trim() || "main unit"}`
+                        : `1 ${unit.name} contains ${unit.relationCount} ${additionalUnits.find((parent) => parent.id === unit.referenceUnitId)?.name || unitName.trim() || "main units"}`}{" "}
                       ·{" "}
                       {multiplePriceOptions
                         ? "Priced by option"
@@ -172,10 +153,33 @@ export function CatalogSetupUnits({
                   market,
                 )}
               >
-                No extra selling units. Your stock unit is enough to begin.
+                No extra selling units. Your main unit is enough to begin.
               </Text>
             </View>
           )}
+          <ActionButton
+            variant="outline"
+            trailingIcon="Plus"
+            onPress={() => openUnitEditor()}
+          >
+            {additionalUnits.length
+              ? "Add another selling unit"
+              : "Add a selling unit"}
+          </ActionButton>
+          {additionalUnits.length ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Remove all additional units"
+              className="min-h-11 items-center justify-center px-4 py-3"
+              onPress={() =>
+                model.requestConfirmation({ kind: "remove-units" })
+              }
+            >
+              <Text className="text-sm text-destructive">
+                Remove all additional units
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </>

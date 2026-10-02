@@ -375,3 +375,127 @@ describe("mobile auth router schemas", () => {
     expect(shouldDispatchMobileOwnerOtpEmail({})).toBe(false)
   })
 })
+
+test("ordinary mobile bootstrap retains business and linked customer access", async () => {
+  const caller = createCallerFactory(authRouter)({
+    db: {
+      user: { findUnique: async () => ({ ageBand: "ADULT" }) },
+      membership: {
+        findFirst: async () => ({
+          role: "OWNER",
+          status: "ACTIVE",
+          tenant: {
+            id: "business",
+            name: "Business",
+            slug: "business",
+            currencyCode: "NGN",
+            stores: [
+              {
+                id: "store",
+                name: "Store",
+                currencyCode: "NGN",
+                status: "ACTIVE",
+              },
+            ],
+          },
+        }),
+      },
+      storeConversationAccountAccess: {
+        findFirst: async () => ({ id: "customer-link" }),
+      },
+    },
+    requestHeaders: new Headers(),
+    session: { user: { id: "ordinary-user" } },
+    qaSessionScope: null,
+  } as never)
+  expect(await caller.getMobileAccessProfile()).toEqual({
+    hasBusinessAccess: true,
+    hasCustomerHistory: true,
+  })
+})
+
+describe("mobile bootstrap for scoped QA sessions", () => {
+  const scope = {
+    membershipId: "qa-membership",
+    tenantId: "qa-tenant",
+    storeId: "qa-store",
+  }
+  function callerFor(
+    options: {
+      eligible?: boolean
+      membership?: boolean
+      session?: boolean
+    } = {},
+  ) {
+    const reads: unknown[] = []
+    const caller = createCallerFactory(authRouter)({
+      db: {
+        user: {
+          findUnique: async () => ({
+            ageBand: options.eligible === false ? "UNDECLARED" : "ADULT",
+          }),
+        },
+        membership: {
+          findFirst: async (query: unknown) => {
+            reads.push(query)
+            return options.membership === false
+              ? null
+              : { id: scope.membershipId }
+          },
+        },
+        storeConversationAccountAccess: {
+          findFirst: async () => {
+            throw new Error("QA bootstrap must not enumerate customer history")
+          },
+        },
+      },
+      requestHeaders: new Headers(),
+      session: options.session === false ? null : { user: { id: "qa-user" } },
+      qaSessionScope: scope,
+    } as never)
+    return { caller, reads }
+  }
+  test("opens only its validated business shell without global enumeration", async () => {
+    const { caller, reads } = callerFor()
+    expect(await caller.getMobileAccessProfile()).toEqual({
+      hasBusinessAccess: true,
+      hasCustomerHistory: false,
+    })
+    expect(reads).toEqual([
+      {
+        where: {
+          id: scope.membershipId,
+          userId: "qa-user",
+          status: "ACTIVE",
+          tenant: {
+            id: scope.tenantId,
+            dataClassification: "QA",
+            isActive: true,
+            qaPurgeStartedAt: null,
+            stores: { some: { id: scope.storeId, status: "ACTIVE" } },
+          },
+        },
+        select: { id: true },
+      },
+    ])
+  })
+  test("denies a missing or inactive scoped membership", async () => {
+    await expect(
+      callerFor({ membership: false }).caller.getMobileAccessProfile(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  })
+  test("preserves the age prerequisite before scope reads", async () => {
+    const { caller, reads } = callerFor({ eligible: false })
+    await expect(caller.getMobileAccessProfile()).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+    })
+    expect(reads).toEqual([])
+  })
+  test("denies an absent or invalidated session before any scope reads", async () => {
+    const { caller, reads } = callerFor({ session: false })
+    await expect(caller.getMobileAccessProfile()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    })
+    expect(reads).toEqual([])
+  })
+})

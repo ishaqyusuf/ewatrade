@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  commercialOrderAuthorizeChargeOnlyServiceLineSchema,
   commercialOrderCreateSchema,
+  commercialOrderFulfillChargeOnlyServiceLineSchema,
   commercialOrderFulfillProductsSchema,
   commercialOrderListPageSchema,
   commercialOrderPaymentSchema,
   commercialOrderPaymentsListPageSchema,
   commercialOrderReminderSettingsUpdateSchema,
+  commercialOrderReportSummarySchema,
 } from "./orders"
 
 describe("commercial Order list schema", () => {
@@ -24,6 +27,22 @@ describe("commercial Order list schema", () => {
     expect(result.direction).toBe("forward")
     expect(result.limit).toBe(20)
     expect(result.statuses).toEqual(["PENDING", "COMPLETED"])
+  })
+})
+
+describe("commercial Order report summary schema", () => {
+  test("accepts a Store filter while retaining tenant-wide calls", () => {
+    expect(commercialOrderReportSummarySchema.parse({})).toEqual({})
+    expect(
+      commercialOrderReportSummarySchema.parse({ storeId: " store_123 " }),
+    ).toEqual({ storeId: "store_123" })
+    expect(
+      commercialOrderReportSummarySchema.safeParse({ storeId: " " }).success,
+    ).toBe(false)
+    expect(
+      commercialOrderReportSummarySchema.safeParse({ tenantId: "forged" })
+        .success,
+    ).toBe(false)
   })
 })
 
@@ -110,5 +129,93 @@ describe("commercial Order bulk fulfillment schema", () => {
       orderId: "order-001",
       schemaVersion: 1,
     })
+  })
+})
+
+describe("charge-only Service-line fulfillment schema", () => {
+  const command = {
+    clientOperationId: "fulfill-service-001",
+    orderLineId: "order-line-1",
+    reason: "Service completed and authorized",
+    schemaVersion: 1,
+  } as const
+
+  test("accepts and trims the exact command contract", () => {
+    expect(
+      commercialOrderFulfillChargeOnlyServiceLineSchema.parse({
+        ...command,
+        clientOperationId: "  fulfill-service-001  ",
+        orderLineId: " order-line-1 ",
+        reason: " Service completed and authorized ",
+      }),
+    ).toEqual(command)
+  })
+
+  test("enforces field bounds and excludes forged authority or fulfillment facts", () => {
+    expect(
+      commercialOrderFulfillChargeOnlyServiceLineSchema.safeParse(command)
+        .success,
+    ).toBe(true)
+
+    for (const invalid of [
+      { ...command, schemaVersion: 2 },
+      { ...command, orderLineId: " " },
+      { ...command, orderLineId: "x".repeat(129) },
+      { ...command, clientOperationId: "short" },
+      { ...command, clientOperationId: "x".repeat(161) },
+      { ...command, reason: "   " },
+      { ...command, reason: "x".repeat(501) },
+      { ...command, tenantId: "caller-tenant" },
+      { ...command, actorUserId: "caller-actor" },
+      { ...command, quantity: "1" },
+      { ...command, performedAt: "2026-10-01T10:00:00.000Z" },
+    ]) {
+      expect(
+        commercialOrderFulfillChargeOnlyServiceLineSchema.safeParse(invalid)
+          .success,
+      ).toBe(false)
+    }
+  })
+})
+
+describe("charge-only Service-line authorization schema", () => {
+  const command = {
+    clientOperationId: "authorize-service-001",
+    orderLineId: "order-line-1",
+    reason: "Customer requested release",
+    schemaVersion: 1,
+  } as const
+
+  test("accepts and trims the exact command contract", () => {
+    expect(
+      commercialOrderAuthorizeChargeOnlyServiceLineSchema.parse({
+        ...command,
+        clientOperationId: "  authorize-service-001  ",
+        orderLineId: " order-line-1 ",
+        reason: " Customer requested release ",
+      }),
+    ).toEqual(command)
+  })
+
+  test("enforces bounds and rejects forged authority, quantity, date, or policy", () => {
+    for (const invalid of [
+      { ...command, schemaVersion: 2 },
+      { ...command, orderLineId: " " },
+      { ...command, orderLineId: "x".repeat(129) },
+      { ...command, clientOperationId: "short" },
+      { ...command, clientOperationId: "x".repeat(161) },
+      { ...command, reason: " " },
+      { ...command, reason: "x".repeat(501) },
+      { ...command, tenantId: "caller-tenant" },
+      { ...command, actorUserId: "caller-actor" },
+      { ...command, quantity: "1" },
+      { ...command, authorizedAt: "2026-10-01T10:00:00.000Z" },
+      { ...command, serviceAuthorizationPolicy: "MANUAL_RELEASE" },
+    ]) {
+      expect(
+        commercialOrderAuthorizeChargeOnlyServiceLineSchema.safeParse(invalid)
+          .success,
+      ).toBe(false)
+    }
   })
 })

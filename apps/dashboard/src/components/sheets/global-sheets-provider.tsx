@@ -1,19 +1,43 @@
 "use client"
 
-import type { ReactNode } from "react"
-import { GlobalSheets } from "./global-sheets"
+import { type ReactNode, useSyncExternalStore } from "react"
+import { type GlobalSheetAccess, GlobalSheets } from "./global-sheets"
+
+const subscribeToHydration = () => () => undefined
 
 export function GlobalSheetsProvider({
+  access,
+  actorUserId,
   children,
   store,
+  storeIds,
+  tenantId,
 }: {
+  access: GlobalSheetAccess
+  actorUserId: string
   children: ReactNode
   store: { id: string; name: string }
+  storeIds: string[]
+  tenantId: string
 }) {
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  )
   return (
     <>
       {children}
-      <GlobalSheets store={store} />
+      {hydrated ? (
+        <GlobalSheets
+          key={`${actorUserId}:${tenantId}:${store.id}`}
+          access={access}
+          actorUserId={actorUserId}
+          store={store}
+          storeIds={storeIds}
+          tenantId={tenantId}
+        />
+      ) : null}
     </>
   )
 }

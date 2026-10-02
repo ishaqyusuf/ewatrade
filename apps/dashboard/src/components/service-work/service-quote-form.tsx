@@ -1,8 +1,19 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  ControlField,
+  DateControl,
+  FieldGroup,
+  FieldLabel,
+  FormActions,
+  MoneyInput,
+  SubmitButton,
+  Field as UiField,
+} from "@ewatrade/ui"
 
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import {
   useMutation,
   useQueryClient,
@@ -11,9 +22,6 @@ import {
 import { useEffect, useMemo, useState } from "react"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
-
-const fieldClass =
-  "h-10 w-full scroll-mt-24 border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 function lineOptionDetail(offeringName: string, variantName: string) {
   return offeringName.trim().toLocaleLowerCase() ===
@@ -124,14 +132,9 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
   }
 
   return (
-    <div className="grid gap-4">
+    <FieldGroup className="grid gap-4">
       {error ? (
-        <p
-          role="alert"
-          className="border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
       {request.lines.map((line) => (
         <div className="grid gap-3 border-b border-border pb-4" key={line.id}>
@@ -142,10 +145,13 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
               {lineOptionDetail(line.offeringName, line.variantName)}
             </p>
           </div>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Unit price</span>
-            <input
-              className={fieldClass}
+          <UiField className="gap-1.5">
+            <FieldLabel htmlFor={`service-quote-price-${line.id}`}>
+              Unit price
+            </FieldLabel>
+            <MoneyInput
+              id={`service-quote-price-${line.id}`}
+              currencyCode={store.currencyCode}
               inputMode="decimal"
               value={prices[line.offeringId] ?? ""}
               onChange={(event) =>
@@ -155,28 +161,34 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
                 }))
               }
             />
-          </label>
+          </UiField>
         </div>
       ))}
-      <label className="grid gap-1.5 text-sm">
-        <span className="font-medium">
-          Expires{" "}
-          <span className="font-normal text-muted-foreground">Optional</span>
-        </span>
-        <input
-          type="datetime-local"
-          className={fieldClass}
-          value={expiresAt}
-          onChange={(event) => setExpiresAt(event.target.value)}
-        />
-      </label>
-      <Button
-        className="rounded-none"
-        disabled={quoteMutation.isPending}
-        onClick={issueQuote}
+      <ControlField
+        label={
+          <>
+            Expires{" "}
+            <span className="font-normal text-muted-foreground">Optional</span>
+          </>
+        }
       >
-        {quoteMutation.isPending ? "Issuing…" : "Issue quote"}
-      </Button>
-    </div>
+        <DateControl
+          type="datetime-local"
+          value={expiresAt}
+          onValueChange={(value) => setExpiresAt(value)}
+        />
+      </ControlField>
+      <FormActions>
+        <SubmitButton
+          type="button"
+          isSubmitting={quoteMutation.isPending}
+          className="rounded-none"
+          disabled={quoteMutation.isPending}
+          onClick={issueQuote}
+        >
+          {quoteMutation.isPending ? "Issuing…" : "Issue quote"}
+        </SubmitButton>
+      </FormActions>
+    </FieldGroup>
   )
 }

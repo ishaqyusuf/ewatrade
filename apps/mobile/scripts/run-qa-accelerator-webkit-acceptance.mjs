@@ -6,7 +6,6 @@ import { webkit } from "playwright"
 const marketingOrigin = requireEnvironment("QA_ACCEPTANCE_MARKETING_ORIGIN")
 const dashboardOrigin = requireEnvironment("QA_ACCEPTANCE_DASHBOARD_ORIGIN")
 const qaDomain = requireEnvironment("QA_ACCEPTANCE_DOMAIN")
-const credential = requireEnvironment("QA_ACCEPTANCE_CREDENTIAL")
 const evidenceDirectory =
   process.env.QA_ACCEPTANCE_EVIDENCE_DIRECTORY?.trim() ||
   "/private/tmp/ewatrade-qa-webkit-acceptance"
@@ -30,7 +29,6 @@ async function assertNoHorizontalOverflow(page, label) {
 
 async function authorize(page) {
   await page.getByLabel("QA domain").fill(qaDomain)
-  await page.getByLabel("Tester credential").fill(credential)
   await page.getByRole("button", { name: "Load QA businesses" }).click()
   await page
     .getByRole("button", { name: "Open 2 QA businesses" })
@@ -85,8 +83,7 @@ try {
   })
 
   if (process.env.QA_ACCEPTANCE_CHECK_INVALID !== "false") {
-    await primary.getByLabel("QA domain").fill(qaDomain)
-    await primary.getByLabel("Tester credential").fill("invalid-credential")
+    await primary.getByLabel("QA domain").fill("unconfigured.example.qa.test")
     await primary.getByRole("button", { name: "Load QA businesses" }).click()
     await primary
       .getByText("QA access could not be authorized.", { exact: true })

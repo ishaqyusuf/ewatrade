@@ -1,12 +1,19 @@
 "use client"
 
-import { getCurrencySymbol } from "@ewatrade/utils"
 import type { ComponentProps } from "react"
 import { type NumberFormatValues, NumericFormat } from "react-number-format"
 
+import { InputGroupInput } from "./input-group"
+import { CurrencyInputGroup } from "./money-input"
+
 type CurrencyInputProps = Omit<
   ComponentProps<typeof NumericFormat>,
-  "decimalScale" | "onValueChange" | "prefix" | "thousandSeparator" | "value"
+  | "customInput"
+  | "decimalScale"
+  | "onValueChange"
+  | "prefix"
+  | "thousandSeparator"
+  | "value"
 > & {
   currencyCode: string
   onValueChange: (value: string, values: NumberFormatValues) => void
@@ -18,19 +25,29 @@ export function CurrencyInput({
   currencyCode,
   onValueChange,
   value,
+  className,
+  disabled,
   ...props
 }: CurrencyInputProps) {
   return (
-    <NumericFormat
-      allowNegative={allowNegative}
-      decimalScale={2}
-      inputMode="decimal"
-      onValueChange={(values) => onValueChange(values.value, values)}
-      prefix={`${getCurrencySymbol(currencyCode)} `}
-      thousandSeparator=","
-      value={value}
-      valueIsNumericString
-      {...props}
-    />
+    <CurrencyInputGroup
+      currencyCode={currencyCode}
+      className={className}
+      disabled={disabled}
+    >
+      <NumericFormat<ComponentProps<typeof InputGroupInput>>
+        customInput={InputGroupInput}
+        aria-description={`Currency ${currencyCode}`}
+        disabled={disabled}
+        allowNegative={allowNegative}
+        decimalScale={2}
+        inputMode="decimal"
+        onValueChange={(values) => onValueChange(values.value, values)}
+        thousandSeparator=","
+        value={value}
+        valueIsNumericString
+        {...props}
+      />
+    </CurrencyInputGroup>
   )
 }

@@ -8,6 +8,7 @@ import {
   resolveCustomerConversationQaPath,
   resolveCustomerDeepLink,
 } from "@/lib/customer-deep-link"
+import { resolveHomeGuidedJourneyQaPath } from "@/lib/home-guided-journey-qa"
 import { resolveOnboardingMarketDayQaPath } from "@/lib/onboarding-market-day-qa"
 import { resolveOrderDetailCurrentQaPath } from "@/lib/order-detail-current-qa"
 import { resolveOrdersDispatchLedgerQaPath } from "@/lib/orders-dispatch-ledger-qa"
@@ -19,6 +20,8 @@ export async function redirectSystemPath({
   initial: boolean
   path: string
 }) {
+  const homeGuidedJourneyQaPath = resolveHomeGuidedJourneyQaPath(path, __DEV__)
+  if (homeGuidedJourneyQaPath) return homeGuidedJourneyQaPath
   const businessHomeMarketLedgerQaPath = resolveBusinessHomeMarketLedgerQaPath(
     path,
     __DEV__,

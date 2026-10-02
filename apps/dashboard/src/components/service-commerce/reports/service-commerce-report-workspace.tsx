@@ -1,5 +1,22 @@
 "use client"
+import {
+  Button,
+  ControlField,
+  SelectControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@ewatrade/ui"
 
+import { DateRangeControl } from "@/components/date-range-control"
+import { PageHeader, PageToolbar } from "@/components/page-header"
+import { MetricCard } from "@/components/reports/metric-card"
+import { ReportError } from "@/components/reports/report-error"
+import { ReportSection as ReportPanel } from "@/components/reports/report-section"
+import { ScrollableContent } from "@/components/scrollable-content"
 import {
   type ServiceCommerceReportDetail,
   type ServiceCommerceReportRange,
@@ -8,10 +25,10 @@ import {
 } from "@/hooks/use-service-commerce-report-params"
 import { useTRPC } from "@/trpc/client"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
-import { Button } from "@ewatrade/ui"
+
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo, useState } from "react"
+import { type ReactNode, useMemo } from "react"
 
 type StoreOption = { id: string; name: string }
 
@@ -38,14 +55,8 @@ const DETAIL_LABELS: Record<ServiceCommerceReportDetail, string> = {
   reliability: "Reliability",
 }
 
-const MAX_REPORT_WINDOW_MILLISECONDS = 366 * 24 * 60 * 60 * 1_000
-
 function formatDateInput(value: Date) {
   return value.toISOString().slice(0, 10)
-}
-
-function readDateInput(value: string) {
-  return value ? new Date(`${value}T00:00:00.000Z`) : null
 }
 
 function humanize(value: string) {
@@ -74,34 +85,23 @@ function hasReportActivity(report: ServiceCommerceReportOutput) {
   ].some((value) => value > 0)
 }
 
-function MetricCard({
-  label,
-  value,
-}: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
-    </div>
-  )
-}
-
 function ReportSection({
   children,
   detail,
   onOpenDetail,
   title,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   detail: ServiceCommerceReportDetail
   onOpenDetail: (detail: ServiceCommerceReportDetail) => void
   title: string
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold">{title}</h2>
+    <ReportPanel
+      title={title}
+      actions={
         <Button
+          appearance="form"
           onClick={() => onOpenDetail(detail)}
           size="sm"
           type="button"
@@ -109,9 +109,10 @@ function ReportSection({
         >
           View detail
         </Button>
-      </div>
-      <div className="mt-4">{children}</div>
-    </section>
+      }
+    >
+      {children}
+    </ReportPanel>
   )
 }
 
@@ -123,7 +124,7 @@ function CountList({
   return (
     <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {entries.map((entry) => (
-        <div className="rounded-lg border border-border p-3" key={entry.label}>
+        <div className="border border-border p-3" key={entry.label}>
           <dt className="text-xs text-muted-foreground">{entry.label}</dt>
           <dd className="mt-1 text-lg font-medium tabular-nums">
             {entry.value}
@@ -167,7 +168,7 @@ function ReportDrilldown({
   return (
     <section
       aria-label={`${DETAIL_LABELS[detail]} report detail`}
-      className="rounded-xl border border-primary/30 bg-primary/5 p-5"
+      className="border border-primary/30 bg-primary/5 p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -177,7 +178,13 @@ function ReportDrilldown({
             identifiers, and private media are never included.
           </p>
         </div>
-        <Button onClick={onClose} size="sm" type="button" variant="outline">
+        <Button
+          appearance="form"
+          onClick={onClose}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
           Close detail
         </Button>
       </div>
@@ -189,7 +196,7 @@ function ReportDrilldown({
       {drilldown.isLoading ? (
         <output
           aria-label="Loading report detail"
-          className="mt-4 block h-24 animate-pulse rounded-lg bg-muted"
+          className="mt-4 block h-24 animate-pulse bg-muted"
         />
       ) : drilldown.isError ? (
         <div className="mt-4 grid gap-3" role="alert">
@@ -197,6 +204,7 @@ function ReportDrilldown({
             Report detail is temporarily unavailable.
           </p>
           <Button
+            appearance="form"
             className="w-fit"
             onClick={() => void drilldown.refetch()}
             size="sm"
@@ -207,20 +215,38 @@ function ReportDrilldown({
           </Button>
         </div>
       ) : drilldown.data?.rows.length ? (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-left text-sm">
-            <thead className="border-b border-border text-xs text-muted-foreground">
-              <tr>
-                <th className="px-2 py-2 font-medium">Date</th>
-                <th className="px-2 py-2 font-medium">Category</th>
-                <th className="px-2 py-2 font-medium">Outcome</th>
-                <th className="px-2 py-2 font-medium">Usage attribution</th>
-                <th className="px-2 py-2 text-right font-medium">Count</th>
-              </tr>
-            </thead>
-            <tbody>
+        <section
+          className="mt-4 overflow-x-auto"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
+          tabIndex={0}
+          aria-label="Report detail table"
+        >
+          <Table className="w-full min-w-[34rem] text-left text-sm">
+            <TableHeader className="border-b border-border text-sm font-normal text-muted-foreground">
+              <TableRow>
+                <TableHead scope="col" className="px-4 py-2 font-normal">
+                  Date
+                </TableHead>
+                <TableHead scope="col" className="px-4 py-2 font-normal">
+                  Category
+                </TableHead>
+                <TableHead scope="col" className="px-4 py-2 font-normal">
+                  Outcome
+                </TableHead>
+                <TableHead scope="col" className="px-4 py-2 font-normal">
+                  Usage attribution
+                </TableHead>
+                <TableHead
+                  scope="col"
+                  className="px-4 py-2 text-right font-normal"
+                >
+                  Count
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {drilldown.data.rows.map((row) => (
-                <tr
+                <TableRow
                   className="border-b border-border/70"
                   key={[
                     row.date,
@@ -232,10 +258,16 @@ function ReportDrilldown({
                     row.billingOwner ?? "",
                   ].join(":")}
                 >
-                  <td className="px-2 py-2 tabular-nums">{row.date}</td>
-                  <td className="px-2 py-2">{humanize(row.category)}</td>
-                  <td className="px-2 py-2">{humanize(row.outcome)}</td>
-                  <td className="px-2 py-2 text-muted-foreground">
+                  <TableCell className="px-4 py-2 tabular-nums">
+                    {row.date}
+                  </TableCell>
+                  <TableCell className="px-4 py-2">
+                    {humanize(row.category)}
+                  </TableCell>
+                  <TableCell className="px-4 py-2">
+                    {humanize(row.outcome)}
+                  </TableCell>
+                  <TableCell className="px-4 py-2 text-muted-foreground">
                     {[
                       row.connectionId
                         ? `Connection ${row.connectionId}`
@@ -246,15 +278,15 @@ function ReportDrilldown({
                     ]
                       .filter(Boolean)
                       .join(" · ") || "—"}
-                  </td>
-                  <td className="px-2 py-2 text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="px-4 py-2 text-right tabular-nums">
                     {row.count}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </section>
       ) : (
         <p className="mt-4 text-sm text-muted-foreground">
           No aggregate events were recorded for this detail and date range.
@@ -273,8 +305,6 @@ export function ServiceCommerceReportWorkspace({
 }) {
   const trpc = useTRPC()
   const params = useServiceCommerceReportParams()
-  const [draftFrom, setDraftFrom] = useState(formatDateInput(initialRange.from))
-  const [draftTo, setDraftTo] = useState(formatDateInput(initialRange.to))
   const scope = useMemo(() => {
     if (params.from && params.to && params.to > params.from) {
       return resolveServiceCommerceReportRange({
@@ -284,30 +314,9 @@ export function ServiceCommerceReportWorkspace({
     }
     return initialRange
   }, [initialRange, params.from, params.to])
-  useEffect(() => {
-    setDraftFrom(formatDateInput(scope.from))
-    setDraftTo(formatDateInput(scope.to))
-  }, [scope.from, scope.to])
   const storeId = stores.some((store) => store.id === params.store)
     ? params.store
     : null
-  const draftRange = {
-    from: readDateInput(draftFrom),
-    to: readDateInput(draftTo),
-  }
-  const canApplyScope =
-    draftRange.from !== null &&
-    draftRange.to !== null &&
-    draftRange.to > draftRange.from &&
-    draftRange.to.getTime() - draftRange.from.getTime() <=
-      MAX_REPORT_WINDOW_MILLISECONDS
-  const rangeValidationMessage =
-    draftRange.from &&
-    draftRange.to &&
-    draftRange.to.getTime() - draftRange.from.getTime() >
-      MAX_REPORT_WINDOW_MILLISECONDS
-      ? "Choose a range of 366 days or fewer."
-      : null
   const report = useQuery(
     trpc.serviceCommerce.report.queryOptions(
       {
@@ -319,142 +328,99 @@ export function ServiceCommerceReportWorkspace({
     ),
   )
 
-  const applyScope = () => {
-    const { from, to } = draftRange
-    if (!from || !to || to <= from) return
-    void params.setScope({ from, store: storeId, to })
-  }
-
   return (
-    <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 p-6 lg:p-8">
-      <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Service Commerce</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Operational reports
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Lifecycle, Catalog, reliability, media and cost facts are scoped to
-            the selected Store and occurrence window.
-          </p>
-        </div>
-      </header>
-
-      <form
-        className="grid gap-4 rounded-xl border border-border bg-card p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
-        onSubmit={(event) => {
-          event.preventDefault()
-          applyScope()
-        }}
-      >
-        <div className="grid gap-3 sm:grid-cols-3">
-          <label className="grid gap-1 text-sm">
-            Store
-            <select
-              className="h-10 rounded-lg border border-border bg-background px-3"
-              onChange={(event) =>
-                void params.setScope({
-                  from: scope.from,
-                  store: event.target.value || null,
-                  to: scope.to,
-                })
-              }
-              value={storeId ?? ""}
-            >
-              <option value="">All tenant stores</option>
-              {stores.map((store) => (
-                <option key={store.id} value={store.id}>
-                  {store.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm">
-            From
-            <input
-              className="h-10 rounded-lg border border-border bg-background px-3"
-              onChange={(event) => setDraftFrom(event.target.value)}
-              type="date"
-              value={draftFrom}
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            To (exclusive)
-            <input
-              className="h-10 rounded-lg border border-border bg-background px-3"
-              onChange={(event) => setDraftTo(event.target.value)}
-              type="date"
-              value={draftTo}
-            />
-          </label>
-        </div>
-        <div className="grid gap-2">
-          <Button disabled={!canApplyScope} type="submit">
-            Apply range
-          </Button>
-          <p
-            className={
-              rangeValidationMessage
-                ? "text-xs text-destructive"
-                : "text-xs text-muted-foreground"
-            }
-            role={rangeValidationMessage ? "alert" : undefined}
-          >
-            {rangeValidationMessage ?? "Maximum 366 days"}
-          </p>
-        </div>
-      </form>
-
-      <ReportDrilldown
-        detail={params.detail}
-        end={scope.to}
-        onClose={() => void params.setDetail(null)}
-        start={scope.from}
-        storeId={storeId}
-      />
-
-      {report.isLoading ? (
-        <ServiceCommerceReportSkeleton />
-      ) : report.isError ? (
-        <section
-          className="grid gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-5"
-          role="alert"
+    <ScrollableContent>
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 pt-6">
+        <PageHeader
+          eyebrow="Service Commerce"
+          title="Operational reports"
+          description="Lifecycle, Catalog, reliability, media and cost facts are scoped to the selected Store and occurrence window."
         >
-          <p className="text-sm text-destructive">
-            This report is temporarily unavailable.
-          </p>
-          <Button
-            className="w-fit"
-            onClick={() => void report.refetch()}
-            type="button"
-            variant="outline"
-          >
-            Retry report
-          </Button>
-        </section>
-      ) : !report.data ? null : !hasReportActivity(report.data) ? (
-        <section className="rounded-xl border border-border bg-card p-6">
-          <h2 className="font-semibold">No report activity in this window</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Try another Store or date range. Zero is shown only after the report
-            has loaded; unavailable provider costs remain explicitly unknown.
-          </p>
-        </section>
-      ) : (
-        <>
-          {report.data.mayBeTruncated ? (
-            <output className="block rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700">
-              One or more report queries reached their safe limit. Totals may be
-              incomplete for this date range.
-            </output>
-          ) : null}
-          <ReportContent
-            onOpenDetail={(detail) => void params.setDetail(detail)}
-            report={report.data}
+          <PageToolbar
+            actions={
+              <>
+                <ControlField label={<>Store</>}>
+                  <SelectControl
+                    aria-label="Service Commerce report store"
+                    onValueChange={(value) =>
+                      void params.setScope({
+                        from: scope.from,
+                        store: value || null,
+                        to: scope.to,
+                      })
+                    }
+                    value={storeId ?? ""}
+                    options={[
+                      { value: "", label: <>All tenant stores</> },
+                      ...(stores.map((store) => ({
+                        value: store.id,
+                        label: store.name,
+                      })) ?? []),
+                    ]}
+                  />
+                </ControlField>
+                <DateRangeControl
+                  start={formatDateInput(scope.from)}
+                  end={formatDateInput(scope.to)}
+                  endExclusive
+                  maxDays={366}
+                  label="Operational report date range"
+                  onApply={({ start, end }) =>
+                    void params.setScope({
+                      from: new Date(`${start}T00:00:00.000Z`),
+                      store: storeId,
+                      to: new Date(`${end}T00:00:00.000Z`),
+                    })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Maximum 366 days
+                </p>
+              </>
+            }
           />
-        </>
-      )}
-    </div>
+        </PageHeader>
+
+        <ReportDrilldown
+          detail={params.detail}
+          end={scope.to}
+          onClose={() => void params.setDetail(null)}
+          start={scope.from}
+          storeId={storeId}
+        />
+
+        {report.isLoading ? (
+          <ReportLoading />
+        ) : report.isError ? (
+          <ReportError
+            error={report.error}
+            retry={() => void report.refetch()}
+          />
+        ) : !report.data ? null : !hasReportActivity(report.data) ? (
+          <section className="border border-border bg-background p-6">
+            <h2 className="font-semibold">No report activity in this window</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try another Store or date range. Zero is shown only after the
+              report has loaded; unavailable provider costs remain explicitly
+              unknown.
+            </p>
+          </section>
+        ) : (
+          <>
+            {report.data.mayBeTruncated ? (
+              <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700">
+                One or more report queries reached their safe limit. Totals may
+                be incomplete for this date range.
+              </output>
+            ) : null}
+            <ReportContent
+              onOpenDetail={(detail) => void params.setDetail(detail)}
+              report={report.data}
+            />
+          </>
+        )}
+      </div>
+    </ScrollableContent>
   )
 }
 
@@ -476,7 +442,7 @@ function ReportContent({
   } = report
 
   return (
-    <div className="grid gap-6">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Requests" value={lifecycle.requestsReceived} />
         <MetricCard label="Quotes issued" value={lifecycle.quotesIssued} />
@@ -530,7 +496,7 @@ function ReportContent({
         </div>
       </ReportSection>
 
-      <section className="rounded-xl border border-border bg-card p-5">
+      <section className="border border-border bg-background p-5">
         <h2 className="font-semibold">Store Conversation service quality</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Content-free operational counts for the selected Store and occurrence
@@ -826,7 +792,7 @@ function ReportContent({
         <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {costs.map((cost) => (
             <div
-              className="rounded-lg border border-border p-3"
+              className="border border-border p-3"
               key={`${cost.costKind}:${cost.currencyCode ?? "unknown"}`}
             >
               <dt className="text-xs text-muted-foreground">
@@ -873,66 +839,106 @@ function ReportContent({
       </ReportSection>
 
       {report.scope.storeId === null && report.storeBreakdown.length > 0 ? (
-        <section className="rounded-xl border border-border bg-card p-5">
+        <section className="border border-border bg-background p-5">
           <h2 className="font-semibold">Store breakdown</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[38rem] text-left text-sm">
-              <thead className="border-b border-border text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-2 py-2 font-medium">Store</th>
-                  <th className="px-2 py-2 text-right font-medium">Requests</th>
-                  <th className="px-2 py-2 text-right font-medium">Quotes</th>
-                  <th className="px-2 py-2 text-right font-medium">Payments</th>
-                  <th className="px-2 py-2 text-right font-medium">
+          <section
+            className="mt-4 overflow-x-auto"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
+            tabIndex={0}
+            aria-label="Store breakdown table"
+          >
+            <Table className="w-full min-w-[38rem] text-left text-sm">
+              <TableHeader className="border-b border-border text-xs text-muted-foreground">
+                <TableRow>
+                  <TableHead scope="col" className="px-4 py-2 font-normal">
+                    Store
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className="px-4 py-2 text-right font-normal"
+                  >
+                    Requests
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className="px-4 py-2 text-right font-normal"
+                  >
+                    Quotes
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className="px-4 py-2 text-right font-normal"
+                  >
+                    Payments
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className="px-4 py-2 text-right font-normal"
+                  >
                     Completions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {report.storeBreakdown.map((store) => (
-                  <tr className="border-b border-border/70" key={store.storeId}>
-                    <td className="px-2 py-2 font-medium">{store.name}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">
+                  <TableRow
+                    className="border-b border-border/70"
+                    key={store.storeId}
+                  >
+                    <TableCell className="px-4 py-2 font-normal">
+                      {store.name}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right tabular-nums">
                       {store.requestsReceived}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right tabular-nums">
                       {store.quotesIssued}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right tabular-nums">
                       {store.paymentsSucceeded}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right tabular-nums">
                       {store.completions}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </section>
         </section>
       ) : null}
     </div>
   )
 }
 
-export function ServiceCommerceReportSkeleton() {
+function ReportLoading() {
   return (
-    <div className="grid gap-6">
+    <div className="grid min-w-0 gap-6">
       <output className="sr-only">Loading Service Commerce report</output>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
-            className="h-28 animate-pulse rounded-xl bg-muted"
+            className="h-28 animate-pulse bg-muted"
             key={`report-card-skeleton-${index + 1}`}
           />
         ))}
       </div>
       {Array.from({ length: 4 }, (_, index) => (
         <div
-          className="h-52 animate-pulse rounded-xl bg-muted"
+          className="h-52 animate-pulse bg-muted"
           key={`report-section-skeleton-${index + 1}`}
         />
       ))}
     </div>
+  )
+}
+
+export function ServiceCommerceReportSkeleton() {
+  return (
+    <ScrollableContent>
+      <div className="pt-6">
+        <ReportLoading />
+      </div>
+    </ScrollableContent>
   )
 }

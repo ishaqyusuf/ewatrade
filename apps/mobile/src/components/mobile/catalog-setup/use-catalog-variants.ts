@@ -3,11 +3,11 @@ import { createCatalogFixture } from "@/internal-tooling/fixture-recipes"
 import { useEffect, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
-  catalogVariantDraftIssue,
-  cloneVariantDraft,
   type CatalogVariantDraft,
   type CatalogVariantEditor,
   type CatalogVariantManagerProps,
+  catalogVariantDraftIssue,
+  cloneVariantDraft,
 } from "./catalog-variant-model"
 
 type Target = { key: string; unitId?: string }

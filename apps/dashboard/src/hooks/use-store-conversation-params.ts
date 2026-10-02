@@ -39,6 +39,25 @@ export function getStoreConversationFilterUpdate<T extends object>(
   return "cursor" in values ? values : { ...values, cursor: null }
 }
 
+export function hasStoreConversationFilters(
+  params: {
+    assignment: "all" | "unassigned" | "mine" | "assigned" | null
+    q: string | null
+    requestKinds: (typeof requestKinds)[number][] | null
+    sla: "all" | "awaiting_response" | "overdue" | null
+    store: string | null
+  },
+  activeStoreId: string,
+) {
+  return Boolean(
+    params.q?.trim() ||
+      (params.assignment && params.assignment !== "all") ||
+      (params.requestKinds && params.requestKinds.length > 0) ||
+      (params.sla && params.sla !== "all") ||
+      (params.store && params.store !== activeStoreId),
+  )
+}
+
 export function useStoreConversationParams() {
   const [params, setParams] = useQueryStates(storeConversationParams)
   return {

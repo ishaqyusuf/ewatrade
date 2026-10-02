@@ -3,6 +3,7 @@ import type { QaLiveEffectOperation } from "@ewatrade/utils/qa-provider-policy"
 const EXACT_QA_PROVIDER_OPERATIONS: Readonly<
   Record<string, QaLiveEffectOperation>
 > = {
+  "catalog.categories.suggest": "ai_analysis",
   "storesubscriptions.verifypurchase": "subscription",
   "domains.checkavailability": "domain_registration",
   "domains.connectexternal": "domain_hosting",

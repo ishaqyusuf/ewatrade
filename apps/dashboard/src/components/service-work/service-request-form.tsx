@@ -1,11 +1,24 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  Button,
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
 
 import {
   flattenServiceOfferings,
   formatMoney,
 } from "@/components/service-work/service-utils"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import {
   useMutation,
   useQueryClient,
@@ -14,9 +27,6 @@ import {
 import { useMemo, useState } from "react"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 export function ServiceRequestForm({ store }: { store: StoreSummary }) {
   const trpc = useTRPC()
@@ -48,7 +58,7 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
 
   if (publicUrl) {
     return (
-      <div className="grid gap-4">
+      <FieldGroup className="grid gap-4">
         <div className="rounded-lg bg-primary/10 px-4 py-3 text-sm">
           <p className="font-medium">Customer request link ready</p>
           <a
@@ -60,51 +70,37 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
             {publicUrl}
           </a>
         </div>
-        <Button variant="outline" onClick={() => setPublicUrl(null)}>
+        <Button
+          appearance="form"
+          variant="outline"
+          onClick={() => setPublicUrl(null)}
+        >
           Create another link
         </Button>
-      </div>
+      </FieldGroup>
     )
   }
 
   return (
-    <div className="grid gap-4">
+    <FieldGroup className="grid gap-4">
       {error ? (
-        <p
-          role="alert"
-          className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
-      <label className="grid gap-1.5 text-sm">
-        <span className="font-medium">Link label</span>
-        <input
-          className={fieldClass}
+      <ControlField label={<>Link label</>}>
+        <Input
           value={formLabel}
           onChange={(event) => setFormLabel(event.target.value)}
           placeholder="Service request"
         />
-      </label>
-      <fieldset className="grid gap-1">
-        <legend className="mb-1 text-sm font-medium">Available Services</legend>
+      </ControlField>
+      <FieldSet className="grid gap-1">
+        <FieldLegend variant="label" className="mb-1 text-sm font-medium">
+          Available Services
+        </FieldLegend>
         {offerings.map((offering) => (
-          <label
-            className="flex items-start gap-3 border-b border-border py-3 text-sm"
+          <CheckboxField
             key={offering.id}
-          >
-            <input
-              type="checkbox"
-              checked={selectedOfferings.includes(offering.id)}
-              onChange={(event) =>
-                setSelectedOfferings((current) =>
-                  event.target.checked
-                    ? [...current, offering.id]
-                    : current.filter((id) => id !== offering.id),
-                )
-              }
-            />
-            <span>
+            label=<span>
               <span className="block font-medium">{offering.displayName}</span>
               <span className="text-xs text-muted-foreground">
                 {offering.pricingPolicy === "quote_required"
@@ -115,25 +111,40 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
                     )}
               </span>
             </span>
-          </label>
+          >
+            <Checkbox
+              checked={selectedOfferings.includes(offering.id)}
+              onCheckedChange={(checked) =>
+                setSelectedOfferings((current) =>
+                  checked
+                    ? [...current, offering.id]
+                    : current.filter((id) => id !== offering.id),
+                )
+              }
+            />
+          </CheckboxField>
         ))}
-      </fieldset>
-      <Button
-        disabled={
-          !formLabel.trim() ||
-          selectedOfferings.length === 0 ||
-          createMutation.isPending
-        }
-        onClick={() =>
-          createMutation.mutate({
-            label: formLabel.trim(),
-            offeringIds: selectedOfferings,
-            storeId: store.id,
-          })
-        }
-      >
-        {createMutation.isPending ? "Creating…" : "Create request link"}
-      </Button>
-    </div>
+      </FieldSet>
+      <FormActions>
+        <SubmitButton
+          type="button"
+          isSubmitting={createMutation.isPending}
+          disabled={
+            !formLabel.trim() ||
+            selectedOfferings.length === 0 ||
+            createMutation.isPending
+          }
+          onClick={() =>
+            createMutation.mutate({
+              label: formLabel.trim(),
+              offeringIds: selectedOfferings,
+              storeId: store.id,
+            })
+          }
+        >
+          {createMutation.isPending ? "Creating…" : "Create request link"}
+        </SubmitButton>
+      </FormActions>
+    </FieldGroup>
   )
 }

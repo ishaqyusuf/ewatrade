@@ -39,6 +39,12 @@ import {
   ServiceWorkEventType,
   WorkAuthorizationStatus,
 } from "../../../generated/prisma/enums"
+import { CatalogError } from "../catalog"
+import {
+  isCommercialOrderFulfillmentAllowed,
+  readCommercialOrderLinesComplete,
+} from "../commercial-order-completion"
+import { lockCommerceFinancialOrder } from "../customer-ledger/commerce-locks"
 import { revalidateCustomerActionCapabilityInTransaction } from "../service-commerce-actions/projection"
 import {
   customerActionSourceValues,
@@ -174,6 +180,7 @@ async function synchronizeBookingServiceWork(
     commercialOrderId: string | null
     effectiveAt: Date
     operation: "complete" | "start"
+    orderCompletedAt?: Date | null
     serviceJobId: string | null
     storeId: string
     tenantId: string
@@ -293,21 +300,22 @@ async function synchronizeBookingServiceWork(
       where: { id: job.id },
     })
   }
-  if (input.operation === "complete" && input.commercialOrderId) {
-    const incomplete = await tx.serviceJobLine.count({
-      where: {
-        commercialOrderLine: { orderId: input.commercialOrderId },
-        status: {
-          notIn: [
-            ServiceJobLineStatus.COMPLETED,
-            ServiceJobLineStatus.CANCELLED,
-          ],
-        },
-      },
+  if (
+    input.operation === "complete" &&
+    input.commercialOrderId &&
+    activeLines.length > 0
+  ) {
+    const complete = await readCommercialOrderLinesComplete(tx, {
+      orderId: input.commercialOrderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
     })
-    if (incomplete === 0) {
+    if (complete) {
       await tx.commercialOrder.updateMany({
-        data: { completedAt: effectiveAt, status: OrderStatus.COMPLETED },
+        data: {
+          completedAt: input.orderCompletedAt ?? effectiveAt,
+          status: OrderStatus.COMPLETED,
+        },
         where: {
           id: input.commercialOrderId,
           storeId: input.storeId,
@@ -392,6 +400,36 @@ async function lockBooking(
       "BOOKING_NOT_FOUND",
       "Booking was not found.",
     )
+  }
+}
+
+async function lockBookingCommercialOrder(
+  tx: BookingTransaction,
+  input: { orderId: string; storeId: string; tenantId: string },
+) {
+  try {
+    const locked = await lockCommerceFinancialOrder(tx, input)
+    if (!locked) {
+      throw new ServiceCommerceBookingError(
+        "BOOKING_NOT_FOUND",
+        "Eligible Commercial Order was not found for booking.",
+      )
+    }
+    if (locked.order.storeId !== input.storeId) {
+      throw new ServiceCommerceBookingError(
+        "BOOKING_NOT_FOUND",
+        "Eligible Commercial Order was not found for booking.",
+      )
+    }
+    return locked
+  } catch (error) {
+    if (error instanceof CatalogError && error.code === "REVISION_CONFLICT") {
+      throw new ServiceCommerceBookingError(
+        "BOOKING_REVISION_CONFLICT",
+        "Booking Order ownership changed. Refresh and try again.",
+      )
+    }
+    throw error
   }
 }
 
@@ -1671,6 +1709,13 @@ export async function confirmServiceCommerceBooking(
           "Booking capability is unavailable.",
         )
       }
+      if (input.commercialOrderId) {
+        await lockBookingCommercialOrder(tx, {
+          orderId: input.commercialOrderId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        })
+      }
       await lockResource(tx, {
         resourceId: hold.resourceId,
         storeId: input.storeId,
@@ -2050,7 +2095,60 @@ export async function reviseServiceCommerceBooking(
         tenantId: input.tenantId,
       })
       await assertBookingRuntimeReady(tx, input)
+      const discoveredBooking = await tx.serviceBooking.findFirst({
+        select: { commercialOrderId: true },
+        where: {
+          id: input.bookingId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!discoveredBooking) {
+        throw new ServiceCommerceBookingError(
+          "BOOKING_NOT_FOUND",
+          "Booking was not found.",
+        )
+      }
+      let lockedOrderCompletedAt: Date | null | undefined
+      if (discoveredBooking.commercialOrderId) {
+        const financialOrder = await lockBookingCommercialOrder(tx, {
+          orderId: discoveredBooking.commercialOrderId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        })
+        if (
+          (input.operation === "start" || input.operation === "complete") &&
+          !isCommercialOrderFulfillmentAllowed(financialOrder.order.status)
+        )
+          throw new ServiceCommerceBookingError(
+            "BOOKING_BLOCKED",
+            "This Order cannot progress in its current state.",
+          )
+        if (input.operation === "complete") {
+          lockedOrderCompletedAt = financialOrder.order.completedAt
+        }
+      }
       await lockBooking(tx, input)
+      const booking = await tx.serviceBooking.findFirst({
+        include: { offeringConfig: true, resource: true },
+        where: {
+          id: input.bookingId,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+      })
+      if (!booking) {
+        throw new ServiceCommerceBookingError(
+          "BOOKING_NOT_FOUND",
+          "Booking was not found.",
+        )
+      }
+      if (booking.commercialOrderId !== discoveredBooking.commercialOrderId) {
+        throw new ServiceCommerceBookingError(
+          "BOOKING_REVISION_CONFLICT",
+          "Booking Order linkage changed. Refresh and try again.",
+        )
+      }
       const replay = await tx.serviceBookingEvent.findFirst({
         include: { booking: { include: { resource: true } } },
         where: {
@@ -2101,20 +2199,6 @@ export async function reviseServiceCommerceBooking(
               ? nextToken
               : null,
         }
-      }
-      const booking = await tx.serviceBooking.findFirst({
-        include: { offeringConfig: true, resource: true },
-        where: {
-          id: input.bookingId,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      if (!booking) {
-        throw new ServiceCommerceBookingError(
-          "BOOKING_NOT_FOUND",
-          "Booking was not found.",
-        )
       }
       if (booking.revision !== input.expectedRevision) {
         throw new ServiceCommerceBookingError(
@@ -2284,6 +2368,7 @@ export async function reviseServiceCommerceBooking(
           commercialOrderId: booking.commercialOrderId,
           effectiveAt: now,
           operation: input.operation,
+          orderCompletedAt: lockedOrderCompletedAt,
           serviceJobId: booking.serviceJobId,
           storeId: input.storeId,
           tenantId: input.tenantId,

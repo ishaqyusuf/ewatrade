@@ -1,23 +1,25 @@
+import {
+  type MoreFrameProps,
+  type MoreHeaderProps,
+  businessInitials,
+} from "@/components/mobile/more/more-presentation"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useColorScheme } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import type { AdminMoreItem } from "@/lib/admin-navigation"
-import {
-  businessInitials,
-  type MoreHeaderProps,
-  type MoreFrameProps,
-} from "@/components/mobile/more/more-presentation"
-import { ScrollView } from "react-native-css/components/ScrollView"
-import { VariableContextProvider } from "nativewind"
 import { StatusBar } from "expo-status-bar"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
+import { ScrollView } from "react-native-css/components/ScrollView"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function ClassicMoreFrame({ children, onScroll }: MoreFrameProps) {
+  const edgeFeedback = useScrollEdgeFeedback()
   const insets = useSafeAreaInsets()
   const { colorScheme } = useColorScheme()
   return (
@@ -35,6 +37,7 @@ export function ClassicMoreFrame({ children, onScroll }: MoreFrameProps) {
           className="absolute inset-x-0 top-0 z-[100] h-[var(--more-safe-top)] bg-background"
         />
         <ScrollView
+          {...edgeFeedback}
           className="flex-1"
           contentContainerClassName="px-5 pt-[var(--more-list-top)] pb-[var(--more-list-bottom)]"
           onScroll={onScroll}

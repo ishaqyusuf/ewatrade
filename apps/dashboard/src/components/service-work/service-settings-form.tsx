@@ -1,12 +1,22 @@
 "use client"
+import {
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  FieldGroup,
+  FieldLabel,
+  FormActions,
+  Input,
+  MoneyInput,
+  SelectControl,
+  SubmitButton,
+  Field as UiField,
+} from "@ewatrade/ui"
 
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 export function ServiceSettingsForm({
   currencyCode,
@@ -111,125 +121,124 @@ export function ServiceSettingsForm({
         : true
 
   return (
-    <div className="grid gap-6">
+    <FieldGroup className="gap-6">
       {message ? (
         <p className="rounded-lg bg-muted px-3 py-2 text-sm">{message}</p>
       ) : null}
       <section className="grid gap-4">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
+        <CheckboxField label={<>Offer express service</>}>
+          <Checkbox
             checked={expressEnabled}
-            onChange={(event) => setExpressEnabled(event.target.checked)}
+            onCheckedChange={(checked) => setExpressEnabled(checked)}
           />
-          Offer express service
-        </label>
+        </CheckboxField>
         {expressEnabled ? (
           <>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Customer label</span>
-              <input
-                className={fieldClass}
+            <ControlField label={<>Customer label</>}>
+              <Input
                 value={expressLabel}
                 onChange={(event) => setExpressLabel(event.target.value)}
               />
-            </label>
+            </ControlField>
             <div className="grid grid-cols-2 gap-3">
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium">Surcharge type</span>
-                <select
-                  className={fieldClass}
+              <ControlField label={<>Surcharge type</>}>
+                <SelectControl
                   value={surchargeType}
-                  onChange={(event) =>
-                    setSurchargeType(event.target.value as typeof surchargeType)
+                  onValueChange={(value) =>
+                    setSurchargeType(value as typeof surchargeType)
                   }
-                >
-                  <option value="percentage">Percentage</option>
-                  <option value="fixed">Fixed amount</option>
-                </select>
-              </label>
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium">
+                  options={[
+                    { value: "percentage", label: <>Percentage</> },
+                    { value: "fixed", label: <>Fixed amount</> },
+                  ]}
+                />
+              </ControlField>
+              <UiField className="grid gap-1.5 text-sm">
+                <FieldLabel htmlFor="service-express-surcharge">
                   {surchargeType === "percentage"
                     ? "Percentage"
                     : `Amount (${currencyCode})`}
-                </span>
-                <input
-                  className={fieldClass}
-                  inputMode="decimal"
-                  value={surchargeValue}
-                  onChange={(event) => setSurchargeValue(event.target.value)}
-                />
-              </label>
+                </FieldLabel>
+                {surchargeType === "fixed" ? (
+                  <MoneyInput
+                    id="service-express-surcharge"
+                    currencyCode={currencyCode}
+                    value={surchargeValue}
+                    onChange={(event) => setSurchargeValue(event.target.value)}
+                  />
+                ) : (
+                  <Input
+                    inputMode="decimal"
+                    id="service-express-surcharge"
+                    value={surchargeValue}
+                    onChange={(event) => setSurchargeValue(event.target.value)}
+                  />
+                )}
+              </UiField>
             </div>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Express turnaround (hours)</span>
-              <input
-                className={fieldClass}
+            <ControlField label={<>Express turnaround (hours)</>}>
+              <Input
                 inputMode="decimal"
                 value={turnaroundHours}
                 onChange={(event) => setTurnaroundHours(event.target.value)}
               />
-            </label>
+            </ControlField>
           </>
         ) : null}
       </section>
       <section className="grid gap-4 border-t border-border pt-5">
         <h3 className="font-medium">Customer notifications</h3>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Default channel</span>
-          <select
-            className={fieldClass}
+        <ControlField label={<>Default channel</>}>
+          <SelectControl
             value={channel}
-            onChange={(event) =>
-              setChannel(event.target.value as typeof channel)
-            }
-          >
-            <option value="">No automatic channel</option>
-            <option value="sms">SMS</option>
-            <option value="whatsapp">WhatsApp</option>
-          </select>
-        </label>
+            onValueChange={(value) => setChannel(value as typeof channel)}
+            options={[
+              { value: "", label: <>No automatic channel</> },
+              { value: "sms", label: <>SMS</> },
+              { value: "whatsapp", label: <>WhatsApp</> },
+            ]}
+          />
+        </ControlField>
         {!channelConfigured ? (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
             This provider is not configured. Add its webhook URL and, when
             required, its token before enabling automatic delivery.
           </p>
         ) : null}
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+        <CheckboxField label={<>Automatically notify when all work is ready</>}>
+          <Checkbox
             checked={autoReady}
-            onChange={(event) => setAutoReady(event.target.checked)}
+            onCheckedChange={(checked) => setAutoReady(checked)}
           />
-          Automatically notify when all work is ready
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+        </CheckboxField>
+        <CheckboxField
+          label={<>Schedule a reminder before the promised pickup time</>}
+        >
+          <Checkbox
             checked={autoReminder}
-            onChange={(event) => setAutoReminder(event.target.checked)}
+            onCheckedChange={(checked) => setAutoReminder(checked)}
           />
-          Schedule a reminder before the promised pickup time
-        </label>
+        </CheckboxField>
         {autoReminder ? (
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Reminder lead time (hours)</span>
-            <input
-              className={fieldClass}
+          <ControlField label={<>Reminder lead time (hours)</>}>
+            <Input
               inputMode="decimal"
               value={reminderHours}
               onChange={(event) => setReminderHours(event.target.value)}
             />
-          </label>
+          </ControlField>
         ) : null}
       </section>
-      <Button
-        disabled={mutation.isPending || !channelConfigured}
-        onClick={submit}
-      >
-        {mutation.isPending ? "Saving…" : "Save settings"}
-      </Button>
-    </div>
+      <FormActions>
+        <SubmitButton
+          type="button"
+          isSubmitting={mutation.isPending}
+          disabled={mutation.isPending || !channelConfigured}
+          onClick={submit}
+        >
+          {mutation.isPending ? "Saving…" : "Save settings"}
+        </SubmitButton>
+      </FormActions>
+    </FieldGroup>
   )
 }

@@ -1,26 +1,39 @@
 "use client"
+import {
+  Button,
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "next/navigation"
-import { useState } from "react"
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+import { useEffect, useState } from "react"
 
 export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const searchParams = useSearchParams()
   const [message, setMessage] = useState<string | null>(null)
+  const [manualSetupOpen, setManualSetupOpen] = useState(false)
   const [testRecipient, setTestRecipient] = useState("")
   const selectionToken = searchParams.get("whatsapp_selection") ?? ""
   const connections = useQuery(
-    trpc.prescriptions.whatsappConnections.queryOptions(),
+    trpc.prescriptions.whatsappConnections.queryOptions(undefined, {
+      retry: false,
+    }),
   )
   const embedded = useQuery(
-    trpc.prescriptions.whatsappEmbeddedSignupUrl.queryOptions({ storeId }),
+    trpc.prescriptions.whatsappEmbeddedSignupUrl.queryOptions(
+      { storeId },
+      { retry: false },
+    ),
   )
   const selection = useQuery({
     ...trpc.prescriptions.whatsappEmbeddedSignupSession.queryOptions({
@@ -28,7 +41,11 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
       storeId,
     }),
     enabled: Boolean(selectionToken),
+    retry: false,
   })
+  useEffect(() => {
+    if (embedded.error) setManualSetupOpen(true)
+  }, [embedded.error])
   const invalidate = () =>
     queryClient.invalidateQueries({
       queryKey: trpc.prescriptions.whatsappConnections.queryKey(),
@@ -81,21 +98,19 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
     }),
   )
 
-  if (connections.isLoading || embedded.isLoading) {
-    return <div className="h-64 animate-pulse rounded-xl bg-muted" />
+  if (connections.isLoading) {
+    return <div className="h-64 animate-pulse bg-muted" aria-busy="true" />
   }
-  const queryError = connections.error ?? embedded.error
-  if (queryError) {
+  if (connections.error) {
     return (
-      <div className="grid gap-3 rounded-xl border border-destructive/30 p-5">
-        <p role="alert" className="text-sm text-destructive">
-          {queryError.message}
-        </p>
+      <div className="grid gap-3 rounded-none border border-destructive/30 p-5">
+        <FormFeedback appearance="dashboard">
+          {connections.error.message}
+        </FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
-          onClick={() =>
-            void Promise.all([connections.refetch(), embedded.refetch()])
-          }
+          onClick={() => void connections.refetch()}
           variant="outline"
         >
           Try again
@@ -105,7 +120,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
   }
 
   return (
-    <section className="grid gap-5 rounded-xl border border-border bg-card p-5">
+    <section className="grid gap-5 rounded-none border border-border bg-card p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-semibold">Pharmacy WhatsApp connection</h2>
@@ -115,19 +130,39 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             Store sender for every message.
           </p>
         </div>
-        {embedded.data?.available && embedded.data.url ? (
+        {embedded.isLoading ? (
+          <Button appearance="form" disabled type="button">
+            Checking Meta signup…
+          </Button>
+        ) : embedded.data?.available && embedded.data.url ? (
           <a
-            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+            className="inline-flex h-10 items-center justify-center rounded-none bg-primary px-4 text-sm font-medium text-primary-foreground"
             href={embedded.data.url}
           >
             Connect with Meta
           </a>
         ) : (
-          <Button disabled type="button">
+          <Button appearance="form" disabled type="button">
             Embedded signup unavailable
           </Button>
         )}
       </div>
+      {embedded.error ? (
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+          <FormFeedback appearance="dashboard">
+            Meta Embedded Signup could not be checked. Manual pilot setup is
+            still available below.
+          </FormFeedback>
+          <Button
+            appearance="form"
+            onClick={() => void embedded.refetch()}
+            type="button"
+            variant="outline"
+          >
+            Retry Meta check
+          </Button>
+        </div>
+      ) : null}
       {message ? <p className="bg-muted px-4 py-3 text-sm">{message}</p> : null}
       {selectionToken ? (
         <section className="grid gap-3 border border-primary/30 bg-primary/5 p-4">
@@ -143,24 +178,26 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
               Loading authorized numbers…
             </p>
           ) : selection.error ? (
-            <p role="alert" className="text-sm text-destructive">
+            <FormFeedback appearance="dashboard">
               {selection.error.message}
-            </p>
+            </FormFeedback>
           ) : selection.data?.numbers.length ? (
             <div className="grid gap-3">
-              <label className="grid gap-1 text-sm">
-                <span className="font-medium">Test-message recipient</span>
-                <input
-                  className={fieldClass}
+              <ControlField
+                label={<>Test-message recipient</>}
+                afterControl={
+                  <span className="text-xs text-muted-foreground">
+                    Use a consented admin number. Activation requires a
+                    successful neutral test message.
+                  </span>
+                }
+              >
+                <Input
                   onChange={(event) => setTestRecipient(event.target.value)}
                   placeholder="e.g. +234…"
                   value={testRecipient}
                 />
-                <span className="text-xs text-muted-foreground">
-                  Use a consented admin number. Activation requires a successful
-                  neutral test message.
-                </span>
-              </label>
+              </ControlField>
               <div className="grid gap-2 sm:grid-cols-2">
                 {selection.data.numbers.map((number) => (
                   <button
@@ -216,6 +253,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    appearance="form"
                     onClick={() =>
                       retest.mutate({ connectionId: connection.id, storeId })
                     }
@@ -231,6 +269,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                       binding.status !== "SUSPENDED",
                   ) ? (
                     <Button
+                      appearance="form"
                       onClick={() =>
                         suspendBinding.mutate({
                           connectionId: connection.id,
@@ -246,6 +285,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                   ) : null}
                   {connection.status !== "REVOKED" ? (
                     <Button
+                      appearance="form"
                       onClick={() =>
                         lifecycle.mutate({
                           connectionId: connection.id,
@@ -288,12 +328,16 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           </p>
         )}
       </div>
-      <details className="border-t border-border pt-4">
+      <details
+        className="border-t border-border pt-4"
+        open={manualSetupOpen}
+        onToggle={(event) => setManualSetupOpen(event.currentTarget.open)}
+      >
         <summary className="cursor-pointer text-sm font-medium">
           Manual pilot setup
         </summary>
         <form
-          className="mt-4 grid gap-3 md:grid-cols-2"
+          className="mt-4"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
@@ -310,57 +354,44 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             })
           }}
         >
-          <input
-            className={fieldClass}
-            name="businessDisplayName"
-            placeholder="Business display name"
-          />
-          <input
-            className={fieldClass}
-            name="displayNumber"
-            placeholder="Display number"
-            required
-          />
-          <input
-            className={fieldClass}
-            name="wabaId"
-            placeholder="WABA ID"
-            required
-          />
-          <input
-            className={fieldClass}
-            name="phoneNumberId"
-            placeholder="Phone number ID"
-            required
-          />
-          <input
-            className={fieldClass}
-            name="billingOwner"
-            placeholder="Billing owner (optional)"
-          />
-          <input
-            className={fieldClass}
-            name="testRecipient"
-            placeholder="Consented test-message recipient"
-            required
-          />
-          <input
-            autoComplete="off"
-            className={fieldClass}
-            name="accessToken"
-            placeholder="Meta access token"
-            required
-            type="password"
-          />
-          <Button
-            className="md:col-span-2"
-            disabled={connect.isPending}
-            type="submit"
-          >
-            {connect.isPending
-              ? "Saving securely…"
-              : "Save and test connection"}
-          </Button>
+          <FieldGroup className="min-w-0 grid gap-3 md:grid-cols-2">
+            <Input
+              name="businessDisplayName"
+              placeholder="Business display name"
+            />
+            <Input name="displayNumber" placeholder="Display number" required />
+            <Input name="wabaId" placeholder="WABA ID" required />
+            <Input
+              name="phoneNumberId"
+              placeholder="Phone number ID"
+              required
+            />
+            <Input name="billingOwner" placeholder="Billing owner (optional)" />
+            <Input
+              name="testRecipient"
+              placeholder="Consented test-message recipient"
+              required
+            />
+            <Input
+              autoComplete="new-password"
+              name="accessToken"
+              placeholder="Meta access token"
+              required
+              type="password"
+            />
+            <FormActions>
+              <SubmitButton
+                isSubmitting={connect.isPending}
+                className="md:col-span-2"
+                disabled={connect.isPending}
+                type="submit"
+              >
+                {connect.isPending
+                  ? "Saving securely…"
+                  : "Save and test connection"}
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
         </form>
       </details>
       <p className="text-xs text-muted-foreground">

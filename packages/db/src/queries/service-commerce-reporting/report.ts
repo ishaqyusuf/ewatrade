@@ -272,7 +272,11 @@ export async function getServiceCommerceReport(
         storeId: true,
         type: true,
       },
-      where: { ...scope, recordedAt: occurrence },
+      where: {
+        ...scope,
+        recordedAt: occurrence,
+        method: { not: "CUSTOMER_CREDIT" },
+      },
       take: SERVICE_COMMERCE_REPORT_QUERY_ROW_LIMIT,
     }),
     db.serviceBooking.findMany({

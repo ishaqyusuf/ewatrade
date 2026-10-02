@@ -6,6 +6,7 @@ import {
 import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
 
 export type GettingStartedAction = {
+  catalogCreateKind?: "product" | "service"
   description: string
   disabled?: boolean
   href: string
@@ -27,12 +28,14 @@ export function getGettingStartedActions(
     actions.push(
       {
         description: "Add a stock-tracked item to your Catalog.",
-        href: "/catalog?catalogItem=create&catalogKind=product",
+        catalogCreateKind: "product",
+        href: "/?catalogItem=create&catalogCreateKind=product",
         label: "Add Product",
       },
       {
         description: "Add work that you price and deliver.",
-        href: "/catalog?catalogItem=create&catalogKind=service",
+        catalogCreateKind: "service",
+        href: "/?catalogItem=create&catalogCreateKind=service",
         label: "Add Service",
       },
     )

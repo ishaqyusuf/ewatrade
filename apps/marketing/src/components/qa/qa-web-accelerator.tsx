@@ -42,7 +42,7 @@ type QaProfile = {
 
 type QaWebContextValue = {
   authorization: QaAuthorization | null
-  authorize(input: { credential: string; qaDomain: string }): Promise<void>
+  authorize(input: { qaDomain: string }): Promise<void>
   error: string | null
   profiles: QaProfile[]
   refreshProfiles(): Promise<void>
@@ -114,12 +114,6 @@ export function QaWebAccelerator({ children }: { children: ReactNode }) {
         setAuthorization(null)
         setProfiles([])
         setStatus(revalidationStatus)
-        if (revalidationStatus === "needs_authorization") {
-          const body = (await response.json().catch(() => null)) as {
-            message?: string
-          } | null
-          setError(body?.message ?? null)
-        }
         return
       }
       const currentAuthorization = await readJson<QaAuthorization>(response)
@@ -200,7 +194,7 @@ export function QaWebAccelerator({ children }: { children: ReactNode }) {
   }, [status])
 
   const authorize = useCallback(
-    async (input: { credential: string; qaDomain: string }) => {
+    async (input: { qaDomain: string }) => {
       setError(null)
       const response = await fetch("/api/qa-access/exchange", {
         body: JSON.stringify({ ...input, contractVersion: CONTRACT_VERSION }),
@@ -306,7 +300,6 @@ export function QaWebAccelerator({ children }: { children: ReactNode }) {
 function QaAuthorizationDialog() {
   const qa = useQaWebAccelerator()
   const [qaDomain, setQaDomain] = useState(qa.authorization?.qaDomain ?? "")
-  const [credential, setCredential] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const visible = shouldBlockQaWebStatus(qa.status)
 
@@ -314,14 +307,11 @@ function QaAuthorizationDialog() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    if (!qaDomain.trim() || !credential.trim()) return
+    if (!qaDomain.trim()) return
     setSubmitting(true)
-    await qa
-      .authorize({ credential: credential.trim(), qaDomain: qaDomain.trim() })
-      .finally(() => {
-        setCredential("")
-        setSubmitting(false)
-      })
+    await qa.authorize({ qaDomain: qaDomain.trim() }).finally(() => {
+      setSubmitting(false)
+    })
   }
 
   return (
@@ -387,28 +377,15 @@ function QaAuthorizationDialog() {
                 autoCorrect="off"
                 className="h-11 w-full rounded-2xl border border-border bg-background px-4 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
                 onChange={(event) => setQaDomain(event.target.value)}
-                placeholder="ishack.qa.test"
+                placeholder="Enter your QA domain"
                 required
                 type="text"
                 value={qaDomain}
               />
             </label>
-            <label className="block space-y-1.5 text-sm font-medium">
-              <span>Tester credential</span>
-              <input
-                autoCapitalize="none"
-                autoComplete="off"
-                className="h-11 w-full rounded-2xl border border-border bg-background px-4 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10"
-                onChange={(event) => setCredential(event.target.value)}
-                placeholder="Enter tester credential"
-                required
-                type="password"
-                value={credential}
-              />
-            </label>
             <p className="rounded-2xl bg-muted/70 px-4 py-3 text-xs leading-5 text-muted-foreground">
-              <strong className="text-foreground">Protected access.</strong> The
-              domain limits the data scope; the credential authorizes it.
+              <strong className="text-foreground">QA businesses only.</strong>{" "}
+              The domain limits the list to its registered QA businesses.
             </p>
             {qa.error ? (
               <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -417,7 +394,7 @@ function QaAuthorizationDialog() {
             ) : null}
             <Button
               className="h-11 w-full rounded-2xl"
-              disabled={submitting || !qaDomain.trim() || !credential.trim()}
+              disabled={submitting || !qaDomain.trim()}
               type="submit"
             >
               {submitting ? "Authorizing…" : "Load QA businesses"}

@@ -1,55 +1,36 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { parseAsString, parseAsStringEnum, useQueryStates } from "nuqs"
 
-export type InventoryOperationMode =
-  | "adjustment"
-  | "count"
-  | "custody"
-  | "receipt"
-  | "transfer"
-  | "transformation"
-
-const MODES = new Set<InventoryOperationMode>([
+export const INVENTORY_OPERATION_MODES = [
   "adjustment",
   "count",
   "custody",
   "receipt",
   "transfer",
   "transformation",
-])
+] as const
+
+export type InventoryOperationMode = (typeof INVENTORY_OPERATION_MODES)[number]
+
+const inventoryParams = {
+  inventoryOperation: parseAsStringEnum([...INVENTORY_OPERATION_MODES]),
+  inventoryQuery: parseAsString,
+}
 
 export function useInventoryParams() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const operationValue = searchParams.get("inventoryOperation")
-  const operation =
-    operationValue && MODES.has(operationValue as InventoryOperationMode)
-      ? (operationValue as InventoryOperationMode)
-      : null
-  const query = searchParams.get("inventoryQuery") ?? ""
+  const [params, setParams] = useQueryStates(inventoryParams)
+  const operation = params.inventoryOperation
+  const query = params.inventoryQuery ?? ""
 
-  function setParams(
+  function updateParams(
     values: {
       inventoryOperation?: InventoryOperationMode | null
       inventoryQuery?: string | null
     } | null,
   ) {
-    const next = new URLSearchParams(searchParams.toString())
-    if (values === null) {
-      next.delete("inventoryOperation")
-    } else {
-      for (const [key, value] of Object.entries(values)) {
-        if (value) next.set(key, value)
-        else next.delete(key)
-      }
-    }
-    const nextQuery = next.toString()
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-      scroll: false,
-    })
+    return setParams(values === null ? { inventoryOperation: null } : values)
   }
 
-  return { operation, query, setParams }
+  return { operation, query, setParams: updateParams }
 }

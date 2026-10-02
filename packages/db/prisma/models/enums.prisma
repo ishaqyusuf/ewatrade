@@ -864,6 +864,7 @@ enum CommercialPaymentType {
 }
 
 enum CommercialPaymentMethod {
+  CUSTOMER_CREDIT
   CASH
   BANK_TRANSFER
   CARD

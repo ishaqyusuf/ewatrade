@@ -1,65 +1,72 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-
-const CATALOG_ITEM_PARAM = "catalogItem"
-const CATALOG_KIND_PARAM = "catalogKind"
-const CATALOG_QUERY_PARAM = "catalogQuery"
-const PRODUCT_UNITS_PARAM = "productUnits"
+import { parseAsString, parseAsStringEnum, useQueryStates } from "nuqs"
+import {
+  CATALOG_KINDS,
+  type CATALOG_STATUSES,
+  type CatalogFilters,
+  catalogFilterParams,
+} from "./use-catalog-filter-params"
 
 export function useCatalogItemParams() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const catalogItemMode =
-    searchParams.get(CATALOG_ITEM_PARAM) === "create" ? "create" : null
-  const catalogKindValue = searchParams.get(CATALOG_KIND_PARAM)
-  const catalogKind: "product" | "service" | null =
-    catalogKindValue === "product" || catalogKindValue === "service"
-      ? catalogKindValue
-      : null
-  const catalogQuery = searchParams.get(CATALOG_QUERY_PARAM) ?? ""
-  const productUnitsId = searchParams.get(PRODUCT_UNITS_PARAM)
-
+  const [params, updateParams] = useQueryStates({
+    catalogItem: parseAsStringEnum(["create"]),
+    catalogCreateKind: parseAsStringEnum([...CATALOG_KINDS]),
+    ...catalogFilterParams,
+    productUnits: parseAsString,
+  })
   function setParams(
     values: {
       catalogItem?: "create" | null
-      catalogKind?: "product" | "service" | null
+      catalogCreateKind?: (typeof CATALOG_KINDS)[number] | null
+      catalogKind?: (typeof CATALOG_KINDS)[number] | null
+      catalogStatus?: (typeof CATALOG_STATUSES)[number] | null
       catalogQuery?: string | null
       productUnits?: string | null
     } | null,
   ) {
-    const next = new URLSearchParams(searchParams.toString())
-
-    if (values === null) {
-      next.delete(CATALOG_ITEM_PARAM)
-      next.delete(PRODUCT_UNITS_PARAM)
-    } else {
-      for (const [key, value] of Object.entries(values)) {
-        const param =
-          key === "catalogItem"
-            ? CATALOG_ITEM_PARAM
-            : key === "catalogKind"
-              ? CATALOG_KIND_PARAM
-              : key === "catalogQuery"
-                ? CATALOG_QUERY_PARAM
-                : PRODUCT_UNITS_PARAM
-        if (value) next.set(param, value)
-        else next.delete(param)
-      }
-    }
-
-    const query = next.toString()
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    return updateParams(
+      values ?? {
+        catalogItem: null,
+        catalogCreateKind: null,
+        productUnits: null,
+      },
+    )
   }
-
   return {
-    catalogKind,
-    catalogItemMode,
-    catalogQuery,
-    productUnitsId,
+    catalogKind: params.catalogKind,
+    catalogStatus: params.catalogStatus,
+    catalogCreateKind: params.catalogCreateKind,
+    catalogItemMode: params.catalogItem,
+    catalogQuery: params.catalogQuery ?? "",
+    filter: {
+      kind: params.catalogKind,
+      query: params.catalogQuery,
+      status: params.catalogStatus,
+    } satisfies CatalogFilters,
+    hasFilters: Boolean(
+      params.catalogKind || params.catalogStatus || params.catalogQuery?.trim(),
+    ),
+    productUnitsId: params.productUnits,
     setCatalogItemMode: (mode: "create" | null) =>
-      setParams({ catalogItem: mode }),
+      setParams({
+        catalogItem: mode,
+        ...(mode === null ? { catalogCreateKind: null } : {}),
+      }),
+    setFilter: (values: Partial<CatalogFilters> | null) =>
+      updateParams(
+        values === null
+          ? {
+              catalogKind: null,
+              catalogQuery: null,
+              catalogStatus: null,
+            }
+          : {
+              catalogKind: values.kind,
+              catalogQuery: values.query,
+              catalogStatus: values.status,
+            },
+      ),
     setParams,
   }
 }

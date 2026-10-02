@@ -1,4 +1,14 @@
 "use client"
+import {
+  Button,
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormSelectControl } from "@/components/forms/form-controls"
 
 import type { RegisterServiceCommerceFormReset } from "@/components/service-commerce/form-context"
 import { useZodForm } from "@/hooks/use-zod-form"
@@ -6,7 +16,7 @@ import {
   serviceCommerceChangeReasonSchema,
   serviceCommerceStoreAttendantAssignmentInputSchema,
 } from "@ewatrade/service-commerce"
-import { Button } from "@ewatrade/ui"
+
 import { useEffect } from "react"
 import type { z } from "zod"
 import type { CustomerChannelWorkspace } from "./types"
@@ -15,9 +25,6 @@ const teamFormSchema = serviceCommerceStoreAttendantAssignmentInputSchema
   .extend({ reason: serviceCommerceChangeReasonSchema })
   .strict()
 type TeamFormValues = z.infer<typeof teamFormSchema>
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 export function TeamRoutingForm({
   isPending,
@@ -57,7 +64,7 @@ export function TeamRoutingForm({
   )
 
   return (
-    <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
+    <section className="grid gap-4 rounded-none border border-border bg-card p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Team & routing
@@ -72,7 +79,7 @@ export function TeamRoutingForm({
         <div className="grid gap-2">
           {team.map((member) => (
             <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-border px-4 py-3"
               key={member.id}
             >
               <div>
@@ -90,6 +97,7 @@ export function TeamRoutingForm({
                   size="sm"
                   type="button"
                   variant="outline"
+                  appearance="form"
                 >
                   Remove
                 </Button>
@@ -98,36 +106,43 @@ export function TeamRoutingForm({
           ))}
         </div>
       ) : (
-        <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+        <p className="rounded-none border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
           Add at least one active attendant before publishing a customer entry
           point.
         </p>
       )}
-      <form
-        className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
-        onSubmit={form.handleSubmit(onAssign)}
-      >
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Team member</span>
-          <select className={fieldClass} {...form.register("membershipId")}>
-            <option value="">Select active membership</option>
-            {available.map((membership) => (
-              <option
-                key={membership.membershipId}
-                value={membership.membershipId}
-              >
-                {membership.name} · {membership.role}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Reason</span>
-          <input className={fieldClass} {...form.register("reason")} />
-        </label>
-        <Button disabled={isPending || available.length === 0} type="submit">
-          Add attendant
-        </Button>
+      <form onSubmit={form.handleSubmit(onAssign)}>
+        <FieldGroup className="min-w-0 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <ControlField label={<>Team member</>}>
+            <FormSelectControl
+              control={form.control}
+              name={"membershipId"}
+              options={[
+                { value: "", label: <>Select active membership</> },
+                ...(available.map((membership) => ({
+                  value: membership.membershipId,
+                  label: (
+                    <>
+                      {membership.name} · {membership.role}
+                    </>
+                  ),
+                })) ?? []),
+              ]}
+            />
+          </ControlField>
+          <ControlField label={<>Reason</>}>
+            <Input {...form.register("reason")} />
+          </ControlField>
+          <FormActions>
+            <SubmitButton
+              isSubmitting={isPending}
+              disabled={isPending || available.length === 0}
+              type="submit"
+            >
+              Add attendant
+            </SubmitButton>
+          </FormActions>
+        </FieldGroup>
       </form>
       <a
         className="w-fit text-sm font-medium text-primary underline underline-offset-4"

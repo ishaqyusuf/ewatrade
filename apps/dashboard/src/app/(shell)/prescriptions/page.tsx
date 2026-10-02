@@ -6,14 +6,12 @@ import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, trpc } from "@/trpc/server"
+import { getInitialTableSettings } from "@/utils/columns"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import type { Metadata } from "next"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
-
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 
 export const metadata: Metadata = {
   title: "Prescription Requests | EwaTrade",
@@ -25,9 +23,9 @@ type Props = {
 
 export default async function PrescriptionsRoutePage({ searchParams }: Props) {
   const session = await getServerSession()
-  if (!session) redirect(`${MARKETING_URL}/login`)
+  if (!session) redirect("/login")
   const ctx = await getActiveTenant(session.user.id)
-  if (!ctx) redirect(`${MARKETING_URL}/login?error=no_tenant`)
+  if (!ctx) redirect("/login?error=no_tenant")
   if (!canUseSalesOperations(ctx.membership.role)) redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0] ?? null
   if (!store) redirect("/setup")
@@ -36,14 +34,20 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
     membershipRole && canManageTenant(membershipRole),
   )
 
-  const filter = await loadPrescriptionFilterParams(searchParams)
+  const [filter, initialSettings] = await Promise.all([
+    loadPrescriptionFilterParams(searchParams),
+    getInitialTableSettings("prescriptions", {
+      userId: session.user.id,
+      tenantId: ctx.tenant.id,
+    }),
+  ])
   const queryClient = getQueryClient()
   const accessOptions = trpc.prescriptions.workspaceAccess.queryOptions({
     storeId: store.id,
   })
   await queryClient.prefetchQuery(accessOptions)
   const access = queryClient.getQueryData(accessOptions.queryKey)
-  await Promise.all([
+  void Promise.all([
     ...(canManagePrescriptionSetup
       ? [
           queryClient.prefetchQuery(
@@ -83,11 +87,16 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
   return (
     <HydrateClient>
       <ErrorBoundary errorComponent={WorkspaceError}>
-        <Suspense fallback={<PrescriptionTableSkeleton />}>
+        <Suspense
+          fallback={
+            <PrescriptionTableSkeleton initialSettings={initialSettings} />
+          }
+        >
           <PrescriptionRequestsPage
             canManageSetup={canManagePrescriptionSetup}
             store={{ id: store.id, name: store.name }}
             timeZone={ctx.tenant.timezone}
+            initialSettings={initialSettings}
           />
         </Suspense>
       </ErrorBoundary>

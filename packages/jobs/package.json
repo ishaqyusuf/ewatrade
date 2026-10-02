@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@ewatrade/communications": "workspace:*",
+    "@ewatrade/catalog": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",

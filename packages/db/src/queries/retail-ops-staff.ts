@@ -49,6 +49,7 @@ export type UpdateRetailOpsStaffStatusInput = {
 }
 
 export type CompleteRetailOpsStaffOnboardingInput = {
+  inviteToken?: string
   displayName?: string
   name?: string
   tenantSlug?: string
@@ -56,6 +57,7 @@ export type CompleteRetailOpsStaffOnboardingInput = {
 }
 
 export type ListRetailOpsStaffInput = {
+  all?: boolean
   limit?: number
   role?: RetailOpsStaffListRoleFilter
   search?: string
@@ -850,7 +852,7 @@ function addRetailOpsStaffMember(
   staff: RetailOpsStaffMember[],
   seen: Set<string>,
   member: RetailOpsStaffMember,
-  limit: number,
+  limit: number | undefined,
 ) {
   const keys = [`membership:${member.id}`, `user:${member.user.id}`]
 
@@ -861,13 +863,13 @@ function addRetailOpsStaffMember(
     seen.add(key)
   }
 
-  return staff.length >= limit
+  return limit !== undefined && staff.length >= limit
 }
 
 function mergeRetailOpsStaffMembers(input: {
   durableStaff: RetailOpsStaffMember[]
   fallbackStaff: RetailOpsStaffMember[]
-  limit: number
+  limit: number | undefined
 }) {
   const staff: RetailOpsStaffMember[] = []
   const seen = new Set<string>()
@@ -886,7 +888,7 @@ function mergeRetailOpsStaffMembers(input: {
 async function listDurableRetailOpsStaff(
   db: PrismaClient,
   input: ListRetailOpsStaffInput,
-  lookbackLimit: number,
+  lookbackLimit: number | undefined,
 ) {
   try {
     const profiles = await db.retailOpsStaffProfile.findMany({
@@ -965,7 +967,7 @@ async function listDurableRetailOpsStaff(
 async function listMembershipRetailOpsStaff(
   db: PrismaClient,
   input: ListRetailOpsStaffInput,
-  lookbackLimit: number,
+  lookbackLimit: number | undefined,
 ) {
   const memberships = await db.membership.findMany({
     where: {
@@ -1017,15 +1019,18 @@ export async function listRetailOpsStaff(
   db: PrismaClient,
   input: ListRetailOpsStaffInput,
 ): Promise<RetailOpsStaffMember[]> {
-  const limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
-  const lookbackLimit = Math.max(limit * 3, 100)
+  const limit = input.all
+    ? undefined
+    : Math.min(Math.max(input.limit ?? 50, 1), 100)
+  const lookbackLimit =
+    limit === undefined ? undefined : Math.max(limit * 3, 100)
   const [durableStaff, fallbackStaff] = await Promise.all([
     listDurableRetailOpsStaff(db, input, lookbackLimit),
     listMembershipRetailOpsStaff(db, input, lookbackLimit),
   ])
 
   if (!durableStaff) {
-    return fallbackStaff.slice(0, limit)
+    return limit === undefined ? fallbackStaff : fallbackStaff.slice(0, limit)
   }
 
   return mergeRetailOpsStaffMembers({
@@ -1394,7 +1399,7 @@ export async function updateRetailOpsStaffStatus(
 }
 
 export async function resolveRetailOpsStaffInviteToken(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: { token: string },
 ): Promise<ResolvedRetailOpsStaffInvite> {
   const token = input.token.trim()
@@ -1486,9 +1491,18 @@ export async function completeRetailOpsStaffOnboarding(
   const name = normalizeName(input.name)
 
   return db.$transaction(async (tx) => {
+    const invitation = input.inviteToken
+      ? await resolveRetailOpsStaffInviteToken(tx, { token: input.inviteToken })
+      : null
+    if (invitation && !invitation.membershipId)
+      throw new RetailOpsStaffError(
+        "STAFF_INVITE_INVALID",
+        "This staff invitation is unavailable.",
+      )
     const memberships = await tx.membership.findMany({
       where: {
         userId: input.userId,
+        ...(invitation?.membershipId ? { id: invitation.membershipId } : {}),
         role: {
           in: ["CASHIER", "MANAGER", "OPERATOR"],
         },
@@ -1499,6 +1513,7 @@ export async function completeRetailOpsStaffOnboarding(
           ? {
               tenant: {
                 slug: input.tenantSlug,
+                ...(invitation ? { isActive: true } : {}),
               },
             }
           : {}),
@@ -1538,6 +1553,17 @@ export async function completeRetailOpsStaffOnboarding(
       memberships[0] ??
       null
 
+    if (
+      invitation &&
+      membership &&
+      (membership.status !== "INVITED" ||
+        membership.role !== invitation.role ||
+        membership.user.email.toLowerCase() !== invitation.email.toLowerCase())
+    )
+      throw new RetailOpsStaffError(
+        "STAFF_INVITE_INVALID",
+        "This invitation does not match your staff account.",
+      )
     if (!membership) {
       throw new RetailOpsStaffError(
         "STAFF_NOT_FOUND",
@@ -1580,6 +1606,13 @@ export async function completeRetailOpsStaffOnboarding(
         ? tx.membership.update({
             where: {
               id: membership.id,
+              ...(invitation
+                ? {
+                    status: "INVITED",
+                    role: membership.role,
+                    tenant: { isActive: true },
+                  }
+                : {}),
             },
             data: {
               acceptedAt,

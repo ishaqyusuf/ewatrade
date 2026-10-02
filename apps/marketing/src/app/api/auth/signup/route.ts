@@ -1,6 +1,10 @@
 import { resolveDashboardUrl } from "@/lib/dashboard-url"
 import { resolveSignupLegalAcceptance } from "@/lib/signup-legal"
 import { signupPayloadSchema } from "@/lib/signup-schemas"
+import {
+  createSignupWorkspaceSlug,
+  resolveSignupWorkspace,
+} from "@/lib/signup-workspace"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import {
@@ -65,7 +69,6 @@ function buildWelcomeEmailText(params: {
 // ─── Signup route ─────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // ── 0. Feature flag guard ────────────────────────────────────────────────
   if (process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true") {
     return NextResponse.json(
       { message: "Signup is not currently available." },
@@ -89,7 +92,7 @@ export async function POST(request: NextRequest) {
     ageBand,
     accessToken,
     addressLine1,
-    subdomain,
+    subdomain: requestedSubdomain,
     businessProfileKey,
     businessProfileVersion,
     businessName,
@@ -120,6 +123,23 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     )
   }
+
+  let workspace: ReturnType<typeof resolveSignupWorkspace>
+  try {
+    workspace = resolveSignupWorkspace({
+      slug: requestedSubdomain ?? createSignupWorkspaceSlug(businessName),
+      email,
+    })
+  } catch {
+    return NextResponse.json(
+      {
+        message:
+          "QA email routing is unavailable or this QA domain is not configured.",
+      },
+      { status: 503 },
+    )
+  }
+  let subdomain = workspace.slug
 
   const legalApproved = isApprovedLegalPublication()
   let legalAcceptance: ReturnType<typeof resolveSignupLegalAcceptance>
@@ -178,21 +198,16 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 2. Check existing account / slug ─────────────────────────────────────
-  const [existingEmailUser, existingPhoneUser, existingTenant] =
-    await Promise.all([
-      prisma.user.findUnique({
-        where: { email: normalizedEmail },
-        select: { id: true },
-      }),
-      prisma.user.findUnique({
-        where: { phone: normalizedPhone },
-        select: { id: true },
-      }),
-      prisma.tenant.findUnique({
-        where: { slug: subdomain },
-        select: { id: true },
-      }),
-    ])
+  const [existingEmailUser, existingPhoneUser] = await Promise.all([
+    prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    }),
+    prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+      select: { id: true },
+    }),
+  ])
 
   if (existingEmailUser) {
     return NextResponse.json(
@@ -208,10 +223,34 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Existing callers may still supply a reserved address. The current signup
+  // generates an internal identity and retries collisions without user input.
+  let existingTenant = await prisma.tenant.findUnique({
+    where: { slug: subdomain },
+    select: { id: true },
+  })
+  for (
+    let attempt = 1;
+    !requestedSubdomain && existingTenant && attempt < 5;
+    attempt++
+  ) {
+    subdomain = resolveSignupWorkspace({
+      slug: createSignupWorkspaceSlug(businessName),
+      email,
+    }).slug
+    existingTenant = await prisma.tenant.findUnique({
+      where: { slug: subdomain },
+      select: { id: true },
+    })
+  }
   if (existingTenant) {
     return NextResponse.json(
-      { message: "That subdomain is already taken. Please choose another." },
-      { status: 409 },
+      {
+        message: requestedSubdomain
+          ? "That subdomain is already taken. Please choose another."
+          : "Your business could not be set up yet. Please try again.",
+      },
+      { status: requestedSubdomain ? 409 : 503 },
     )
   }
 
@@ -388,6 +427,13 @@ export async function POST(request: NextRequest) {
           countryCode,
           currencyCode,
           metadata: { businessSize },
+          ...(workspace.qaSourceDomain
+            ? {
+                dataClassification: "QA",
+                qaSourceDomain: workspace.qaSourceDomain,
+                qaMarkedAt: new Date(),
+              }
+            : {}),
         },
       })
 

@@ -1,3 +1,4 @@
+import { useBottomDockScroll } from "@/hooks/use-bottom-dock-scroll"
 import type { MobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { useFocusEffect } from "expo-router"
 import {
@@ -7,9 +8,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useRef,
 } from "react"
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
 type AdminTabsContextValue = {
   availability: MobileWorkspaceFeatureAvailability
@@ -64,20 +63,5 @@ export function useResetAdminDock() {
 
 export function useAdminDockScroll() {
   const { setDockHidden } = useAdminTabs()
-  const lastScrollYRef = useRef(0)
-  useResetAdminDock()
-
-  return useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const scrollY = Math.max(0, event.nativeEvent.contentOffset.y)
-      const delta = scrollY - lastScrollYRef.current
-
-      if (scrollY <= 1) setDockHidden(false)
-      else if (delta > 4) setDockHidden(true)
-      else if (delta < -4) setDockHidden(false)
-
-      lastScrollYRef.current = scrollY
-    },
-    [setDockHidden],
-  )
+  return useBottomDockScroll(setDockHidden)
 }

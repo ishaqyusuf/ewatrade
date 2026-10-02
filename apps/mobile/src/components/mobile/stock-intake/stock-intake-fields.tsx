@@ -1,13 +1,14 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { FormField } from "@/components/mobile/form-field"
-import { StatusBanner } from "@/components/mobile/status-banner"
 import * as Classic from "@/components/mobile/appearances/classic/stock-intake"
 import * as Market from "@/components/mobile/appearances/market-day/stock-intake"
+import { FormField } from "@/components/mobile/form-field"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { StockIntakeModel } from "./use-stock-intake"
+import { StockCategoriesInput } from "./stock-categories-input"
 import { stockCustodyLabel } from "./stock-intake-model"
+import type { StockIntakeModel } from "./use-stock-intake"
 
 export function StockIntakeFields({
   model,
@@ -184,16 +185,27 @@ export function StockIntakeFields({
             current API requires a positive observation.
           </Text>
         ) : null}
-        <FormField
-          label="Reason"
-          multiline
-          maxLength={500}
-          variant="filled"
-          value={draft.reason}
-          editable={!model.locked}
-          onChangeText={(reason) => model.edit({ reason })}
-          placeholder="Why is this stock movement being recorded?"
-        />
+        {draft.mode === "receipt" || draft.mode === "adjustment" ? (
+          <StockCategoriesInput
+            value={draft.categories}
+            input={draft.categoryInput}
+            disabled={model.locked}
+            market={market}
+            onChange={(categories) => model.edit({ categories })}
+            onInputChange={(categoryInput) => model.edit({ categoryInput })}
+          />
+        ) : (
+          <FormField
+            label="Reason"
+            multiline
+            maxLength={500}
+            variant="filled"
+            value={draft.reason}
+            editable={!model.locked}
+            onChangeText={(reason) => model.edit({ reason })}
+            placeholder="Why is this stock movement being recorded?"
+          />
+        )}
       </Section>
     </View>
   )

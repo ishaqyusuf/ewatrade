@@ -33,6 +33,7 @@ function fixtureOrder(
     currencyCode: "NGN",
     customerEmail: null,
     customerName: "Amina Yusuf",
+    customerId: null,
     customerPhone: null,
     deliveryDueAt: null,
     discountMinor: 0,

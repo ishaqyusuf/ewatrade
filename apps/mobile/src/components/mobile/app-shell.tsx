@@ -1,17 +1,13 @@
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useBottomDockScroll } from "@/hooks/use-bottom-dock-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
+import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import { cn } from "@/lib/utils"
-import { VariableContextProvider } from "nativewind"
 import { StatusBar } from "expo-status-bar"
-import {
-  type ReactElement,
-  type ReactNode,
-  useCallback,
-  useRef,
-  useState,
-} from "react"
+import { VariableContextProvider } from "nativewind"
+import { type ReactElement, type ReactNode, useCallback, useState } from "react"
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -62,6 +58,7 @@ type MobileAppShellProps = {
   statusBarSwitchOffset?: number
   syncBanner?: ReactNode
   title: string
+  translucentStatusBar?: boolean
 }
 
 export function MobileAppShell({
@@ -89,6 +86,7 @@ export function MobileAppShell({
   statusBarSwitchOffset = 1,
   syncBanner,
   title,
+  translucentStatusBar = false,
 }: MobileAppShellProps) {
   const insets = useSafeAreaInsets()
   const colors = useColors()
@@ -96,7 +94,15 @@ export function MobileAppShell({
   const [hasStartedScroll, setHasStartedScroll] = useState(false)
   const [heroHeight, setHeroHeight] = useState(0)
   const [isBottomTabHidden, setIsBottomTabHidden] = useState(false)
-  const lastScrollYRef = useRef(0)
+  const edgeFeedback = useScrollEdgeFeedback()
+  const handleDockVisibility = useCallback(
+    (hidden: boolean) => {
+      setIsBottomTabHidden(hidden)
+      onBottomTabVisibilityChange?.(hidden)
+    },
+    [onBottomTabVisibilityChange],
+  )
+  const handleDockScroll = useBottomDockScroll(handleDockVisibility)
   const visibleNavItems = navItems.filter(
     (item) => role === "owner" || !item.ownerOnly,
   )
@@ -129,7 +135,6 @@ export function MobileAppShell({
     statusBarFollowsHero && heroHeight > 0
       ? Math.max(0, heroHeight - insets.top)
       : statusBarSwitchOffset
-  const bottomTabScrollThreshold = statusBarSwitchOffset
   const statusBarBackgroundColor = hasStartedScroll
     ? (scrolledStatusBarColor ?? colors.card)
     : shellStatusBarColor
@@ -144,7 +149,6 @@ export function MobileAppShell({
       const scrollY = Math.max(0, event.nativeEvent.contentOffset.y)
       const nextHasStartedScroll =
         scrollY > 0 && scrollY + 0.5 >= effectiveStatusBarSwitchOffset
-      const scrollDelta = scrollY - lastScrollYRef.current
 
       setHasStartedScroll((currentValue) =>
         currentValue === nextHasStartedScroll
@@ -152,24 +156,9 @@ export function MobileAppShell({
           : nextHasStartedScroll,
       )
 
-      if (scrollY <= bottomTabScrollThreshold) {
-        setIsBottomTabHidden(false)
-        onBottomTabVisibilityChange?.(false)
-      } else if (scrollDelta > 4) {
-        setIsBottomTabHidden(true)
-        onBottomTabVisibilityChange?.(true)
-      } else if (scrollDelta < -4) {
-        setIsBottomTabHidden(false)
-        onBottomTabVisibilityChange?.(false)
-      }
-
-      lastScrollYRef.current = scrollY
+      handleDockScroll(event)
     },
-    [
-      bottomTabScrollThreshold,
-      effectiveStatusBarSwitchOffset,
-      onBottomTabVisibilityChange,
-    ],
+    [effectiveStatusBarSwitchOffset, handleDockScroll],
   )
 
   return (
@@ -179,16 +168,21 @@ export function MobileAppShell({
     >
       <StatusBar
         animated
-        backgroundColor={statusBarBackgroundColor}
-        style={statusBarStyle}
+        {...(!translucentStatusBar
+          ? { backgroundColor: statusBarBackgroundColor }
+          : {})}
+        style={translucentStatusBar ? contentStatusBarStyle : statusBarStyle}
       />
       <RNView
         pointerEvents="none"
         style={{
-          backgroundColor: statusBarBackgroundColor,
+          backgroundColor: translucentStatusBar
+            ? colors.background
+            : statusBarBackgroundColor,
           elevation: 100,
           height: insets.top,
           left: 0,
+          opacity: translucentStatusBar ? 0.7 : 1,
           position: "absolute",
           right: 0,
           top: 0,
@@ -197,6 +191,15 @@ export function MobileAppShell({
         testID="mobile-shell-status-bar-background"
       />
       <KeyboardAwareScrollView
+        {...edgeFeedback}
+        // Keep safe-area spacing in scrollable content so it can pass under
+        // the native translucent bar; Expo already defaults to translucent.
+        {...(translucentStatusBar
+          ? {
+              automaticallyAdjustContentInsets: false,
+              contentInsetAdjustmentBehavior: "never" as const,
+            }
+          : {})}
         bottomOffset={keyboardBottomOffset}
         contentContainerStyle={{
           flexGrow: 1,

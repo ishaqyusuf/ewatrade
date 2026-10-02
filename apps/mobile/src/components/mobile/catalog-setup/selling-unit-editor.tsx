@@ -1,23 +1,26 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { ClassicSellingUnitFields } from "@/components/mobile/appearances/classic/selling-unit-editor"
 import { MarketSellingUnitFields } from "@/components/mobile/appearances/market-day/selling-unit-editor"
+import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { useModal } from "@/components/ui/modal"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import {
   type CatalogUnitRelationDirection,
   transposeCatalogUnitRelation,
 } from "@ewatrade/utils"
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useState } from "react"
 import { Keyboard, Modal as NativeModal, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import {
-  newUnit,
   type MobileUnitDraft,
   type SellingUnitEditorFieldsProps,
+  newUnit,
 } from "./catalog-setup-model"
+import { SellingUnitReferenceSheetContext } from "./selling-unit-reference-selector"
 
 export function SellingUnitEditor({
   onClose,
@@ -25,6 +28,8 @@ export function SellingUnitEditor({
   ...fields
 }: SellingUnitEditorFieldsProps & { onClose: () => void; onSave: () => void }) {
   const [footerHeight, setFooterHeight] = useState(88)
+  const referenceSheet = useModal()
+  const [referencePickerOpen, setReferencePickerOpen] = useState(false)
   const market = useMobileDesign("first-product") === "market-day"
   const palette = useMarketDayPalette()
   const Fields = market ? MarketSellingUnitFields : ClassicSellingUnitFields
@@ -35,59 +40,84 @@ export function SellingUnitEditor({
       statusBarTranslucent
       navigationBarTranslucent
       visible
-      onRequestClose={onClose}
+      onRequestClose={referencePickerOpen ? referenceSheet.dismiss : onClose}
     >
-      <MobileWorkflowChrome
-        screen="first-product"
-          hideHeader={false}
-          keyboardBottomOffset={footerHeight + 12}
-        title={fields.isEditingUnit ? "Edit selling unit" : "Add selling unit"}
-        closeLabel="Cancel selling unit changes"
-        onClose={onClose}
-      >
-        <VariableContextProvider
-          value={{ "--selling-unit-footer": footerHeight + 24 }}
+      <BottomSheetModalProvider>
+        <SellingUnitReferenceSheetContext.Provider
+          value={{
+            ref: referenceSheet.ref,
+            open: referencePickerOpen,
+            present: () => {
+              Keyboard.dismiss()
+              setReferencePickerOpen(true)
+              referenceSheet.present()
+            },
+            dismiss: referenceSheet.dismiss,
+            onDismiss: () => setReferencePickerOpen(false),
+          }}
         >
-          <View className="flex-1">
-            <KeyboardAwareScrollView
-              className="flex-1"
-              bottomOffset={footerHeight + 12}
-              extraKeyboardSpace={0}
-              disableScrollOnKeyboardHide
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
+          <MobileWorkflowChrome
+            screen="first-product"
+            hideHeader={false}
+            keyboardBottomOffset={footerHeight + 12}
+            title={
+              fields.isEditingUnit ? "Edit selling unit" : "Add selling unit"
+            }
+            closeLabel="Cancel selling unit changes"
+            onClose={onClose}
+          >
+            <VariableContextProvider
+              value={{ "--selling-unit-footer": footerHeight + 24 }}
             >
-              <View className="pt-3 pb-[var(--selling-unit-footer)]">
-                <Fields {...fields} />
-              </View>
-            </KeyboardAwareScrollView>
-            <BottomSearchFooter
-              variant={market ? "market-day" : "default"}
-              accessibilityLabel="Selling unit actions"
-              onHeightChange={setFooterHeight}
-              searchVisible={false}
-              onChangeText={() => undefined}
-              placeholder=""
-              totalCount={0}
-              value=""
-            >
-              <ActionButton
-                onPress={onSave}
-                foregroundColor={market ? palette.onPalm : undefined}
-                className={
-                  market
-                    ? "bg-market-palm active:bg-market-hero-pressed"
-                    : undefined
+              <View
+                className="flex-1"
+                accessibilityElementsHidden={referencePickerOpen}
+                importantForAccessibility={
+                  referencePickerOpen ? "no-hide-descendants" : "auto"
                 }
               >
-                {fields.isEditingUnit
-                  ? "Save unit changes"
-                  : "Add selling unit"}
-              </ActionButton>
-            </BottomSearchFooter>
-          </View>
-        </VariableContextProvider>
-      </MobileWorkflowChrome>
+                <KeyboardAwareScrollView
+                  enabled={!referencePickerOpen}
+                  className="flex-1"
+                  bottomOffset={footerHeight + 12}
+                  extraKeyboardSpace={0}
+                  disableScrollOnKeyboardHide
+                  keyboardDismissMode="interactive"
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View className="pt-3 pb-[var(--selling-unit-footer)]">
+                    <Fields {...fields} />
+                  </View>
+                </KeyboardAwareScrollView>
+                <BottomSearchFooter
+                  variant={market ? "market-day" : "default"}
+                  accessibilityLabel="Selling unit actions"
+                  onHeightChange={setFooterHeight}
+                  searchVisible={false}
+                  onChangeText={() => undefined}
+                  placeholder=""
+                  totalCount={0}
+                  value=""
+                >
+                  <ActionButton
+                    onPress={onSave}
+                    foregroundColor={market ? palette.onPalm : undefined}
+                    className={
+                      market
+                        ? "bg-market-palm active:bg-market-hero-pressed"
+                        : undefined
+                    }
+                  >
+                    {fields.isEditingUnit
+                      ? "Save unit changes"
+                      : "Add selling unit"}
+                  </ActionButton>
+                </BottomSearchFooter>
+              </View>
+            </VariableContextProvider>
+          </MobileWorkflowChrome>
+        </SellingUnitReferenceSheetContext.Provider>
+      </BottomSheetModalProvider>
     </NativeModal>
   )
 }

@@ -11,6 +11,7 @@ export default function CreateSaleModalRoute() {
     catalogItemId?: string
     customerEmail?: string
     customerId?: string
+    customerDirectoryId?: string
     customerName?: string
     customerPhone?: string
     kind?: string
@@ -33,6 +34,7 @@ export default function CreateSaleModalRoute() {
             ? {
                 email: params.customerEmail,
                 id: params.customerId ?? `customer:${params.customerName}`,
+                directoryId: params.customerDirectoryId,
                 name: params.customerName,
                 phone: params.customerPhone,
               }

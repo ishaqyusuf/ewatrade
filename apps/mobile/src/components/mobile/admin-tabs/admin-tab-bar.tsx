@@ -4,7 +4,7 @@ import {
 } from "@/components/mobile/bottom-tabs"
 import type { AdminTabDefinition } from "@/lib/admin-navigation"
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs"
-import { View } from "react-native"
+import { StyleSheet, View } from "react-native"
 
 export function AdminTabBar({
   definitions,
@@ -59,7 +59,11 @@ export function AdminTabBar({
   return (
     <View
       pointerEvents="box-none"
-      style={{ height: 0, overflow: "visible", zIndex: 1000 }}
+      style={{
+        ...StyleSheet.absoluteFillObject,
+        overflow: "visible",
+        zIndex: 1000,
+      }}
       testID="admin-root-tab-dock"
     >
       <MobileBottomTabs

@@ -1,9 +1,10 @@
 "use client"
 
+import { FormFeedback } from "@/components/forms/form-feedback"
 import { label } from "@/components/service-work/service-utils"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
-import { Badge, Button } from "@ewatrade/ui"
+import { Badge, Button, SubmitButton } from "@ewatrade/ui"
 import {
   useMutation,
   useQueryClient,
@@ -35,6 +36,11 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
 
   return (
     <section className="grid gap-3 border-t border-border pt-6">
+      {dispositionMutation.isError ? (
+        <FormFeedback appearance="dashboard">
+          {dispositionMutation.error.message}
+        </FormFeedback>
+      ) : null}
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="font-semibold">Customer requests</h2>
@@ -47,7 +53,7 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
         </span>
       </div>
       {requests.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+        <p className="border border-dashed border-border p-6 text-sm text-muted-foreground">
           No customer requests yet.
         </p>
       ) : (
@@ -70,7 +76,7 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
               </Badge>
             </div>
             {request.details ? (
-              <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm">
+              <p className="mt-3 bg-muted px-3 py-2 text-sm">
                 {request.details}
               </p>
             ) : null}
@@ -78,6 +84,7 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
               {request.status !== "CONVERTED" &&
               request.status !== "DECLINED" ? (
                 <Button
+                  appearance="form"
                   size="sm"
                   onClick={() =>
                     setParams({
@@ -90,7 +97,14 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
                 </Button>
               ) : null}
               {request.status === "SUBMITTED" ? (
-                <Button
+                <SubmitButton
+                  type="button"
+                  isSubmitting={
+                    dispositionMutation.isPending &&
+                    dispositionMutation.variables?.requestId === request.id &&
+                    dispositionMutation.variables?.status ===
+                      "needs_information"
+                  }
                   size="sm"
                   variant="outline"
                   disabled={dispositionMutation.isPending}
@@ -104,11 +118,17 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
                   }
                 >
                   Request information
-                </Button>
+                </SubmitButton>
               ) : null}
               {request.status !== "CONVERTED" &&
               request.status !== "DECLINED" ? (
-                <Button
+                <SubmitButton
+                  type="button"
+                  isSubmitting={
+                    dispositionMutation.isPending &&
+                    dispositionMutation.variables?.requestId === request.id &&
+                    dispositionMutation.variables?.status === "declined"
+                  }
                   size="sm"
                   variant="ghost"
                   disabled={dispositionMutation.isPending}
@@ -121,7 +141,7 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
                   }
                 >
                   Decline
-                </Button>
+                </SubmitButton>
               ) : null}
             </div>
           </div>

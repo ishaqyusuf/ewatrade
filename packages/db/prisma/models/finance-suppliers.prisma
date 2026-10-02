@@ -1,0 +1,112 @@
+enum FinanceSupplierEntryKind {
+  OPENING_PAYABLE
+  OPENING_ADVANCE
+  ADVANCE
+  PURCHASE_BILL
+  PURCHASE_PAYMENT
+  ADVANCE_ALLOCATION
+  ALLOCATION_RELEASE
+  REVERSAL
+}
+
+enum FinanceSupplierSide {
+  DEBIT
+  CREDIT
+}
+
+model FinanceSupplierAccount {
+  purchaseRecognitions FinancePurchaseRecognition[]
+  id                 String                             @id @default(cuid())
+  bookId             String
+  code               String
+  name               String
+  actorUserId        String
+  createdAt          DateTime                           @default(now())
+  book               FinanceBook                        @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  entries            FinanceSupplierEntry[]
+  bills              FinanceBill[]
+  allocations        FinanceSupplierAllocation[]
+  allocationReleases FinanceSupplierAllocationRelease[]
+
+  @@unique([bookId, code])
+  @@unique([bookId, id])
+}
+
+model FinanceSupplierEntry {
+  id                 String                            @id @default(cuid())
+  bookId             String
+  supplierId         String
+  kind               FinanceSupplierEntryKind
+  side               FinanceSupplierSide
+  amountMinor        BigInt
+  journalEntryId     String                            @unique
+  moneyAccountId     String?
+  effectiveAt        DateTime
+  recordedAt         DateTime                          @default(now())
+  actorUserId        String
+  description        String
+  reversalOfId       String?                           @unique
+  billId             String?
+  paymentId          String?                           @unique
+  book               FinanceBook                       @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  supplier           FinanceSupplierAccount            @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  journalEntry       FinanceJournalEntry               @relation(fields: [bookId, journalEntryId], references: [bookId, id], onDelete: Restrict)
+  moneyAccount       FinanceAccount?                   @relation(fields: [bookId, moneyAccountId], references: [bookId, id], onDelete: Restrict)
+  reversalOf         FinanceSupplierEntry?             @relation("SupplierEntryReversal", fields: [bookId, supplierId, reversalOfId], references: [bookId, supplierId, id], onDelete: Restrict)
+  reversals          FinanceSupplierEntry[]            @relation("SupplierEntryReversal")
+  bill               FinanceBill?                      @relation("SupplierBillSources", fields: [bookId, supplierId, billId], references: [bookId, supplierId, id], onDelete: Restrict)
+  payment            FinanceBillPayment?               @relation(fields: [bookId, billId, paymentId], references: [bookId, billId, id], onDelete: Restrict)
+  advanceAllocations FinanceSupplierAllocation[]       @relation("SupplierAdvanceAllocations")
+  settledAllocation  FinanceSupplierAllocation?        @relation("SupplierAllocationEntry")
+  releasedAllocation FinanceSupplierAllocationRelease? @relation("SupplierAllocationReleaseEntry")
+
+  @@unique([bookId, id])
+  @@unique([bookId, supplierId, id])
+  @@unique([bookId, billId, paymentId])
+  @@index([bookId, supplierId, effectiveAt])
+  @@index([bookId, moneyAccountId])
+}
+
+model FinanceSupplierAllocation {
+  id              String                             @id @default(cuid())
+  bookId          String
+  supplierId      String
+  billId          String
+  advanceEntryId  String
+  supplierEntryId String                             @unique
+  amountMinor     BigInt
+  effectiveAt     DateTime
+  actorUserId     String
+  createdAt       DateTime                           @default(now())
+  book            FinanceBook                        @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  supplier        FinanceSupplierAccount             @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  bill            FinanceBill                        @relation(fields: [bookId, supplierId, billId], references: [bookId, supplierId, id], onDelete: Restrict)
+  advanceEntry    FinanceSupplierEntry               @relation("SupplierAdvanceAllocations", fields: [bookId, supplierId, advanceEntryId], references: [bookId, supplierId, id], onDelete: Restrict)
+  supplierEntry   FinanceSupplierEntry               @relation("SupplierAllocationEntry", fields: [bookId, supplierId, supplierEntryId], references: [bookId, supplierId, id], onDelete: Restrict)
+  releases        FinanceSupplierAllocationRelease[]
+
+  @@unique([bookId, supplierId, id])
+  @@unique([bookId, supplierId, supplierEntryId])
+  @@index([bookId, billId])
+  @@index([bookId, advanceEntryId])
+}
+
+model FinanceSupplierAllocationRelease {
+  id              String                    @id @default(cuid())
+  bookId          String
+  supplierId      String
+  allocationId    String
+  supplierEntryId String                    @unique
+  amountMinor     BigInt
+  effectiveAt     DateTime
+  actorUserId     String
+  reason          String
+  createdAt       DateTime                  @default(now())
+  book            FinanceBook               @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  supplier        FinanceSupplierAccount    @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  allocation      FinanceSupplierAllocation @relation(fields: [bookId, supplierId, allocationId], references: [bookId, supplierId, id], onDelete: Restrict)
+  supplierEntry   FinanceSupplierEntry      @relation("SupplierAllocationReleaseEntry", fields: [bookId, supplierId, supplierEntryId], references: [bookId, supplierId, id], onDelete: Restrict)
+
+  @@unique([bookId, supplierId, supplierEntryId])
+  @@index([bookId, allocationId])
+}

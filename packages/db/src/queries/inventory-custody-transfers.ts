@@ -8,7 +8,7 @@ import {
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   InventoryCloseoutStatus,
   StockCustodyType,
@@ -16,6 +16,11 @@ import {
   StockTransferStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import { recordInventoryCloseoutFinanceInTransaction } from "./finance/posting"
+import { recordInventoryRelocationValuationInTransaction } from "./finance/valuation-relocations"
+import { lockInventoryFinancialStores } from "./inventory-finance-locks"
+
+const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 } as const
 
 function stableJson(value: unknown): string {
   if (value === undefined || value === null || typeof value !== "object") {
@@ -42,6 +47,7 @@ function custodyType(value: "session" | "staff" | "store" | "transit") {
 }
 
 const balanceInclude = {
+  store: true,
   inventoryUnit: { include: { configurationVersion: true } },
 } satisfies Prisma.StockBalanceSourceInclude
 
@@ -52,7 +58,7 @@ async function tenantStore(
 ) {
   const store = await tx.store.findFirst({
     where: { id: storeId, tenantId },
-    select: { id: true },
+    select: { id: true, currencyCode: true },
   })
   if (!store) {
     throw new CatalogError(
@@ -65,11 +71,15 @@ async function tenantStore(
 
 async function balance(
   tx: Prisma.TransactionClient,
-  input: { balanceSourceId: string; tenantId: string },
+  input: { balanceSourceId: string; storeId?: string; tenantId: string },
 ) {
   const row = await tx.stockBalanceSource.findFirst({
     include: balanceInclude,
-    where: { id: input.balanceSourceId, tenantId: input.tenantId },
+    where: {
+      id: input.balanceSourceId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
   })
   if (!row) {
     throw new CatalogError(
@@ -85,6 +95,34 @@ function assertRevision(actual: number, expected: number) {
     throw new CatalogError(
       "REVISION_CONFLICT",
       "A Balance Source changed before confirmation.",
+    )
+  }
+}
+
+async function lockRelocationBalances(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  balanceIds: string[],
+) {
+  const ids = [...new Set(balanceIds)].sort()
+  if (ids.length !== 2) {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Stock relocation requires two distinct Balance Sources.",
+    )
+  }
+  const locked = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "StockBalanceSource"
+    WHERE "id" IN (${Prisma.join(ids)}) AND "tenantId" = ${tenantId}
+    ORDER BY "id" FOR UPDATE
+  `
+  if (
+    locked.length !== ids.length ||
+    locked.some((row) => !ids.includes(row.id))
+  ) {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Stock relocation Balance Sources must belong to this business.",
     )
   }
 }
@@ -128,13 +166,13 @@ async function postCustodyMovement(
     )
   }
   const sourceResult = subtractExactDecimals(
-    input.sourceBalance.onHandQuantity.toString(),
+    input.sourceBalance.onHandQuantity.toFixed(),
     quantity,
   )
   if (
     compareExactDecimals(
       sourceResult,
-      input.sourceBalance.reservedQuantity.toString(),
+      input.sourceBalance.reservedQuantity.toFixed(),
     ) < 0
   ) {
     throw new CatalogError(
@@ -143,7 +181,7 @@ async function postCustodyMovement(
     )
   }
   const targetResult = addExactDecimals(
-    input.targetBalance.onHandQuantity.toString(),
+    input.targetBalance.onHandQuantity.toFixed(),
     quantity,
   )
   const sourceUpdate = await tx.stockBalanceSource.updateMany({
@@ -169,12 +207,13 @@ async function postCustodyMovement(
 
   const canonicalQuantity = multiplyExactDecimals(
     quantity,
-    input.sourceBalance.inventoryUnit.factor.toString(),
+    input.sourceBalance.inventoryUnit.factor.toFixed(),
   )
   const operation = await tx.stockOperation.create({
     data: {
       actorUserId: input.actorUserId,
       clientOperationId: input.clientOperationId,
+      effectiveAt: new Date(),
       payloadHash: input.payloadHash,
       reason: input.reason.trim(),
       source: input.source,
@@ -242,6 +281,21 @@ export async function moveInventoryCustody(
 ) {
   const payloadHash = hash(input)
   return db.$transaction(async (tx) => {
+    const sourceIdentity = await tx.stockBalanceSource.findFirst({
+      where: { id: input.sourceBalanceSourceId, tenantId: input.tenantId },
+      select: { id: true, storeId: true },
+    })
+    if (!sourceIdentity) {
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Balance Source not found for this business.",
+      )
+    }
+    await lockInventoryFinancialStores(tx, {
+      tenantId: input.tenantId,
+      storeIds: [sourceIdentity.storeId],
+    })
+
     const previous = await tx.stockOperation.findUnique({
       where: {
         tenantId_clientOperationId: {
@@ -260,8 +314,9 @@ export async function moveInventoryCustody(
       return previous
     }
 
-    const sourceBalance = await balance(tx, {
+    let sourceBalance = await balance(tx, {
       balanceSourceId: input.sourceBalanceSourceId,
+      storeId: sourceIdentity.storeId,
       tenantId: input.tenantId,
     })
     assertRevision(sourceBalance.revision, input.expectedSourceRevision)
@@ -302,6 +357,16 @@ export async function moveInventoryCustody(
         },
       },
     })
+    await lockRelocationBalances(tx, input.tenantId, [
+      sourceBalance.id,
+      target.id,
+    ])
+    sourceBalance = await balance(tx, {
+      balanceSourceId: sourceBalance.id,
+      storeId: sourceIdentity.storeId,
+      tenantId: input.tenantId,
+    })
+    assertRevision(sourceBalance.revision, input.expectedSourceRevision)
     const targetBalance = await balance(tx, {
       balanceSourceId: target.id,
       tenantId: input.tenantId,
@@ -318,7 +383,7 @@ export async function moveInventoryCustody(
     const isReturn =
       sourceBalance.custodyType !== StockCustodyType.STORE &&
       targetType === StockCustodyType.STORE
-    return postCustodyMovement(tx, {
+    const operation = await postCustodyMovement(tx, {
       actorUserId: input.actorUserId,
       clientOperationId: input.clientOperationId,
       payloadHash,
@@ -330,7 +395,14 @@ export async function moveInventoryCustody(
       tenantId: input.tenantId,
       type: isReturn ? "return" : "assignment",
     })
-  })
+    await recordInventoryRelocationValuationInTransaction(tx, {
+      tenantId: input.tenantId,
+      stockOperationId: operation.id,
+      expectedSourceStockRevision: sourceBalance.revision + 1,
+      expectedTargetStockRevision: targetBalance.revision + 1,
+    })
+    return operation
+  }, TRANSACTION_OPTIONS)
 }
 
 export async function createAndDispatchStockTransfer(
@@ -351,6 +423,21 @@ export async function createAndDispatchStockTransfer(
 ) {
   const payloadHash = hash(input)
   return db.$transaction(async (tx) => {
+    const sourceIdentity = await tx.stockBalanceSource.findFirst({
+      where: { id: input.sourceBalanceSourceId, tenantId: input.tenantId },
+      select: { id: true, storeId: true },
+    })
+    if (!sourceIdentity) {
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Balance Source not found for this business.",
+      )
+    }
+    await lockInventoryFinancialStores(tx, {
+      tenantId: input.tenantId,
+      storeIds: [sourceIdentity.storeId, input.targetStoreId],
+    })
+
     const previous = await tx.stockTransfer.findUnique({
       where: {
         tenantId_clientTransferId: {
@@ -369,8 +456,9 @@ export async function createAndDispatchStockTransfer(
       return previous
     }
 
-    const sourceBalance = await balance(tx, {
+    let sourceBalance = await balance(tx, {
       balanceSourceId: input.sourceBalanceSourceId,
+      storeId: sourceIdentity.storeId,
       tenantId: input.tenantId,
     })
     if (sourceBalance.custodyType !== StockCustodyType.STORE) {
@@ -380,7 +468,11 @@ export async function createAndDispatchStockTransfer(
       )
     }
     assertRevision(sourceBalance.revision, input.expectedSourceRevision)
-    await tenantStore(tx, input.tenantId, input.targetStoreId)
+    const targetStore = await tenantStore(
+      tx,
+      input.tenantId,
+      input.targetStoreId,
+    )
     if (sourceBalance.storeId === input.targetStoreId) {
       throw new CatalogError(
         "INVALID_STOCK_OPERATION",
@@ -393,7 +485,7 @@ export async function createAndDispatchStockTransfer(
     })
     const canonicalQuantity = multiplyExactDecimals(
       quantity,
-      sourceBalance.inventoryUnit.factor.toString(),
+      sourceBalance.inventoryUnit.factor.toFixed(),
     )
     const transfer = await tx.stockTransfer.create({
       data: {
@@ -427,6 +519,16 @@ export async function createAndDispatchStockTransfer(
         variantId: sourceBalance.variantId,
       },
     })
+    await lockRelocationBalances(tx, input.tenantId, [
+      sourceBalance.id,
+      transit.id,
+    ])
+    sourceBalance = await balance(tx, {
+      balanceSourceId: sourceBalance.id,
+      storeId: sourceIdentity.storeId,
+      tenantId: input.tenantId,
+    })
+    assertRevision(sourceBalance.revision, input.expectedSourceRevision)
     const transitBalance = await balance(tx, {
       balanceSourceId: transit.id,
       tenantId: input.tenantId,
@@ -443,16 +545,25 @@ export async function createAndDispatchStockTransfer(
       tenantId: input.tenantId,
       type: "transfer",
     })
-    return tx.stockTransfer.update({
+    const dispatched = await tx.stockTransfer.update({
       data: {
-        dispatchedAt: new Date(),
+        dispatchedAt: operation.effectiveAt,
         dispatchedOperationId: operation.id,
         status: StockTransferStatus.IN_TRANSIT,
         transitBalanceSourceId: transit.id,
       },
       where: { id: transfer.id },
     })
-  })
+    if (sourceBalance.store.currencyCode === targetStore.currencyCode) {
+      await recordInventoryRelocationValuationInTransaction(tx, {
+        tenantId: input.tenantId,
+        stockOperationId: operation.id,
+        expectedSourceStockRevision: sourceBalance.revision + 1,
+        expectedTargetStockRevision: transitBalance.revision + 1,
+      })
+    }
+    return dispatched
+  }, TRANSACTION_OPTIONS)
 }
 
 export async function receiveOrCancelStockTransfer(
@@ -471,6 +582,24 @@ export async function receiveOrCancelStockTransfer(
 ) {
   const payloadHash = hash(input)
   return db.$transaction(async (tx) => {
+    const transferIdentity = await tx.stockTransfer.findFirst({
+      select: { id: true, sourceStoreId: true, targetStoreId: true },
+      where: { id: input.transferId, tenantId: input.tenantId },
+    })
+    if (!transferIdentity) {
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Stock Transfer not found for this business.",
+      )
+    }
+    await lockInventoryFinancialStores(tx, {
+      tenantId: input.tenantId,
+      storeIds: [
+        transferIdentity.sourceStoreId,
+        transferIdentity.targetStoreId,
+      ],
+    })
+
     const previousOperation = await tx.stockOperation.findUnique({
       where: {
         tenantId_clientOperationId: {
@@ -491,18 +620,32 @@ export async function receiveOrCancelStockTransfer(
       })
     }
 
+    await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "StockTransfer"
+      WHERE "id" = ${input.transferId} AND "tenantId" = ${input.tenantId}
+        AND "sourceStoreId" = ${transferIdentity.sourceStoreId}
+        AND "targetStoreId" = ${transferIdentity.targetStoreId}
+      FOR UPDATE
+    `
+
     const transfer = await tx.stockTransfer.findFirst({
       include: {
+        sourceStore: true,
+        targetStore: true,
         sourceBalanceSource: { include: balanceInclude },
         transitBalanceSource: { include: balanceInclude },
       },
       where: {
         id: input.transferId,
-        status: StockTransferStatus.IN_TRANSIT,
         tenantId: input.tenantId,
+        sourceStoreId: transferIdentity.sourceStoreId,
+        targetStoreId: transferIdentity.targetStoreId,
       },
     })
-    if (!transfer?.transitBalanceSource) {
+    if (
+      !transfer?.transitBalanceSource ||
+      transfer.status !== StockTransferStatus.IN_TRANSIT
+    ) {
       throw new CatalogError(
         "INVALID_STOCK_OPERATION",
         "Only an in-transit Stock Transfer can be received or cancelled.",
@@ -542,20 +685,33 @@ export async function receiveOrCancelStockTransfer(
         tenantId: input.tenantId,
       })
     }
+    await lockRelocationBalances(tx, input.tenantId, [
+      transfer.transitBalanceSource.id,
+      targetBalance.id,
+    ])
+    const transitBalance = await balance(tx, {
+      balanceSourceId: transfer.transitBalanceSource.id,
+      tenantId: input.tenantId,
+    })
+    targetBalance = await balance(tx, {
+      balanceSourceId: targetBalance.id,
+      tenantId: input.tenantId,
+    })
+    assertRevision(transitBalance.revision, input.expectedTransitRevision)
     const operation = await postCustodyMovement(tx, {
       actorUserId: input.actorUserId,
       clientOperationId: input.clientOperationId,
       payloadHash,
-      quantity: transfer.enteredQuantity.toString(),
+      quantity: transfer.enteredQuantity.toFixed(),
       reason: input.reason,
       source: input.source,
-      sourceBalance: transfer.transitBalanceSource,
+      sourceBalance: transitBalance,
       targetBalance,
       tenantId: input.tenantId,
       type: "transfer",
     })
-    const now = new Date()
-    return tx.stockTransfer.update({
+    const now = operation.effectiveAt
+    const transitioned = await tx.stockTransfer.update({
       data:
         input.transition === "receive"
           ? {
@@ -570,7 +726,18 @@ export async function receiveOrCancelStockTransfer(
             },
       where: { id: transfer.id },
     })
-  })
+    if (
+      transfer.sourceStore.currencyCode === transfer.targetStore.currencyCode
+    ) {
+      await recordInventoryRelocationValuationInTransaction(tx, {
+        tenantId: input.tenantId,
+        stockOperationId: operation.id,
+        expectedSourceStockRevision: transitBalance.revision + 1,
+        expectedTargetStockRevision: targetBalance.revision + 1,
+      })
+    }
+    return transitioned
+  }, TRANSACTION_OPTIONS)
 }
 
 export async function createInventoryCloseout(
@@ -675,15 +842,40 @@ export async function finalizeInventoryCloseout(
 ) {
   const payloadHash = hash(input)
   return db.$transaction(async (tx) => {
-    const previous = await tx.stockOperation.findUnique({
-      where: {
-        tenantId_clientOperationId: {
-          clientOperationId: input.clientOperationId,
-          tenantId: input.tenantId,
-        },
-      },
+    const closeoutIdentity = await tx.inventoryCloseout.findFirst({
+      where: { id: input.closeoutId, tenantId: input.tenantId },
+      select: { id: true, storeId: true },
     })
-    if (previous) {
+    if (!closeoutIdentity) {
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Draft Inventory Closeout not found.",
+      )
+    }
+    const financialContexts = await lockInventoryFinancialStores(tx, {
+      tenantId: input.tenantId,
+      storeIds: [closeoutIdentity.storeId],
+    })
+
+    if (financialContexts.length !== 1) {
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Closeout financial Store context is incomplete.",
+      )
+    }
+
+    const readPrevious = () =>
+      tx.stockOperation.findUnique({
+        where: {
+          tenantId_clientOperationId: {
+            clientOperationId: input.clientOperationId,
+            tenantId: input.tenantId,
+          },
+        },
+      })
+    const replay = (
+      previous: NonNullable<Awaited<ReturnType<typeof readPrevious>>>,
+    ) => {
       if (previous.payloadHash !== payloadHash) {
         throw new CatalogError(
           "IDEMPOTENCY_MISMATCH",
@@ -692,13 +884,62 @@ export async function finalizeInventoryCloseout(
       }
       return previous
     }
+    const previous = await readPrevious()
+    if (previous) return replay(previous)
+
+    const lockedCloseouts = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "InventoryCloseout"
+      WHERE "id" = ${input.closeoutId} AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${closeoutIdentity.storeId}
+      FOR UPDATE
+    `
+    if (
+      lockedCloseouts.length !== 1 ||
+      lockedCloseouts[0]?.id !== input.closeoutId
+    ) {
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Closeout source ownership changed before finalization.",
+      )
+    }
+    const concurrentPrevious = await readPrevious()
+    if (concurrentPrevious) return replay(concurrentPrevious)
+    const lineIdentities = await tx.inventoryCloseoutLine.findMany({
+      select: { balanceSourceId: true },
+      where: { closeoutId: input.closeoutId },
+    })
+    const balanceIds = [
+      ...new Set(lineIdentities.map((line) => line.balanceSourceId)),
+    ].sort()
+    if (balanceIds.length) {
+      const lockedBalances = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "StockBalanceSource"
+        WHERE "id" IN (${Prisma.join(balanceIds)})
+          AND "tenantId" = ${input.tenantId}
+          AND "storeId" = ${closeoutIdentity.storeId}
+        ORDER BY "id"
+        FOR UPDATE
+      `
+      if (
+        lockedBalances.length !== balanceIds.length ||
+        new Set(lockedBalances.map((row) => row.id)).size !==
+          balanceIds.length ||
+        lockedBalances.some((row) => !balanceIds.includes(row.id))
+      ) {
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "Closeout Balance Sources must belong to this Store and business.",
+        )
+      }
+    }
 
     const closeout = await tx.inventoryCloseout.findFirst({
       include: {
         lines: { include: { balanceSource: { include: balanceInclude } } },
       },
       where: {
-        id: input.closeoutId,
+        id: closeoutIdentity.id,
+        storeId: closeoutIdentity.storeId,
         status: InventoryCloseoutStatus.DRAFT,
         tenantId: input.tenantId,
       },
@@ -709,6 +950,53 @@ export async function finalizeInventoryCloseout(
         "Draft Inventory Closeout not found.",
       )
     }
+    if (
+      (closeout.custodyType !== StockCustodyType.STAFF &&
+        closeout.custodyType !== StockCustodyType.SESSION) ||
+      !closeout.custodyReferenceId.trim() ||
+      closeout.lines.length !== lineIdentities.length ||
+      new Set(closeout.lines.map((line) => line.balanceSourceId)).size !==
+        balanceIds.length
+    ) {
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Closeout declarations changed during confirmation.",
+      )
+    }
+    for (const line of closeout.lines) {
+      const source = line.balanceSource
+      if (
+        !balanceIds.includes(line.balanceSourceId) ||
+        source.id !== line.balanceSourceId ||
+        source.tenantId !== input.tenantId ||
+        source.storeId !== closeout.storeId ||
+        source.custodyType !== closeout.custodyType ||
+        source.custodyReferenceId !== closeout.custodyReferenceId ||
+        line.closeoutId !== closeout.id ||
+        source.onHandQuantity.toFixed() !== line.expectedQuantity.toFixed() ||
+        subtractExactDecimals(
+          line.declaredQuantity.toFixed(),
+          line.expectedQuantity.toFixed(),
+        ) !== line.varianceQuantity.toFixed()
+      )
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "Closeout declarations no longer match their original custody stock.",
+        )
+      assertRevision(source.revision, line.expectedRevision)
+      if (
+        compareExactDecimals(
+          line.declaredQuantity.toFixed(),
+          source.reservedQuantity.toFixed(),
+        ) < 0
+      ) {
+        throw new CatalogError(
+          "INSUFFICIENT_STOCK",
+          "Closeout cannot remove reserved stock.",
+        )
+      }
+    }
+    const effectiveAt = new Date()
     const operation = await tx.stockOperation.create({
       data: {
         actorUserId: input.actorUserId,
@@ -718,12 +1006,12 @@ export async function finalizeInventoryCloseout(
         source: "inventory_closeout",
         storeId: closeout.storeId,
         tenantId: input.tenantId,
+        effectiveAt,
         type: StockOperationType.ADJUSTMENT,
       },
     })
     for (const line of closeout.lines) {
-      assertRevision(line.balanceSource.revision, line.expectedRevision)
-      if (compareExactDecimals(line.varianceQuantity.toString(), "0") === 0) {
+      if (compareExactDecimals(line.varianceQuantity.toFixed(), "0") === 0) {
         continue
       }
       const update = await tx.stockBalanceSource.updateMany({
@@ -733,6 +1021,8 @@ export async function finalizeInventoryCloseout(
         },
         where: {
           id: line.balanceSourceId,
+          tenantId: input.tenantId,
+          storeId: closeout.storeId,
           revision: line.expectedRevision,
         },
       })
@@ -743,8 +1033,8 @@ export async function finalizeInventoryCloseout(
         )
       }
       const canonicalEffect = multiplyExactDecimals(
-        line.varianceQuantity.toString(),
-        line.balanceSource.inventoryUnit.factor.toString(),
+        line.varianceQuantity.toFixed(),
+        line.balanceSource.inventoryUnit.factor.toFixed(),
       )
       await tx.stockMovement.create({
         data: {
@@ -765,14 +1055,22 @@ export async function finalizeInventoryCloseout(
     }
     await tx.inventoryCloseout.update({
       data: {
-        finalizedAt: new Date(),
+        finalizedAt: operation.effectiveAt,
         finalizedOperationId: operation.id,
         status: InventoryCloseoutStatus.FINALIZED,
       },
       where: { id: closeout.id },
     })
+    const financialContext = financialContexts[0]
+    if (financialContext) {
+      await recordInventoryCloseoutFinanceInTransaction(tx, {
+        tenantId: input.tenantId,
+        closeoutId: closeout.id,
+        expectedBookId: financialContext.bookId,
+      })
+    }
     return operation
-  })
+  }, TRANSACTION_OPTIONS)
 }
 
 export async function listStockTransfers(
@@ -807,9 +1105,15 @@ export async function listStockTransfers(
     inventoryUnitName: transfer.inventoryUnit.name,
     productName: transfer.sourceBalanceSource.product.catalogItem.name,
     quantity: transfer.enteredQuantity.toString(),
-    sourceStore: { id: transfer.sourceStore.id, name: transfer.sourceStore.name },
+    sourceStore: {
+      id: transfer.sourceStore.id,
+      name: transfer.sourceStore.name,
+    },
     status: transfer.status,
-    targetStore: { id: transfer.targetStore.id, name: transfer.targetStore.name },
+    targetStore: {
+      id: transfer.targetStore.id,
+      name: transfer.targetStore.name,
+    },
     transitRevision: transfer.transitBalanceSource?.revision ?? null,
     variantName: transfer.sourceBalanceSource.variant.name,
   }))

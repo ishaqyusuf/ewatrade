@@ -1,19 +1,29 @@
 "use client"
 
-import { Button } from "@ewatrade/ui"
 import {
-  type CatalogSetupHelper,
-  type CatalogSetupHelperKind,
-  listCatalogSetupHelpers,
-} from "@ewatrade/utils/catalog-setup-helpers"
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@ewatrade/ui"
 import {
   findBusinessProfile,
   getRecommendedCatalogSetupHelperKeys,
   rankCatalogSetupHelpersForBusinessProfile,
 } from "@ewatrade/utils/business-profiles"
+import {
+  type CatalogSetupHelper,
+  type CatalogSetupHelperKind,
+  listCatalogSetupHelpers,
+} from "@ewatrade/utils/catalog-setup-helpers"
 import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 type CatalogSetupHelperPickerProps = {
   businessProfileKey?: string | null
@@ -44,17 +54,11 @@ function HelperRow({
       <span className="flex items-center justify-between gap-3">
         <span className="font-medium text-foreground">{helper.title}</span>
         {selected ? (
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            Selected
-          </span>
+          <Badge variant="secondary">Selected</Badge>
         ) : personalized ? (
-          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            For your business
-          </span>
+          <Badge variant="secondary">For your business</Badge>
         ) : helper.recommended ? (
-          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            Recommended
-          </span>
+          <Badge variant="secondary">Recommended</Badge>
         ) : null}
       </span>
       <span className="text-sm leading-6 text-muted-foreground">
@@ -62,19 +66,37 @@ function HelperRow({
       </span>
       <span className="flex flex-wrap gap-1.5">
         {helper.tags.map((tag) => (
-          <span
-            className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"
-            key={tag}
-          >
+          <Badge variant="secondary" key={tag}>
             {tag}
-          </span>
+          </Badge>
         ))}
       </span>
     </button>
   )
 }
 
-export function CatalogSetupHelperPicker({
+import { useCatalogThemeClass } from "./catalog-appearance"
+
+export function CatalogSetupHelperPicker(props: CatalogSetupHelperPickerProps) {
+  const themeClass = useCatalogThemeClass()
+  return (
+    <Dialog
+      open={props.open}
+      onOpenChange={(open) => {
+        if (!open) props.onClose()
+      }}
+    >
+      <DialogContent
+        hideClose
+        className={`${themeClass} flex h-[min(760px,85svh)] flex-col overflow-hidden`}
+      >
+        {props.open ? <CatalogSetupHelperPickerContent {...props} /> : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function CatalogSetupHelperPickerContent({
   businessProfileKey,
   kind,
   onClose,
@@ -83,7 +105,7 @@ export function CatalogSetupHelperPicker({
   selectedKey,
 }: CatalogSetupHelperPickerProps) {
   const [query, setQuery] = useState("")
-  const dialogRef = useRef<HTMLDialogElement>(null)
+  const [showAllExamples, setShowAllExamples] = useState(false)
   const businessProfile = findBusinessProfile(businessProfileKey)
   const recommendedHelperKeys = useMemo(
     () =>
@@ -114,48 +136,36 @@ export function CatalogSetupHelperPicker({
   const patterns = remainingHelpers.filter(
     (helper) => helper.classification === "pattern",
   )
-  const examples = remainingHelpers.filter(
-    (helper) => helper.classification === "example",
-  )
+  const includeOtherExamples =
+    !businessProfile || showAllExamples || Boolean(query.trim())
+  const examples = includeOtherExamples
+    ? remainingHelpers.filter((helper) => helper.classification === "example")
+    : []
 
   useEffect(() => {
-    if (!open) setQuery("")
-  }, [open])
-
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!open || !dialog) return
-    dialog.showModal()
-    return () => {
-      if (dialog.open) dialog.close()
+    if (!open) {
+      setQuery("")
+      setShowAllExamples(false)
     }
   }, [open])
 
   if (!open) return null
 
   return (
-    <dialog
-      aria-label="Catalog quick setup templates"
-      aria-modal="true"
-      className="fixed inset-0 z-[70] m-0 flex h-screen max-h-none w-screen max-w-none flex-col border-0 bg-background p-0 text-foreground"
-      onCancel={(event) => {
-        event.preventDefault()
-        onClose()
-      }}
-      ref={dialogRef}
-    >
+    <>
       <header className="flex min-h-[72px] items-center justify-between gap-4 border-b border-border px-5 py-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">
-            Choose a quick setup
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {businessProfile
+          <DialogTitle className="text-lg font-semibold tracking-tight">
+            Choose a {kind === "product" ? "product" : "service"} quick setup
+          </DialogTitle>
+          <DialogDescription className="mt-1 text-sm text-muted-foreground">
+            {businessProfile && recommendedHelperKeys.length > 0
               ? `${businessProfile.title} suggestions appear first. Review and edit before saving.`
               : "Pick a starting point, then review and edit it before saving."}
-          </p>
+          </DialogDescription>
         </div>
         <Button
+          appearance="form"
           type="button"
           aria-label="Close quick setup"
           onClick={onClose}
@@ -175,9 +185,7 @@ export function CatalogSetupHelperPicker({
           <span className="flex items-center justify-between gap-3">
             <span className="font-medium text-foreground">Start blank</span>
             {selectedKey === null ? (
-              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                Selected
-              </span>
+              <Badge variant="secondary">Selected</Badge>
             ) : null}
           </span>
           <span className="text-sm text-muted-foreground">
@@ -236,6 +244,22 @@ export function CatalogSetupHelperPicker({
           </div>
         ) : null}
 
+        {businessProfile && !query.trim() ? (
+          <div className="px-5 py-4">
+            <Button
+              appearance="form"
+              type="button"
+              variant="outline"
+              aria-pressed={showAllExamples}
+              onClick={() => setShowAllExamples((current) => !current)}
+            >
+              {showAllExamples
+                ? "Show business examples"
+                : "Browse all examples"}
+            </Button>
+          </div>
+        ) : null}
+
         {helpers.length === 0 ? (
           <p className="px-5 py-12 text-center text-sm text-muted-foreground">
             No quick setups match “{query.trim()}”.
@@ -244,15 +268,10 @@ export function CatalogSetupHelperPicker({
       </div>
 
       <div className="border-t border-border bg-background px-5 py-4">
-        <label className="flex h-12 items-center gap-3 rounded-lg border border-border bg-background px-4 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-          <HugeiconsIcon
-            className="size-4 text-muted-foreground"
-            icon={Search01Icon}
-          />
-          <span className="sr-only">Search quick setups</span>
-          <input
+        <InputGroup appearance="form">
+          <InputGroupInput
+            aria-label="Search quick setups"
             autoComplete="off"
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") event.preventDefault()
@@ -260,8 +279,11 @@ export function CatalogSetupHelperPicker({
             placeholder="Search templates, units, or business examples"
             value={query}
           />
-        </label>
+          <InputGroupAddon>
+            <HugeiconsIcon icon={Search01Icon} />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
-    </dialog>
+    </>
   )
 }

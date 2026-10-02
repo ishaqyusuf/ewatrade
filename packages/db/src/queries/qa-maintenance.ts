@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import type { DbClient } from "./types"
 
 export type QaPurgeCounts = {
@@ -237,7 +238,7 @@ export async function beginQaPurge(db: DbClient, runId: string) {
   return preview
 }
 
-export async function deleteQaTenant(db: DbClient, tenantId: string) {
+export async function deleteQaTenant(db: PrismaClient, tenantId: string) {
   const userIds = (
     await db.membership.findMany({
       where: { tenantId },
@@ -245,13 +246,40 @@ export async function deleteQaTenant(db: DbClient, tenantId: string) {
     })
   ).map((membership) => membership.userId)
 
-  await db.tenant.delete({
-    where: {
-      id: tenantId,
-      dataClassification: "QA",
-      qaPurgeStartedAt: { not: null },
+  // QA deletion is metadata-only; no QA object path is ever sent to Blob.
+  // Lock Tenant before assets, matching upload/attachment authorization ordering.
+  await db.$transaction(
+    async (tx) => {
+      const [tenant] = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT "id" FROM "Tenant" WHERE "id"=${tenantId}
+      AND "dataClassification"='QA' AND "qaPurgeStartedAt" IS NOT NULL FOR UPDATE
+    `)
+      if (!tenant) throw new Error("QA purge scope unavailable.")
+      // Historical provider ownership in a relabeled QA Tenant requires review.
+      if (
+        (await tx.catalogPhotoAsset.count({
+          where: {
+            tenantId,
+            OR: [
+              { storagePath: { not: null } },
+              { storageStoreId: { not: null } },
+            ],
+          },
+        })) ||
+        (await tx.catalogPhotoDerivative.count({ where: { tenantId } }))
+      )
+        throw new Error("Catalog provider ownership blocks QA deletion.")
+      await tx.catalogPhotoAsset.deleteMany({ where: { tenantId } })
+      await tx.tenant.delete({
+        where: {
+          id: tenantId,
+          dataClassification: "QA",
+          qaPurgeStartedAt: { not: null },
+        },
+      })
     },
-  })
+    { maxWait: 10_000, timeout: 30_000 },
+  )
   await db.user.deleteMany({
     where: {
       id: { in: userIds },

@@ -1,0 +1,41 @@
+/* Workshop theme reference. Components consume semantic variables only.
+   Native integration must resolve THEME + NativeWind variables together.
+   Landing source: shop-v3.css --ink #30352d, --accent #ae4723.
+   Green source: MARKET_DAY_PALETTES.light.palm #17684f.
+   Dark rust/green tones below are proposed accessible adaptations. */
+:root {
+  --background:#f3f4f5; --card:#ffffff; --foreground:#182420;
+  --muted-foreground:#626d69; --border:#dce2df; --input:#f6f7f7;
+  --primary:#0d5e52; --primary-foreground:#f0fdfa;
+  --accent:#edf3f0; --accent-foreground:#0d5e52; --ring:#0d5e52;
+  --warn-foreground:#976325; --overlay:#07180fb8;
+  --image-background:#dde5d7; --reference-background:#111111;
+  --shadow:0 14px 55px #163b2510;
+  color-scheme:light;
+  /* Compatibility aliases for archived reference galleries. */
+  --page:var(--background); --paper:var(--card); --ink:var(--foreground);
+  --muted:var(--muted-foreground); --line:var(--border); --soft:var(--accent);
+}
+body.dark {
+  --background:#111715; --card:#1b2320; --foreground:#f0f3f1;
+  --muted-foreground:#aab7af; --border:#3d4a43; --input:#232e28;
+  --primary:#61d0b5; --primary-foreground:#042f2e;
+  --accent:#293930; --accent-foreground:#61d0b5; --ring:#61d0b5;
+  --warn-foreground:#e8b76d; color-scheme:dark;
+}
+body[data-palette="landing"] {
+  --primary:#ae4723; --primary-foreground:#ffffff;
+  --accent:#f7ede7; --accent-foreground:#ae4723; --ring:#ae4723;
+}
+body.dark[data-palette="landing"] {
+  --primary:#e9a483; --primary-foreground:#301c14;
+  --accent:#382b24; --accent-foreground:#e9a483; --ring:#e9a483;
+}
+body[data-palette="green"] {
+  --primary:#17684f; --primary-foreground:#fff9ed;
+  --accent:#ecf3ee; --accent-foreground:#17684f; --ring:#17684f;
+}
+body.dark[data-palette="green"] {
+  --primary:#8cd5b5; --primary-foreground:#10271d;
+  --accent:#26372d; --accent-foreground:#8cd5b5; --ring:#8cd5b5;
+}

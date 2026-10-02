@@ -277,8 +277,9 @@ async function requireEligibleAccountAge(
   }
 }
 
-const withTenantPermissionMiddleware = t.middleware(async (opts) => {
-  const { session } = opts.ctx
+/** Shared by protected tRPC and authenticated byte transports. */
+export async function resolveProtectedTenantContext(ctx: TRPCContext) {
+  const { session } = ctx
 
   if (!session) {
     throw new TRPCError({
@@ -287,15 +288,15 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
     })
   }
 
-  if (!opts.ctx.tenantContext) {
-    await requireEligibleAccountAge(opts.ctx.db, session.user.id)
+  if (!ctx.tenantContext) {
+    await requireEligibleAccountAge(ctx.db, session.user.id)
   }
   const tenantContext =
-    opts.ctx.tenantContext ??
-    (await getActiveTenantForUser(opts.ctx.db, {
-      storeId: opts.ctx.qaSessionScope?.storeId ?? opts.ctx.activeStoreId,
+    ctx.tenantContext ??
+    (await getActiveTenantForUser(ctx.db, {
+      storeId: ctx.qaSessionScope?.storeId ?? ctx.activeStoreId,
       userId: session.user.id,
-      tenantSlug: opts.ctx.tenantSlug,
+      tenantSlug: ctx.tenantSlug,
     }))
 
   if (!tenantContext) {
@@ -306,10 +307,10 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   }
 
   if (
-    opts.ctx.qaSessionScope &&
-    (tenantContext.tenant.id !== opts.ctx.qaSessionScope.tenantId ||
-      tenantContext.membership.id !== opts.ctx.qaSessionScope.membershipId ||
-      tenantContext.activeStore?.id !== opts.ctx.qaSessionScope.storeId)
+    ctx.qaSessionScope &&
+    (tenantContext.tenant.id !== ctx.qaSessionScope.tenantId ||
+      tenantContext.membership.id !== ctx.qaSessionScope.membershipId ||
+      tenantContext.activeStore?.id !== ctx.qaSessionScope.storeId)
   ) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -324,14 +325,11 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
     })
   }
 
-  return opts.next({
-    ctx: {
-      ...opts.ctx,
-      session,
-      tenantContext,
-      tenantId: tenantContext.tenant.id,
-    },
-  })
+  return { ...ctx, session, tenantContext, tenantId: tenantContext.tenant.id }
+}
+
+const withTenantPermissionMiddleware = t.middleware(async (opts) => {
+  return opts.next({ ctx: await resolveProtectedTenantContext(opts.ctx) })
 })
 
 const enforceQaProviderBoundary = t.middleware(async (opts) => {
@@ -386,6 +384,15 @@ export const publicProcedure = t.procedure
 export const authenticatedProcedure = publicProcedure.use(
   requireGlobalAuthMiddleware,
 )
+
+// Mobile entry may authenticate a derived QA session, but its only consumer
+// must read the server-validated scope instead of enumerating global access.
+export const mobileEntryProcedure = publicProcedure.use(requireAuthMiddleware)
+
+// Startup must read or declare this session's own age before Tenant access.
+// QA-derived sessions use this only for the two Account age endpoints;
+// global Account and platform procedures retain their separate restriction.
+export const accountAgeProcedure = publicProcedure.use(requireAuthMiddleware)
 
 export const eligibleAccountProcedure = authenticatedProcedure.use(
   async (opts) => {

@@ -4,6 +4,9 @@ import { captureTerminalJobError } from "./src/observability/sentry"
 
 const syncedProductionEnvVars = [
   "APP_ENV",
+  "BLOB_STORE_ID",
+  "BLOB_READ_WRITE_TOKEN",
+  "CATALOG_PHOTO_CLEANUP_ENABLED",
   "EWATRADE_DATABASE_URL",
   "EMAIL_DELIVERY_MODE",
   "EMAIL_FROM",

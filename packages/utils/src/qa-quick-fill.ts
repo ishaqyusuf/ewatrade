@@ -380,7 +380,7 @@ export const QA_FORM_COVERAGE: readonly QaFormCoverageDeclaration[] = [
     formId: "marketing.qa-authorization",
     kind: "excluded",
     reason:
-      "The QA Domain and tester credential are authorization inputs, never fixtures.",
+      "The QA domain selects the environment scope and is never fixture data.",
     surface: "marketing",
   },
   { formId: "signup.business", kind: "recipe", surface: "marketing" },

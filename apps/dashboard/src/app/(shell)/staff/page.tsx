@@ -1,24 +1,27 @@
-import { StaffPage } from "@/components/dashboard/staff-page"
+import { PageLoading } from "@/components/dashboard/page-loading"
+import { StaffContent } from "@/components/dashboard/staff-content"
+import { loadStaffDirectoryParams } from "@/hooks/staff-directory-params"
 import { getServerSession } from "@/lib/session"
-import { getDashboardStaff } from "@/lib/staff-data"
 import { canManageStaff } from "@/lib/staff-management"
 import { getActiveTenant } from "@/lib/tenant"
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
-
-export default async function StaffRoutePage() {
+export default async function StaffRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await getServerSession()
 
   if (!session) {
-    redirect(`${MARKETING_URL}/login`)
+    redirect("/login")
   }
 
   const ctx = await getActiveTenant(session.user.id)
 
   if (!ctx) {
-    redirect(`${MARKETING_URL}/login?error=no_tenant`)
+    redirect("/login?error=no_tenant")
   }
 
   if (!canManageStaff(ctx.membership.role)) {
@@ -31,9 +34,18 @@ export default async function StaffRoutePage() {
     redirect("/setup")
   }
 
-  const staff = await getDashboardStaff({
-    tenantId: ctx.tenant.id,
-  })
+  const { staffQuery, staffRole, staffStatus } =
+    await loadStaffDirectoryParams(searchParams)
 
-  return <StaffPage initialStaff={staff} store={store} />
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <StaffContent
+        store={store}
+        tenantId={ctx.tenant.id}
+        search={staffQuery}
+        role={staffRole}
+        status={staffStatus}
+      />
+    </Suspense>
+  )
 }

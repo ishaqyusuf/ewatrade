@@ -34,9 +34,18 @@ export function getConfiguredStoreConversationTextSafetyProvider(
 ): StoreConversationTextSafetyProvider | null {
   if (
     environment.APP_ENV === "production" ||
-    environment.DEV_PROFILE === "prod"
+    ["prod", "production"].includes(environment.DEV_PROFILE ?? "")
   )
     return null
+
+  // Local development uses the deterministic QA screen. Preview still opts in
+  // explicitly, and Production can never select this fixture.
+  if (
+    (environment.APP_ENV === "local" ||
+      (!environment.APP_ENV && environment.DEV_PROFILE === "local")) &&
+    !environment.STORE_CONVERSATION_TEXT_SAFETY_PROVIDER
+  )
+    return createQaStoreConversationTextSafetyProvider()
 
   if (environment.NODE_ENV === "test")
     return createQaStoreConversationTextSafetyProvider()

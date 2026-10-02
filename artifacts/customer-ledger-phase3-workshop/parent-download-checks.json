@@ -1,0 +1,13 @@
+{
+  "syntheticReadOnlyFixture": true,
+  "snapshot": 65,
+  "entries": 65,
+  "exportPageLimit": 50,
+  "debitMinor": "2403200",
+  "creditMinor": "603100",
+  "netMinor": "1800100",
+  "allRunningBalancesVerified": true,
+  "sha256": "fa424672ca953ce11baad40ba5df9575daa20c32ffd426c0bc2e55afd6d78d46",
+  "realFinancialWrites": false,
+  "nativeAcceptance": false
+}

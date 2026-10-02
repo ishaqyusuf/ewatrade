@@ -1,4 +1,13 @@
 "use client"
+import {
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormSelectControl } from "@/components/forms/form-controls"
 
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
@@ -10,7 +19,7 @@ import {
   type StoreConversationModerationFormValues,
   storeConversationModerationFormSchema,
 } from "@ewatrade/service-commerce"
-import { Button, Input, Select } from "@ewatrade/ui"
+
 import { useMutation } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
 
@@ -98,7 +107,7 @@ export function ConversationModerationForm({
 
   return (
     <form
-      className="grid gap-3 border-t border-border pt-5"
+      className="border-t border-border pt-5"
       onSubmit={form.handleSubmit((values) => {
         const operatorNote = values.operatorNote?.trim()
         const input = {
@@ -119,68 +128,71 @@ export function ConversationModerationForm({
         })
       })}
     >
-      <div>
-        <h3 className="font-medium">Customer submission</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Restriction pauses new text, media, voice, and actions without
-          deleting the conversation or its Requests.
-        </p>
-      </div>
-      <label
-        className="grid gap-1 text-sm font-medium"
-        htmlFor="moderation-action"
-      >
-        Action
-        <Select id="moderation-action" {...form.register("action")}>
-          <option value="restrict">Restrict new submissions</option>
-          <option value="reinstate">Reinstate submissions</option>
-        </Select>
-      </label>
-      <label
-        className="grid gap-1 text-sm font-medium"
-        htmlFor="moderation-reason"
-      >
-        Reason
-        <Select id="moderation-reason" {...form.register("reason")}>
-          {action === "restrict" ? (
-            <>
-              <option value="operator_review">Operator review</option>
-              <option value="spam_or_abuse">Spam or abuse</option>
-              <option value="security_review">Security review</option>
-              <option value="policy_review">Policy review</option>
-            </>
-          ) : (
-            <>
-              <option value="review_complete">Review complete</option>
-              <option value="appeal_approved">Appeal approved</option>
-            </>
-          )}
-        </Select>
-        {form.formState.errors.reason ? (
-          <span className="text-xs text-destructive">
-            {form.formState.errors.reason.message}
-          </span>
-        ) : null}
-      </label>
-      <label
-        className="grid gap-1 text-sm font-medium"
-        htmlFor="moderation-note"
-      >
-        Internal note (optional)
-        <Input
-          id="moderation-note"
-          maxLength={240}
-          placeholder="Visible only to authorized operators"
-          {...form.register("operatorNote")}
-        />
-      </label>
-      <Button disabled={mutation.isPending} type="submit" variant="outline">
-        {mutation.isPending
-          ? "Applying…"
-          : action === "restrict"
-            ? "Restrict submissions"
-            : "Reinstate submissions"}
-      </Button>
+      <FieldGroup className="min-w-0 grid gap-3">
+        <div>
+          <h3 className="font-medium">Customer submission</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Restriction pauses new text, media, voice, and actions without
+            deleting the conversation or its Requests.
+          </p>
+        </div>
+        <ControlField label={<>Action</>}>
+          <FormSelectControl
+            id="moderation-action"
+            control={form.control}
+            name={"action"}
+            options={[
+              { value: "restrict", label: <>Restrict new submissions</> },
+              { value: "reinstate", label: <>Reinstate submissions</> },
+            ]}
+          />
+        </ControlField>
+        <ControlField
+          label={<>Reason</>}
+          error={form.formState.errors.reason?.message}
+        >
+          <FormSelectControl
+            id="moderation-reason"
+            control={form.control}
+            name={"reason"}
+            options={[
+              ...(action === "restrict"
+                ? [
+                    { value: "operator_review", label: <>Operator review</> },
+                    { value: "spam_or_abuse", label: <>Spam or abuse</> },
+                    { value: "security_review", label: <>Security review</> },
+                    { value: "policy_review", label: <>Policy review</> },
+                  ]
+                : [
+                    { value: "review_complete", label: <>Review complete</> },
+                    { value: "appeal_approved", label: <>Appeal approved</> },
+                  ]),
+            ]}
+          />
+        </ControlField>
+        <ControlField label={<>Internal note (optional)</>}>
+          <Input
+            id="moderation-note"
+            maxLength={240}
+            placeholder="Visible only to authorized operators"
+            {...form.register("operatorNote")}
+          />
+        </ControlField>
+        <FormActions>
+          <SubmitButton
+            isSubmitting={mutation.isPending}
+            disabled={mutation.isPending}
+            type="submit"
+            variant="outline"
+          >
+            {mutation.isPending
+              ? "Applying…"
+              : action === "restrict"
+                ? "Restrict submissions"
+                : "Reinstate submissions"}
+          </SubmitButton>
+        </FormActions>
+      </FieldGroup>
     </form>
   )
 }

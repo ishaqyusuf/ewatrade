@@ -1,0 +1,192 @@
+apps/dashboard/src/app/(shell)/catalog/page.tsx(51,48): error TS2345: Argument of type 'Record<string, string | string[] | undefined>' is not assignable to parameter of type 'Promise<LoaderInput>'.
+  Type 'Record<string, string | string[] | undefined>' is missing the following properties from type 'Promise<LoaderInput>': then, catch, finally, [Symbol.toStringTag]
+apps/dashboard/src/app/(shell)/sales/page.tsx(54,27): error TS2345: Argument of type 'Record<string, string | string[] | undefined>' is not assignable to parameter of type 'Promise<LoaderInput>'.
+  Type 'Record<string, string | string[] | undefined>' is missing the following properties from type 'Promise<LoaderInput>': then, catch, finally, [Symbol.toStringTag]
+apps/dashboard/src/app/(shell)/services/page.tsx(55,52): error TS2345: Argument of type 'Record<string, string | string[] | undefined>' is not assignable to parameter of type 'Promise<LoaderInput>'.
+  Type 'Record<string, string | string[] | undefined>' is missing the following properties from type 'Promise<LoaderInput>': then, catch, finally, [Symbol.toStringTag]
+apps/dashboard/src/components/dashboard/command-search.tsx(185,13): error TS2322: Type 'RefObject<HTMLInputElement | null>' is not assignable to type 'Ref<never> | undefined'.
+  Type 'RefObject<HTMLInputElement | null>' is not assignable to type 'RefObject<null>'.
+    Type 'HTMLInputElement | null' is not assignable to type 'null'.
+      Type 'HTMLInputElement' is not assignable to type 'null'.
+apps/dashboard/src/components/dashboard/customers-page.tsx(90,71): error TS2737: BigInt literals are not available when targeting lower than ES2020.
+apps/dashboard/src/components/search-field.tsx(48,7): error TS2322: Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLFormElement> | undefined' is not assignable to type 'React.Ref<HTMLFormElement> | undefined'.
+  Type '(instance: HTMLFormElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLFormElement> | undefined'.
+    Type '(instance: HTMLFormElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLFormElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+      Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+        Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+          Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+            Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+              Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+apps/dashboard/src/components/store-conversations/conversation-moderation-form.tsx(159,20): error TS2869: Right operand of ?? is unreachable because the left operand is never nullish.
+apps/dashboard/src/components/store-conversations/store-conversation-sheet-content.tsx(582,28): error TS2869: Right operand of ?? is unreachable because the left operand is never nullish.
+apps/dashboard/src/components/store-conversations/store-conversation-sheet-content.tsx(588,26): error TS2488: Type 'never[] | { value: string; label: Element; }' must have a '[Symbol.iterator]()' method that returns an iterator.
+apps/dashboard/src/components/store-conversations/store-conversation-sheet-content.tsx(588,28): error TS2869: Right operand of ?? is unreachable because the left operand is never nullish.
+apps/dashboard/src/components/tables/catalog/data-table.tsx(29,36): error TS2345: Argument of type '{ kind: string | null; query: string | null; status: string | null; }' is not assignable to parameter of type 'CatalogFilters'.
+  Types of property 'kind' are incompatible.
+    Type 'string | null' is not assignable to type '"product" | "service" | null'.
+      Type 'string' is not assignable to type '"product" | "service" | null'.
+apps/dashboard/src/components/tables/prescriptions/data-table.tsx(120,6): error TS2741: Property 'onRowOpen' is missing in type '{ table: Table<{ createdAt: Date; fulfilmentPreference: string; id: string; reference: string; source: "web" | "whatsapp" | "staff_phone" | "staff_walk_in"; status: PrescriptionRequestStatusValue; updatedAt: Date; }>; ... 12 more ...; retryPersistence: () => void; }' but required in type '{ table: Table<{ createdAt: Date; fulfilmentPreference: string; id: string; reference: string; source: "web" | "whatsapp" | "staff_phone" | "staff_walk_in"; status: PrescriptionRequestStatusValue; updatedAt: Date; }>; ... 13 more ...; retryPersistence: () => void; }'.
+apps/dashboard/src/hooks/use-catalog-filter-params.ts(7,34): error TS2345: Argument of type 'readonly ["product", "service"]' is not assignable to parameter of type 'string[]'.
+  The type 'readonly ["product", "service"]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+apps/dashboard/src/hooks/use-catalog-filter-params.ts(8,36): error TS2345: Argument of type 'readonly ["active", "draft", "archived"]' is not assignable to parameter of type 'string[]'.
+  The type 'readonly ["active", "draft", "archived"]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+apps/dashboard/src/hooks/use-catalog-filter-params.ts(25,5): error TS2322: Type 'string | null' is not assignable to type '"product" | "service" | null'.
+  Type 'string' is not assignable to type '"product" | "service" | null'.
+apps/dashboard/src/hooks/use-catalog-filter-params.ts(27,5): error TS2322: Type 'string | null' is not assignable to type '"draft" | "active" | "archived" | null'.
+  Type 'string' is not assignable to type '"draft" | "active" | "archived" | null'.
+apps/dashboard/src/hooks/use-catalog-item-params.ts(14,42): error TS2345: Argument of type 'readonly ["product", "service"]' is not assignable to parameter of type 'any[]'.
+  The type 'readonly ["product", "service"]' is 'readonly' and cannot be assigned to the mutable type 'any[]'.
+apps/dashboard/src/hooks/use-catalog-item-params.ts(43,7): error TS2322: Type 'string | null' is not assignable to type '"product" | "service" | null'.
+  Type 'string' is not assignable to type '"product" | "service" | null'.
+apps/dashboard/src/hooks/use-catalog-item-params.ts(45,7): error TS2322: Type 'string | null' is not assignable to type '"draft" | "active" | "archived" | null'.
+  Type 'string' is not assignable to type '"draft" | "active" | "archived" | null'.
+apps/dashboard/src/hooks/use-order-filter-params.ts(17,34): error TS2345: Argument of type 'readonly ["DRAFT", "PENDING", "CONFIRMED", "FULFILLING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "COMPLETED", "CANCELLED", "REFUNDED"]' is not assignable to parameter of type 'string[]'.
+  The type 'readonly ["DRAFT", "PENDING", "CONFIRMED", "FULFILLING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "COMPLETED", "CANCELLED", "REFUNDED"]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+apps/dashboard/src/hooks/use-order-filter-params.ts(33,5): error TS2322: Type 'string | null' is not assignable to type '"COMPLETED" | "CANCELLED" | "PENDING" | "DRAFT" | "CONFIRMED" | "REFUNDED" | "FULFILLING" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | null'.
+  Type 'string' is not assignable to type '"COMPLETED" | "CANCELLED" | "PENDING" | "DRAFT" | "CONFIRMED" | "REFUNDED" | "FULFILLING" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | null'.
+apps/dashboard/src/hooks/use-order-params.ts(14,5): error TS2322: Type 'string | null' is not assignable to type '"COMPLETED" | "CANCELLED" | "PENDING" | "DRAFT" | "CONFIRMED" | "REFUNDED" | "FULFILLING" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | null'.
+  Type 'string' is not assignable to type '"COMPLETED" | "CANCELLED" | "PENDING" | "DRAFT" | "CONFIRMED" | "REFUNDED" | "FULFILLING" | "READY_FOR_PICKUP" | "OUT_FOR_DELIVERY" | null'.
+apps/dashboard/src/hooks/use-service-work-filter-params.ts(8,33): error TS2345: Argument of type 'readonly ["all", "overdue", "today"]' is not assignable to parameter of type 'string[]'.
+  The type 'readonly ["all", "overdue", "today"]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+apps/dashboard/src/hooks/use-service-work-filter-params.ts(9,38): error TS2345: Argument of type 'readonly ["normal", "urgent"]' is not assignable to parameter of type 'string[]'.
+  The type 'readonly ["normal", "urgent"]' is 'readonly' and cannot be assigned to the mutable type 'string[]'.
+apps/dashboard/src/hooks/use-service-work-filter-params.ts(28,5): error TS2322: Type 'string | null' is not assignable to type '"all" | "today" | "overdue" | null'.
+  Type 'string' is not assignable to type '"all" | "today" | "overdue" | null'.
+apps/dashboard/src/hooks/use-service-work-filter-params.ts(29,5): error TS2322: Type 'string | null' is not assignable to type '"normal" | "urgent" | null'.
+  Type 'string' is not assignable to type '"normal" | "urgent" | null'.
+apps/dashboard/src/hooks/use-service-work-params.ts(33,5): error TS2322: Type 'string | null' is not assignable to type '"all" | "today" | "overdue" | null'.
+  Type 'string' is not assignable to type '"all" | "today" | "overdue" | null'.
+apps/dashboard/src/hooks/use-service-work-params.ts(34,5): error TS2322: Type 'string | null' is not assignable to type '"normal" | "urgent" | null'.
+  Type 'string' is not assignable to type '"normal" | "urgent" | null'.
+packages/ui/src/components/alert-dialog.tsx(45,6): error TS2322: Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'.
+  Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLDivElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLDivElement> | undefined' is not assignable to type 'React.Ref<HTMLDivElement> | undefined'.
+        Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+          Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/dialog.tsx(60,6): error TS2322: Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'.
+  Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLDivElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLDivElement> | undefined' is not assignable to type 'React.Ref<HTMLDivElement> | undefined'.
+        Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+          Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/dialog.tsx(68,6): error TS2322: Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'.
+  Type '{ ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLDivElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLDivElement> | undefined' is not assignable to type 'React.Ref<HTMLDivElement> | undefined'.
+        Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+          Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/form-actions.tsx(11,6): error TS2322: Type '{ children: Element[]; "data-slot": string; className: string; ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; ... 274 more ...; onTransitionStartCapture?: TransitionEventHandler<...> | undefined; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'.
+  Type '{ children: Element[]; "data-slot": string; className: string; ref?: Ref<HTMLDivElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; ... 274 more ...; onTransitionStartCapture?: TransitionEventHandler<...> | undefined; }' is not assignable to type 'ClassAttributes<HTMLDivElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLDivElement> | undefined' is not assignable to type 'React.Ref<HTMLDivElement> | undefined'.
+        Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+          Type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(6,6): error TS2322: Type '{ ref?: Ref<HTMLTableElement> | undefined; key?: Key | null | undefined; align?: "center" | "left" | "right" | undefined; bgcolor?: string | undefined; ... 284 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>'.
+  Type '{ ref?: Ref<HTMLTableElement> | undefined; key?: Key | null | undefined; align?: "center" | "left" | "right" | undefined; bgcolor?: string | undefined; ... 284 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableElement> | undefined' is not assignable to type 'React.Ref<HTMLTableElement> | undefined'.
+        Type '(instance: HTMLTableElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableElement> | undefined'.
+          Type '(instance: HTMLTableElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(15,6): error TS2322: Type '{ ref?: Ref<HTMLTableSectionElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>'.
+  Type '{ ref?: Ref<HTMLTableSectionElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableSectionElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableSectionElement> | undefined' is not assignable to type 'React.Ref<HTMLTableSectionElement> | undefined'.
+        Type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableSectionElement> | undefined'.
+          Type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(21,6): error TS2322: Type '{ ref?: Ref<HTMLTableSectionElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>'.
+  Type '{ ref?: Ref<HTMLTableSectionElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableSectionElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableSectionElement> | undefined' is not assignable to type 'React.Ref<HTMLTableSectionElement> | undefined'.
+        Type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableSectionElement> | undefined'.
+          Type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(30,6): error TS2322: Type '{ ref?: Ref<HTMLTableSectionElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>'.
+  Type '{ ref?: Ref<HTMLTableSectionElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableSectionElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableSectionElement> | undefined' is not assignable to type 'React.Ref<HTMLTableSectionElement> | undefined'.
+        Type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableSectionElement> | undefined'.
+          Type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableSectionElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(41,11): error TS2322: Type '{ ref?: Ref<HTMLTableRowElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLTableRowElement>, HTMLTableRowElement>'.
+  Type '{ ref?: Ref<HTMLTableRowElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableRowElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableRowElement> | undefined' is not assignable to type 'React.Ref<HTMLTableRowElement> | undefined'.
+        Type '(instance: HTMLTableRowElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableRowElement> | undefined'.
+          Type '(instance: HTMLTableRowElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableRowElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(46,6): error TS2322: Type '{ ref?: Ref<HTMLTableHeaderCellElement> | undefined; key?: Key | null | undefined; align?: "center" | "left" | "right" | "justify" | "char" | undefined; ... 282 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<ThHTMLAttributes<HTMLTableHeaderCellElement>, HTMLTableHeaderCellElement>'.
+  Type '{ ref?: Ref<HTMLTableHeaderCellElement> | undefined; key?: Key | null | undefined; align?: "center" | "left" | "right" | "justify" | "char" | undefined; ... 282 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableHeaderCellElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableHeaderCellElement> | undefined' is not assignable to type 'React.Ref<HTMLTableHeaderCellElement> | undefined'.
+        Type '(instance: HTMLTableHeaderCellElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableHeaderCellElement> | undefined'.
+          Type '(instance: HTMLTableHeaderCellElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableHeaderCellElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(58,6): error TS2322: Type '{ ref?: Ref<HTMLTableDataCellElement> | undefined; key?: Key | null | undefined; align?: "center" | "left" | "right" | "justify" | "char" | undefined; ... 285 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<TdHTMLAttributes<HTMLTableDataCellElement>, HTMLTableDataCellElement>'.
+  Type '{ ref?: Ref<HTMLTableDataCellElement> | undefined; key?: Key | null | undefined; align?: "center" | "left" | "right" | "justify" | "char" | undefined; ... 285 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLTableDataCellElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLTableDataCellElement> | undefined' is not assignable to type 'React.Ref<HTMLTableDataCellElement> | undefined'.
+        Type '(instance: HTMLTableDataCellElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLTableDataCellElement> | undefined'.
+          Type '(instance: HTMLTableDataCellElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLTableDataCellElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.
+packages/ui/src/components/table.tsx(73,6): error TS2322: Type '{ ref?: Ref<HTMLElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement>'.
+  Type '{ ref?: Ref<HTMLElement> | undefined; key?: Key | null | undefined; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; ... 275 more ...; className: string; }' is not assignable to type 'ClassAttributes<HTMLElement>'.
+    Types of property 'ref' are incompatible.
+      Type 'import("/Users/M1PRO/Documents/code/ewatrade/node_modules/.bun/@types+react@19.2.14/node_modules/@types/react/index").Ref<HTMLElement> | undefined' is not assignable to type 'React.Ref<HTMLElement> | undefined'.
+        Type '(instance: HTMLElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type 'Ref<HTMLElement> | undefined'.
+          Type '(instance: HTMLElement | null) => void | (() => VoidOrUndefinedOnly)' is not assignable to type '(instance: HTMLElement | null) => void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+            Type 'void | (() => VoidOrUndefinedOnly)' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'. Two different types with this name exist, but they are unrelated.
+              Type '() => VoidOrUndefinedOnly' is not assignable to type 'void | (() => VoidOrUndefinedOnly)'.
+                Type '() => VoidOrUndefinedOnly' is not assignable to type '() => VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                  Type 'VoidOrUndefinedOnly' is not assignable to type 'VoidOrUndefinedOnly'. Two different types with this name exist, but they are unrelated.
+                    Type '{ [UNDEFINED_VOID_ONLY]: never; }' is not assignable to type 'VoidOrUndefinedOnly'.

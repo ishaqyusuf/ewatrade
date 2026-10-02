@@ -1,15 +1,16 @@
+import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
+import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
 import { Text } from "@/components/ui/text"
 import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
-import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupService({
   model,
   market,
-}: { model: CatalogSetupModel; market: boolean }) {
+  focused = false,
+}: { model: CatalogSetupModel; market: boolean; focused?: boolean }) {
   const {
     kind,
     showDescription,
@@ -106,7 +107,8 @@ export function CatalogSetupService({
         </View>
       ) : null}
 
-      {kind === "service" &&
+      {!focused &&
+      kind === "service" &&
       (!showDescription || !showAdvanced || !trackServiceWork) ? (
         <View
           className={catalogSetupClassName(

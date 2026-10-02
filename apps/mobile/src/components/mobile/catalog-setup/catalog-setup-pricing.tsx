@@ -1,7 +1,7 @@
 import { Text } from "@/components/ui/text"
-import { View, type LayoutChangeEvent } from "react-native"
-import { CatalogVariantManager } from "./catalog-variant-manager"
+import { type LayoutChangeEvent, View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
+import { CatalogVariantManager } from "./catalog-variant-manager"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupPricing({
@@ -97,8 +97,8 @@ export function CatalogSetupPricing({
                   market,
                 )}
               >
-                A fixed price is optional. Use Quote when the final amount
-                depends on the customer request.
+                Set an amount for each fixed-price choice. Use Quote when the
+                amount depends on the customer request.
               </Text>
             </View>
           ) : null}

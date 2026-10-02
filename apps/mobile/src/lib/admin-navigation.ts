@@ -21,6 +21,7 @@ export type AdminMoreItemId =
   | "inventory"
   | "analytics"
   | "payments-received"
+  | "finance"
   | "order-reminders"
   | "team"
   | "customers"
@@ -174,6 +175,12 @@ export function buildAdminMoreSections({
 
   const storefrontItems: AdminMoreItem[] = []
   if (role === "OWNER" || role === "ADMIN") {
+    storeItems.push({
+      action: { href: "/finance-modal" as LinkProps["href"], kind: "route" },
+      icon: "ReceiptText",
+      id: "finance",
+      label: "Spending & finance",
+    })
     storeItems.push({
       action: {
         href: "/order-reminder-settings-modal" as LinkProps["href"],

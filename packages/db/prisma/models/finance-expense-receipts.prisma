@@ -1,0 +1,127 @@
+// Original source, creator, command, content and path are immutable in commands.
+// Evidence is retained with restrictive relations independently of source voiding.
+model FinanceExpenseReceiptAsset {
+  id                    String @id @default(cuid())
+  tenantId              String
+  bookId                String
+  billId                String
+  actorUserId           String
+  clientCommandId       String
+  payloadHash           String
+  originalFileName      String
+  contentDigest         String
+  contentType           String
+  sizeBytes             Int
+  storageProvider       String @default("vercel_blob_private")
+  storagePath           String
+  storageStoreId        String?
+  uploadState           FinanceExpenseReceiptUploadState @default(PENDING)
+  safetyState           FinanceExpenseReceiptSafetyState @default(QUARANTINED)
+  attachmentState       FinanceExpenseReceiptAttachmentState @default(UNATTACHED)
+  version               Int @default(0)
+  uploadClaimId         String?
+  uploadClaimedAt       DateTime?
+  uploadLeaseUntil      DateTime?
+  verifiedClaimId       String?
+  verifiedClaimVersion  Int?
+  verifiedAt            DateTime?
+  safetyAttestation     Json?
+  safetyReviewedAt      DateTime?
+  attachedAt            DateTime?
+  attachedById          String?
+  withdrawnAt           DateTime?
+  withdrawnById         String?
+  retentionHold         Boolean @default(false)
+  retentionHoldReason   String?
+  cleanupClaimId        String?
+  cleanupLeaseUntil     DateTime?
+  bytesDeletedAt        DateTime?
+  createdAt             DateTime @default(now())
+  expiresAt             DateTime
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  book FinanceBook @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  bill FinanceBill @relation(fields: [bookId, billId], references: [bookId, id], onDelete: Restrict)
+  auditEvents FinanceExpenseReceiptAuditEvent[]
+  downloadGrants FinanceExpenseReceiptDownloadGrant[]
+
+  @@unique([tenantId, bookId, billId, id])
+  @@unique([tenantId, storageProvider, storagePath])
+  @@index([bookId, billId, createdAt, id])
+  @@index([bookId, actorUserId, expiresAt])
+  @@index([uploadState, expiresAt])
+}
+
+model FinanceExpenseReceiptAuditEvent {
+  id           String @id @default(cuid())
+  tenantId     String
+  bookId       String
+  billId       String
+  assetId      String
+  actorUserId  String
+  kind         FinanceExpenseReceiptAuditKind
+  assetVersion Int
+  occurredAt   DateTime @default(now())
+
+  asset FinanceExpenseReceiptAsset @relation(fields: [tenantId, bookId, billId, assetId], references: [tenantId, bookId, billId, id], onDelete: Restrict)
+  @@index([tenantId, bookId, billId, assetId, occurredAt, id])
+}
+
+// Future delivery records; this metadata chunk never issues or consumes grants.
+model FinanceExpenseReceiptDownloadGrant {
+  id            String @id @default(cuid())
+  tenantId      String
+  bookId        String
+  billId        String
+  assetId       String
+  actorUserId   String
+  sessionDigest String
+  nonceDigest   String @unique
+  contentDigest String
+  purpose       String
+  version       Int
+  issuedAt      DateTime @default(now())
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  revokedAt     DateTime?
+
+  asset FinanceExpenseReceiptAsset @relation(fields: [tenantId, bookId, billId, assetId], references: [tenantId, bookId, billId, id], onDelete: Restrict)
+  @@index([tenantId, actorUserId, expiresAt])
+  @@index([assetId, expiresAt])
+}
+
+enum FinanceExpenseReceiptUploadState {
+  PENDING
+  CLAIMED
+  VERIFIED
+  RETRYABLE
+  CLEANUP_PENDING
+  DELETED
+}
+
+enum FinanceExpenseReceiptSafetyState {
+  QUARANTINED
+  SAFE
+  REJECTED
+}
+
+enum FinanceExpenseReceiptAttachmentState {
+  UNATTACHED
+  ATTACHED
+  WITHDRAWN
+}
+
+enum FinanceExpenseReceiptAuditKind {
+  INTENT_CREATED
+  UPLOAD_CLAIMED
+  UPLOAD_VERIFIED
+  UPLOAD_RETRYABLE
+  SAFETY_REVIEWED
+  ATTACHED
+  WITHDRAWN
+  DOWNLOAD_GRANTED
+  DOWNLOAD_CONSUMED
+  RETENTION_CHANGED
+  CLEANUP_CLAIMED
+  BYTES_DELETED
+}

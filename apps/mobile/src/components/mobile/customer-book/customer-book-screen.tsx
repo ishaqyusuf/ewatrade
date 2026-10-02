@@ -11,25 +11,26 @@ import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
-import { FlatList } from "react-native-css/components/FlatList"
 import { VariableContextProvider } from "nativewind"
 import { useState } from "react"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
+import { FlatList } from "react-native-css/components/FlatList"
 import { ActionButton, MarketDayActionButton } from "../action-button"
-import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
-import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import {
+  ClassicCustomerBookFilter,
   ClassicCustomerBookHeader,
   ClassicCustomerBookRow,
-  ClassicCustomerBookFilter,
 } from "../appearances/classic/customer-book-screen"
 import {
+  MarketDayCustomerBookFilter,
   MarketDayCustomerBookHeader,
   MarketDayCustomerBookRow,
-  MarketDayCustomerBookFilter,
 } from "../appearances/market-day/customer-book-screen"
-import { useCustomerBook, type CustomerBookProps } from "./use-customer-book"
+import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
+import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
+import { type CustomerBookProps, useCustomerBook } from "./use-customer-book"
 export function CustomerBookChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="customers" />
 }
@@ -40,6 +41,10 @@ export function activeCustomerFilterLabel(filter: CustomerBookFilter) {
 }
 
 export function CustomerBookContent(props: CustomerBookProps) {
+  const { profile } = useAuthContext()
+  const canManageTenant = ["OWNER", "ADMIN"].includes(
+    profile?.role?.trim().toUpperCase() ?? "",
+  )
   const market = useMobileDesign("customers") === "market-day"
   const Header = market
     ? MarketDayCustomerBookHeader
@@ -143,7 +148,26 @@ export function CustomerBookContent(props: CustomerBookProps) {
   )
   const overview = selectedCustomer ? (
     <CustomerOverviewContent
-      headerContent={feedback}
+      headerContent={
+        <>
+          {feedback}
+          {canManageTenant && selectedIsSaved && selectedCustomer ? (
+            <View className="px-4 pb-3">
+              <ActionButton
+                variant="outline"
+                onPress={() =>
+                  router.push({
+                    pathname: "/customer-ledger/[customerId]",
+                    params: { customerId: selectedCustomer.id },
+                  })
+                }
+              >
+                Statement and payments
+              </ActionButton>
+            </View>
+          ) : null}
+        </>
+      }
       appearance={market ? "market-day" : "classic"}
       customer={selectedCustomer}
       historyComplete={historyComplete}
@@ -166,6 +190,9 @@ export function CustomerBookContent(props: CustomerBookProps) {
           params: {
             customerEmail: selectedCustomer.email ?? undefined,
             customerId: selectedCustomer.id,
+            customerDirectoryId: selectedIsSaved
+              ? selectedCustomer.id
+              : undefined,
             customerName: selectedCustomer.name,
             customerPhone: selectedCustomer.phone ?? undefined,
           },

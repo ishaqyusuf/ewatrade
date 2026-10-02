@@ -1,8 +1,8 @@
 import type {
-  SaleStageHeaderProps,
-  SelectedOrderLineProps,
   CustomerActionRowProps,
   CustomerSuggestionRowProps,
+  SaleStageHeaderProps,
+  SelectedOrderLineProps,
 } from "@/components/mobile/create-sale/create-sale-presentation"
 import { FormField } from "@/components/mobile/form-field"
 import { saleLineTotalMinor } from "@/components/mobile/sale-checkout-model"
@@ -210,8 +210,13 @@ export function ClassicCustomerSuggestionRow({
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{customer.name}</Text>
         <Text className="text-xs text-muted-foreground">
-          {[customer.phone, customer.email].filter(Boolean).join(" · ") ||
-            "Recent customer"}
+          {[
+            customer.directoryId ? "Saved customer" : "Previous sale contact",
+            customer.phone,
+            customer.email,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </Text>
       </View>
       <Icon className="size-sm text-muted-foreground" name="ChevronRight" />

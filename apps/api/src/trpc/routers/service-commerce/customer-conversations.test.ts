@@ -14,17 +14,90 @@ function caller(input?: {
   credential?: string
   db?: unknown
   installation?: string
+  qaSessionScope?: { membershipId: string; storeId: string; tenantId: string }
   session?: unknown
 }) {
   return createCaller({
     customerConversationCredential: input?.credential ?? null,
     customerConversationInstallation: input?.installation ?? null,
     db: input?.db ?? {},
+    qaSessionScope: input?.qaSessionScope ?? null,
     session: input?.session ?? null,
   } as never)
 }
 
 describe("mobile customer conversation transport", () => {
+  test.each(["ADULT", "UNDECLARED"] as const)(
+    "QA startup can read the selected Account's %s age band",
+    async (ageBand) => {
+      const reads: unknown[] = []
+      const client = caller({
+        qaSessionScope: {
+          membershipId: "qa-membership",
+          storeId: "qa-store",
+          tenantId: "qa-tenant",
+        },
+        session: { user: { id: "qa-admin" } },
+        db: {
+          user: {
+            findUnique: async (input: unknown) => {
+              reads.push(input)
+              return { ageBand }
+            },
+          },
+        },
+      })
+
+      await expect(client.accountAgeStatus()).resolves.toEqual({
+        ageBand,
+        eligible: ageBand === "ADULT",
+      })
+      expect(reads).toEqual([
+        { select: { ageBand: true }, where: { id: "qa-admin" } },
+      ])
+    },
+  )
+
+  test("undeclared QA Account can save its own age range and continue startup", async () => {
+    let ageBand = "UNDECLARED"
+    const client = caller({
+      qaSessionScope: {
+        membershipId: "qa-membership",
+        storeId: "qa-store",
+        tenantId: "qa-tenant",
+      },
+      session: { user: { id: "qa-admin" } },
+      db: {
+        user: {
+          findUnique: async () => ({ ageBand }),
+          updateMany: async (input: {
+            data: { ageBand: string }
+            where: { id: string; ageBand: string }
+          }) => {
+            expect(input.where).toEqual({
+              id: "qa-admin",
+              ageBand: "UNDECLARED",
+            })
+            ageBand = input.data.ageBand
+            return { count: 1 }
+          },
+        },
+      },
+    })
+
+    await expect(client.accountAgeStatus()).resolves.toEqual({
+      ageBand: "UNDECLARED",
+      eligible: false,
+    })
+    await expect(
+      client.accountDeclareAgeBand({ ageBand: "ADULT" }),
+    ).resolves.toMatchObject({ ageBand: "ADULT" })
+    await expect(client.accountAgeStatus()).resolves.toEqual({
+      ageBand: "ADULT",
+      eligible: true,
+    })
+  })
+
   test("legacy undeclared Account cannot link Guest conversations before age entry", async () => {
     let ageReads = 0
     const input = {

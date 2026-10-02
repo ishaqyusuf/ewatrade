@@ -21,6 +21,8 @@ import {
   UnitConfigurationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import { recordReservationCommitValuationInTransaction } from "./finance/valuation-reservations"
+import { lockInventoryFinancialStore } from "./inventory-finance-locks"
 
 type InventoryDb = Prisma.TransactionClient | PrismaClient
 
@@ -467,81 +469,149 @@ export type CommitCatalogStockReservationInput = {
   tenantId: string
 }
 
+/** The outer source owns authorization and acquires its FinanceBook before stock. */
 export async function commitCatalogStockReservationInTransaction(
   tx: Prisma.TransactionClient,
   input: CommitCatalogStockReservationInput,
+  options: {
+    expectedStoreId?: string
+    expectedCommercialOrderLineId?: string
+    financialContext?: { bookId: string } | null
+  } = {},
 ) {
   assertSchemaVersion(input.schemaVersion)
   const hash = payloadHash(input)
-
-  const previous = await tx.stockOperation.findUnique({
-    include: { movements: true },
-    where: {
-      tenantId_clientOperationId: {
-        clientOperationId: input.clientOperationId,
-        tenantId: input.tenantId,
+  const readPrevious = () =>
+    tx.stockOperation.findUnique({
+      include: { movements: true },
+      where: {
+        tenantId_clientOperationId: {
+          clientOperationId: input.clientOperationId,
+          tenantId: input.tenantId,
+        },
       },
-    },
-  })
-  if (previous) {
-    if (previous.payloadHash !== hash) {
+    })
+  const replay = (
+    previous: NonNullable<Awaited<ReturnType<typeof readPrevious>>>,
+  ) => {
+    if (previous.payloadHash !== hash)
       throw new CatalogError(
         "IDEMPOTENCY_MISMATCH",
         "This stock operation identity was already used with different input.",
       )
-    }
     return {
       id: previous.id,
       movements: previous.movements.map((movement) => ({
         balanceSourceId: movement.balanceSourceId,
-        enteredQuantity: movement.enteredQuantity.toString(),
-        resultingOnHandQuantity: movement.resultingOnHandQuantity.toString(),
-        signedCanonicalEffect: movement.signedCanonicalEffect.toString(),
+        enteredQuantity: movement.enteredQuantity.toFixed(),
+        resultingOnHandQuantity: movement.resultingOnHandQuantity.toFixed(),
+        signedCanonicalEffect: movement.signedCanonicalEffect.toFixed(),
       })),
     }
   }
+  const previous = await readPrevious()
+  if (previous) return replay(previous)
 
-  const reservation = await tx.stockReservation.findFirst({
-    include: { balanceSource: true, enteredInventoryUnit: true },
-    where: { id: input.reservationId, tenantId: input.tenantId },
-  })
-  if (!reservation) {
+  const lockedReservations = await tx.$queryRaw<
+    Array<{ id: string; storeId: string; balanceSourceId: string }>
+  >`
+    SELECT "id", "storeId", "balanceSourceId" FROM "StockReservation"
+    WHERE "id" = ${input.reservationId} AND "tenantId" = ${input.tenantId}
+    FOR UPDATE
+  `
+  const identity = lockedReservations[0]
+  if (
+    lockedReservations.length !== 1 ||
+    !identity ||
+    identity.id !== input.reservationId
+  )
     throw new CatalogError(
       "RESERVATION_NOT_FOUND",
       "Stock Reservation not found.",
     )
-  }
-  if (reservation.status !== StockReservationStatus.ACTIVE) {
+  // Without a Book, the reservation lock is what serializes identical commands.
+  const concurrentPrevious = await readPrevious()
+  if (concurrentPrevious) return replay(concurrentPrevious)
+  if (
+    options.expectedStoreId !== undefined &&
+    identity.storeId !== options.expectedStoreId
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Reservation Store ownership changed. Reload before retrying.",
+    )
+
+  const lockedBalances = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "StockBalanceSource"
+    WHERE "id" = ${identity.balanceSourceId} AND "tenantId" = ${input.tenantId}
+      AND "storeId" = ${identity.storeId}
+    FOR UPDATE
+  `
+  if (
+    lockedBalances.length !== 1 ||
+    lockedBalances[0]?.id !== identity.balanceSourceId
+  )
     throw new CatalogError(
       "RESERVATION_NOT_FOUND",
-      "Only an active Stock Reservation can be committed.",
+      "Reservation Balance Source not found.",
     )
-  }
+  const reservation = await tx.stockReservation.findFirst({
+    include: { balanceSource: true, enteredInventoryUnit: true },
+    where: { id: input.reservationId, tenantId: input.tenantId },
+  })
+  if (
+    !reservation ||
+    reservation.storeId !== identity.storeId ||
+    reservation.balanceSourceId !== identity.balanceSourceId
+  )
+    throw new CatalogError(
+      "RESERVATION_NOT_FOUND",
+      "Stock Reservation not found.",
+    )
+  const isProductFulfillment = input.operationType === "sale_fulfillment"
+  if (
+    isProductFulfillment
+      ? reservation.commercialOrderLineId === null ||
+        reservation.commercialOrderLineId !==
+          options.expectedCommercialOrderLineId
+      : reservation.commercialOrderLineId !== null
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Product reservations must be fulfilled through their owning Commercial Order.",
+    )
+  if (
+    reservation.status !== StockReservationStatus.ACTIVE ||
+    reservation.committedOperationId !== null
+  )
+    throw new CatalogError(
+      "RESERVATION_NOT_FOUND",
+      "Only an active uncommitted Stock Reservation can be committed.",
+    )
 
   const isPackaged =
     reservation.enteredInventoryUnit.stockBehavior ===
     InventoryUnitStockBehavior.PACKAGED_STOCK
   const balanceQuantity = isPackaged
-    ? reservation.enteredQuantity.toString()
-    : reservation.canonicalQuantity.toString()
+    ? reservation.enteredQuantity.toFixed()
+    : reservation.canonicalQuantity.toFixed()
   const resultingOnHand = subtractExactDecimals(
-    reservation.balanceSource.onHandQuantity.toString(),
+    reservation.balanceSource.onHandQuantity.toFixed(),
     balanceQuantity,
   )
   const resultingReserved = subtractExactDecimals(
-    reservation.balanceSource.reservedQuantity.toString(),
+    reservation.balanceSource.reservedQuantity.toFixed(),
     balanceQuantity,
   )
   if (
     compareExactDecimals(resultingOnHand, "0") < 0 ||
     compareExactDecimals(resultingReserved, "0") < 0
-  ) {
+  )
     throw new CatalogError(
       "INSUFFICIENT_STOCK",
       "The reserved stock is no longer available for commitment.",
     )
-  }
-
+  const effectiveAt = new Date()
   const updated = await tx.stockBalanceSource.updateMany({
     data: {
       onHandQuantity: resultingOnHand,
@@ -550,16 +620,16 @@ export async function commitCatalogStockReservationInTransaction(
     },
     where: {
       id: reservation.balanceSourceId,
+      tenantId: input.tenantId,
+      storeId: identity.storeId,
       revision: reservation.balanceSource.revision,
     },
   })
-  if (updated.count !== 1) {
+  if (updated.count !== 1)
     throw new CatalogError(
       "REVISION_CONFLICT",
       "The inventory balance changed while committing stock.",
     )
-  }
-
   const operation = await tx.stockOperation.create({
     data: {
       actorUserId: input.actorUserId,
@@ -569,10 +639,10 @@ export async function commitCatalogStockReservationInTransaction(
       source: input.source,
       storeId: reservation.storeId,
       tenantId: input.tenantId,
-      type:
-        input.operationType === "sale_fulfillment"
-          ? StockOperationType.SALE_FULFILLMENT
-          : StockOperationType.RESERVATION_COMMIT,
+      effectiveAt,
+      type: isProductFulfillment
+        ? StockOperationType.SALE_FULFILLMENT
+        : StockOperationType.RESERVATION_COMMIT,
     },
   })
   const movement = await tx.stockMovement.create({
@@ -586,7 +656,7 @@ export async function commitCatalogStockReservationInTransaction(
       resultingOnHandQuantity: resultingOnHand,
       signedCanonicalEffect: subtractExactDecimals(
         "0",
-        reservation.canonicalQuantity.toString(),
+        reservation.canonicalQuantity.toFixed(),
       ),
       transactionScaleSnapshot:
         reservation.enteredInventoryUnit.transactionScale,
@@ -595,20 +665,30 @@ export async function commitCatalogStockReservationInTransaction(
   })
   await tx.stockReservation.update({
     data: {
-      committedAt: new Date(),
+      committedAt: operation.effectiveAt,
+      committedOperationId: operation.id,
       status: StockReservationStatus.COMMITTED,
     },
     where: { id: reservation.id },
   })
-
+  // ProductFulfillment owns its own issue adapter after its source is saved.
+  // A missing Book at coordination time adds no finance requirements or writes.
+  if (!isProductFulfillment && options.financialContext !== null) {
+    await recordReservationCommitValuationInTransaction(tx, {
+      tenantId: input.tenantId,
+      stockOperationId: operation.id,
+      expectedStockRevision: reservation.balanceSource.revision + 1,
+      expectedBookId: options.financialContext?.bookId,
+    })
+  }
   return {
     id: operation.id,
     movements: [
       {
         balanceSourceId: movement.balanceSourceId,
-        enteredQuantity: movement.enteredQuantity.toString(),
-        resultingOnHandQuantity: movement.resultingOnHandQuantity.toString(),
-        signedCanonicalEffect: movement.signedCanonicalEffect.toString(),
+        enteredQuantity: movement.enteredQuantity.toFixed(),
+        resultingOnHandQuantity: movement.resultingOnHandQuantity.toFixed(),
+        signedCanonicalEffect: movement.signedCanonicalEffect.toFixed(),
       },
     ],
   }
@@ -618,7 +698,33 @@ export async function commitCatalogStockReservation(
   db: PrismaClient,
   input: CommitCatalogStockReservationInput,
 ) {
-  return db.$transaction((tx) =>
-    commitCatalogStockReservationInTransaction(tx, input),
+  assertSchemaVersion(input.schemaVersion)
+  if (input.operationType === "sale_fulfillment")
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Product reservations must be fulfilled through their owning Commercial Order.",
+    )
+  return db.$transaction(
+    async (tx) => {
+      const identity = await tx.stockReservation.findFirst({
+        select: { storeId: true },
+        where: { id: input.reservationId, tenantId: input.tenantId },
+      })
+      if (!identity) {
+        throw new CatalogError(
+          "RESERVATION_NOT_FOUND",
+          "Stock Reservation not found.",
+        )
+      }
+      const financialContext = await lockInventoryFinancialStore(tx, {
+        tenantId: input.tenantId,
+        storeId: identity.storeId,
+      })
+      return commitCatalogStockReservationInTransaction(tx, input, {
+        expectedStoreId: identity.storeId,
+        financialContext,
+      })
+    },
+    { maxWait: 10_000, timeout: 30_000 },
   )
 }

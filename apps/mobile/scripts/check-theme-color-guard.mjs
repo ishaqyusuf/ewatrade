@@ -65,11 +65,18 @@ console.log("Theme color guard passed.")
 function checkDarkThemeTokens() {
   const tokenFiles = [
     {
-      contents: extractDarkTokenSection(
-        readFileSync(THEME_FILE, "utf8"),
-        "dark: {",
-        "\n  },\n}",
-      ),
+      contents: [
+        extractDarkTokenSection(
+          readFileSync(join(SOURCE_DIR, "lib/brand-theme.ts"), "utf8"),
+          "dark: {",
+          "\n  },\n}",
+        ),
+        extractDarkTokenSection(
+          readFileSync(THEME_FILE, "utf8"),
+          "dark: {",
+          "\n  },\n}",
+        ),
+      ].join("\n"),
       file: relative(MOBILE_DIR, THEME_FILE),
     },
     {
@@ -83,20 +90,20 @@ function checkDarkThemeTokens() {
   ]
   const requiredDarkTokens = [
     {
-      label: "matte black canvas",
-      token: "rgb(18, 18, 18)",
+      label: "charcoal canvas",
+      token: "#111715",
     },
     {
       label: "charcoal card surface",
-      token: "rgb(30, 30, 30)",
+      token: "#1B2320",
     },
     {
       label: "crisp white foreground",
-      token: "rgb(250, 250, 250)",
+      token: "#F0F3F1",
     },
     {
-      label: "teal brand/action accent",
-      token: "rgb(45, 212, 191)",
+      label: "brand-green action accent",
+      token: "#8CD5B5",
     },
     {
       label: "green success/online accent",
@@ -108,7 +115,7 @@ function checkDarkThemeTokens() {
     },
     {
       label: "muted gray metadata",
-      token: "rgb(163, 163, 163)",
+      token: "#AAB7AF",
     },
   ]
   const retiredSlateTokens = [
@@ -127,7 +134,7 @@ function checkDarkThemeTokens() {
       violations.push({
         file,
         line: 1,
-        reason: `missing sample-inspired dark token for ${label}`,
+        reason: `missing approved dark token for ${label}`,
         text: token,
       })
     }

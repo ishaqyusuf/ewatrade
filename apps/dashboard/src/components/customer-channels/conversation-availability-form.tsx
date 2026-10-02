@@ -1,4 +1,17 @@
 "use client"
+import {
+  Button,
+  ControlField,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+  FormActions,
+  Input,
+  SelectControl,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import type { RegisterServiceCommerceFormReset } from "@/components/service-commerce/form-context"
 import { useZodForm } from "@/hooks/use-zod-form"
@@ -13,7 +26,7 @@ import {
   storeConversationTimezoneSchema,
   storeConversationWeeklyHoursSchema,
 } from "@ewatrade/service-commerce"
-import { Button, Input, Select } from "@ewatrade/ui"
+
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef } from "react"
 import { z } from "zod"
@@ -187,8 +200,7 @@ export function ConversationAvailabilityForm({
       ...values,
       expectedRevision: settings.revision,
       storeId,
-      unreadNotificationGraceSeconds:
-        settings.unreadNotificationGraceSeconds,
+      unreadNotificationGraceSeconds: settings.unreadNotificationGraceSeconds,
     }
     scheduleOperation.current = resolvePayloadBoundOperation(
       scheduleOperation.current,
@@ -221,8 +233,8 @@ export function ConversationAvailabilityForm({
   }
 
   return (
-    <div className="grid gap-6">
-      <section className="grid gap-2 rounded-xl border border-border bg-card p-5">
+    <FieldGroup className="grid gap-6">
+      <section className="grid gap-2 rounded-none border border-border bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Current intake state
         </p>
@@ -237,166 +249,160 @@ export function ConversationAvailabilityForm({
         </p>
       </section>
 
-      <form className="grid gap-5" onSubmit={saveSchedule}>
-        <label className="grid gap-1.5 text-sm" htmlFor="chat-timezone">
-          <span className="font-medium">Store timezone</span>
-          <Input
-            autoComplete="off"
-            disabled={pending}
-            id="chat-timezone"
-            placeholder="Africa/Lagos"
-            {...form.register("timezone")}
-          />
-          <span className="text-xs text-muted-foreground">
-            Use an IANA timezone. Service-hour boundaries follow this timezone,
-            including daylight-saving changes.
-          </span>
-          {form.formState.errors.timezone?.message ? (
-            <span className="text-xs text-destructive" role="alert">
-              {form.formState.errors.timezone.message}
-            </span>
-          ) : null}
-        </label>
+      <form onSubmit={saveSchedule}>
+        <FieldGroup className="min-w-0 grid gap-5">
+          <ControlField
+            label={<>Store timezone</>}
+            error={form.formState.errors.timezone?.message}
+            description="Use an IANA timezone. Service-hour boundaries follow this timezone, including daylight-saving changes."
+          >
+            <Input
+              autoComplete="off"
+              disabled={pending}
+              id="chat-timezone"
+              placeholder="Africa/Lagos"
+              {...form.register("timezone")}
+            />
+          </ControlField>
 
-        <fieldset className="grid gap-3">
-          <legend className="font-medium">Weekly service hours</legend>
-          {DAYS.map((day, dayOfWeek) => {
-            const intervals = hoursByDay[dayOfWeek] ?? []
-            return (
-              <div
-                className="grid gap-3 rounded-xl border border-border p-4"
-                key={day}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold">{day}</span>
-                  <Button
-                    disabled={pending || weeklyHours.length >= 28}
-                    onClick={() =>
-                      setWeeklyHours([
-                        ...weeklyHours,
-                        defaultInterval(dayOfWeek),
-                      ])
-                    }
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    Add hours
-                  </Button>
-                </div>
-                {intervals.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Closed</p>
-                ) : (
-                  intervals.map((interval, index) => (
-                    <div
-                      className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-end gap-2"
-                      key={`${day}-${interval.startMinute}-${interval.endMinute}-${index}`}
+          <FieldSet className="grid gap-3">
+            <FieldLegend variant="label" className="font-medium">
+              Weekly service hours
+            </FieldLegend>
+            {DAYS.map((day, dayOfWeek) => {
+              const intervals = hoursByDay[dayOfWeek] ?? []
+              return (
+                <FieldGroup
+                  className="grid gap-3 rounded-none border border-border p-4"
+                  key={day}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold">{day}</span>
+                    <Button
+                      disabled={pending || weeklyHours.length >= 28}
+                      onClick={() =>
+                        setWeeklyHours([
+                          ...weeklyHours,
+                          defaultInterval(dayOfWeek),
+                        ])
+                      }
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      appearance="form"
                     >
-                      <label
-                        className="grid min-w-0 gap-1 text-xs text-muted-foreground"
-                        htmlFor={`chat-${dayOfWeek}-${index}-opens`}
+                      Add hours
+                    </Button>
+                  </div>
+                  {intervals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Closed</p>
+                  ) : (
+                    intervals.map((interval, index) => (
+                      <div
+                        className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-end gap-2"
+                        key={`${day}-${interval.startMinute}-${interval.endMinute}-${index}`}
                       >
-                        Opens
-                        <Select
-                          className="min-w-0 px-2"
+                        <ControlField label={<>Opens</>}>
+                          <SelectControl
+                            disabled={pending}
+                            id={`chat-${dayOfWeek}-${index}-opens`}
+                            onValueChange={(value) =>
+                              replaceInterval(interval, {
+                                ...interval,
+                                startMinute: Number(value),
+                              })
+                            }
+                            value={interval.startMinute}
+                            options={[
+                              ...(timeOptions(interval.startMinute, false).map(
+                                (minute) => ({
+                                  value: minute,
+                                  label: minuteLabel(minute),
+                                }),
+                              ) ?? []),
+                            ]}
+                          />
+                        </ControlField>
+                        <span className="pb-3 text-xs text-muted-foreground">
+                          to
+                        </span>
+                        <ControlField label={<>Closes</>}>
+                          <SelectControl
+                            disabled={pending}
+                            id={`chat-${dayOfWeek}-${index}-closes`}
+                            onValueChange={(value) =>
+                              replaceInterval(interval, {
+                                ...interval,
+                                endMinute: Number(value),
+                              })
+                            }
+                            value={interval.endMinute}
+                            options={[
+                              ...(timeOptions(interval.endMinute, true).map(
+                                (minute) => ({
+                                  value: minute,
+                                  label: minuteLabel(minute),
+                                }),
+                              ) ?? []),
+                            ]}
+                          />
+                        </ControlField>
+                        <Button
+                          aria-label={`Remove ${day} service interval ${index + 1}`}
                           disabled={pending}
-                          id={`chat-${dayOfWeek}-${index}-opens`}
-                          onChange={(event) =>
-                            replaceInterval(interval, {
-                              ...interval,
-                              startMinute: Number(event.target.value),
-                            })
+                          onClick={() =>
+                            setWeeklyHours(
+                              weeklyHours.filter(
+                                (candidate) => candidate !== interval,
+                              ),
+                            )
                           }
-                          value={interval.startMinute}
+                          size="icon"
+                          type="button"
+                          variant="ghost"
+                          appearance="form"
                         >
-                          {timeOptions(interval.startMinute, false).map(
-                            (minute) => (
-                              <option key={minute} value={minute}>
-                                {minuteLabel(minute)}
-                              </option>
-                            ),
-                          )}
-                        </Select>
-                      </label>
-                      <span className="pb-3 text-xs text-muted-foreground">
-                        to
-                      </span>
-                      <label
-                        className="grid min-w-0 gap-1 text-xs text-muted-foreground"
-                        htmlFor={`chat-${dayOfWeek}-${index}-closes`}
-                      >
-                        Closes
-                        <Select
-                          className="min-w-0 px-2"
-                          disabled={pending}
-                          id={`chat-${dayOfWeek}-${index}-closes`}
-                          onChange={(event) =>
-                            replaceInterval(interval, {
-                              ...interval,
-                              endMinute: Number(event.target.value),
-                            })
-                          }
-                          value={interval.endMinute}
-                        >
-                          {timeOptions(interval.endMinute, true).map(
-                            (minute) => (
-                              <option key={minute} value={minute}>
-                                {minuteLabel(minute)}
-                              </option>
-                            ),
-                          )}
-                        </Select>
-                      </label>
-                      <Button
-                        aria-label={`Remove ${day} service interval ${index + 1}`}
-                        disabled={pending}
-                        onClick={() =>
-                          setWeeklyHours(
-                            weeklyHours.filter(
-                              (candidate) => candidate !== interval,
-                            ),
-                          )
-                        }
-                        size="icon"
-                        type="button"
-                        variant="ghost"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-            )
-          })}
-          {form.formState.errors.weeklyHours?.message ? (
-            <p className="text-sm text-destructive" role="alert">
-              {form.formState.errors.weeklyHours.message}
-            </p>
-          ) : null}
-        </fieldset>
+                          ×
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </FieldGroup>
+              )
+            })}
+            {form.formState.errors.weeklyHours?.message ? (
+              <FormFeedback appearance="dashboard">
+                {form.formState.errors.weeklyHours.message}
+              </FormFeedback>
+            ) : null}
+          </FieldSet>
 
-        <label className="grid gap-1.5 text-sm" htmlFor="chat-change-reason">
-          <span className="font-medium">Internal change reason</span>
-          <Input
-            disabled={pending}
-            id="chat-change-reason"
-            maxLength={240}
-            {...form.register("reason")}
-          />
-          {form.formState.errors.reason?.message ? (
-            <span className="text-xs text-destructive" role="alert">
-              {form.formState.errors.reason.message}
-            </span>
-          ) : null}
-        </label>
+          <ControlField
+            label={<>Internal change reason</>}
+            error={form.formState.errors.reason?.message}
+          >
+            <Input
+              disabled={pending}
+              id="chat-change-reason"
+              maxLength={240}
+              {...form.register("reason")}
+            />
+          </ControlField>
 
-        <Button className="w-fit" disabled={pending} type="submit">
-          {updateSchedule.isPending ? "Saving…" : "Save service hours"}
-        </Button>
+          <FormActions>
+            <SubmitButton
+              isSubmitting={pending}
+              className="w-fit"
+              disabled={pending}
+              type="submit"
+            >
+              {updateSchedule.isPending ? "Saving…" : "Save service hours"}
+            </SubmitButton>
+          </FormActions>
+        </FieldGroup>
       </form>
 
-      <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
+      <section className="grid gap-4 rounded-none border border-border bg-card p-5">
         <div>
           <h2 className="font-semibold">Manual pause</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -411,6 +417,7 @@ export function ConversationAvailabilityForm({
           onClick={() => void togglePause()}
           type="button"
           variant={settings.manualPaused ? "outline" : "destructive"}
+          appearance="form"
         >
           {setManualPause.isPending
             ? "Updating…"
@@ -419,6 +426,6 @@ export function ConversationAvailabilityForm({
               : "Pause new messages"}
         </Button>
       </section>
-    </div>
+    </FieldGroup>
   )
 }

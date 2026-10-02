@@ -1,14 +1,16 @@
 import { createHash } from "node:crypto"
 
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   HostedPaymentStatus,
   PaymentProviderEventOutcome,
   PrescriptionRefundProviderDispatchState,
   PrescriptionRefundStatus,
 } from "../../generated/prisma/enums"
+import { CatalogError } from "./catalog"
 import { resolveCommerceQuoteAccess } from "./commerce-quotes"
 import { recordCommercialOrderPaymentInTransaction } from "./commercial-payments"
+import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import {
   assertServiceCommercePolicyAllowedInTransaction,
   evaluateServiceCommercePolicy,
@@ -35,6 +37,55 @@ function digest(value: string) {
 
 function stableHash(value: unknown) {
   return digest(JSON.stringify(value))
+}
+
+async function lockPaymentIntentOrder(
+  tx: Prisma.TransactionClient,
+  identity: {
+    id: string
+    orderId: string
+    storeId: string
+    tenantId: string
+  },
+) {
+  let locked: Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  try {
+    locked = await lockCommerceFinancialOrder(tx, identity)
+  } catch (error) {
+    if (error instanceof CatalogError && error.code === "REVISION_CONFLICT") {
+      throw new PrescriptionPaymentError("PAYMENT_CONFLICT", error.message)
+    }
+    throw error
+  }
+  if (!locked || locked.order.storeId !== identity.storeId) {
+    throw new PrescriptionPaymentError(
+      "PAYMENT_NOT_FOUND",
+      "Payment Order was not found in this Store.",
+    )
+  }
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "PrescriptionPaymentIntent"
+    WHERE "id" = ${identity.id} AND "tenantId" = ${identity.tenantId}
+      AND "storeId" = ${identity.storeId} AND "orderId" = ${identity.orderId}
+    FOR UPDATE
+  `
+  const intent = rows.length
+    ? await tx.prescriptionPaymentIntent.findUnique({
+        where: {
+          id: identity.id,
+          tenantId: identity.tenantId,
+          storeId: identity.storeId,
+          orderId: identity.orderId,
+        },
+      })
+    : null
+  if (!intent || intent.currencyCode !== locked.order.currencyCode) {
+    throw new PrescriptionPaymentError(
+      "PAYMENT_CONFLICT",
+      "Payment financial source changed. Reconcile it before retrying.",
+    )
+  }
+  return intent
 }
 
 export async function preparePrescriptionHostedCheckout(
@@ -336,218 +387,278 @@ export async function processPrescriptionPaymentProviderEvent(
     eventId: string
     provider: string
     providerReference: string
+    providerRefundId?: string
     status: "failed" | "paid" | "refund_failed" | "refund_succeeded"
   },
-) {
+): Promise<{ communicationIntentId?: string | null; replay: boolean }> {
   const payloadHash = stableHash(input)
-  return db.$transaction(async (tx) => {
-    const existing = await tx.prescriptionPaymentProviderEvent.findUnique({
-      where: { providerEventId: input.eventId },
-    })
-    if (existing) {
-      if (existing.payloadHash !== payloadHash) {
+  return db
+    .$transaction(async (tx) => {
+      const existing = await tx.prescriptionPaymentProviderEvent.findUnique({
+        where: { providerEventId: input.eventId },
+      })
+      if (existing) {
+        if (existing.payloadHash !== payloadHash) {
+          throw new PrescriptionPaymentError(
+            "EVENT_CONFLICT",
+            "A provider event identity was reused with different details.",
+          )
+        }
+        return { replay: true }
+      }
+      const identity = await tx.prescriptionPaymentIntent.findUnique({
+        where: { providerReference: input.providerReference },
+      })
+      if (!identity) {
+        await tx.prescriptionPaymentProviderEvent.create({
+          data: {
+            eventType: input.status,
+            outcome: PaymentProviderEventOutcome.REJECTED,
+            payloadHash,
+            provider: input.provider,
+            providerEventId: input.eventId,
+            processedAt: new Date(),
+          },
+        })
         throw new PrescriptionPaymentError(
-          "EVENT_CONFLICT",
-          "A provider event identity was reused with different details.",
+          "PAYMENT_NOT_FOUND",
+          "Payment intent was not found.",
         )
       }
-      return { replay: true }
-    }
-    const intent = await tx.prescriptionPaymentIntent.findUnique({
-      where: { providerReference: input.providerReference },
-    })
-    if (!intent) {
-      await tx.prescriptionPaymentProviderEvent.create({
+      const intent = await lockPaymentIntentOrder(tx, identity)
+      if (
+        intent.provider !== input.provider ||
+        intent.providerReference !== input.providerReference
+      ) {
+        throw new PrescriptionPaymentError(
+          "PAYMENT_CONFLICT",
+          "Payment event does not match its provider source.",
+        )
+      }
+      const concurrentEvent =
+        await tx.prescriptionPaymentProviderEvent.findUnique({
+          where: { providerEventId: input.eventId },
+        })
+      if (concurrentEvent) {
+        if (concurrentEvent.payloadHash !== payloadHash) {
+          throw new PrescriptionPaymentError(
+            "EVENT_CONFLICT",
+            "A provider event identity was reused with different details.",
+          )
+        }
+        return { replay: true }
+      }
+      const event = await tx.prescriptionPaymentProviderEvent.create({
         data: {
           eventType: input.status,
-          outcome: PaymentProviderEventOutcome.REJECTED,
           payloadHash,
+          paymentIntentId: intent.id,
           provider: input.provider,
           providerEventId: input.eventId,
-          processedAt: new Date(),
         },
       })
-      throw new PrescriptionPaymentError(
-        "PAYMENT_NOT_FOUND",
-        "Payment intent was not found.",
-      )
-    }
-    const event = await tx.prescriptionPaymentProviderEvent.create({
-      data: {
-        eventType: input.status,
-        payloadHash,
-        paymentIntentId: intent.id,
-        provider: input.provider,
-        providerEventId: input.eventId,
-      },
-    })
-    let communicationIntentId: string | null = null
-    if (
-      input.amountMinor !== intent.amountMinor ||
-      input.currencyCode.toUpperCase() !== intent.currencyCode.toUpperCase()
-    ) {
-      await tx.prescriptionPaymentProviderEvent.update({
-        data: {
-          outcome: PaymentProviderEventOutcome.REJECTED,
-          processedAt: new Date(),
-        },
-        where: { id: event.id },
-      })
-      throw new PrescriptionPaymentError(
-        "AMOUNT_MISMATCH",
-        "Payment amount or currency does not match the order.",
-      )
-    }
-    if (input.status === "paid") {
+      let communicationIntentId: string | null = null
       if (
-        intent.status !== HostedPaymentStatus.PAID &&
-        intent.status !== HostedPaymentStatus.PARTIALLY_REFUNDED &&
-        intent.status !== HostedPaymentStatus.REFUNDED
+        (!input.status.startsWith("refund_") &&
+          input.amountMinor !== intent.amountMinor) ||
+        input.currencyCode.toUpperCase() !== intent.currencyCode.toUpperCase()
       ) {
-        await recordCommercialOrderPaymentInTransaction(tx, {
-          actorUserId: "payment-provider",
-          amountMinor: intent.amountMinor,
-          clientPaymentId: `provider:${input.eventId}`,
-          method: "card",
-          orderId: intent.orderId,
-          reference: intent.providerReference,
-          tenantId: intent.tenantId,
-        })
-        await tx.prescriptionPaymentIntent.update({
-          data: { paidAt: new Date(), status: HostedPaymentStatus.PAID },
-          where: { id: intent.id },
-        })
-        await tx.prescriptionUsageEvent.upsert({
-          create: {
-            amounts: {
-              paymentProviderFeeMinor: null,
-              pharmacyRevenueMinor: intent.amountMinor,
-              platformChargeMinor: null,
-            },
-            deduplicationKey: `payment-succeeded:${intent.id}`,
-            eventType: "PAYMENT_SUCCEEDED",
-            occurredAt: new Date(),
-            sourceId: intent.id,
-            sourceType: "payment",
-            storeId: intent.storeId,
-            tenantId: intent.tenantId,
+        await tx.prescriptionPaymentProviderEvent.update({
+          data: {
+            outcome: PaymentProviderEventOutcome.REJECTED,
+            processedAt: new Date(),
           },
-          update: {},
-          where: {
-            tenantId_deduplicationKey: {
-              deduplicationKey: `payment-succeeded:${intent.id}`,
-              tenantId: intent.tenantId,
-            },
-          },
+          where: { id: event.id },
         })
-        const order = await tx.commercialOrder.findUnique({
-          select: { customerPhone: true },
-          where: { id: intent.orderId },
-        })
-        if (order?.customerPhone) {
-          const communicationPolicy =
-            await evaluateServiceCommercePolicyInTransaction(tx, {
-              actorUserId: "system_prescription_notification",
-              channel: "whatsapp",
-              purpose: "prescription_payment_receipt_notification",
-              storeId: intent.storeId,
-              subject: "whatsapp",
-              tenantId: intent.tenantId,
-              vertical: "pharmacy",
-            })
-          if (communicationPolicy.outcome === "allowed") {
-            const communication =
-              await tx.prescriptionCommunicationIntent.upsert({
-                create: {
-                  deduplicationKey: `payment-receipt:${intent.id}`,
-                  orderId: intent.orderId,
-                  payload: {},
-                  recipientReference: order.customerPhone,
-                  storeId: intent.storeId,
-                  tenantId: intent.tenantId,
-                  type: "PAYMENT_RECEIPT",
-                },
-                update: {},
-                where: {
-                  tenantId_deduplicationKey: {
-                    deduplicationKey: `payment-receipt:${intent.id}`,
-                    tenantId: intent.tenantId,
-                  },
-                },
-              })
-            communicationIntentId = communication.id
-          }
-        }
+        throw new PrescriptionPaymentError(
+          "AMOUNT_MISMATCH",
+          "Payment amount or currency does not match the order.",
+        )
       }
-    } else if (
-      input.status === "failed" &&
-      (intent.status === HostedPaymentStatus.CREATED ||
-        intent.status === HostedPaymentStatus.PENDING)
-    ) {
-      await tx.prescriptionPaymentIntent.update({
-        data: { failedAt: new Date(), status: HostedPaymentStatus.FAILED },
-        where: { id: intent.id },
-      })
-    } else if (input.status.startsWith("refund_")) {
-      const refund = await tx.prescriptionPaymentRefund.findFirst({
-        where: {
-          amountMinor: input.amountMinor,
-          paymentIntentId: intent.id,
-          status: PrescriptionRefundStatus.PENDING,
-        },
-      })
-      if (refund) {
-        const succeeded = input.status === "refund_succeeded"
-        if (succeeded) {
+      if (input.status === "paid") {
+        if (
+          intent.status !== HostedPaymentStatus.PAID &&
+          intent.status !== HostedPaymentStatus.PARTIALLY_REFUNDED &&
+          intent.status !== HostedPaymentStatus.REFUNDED
+        ) {
           await recordCommercialOrderPaymentInTransaction(tx, {
-            actorUserId: refund.requestedByUserId,
-            amountMinor: refund.amountMinor,
+            actorUserId: "payment-provider",
+            amountMinor: intent.amountMinor,
             clientPaymentId: `provider:${input.eventId}`,
             method: "card",
             orderId: intent.orderId,
             reference: intent.providerReference,
             tenantId: intent.tenantId,
-            type: "refund",
-          })
-        }
-        await tx.prescriptionPaymentRefund.update({
-          data: {
-            completedAt: new Date(),
-            status: succeeded
-              ? PrescriptionRefundStatus.SUCCEEDED
-              : PrescriptionRefundStatus.FAILED,
-          },
-          where: { id: refund.id },
-        })
-        if (succeeded) {
-          const refunded = await tx.prescriptionPaymentRefund.aggregate({
-            _sum: { amountMinor: true },
-            where: {
-              paymentIntentId: intent.id,
-              status: PrescriptionRefundStatus.SUCCEEDED,
-            },
           })
           await tx.prescriptionPaymentIntent.update({
-            data: {
-              status:
-                (refunded._sum.amountMinor ?? 0) >= intent.amountMinor
-                  ? HostedPaymentStatus.REFUNDED
-                  : HostedPaymentStatus.PARTIALLY_REFUNDED,
-            },
+            data: { paidAt: new Date(), status: HostedPaymentStatus.PAID },
             where: { id: intent.id },
           })
+          await tx.prescriptionUsageEvent.upsert({
+            create: {
+              amounts: {
+                paymentProviderFeeMinor: null,
+                pharmacyRevenueMinor: intent.amountMinor,
+                platformChargeMinor: null,
+              },
+              deduplicationKey: `payment-succeeded:${intent.id}`,
+              eventType: "PAYMENT_SUCCEEDED",
+              occurredAt: new Date(),
+              sourceId: intent.id,
+              sourceType: "payment",
+              storeId: intent.storeId,
+              tenantId: intent.tenantId,
+            },
+            update: {},
+            where: {
+              tenantId_deduplicationKey: {
+                deduplicationKey: `payment-succeeded:${intent.id}`,
+                tenantId: intent.tenantId,
+              },
+            },
+          })
+          const order = await tx.commercialOrder.findUnique({
+            select: { customerPhone: true },
+            where: { id: intent.orderId },
+          })
+          if (order?.customerPhone) {
+            const communicationPolicy =
+              await evaluateServiceCommercePolicyInTransaction(tx, {
+                actorUserId: "system_prescription_notification",
+                channel: "whatsapp",
+                purpose: "prescription_payment_receipt_notification",
+                storeId: intent.storeId,
+                subject: "whatsapp",
+                tenantId: intent.tenantId,
+                vertical: "pharmacy",
+              })
+            if (communicationPolicy.outcome === "allowed") {
+              const communication =
+                await tx.prescriptionCommunicationIntent.upsert({
+                  create: {
+                    deduplicationKey: `payment-receipt:${intent.id}`,
+                    orderId: intent.orderId,
+                    payload: {},
+                    recipientReference: order.customerPhone,
+                    storeId: intent.storeId,
+                    tenantId: intent.tenantId,
+                    type: "PAYMENT_RECEIPT",
+                  },
+                  update: {},
+                  where: {
+                    tenantId_deduplicationKey: {
+                      deduplicationKey: `payment-receipt:${intent.id}`,
+                      tenantId: intent.tenantId,
+                    },
+                  },
+                })
+              communicationIntentId = communication.id
+            }
+          }
+        }
+      } else if (
+        input.status === "failed" &&
+        (intent.status === HostedPaymentStatus.CREATED ||
+          intent.status === HostedPaymentStatus.PENDING)
+      ) {
+        await tx.prescriptionPaymentIntent.update({
+          data: { failedAt: new Date(), status: HostedPaymentStatus.FAILED },
+          where: { id: intent.id },
+        })
+      } else if (input.status.startsWith("refund_")) {
+        if (!input.providerRefundId?.trim()) {
+          throw new PrescriptionPaymentError(
+            "REFUND_CONFLICT",
+            "Reconcile the provider refund identity before applying this event.",
+          )
+        }
+        const matches = await tx.prescriptionPaymentRefund.findMany({
+          take: 2,
+          where: {
+            paymentIntentId: intent.id,
+            providerRefundId: input.providerRefundId,
+            tenantId: intent.tenantId,
+            storeId: intent.storeId,
+          },
+        })
+        const refund = matches.length === 1 ? matches[0] : null
+        if (!refund || refund.amountMinor !== input.amountMinor) {
+          throw new PrescriptionPaymentError(
+            "REFUND_CONFLICT",
+            "Refund event does not match one exact stored refund.",
+          )
+        }
+        if (refund.status !== PrescriptionRefundStatus.SUCCEEDED) {
+          const succeeded = input.status === "refund_succeeded"
+          if (succeeded) {
+            await recordCommercialOrderPaymentInTransaction(tx, {
+              actorUserId: refund.requestedByUserId,
+              amountMinor: refund.amountMinor,
+              clientPaymentId: `provider-refund:${refund.id}`,
+              method: "card",
+              orderId: intent.orderId,
+              reference: refund.providerRefundId ?? undefined,
+              tenantId: intent.tenantId,
+              type: "refund",
+            })
+          }
+          await tx.prescriptionPaymentRefund.update({
+            data: {
+              completedAt: succeeded
+                ? new Date()
+                : (refund.completedAt ?? new Date()),
+              status: succeeded
+                ? PrescriptionRefundStatus.SUCCEEDED
+                : PrescriptionRefundStatus.FAILED,
+            },
+            where: { id: refund.id },
+          })
+          if (succeeded) {
+            const refunded = await tx.prescriptionPaymentRefund.aggregate({
+              _sum: { amountMinor: true },
+              where: {
+                paymentIntentId: intent.id,
+                status: PrescriptionRefundStatus.SUCCEEDED,
+              },
+            })
+            await tx.prescriptionPaymentIntent.update({
+              data: {
+                status:
+                  (refunded._sum.amountMinor ?? 0) >= intent.amountMinor
+                    ? HostedPaymentStatus.REFUNDED
+                    : HostedPaymentStatus.PARTIALLY_REFUNDED,
+              },
+              where: { id: intent.id },
+            })
+          }
         }
       }
-    }
-    await tx.prescriptionPaymentProviderEvent.update({
-      data: {
-        outcome: PaymentProviderEventOutcome.PROCESSED,
-        processedAt: new Date(),
-      },
-      where: { id: event.id },
+      await tx.prescriptionPaymentProviderEvent.update({
+        data: {
+          outcome: PaymentProviderEventOutcome.PROCESSED,
+          processedAt: new Date(),
+        },
+        where: { id: event.id },
+      })
+      return { communicationIntentId, replay: false }
     })
-    return { communicationIntentId, replay: false }
-  })
+    .catch(async (error: unknown) => {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== "P2002"
+      )
+        throw error
+      const previous = await db.prescriptionPaymentProviderEvent.findUnique({
+        where: { providerEventId: input.eventId },
+      })
+      if (!previous) throw error
+      if (previous.payloadHash !== payloadHash)
+        throw new PrescriptionPaymentError(
+          "EVENT_CONFLICT",
+          "A provider event identity was reused with different details.",
+        )
+      return { replay: true }
+    })
 }
 
 export async function createPrescriptionRefund(
@@ -562,7 +673,12 @@ export async function createPrescriptionRefund(
     tenantId: string
   },
 ) {
-  if (!input.reason.trim() || input.amountMinor <= 0) {
+  if (
+    !input.reason.trim() ||
+    !Number.isSafeInteger(input.amountMinor) ||
+    input.amountMinor <= 0 ||
+    input.amountMinor > 100_000_000
+  ) {
     throw new PrescriptionPaymentError(
       "REFUND_CONFLICT",
       "A positive refund amount and reason are required.",
@@ -592,7 +708,7 @@ export async function createPrescriptionRefund(
       }
       return { refund: previous, replay: true }
     }
-    const intent = await tx.prescriptionPaymentIntent.findFirst({
+    const identity = await tx.prescriptionPaymentIntent.findFirst({
       where: {
         orderId: input.orderId,
         status: {
@@ -605,20 +721,45 @@ export async function createPrescriptionRefund(
         tenantId: input.tenantId,
       },
     })
-    if (!intent) {
+    if (!identity) {
       throw new PrescriptionPaymentError(
         "REFUND_CONFLICT",
         "The payment is not eligible for this refund.",
       )
     }
-    await tx.$queryRaw`
-      SELECT "id"
-      FROM "PrescriptionPaymentIntent"
-      WHERE "id" = ${intent.id}
-        AND "tenantId" = ${input.tenantId}
-        AND "storeId" = ${input.storeId}
-      FOR UPDATE
-    `
+    const intent = await lockPaymentIntentOrder(tx, identity)
+    if (
+      intent.status !== HostedPaymentStatus.PAID &&
+      intent.status !== HostedPaymentStatus.PARTIALLY_REFUNDED
+    ) {
+      throw new PrescriptionPaymentError(
+        "REFUND_CONFLICT",
+        "The payment is no longer eligible for this refund.",
+      )
+    }
+    const concurrentPrevious = await tx.prescriptionPaymentRefund.findUnique({
+      include: { paymentIntent: true },
+      where: {
+        tenantId_clientRefundId: {
+          tenantId: input.tenantId,
+          clientRefundId: input.clientRefundId,
+        },
+      },
+    })
+    if (concurrentPrevious) {
+      if (
+        concurrentPrevious.amountMinor !== input.amountMinor ||
+        concurrentPrevious.reason !== input.reason.trim() ||
+        concurrentPrevious.storeId !== input.storeId ||
+        concurrentPrevious.paymentIntent.orderId !== input.orderId
+      ) {
+        throw new PrescriptionPaymentError(
+          "REFUND_CONFLICT",
+          "This refund identity was already used with different details.",
+        )
+      }
+      return { refund: concurrentPrevious, replay: true }
+    }
     const reserved = await tx.prescriptionPaymentRefund.aggregate({
       _sum: { amountMinor: true },
       where: {
@@ -812,8 +953,14 @@ export async function attachPrescriptionRefundProviderResult(
     tenantId: string
   },
 ) {
+  if (!input.providerRefundId.trim()) {
+    throw new PrescriptionPaymentError(
+      "REFUND_CONFLICT",
+      "A provider refund identity is required.",
+    )
+  }
   return db.$transaction(async (tx) => {
-    const refund = await tx.prescriptionPaymentRefund.findFirst({
+    const identity = await tx.prescriptionPaymentRefund.findFirst({
       include: { paymentIntent: true },
       where: {
         id: input.refundId,
@@ -821,12 +968,33 @@ export async function attachPrescriptionRefundProviderResult(
         tenantId: input.tenantId,
       },
     })
-    if (!refund) {
+    if (!identity) {
       throw new PrescriptionPaymentError(
         "PAYMENT_NOT_FOUND",
         "Refund was not found.",
       )
     }
+    await lockPaymentIntentOrder(tx, identity.paymentIntent)
+    await tx.$queryRaw`
+      SELECT "id" FROM "PrescriptionPaymentRefund"
+      WHERE "id" = ${identity.id} AND "tenantId" = ${input.tenantId}
+        AND "storeId" = ${input.storeId} AND "paymentIntentId" = ${identity.paymentIntentId}
+      FOR UPDATE
+    `
+    const refund = await tx.prescriptionPaymentRefund.findFirst({
+      include: { paymentIntent: true },
+      where: {
+        id: identity.id,
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+        paymentIntentId: identity.paymentIntentId,
+      },
+    })
+    if (!refund)
+      throw new PrescriptionPaymentError(
+        "REFUND_CONFLICT",
+        "Refund source changed. Reload before retrying.",
+      )
     if (
       refund.providerRefundId &&
       refund.providerRefundId !== input.providerRefundId
@@ -836,6 +1004,12 @@ export async function attachPrescriptionRefundProviderResult(
         "This refund is already attached to another provider result.",
       )
     }
+    if (
+      refund.status === PrescriptionRefundStatus.SUCCEEDED ||
+      (refund.status === PrescriptionRefundStatus.FAILED &&
+        input.status === "pending")
+    )
+      return refund
     if (input.status === "succeeded") {
       await recordCommercialOrderPaymentInTransaction(tx, {
         actorUserId: refund.requestedByUserId,

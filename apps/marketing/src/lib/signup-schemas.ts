@@ -7,6 +7,7 @@ import {
   isBusinessProfileKey,
 } from "@ewatrade/utils"
 import { z } from "zod"
+import { resolveSignupPhone } from "./signup-phone"
 
 // ─── Step 1: Workspace ────────────────────────────────────────────────────────
 
@@ -82,6 +83,14 @@ export const businessSchema = z
     otherBusinessDescription: z.string().trim().max(240).optional(),
   })
   .superRefine((value, ctx) => {
+    if (!resolveSignupPhone(value.phone, value.countryCode)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["phone"],
+        message:
+          "Enter a phone number for the selected country. For Other, include the country code.",
+      })
+    }
     if (
       value.businessProfileKey === "other-mixed-business" &&
       !value.otherBusinessDescription?.trim()
@@ -93,6 +102,10 @@ export const businessSchema = z
       })
     }
   })
+  .transform((value) => ({
+    ...value,
+    phone: resolveSignupPhone(value.phone, value.countryCode) ?? value.phone,
+  }))
 
 export type BusinessValues = z.infer<typeof businessSchema>
 
@@ -135,7 +148,7 @@ export const signupPayloadSchema = z
     ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]),
     addressLine1: z.string().min(3).max(200),
     accessToken: z.string().trim().min(1).optional(),
-    subdomain: z.string().min(3).max(32),
+    subdomain: workspaceSchema.shape.subdomain.optional(),
     businessName: z.string().min(2).max(120),
     city: z.string().min(2).max(120),
     businessProfileKey: z
@@ -160,6 +173,14 @@ export const signupPayloadSchema = z
     acknowledgedPrivacyNotice: z.literal(true).optional(),
   })
   .superRefine((value, ctx) => {
+    if (!resolveSignupPhone(value.phone, value.countryCode)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["phone"],
+        message:
+          "Enter a phone number for the selected country. For Other, include the country code.",
+      })
+    }
     if (
       value.businessProfileKey === "other-mixed-business" &&
       !value.otherBusinessDescription?.trim()
@@ -171,5 +192,9 @@ export const signupPayloadSchema = z
       })
     }
   })
+  .transform((value) => ({
+    ...value,
+    phone: resolveSignupPhone(value.phone, value.countryCode) ?? value.phone,
+  }))
 
 export type SignupPayload = z.infer<typeof signupPayloadSchema>

@@ -1,4 +1,5 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import type { RegisterServiceCommerceFormReset } from "@/components/service-commerce/form-context"
 import { useCustomerChannelParams } from "@/hooks/use-customer-channel-params"
@@ -8,7 +9,15 @@ import type {
   ServiceCommerceManualWhatsAppConnection,
   ServiceCommerceStoreBindingConfiguration,
 } from "@ewatrade/service-commerce"
-import { Button } from "@ewatrade/ui"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  Button,
+} from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRef, useState, useSyncExternalStore } from "react"
 
@@ -64,7 +73,10 @@ export function CustomerChannelSheetContent({
   )
   const embedded = useQuery({
     ...trpc.serviceCommerce.channelEmbeddedSignupUrl.queryOptions({ storeId }),
-    enabled: mode === "connection",
+    enabled:
+      mode === "connection" &&
+      channelParams.whatsapp !== "select-number" &&
+      Boolean(workspace.data?.access.canManage),
     retry: false,
   })
   const selection = useQuery({
@@ -72,7 +84,9 @@ export function CustomerChannelSheetContent({
       storeId,
     }),
     enabled:
-      mode === "connection" && channelParams.whatsapp === "select-number",
+      mode === "connection" &&
+      channelParams.whatsapp === "select-number" &&
+      Boolean(workspace.data?.access.canManage),
     retry: false,
   })
   const releaseSettings = useQuery({
@@ -266,28 +280,23 @@ export function CustomerChannelSheetContent({
     workspace.isLoading ||
     (mode === "availability" && availabilitySettings.isLoading) ||
     (mode === "conversation_mode" && conversationModeSettings.isLoading) ||
-    (mode === "connection" && embedded.isLoading) ||
     (mode === "quote_policy" && releaseSettings.isLoading) ||
     (mode === "quote_approval" && approvalDetail.isLoading)
   ) {
-    return <div className="h-72 animate-pulse rounded-xl bg-muted" />
+    return <div className="h-72 animate-pulse rounded-none bg-muted" />
   }
   const error =
     workspace.error ??
     (mode === "availability" ? availabilitySettings.error : null) ??
     (mode === "conversation_mode" ? conversationModeSettings.error : null) ??
-    (mode === "connection" ? embedded.error : null) ??
     (mode === "quote_policy" ? releaseSettings.error : null) ??
     (mode === "quote_approval" ? approvalDetail.error : null)
   if (error || !workspace.data) {
     return (
       <div className="grid gap-3">
-        <p
-          className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
-          role="alert"
-        >
+        <FormFeedback appearance="dashboard">
           {error?.message ?? "Customer channel settings are unavailable."}
-        </p>
+        </FormFeedback>
         <Button
           className="w-fit"
           onClick={() =>
@@ -299,7 +308,6 @@ export function CustomerChannelSheetContent({
               mode === "conversation_mode"
                 ? conversationModeSettings.refetch()
                 : Promise.resolve(),
-              mode === "connection" ? embedded.refetch() : Promise.resolve(),
               mode === "quote_policy"
                 ? releaseSettings.refetch()
                 : Promise.resolve(),
@@ -309,6 +317,7 @@ export function CustomerChannelSheetContent({
             ])
           }
           variant="outline"
+          appearance="form"
         >
           Try again
         </Button>
@@ -343,9 +352,9 @@ export function CustomerChannelSheetContent({
     <div className="grid gap-5">
       <SetupProgress active={mode} />
       {message ? (
-        <output className="rounded-lg bg-muted px-4 py-3 text-sm">
+        <FormFeedback variant="default" appearance="dashboard">
           {message}
-        </output>
+        </FormFeedback>
       ) : null}
 
       {mode === "availability" && availabilitySettings.data ? (
@@ -381,8 +390,11 @@ export function CustomerChannelSheetContent({
       !selectedConnection ? (
         <ConnectionForm
           embeddedSignupUrl={embedded.data?.url ?? null}
+          embeddedSignupError={!!embedded.error}
+          embeddedSignupLoading={embedded.isFetching}
           error={saveConnection.error?.message}
           isPending={saveConnection.isPending}
+          onRetryEmbeddedSignup={() => void embedded.refetch()}
           onSubmit={(values: ServiceCommerceManualWhatsAppConnection) =>
             saveConnection.mutate({ ...values, storeId })
           }
@@ -408,55 +420,24 @@ export function CustomerChannelSheetContent({
                 retest.mutate({ connectionId: selectedConnection.id, storeId })
               }
               variant="outline"
+              appearance="form"
             >
               Retest connection
             </Button>
-            {connectionAction ? (
-              <>
-                <p className="basis-full text-sm text-destructive" role="alert">
-                  Confirm{" "}
-                  {connectionAction === "revoked"
-                    ? "permanent revocation"
-                    : "suspension"}
-                  . Current Store routes will stop using this connection.
-                </p>
-                <Button
-                  disabled={pending}
-                  onClick={() =>
-                    lifecycle.mutate({
-                      connectionId: selectedConnection.id,
-                      status: connectionAction,
-                      storeId,
-                    })
-                  }
-                  variant="destructive"
-                >
-                  Confirm{" "}
-                  {connectionAction === "revoked" ? "revoke" : "suspend"}
-                </Button>
-                <Button
-                  onClick={() => setConnectionAction(null)}
-                  variant="outline"
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  onClick={() => setConnectionAction("suspended")}
-                  variant="outline"
-                >
-                  Suspend
-                </Button>
-                <Button
-                  onClick={() => setConnectionAction("revoked")}
-                  variant="outline"
-                >
-                  Revoke
-                </Button>
-              </>
-            )}
+            <Button
+              onClick={() => setConnectionAction("suspended")}
+              variant="outline"
+              appearance="form"
+            >
+              Suspend
+            </Button>
+            <Button
+              onClick={() => setConnectionAction("revoked")}
+              variant="outline"
+              appearance="form"
+            >
+              Revoke
+            </Button>
           </div>
         </div>
       ) : null}
@@ -515,7 +496,7 @@ export function CustomerChannelSheetContent({
           approval={approvalDetail.data}
           isPending={approveQuote.isPending || rejectQuote.isPending}
           onApprove={(values) =>
-            approveQuote.mutate({
+            approveQuote.mutateAsync({
               approvalId: approvalDetail.data.id,
               clientDecisionId: approvalDecisionId.current,
               expectedPolicyRevision: approvalDetail.data.policyRevision,
@@ -526,7 +507,7 @@ export function CustomerChannelSheetContent({
             })
           }
           onReject={(values) =>
-            rejectQuote.mutate({
+            rejectQuote.mutateAsync({
               approvalId: approvalDetail.data.id,
               clientDecisionId: rejectionDecisionId.current,
               expectedPolicyRevision: approvalDetail.data.policyRevision,
@@ -537,6 +518,52 @@ export function CustomerChannelSheetContent({
             })
           }
         />
+      ) : null}
+      {mode === "connection" && selectedConnection ? (
+        <AlertDialog
+          open={connectionAction !== null}
+          onOpenChange={(open) => {
+            if (!open && !lifecycle.isPending) setConnectionAction(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogTitle className="text-lg font-medium">
+              {connectionAction === "revoked"
+                ? "Revoke this connection?"
+                : "Suspend this connection?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
+              {connectionAction === "revoked"
+                ? "Revocation is permanent. Current Store routes will stop using this connection."
+                : "Current Store routes will stop using this connection until it is reactivated."}
+            </AlertDialogDescription>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={lifecycle.isPending}>
+                Cancel
+              </AlertDialogCancel>
+              <Button
+                appearance="form"
+                disabled={lifecycle.isPending}
+                onClick={() => {
+                  if (!connectionAction) return
+                  lifecycle.mutate({
+                    connectionId: selectedConnection.id,
+                    status: connectionAction,
+                    storeId,
+                  })
+                }}
+                type="button"
+                variant="destructive"
+              >
+                {lifecycle.isPending
+                  ? "Updating…"
+                  : connectionAction === "revoked"
+                    ? "Revoke connection"
+                    : "Suspend connection"}
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : null}
     </div>
   )
@@ -575,7 +602,7 @@ function SetupProgress({
     >
       {steps.map((step, index) => (
         <li
-          className={`rounded-lg border px-3 py-2 ${step.active ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}
+          className={`rounded-none border px-3 py-2 ${step.active ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}
           key={step.label}
         >
           {index + 1}. {step.label}
@@ -586,12 +613,5 @@ function SetupProgress({
 }
 
 function SheetError({ message }: { message: string }) {
-  return (
-    <p
-      className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive"
-      role="alert"
-    >
-      {message}
-    </p>
-  )
+  return <FormFeedback appearance="dashboard">{message}</FormFeedback>
 }

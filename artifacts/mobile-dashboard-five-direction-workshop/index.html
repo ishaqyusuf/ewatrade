@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>EwaTrade · Five Android Home directions</title>
+  <link rel="stylesheet" href="workshop.css">
+  <script src="workshop.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="wordmark" href="#board"><span class="brand-mark">e</span>EwaTrade<span class="edition">DESIGN WORKSHOP / 01</span></a>
+    <a href="journey/" class="quiet-link">01 · Guided journey workshop →</a>
+  </header>
+  <main>
+    <section class="introduction" aria-labelledby="workshop-title">
+      <div><p class="eyebrow">ANDROID HOME · CLASSIC · FIVE DIRECTIONS</p><h1 id="workshop-title">A better place to<br>run your business.</h1></div>
+      <div class="brief"><p>One real dashboard. Five different ways to put the next useful action within reach.</p><p class="subtle">Grounded in Ishaq’s Jawdah Home capture. Light and Dark are independent of appearance. No Market Day designs.</p><span class="scope-tag">Review only · no app changes</span></div>
+    </section>
+    <section class="control-panel" aria-label="Workshop controls">
+      <div class="control-group"><span class="control-label">Preview theme</span><div class="segmented"><button data-theme="light" aria-pressed="true">Light</button><button data-theme="dark" aria-pressed="false">Dark</button></div></div>
+      <div class="control-group"><span class="control-label">Business state</span><select id="state-control" aria-label="Business state"><option value="ready">Catalog ready · no orders</option><option value="onboarding">Catalog not ready</option><option value="established">Established · local sample</option></select></div>
+      <div class="control-group"><span class="control-label">Text size</span><button id="text-control" aria-pressed="false">100% → 200%</button></div>
+      <button id="reset-control" class="reset">Reset all previews</button>
+    </section>
+    <p id="sample-note" class="sample-note" aria-live="polite">Observed reference facts: Jawdah · Catalog Ready · 0 recent orders · R0.00 across loaded orders. All preview interactions stay local.</p>
+    <section id="board" class="comparison-board" aria-label="Five dashboard design directions"></section>
+    <section id="detail" class="detail-view" aria-label="Full-size design detail" hidden></section>
+    <section class="recommendation" id="recommendation">
+      <div><p class="eyebrow">OUR RECOMMENDATION</p><h2>01 · Clear Counter</h2><p>Best everyday Home: the next order, meaningful business facts, and recent activity share the screen. It needs the least new navigation and scales naturally as a business grows.</p><a href="#direction-01" class="review-link">Review 01 in Light + Dark →</a></div>
+      <div class="recommendation-tradeoff"><h3>The useful alternatives</h3><p><b>02</b> makes repeated selling fastest. <b>03</b> gives owners the most information with the least decoration. <b>04</b> is strongest for first-time setup. <b>05</b> prioritizes checking existing orders.</p><p class="subtle">Choosing a favorite here records a workshop preference only. Production implementation begins after your explicit selection.</p></div>
+    </section>
+    <section id="implementation" class="implementation">
+      <p class="eyebrow">FROM PREVIEW TO NATIVE</p><h2>One palette. Reusable native pieces.</h2>
+      <div class="implementation-grid"><article><h3>Semantic colors</h3><p>Reuse <code>background</code>, <code>card</code>, <code>foreground</code>, <code>mutedForeground</code>, <code>primary</code>, <code>primaryForeground</code>, <code>accent</code> and <code>border</code> from the existing brand theme. Dark gets separate canvas, surface and raised-surface values; no inverted white cards.</p><div class="swatches"><span style="background:#F3F4F5" title="Light canvas"></span><span style="background:#17684F" title="Light primary"></span><span style="background:#111715" title="Dark canvas"></span><span style="background:#1B2320" title="Dark card"></span><span style="background:#8CD5B5" title="Dark primary"></span></div></article><article><h3>Tailwind + useColors</h3><p>Use NativeWind <code>className</code> for layout and semantic colors: <code>bg-card text-foreground border-border</code>. The existing <code>useColors()</code> resolves the same <code>THEME</code> for icon strokes, native properties and navigation. Never mix <code>style</code> with <code>className</code> on one native element.</p></article><article><h3>Preserve the controller</h3><p>Compose Classic presentations from shared Home header, summary, next-action, task row and order-row primitives. Keep queries, permissions, offline gates and callbacks in the current operations controller. The center Create action still opens its existing chooser.</p></article><article><h3>Readable at 200%</h3><p>At the existing large-text threshold, stack metrics and header actions; grow rows and let full names, values and actions wrap. Minimum 48-point targets, visible focus, explicit status labels and reduced-motion support. Browser text scaling is a design check; native TalkBack and font-scale acceptance remain later gates.</p></article></div>
+    </section>
+    <section id="references" class="references"><p class="eyebrow">OBSERVED NATIVE EVIDENCE · 2 OCTOBER 2026</p><h2>The Home we started from.</h2><p class="subtle">Saved screenshots inspected before design and copied with SHA-256 provenance. The bell-shaped action is “Open sync status” in the native accessibility tree.</p><div class="reference-grid"><a href="references/B05-current-qa-state.png"><img src="references/B05-current-qa-state.png" alt="Actual Android Light Jawdah Home: Catalog Ready, 0 recent orders, R0.00 and setup tasks"><span>Primary · loaded QA Owner Home ↗</span></a><a href="references/17-current-session.png"><img src="references/17-current-session.png" alt="Supporting loaded Jawdah Home from earlier session"><span>Supporting · loaded Home ↗</span></a><a href="references/16-auto-renderer-session.png"><img src="references/16-auto-renderer-session.png" alt="Supporting Home while Store overview and orders load"><span>Supporting · loading Home ↗</span></a></div><p><a href="README.md">Design rationale & implementation handoff</a> · <a href="references/manifest.json">Reference provenance</a></p></section>
+    <section class="references" aria-label="Screenshot exports"><p class="eyebrow">SAVED PREVIEWS</p><h2>Keep a direction for reference.</h2><p><a href="evidence/board-light.jpg">Light comparison</a> · <a href="evidence/board-dark.jpg">Dark comparison</a> · <a href="evidence/01-ready-light-dark.jpg">01 full-size pair</a> · <a href="evidence/02-ready-light-dark.jpg">02 full-size pair</a> · <a href="evidence/03-ready-light-dark.jpg">03 full-size pair</a> · <a href="evidence/04-ready-light-dark.jpg">04 full-size pair</a> · <a href="evidence/05-ready-light-dark.jpg">05 full-size pair</a></p></section>
+  </main>
+  <footer>01–05 are design studies, not production screens. No backend, authentication, emulator or merchant records are touched.</footer>
+  <dialog id="preview-dialog" aria-labelledby="dialog-title"><div class="dialog-top"><p class="eyebrow" id="dialog-context">LOCAL PREVIEW</p><button id="close-dialog" aria-label="Close preview">×</button></div><div id="dialog-body"></div><p class="dialog-foot">Local workshop simulation. Nothing is sent or saved to EwaTrade.</p></dialog>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+</body>
+</html>

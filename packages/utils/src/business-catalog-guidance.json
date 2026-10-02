@@ -1,0 +1,2158 @@
+{
+  "schemaVersion": 1,
+  "defaults": {
+    "product": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Your product name",
+        "examples": ["Your product name", "Handmade item"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the item customers will receive.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Size, Colour, Material",
+        "helperText": "Add customer choices such as Size, Colour, Material, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "size",
+            "label": "Size",
+            "aliases": [],
+            "namePlaceholder": "e.g. Size",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Small, Medium, Large",
+            "suggestedValues": ["Small", "Medium", "Large"]
+          },
+          {
+            "key": "colour",
+            "label": "Colour",
+            "aliases": ["Color"],
+            "namePlaceholder": "e.g. Colour",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Black, White, Blue",
+            "suggestedValues": ["Black", "White", "Blue"]
+          },
+          {
+            "key": "material",
+            "label": "Material",
+            "aliases": [],
+            "namePlaceholder": "e.g. Material",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Wood, Metal, Fabric",
+            "suggestedValues": ["Wood", "Metal", "Fabric"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Piece, Kilogram, Litre",
+        "helperText": "Main unit.",
+        "suggestions": ["Piece", "Kilogram", "Litre"]
+      }
+    },
+    "service": {
+      "kind": "service",
+      "name": {
+        "placeholder": "e.g. Your service name",
+        "examples": ["Your service name", "Consultation"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the work and what is included.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Package, Service level, Visit type",
+        "helperText": "Add customer choices such as Package, Service level, Visit type, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "package",
+            "label": "Package",
+            "aliases": [],
+            "namePlaceholder": "e.g. Package",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Basic, Standard, Premium",
+            "suggestedValues": ["Basic", "Standard", "Premium"]
+          },
+          {
+            "key": "service-level",
+            "label": "Service level",
+            "aliases": [],
+            "namePlaceholder": "e.g. Service level",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Standard, Express, Premium",
+            "suggestedValues": ["Standard", "Express", "Premium"]
+          },
+          {
+            "key": "visit-type",
+            "label": "Visit type",
+            "aliases": [],
+            "namePlaceholder": "e.g. Visit type",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Remote, In-store, On-site",
+            "suggestedValues": ["Remote", "In-store", "On-site"]
+          }
+        ]
+      }
+    }
+  },
+  "byBusinessProfile": {
+    "general-retail-groceries": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Rice",
+          "examples": ["Rice", "Cooking oil", "Breakfast cereal"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the variety, ingredients or packaging.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Brand, Variety, Grade",
+          "helperText": "Add customer choices such as Brand, Variety, Grade, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "brand",
+              "label": "Brand",
+              "aliases": [],
+              "namePlaceholder": "e.g. Brand",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+              "suggestedValues": [
+                "Local brand",
+                "Store brand",
+                "Imported brand"
+              ]
+            },
+            {
+              "key": "variety",
+              "label": "Variety",
+              "aliases": [],
+              "namePlaceholder": "e.g. Variety",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Long grain, Short grain, Brown rice",
+              "suggestedValues": ["Long grain", "Short grain", "Brown rice"]
+            },
+            {
+              "key": "grade",
+              "label": "Grade",
+              "aliases": [],
+              "namePlaceholder": "e.g. Grade",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Standard, Premium",
+              "suggestedValues": ["Standard", "Premium"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Kilogram, Litre",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Kilogram", "Litre"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Gift wrapping",
+          "examples": ["Gift wrapping", "Grocery packing"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe what is included in this service.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Wrapping style, Package, Occasion",
+          "helperText": "Add customer choices such as Wrapping style, Package, Occasion, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "wrapping-style",
+              "label": "Wrapping style",
+              "aliases": [],
+              "namePlaceholder": "e.g. Wrapping style",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Paper, Gift bag, Gift box",
+              "suggestedValues": ["Paper", "Gift bag", "Gift box"]
+            },
+            {
+              "key": "package",
+              "label": "Package",
+              "aliases": [],
+              "namePlaceholder": "e.g. Package",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Basic, Standard, Premium",
+              "suggestedValues": ["Basic", "Standard", "Premium"]
+            },
+            {
+              "key": "occasion",
+              "label": "Occasion",
+              "aliases": [],
+              "namePlaceholder": "e.g. Occasion",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Birthday, Wedding, Thank you",
+              "suggestedValues": ["Birthday", "Wedding", "Thank you"]
+            }
+          ]
+        }
+      }
+    },
+    "animal-feed-agricultural-supplies": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Fresh eggs",
+          "examples": [
+            "Fresh eggs",
+            "Live broiler",
+            "Fresh tomatoes",
+            "Layer feed"
+          ]
+        },
+        "description": {
+          "placeholder": "e.g. Fresh eggs collected from our farm.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Bird type, Egg size, Grade",
+          "helperText": "Add customer choices such as Bird type, Egg size, Grade, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "bird-type",
+              "label": "Bird type",
+              "aliases": ["Poultry type"],
+              "namePlaceholder": "e.g. Bird type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Broiler, Layer, Cockerel",
+              "suggestedValues": ["Broiler", "Layer", "Cockerel"]
+            },
+            {
+              "key": "egg-size",
+              "label": "Egg size",
+              "aliases": ["Size"],
+              "namePlaceholder": "e.g. Egg size",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Small, Medium, Large",
+              "suggestedValues": ["Small", "Medium", "Large"]
+            },
+            {
+              "key": "grade",
+              "label": "Grade",
+              "aliases": [],
+              "namePlaceholder": "e.g. Grade",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Grade A, Grade B, Standard",
+              "suggestedValues": ["Grade A", "Grade B", "Standard"]
+            },
+            {
+              "key": "produce-type",
+              "label": "Produce type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Produce type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Tomato, Pepper, Maize",
+              "suggestedValues": ["Tomato", "Pepper", "Maize"]
+            },
+            {
+              "key": "feed-type",
+              "label": "Feed type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Feed type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Starter, Grower, Finisher",
+              "suggestedValues": ["Starter", "Grower", "Finisher", "Layer mash"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Egg, Bird, Kilogram, Bag",
+          "helperText": "Main unit.",
+          "suggestions": ["Egg", "Bird", "Kilogram", "Bag"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Produce sorting",
+          "examples": ["Produce sorting", "Farm equipment cleaning"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the farm work and what is included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Work type, Produce type, Service location",
+          "helperText": "Add customer choices such as Work type, Produce type, Service location, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Sorting, Cleaning, Packing",
+              "suggestedValues": ["Sorting", "Cleaning", "Packing"]
+            },
+            {
+              "key": "produce-type",
+              "label": "Produce type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Produce type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Tomato, Pepper, Maize",
+              "suggestedValues": ["Tomato", "Pepper", "Maize"]
+            },
+            {
+              "key": "service-location",
+              "label": "Service location",
+              "aliases": [],
+              "namePlaceholder": "e.g. Service location",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. On-farm, At our premises",
+              "suggestedValues": ["On-farm", "At our premises"]
+            }
+          ]
+        }
+      }
+    },
+    "fashion-apparel": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Cotton shirt",
+          "examples": ["Cotton shirt", "Ankara tote bag", "Leather sandals"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the fit, fabric and finish.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Size, Colour, Material",
+          "helperText": "Add customer choices such as Size, Colour, Material, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "size",
+              "label": "Size",
+              "aliases": [],
+              "namePlaceholder": "e.g. Size",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. XS, S, M",
+              "suggestedValues": ["XS", "S", "M", "L", "XL", "XXL"]
+            },
+            {
+              "key": "colour",
+              "label": "Colour",
+              "aliases": ["Color"],
+              "namePlaceholder": "e.g. Colour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Black, White, Blue",
+              "suggestedValues": ["Black", "White", "Blue", "Red", "Green"]
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Cotton, Linen, Denim",
+              "suggestedValues": ["Cotton", "Linen", "Denim", "Leather"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Pair",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Pair"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Clothing alteration",
+          "examples": ["Clothing alteration", "Personal styling"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the garment work or styling session.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Garment, Work type, Session format",
+          "helperText": "Add customer choices such as Garment, Work type, Session format, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "garment",
+              "label": "Garment",
+              "aliases": [],
+              "namePlaceholder": "e.g. Garment",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Shirt, Trousers, Dress",
+              "suggestedValues": ["Shirt", "Trousers", "Dress"]
+            },
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Hemming, Resizing, Repair",
+              "suggestedValues": ["Hemming", "Resizing", "Repair"]
+            },
+            {
+              "key": "session-format",
+              "label": "Session format",
+              "aliases": [],
+              "namePlaceholder": "e.g. Session format",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. In-person, Remote",
+              "suggestedValues": ["In-person", "Remote"]
+            }
+          ]
+        }
+      }
+    },
+    "fabrics-tailoring": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Ankara fabric",
+          "examples": ["Ankara fabric", "Cotton lining", "Sewing thread"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the fabric, pattern and finish.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Material, Colour, Pattern",
+          "helperText": "Add customer choices such as Material, Colour, Pattern, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Cotton, Linen, Silk",
+              "suggestedValues": ["Cotton", "Linen", "Silk", "Polyester"]
+            },
+            {
+              "key": "colour",
+              "label": "Colour",
+              "aliases": ["Color"],
+              "namePlaceholder": "e.g. Colour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Blue, Red, Black",
+              "suggestedValues": ["Blue", "Red", "Black", "White"]
+            },
+            {
+              "key": "pattern",
+              "label": "Pattern",
+              "aliases": [],
+              "namePlaceholder": "e.g. Pattern",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Plain, Floral, Striped",
+              "suggestedValues": ["Plain", "Floral", "Striped", "Printed"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Metre, Roll, Piece",
+          "helperText": "Main unit.",
+          "suggestions": ["Metre", "Roll", "Piece"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Dress tailoring",
+          "examples": ["Dress tailoring", "Trouser alteration"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the garment and work included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Garment, Work type, Lining",
+          "helperText": "Add customer choices such as Garment, Work type, Lining, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "garment",
+              "label": "Garment",
+              "aliases": [],
+              "namePlaceholder": "e.g. Garment",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Dress, Shirt, Trousers",
+              "suggestedValues": ["Dress", "Shirt", "Trousers", "Skirt"]
+            },
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. New sewing, Alteration, Repair",
+              "suggestedValues": ["New sewing", "Alteration", "Repair"]
+            },
+            {
+              "key": "lining",
+              "label": "Lining",
+              "aliases": [],
+              "namePlaceholder": "e.g. Lining",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Unlined, Partially lined, Fully lined",
+              "suggestedValues": ["Unlined", "Partially lined", "Fully lined"]
+            }
+          ]
+        }
+      }
+    },
+    "drinks-water-distribution": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Bottled water",
+          "examples": ["Bottled water", "Orange juice", "Soft drink"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the drink, flavour and packaging.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Flavour, Brand, Drink type",
+          "helperText": "Add customer choices such as Flavour, Brand, Drink type, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "flavour",
+              "label": "Flavour",
+              "aliases": [],
+              "namePlaceholder": "e.g. Flavour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Orange, Apple, Pineapple",
+              "suggestedValues": ["Orange", "Apple", "Pineapple", "Lemon"]
+            },
+            {
+              "key": "brand",
+              "label": "Brand",
+              "aliases": [],
+              "namePlaceholder": "e.g. Brand",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+              "suggestedValues": [
+                "Local brand",
+                "Store brand",
+                "Imported brand"
+              ]
+            },
+            {
+              "key": "drink-type",
+              "label": "Drink type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Drink type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Still, Sparkling, Juice",
+              "suggestedValues": ["Still", "Sparkling", "Juice"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Bottle, Crate, Litre",
+          "helperText": "Main unit.",
+          "suggestions": ["Bottle", "Crate", "Litre"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Event drinks supply",
+          "examples": ["Event drinks supply", "Dispenser cleaning"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the supply or cleaning work included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Service type, Event type, Location",
+          "helperText": "Add customer choices such as Service type, Event type, Location, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "service-type",
+              "label": "Service type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Service type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Supply only, Supply and setup, Cleaning",
+              "suggestedValues": ["Supply only", "Supply and setup", "Cleaning"]
+            },
+            {
+              "key": "event-type",
+              "label": "Event type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Event type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Meeting, Party, Wedding",
+              "suggestedValues": ["Meeting", "Party", "Wedding"]
+            },
+            {
+              "key": "location",
+              "label": "Location",
+              "aliases": [],
+              "namePlaceholder": "e.g. Location",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Customer location, Our premises",
+              "suggestedValues": ["Customer location", "Our premises"]
+            }
+          ]
+        }
+      }
+    },
+    "food-bakery-catering": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Fresh bread",
+          "examples": ["Fresh bread", "Celebration cake", "Meat pie"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the flavour, ingredients and portion.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Flavour, Cake size, Filling",
+          "helperText": "Add customer choices such as Flavour, Cake size, Filling, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "flavour",
+              "label": "Flavour",
+              "aliases": [],
+              "namePlaceholder": "e.g. Flavour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Vanilla, Chocolate, Red velvet",
+              "suggestedValues": ["Vanilla", "Chocolate", "Red velvet"]
+            },
+            {
+              "key": "cake-size",
+              "label": "Cake size",
+              "aliases": ["Size"],
+              "namePlaceholder": "e.g. Cake size",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Small, Medium, Large",
+              "suggestedValues": ["Small", "Medium", "Large"]
+            },
+            {
+              "key": "filling",
+              "label": "Filling",
+              "aliases": [],
+              "namePlaceholder": "e.g. Filling",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Plain, Fruit, Cream",
+              "suggestedValues": ["Plain", "Fruit", "Cream"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Loaf, Piece, Kilogram",
+          "helperText": "Main unit.",
+          "suggestions": ["Loaf", "Piece", "Kilogram"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Event catering",
+          "examples": ["Event catering", "Meal preparation"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the menu and service included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Menu, Service type, Dietary preference",
+          "helperText": "Add customer choices such as Menu, Service type, Dietary preference, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "menu",
+              "label": "Menu",
+              "aliases": [],
+              "namePlaceholder": "e.g. Menu",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Rice dishes, Local dishes, Mixed menu",
+              "suggestedValues": ["Rice dishes", "Local dishes", "Mixed menu"]
+            },
+            {
+              "key": "service-type",
+              "label": "Service type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Service type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Food only, Buffet service, Plated service",
+              "suggestedValues": [
+                "Food only",
+                "Buffet service",
+                "Plated service"
+              ]
+            },
+            {
+              "key": "dietary-preference",
+              "label": "Dietary preference",
+              "aliases": [],
+              "namePlaceholder": "e.g. Dietary preference",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Regular, Vegetarian, Dairy-free",
+              "suggestedValues": ["Regular", "Vegetarian", "Dairy-free"]
+            }
+          ]
+        }
+      }
+    },
+    "beauty-salon-spa": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Hair shampoo",
+          "examples": ["Hair shampoo", "Body lotion", "Hair conditioner"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the product, scent and suitable use.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Scent, Hair type, Finish",
+          "helperText": "Add customer choices such as Scent, Hair type, Finish, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "scent",
+              "label": "Scent",
+              "aliases": [],
+              "namePlaceholder": "e.g. Scent",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Unscented, Floral, Citrus",
+              "suggestedValues": ["Unscented", "Floral", "Citrus"]
+            },
+            {
+              "key": "hair-type",
+              "label": "Hair type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Hair type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Natural, Relaxed, All hair types",
+              "suggestedValues": ["Natural", "Relaxed", "All hair types"]
+            },
+            {
+              "key": "finish",
+              "label": "Finish",
+              "aliases": [],
+              "namePlaceholder": "e.g. Finish",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Matte, Glossy, Natural",
+              "suggestedValues": ["Matte", "Glossy", "Natural"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Bottle, Piece, Jar",
+          "helperText": "Main unit.",
+          "suggestions": ["Bottle", "Piece", "Jar"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Haircut",
+          "examples": ["Haircut", "Braiding", "Facial treatment"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the treatment and what is included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Style, Hair length, Treatment",
+          "helperText": "Add customer choices such as Style, Hair length, Treatment, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "style",
+              "label": "Style",
+              "aliases": [],
+              "namePlaceholder": "e.g. Style",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Low cut, Fade, Trim",
+              "suggestedValues": ["Low cut", "Fade", "Trim"]
+            },
+            {
+              "key": "hair-length",
+              "label": "Hair length",
+              "aliases": [],
+              "namePlaceholder": "e.g. Hair length",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Short, Medium, Long",
+              "suggestedValues": ["Short", "Medium", "Long"]
+            },
+            {
+              "key": "treatment",
+              "label": "Treatment",
+              "aliases": [],
+              "namePlaceholder": "e.g. Treatment",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Wash, Conditioning, Scalp care",
+              "suggestedValues": ["Wash", "Conditioning", "Scalp care"]
+            }
+          ]
+        }
+      }
+    },
+    "laundry-dry-cleaning": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Laundry detergent",
+          "examples": ["Laundry detergent", "Garment bag", "Fabric softener"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the laundry product and packaging.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Scent, Product type, Material",
+          "helperText": "Add customer choices such as Scent, Product type, Material, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "scent",
+              "label": "Scent",
+              "aliases": [],
+              "namePlaceholder": "e.g. Scent",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Unscented, Fresh linen, Floral",
+              "suggestedValues": ["Unscented", "Fresh linen", "Floral"]
+            },
+            {
+              "key": "product-type",
+              "label": "Product type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Product type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Liquid, Powder, Bar",
+              "suggestedValues": ["Liquid", "Powder", "Bar"]
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Fabric, Plastic, Mesh",
+              "suggestedValues": ["Fabric", "Plastic", "Mesh"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Bottle, Bag, Piece",
+          "helperText": "Main unit.",
+          "suggestions": ["Bottle", "Bag", "Piece"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Shirt cleaning",
+          "examples": ["Shirt cleaning", "Ironing", "Duvet cleaning"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the garment care included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Garment, Treatment, Size",
+          "helperText": "Add customer choices such as Garment, Treatment, Size, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "garment",
+              "label": "Garment",
+              "aliases": [],
+              "namePlaceholder": "e.g. Garment",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Shirt, Trousers, Dress",
+              "suggestedValues": ["Shirt", "Trousers", "Dress", "Duvet"]
+            },
+            {
+              "key": "treatment",
+              "label": "Treatment",
+              "aliases": [],
+              "namePlaceholder": "e.g. Treatment",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Wash and iron, Dry clean, Iron only",
+              "suggestedValues": ["Wash and iron", "Dry clean", "Iron only"]
+            },
+            {
+              "key": "size",
+              "label": "Size",
+              "aliases": [],
+              "namePlaceholder": "e.g. Size",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Small, Medium, Large",
+              "suggestedValues": ["Small", "Medium", "Large"]
+            }
+          ]
+        }
+      }
+    },
+    "electronics-phone-shops": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Smartphone",
+          "examples": ["Smartphone", "USB charger", "Wireless headphones"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the model, specifications and included accessories.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Model, Storage, Colour",
+          "helperText": "Add customer choices such as Model, Storage, Colour, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "model",
+              "label": "Model",
+              "aliases": [],
+              "namePlaceholder": "e.g. Model",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Model A, Model B, Model C",
+              "suggestedValues": ["Model A", "Model B", "Model C"]
+            },
+            {
+              "key": "storage",
+              "label": "Storage",
+              "aliases": [],
+              "namePlaceholder": "e.g. Storage",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. 64 GB, 128 GB, 256 GB",
+              "suggestedValues": ["64 GB", "128 GB", "256 GB"]
+            },
+            {
+              "key": "colour",
+              "label": "Colour",
+              "aliases": ["Color"],
+              "namePlaceholder": "e.g. Colour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Black, Silver, Blue",
+              "suggestedValues": ["Black", "Silver", "Blue"]
+            },
+            {
+              "key": "connector",
+              "label": "Connector",
+              "aliases": [],
+              "namePlaceholder": "e.g. Connector",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. USB-C, Micro USB, Lightning",
+              "suggestedValues": ["USB-C", "Micro USB", "Lightning"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Pair",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Pair"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Phone screen replacement",
+          "examples": ["Phone screen replacement", "Laptop servicing"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the device work and parts included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Device type, Repair type, Service location",
+          "helperText": "Add customer choices such as Device type, Repair type, Service location, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "device-type",
+              "label": "Device type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Device type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Phone, Tablet, Laptop",
+              "suggestedValues": ["Phone", "Tablet", "Laptop"]
+            },
+            {
+              "key": "repair-type",
+              "label": "Repair type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Repair type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Screen replacement, Battery replacement, Charging port repair",
+              "suggestedValues": [
+                "Screen replacement",
+                "Battery replacement",
+                "Charging port repair"
+              ]
+            },
+            {
+              "key": "service-location",
+              "label": "Service location",
+              "aliases": [],
+              "namePlaceholder": "e.g. Service location",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. In-store, Customer location",
+              "suggestedValues": ["In-store", "Customer location"]
+            }
+          ]
+        }
+      }
+    },
+    "repair-maintenance": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Replacement belt",
+          "examples": ["Replacement belt", "Water pump", "Appliance filter"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the part and compatible equipment.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Compatible model, Part type, Material",
+          "helperText": "Add customer choices such as Compatible model, Part type, Material, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "compatible-model",
+              "label": "Compatible model",
+              "aliases": [],
+              "namePlaceholder": "e.g. Compatible model",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Model A, Model B, Model C",
+              "suggestedValues": ["Model A", "Model B", "Model C"]
+            },
+            {
+              "key": "part-type",
+              "label": "Part type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Part type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Original, Compatible, Refurbished",
+              "suggestedValues": ["Original", "Compatible", "Refurbished"]
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Steel, Plastic, Rubber",
+              "suggestedValues": ["Steel", "Plastic", "Rubber"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Pair, Set",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Pair", "Set"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Appliance repair",
+          "examples": ["Appliance repair", "Generator servicing"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the equipment and maintenance work.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Appliance type, Work type, Visit type",
+          "helperText": "Add customer choices such as Appliance type, Work type, Visit type, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "appliance-type",
+              "label": "Appliance type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Appliance type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Washing machine, Refrigerator, Air conditioner",
+              "suggestedValues": [
+                "Washing machine",
+                "Refrigerator",
+                "Air conditioner"
+              ]
+            },
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Inspection, Repair, Maintenance",
+              "suggestedValues": ["Inspection", "Repair", "Maintenance"]
+            },
+            {
+              "key": "visit-type",
+              "label": "Visit type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Visit type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Workshop, On-site",
+              "suggestedValues": ["Workshop", "On-site"]
+            }
+          ]
+        }
+      }
+    },
+    "pharmacy-health-retail": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Adhesive bandages",
+          "examples": [
+            "Adhesive bandages",
+            "Digital thermometer",
+            "First aid kit"
+          ]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the packaged item and manufacturer information.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Brand, Material, Size",
+          "helperText": "Add customer choices such as Brand, Material, Size, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "brand",
+              "label": "Brand",
+              "aliases": [],
+              "namePlaceholder": "e.g. Brand",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+              "suggestedValues": [
+                "Local brand",
+                "Store brand",
+                "Imported brand"
+              ]
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Fabric, Plastic, Latex-free",
+              "suggestedValues": ["Fabric", "Plastic", "Latex-free"]
+            },
+            {
+              "key": "size",
+              "label": "Size",
+              "aliases": [],
+              "namePlaceholder": "e.g. Size",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Small, Medium, Large",
+              "suggestedValues": ["Small", "Medium", "Large"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Pack, Piece, Box",
+          "helperText": "Main unit.",
+          "suggestions": ["Pack", "Piece", "Box"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Health equipment cleaning",
+          "examples": ["Health equipment cleaning", "First aid kit packing"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the non-clinical work and what is included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Equipment type, Work type, Package",
+          "helperText": "Add customer choices such as Equipment type, Work type, Package, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "equipment-type",
+              "label": "Equipment type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Equipment type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Thermometer, Blood pressure monitor, First aid kit",
+              "suggestedValues": [
+                "Thermometer",
+                "Blood pressure monitor",
+                "First aid kit"
+              ]
+            },
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Cleaning, Packing, Accessory replacement",
+              "suggestedValues": [
+                "Cleaning",
+                "Packing",
+                "Accessory replacement"
+              ]
+            },
+            {
+              "key": "package",
+              "label": "Package",
+              "aliases": [],
+              "namePlaceholder": "e.g. Package",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Basic, Standard, Extended",
+              "suggestedValues": ["Basic", "Standard", "Extended"]
+            }
+          ]
+        }
+      }
+    },
+    "hardware-building-materials": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Cement",
+          "examples": ["Cement", "Wall paint", "Electrical cable"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the material, grade and specifications.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Grade, Colour, Finish",
+          "helperText": "Add customer choices such as Grade, Colour, Finish, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "grade",
+              "label": "Grade",
+              "aliases": [],
+              "namePlaceholder": "e.g. Grade",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Standard, Premium, Heavy duty",
+              "suggestedValues": ["Standard", "Premium", "Heavy duty"]
+            },
+            {
+              "key": "colour",
+              "label": "Colour",
+              "aliases": ["Color"],
+              "namePlaceholder": "e.g. Colour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. White, Grey, Blue",
+              "suggestedValues": ["White", "Grey", "Blue"]
+            },
+            {
+              "key": "finish",
+              "label": "Finish",
+              "aliases": [],
+              "namePlaceholder": "e.g. Finish",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Matte, Gloss, Satin",
+              "suggestedValues": ["Matte", "Gloss", "Satin"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Bag, Tin, Metre, Piece",
+          "helperText": "Main unit.",
+          "suggestions": ["Bag", "Tin", "Metre", "Piece"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Paint mixing",
+          "examples": ["Paint mixing", "Material cutting"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the material preparation included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Work type, Material, Finish",
+          "helperText": "Add customer choices such as Work type, Material, Finish, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Mixing, Cutting, Preparation",
+              "suggestedValues": ["Mixing", "Cutting", "Preparation"]
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Wood, Metal, Plastic",
+              "suggestedValues": ["Wood", "Metal", "Plastic"]
+            },
+            {
+              "key": "finish",
+              "label": "Finish",
+              "aliases": [],
+              "namePlaceholder": "e.g. Finish",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Raw, Smooth, Polished",
+              "suggestedValues": ["Raw", "Smooth", "Polished"]
+            }
+          ]
+        }
+      }
+    },
+    "wholesale-distribution": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Wholesale rice",
+          "examples": ["Wholesale rice", "Cleaning supplies", "Packaged snacks"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the item, brand and packaging.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Brand, Grade, Variety",
+          "helperText": "Add customer choices such as Brand, Grade, Variety, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "brand",
+              "label": "Brand",
+              "aliases": [],
+              "namePlaceholder": "e.g. Brand",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+              "suggestedValues": [
+                "Local brand",
+                "Store brand",
+                "Imported brand"
+              ]
+            },
+            {
+              "key": "grade",
+              "label": "Grade",
+              "aliases": [],
+              "namePlaceholder": "e.g. Grade",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Standard, Premium, Economy",
+              "suggestedValues": ["Standard", "Premium", "Economy"]
+            },
+            {
+              "key": "variety",
+              "label": "Variety",
+              "aliases": [],
+              "namePlaceholder": "e.g. Variety",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Original, Flavoured, Mixed",
+              "suggestedValues": ["Original", "Flavoured", "Mixed"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Bag, Kilogram, Bottle",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Bag", "Kilogram", "Bottle"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Order packing",
+          "examples": ["Order packing", "Goods labelling"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the handling work included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Work type, Packaging, Label type",
+          "helperText": "Add customer choices such as Work type, Packaging, Label type, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "work-type",
+              "label": "Work type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Work type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Packing, Labelling, Sorting",
+              "suggestedValues": ["Packing", "Labelling", "Sorting"]
+            },
+            {
+              "key": "packaging",
+              "label": "Packaging",
+              "aliases": [],
+              "namePlaceholder": "e.g. Packaging",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Box, Bag, Protective wrap",
+              "suggestedValues": ["Box", "Bag", "Protective wrap"]
+            },
+            {
+              "key": "label-type",
+              "label": "Label type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Label type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Product label, Barcode label, Shipping label",
+              "suggestedValues": [
+                "Product label",
+                "Barcode label",
+                "Shipping label"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "professional-services": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Printed workbook",
+          "examples": ["Printed workbook", "Training manual", "Design print"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the printed material and edition.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Format, Edition, Language",
+          "helperText": "Add customer choices such as Format, Edition, Language, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "format",
+              "label": "Format",
+              "aliases": [],
+              "namePlaceholder": "e.g. Format",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Workbook, Manual, Poster",
+              "suggestedValues": ["Workbook", "Manual", "Poster"]
+            },
+            {
+              "key": "edition",
+              "label": "Edition",
+              "aliases": [],
+              "namePlaceholder": "e.g. Edition",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Standard, Revised, Instructor",
+              "suggestedValues": ["Standard", "Revised", "Instructor"]
+            },
+            {
+              "key": "language",
+              "label": "Language",
+              "aliases": [],
+              "namePlaceholder": "e.g. Language",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. English, Yoruba, Hausa",
+              "suggestedValues": ["English", "Yoruba", "Hausa"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Book, Set",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Book", "Set"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Business consultation",
+          "examples": [
+            "Business consultation",
+            "Logo design",
+            "Training session"
+          ]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the scope, deliverables and session.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Package, Session format, Delivery format",
+          "helperText": "Add customer choices such as Package, Session format, Delivery format, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "package",
+              "label": "Package",
+              "aliases": [],
+              "namePlaceholder": "e.g. Package",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Basic, Standard, Premium",
+              "suggestedValues": ["Basic", "Standard", "Premium"]
+            },
+            {
+              "key": "session-format",
+              "label": "Session format",
+              "aliases": [],
+              "namePlaceholder": "e.g. Session format",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Remote, In-person",
+              "suggestedValues": ["Remote", "In-person"]
+            },
+            {
+              "key": "delivery-format",
+              "label": "Delivery format",
+              "aliases": [],
+              "namePlaceholder": "e.g. Delivery format",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Digital, Printed, Digital and printed",
+              "suggestedValues": ["Digital", "Printed", "Digital and printed"]
+            }
+          ]
+        }
+      }
+    },
+    "other-mixed-business": {
+      "product": {
+        "kind": "product",
+        "name": {
+          "placeholder": "e.g. Your product name",
+          "examples": ["Your product name", "Handmade item"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the item customers will receive.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Size, Colour, Material",
+          "helperText": "Add customer choices such as Size, Colour, Material, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "size",
+              "label": "Size",
+              "aliases": [],
+              "namePlaceholder": "e.g. Size",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Small, Medium, Large",
+              "suggestedValues": ["Small", "Medium", "Large"]
+            },
+            {
+              "key": "colour",
+              "label": "Colour",
+              "aliases": ["Color"],
+              "namePlaceholder": "e.g. Colour",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Black, White, Blue",
+              "suggestedValues": ["Black", "White", "Blue"]
+            },
+            {
+              "key": "material",
+              "label": "Material",
+              "aliases": [],
+              "namePlaceholder": "e.g. Material",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Wood, Metal, Fabric",
+              "suggestedValues": ["Wood", "Metal", "Fabric"]
+            }
+          ]
+        },
+        "stockUnit": {
+          "placeholder": "e.g. Piece, Kilogram, Litre",
+          "helperText": "Main unit.",
+          "suggestions": ["Piece", "Kilogram", "Litre"]
+        }
+      },
+      "service": {
+        "kind": "service",
+        "name": {
+          "placeholder": "e.g. Your service name",
+          "examples": ["Your service name", "Consultation"]
+        },
+        "description": {
+          "placeholder": "e.g. Describe the work and what is included.",
+          "helperText": "Describe what customers will receive."
+        },
+        "options": {
+          "namePlaceholder": "e.g. Package, Service level, Visit type",
+          "helperText": "Add customer choices such as Package, Service level, Visit type, or enter your own.",
+          "suggestedOptions": [
+            {
+              "key": "package",
+              "label": "Package",
+              "aliases": [],
+              "namePlaceholder": "e.g. Package",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Basic, Standard, Premium",
+              "suggestedValues": ["Basic", "Standard", "Premium"]
+            },
+            {
+              "key": "service-level",
+              "label": "Service level",
+              "aliases": [],
+              "namePlaceholder": "e.g. Service level",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Standard, Express, Premium",
+              "suggestedValues": ["Standard", "Express", "Premium"]
+            },
+            {
+              "key": "visit-type",
+              "label": "Visit type",
+              "aliases": [],
+              "namePlaceholder": "e.g. Visit type",
+              "helperText": "Choose the values you actually offer; you can enter your own.",
+              "valuePlaceholder": "e.g. Remote, In-store, On-site",
+              "suggestedValues": ["Remote", "In-store", "On-site"]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "byHelper": {
+    "farm-eggs-tray": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Eggs",
+        "examples": ["Eggs"]
+      },
+      "description": {
+        "placeholder": "e.g. Fresh eggs collected from our farm.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Egg size, Grade",
+        "helperText": "Add customer choices such as Egg size, Grade, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "egg-size",
+            "label": "Egg size",
+            "aliases": ["Size"],
+            "namePlaceholder": "e.g. Egg size",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Small, Medium, Large",
+            "suggestedValues": ["Small", "Medium", "Large"]
+          },
+          {
+            "key": "grade",
+            "label": "Grade",
+            "aliases": [],
+            "namePlaceholder": "e.g. Grade",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Grade A, Grade B",
+            "suggestedValues": ["Grade A", "Grade B"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Egg",
+        "helperText": "Main unit.",
+        "suggestions": ["Egg"]
+      }
+    },
+    "farm-produce-weight": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Farm Produce",
+        "examples": ["Farm Produce"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the harvested produce and its grade.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Grade, Produce type",
+        "helperText": "Add customer choices such as Grade, Produce type, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "grade",
+            "label": "Grade",
+            "aliases": [],
+            "namePlaceholder": "e.g. Grade",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Grade A, Grade B",
+            "suggestedValues": ["Grade A", "Grade B"]
+          },
+          {
+            "key": "produce-type",
+            "label": "Produce type",
+            "aliases": [],
+            "namePlaceholder": "e.g. Produce type",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Tomato, Pepper, Maize",
+            "suggestedValues": ["Tomato", "Pepper", "Maize"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Kilogram",
+        "helperText": "Main unit.",
+        "suggestions": ["Kilogram"]
+      }
+    },
+    "drinks-bottle-crate": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Bottled water",
+        "examples": ["Bottled water", "Orange juice", "Soft drink"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the drink, flavour and packaging.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Flavour, Brand",
+        "helperText": "Add customer choices such as Flavour, Brand, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "flavour",
+            "label": "Flavour",
+            "aliases": [],
+            "namePlaceholder": "e.g. Flavour",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Cola, Orange, Lemon",
+            "suggestedValues": ["Cola", "Orange", "Lemon"]
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "aliases": [],
+            "namePlaceholder": "e.g. Brand",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+            "suggestedValues": ["Local brand", "Store brand", "Imported brand"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Bottle, Crate, Litre",
+        "helperText": "Main unit.",
+        "suggestions": ["Bottle", "Crate", "Litre"]
+      }
+    },
+    "fabric-roll-metre": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Ankara fabric",
+        "examples": ["Ankara fabric", "Cotton lining", "Sewing thread"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the fabric, pattern and finish.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Material, Colour, Pattern",
+        "helperText": "Add customer choices such as Material, Colour, Pattern, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "material",
+            "label": "Material",
+            "aliases": [],
+            "namePlaceholder": "e.g. Material",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Cotton, Linen, Silk",
+            "suggestedValues": ["Cotton", "Linen", "Silk", "Polyester"]
+          },
+          {
+            "key": "colour",
+            "label": "Colour",
+            "aliases": ["Color"],
+            "namePlaceholder": "e.g. Colour",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Blue, Red, Black",
+            "suggestedValues": ["Blue", "Red", "Black", "White"]
+          },
+          {
+            "key": "pattern",
+            "label": "Pattern",
+            "aliases": [],
+            "namePlaceholder": "e.g. Pattern",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Plain, Floral, Striped",
+            "suggestedValues": ["Plain", "Floral", "Striped", "Printed"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Metre, Roll, Piece",
+        "helperText": "Main unit.",
+        "suggestions": ["Metre", "Roll", "Piece"]
+      }
+    },
+    "rice-kilogram": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Rice",
+        "examples": ["Rice", "Cooking oil", "Breakfast cereal"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the variety, ingredients or packaging.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Brand, Variety, Grade",
+        "helperText": "Add customer choices such as Brand, Variety, Grade, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "brand",
+            "label": "Brand",
+            "aliases": [],
+            "namePlaceholder": "e.g. Brand",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+            "suggestedValues": ["Local brand", "Store brand", "Imported brand"]
+          },
+          {
+            "key": "variety",
+            "label": "Variety",
+            "aliases": [],
+            "namePlaceholder": "e.g. Variety",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Long grain, Short grain, Brown rice",
+            "suggestedValues": ["Long grain", "Short grain", "Brown rice"]
+          },
+          {
+            "key": "grade",
+            "label": "Grade",
+            "aliases": [],
+            "namePlaceholder": "e.g. Grade",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Standard, Premium",
+            "suggestedValues": ["Standard", "Premium"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Piece, Kilogram, Litre",
+        "helperText": "Main unit.",
+        "suggestions": ["Piece", "Kilogram", "Litre"]
+      }
+    },
+    "biscuits-piece-carton": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Rice",
+        "examples": ["Rice", "Cooking oil", "Breakfast cereal"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the variety, ingredients or packaging.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Flavour, Filling, Brand",
+        "helperText": "Add customer choices such as Flavour, Filling, Brand, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "flavour",
+            "label": "Flavour",
+            "aliases": [],
+            "namePlaceholder": "e.g. Flavour",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Plain, Chocolate, Coconut",
+            "suggestedValues": ["Plain", "Chocolate", "Coconut"]
+          },
+          {
+            "key": "filling",
+            "label": "Filling",
+            "aliases": [],
+            "namePlaceholder": "e.g. Filling",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. No filling, Cream, Chocolate",
+            "suggestedValues": ["No filling", "Cream", "Chocolate"]
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "aliases": [],
+            "namePlaceholder": "e.g. Brand",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+            "suggestedValues": ["Local brand", "Store brand", "Imported brand"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Piece, Kilogram, Litre",
+        "helperText": "Main unit.",
+        "suggestions": ["Piece", "Kilogram", "Litre"]
+      }
+    },
+    "bottled-water-pack": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Bottled water",
+        "examples": ["Bottled water", "Orange juice", "Soft drink"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the drink, flavour and packaging.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Water type, Brand",
+        "helperText": "Add customer choices such as Water type, Brand, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "water-type",
+            "label": "Water type",
+            "aliases": [],
+            "namePlaceholder": "e.g. Water type",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Still, Sparkling",
+            "suggestedValues": ["Still", "Sparkling"]
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "aliases": [],
+            "namePlaceholder": "e.g. Brand",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+            "suggestedValues": ["Local brand", "Store brand", "Imported brand"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Bottle, Crate, Litre",
+        "helperText": "Main unit.",
+        "suggestions": ["Bottle", "Crate", "Litre"]
+      }
+    },
+    "bandages-piece-box": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Adhesive bandages",
+        "examples": [
+          "Adhesive bandages",
+          "Digital thermometer",
+          "First aid kit"
+        ]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the packaged item and manufacturer information.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Bandage type, Material, Size",
+        "helperText": "Add customer choices such as Bandage type, Material, Size, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "bandage-type",
+            "label": "Bandage type",
+            "aliases": [],
+            "namePlaceholder": "e.g. Bandage type",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Adhesive, Gauze, Elastic",
+            "suggestedValues": ["Adhesive", "Gauze", "Elastic"]
+          },
+          {
+            "key": "material",
+            "label": "Material",
+            "aliases": [],
+            "namePlaceholder": "e.g. Material",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Fabric, Plastic, Latex-free",
+            "suggestedValues": ["Fabric", "Plastic", "Latex-free"]
+          },
+          {
+            "key": "size",
+            "label": "Size",
+            "aliases": [],
+            "namePlaceholder": "e.g. Size",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Small, Medium, Large",
+            "suggestedValues": ["Small", "Medium", "Large"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Pack, Piece, Box",
+        "helperText": "Main unit.",
+        "suggestions": ["Pack", "Piece", "Box"]
+      }
+    },
+    "cable-metre-roll": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Cement",
+        "examples": ["Cement", "Wall paint", "Electrical cable"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the material, grade and specifications.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Core type, Conductor, Colour",
+        "helperText": "Add customer choices such as Core type, Conductor, Colour, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "core-type",
+            "label": "Core type",
+            "aliases": [],
+            "namePlaceholder": "e.g. Core type",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Single core, Multicore",
+            "suggestedValues": ["Single core", "Multicore"]
+          },
+          {
+            "key": "conductor",
+            "label": "Conductor",
+            "aliases": [],
+            "namePlaceholder": "e.g. Conductor",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Copper, Aluminium",
+            "suggestedValues": ["Copper", "Aluminium"]
+          },
+          {
+            "key": "colour",
+            "label": "Colour",
+            "aliases": ["Color"],
+            "namePlaceholder": "e.g. Colour",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Brown, Blue, Green and yellow",
+            "suggestedValues": ["Brown", "Blue", "Green and yellow"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Bag, Tin, Metre, Piece",
+        "helperText": "Main unit.",
+        "suggestions": ["Bag", "Tin", "Metre", "Piece"]
+      }
+    },
+    "wholesale-piece-pack-carton": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Wholesale rice",
+        "examples": ["Wholesale rice", "Cleaning supplies", "Packaged snacks"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the item, brand and packaging.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Brand, Grade, Variety",
+        "helperText": "Add customer choices such as Brand, Grade, Variety, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "brand",
+            "label": "Brand",
+            "aliases": [],
+            "namePlaceholder": "e.g. Brand",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Local brand, Store brand, Imported brand",
+            "suggestedValues": ["Local brand", "Store brand", "Imported brand"]
+          },
+          {
+            "key": "grade",
+            "label": "Grade",
+            "aliases": [],
+            "namePlaceholder": "e.g. Grade",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Standard, Premium, Economy",
+            "suggestedValues": ["Standard", "Premium", "Economy"]
+          },
+          {
+            "key": "variety",
+            "label": "Variety",
+            "aliases": [],
+            "namePlaceholder": "e.g. Variety",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Original, Flavoured, Mixed",
+            "suggestedValues": ["Original", "Flavoured", "Mixed"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Piece, Bag, Kilogram, Bottle",
+        "helperText": "Main unit.",
+        "suggestions": ["Piece", "Bag", "Kilogram", "Bottle"]
+      }
+    },
+    "mixed-everyday-item": {
+      "kind": "product",
+      "name": {
+        "placeholder": "e.g. Your product name",
+        "examples": ["Your product name", "Handmade item"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the item customers will receive.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Size, Colour, Material",
+        "helperText": "Add customer choices such as Size, Colour, Material, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "size",
+            "label": "Size",
+            "aliases": [],
+            "namePlaceholder": "e.g. Size",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Small, Medium, Large",
+            "suggestedValues": ["Small", "Medium", "Large"]
+          },
+          {
+            "key": "colour",
+            "label": "Colour",
+            "aliases": ["Color"],
+            "namePlaceholder": "e.g. Colour",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Black, White, Blue",
+            "suggestedValues": ["Black", "White", "Blue"]
+          },
+          {
+            "key": "material",
+            "label": "Material",
+            "aliases": [],
+            "namePlaceholder": "e.g. Material",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Wood, Metal, Fabric",
+            "suggestedValues": ["Wood", "Metal", "Fabric"]
+          }
+        ]
+      },
+      "stockUnit": {
+        "placeholder": "e.g. Piece, Kilogram, Litre",
+        "helperText": "Main unit.",
+        "suggestions": ["Piece", "Kilogram", "Litre"]
+      }
+    },
+    "mixed-basic-service": {
+      "kind": "service",
+      "name": {
+        "placeholder": "e.g. Your service name",
+        "examples": ["Your service name", "Consultation"]
+      },
+      "description": {
+        "placeholder": "e.g. Describe the work and what is included.",
+        "helperText": "Describe what customers will receive."
+      },
+      "options": {
+        "namePlaceholder": "e.g. Package, Service level, Visit type",
+        "helperText": "Add customer choices such as Package, Service level, Visit type, or enter your own.",
+        "suggestedOptions": [
+          {
+            "key": "package",
+            "label": "Package",
+            "aliases": [],
+            "namePlaceholder": "e.g. Package",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Basic, Standard, Premium",
+            "suggestedValues": ["Basic", "Standard", "Premium"]
+          },
+          {
+            "key": "service-level",
+            "label": "Service level",
+            "aliases": [],
+            "namePlaceholder": "e.g. Service level",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Standard, Express, Premium",
+            "suggestedValues": ["Standard", "Express", "Premium"]
+          },
+          {
+            "key": "visit-type",
+            "label": "Visit type",
+            "aliases": [],
+            "namePlaceholder": "e.g. Visit type",
+            "helperText": "Choose the values you actually offer; you can enter your own.",
+            "valuePlaceholder": "e.g. Remote, In-store, On-site",
+            "suggestedValues": ["Remote", "In-store", "On-site"]
+          }
+        ]
+      }
+    }
+  }
+}

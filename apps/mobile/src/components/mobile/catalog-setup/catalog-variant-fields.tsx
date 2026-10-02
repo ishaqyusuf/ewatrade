@@ -1,10 +1,10 @@
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { Text } from "@/components/ui/text"
 import { View } from "react-native"
-import type { CatalogVariantManagerProps } from "./catalog-variant-model"
-import type { CatalogVariantsModel } from "./use-catalog-variants"
 import { CatalogVariantBasics } from "./catalog-variant-basics"
 import { CatalogVariantDetails } from "./catalog-variant-details"
+import type { CatalogVariantManagerProps } from "./catalog-variant-model"
+import type { CatalogVariantsModel } from "./use-catalog-variants"
 
 export function CatalogVariantFields({
   model,

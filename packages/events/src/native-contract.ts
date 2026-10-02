@@ -3,13 +3,15 @@ import {
   analyticsEventSchema,
 } from "@ishaqyusuf/logly-core"
 import { z } from "zod"
+import { analyticsContextSchema } from "./attributed-contract"
 
 // Logly's native wire contract is deployed separately from its published 0.2 SDK.
 // Keep this compatibility boundary explicit until core 0.3 is published.
 export const nativeEventSchema = analyticsEventSchema.extend({
+  analyticsContext: analyticsContextSchema,
   source: z.literal("mobile"),
   platform: z.literal("android"),
-  name: z.enum(["app_session", "screen_view"]),
+
   appVersion: z
     .string()
     .regex(/^[0-9]+(?:\.[0-9]+){1,3}$/)

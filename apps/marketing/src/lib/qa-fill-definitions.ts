@@ -28,7 +28,8 @@ export const businessFill = (
     businessProfileVersion: 1,
     businessSize: "2_5",
     city: business.city,
-    countryCode: "NG",
+    // QA fixtures use a reserved +1 number; retain its explicit calling code.
+    countryCode: "OTHER",
     currencyCode: normalizeOperatingCurrencyCode(business.currencyCode),
     operatingModel: "products",
     orderChannels: ["walk_in"],

@@ -1,0 +1,107 @@
+// Catalog display photos are separate from private service-job evidence.
+model CatalogPhotoAsset {
+  id                  String                 @id @default(cuid())
+  tenantId            String
+  storeId             String
+  actorUserId         String
+  clientOperationId   String
+  payloadHash         String
+  contentDigest       String
+  contentType         String
+  sizeBytes           Int
+  state               CatalogPhotoAssetState @default(UPLOADING)
+  storageProvider     String                 @default("vercel_blob_private")
+  storageStoreId      String?
+  storagePath         String?
+  uploadedAt          DateTime?
+  bytesDeletedAt      DateTime?
+  reviewProvider      String?
+  reviewPolicyVersion String?
+  reviewDisplayDigest String?
+  reviewedAt          DateTime?
+  approvedAt          DateTime?
+  expiresAt           DateTime
+  catalogItemId       String?
+  sortOrder           Int?
+  attachedAt          DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store               Store                  @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Restrict)
+  catalogItem         CatalogItem?           @relation(fields: [tenantId, catalogItemId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, clientOperationId])
+  @@unique([tenantId, storagePath])
+  @@unique([catalogItemId, sortOrder])
+  @@index([tenantId, storeId, actorUserId, expiresAt])
+  @@index([tenantId, catalogItemId, state])
+}
+
+// Approval is a server-only verdict bound to the immutable source/display bytes.
+enum CatalogPhotoAssetState {
+  UPLOADING
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REMOVED
+}
+
+// No Tenant/Store/User FK: cleanup ownership must survive approved hard deletion.
+// Exact object identity is immutable; only lease/retry fields are updated.
+model CatalogPhotoDeletionOutbox {
+  id                 String   @id @default(cuid())
+  assetId            String   @unique
+  tenantId           String
+  storeId            String
+  contentDigest      String
+  contentType        String
+  sizeBytes          Int
+  storageProvider    String
+  storageStoreId     String
+  storagePath        String
+  dataClassification String
+  provenance         String
+  availableAt        DateTime
+  leaseToken         String?
+  leaseUntil         DateTime?
+  attempts           Int      @default(0)
+  completedAt        DateTime?
+  createdAt          DateTime @default(now())
+
+  @@unique([storageStoreId, storagePath])
+  @@index([completedAt, availableAt, leaseUntil])
+}
+
+// Independent durable receipts also inventory writes interrupted before completion.
+// No FK/cascade: exact private cleanup ownership survives Tenant/asset deletion.
+model CatalogPhotoDerivative {
+  id                 String   @id @default(cuid())
+  assetId            String
+  tenantId           String
+  storeId            String
+  sourceDigest       String
+  processingVersion  String
+  variant            String
+  displayDigest      String
+  storageStoreId     String
+  storagePath        String
+  contentDigest      String
+  contentType        String
+  sizeBytes          Int
+  width              Int
+  height             Int
+  dataClassification String
+  provenance         String   @default("catalog-derivative-v1")
+  readyAt            DateTime?
+  writeUntil         DateTime
+  leaseToken         String?
+  leaseUntil         DateTime?
+  availableAt        DateTime
+  attempts           Int      @default(0)
+  createdAt          DateTime @default(now())
+
+  @@unique([storageStoreId, storagePath])
+  @@unique([assetId, sourceDigest, processingVersion, variant])
+  @@index([tenantId, assetId])
+  @@index([availableAt, leaseUntil])
+}

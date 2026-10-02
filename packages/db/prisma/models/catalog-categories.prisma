@@ -1,0 +1,20 @@
+// Presets are reusable vocabulary. Each business owns its selected/custom rows.
+model CatalogCategory {
+  id               String            @id @default(cuid())
+  tenantId         String
+  key              String
+  label            String
+  normalizedLabel  String
+  parentId         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent           CatalogCategory?  @relation("CatalogCategoryChildren", fields: [tenantId, parentId], references: [tenantId, id], onDelete: Restrict)
+  children         CatalogCategory[] @relation("CatalogCategoryChildren")
+  items            CatalogItem[]     @relation("CatalogItemCategory")
+  subcategoryItems CatalogItem[]     @relation("CatalogItemSubcategory")
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, key])
+  @@index([tenantId, parentId, normalizedLabel])
+}

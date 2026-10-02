@@ -1,7 +1,9 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { Button, ControlField, Input } from "@ewatrade/ui"
 
 import type { RegisterServiceCommerceFormReset } from "@/components/service-commerce/form-context"
-import { Button } from "@ewatrade/ui"
+
 import { useEffect, useState } from "react"
 
 type NumberOption = {
@@ -10,9 +12,6 @@ type NumberOption = {
   phoneNumberId: string
   wabaId: string
 }
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 export function EmbeddedSignupSelection({
   error,
@@ -45,7 +44,7 @@ export function EmbeddedSignupSelection({
   )
 
   return (
-    <section className="grid gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
+    <section className="grid gap-4 rounded-none border border-primary/30 bg-primary/5 p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-primary">
           Authorized numbers
@@ -57,37 +56,31 @@ export function EmbeddedSignupSelection({
         </p>
       </div>
       {isLoading ? (
-        <div className="h-28 animate-pulse rounded-lg bg-muted" />
+        <div className="h-28 animate-pulse rounded-none bg-muted" />
       ) : error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : numbers.length === 0 ? (
-        <p className="text-sm text-destructive" role="alert">
+        <FormFeedback appearance="dashboard">
           This selection expired or has no authorized numbers. Start Embedded
           Signup again.
-        </p>
+        </FormFeedback>
       ) : (
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Consented test recipient</span>
-              <input
-                className={fieldClass}
+            <ControlField label={<>Consented test recipient</>}>
+              <Input
                 onChange={(event) => setTestRecipient(event.target.value)}
                 placeholder="+234…"
                 value={testRecipient}
               />
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Billing owner</span>
-              <input
-                className={fieldClass}
+            </ControlField>
+            <ControlField label={<>Billing owner</>}>
+              <Input
                 onChange={(event) => setBillingOwner(event.target.value)}
                 placeholder="Business"
                 value={billingOwner}
               />
-            </label>
+            </ControlField>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {numbers.map((number) => (
@@ -104,6 +97,7 @@ export function EmbeddedSignupSelection({
                 }
                 type="button"
                 variant="outline"
+                appearance="form"
               >
                 <span>
                   <span className="block font-medium">

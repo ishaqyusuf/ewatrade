@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=${PORTLESS_WILDCARD:-1} PORTLESS_SYNC_HOSTS=${PORTLESS_SYNC_HOSTS:-0} PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-3095} TZ=UTC portless ewatrade-api bun run --hot src/local.ts",
+    "dev": "node ../../scripts/with-workspace-env.mjs PORTLESS_WILDCARD=${PORTLESS_WILDCARD:-1} PORTLESS_SYNC_HOSTS=${PORTLESS_SYNC_HOSTS:-0} PORTLESS_APP_PORT=${PORTLESS_APP_PORT:-${API_PORT:-3095}} TZ=UTC portless ewatrade-api bun run --hot src/local.ts",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
@@ -17,6 +17,7 @@
   "dependencies": {
     "@apple/app-store-server-library": "^3.1.0",
     "@ewatrade/auth": "workspace:*",
+    "@ewatrade/catalog": "workspace:*",
     "@ewatrade/communications": "workspace:*",
     "@ewatrade/db": "workspace:*",
     "@ewatrade/domains": "workspace:*",
@@ -26,6 +27,7 @@
     "@ewatrade/observability": "workspace:*",
     "@ewatrade/payments": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
+    "@ewatrade/private-media": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@hono/trpc-server": "^0.4.2",
@@ -38,7 +40,8 @@
     "music-metadata": "^11.14.0",
     "resend": "^6.30.0",
     "superjson": "^2.2.6",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@ewatrade/events": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

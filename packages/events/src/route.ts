@@ -1,4 +1,6 @@
-import { analyticsBatchSchema } from "@ishaqyusuf/logly-core"
+import { attributedBatchSchema } from "./attributed-contract"
+import { safeEventMetadata } from "./event-metadata"
+import { verifyAnalyticsContext } from "./identity-server"
 import { nativeBatchSchema } from "./native-contract"
 import { isProductOrigin, safeBatch, safeRoute } from "./policy"
 import { readBatchBody } from "./read-batch-body"
@@ -49,7 +51,7 @@ export function createEventsRoute(
       )
     const native =
       surface === "mobile" ? nativeBatchSchema.safeParse(input.body) : undefined
-    const parsed = analyticsBatchSchema.safeParse(input.body)
+    const parsed = attributedBatchSchema.safeParse(input.body)
     if (!native?.success && !parsed.success)
       return Response.json({ error: "Invalid batch" }, { status: 400 })
     const project =
@@ -75,7 +77,7 @@ export function createEventsRoute(
             appVersion: event.appVersion,
             appBuild: event.appBuild,
             route: safeRoute(event.route),
-            properties: {},
+            properties: safeEventMetadata(event.properties),
           })),
         }
       : parsed.success
@@ -83,6 +85,28 @@ export function createEventsRoute(
         : undefined
     if (!batch)
       return Response.json({ error: "Invalid batch" }, { status: 400 })
+    const incoming = native?.success
+      ? native.data.events
+      : parsed.success
+        ? parsed.data.events
+        : []
+    const contexts = new Map(
+      incoming.map((event) => [event.eventId, event.analyticsContext]),
+    )
+    for (const event of batch.events) {
+      event.properties = { ...event.properties, audience: "anonymous" }
+      const token = contexts.get(event.eventId)
+      if (token === undefined) continue
+      const identity = verifyAnalyticsContext(token, project, event.occurredAt)
+      if (!identity)
+        return Response.json(
+          { error: "Invalid analytics context" },
+          { status: 400 },
+        )
+      Object.assign(event, identity, {
+        properties: { ...event.properties, ...identity.properties },
+      })
+    }
     if (!batch.events.length)
       return Response.json({ accepted: 0 }, { status: 202 })
     const country =

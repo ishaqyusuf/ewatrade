@@ -33,18 +33,35 @@ import {
   commitCatalogStockReservationInTransaction,
   reserveCatalogOfferingStockInTransaction,
 } from "./catalog-inventory"
+import {
+  isCommercialOrderFulfillmentAllowed,
+  readCommercialOrderLinesComplete,
+} from "./commercial-order-completion"
 import { allocateCommercialOrderNumber } from "./commercial-order-number"
 import {
   type CommercialPaymentMethodValue,
   effectiveCommercialAmountPaid,
   recordCommercialOrderPaymentInTransaction,
 } from "./commercial-payments"
+import {
+  lockCommerceFinancialContext,
+  lockCommerceFinancialOrder,
+} from "./customer-ledger/commerce-locks"
 import { ensureOrderCustomerInTransaction } from "./customers"
+import { postProductReturnFinanceJournalInTransaction } from "./finance/posting"
+import { recordProductFulfillmentValuationInTransaction } from "./finance/valuation-issues"
+import { recordProductReturnValuationInTransaction } from "./finance/valuation-returns"
+import {
+  type ListSortKey,
+  buildScopedListCursorWhere,
+  buildScopedListPageWhere,
+} from "./list-sort"
 import { loadTenantActors } from "./tenant-actors"
 
 export type CreateCommercialOrderInput = {
   actorUserId: string
   clientOrderId: string
+  customerId?: string
   customerEmail?: string
   customerName?: string
   customerPhone?: string
@@ -82,6 +99,8 @@ const orderGraph = {
     include: {
       productFulfillments: true,
       productReturns: true,
+      serviceFulfillment: true,
+      serviceAuthorization: true,
       snapshot: true,
       stockReservation: true,
     },
@@ -180,6 +199,7 @@ function serializeOrder(order: OrderGraph) {
     currencyCode: order.currencyCode,
     customerEmail: order.customerEmail,
     customerName: order.customerName,
+    customerId: order.customerId,
     customerPhone: order.customerPhone,
     discountMinor: order.discountMinor,
     deliveryDueAt: order.deliveryDueAt,
@@ -204,6 +224,24 @@ function serializeOrder(order: OrderGraph) {
         stockOperationId: productReturn.stockOperationId,
       })),
       quantity: line.quantity.toString(),
+      serviceFulfillment: line.serviceFulfillment
+        ? {
+            id: line.serviceFulfillment.id,
+            actorUserId: line.serviceFulfillment.actorUserId,
+            performedAt: line.serviceFulfillment.performedAt,
+            quantity: line.serviceFulfillment.quantity.toString(),
+            reason: line.serviceFulfillment.reason,
+          }
+        : null,
+      serviceAuthorization: line.serviceAuthorization
+        ? {
+            id: line.serviceAuthorization.id,
+            actorUserId: line.serviceAuthorization.actorUserId,
+            authorizedAt: line.serviceAuthorization.authorizedAt,
+            quantity: line.serviceAuthorization.quantity.toString(),
+            reason: line.serviceAuthorization.reason,
+          }
+        : null,
       reservation: line.stockReservation
         ? {
             balanceSourceId: line.stockReservation.balanceSourceId,
@@ -233,6 +271,9 @@ function serializeOrder(order: OrderGraph) {
                 ? ("fixed" as const)
                 : ("quote_required" as const),
             stockBehavior: line.snapshot.stockBehavior,
+            serviceWorkPolicy: line.snapshot.serviceWorkPolicy,
+            serviceAuthorizationPolicy:
+              line.snapshot.serviceAuthorizationPolicy,
             unitFactor: line.snapshot.unitFactor?.toString() ?? null,
             variantName: line.snapshot.variantName,
           }
@@ -263,37 +304,26 @@ function serializeOrder(order: OrderGraph) {
   }
 }
 
-async function resolveOrderStatusAfterProductFulfillment(
-  tx: Prisma.TransactionClient,
-  orderId: string,
-) {
-  const lines = await tx.commercialOrderLine.findMany({
-    select: {
-      kind: true,
-      productFulfillments: { select: { id: true }, take: 1 },
-    },
-    where: { orderId },
-  })
-  const productLines = lines.filter(
-    (line) => line.kind === SellableOfferingKind.PRODUCT_UNIT,
-  )
-  const allProductsFulfilled =
-    productLines.length > 0 &&
-    productLines.every((line) => line.productFulfillments.length > 0)
-  return allProductsFulfilled &&
-    lines.every((line) => line.kind === SellableOfferingKind.PRODUCT_UNIT)
-    ? OrderStatus.COMPLETED
-    : OrderStatus.FULFILLING
-}
-
 async function updateOrderStatusAfterProductFulfillment(
   tx: Prisma.TransactionClient,
   orderId: string,
 ) {
-  const status = await resolveOrderStatusAfterProductFulfillment(tx, orderId)
+  const order = await tx.commercialOrder.findUniqueOrThrow({
+    where: { id: orderId },
+    select: { completedAt: true, storeId: true, tenantId: true },
+  })
+  const complete = await readCommercialOrderLinesComplete(tx, {
+    orderId,
+    storeId: order.storeId,
+    tenantId: order.tenantId,
+  })
+  const status = complete ? OrderStatus.COMPLETED : OrderStatus.FULFILLING
   await tx.commercialOrder.update({
     data: {
-      completedAt: status === OrderStatus.COMPLETED ? new Date() : undefined,
+      completedAt:
+        status === OrderStatus.COMPLETED
+          ? (order.completedAt ?? new Date())
+          : undefined,
       status,
     },
     where: { id: orderId },
@@ -315,6 +345,7 @@ async function fulfillCommercialOrderProductLineInTransaction(
     reason?: string
     schemaVersion: number
     tenantId: string
+    storeId: string
   },
 ) {
   if (!input.line.stockReservation) {
@@ -323,17 +354,32 @@ async function fulfillCommercialOrderProductLineInTransaction(
       "Reserved Product Order line not found.",
     )
   }
-  const operation = await commitCatalogStockReservationInTransaction(tx, {
-    actorUserId: input.actorUserId,
-    clientOperationId: input.clientOperationId,
-    operationType: "sale_fulfillment",
-    reason: input.reason,
-    reservationId: input.line.stockReservation.id,
-    schemaVersion: input.schemaVersion,
-    source: "commercial_order",
-    tenantId: input.tenantId,
+  const previousFulfillment = await tx.productFulfillment.findUnique({
+    where: {
+      orderLineId_reservationId: {
+        orderLineId: input.line.id,
+        reservationId: input.line.stockReservation.id,
+      },
+    },
   })
-  return tx.productFulfillment.upsert({
+  const operation = await commitCatalogStockReservationInTransaction(
+    tx,
+    {
+      actorUserId: input.actorUserId,
+      clientOperationId: input.clientOperationId,
+      operationType: "sale_fulfillment",
+      reason: input.reason,
+      reservationId: input.line.stockReservation.id,
+      schemaVersion: input.schemaVersion,
+      source: "commercial_order",
+      tenantId: input.tenantId,
+    },
+    {
+      expectedStoreId: input.storeId,
+      expectedCommercialOrderLineId: input.line.id,
+    },
+  )
+  const fulfillment = await tx.productFulfillment.upsert({
     create: {
       orderLineId: input.line.id,
       quantity: input.line.quantity,
@@ -348,6 +394,14 @@ async function fulfillCommercialOrderProductLineInTransaction(
       },
     },
   })
+  // Replayed legacy fulfillment is not a reviewed historical cost import.
+  if (!previousFulfillment) {
+    await recordProductFulfillmentValuationInTransaction(tx, {
+      tenantId: input.tenantId,
+      fulfillmentId: fulfillment.id,
+    })
+  }
+  return fulfillment
 }
 
 async function fulfillCommercialOrderProductsInTransaction(
@@ -361,6 +415,15 @@ async function fulfillCommercialOrderProductsInTransaction(
     tenantId: string
   },
 ) {
+  const lockedOrder = await lockCommerceFinancialOrder(tx, input)
+  if (!lockedOrder) {
+    throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+  }
+  if (!isCommercialOrderFulfillmentAllowed(lockedOrder.order.status))
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "This Order cannot be fulfilled in its current state.",
+    )
   const productLines = await tx.commercialOrderLine.findMany({
     include: { productFulfillments: true, stockReservation: true },
     orderBy: { createdAt: "asc" },
@@ -383,6 +446,7 @@ async function fulfillCommercialOrderProductsInTransaction(
       reason: input.reason,
       schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
+      storeId: lockedOrder.order.storeId,
     })
   }
 
@@ -485,6 +549,29 @@ export async function createCommercialOrderInTransaction(
     )
   }
 
+  await lockCommerceFinancialContext(tx, {
+    tenantId: input.tenantId,
+    currencyCode: store.currencyCode,
+    customerId: input.customerId,
+  })
+
+  // Contact snapshots and directory name matching do not establish financial
+  // ownership. Only an explicitly selected, same-Tenant Customer does.
+  if (input.customerId !== undefined) {
+    if (
+      !input.customerId.trim() ||
+      !(await tx.customer.findFirst({
+        where: { id: input.customerId, tenantId: input.tenantId },
+        select: { id: true },
+      }))
+    ) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Selected Customer not found in this business.",
+      )
+    }
+  }
+
   const resolvedLines: Array<{
     input: CreateCommercialOrderInput["lines"][number]
     offering: Awaited<ReturnType<typeof tx.sellableOffering.findFirst>> & {
@@ -501,7 +588,11 @@ export async function createCommercialOrderInTransaction(
         barcode: string | null
         sku: string | null
       }
-      serviceOffering: null | { quantityScale: number }
+      serviceOffering: null | {
+        quantityScale: number
+        workPolicy: ServiceWorkPolicy
+        authorizationPolicy: WorkAuthorizationPolicy
+      }
       storeAvailability: Array<{ isAvailable: boolean }>
       variant: {
         id: string
@@ -545,6 +636,15 @@ export async function createCommercialOrderInTransaction(
       throw new CatalogError(
         "OFFERING_UNAVAILABLE",
         "An Order line selected an unavailable Offering.",
+      )
+    }
+    if (
+      offering.kind === SellableOfferingKind.SERVICE &&
+      !offering.serviceOffering
+    ) {
+      throw new CatalogError(
+        "OFFERING_UNAVAILABLE",
+        "Service Offering is missing its work policy.",
       )
     }
 
@@ -662,6 +762,7 @@ export async function createCommercialOrderInTransaction(
       clientOrderId: input.clientOrderId,
       createdByUserId: input.actorUserId,
       currencyCode: store.currencyCode,
+      customerId: input.customerId,
       customerEmail: input.customerEmail?.trim() || null,
       customerName: input.customerName?.trim() || null,
       customerPhone: input.customerPhone?.trim() || null,
@@ -758,6 +859,9 @@ export async function createCommercialOrderInTransaction(
         pricingPolicy: resolved.offering.pricingPolicy,
         quantity: resolved.quantity,
         stockBehavior: productUnit?.stockBehavior,
+        serviceWorkPolicy: resolved.offering.serviceOffering?.workPolicy,
+        serviceAuthorizationPolicy:
+          resolved.offering.serviceOffering?.authorizationPolicy,
         totalMinor: resolved.totalMinor,
         unitFactor: productUnit?.factor,
         unitPriceMinor: resolved.unitPriceMinor,
@@ -775,9 +879,7 @@ export async function createCommercialOrderInTransaction(
       },
       where: {
         orderId: order.id,
-        offering: {
-          serviceOffering: { workPolicy: ServiceWorkPolicy.TRACKED },
-        },
+        snapshot: { serviceWorkPolicy: ServiceWorkPolicy.TRACKED },
       },
     })
     if (trackedLines.length > 0) {
@@ -792,14 +894,13 @@ export async function createCommercialOrderInTransaction(
         },
       })
       for (const orderLine of trackedLines) {
-        const serviceOffering = orderLine.offering.serviceOffering
-        if (!serviceOffering) {
+        const policy = orderLine.snapshot?.serviceAuthorizationPolicy
+        if (!policy) {
           throw new CatalogError(
             "INVALID_ORDER",
             "Tracked Service line is missing its Service Offering.",
           )
         }
-        const policy = serviceOffering.authorizationPolicy
         const authorizationStatus =
           policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION
             ? WorkAuthorizationStatus.AUTHORIZED
@@ -841,12 +942,14 @@ export async function createCommercialOrderInTransaction(
     }
   }
 
-  await ensureOrderCustomerInTransaction(tx, {
-    email: input.customerEmail,
-    name: input.customerName,
-    phone: input.customerPhone,
-    tenantId: input.tenantId,
-  })
+  if (!input.customerId) {
+    await ensureOrderCustomerInTransaction(tx, {
+      email: input.customerEmail,
+      name: input.customerName,
+      phone: input.customerPhone,
+      tenantId: input.tenantId,
+    })
+  }
 
   if (input.initialPayment) {
     await recordCommercialOrderPaymentInTransaction(tx, {
@@ -879,8 +982,9 @@ export async function createCommercialOrder(
   input: CreateCommercialOrderInput,
 ) {
   try {
-    return await db.$transaction((tx) =>
-      createCommercialOrderInTransaction(tx, input),
+    return await db.$transaction(
+      (tx) => createCommercialOrderInTransaction(tx, input),
+      { maxWait: 10_000, timeout: 30_000 },
     )
   } catch (error) {
     if (
@@ -927,12 +1031,15 @@ export async function listCommercialOrders(
 
 export async function getCommercialOrderReportSummary(
   db: PrismaClient,
-  input: { tenantId: string },
+  input: { storeId?: string; tenantId: string },
 ) {
   const summary = await db.commercialOrder.aggregate({
     _count: { _all: true },
     _sum: { totalMinor: true },
-    where: { tenantId: input.tenantId },
+    where: {
+      tenantId: input.tenantId,
+      ...(input.storeId ? { storeId: input.storeId } : {}),
+    },
   })
 
   return {
@@ -973,6 +1080,10 @@ export async function listCommercialOrdersPage(
     limit?: number
     query?: string
     queryMode?: "all" | "customer"
+    sort?: {
+      direction: "asc" | "desc"
+      field: "orderNumber" | "status" | "createdAt" | "total"
+    }
     statuses?: OrderStatus[]
     storeId?: string
     tenantId: string
@@ -1034,14 +1145,64 @@ export async function listCommercialOrdersPage(
         ],
       }
     : baseWhere
+  const sortFields: Array<{
+    direction: "asc" | "desc"
+    field: "orderNumber" | "status" | "createdAt" | "totalMinor"
+    queryField: "orderNumber" | "status" | "createdAt" | "totalMinor"
+  }> = input.sort
+    ? [
+        {
+          field: input.sort.field === "total" ? "totalMinor" : input.sort.field,
+          direction: input.sort.direction,
+          queryField:
+            input.sort.field === "total" ? "totalMinor" : input.sort.field,
+        },
+      ]
+    : [{ field: "createdAt", direction: "desc", queryField: "createdAt" }]
+  const cursor = input.cursor
+    ? await db.commercialOrder.findFirst({
+        where: buildScopedListCursorWhere(
+          where,
+          input.cursor,
+        ) as Prisma.CommercialOrderWhereInput,
+      })
+    : null
+  if (input.cursor && !cursor) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "The Order list changed. Refresh to continue.",
+    )
+  }
+  const tieDirection = input.sort ? "asc" : "desc"
+  const orderBy = [
+    ...sortFields.map(({ queryField, direction }) => ({
+      [queryField]: direction,
+    })),
+    { id: tieDirection },
+  ] as Prisma.CommercialOrderOrderByWithRelationInput[]
+  const continuationKeys: ListSortKey[] = cursor
+    ? [
+        ...sortFields.map(({ field, direction }) => ({
+          field,
+          direction,
+          value: cursor[field],
+          enumValues:
+            field === "status" ? Object.values(OrderStatus) : undefined,
+        })),
+        { field: "id", direction: tieDirection, value: cursor.id },
+      ]
+    : []
   const [records, totalCount] = await Promise.all([
     db.commercialOrder.findMany({
-      cursor: input.cursor ? { id: input.cursor } : undefined,
       include: orderGraph,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      skip: input.cursor ? 1 : 0,
+      orderBy,
       take: limit + 1,
-      where,
+      where: cursor
+        ? (buildScopedListPageWhere(
+            where,
+            continuationKeys,
+          ) as Prisma.CommercialOrderWhereInput)
+        : where,
     }),
     db.commercialOrder.count({ where: baseWhere }),
   ])
@@ -1072,10 +1233,39 @@ export async function fulfillCommercialOrderProductLine(
 ) {
   assertSchemaVersion(input.schemaVersion)
   return db.$transaction(async (tx) => {
+    const identity = await tx.commercialOrderLine.findFirst({
+      select: { orderId: true },
+      where: {
+        id: input.orderLineId,
+        kind: SellableOfferingKind.PRODUCT_UNIT,
+        order: { tenantId: input.tenantId },
+      },
+    })
+    if (!identity)
+      throw new CatalogError(
+        "ORDER_NOT_FOUND",
+        "Reserved Product Order line not found.",
+      )
+    const lockedOrder = await lockCommerceFinancialOrder(tx, {
+      tenantId: input.tenantId,
+      orderId: identity.orderId,
+    })
+    if (!lockedOrder) {
+      throw new CatalogError(
+        "ORDER_NOT_FOUND",
+        "Reserved Product Order line not found.",
+      )
+    }
+    if (!isCommercialOrderFulfillmentAllowed(lockedOrder.order.status))
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "This Order cannot be fulfilled in its current state.",
+      )
     const line = await tx.commercialOrderLine.findFirst({
       include: { order: true, stockReservation: true },
       where: {
         id: input.orderLineId,
+        orderId: identity.orderId,
         kind: SellableOfferingKind.PRODUCT_UNIT,
         order: { tenantId: input.tenantId },
       },
@@ -1096,6 +1286,7 @@ export async function fulfillCommercialOrderProductLine(
         reason: input.reason,
         schemaVersion: input.schemaVersion,
         tenantId: input.tenantId,
+        storeId: lockedOrder.order.storeId,
       },
     )
     await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
@@ -1145,6 +1336,9 @@ export async function fulfillCommercialOrderProducts(
 
   try {
     return await db.$transaction(async (tx) => {
+      if (!(await lockCommerceFinancialOrder(tx, input))) {
+        throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+      }
       const previous = await tx.commercialOrderFulfillmentCommand.findUnique({
         where: {
           tenantId_clientOperationId: {
@@ -1236,184 +1430,235 @@ export async function returnCommercialOrderProductLine(
 ) {
   assertSchemaVersion(input.schemaVersion)
   const hash = payloadHash(input)
-  return db.$transaction(async (tx) => {
-    const previous = await tx.productReturn.findUnique({
-      where: {
-        tenantId_clientReturnId: {
-          clientReturnId: input.clientReturnId,
-          tenantId: input.tenantId,
-        },
-      },
-    })
-    if (previous) {
-      if (previous.payloadHash !== hash) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This Product Return identity was already used with different input.",
-        )
-      }
-      return previous
-    }
-
-    const line = await tx.commercialOrderLine.findFirst({
-      include: {
-        order: true,
-        productFulfillments: true,
-        productReturns: true,
-        snapshot: { include: { inventoryUnit: true } },
-      },
-      where: {
-        id: input.orderLineId,
-        kind: SellableOfferingKind.PRODUCT_UNIT,
-        order: { tenantId: input.tenantId },
-      },
-    })
-    if (!line?.snapshot || line.productFulfillments.length === 0) {
-      throw new CatalogError(
-        "ORDER_NOT_FOUND",
-        "Fulfilled Product Order line not found.",
-      )
-    }
-    const quantity = parseExactDecimal(input.quantity, {
-      allowZero: false,
-      maxScale: 6,
-    })
-    const fulfilledQuantity = line.productFulfillments.reduce(
-      (total, fulfillment) =>
-        addExactDecimals(total, fulfillment.quantity.toString()),
-      "0",
-    )
-    const returnedQuantity = line.productReturns.reduce(
-      (total, productReturn) =>
-        addExactDecimals(total, productReturn.quantity.toString()),
-      "0",
-    )
-    if (
-      compareExactDecimals(
-        addExactDecimals(returnedQuantity, quantity),
-        fulfilledQuantity,
-      ) > 0
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Return quantity exceeds fulfilled quantity not already returned.",
-      )
-    }
-
-    const disposition =
-      input.disposition === "restock"
-        ? ProductReturnDisposition.RESTOCK
-        : input.disposition === "quarantine"
-          ? ProductReturnDisposition.QUARANTINE
-          : input.disposition === "damaged"
-            ? ProductReturnDisposition.DAMAGED
-            : ProductReturnDisposition.NO_RESTOCK
-    let destinationBalanceSourceId: string | null = null
-    let stockOperationId: string | null = null
-
-    if (disposition === ProductReturnDisposition.RESTOCK) {
-      destinationBalanceSourceId =
-        input.destinationBalanceSourceId ?? line.snapshot.balanceSourceId
-      if (!destinationBalanceSourceId || !line.snapshot.unitFactor) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "Restock disposition requires the original or an explicit compatible Balance Source.",
-        )
-      }
-      const balance = await tx.stockBalanceSource.findFirst({
-        include: { inventoryUnit: true },
+  return db.$transaction(
+    async (tx) => {
+      const identity = await tx.commercialOrderLine.findFirst({
+        select: { orderId: true },
         where: {
-          id: destinationBalanceSourceId,
-          storeId: line.order.storeId,
-          tenantId: input.tenantId,
+          id: input.orderLineId,
+          kind: SellableOfferingKind.PRODUCT_UNIT,
+          order: { tenantId: input.tenantId },
         },
       })
-      const isOriginalBalance = balance?.id === line.snapshot.balanceSourceId
-      const isCompatiblePackagedDestination =
-        balance?.kind === StockBalanceKind.PACKAGED_STOCK &&
-        balance.inventoryUnitId === line.snapshot.inventoryUnitId
+      if (!identity) {
+        throw new CatalogError(
+          "ORDER_NOT_FOUND",
+          "Fulfilled Product Order line not found.",
+        )
+      }
+      const lockedOrder = await lockCommerceFinancialOrder(tx, {
+        tenantId: input.tenantId,
+        orderId: identity.orderId,
+      })
+      if (!lockedOrder) {
+        throw new CatalogError(
+          "ORDER_NOT_FOUND",
+          "Fulfilled Product Order line not found.",
+        )
+      }
+      const previous = await tx.productReturn.findUnique({
+        where: {
+          tenantId_clientReturnId: {
+            clientReturnId: input.clientReturnId,
+            tenantId: input.tenantId,
+          },
+        },
+      })
+      if (previous) {
+        if (previous.payloadHash !== hash) {
+          throw new CatalogError(
+            "IDEMPOTENCY_MISMATCH",
+            "This Product Return identity was already used with different input.",
+          )
+        }
+        return previous
+      }
+
+      const line = await tx.commercialOrderLine.findFirst({
+        include: {
+          order: true,
+          productFulfillments: true,
+          productReturns: true,
+          snapshot: { include: { inventoryUnit: true } },
+        },
+        where: {
+          id: input.orderLineId,
+          orderId: lockedOrder.order.id,
+          kind: SellableOfferingKind.PRODUCT_UNIT,
+          order: { tenantId: input.tenantId },
+        },
+      })
+      if (!line?.snapshot || line.productFulfillments.length === 0) {
+        throw new CatalogError(
+          "ORDER_NOT_FOUND",
+          "Fulfilled Product Order line not found.",
+        )
+      }
+      const quantity = parseExactDecimal(input.quantity, {
+        allowZero: false,
+        maxScale: 6,
+      })
+      const fulfilledQuantity = line.productFulfillments.reduce(
+        (total, fulfillment) =>
+          addExactDecimals(total, fulfillment.quantity.toString()),
+        "0",
+      )
+      const returnedQuantity = line.productReturns.reduce(
+        (total, productReturn) =>
+          addExactDecimals(total, productReturn.quantity.toString()),
+        "0",
+      )
       if (
-        !balance ||
-        (!isOriginalBalance && !isCompatiblePackagedDestination)
+        compareExactDecimals(
+          addExactDecimals(returnedQuantity, quantity),
+          fulfilledQuantity,
+        ) > 0
       ) {
         throw new CatalogError(
           "INVALID_ORDER",
-          "Return destination must preserve the original Inventory Unit meaning.",
+          "Return quantity exceeds fulfilled quantity not already returned.",
         )
       }
-      const canonicalQuantity = multiplyExactDecimals(
-        quantity,
-        line.snapshot.unitFactor.toString(),
-      )
-      const balanceQuantity =
-        balance.kind === StockBalanceKind.SHARED_POOL
-          ? canonicalQuantity
-          : quantity
-      const resultingOnHand = addExactDecimals(
-        balance.onHandQuantity.toString(),
-        balanceQuantity,
-      )
-      const update = await tx.stockBalanceSource.updateMany({
-        data: { onHandQuantity: resultingOnHand, revision: { increment: 1 } },
-        where: { id: balance.id, revision: balance.revision },
-      })
-      if (update.count !== 1) {
-        throw new CatalogError(
-          "REVISION_CONFLICT",
-          "The return Balance Source changed while posting.",
+
+      const disposition =
+        input.disposition === "restock"
+          ? ProductReturnDisposition.RESTOCK
+          : input.disposition === "quarantine"
+            ? ProductReturnDisposition.QUARANTINE
+            : input.disposition === "damaged"
+              ? ProductReturnDisposition.DAMAGED
+              : ProductReturnDisposition.NO_RESTOCK
+      let destinationBalanceSourceId: string | null = null
+      let stockOperationId: string | null = null
+      let returnedAt = new Date()
+
+      if (disposition === ProductReturnDisposition.RESTOCK) {
+        destinationBalanceSourceId =
+          input.destinationBalanceSourceId ?? line.snapshot.balanceSourceId
+        if (!destinationBalanceSourceId || !line.snapshot.unitFactor) {
+          throw new CatalogError(
+            "INVALID_ORDER",
+            "Restock disposition requires the original or an explicit compatible Balance Source.",
+          )
+        }
+        await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "StockBalanceSource"
+        WHERE "id" = ${destinationBalanceSourceId}
+          AND "tenantId" = ${input.tenantId}
+          AND "storeId" = ${line.order.storeId}
+        FOR UPDATE
+      `
+        const balance = await tx.stockBalanceSource.findFirst({
+          include: { inventoryUnit: true },
+          where: {
+            id: destinationBalanceSourceId,
+            storeId: line.order.storeId,
+            tenantId: input.tenantId,
+          },
+        })
+        const isOriginalBalance = balance?.id === line.snapshot.balanceSourceId
+        const isCompatiblePackagedDestination =
+          balance?.kind === StockBalanceKind.PACKAGED_STOCK &&
+          balance.inventoryUnitId === line.snapshot.inventoryUnitId
+        if (
+          !balance ||
+          balance.variantId !== line.snapshot.variantId ||
+          (!isOriginalBalance && !isCompatiblePackagedDestination)
+        ) {
+          throw new CatalogError(
+            "INVALID_ORDER",
+            "Return destination must preserve the original Inventory Unit meaning.",
+          )
+        }
+        const canonicalQuantity = multiplyExactDecimals(
+          quantity,
+          line.snapshot.unitFactor.toString(),
         )
+        const balanceQuantity =
+          balance.kind === StockBalanceKind.SHARED_POOL
+            ? canonicalQuantity
+            : quantity
+        const resultingOnHand = addExactDecimals(
+          balance.onHandQuantity.toString(),
+          balanceQuantity,
+        )
+        const update = await tx.stockBalanceSource.updateMany({
+          data: { onHandQuantity: resultingOnHand, revision: { increment: 1 } },
+          where: { id: balance.id, revision: balance.revision },
+        })
+        if (update.count !== 1) {
+          throw new CatalogError(
+            "REVISION_CONFLICT",
+            "The return Balance Source changed while posting.",
+          )
+        }
+        returnedAt = new Date()
+        const operation = await tx.stockOperation.create({
+          data: {
+            actorUserId: input.actorUserId,
+            effectiveAt: returnedAt,
+            clientOperationId: `${input.clientReturnId}:stock`,
+            payloadHash: hash,
+            reason: input.reason.trim(),
+            source: "commercial_order_return",
+            storeId: line.order.storeId,
+            tenantId: input.tenantId,
+            type: StockOperationType.RETURN,
+          },
+        })
+        stockOperationId = operation.id
+        await tx.stockMovement.create({
+          data: {
+            balanceSourceId: balance.id,
+            configurationVersionId:
+              line.snapshot.configurationVersionId ??
+              balance.inventoryUnit.configurationVersionId,
+            enteredInventoryUnitId:
+              line.snapshot.inventoryUnitId ?? balance.inventoryUnitId,
+            enteredQuantity: quantity,
+            operationId: operation.id,
+            previousOnHandQuantity: balance.onHandQuantity,
+            resultingOnHandQuantity: resultingOnHand,
+            signedCanonicalEffect: canonicalQuantity,
+            transactionScaleSnapshot:
+              line.snapshot.transactionScale ??
+              line.snapshot.inventoryUnit?.transactionScale ??
+              balance.inventoryUnit.transactionScale,
+            unitFactorSnapshot: line.snapshot.unitFactor,
+          },
+        })
       }
-      const operation = await tx.stockOperation.create({
+
+      const productReturn = await tx.productReturn.create({
         data: {
           actorUserId: input.actorUserId,
-          clientOperationId: `${input.clientReturnId}:stock`,
+          clientReturnId: input.clientReturnId,
+          createdAt: returnedAt,
+          destinationBalanceSourceId,
+          disposition,
+          orderId: line.orderId,
+          orderLineId: line.id,
           payloadHash: hash,
+          quantity,
           reason: input.reason.trim(),
-          source: "commercial_order_return",
+          schemaVersion: input.schemaVersion,
+          stockOperationId,
           storeId: line.order.storeId,
           tenantId: input.tenantId,
-          type: StockOperationType.RETURN,
         },
       })
-      stockOperationId = operation.id
-      await tx.stockMovement.create({
-        data: {
-          balanceSourceId: balance.id,
-          configurationVersionId:
-            line.snapshot.configurationVersionId ??
-            balance.inventoryUnit.configurationVersionId,
-          enteredInventoryUnitId:
-            line.snapshot.inventoryUnitId ?? balance.inventoryUnitId,
-          enteredQuantity: quantity,
-          operationId: operation.id,
-          previousOnHandQuantity: balance.onHandQuantity,
-          resultingOnHandQuantity: resultingOnHand,
-          signedCanonicalEffect: canonicalQuantity,
-          transactionScaleSnapshot:
-            line.snapshot.transactionScale ??
-            line.snapshot.inventoryUnit?.transactionScale ??
-            balance.inventoryUnit.transactionScale,
-          unitFactorSnapshot: line.snapshot.unitFactor,
-        },
-      })
-    }
-
-    return tx.productReturn.create({
-      data: {
-        actorUserId: input.actorUserId,
-        clientReturnId: input.clientReturnId,
-        destinationBalanceSourceId,
-        disposition,
-        orderId: line.orderId,
-        orderLineId: line.id,
-        payloadHash: hash,
-        quantity,
-        reason: input.reason.trim(),
-        schemaVersion: input.schemaVersion,
-        stockOperationId,
-        storeId: line.order.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-  })
+      if (lockedOrder.context) {
+        await recordProductReturnValuationInTransaction(tx, {
+          tenantId: input.tenantId,
+          productReturnId: productReturn.id,
+        })
+        await postProductReturnFinanceJournalInTransaction(tx, {
+          tenantId: input.tenantId,
+          productReturnId: productReturn.id,
+        })
+      }
+      return productReturn
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  )
 }

@@ -1,10 +1,16 @@
 import {
-  DashboardActionRow,
-  DashboardRecentOrderRow,
-} from "@/components/mobile/dashboard-kit"
-import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
-import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
-import { StatusBanner } from "@/components/mobile/status-banner"
+  ClassicDashboardEmptyOrders,
+  ClassicDashboardHero,
+  ClassicDashboardOverview,
+  ClassicDashboardScreen,
+  ClassicDashboardSectionHeader,
+  ClassicDashboardSetup,
+  ClassicSalesRepEmptySales,
+  ClassicSalesRepOverview,
+  ClassicSalesRepSection,
+} from "@/components/mobile/appearances/classic/dashboard-screen"
+import { ClassicCounterHeader } from "@/components/mobile/appearances/classic/home-counter-parts"
+import { ClassicHomeJourney } from "@/components/mobile/appearances/classic/home-journey"
 import {
   BusinessHomeMarketLedgerEmptyOrders,
   BusinessHomeMarketLedgerHero,
@@ -12,6 +18,7 @@ import {
   BusinessHomeMarketLedgerSectionHeader,
   BusinessHomeMarketLedgerSetup,
 } from "@/components/mobile/appearances/market-day/business-home-market-ledger"
+import { MarketDayDashboardScreen } from "@/components/mobile/appearances/market-day/dashboard-screen"
 import {
   SalesRepShiftLedgerEmptySales,
   SalesRepShiftLedgerHero,
@@ -19,23 +26,18 @@ import {
   SalesRepShiftLedgerSection,
 } from "@/components/mobile/appearances/market-day/sales-rep-shift-ledger"
 import {
-  ClassicDashboardScreen,
-  ClassicDashboardHero,
-  ClassicDashboardOverview,
-  ClassicDashboardSetup,
-  ClassicDashboardSectionHeader,
-  ClassicDashboardEmptyOrders,
-  ClassicSalesRepOverview,
-  ClassicSalesRepSection,
-  ClassicSalesRepEmptySales,
-} from "@/components/mobile/appearances/classic/dashboard-screen"
-import { MarketDayDashboardScreen } from "@/components/mobile/appearances/market-day/dashboard-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
+  DashboardActionRow,
+  DashboardRecentOrderRow,
+} from "@/components/mobile/dashboard-kit"
+import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { hasStoredCustomerShellAccess } from "@/lib/customer-conversation-store"
 import { setLastMobileShell } from "@/lib/customer-shell-preference"
 import { isSalesRepRole } from "@/lib/mobile-roles"
@@ -58,6 +60,8 @@ import { useQuery } from "@tanstack/react-query"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useState } from "react"
 import { View } from "react-native"
+import { getHomeJourneyMetrics } from "./home-journey-metrics"
+import { useHomeJourney } from "./use-home-journey"
 
 export function OperationsDashboardSurface({
   embeddedInAdminTabs = false,
@@ -89,10 +93,11 @@ export function OperationsDashboardSurface({
     isAttendant ? "sales-rep-home" : "business-home",
   )
   const isMarketDay = appearance === "market-day"
+  const isClassicOwner = !isMarketDay && !isAttendant
   const Screen = isMarketDay ? MarketDayDashboardScreen : ClassicDashboardScreen
   const OwnerHero = isMarketDay
     ? BusinessHomeMarketLedgerHero
-    : ClassicDashboardHero
+    : ClassicCounterHeader
   const RepHero = isMarketDay ? SalesRepShiftLedgerHero : ClassicDashboardHero
   const OwnerOverview = isMarketDay
     ? BusinessHomeMarketLedgerOverview
@@ -183,6 +188,43 @@ export function OperationsDashboardSurface({
   })
   const isOfflineAvailabilityUnknown =
     isOffline && !hasResolvedFeatureAvailability
+  const ownerHome = useHomeJourney({
+    enabled: isClassicOwner,
+    availability: featureAvailability,
+    availabilityResolved: hasResolvedFeatureAvailability,
+    availabilityPending: isFeatureAvailabilityPending,
+    isOffline,
+    loadedOrderCount: orderRows.length,
+  })
+  const ownerMetrics = getHomeJourneyMetrics({
+    isOffline,
+    catalogReady: hasSellableCatalogItem,
+    hasProducts: hasProduct,
+    hasServiceWork:
+      featureAvailability.hasServiceItems || featureAvailability.hasServiceJobs,
+    orderQuery: {
+      resolved: orders.data !== undefined,
+      unavailable: orders.isError,
+      stale: orders.isError && orders.data !== undefined,
+    },
+    stockQuery: {
+      resolved: balances.data !== undefined,
+      unavailable: balances.isError,
+      stale: balances.isError && balances.data !== undefined,
+    },
+    workQuery: {
+      resolved: service.data !== undefined,
+      unavailable: service.isError,
+      stale: service.isError && service.data !== undefined,
+    },
+    loadedOrderCount: orderRows.length,
+    queuedOrders: provisional.commercialOrders,
+    loadedStockCount: balances.data?.rows.length ?? 0,
+    queuedStockOperations: provisional.inventoryOperations,
+    loadedWorkCount: service.data?.length ?? 0,
+    queuedWorkOperations: provisional.serviceOperations,
+    loadedOrderValue: formatMinorMoney(orderValue, currency),
+  })
   const salesRepPresentation = getSalesRepShiftLedgerPresentation({
     hasSellableCatalogItem,
     isOffline,
@@ -381,6 +423,11 @@ export function OperationsDashboardSurface({
             onNotificationPress={() =>
               router.push("/sync-status-modal" as never)
             }
+            onProfilePress={
+              isClassicOwner
+                ? () => router.push("/(admin-tabs)/more" as never)
+                : undefined
+            }
             onSearchPress={
               isOffline
                 ? undefined
@@ -405,7 +452,65 @@ export function OperationsDashboardSurface({
         />
       ) : null}
 
-      {isOfflineAvailabilityUnknown ? (
+      {isClassicOwner ? (
+        <ClassicHomeJourney
+          {...ownerMetrics}
+          journey={ownerHome.journey}
+          isOffline={isOffline}
+          availabilityStale={
+            featureAvailabilityQuery.isError && hasResolvedFeatureAvailability
+          }
+          syncLabel={
+            isOffline || pendingCommandCount > 0
+              ? `${pendingCommandCount} waiting to sync`
+              : "Synced now"
+          }
+          syncAttention={isOffline || pendingCommandCount > 0}
+          canManageTeam={ownerHome.canManage}
+          teamPreferenceError={ownerHome.preference.error}
+          teamPreferenceSaving={ownerHome.preference.saving}
+          onDismissTeam={() => void ownerHome.preference.dismiss()}
+          onAddItem={() => router.push("/first-product-setup-modal" as never)}
+          onCatalog={() => router.push("/catalog-items-modal" as never)}
+          onCreateOrder={() => {
+            if (hasSellableCatalogItem)
+              router.push("/create-sale-modal" as never)
+          }}
+          onOrders={() => router.push("/orders" as never)}
+          onTeam={() => {
+            if (ownerHome.canManage) router.push("/staff-invite-modal" as never)
+          }}
+          onSync={() => router.push("/sync-status-modal" as never)}
+          onRetry={() => {
+            if (isOffline) return
+            void featureAvailabilityQuery.refetch()
+            void orders.refetch()
+            void balances.refetch()
+            void service.refetch()
+          }}
+          onOperationalAction={operationalAction.onPress}
+          operationalActionLabel={operationalAction.label}
+          recentOrders={orderRows
+            .slice(0, 4)
+            .map((order) => (
+              <DashboardRecentOrderRow
+                key={order.id}
+                amount={formatMinorMoney(order.totalMinor, order.currencyCode)}
+                customer={
+                  order.customerName ||
+                  order.customerPhone ||
+                  "Walk-in customer"
+                }
+                detail={`${order.orderNumber} · ${order.lines.map((line) => `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`).join(", ")}`}
+                onPress={() =>
+                  router.push(`/order/${encodeURIComponent(order.id)}` as never)
+                }
+                status={formatStatusLabel(order.status)}
+                tone={getOrderStatusTone(order.status)}
+              />
+            ))}
+        />
+      ) : isOfflineAvailabilityUnknown ? (
         <StatusBanner
           icon="WifiOff"
           message="Reconnect to confirm your latest catalog and Store setup."
@@ -577,7 +682,7 @@ export function OperationsDashboardSurface({
               ))
           )}
         </RepSection>
-      ) : (
+      ) : isMarketDay ? (
         <View>
           <OwnerSection
             actionLabel="See all"
@@ -636,7 +741,7 @@ export function OperationsDashboardSurface({
               ))
           )}
         </View>
-      )}
+      ) : null}
 
       {!isAttendant && !embeddedInAdminTabs ? (
         <CreateActionSheet actions={createActions} modal={createModal} />

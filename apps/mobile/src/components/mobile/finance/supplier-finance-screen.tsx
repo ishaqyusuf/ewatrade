@@ -1,0 +1,1205 @@
+import { ActionButton } from "@/components/mobile/action-button"
+import { FormField } from "@/components/mobile/form-field"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { useTRPC } from "@/trpc/client"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
+import { Suspense, lazy } from "react"
+import { useEffect, useRef, useState } from "react"
+import { FlatList, View } from "react-native"
+import type { FinanceWorkspace } from "./finance-workspace-gate"
+
+import {
+  type SupplierReadToken,
+  beginSupplierProtectedRead,
+  canShowSupplierRead,
+  completeSupplierProtectedRead,
+  createSupplierReadAuthority,
+  isSupplierAgingDay,
+  supplierAgingBucketLabels,
+  taintSupplierReadAuthority,
+  transitionSupplierReadAuthority,
+} from "./supplier-finance-state"
+
+const SupplierCommandForm = lazy(() =>
+  import("./supplier-command-form").then((module) => ({
+    default: module.SupplierCommandForm,
+  })),
+)
+const SupplierPurchaseScreen = lazy(() =>
+  import("./supplier-purchase-screen").then((module) => ({
+    default: module.SupplierPurchaseScreen,
+  })),
+)
+const SupplierPurchaseRegistrationForm = lazy(() =>
+  import("./supplier-purchase-recognition").then((module) => ({
+    default: module.SupplierPurchaseRegistrationForm,
+  })),
+)
+const SupplierPurchaseRecognitionPanel = lazy(() =>
+  import("./supplier-purchase-recognition").then((module) => ({
+    default: module.SupplierPurchaseRecognitionPanel,
+  })),
+)
+
+export type SupplierReadResult = { isSuccess: boolean; fetchStatus: string }
+
+export function useSupplierReadAuthority({
+  scope,
+  enabled,
+  offline,
+  paused,
+  error,
+  fetching,
+  refetch,
+}: {
+  scope: string
+  enabled: boolean
+  offline: boolean
+  paused: boolean
+  error: boolean
+  fetching: boolean
+  refetch: () => Promise<SupplierReadResult>
+}) {
+  const [authority, setAuthority] = useState(() =>
+    createSupplierReadAuthority(scope),
+  )
+  const authorityRef = useRef(authority)
+  const offlineRef = useRef(offline)
+  const scopeRef = useRef(scope)
+  authorityRef.current = authority
+  offlineRef.current = offline
+  scopeRef.current = scope
+
+  const transitioned = transitionSupplierReadAuthority(
+    authorityRef.current,
+    offline || paused || error || !enabled,
+    scope,
+  )
+  if (transitioned !== authorityRef.current) {
+    const next = transitioned
+    authorityRef.current = next
+    setAuthority(next)
+  }
+
+  function publish(next: typeof authorityRef.current) {
+    authorityRef.current = next
+    setAuthority(next)
+  }
+
+  function beginProtectedRead(): SupplierReadToken | null {
+    if (offlineRef.current) return null
+    const started = beginSupplierProtectedRead(
+      authorityRef.current,
+      scopeRef.current,
+    )
+    if (!started) return null
+    publish(started.authority)
+    return started.token
+  }
+
+  function completeProtectedRead(token: SupplierReadToken, succeeded: boolean) {
+    const validSuccess =
+      succeeded && !offlineRef.current && token.scope === scopeRef.current
+    publish(
+      completeSupplierProtectedRead(authorityRef.current, token, validSuccess),
+    )
+  }
+
+  function isCurrent(token: SupplierReadToken) {
+    const current = authorityRef.current
+    return (
+      !offlineRef.current &&
+      token.scope === scopeRef.current &&
+      current.generation === token.generation &&
+      current.activeRequestId === token.requestId
+    )
+  }
+
+  function runProtectedRead(read: () => Promise<SupplierReadResult> = refetch) {
+    const token = beginProtectedRead()
+    if (!token) return
+    void Promise.resolve()
+      .then(read)
+      .then((result) => {
+        completeProtectedRead(
+          token,
+          result.isSuccess && result.fetchStatus !== "paused",
+        )
+      })
+      .catch(() => completeProtectedRead(token, false))
+  }
+  const runProtectedReadRef = useRef(runProtectedRead)
+  runProtectedReadRef.current = runProtectedRead
+
+  useEffect(() => {
+    if (
+      enabled &&
+      !offline &&
+      !paused &&
+      !error &&
+      !fetching &&
+      !authority.verified &&
+      !authority.attempted &&
+      authority.activeRequestId === null
+    )
+      runProtectedReadRef.current()
+  }, [enabled, offline, paused, error, fetching, authority])
+
+  return {
+    verified:
+      authorityRef.current.verified &&
+      authorityRef.current.scope === scope &&
+      enabled &&
+      !offline &&
+      !paused &&
+      !error,
+    beginProtectedRead,
+    completeProtectedRead,
+    runProtectedRead,
+    isCurrent,
+    invalidate: () =>
+      publish(
+        taintSupplierReadAuthority(authorityRef.current, scopeRef.current),
+      ),
+  }
+}
+
+type Supplier = { id: string; code: string; name: string }
+type ReversibleSupplierEntry = {
+  id: string
+  kind: string
+  amountMinor: string
+  description: string
+  effectiveAt: Date | string
+  reversal: { id: string } | null
+}
+type SupplierFinanceScreenProps = FinanceWorkspace & { onBack: () => void }
+type AgingCursor = NonNullable<
+  RouterInputs["finance"]["supplierPayableAging"]["cursor"]
+>
+
+export function SupplierFinanceScreen(props: SupplierFinanceScreenProps) {
+  const [selected, setSelected] = useState<Supplier | null>(null)
+  const [creating, setCreating] = useState(false)
+  if (creating)
+    return (
+      <Suspense fallback={<Text>Loading supplier form…</Text>}>
+        <SupplierCommandForm
+          {...props}
+          onBack={() => setCreating(false)}
+          onRecorded={() => setCreating(false)}
+        />
+      </Suspense>
+    )
+  if (selected)
+    return (
+      <SupplierFinanceDetail
+        {...props}
+        supplier={selected}
+        onBack={() => setSelected(null)}
+      />
+    )
+  return (
+    <SupplierDirectory
+      {...props}
+      onCreate={() => setCreating(true)}
+      onSelect={setSelected}
+    />
+  )
+}
+
+function SupplierDirectory({
+  book,
+  onBack,
+  onCreate,
+  onSelect,
+}: SupplierFinanceScreenProps & {
+  onCreate: () => void
+  onSelect: (supplier: Supplier) => void
+}) {
+  const trpc = useTRPC()
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const query = useInfiniteQuery(
+    trpc.finance.suppliers.infiniteQueryOptions(
+      { bookId: book.id, limit: 30 },
+      {
+        enabled: !offline,
+        getNextPageParam: (page) => page.nextCursor ?? undefined,
+        retry: false,
+        staleTime: Number.POSITIVE_INFINITY,
+        refetchOnMount: "always",
+        refetchOnReconnect: "always",
+        refetchOnWindowFocus: false,
+      },
+    ),
+  )
+  const wasOffline = useRef(offline)
+  const recovering = !offline && wasOffline.current
+  useEffect(() => {
+    wasOffline.current = offline
+  }, [offline])
+  const authority = useSupplierReadAuthority({
+    scope: `directory:${book.id}`,
+    enabled: true,
+    offline,
+    paused: query.fetchStatus === "paused",
+    error: query.isError,
+    fetching: query.isFetching,
+    refetch: query.refetch,
+  })
+  const visible = canShowSupplierRead({
+    success: query.isSuccess,
+    fetching: query.isFetching,
+    paused: query.fetchStatus === "paused",
+    offline,
+    error: query.isError,
+    verified: authority.verified && !recovering,
+    scopeMatches: true,
+  })
+  const suppliers = visible
+    ? (query.data?.pages.flatMap((page) => page.data) ?? [])
+    : []
+  return (
+    <FlatList
+      className="flex-1 px-4"
+      data={suppliers}
+      keyExtractor={(supplier) => supplier.id}
+      refreshing={query.isRefetching}
+      onRefresh={() => {
+        authority.runProtectedRead()
+      }}
+      onEndReached={() => {
+        if (visible && query.hasNextPage && !query.isFetchingNextPage)
+          void query.fetchNextPage()
+      }}
+      onEndReachedThreshold={0.4}
+      ListHeaderComponent={
+        <View className="gap-4 pb-4">
+          <ActionButton variant="ghost" onPress={onBack}>
+            ‹ Back to spending
+          </ActionButton>
+          <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Business money
+          </Text>
+          <Text className="text-2xl font-bold">Suppliers</Text>
+          <Text className="text-sm text-muted-foreground">
+            Recorded supplier accounts for this financial book.
+          </Text>
+          <ActionButton onPress={onCreate}>Add supplier</ActionButton>
+          {offline ? (
+            <StatusBanner
+              title="Offline"
+              message="Supplier balances are hidden until a fresh online read is available."
+              tone="warning"
+            />
+          ) : null}
+          {query.isPending && !offline ? <Text>Loading suppliers…</Text> : null}
+          {query.isError ? (
+            <StatusBanner
+              title="Suppliers unavailable"
+              message={query.error.message}
+              actionLabel="Try again"
+              onActionPress={() => {
+                authority.runProtectedRead()
+              }}
+              tone="destructive"
+            />
+          ) : null}
+          {query.isSuccess && visible && suppliers.length === 0 ? (
+            <StatusBanner
+              title="No suppliers yet"
+              message="Supplier accounts will appear here when they are added to this financial book."
+              tone="muted"
+            />
+          ) : null}
+        </View>
+      }
+      renderItem={({ item }) => (
+        <Pressable
+          className="mb-3 min-h-16 flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3"
+          onPress={() => onSelect(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.name}, ${item.code}, open supplier statement`}
+        >
+          <View className="min-w-0 flex-1 gap-1">
+            <Text className="text-base font-semibold">{item.name}</Text>
+            <Text className="text-sm text-muted-foreground">{item.code}</Text>
+          </View>
+          <Text className="text-lg text-primary">›</Text>
+        </Pressable>
+      )}
+      ListFooterComponent={
+        visible && query.hasNextPage && !query.isFetchingNextPage ? (
+          <ActionButton
+            variant="outline"
+            isLoading={query.isFetchingNextPage}
+            onPress={() => {
+              authority.invalidate()
+              authority.runProtectedRead(query.fetchNextPage)
+            }}
+          >
+            Load more suppliers
+          </ActionButton>
+        ) : null
+      }
+      contentContainerClassName="pb-12"
+    />
+  )
+}
+
+export function SupplierFinanceDetail({
+  book,
+  actorUserId,
+  tenantId,
+  supplier,
+  onBack,
+  initialView = "statement",
+}: SupplierFinanceScreenProps & {
+  supplier: Supplier
+  onBack: () => void
+  initialView?: "statement" | "aging"
+}) {
+  const [view, setView] = useState<"statement" | "aging" | "purchases">(
+    initialView,
+  )
+  const [recording, setRecording] = useState(false)
+  const [reversalEntry, setReversalEntry] =
+    useState<ReversibleSupplierEntry | null>(null)
+  const [advanceToAllocate, setAdvanceToAllocate] =
+    useState<ReversibleSupplierEntry | null>(null)
+  const [purchaseId, setPurchaseId] = useState<string | null>(null)
+  const [registeringPurchase, setRegisteringPurchase] = useState(false)
+  const [recognitionId, setRecognitionId] = useState<string | null>(null)
+  if (recognitionId)
+    return (
+      <Suspense
+        fallback={<Text className="px-4">Loading purchase history…</Text>}
+      >
+        <SupplierPurchaseRecognitionPanel
+          book={book}
+          actorUserId={actorUserId}
+          tenantId={tenantId}
+          supplier={supplier}
+          recognitionId={recognitionId}
+          onBack={() => setRecognitionId(null)}
+        />
+      </Suspense>
+    )
+  if (registeringPurchase)
+    return (
+      <Suspense fallback={<Text className="px-4">Loading purchase form…</Text>}>
+        <SupplierPurchaseRegistrationForm
+          book={book}
+          actorUserId={actorUserId}
+          tenantId={tenantId}
+          supplier={supplier}
+          onBack={() => setRegisteringPurchase(false)}
+          onRegistered={(id) => {
+            setRegisteringPurchase(false)
+            setRecognitionId(id)
+          }}
+        />
+      </Suspense>
+    )
+  if (purchaseId)
+    return (
+      <Suspense fallback={<Text className="px-4">Loading purchase…</Text>}>
+        <SupplierPurchaseScreen
+          book={book}
+          actorUserId={actorUserId}
+          tenantId={tenantId}
+          supplier={supplier}
+          purchaseId={purchaseId}
+          advanceToAllocate={advanceToAllocate ?? undefined}
+          onBack={() => setPurchaseId(null)}
+          onRegisterPurchase={() => setRegisteringPurchase(true)}
+        />
+      </Suspense>
+    )
+  if (recording || reversalEntry)
+    return (
+      <Suspense fallback={<Text className="px-4">Loading supplier form…</Text>}>
+        <SupplierCommandForm
+          book={book}
+          actorUserId={actorUserId}
+          tenantId={tenantId}
+          supplier={supplier}
+          reversalEntry={reversalEntry ?? undefined}
+          onBack={() => {
+            setRecording(false)
+            setReversalEntry(null)
+          }}
+          onRecorded={() => {
+            setRecording(false)
+            setReversalEntry(null)
+          }}
+        />
+      </Suspense>
+    )
+  return (
+    <View className="flex-1 px-4">
+      <View className="gap-3 pb-4">
+        <ActionButton variant="ghost" onPress={onBack}>
+          ‹ Suppliers
+        </ActionButton>
+        <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Supplier account
+        </Text>
+        <Text className="text-2xl font-bold">{supplier.name}</Text>
+        <Text className="text-sm text-muted-foreground">
+          {supplier.code} · {book.currencyCode} · all stores
+        </Text>
+        <ActionButton variant="outline" onPress={() => setRecording(true)}>
+          Record entry
+        </ActionButton>
+        <View className="flex-row gap-2">
+          <ActionButton
+            variant={view === "statement" ? "secondary" : "outline"}
+            className="flex-1"
+            onPress={() => setView("statement")}
+          >
+            Statement
+          </ActionButton>
+          <ActionButton
+            variant={view === "aging" ? "secondary" : "outline"}
+            className="flex-1"
+            onPress={() => setView("aging")}
+          >
+            Payable aging
+          </ActionButton>
+          <ActionButton
+            variant={view === "purchases" ? "secondary" : "outline"}
+            className="flex-1"
+            onPress={() => setView("purchases")}
+          >
+            Purchases
+          </ActionButton>
+        </View>
+      </View>
+      {view === "statement" ? (
+        <SupplierStatement
+          key={supplier.id}
+          bookId={book.id}
+          supplier={supplier}
+          currencyCode={book.currencyCode}
+          onReverse={setReversalEntry}
+          onAllocateAdvance={(entry) => {
+            setAdvanceToAllocate(entry)
+            setView("purchases")
+          }}
+        />
+      ) : view === "aging" ? (
+        <SupplierAging
+          key={supplier.id}
+          bookId={book.id}
+          supplier={supplier}
+          currencyCode={book.currencyCode}
+        />
+      ) : (
+        <Suspense fallback={<Text>Loading purchases…</Text>}>
+          <SupplierPurchaseScreen
+            book={book}
+            actorUserId={actorUserId}
+            tenantId={tenantId}
+            supplier={supplier}
+            advanceToAllocate={advanceToAllocate ?? undefined}
+            onSelectPurchase={setPurchaseId}
+            onRegisterPurchase={() => setRegisteringPurchase(true)}
+            onSelectRecognition={setRecognitionId}
+          />
+        </Suspense>
+      )}
+    </View>
+  )
+}
+
+function SupplierStatement({
+  bookId,
+  supplier,
+  currencyCode,
+  onReverse,
+  onAllocateAdvance,
+}: {
+  bookId: string
+  supplier: Supplier
+  currencyCode: string
+  onReverse: (entry: ReversibleSupplierEntry) => void
+  onAllocateAdvance: (entry: ReversibleSupplierEntry) => void
+}) {
+  const trpc = useTRPC()
+  const client = useQueryClient()
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const [snapshot, setSnapshot] = useState<string>()
+  const [cursor, setCursor] = useState<string>()
+  const [previous, setPrevious] = useState<(string | undefined)[]>([])
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const query = useQuery(
+    trpc.finance.supplierStatement.queryOptions(
+      {
+        bookId,
+        supplierId: supplier.id,
+        snapshotSequence: snapshot,
+        cursor,
+        limit: 30,
+      },
+      {
+        enabled: !offline,
+        retry: false,
+        staleTime: Number.POSITIVE_INFINITY,
+        refetchOnMount: "always",
+        refetchOnReconnect: "always",
+        refetchOnWindowFocus: false,
+      },
+    ),
+  )
+  const scope = `statement:${bookId}:${supplier.id}:${snapshot ?? "latest"}:${cursor ?? "first"}`
+  const authority = useSupplierReadAuthority({
+    scope,
+    enabled: true,
+    offline,
+    paused: query.fetchStatus === "paused",
+    error: query.isError,
+    fetching: query.isFetching,
+    refetch: query.refetch,
+  })
+  useEffect(() => {
+    if (
+      snapshot === undefined &&
+      query.data &&
+      authority.verified &&
+      !query.isFetching &&
+      query.fetchStatus !== "paused" &&
+      !query.isError &&
+      !refreshing &&
+      !offline
+    )
+      setSnapshot(query.data.snapshotSequence)
+  }, [
+    snapshot,
+    query.data,
+    query.isFetching,
+    query.fetchStatus,
+    query.isError,
+    refreshing,
+    offline,
+    authority.verified,
+  ])
+  const visible = canShowSupplierRead({
+    success: query.isSuccess && refreshError === null,
+    fetching: query.isFetching || refreshing,
+    paused: query.fetchStatus === "paused",
+    offline,
+    error: query.isError,
+    verified: authority.verified,
+    scopeMatches:
+      snapshot === undefined || query.data?.snapshotSequence === snapshot,
+  })
+  async function refresh() {
+    if (refreshing || query.isFetching || offline) return
+    authority.invalidate()
+    const token = authority.beginProtectedRead()
+    if (!token) return
+    setRefreshing(true)
+    setRefreshError(null)
+    try {
+      const latest = await client.fetchQuery(
+        trpc.finance.supplierStatement.queryOptions(
+          { bookId, supplierId: supplier.id, limit: 30 },
+          { retry: false, staleTime: 0 },
+        ),
+      )
+      if (!authority.isCurrent(token)) return
+      const pinnedInput = {
+        bookId,
+        supplierId: supplier.id,
+        snapshotSequence: latest.snapshotSequence,
+        cursor: undefined,
+        limit: 30,
+      }
+      client.setQueryData(
+        trpc.finance.supplierStatement.queryKey(pinnedInput),
+        latest,
+      )
+      authority.completeProtectedRead(token, true)
+      setPrevious([])
+      setCursor(undefined)
+      setSnapshot(latest.snapshotSequence)
+    } catch (failure) {
+      authority.completeProtectedRead(token, false)
+      setRefreshError(
+        failure instanceof Error
+          ? failure.message
+          : "Statement refresh failed.",
+      )
+    } finally {
+      setRefreshing(false)
+    }
+  }
+  function changePage(nextCursor: string | undefined) {
+    if (snapshot === undefined || offline) return
+    const input = {
+      bookId,
+      supplierId: supplier.id,
+      snapshotSequence: snapshot,
+      cursor: nextCursor,
+      limit: 30,
+    }
+    client.removeQueries({
+      queryKey: trpc.finance.supplierStatement.queryKey(input),
+      exact: true,
+    })
+    setCursor(nextCursor)
+  }
+  return (
+    <FlatList
+      className="flex-1"
+      data={visible ? (query.data?.data ?? []) : []}
+      keyExtractor={(entry) => entry.id}
+      refreshing={refreshing || query.isRefetching}
+      onRefresh={() => void refresh()}
+      ListHeaderComponent={
+        <View className="gap-4 pb-4">
+          <Text className="text-base font-semibold">
+            Payable and advance statement
+          </Text>
+          <Text className="text-sm text-muted-foreground">
+            Amounts are exact journal control totals at one pinned book
+            sequence.
+          </Text>
+          {offline ? (
+            <StatusBanner
+              title="Offline"
+              message="Statement details and balances are hidden until a fresh online read is available."
+              tone="warning"
+            />
+          ) : null}
+          {query.isPending && !offline ? (
+            <Text>Loading supplier statement…</Text>
+          ) : null}
+          {query.isError ? (
+            <StatusBanner
+              title="Statement unavailable"
+              message={query.error.message}
+              actionLabel="Try again"
+              onActionPress={() => {
+                authority.runProtectedRead()
+              }}
+              tone="destructive"
+            />
+          ) : null}
+          {refreshError ? (
+            <StatusBanner
+              title="Statement refresh failed"
+              message={refreshError}
+              actionLabel="Try again"
+              onActionPress={() => void refresh()}
+              tone="destructive"
+            />
+          ) : null}
+          {visible && query.data ? (
+            <View className="flex-row gap-3 rounded-2xl bg-muted/60 p-4">
+              <Amount
+                label="Payable"
+                amount={query.data.payableMinor}
+                currencyCode={currencyCode}
+              />
+              <Amount
+                label="Supplier advance"
+                amount={query.data.advanceMinor}
+                currencyCode={currencyCode}
+              />
+            </View>
+          ) : null}
+          {visible && query.data ? (
+            <Text className="text-xs text-muted-foreground">
+              Snapshot {query.data.snapshotSequence} · advances remain separate
+              from payable
+            </Text>
+          ) : null}
+          {query.isSuccess && visible && query.data.data.length === 0 ? (
+            <Text className="py-6 text-sm text-muted-foreground">
+              No supplier entries at this snapshot.
+            </Text>
+          ) : null}
+        </View>
+      }
+      renderItem={({ item }) => (
+        <View className="mb-3 gap-2 rounded-2xl border border-border bg-card p-4">
+          <View className="flex-row items-start justify-between gap-3">
+            <Text className="min-w-0 flex-1 font-semibold">
+              {item.description}
+            </Text>
+            <Text className="font-bold">
+              {formatFinanceMoney(item.amountMinor, currencyCode)}
+            </Text>
+          </View>
+          <Text className="text-sm text-muted-foreground">
+            {item.kind.replaceAll("_", " ")} · {item.side.toLowerCase()} ·{" "}
+            {new Date(item.effectiveAt).toISOString().slice(0, 10)} UTC
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            Journal sequence {item.sequence}
+            {item.reversal ? ` · reversed at ${item.reversal.sequence}` : ""}
+          </Text>
+          {!item.reversal &&
+          ["OPENING_PAYABLE", "OPENING_ADVANCE", "ADVANCE"].includes(
+            item.kind,
+          ) ? (
+            <ActionButton
+              variant="outline"
+              onPress={() => onReverse(item)}
+              accessibilityLabel={`Correct ${item.kind.replaceAll("_", " ")} dated ${new Date(item.effectiveAt).toISOString().slice(0, 10)}`}
+            >
+              Correct this entry
+            </ActionButton>
+          ) : null}
+          {!item.reversal &&
+          ["OPENING_ADVANCE", "ADVANCE"].includes(item.kind) ? (
+            <ActionButton
+              variant="outline"
+              onPress={() => onAllocateAdvance(item)}
+              accessibilityLabel={`Choose a purchase to apply ${item.kind.replaceAll("_", " ")} from ${new Date(item.effectiveAt).toISOString().slice(0, 10)}`}
+            >
+              Apply to a purchase
+            </ActionButton>
+          ) : null}
+        </View>
+      )}
+      ListFooterComponent={
+        visible && query.data ? (
+          <SupplierFinancePageControls
+            visible={visible}
+            nextLabel="Next entries"
+            previousLabel="Previous entries"
+            hasNext={query.data.nextCursor !== null}
+            hasPrevious={previous.length > 0}
+            onNext={() => {
+              const next = query.data?.nextCursor ?? undefined
+              if (next === undefined) return
+              setPrevious((pages) => [...pages, cursor])
+              changePage(next)
+            }}
+            onPrevious={() => {
+              const prev = previous.at(-1)
+              setPrevious((pages) => pages.slice(0, -1))
+              changePage(prev)
+            }}
+          />
+        ) : null
+      }
+      contentContainerClassName="pb-12"
+    />
+  )
+}
+
+function SupplierAging({
+  bookId,
+  supplier,
+  currencyCode,
+}: { bookId: string; supplier: Supplier; currencyCode: string }) {
+  const trpc = useTRPC()
+  const client = useQueryClient()
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const [asOfDate, setAsOfDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  )
+  const asOfDateRef = useRef(asOfDate)
+  asOfDateRef.current = asOfDate
+  const scopeGeneration = useRef(0)
+  const refreshGeneration = useRef(0)
+  const [snapshot, setSnapshot] = useState<string>()
+  const [snapshotDate, setSnapshotDate] = useState<string>()
+  const [cursor, setCursor] = useState<AgingCursor>()
+  const [previous, setPrevious] = useState<(AgingCursor | undefined)[]>([])
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const validDay = isSupplierAgingDay(asOfDate)
+  const query = useQuery(
+    trpc.finance.supplierPayableAging.queryOptions(
+      {
+        bookId,
+        supplierId: supplier.id,
+        asOfDate,
+        snapshotSequence: snapshot,
+        cursor,
+        limit: 30,
+      },
+      {
+        enabled: validDay && !offline,
+        retry: false,
+        staleTime: Number.POSITIVE_INFINITY,
+        refetchOnMount: "always",
+        refetchOnReconnect: "always",
+        refetchOnWindowFocus: false,
+      },
+    ),
+  )
+  const readScope = `aging:${bookId}:${supplier.id}:${asOfDate}:${snapshot ?? "latest"}:${cursor ? JSON.stringify(cursor) : "first"}`
+  const authority = useSupplierReadAuthority({
+    scope: readScope,
+    enabled: validDay,
+    offline,
+    paused: query.fetchStatus === "paused",
+    error: query.isError,
+    fetching: query.isFetching,
+    refetch: query.refetch,
+  })
+  useEffect(() => {
+    if (
+      snapshot === undefined &&
+      query.data &&
+      validDay &&
+      !offline &&
+      query.data.asOfDate === asOfDate &&
+      authority.verified &&
+      !query.isFetching &&
+      query.fetchStatus !== "paused" &&
+      !query.isError &&
+      !refreshing
+    ) {
+      setSnapshot(query.data.snapshotSequence)
+      setSnapshotDate(asOfDate)
+    }
+  }, [
+    snapshot,
+    query.data,
+    query.isFetching,
+    query.fetchStatus,
+    query.isError,
+    authority.verified,
+    refreshing,
+    validDay,
+    offline,
+    asOfDate,
+  ])
+  const visible =
+    validDay &&
+    canShowSupplierRead({
+      success: query.isSuccess && refreshError === null,
+      fetching: query.isFetching || refreshing,
+      paused: query.fetchStatus === "paused",
+      offline,
+      error: query.isError,
+      verified: authority.verified,
+      scopeMatches:
+        query.data?.asOfDate === asOfDate &&
+        (snapshotDate === undefined || snapshotDate === asOfDate) &&
+        (snapshot === undefined || query.data?.snapshotSequence === snapshot),
+    })
+  async function refresh() {
+    if (refreshing || query.isFetching || offline || !validDay) return
+    const requestedDate = asOfDate
+    const requestedScope = scopeGeneration.current
+    const request = ++refreshGeneration.current
+    authority.invalidate()
+    const token = authority.beginProtectedRead()
+    if (!token) return
+    setRefreshing(true)
+    setRefreshError(null)
+    try {
+      const latest = await client.fetchQuery(
+        trpc.finance.supplierPayableAging.queryOptions(
+          { bookId, supplierId: supplier.id, asOfDate, limit: 30 },
+          { retry: false, staleTime: 0 },
+        ),
+      )
+      if (
+        request !== refreshGeneration.current ||
+        requestedScope !== scopeGeneration.current ||
+        asOfDateRef.current !== requestedDate ||
+        !authority.isCurrent(token)
+      )
+        return
+      const pinnedInput = {
+        bookId,
+        supplierId: supplier.id,
+        asOfDate,
+        snapshotSequence: latest.snapshotSequence,
+        cursor: undefined,
+        limit: 30,
+      }
+      client.setQueryData(
+        trpc.finance.supplierPayableAging.queryKey(pinnedInput),
+        latest,
+      )
+      authority.completeProtectedRead(token, true)
+      setPrevious([])
+      setCursor(undefined)
+      setSnapshot(latest.snapshotSequence)
+      setSnapshotDate(asOfDate)
+    } catch (failure) {
+      authority.completeProtectedRead(token, false)
+      if (
+        request === refreshGeneration.current &&
+        requestedScope === scopeGeneration.current &&
+        asOfDateRef.current === requestedDate
+      )
+        setRefreshError(
+          failure instanceof Error
+            ? failure.message
+            : "Payable aging refresh failed.",
+        )
+    } finally {
+      if (request === refreshGeneration.current) setRefreshing(false)
+    }
+  }
+  function changePage(nextCursor: AgingCursor | undefined) {
+    if (snapshot === undefined || offline || !validDay) return
+    const input = {
+      bookId,
+      supplierId: supplier.id,
+      asOfDate,
+      snapshotSequence: snapshot,
+      cursor: nextCursor,
+      limit: 30,
+    }
+    client.removeQueries({
+      queryKey: trpc.finance.supplierPayableAging.queryKey(input),
+      exact: true,
+    })
+    setCursor(nextCursor)
+  }
+  return (
+    <FlatList
+      className="flex-1"
+      data={visible ? (query.data?.data ?? []) : []}
+      keyExtractor={(entry) => entry.sourceEntryId}
+      refreshing={refreshing || query.isRefetching}
+      onRefresh={() => void refresh()}
+      ListHeaderComponent={
+        <View className="gap-4 pb-4">
+          <Text className="text-base font-semibold">
+            Supplier payable aging
+          </Text>
+          <Text className="text-sm text-muted-foreground">
+            UTC cutoff · all stores · based on recorded due dates. Advances stay
+            separate.
+          </Text>
+          <FormField
+            label="As of date (UTC)"
+            value={asOfDate}
+            onChangeText={(value) => {
+              scopeGeneration.current += 1
+              refreshGeneration.current += 1
+              setRefreshing(false)
+              authority.invalidate()
+              if (isSupplierAgingDay(value)) {
+                client.removeQueries({
+                  queryKey: trpc.finance.supplierPayableAging.queryKey({
+                    bookId,
+                    supplierId: supplier.id,
+                    asOfDate: value,
+                    snapshotSequence: undefined,
+                    cursor: undefined,
+                    limit: 30,
+                  }),
+                  exact: true,
+                })
+              }
+              setAsOfDate(value)
+              setSnapshot(undefined)
+              setSnapshotDate(undefined)
+              setCursor(undefined)
+              setPrevious([])
+              setRefreshError(null)
+            }}
+            placeholder="YYYY-MM-DD"
+            keyboardType="numbers-and-punctuation"
+            autoCapitalize="none"
+          />
+          {!validDay ? (
+            <Text className="text-sm text-destructive">
+              Enter a real date in YYYY-MM-DD format.
+            </Text>
+          ) : null}
+          {offline ? (
+            <StatusBanner
+              title="Offline"
+              message="Aging totals and source entries are hidden until a fresh online read is available."
+              tone="warning"
+            />
+          ) : null}
+          {query.isPending && validDay && !offline ? (
+            <Text>Loading payable aging…</Text>
+          ) : null}
+          {query.isError ? (
+            <StatusBanner
+              title="Payable aging unavailable"
+              message={query.error.message}
+              actionLabel="Try again"
+              onActionPress={() => {
+                authority.runProtectedRead()
+              }}
+              tone="destructive"
+            />
+          ) : null}
+          {refreshError ? (
+            <StatusBanner
+              title="Payable aging refresh failed"
+              message={refreshError}
+              actionLabel="Try again"
+              onActionPress={() => void refresh()}
+              tone="destructive"
+            />
+          ) : null}
+          {visible && query.data ? (
+            <View className="flex-row gap-3 rounded-2xl bg-muted/60 p-4">
+              <Amount
+                label="Payable"
+                amount={query.data.payableMinor}
+                currencyCode={currencyCode}
+              />
+              <Amount
+                label="Supplier advance"
+                amount={query.data.advanceMinor}
+                currencyCode={currencyCode}
+              />
+            </View>
+          ) : null}
+          {visible && query.data ? (
+            <Text className="text-xs text-muted-foreground">
+              Snapshot {query.data.snapshotSequence} · {query.data.sourcesRead}{" "}
+              sources read · scope includes unassigned opening liabilities
+            </Text>
+          ) : null}
+          {visible && query.data ? (
+            <View className="gap-2 rounded-2xl border border-border p-4">
+              {query.data.buckets.map((bucket) => (
+                <View
+                  key={bucket.bucket}
+                  className="flex-row justify-between gap-3"
+                >
+                  <Text className="flex-1 text-sm text-muted-foreground">
+                    {supplierAgingBucketLabels[bucket.bucket]}
+                  </Text>
+                  <Text className="font-semibold">
+                    {formatFinanceMoney(bucket.amountMinor, currencyCode)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {query.isSuccess && visible && query.data.data.length === 0 ? (
+            <Text className="py-6 text-sm text-muted-foreground">
+              No outstanding payable sources at this cutoff.
+            </Text>
+          ) : null}
+          {visible &&
+          query.data &&
+          query.data.outstandingSourceCount > query.data.sourceLimit ? (
+            <StatusBanner
+              title="Aging source limit reached"
+              message="The full aging result is unavailable. Ask an administrator to stage a report."
+              tone="warning"
+            />
+          ) : null}
+        </View>
+      }
+      renderItem={({ item }) => (
+        <View className="mb-3 gap-2 rounded-2xl border border-border bg-card p-4">
+          <View className="flex-row items-start justify-between gap-3">
+            <Text className="min-w-0 flex-1 font-semibold">
+              {item.reference || item.description}
+            </Text>
+            <Text className="font-bold">
+              {formatFinanceMoney(item.outstandingMinor, currencyCode)}
+            </Text>
+          </View>
+          <Text className="text-sm text-muted-foreground">
+            {supplierAgingBucketLabels[item.bucket]} ·{" "}
+            {item.kind.replaceAll("_", " ")}
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            {item.dueAt
+              ? `Due ${new Date(item.dueAt).toISOString().slice(0, 10)} UTC`
+              : "No due date recorded"}
+            {item.storeId ? " · store source" : " · book-level source"} ·
+            sequence {item.sequence}
+          </Text>
+        </View>
+      )}
+      ListFooterComponent={
+        visible && query.data ? (
+          <SupplierFinancePageControls
+            visible={visible}
+            nextLabel="Next sources"
+            previousLabel="Previous sources"
+            hasNext={query.data.nextCursor !== null}
+            hasPrevious={previous.length > 0}
+            onNext={() => {
+              const next = query.data?.nextCursor ?? undefined
+              if (next === undefined) return
+              setPrevious((pages) => [...pages, cursor])
+              changePage(next)
+            }}
+            onPrevious={() => {
+              const prev = previous.at(-1)
+              setPrevious((pages) => pages.slice(0, -1))
+              changePage(prev)
+            }}
+          />
+        ) : null
+      }
+      contentContainerClassName="pb-12"
+    />
+  )
+}
+
+function Amount({
+  label,
+  amount,
+  currencyCode,
+}: { label: string; amount: string; currencyCode: string }) {
+  return (
+    <View className="min-w-0 flex-1 gap-1">
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+      <Text className="text-base font-bold">
+        {formatFinanceMoney(amount, currencyCode)}
+      </Text>
+    </View>
+  )
+}
+
+export function SupplierFinancePageControls({
+  visible,
+  hasNext,
+  hasPrevious,
+  nextLabel,
+  previousLabel,
+  onNext,
+  onPrevious,
+}: {
+  visible: boolean
+  hasNext: boolean
+  hasPrevious: boolean
+  nextLabel: string
+  previousLabel: string
+  onNext: () => void
+  onPrevious: () => void
+}) {
+  if (!visible || (!hasNext && !hasPrevious)) return null
+  return (
+    <View className="gap-2">
+      {hasNext ? (
+        <ActionButton variant="outline" onPress={onNext}>
+          {nextLabel}
+        </ActionButton>
+      ) : null}
+      {hasPrevious ? (
+        <ActionButton variant="ghost" onPress={onPrevious}>
+          {previousLabel}
+        </ActionButton>
+      ) : null}
+    </View>
+  )
+}

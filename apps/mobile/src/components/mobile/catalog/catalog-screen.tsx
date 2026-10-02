@@ -1,24 +1,42 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import {
+  ClassicCatalogFilter,
+  ClassicCatalogFirstItemGate,
+  ClassicCatalogFrame,
+  ClassicCatalogMasthead,
+  ClassicCatalogRow,
+} from "@/components/mobile/appearances/classic/catalog-screen"
+import {
+  MarketDayCatalogAddButton,
+  MarketDayCatalogChoices,
+  MarketDayCatalogFilter,
+  MarketDayCatalogFirstItemGate,
+  MarketDayCatalogFrame,
+  MarketDayCatalogMasthead,
+  MarketDayCatalogRow,
+  MarketDayCatalogSummary,
+} from "@/components/mobile/appearances/market-day/catalog-screen"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { Modal, useModal } from "@/components/ui/modal"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -29,29 +47,12 @@ import {
 } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import {
-  ClassicCatalogFrame,
-  ClassicCatalogMasthead,
-  ClassicCatalogFirstItemGate,
-  ClassicCatalogRow,
-  ClassicCatalogFilter,
-} from "@/components/mobile/appearances/classic/catalog-screen"
-import {
-  MarketDayCatalogFrame,
-  MarketDayCatalogMasthead,
-  MarketDayCatalogFirstItemGate,
-  MarketDayCatalogRow,
-  MarketDayCatalogFilter,
-  MarketDayCatalogSummary,
-  MarketDayCatalogChoices,
-  MarketDayCatalogAddButton,
-} from "@/components/mobile/appearances/market-day/catalog-screen"
 import { shouldShowCatalogFirstItemGate } from "../catalog-items-model"
-import { mapCatalogItem } from "./catalog-row-model"
 import type {
   CatalogItemsContentProps,
   CatalogKindFilter,
 } from "./catalog-presentation"
+import { mapCatalogItem } from "./catalog-row-model"
 
 export function CatalogItemsContent({
   designScreen = "catalog",
@@ -153,6 +154,7 @@ export function CatalogItemsContent({
     if (kind === "product") onAddProduct()
     else onAddService()
   }
+  const edgeFeedback = useScrollEdgeFeedback()
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     onScroll?.(event)
     const canvas =
@@ -168,6 +170,7 @@ export function CatalogItemsContent({
       showCanvasStatusBar={showCanvasStatusBar}
     >
       <FlatList
+        {...edgeFeedback}
         className="flex-1"
         contentContainerClassName="grow pt-[var(--catalog-list-top)] pb-[var(--catalog-list-bottom)]"
         data={rows}

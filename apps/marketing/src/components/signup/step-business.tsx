@@ -5,11 +5,31 @@ import { useQaFormFill } from "@/hooks/use-qa-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { businessFill } from "@/lib/qa-fill-definitions"
 import {
+  getCountryCallingCode,
+  getNationalSignupPhone,
+  getSignupPhoneForCountry,
+} from "@/lib/signup-phone"
+import {
   type BusinessValues,
   COUNTRIES,
   businessSchema,
 } from "@/lib/signup-schemas"
-import { Button } from "@ewatrade/ui"
+import {
+  Button,
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  Input,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+} from "@ewatrade/ui"
 import {
   BUSINESS_OPERATING_MODELS,
   BUSINESS_ORDER_CHANNELS,
@@ -19,26 +39,28 @@ import {
   listBusinessProfiles,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
-import { useMemo, useState } from "react"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
 
-const baseInputClasses =
-  "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
+import { SignupSelect } from "./signup-select"
+
+const baseInputClasses = "signup-input"
 
 type StepBusinessProps = {
   approvedBusinessName?: string
+  totalSteps?: number
   defaultValues?: Partial<BusinessValues>
   onNext: (data: BusinessValues) => void
-  onBack: () => void
 }
 
 export function StepBusiness({
   approvedBusinessName,
   defaultValues,
   onNext,
-  onBack,
+  totalSteps = 2,
 }: StepBusinessProps) {
   const form = useZodForm<BusinessValues>(businessSchema, {
-    defaultValues: defaultValues ?? {
+    defaultValues: {
       addressLine1: "",
       businessProfileKey: "",
       businessProfileVersion: 1,
@@ -52,15 +74,14 @@ export function StepBusiness({
       operatingModel: "products",
       orderChannels: ["walk_in"],
       otherBusinessDescription: "",
+      ...defaultValues,
     },
   })
-  const [profileQuery, setProfileQuery] = useState("")
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
+  const selectedCountry = form.watch("countryCode") ?? ""
+  const phonePrefix = getCountryCallingCode(selectedCountry)
   const selectedProfileKey = form.watch("businessProfileKey")
   const selectedProfile = findBusinessProfile(selectedProfileKey)
-  const visibleProfiles = useMemo(() => {
-    if (selectedProfile && !profileQuery.trim()) return [selectedProfile]
-    return listBusinessProfiles({ query: profileQuery })
-  }, [profileQuery, selectedProfile])
 
   const { canUndo, fill, isAvailable, qaDomain, undo } = useQaFormFill(
     businessFill,
@@ -69,62 +90,77 @@ export function StepBusiness({
 
   return (
     <div>
-      <div className="mb-8 text-center">
-        <h2
-          className="text-2xl font-semibold text-foreground sm:text-3xl"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Tell us about your business
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          This helps us configure your workspace and show you relevant features.
+      <div className="signup-heading">
+        <p className="signup-entry">
+          Step 1 of {totalSteps} · Business details
+        </p>
+        <h1>
+          A little about
+          <br />
+          your business.
+        </h1>
+        <p className="signup-intro">
+          Keep your first setup useful. Products and services share the same
+          workspace.
         </p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onNext)} className="space-y-4">
-        {/* Business name */}
-        <label className="block space-y-1.5 text-sm font-medium text-foreground">
-          Business name
-          <input
-            {...form.register("businessName")}
-            readOnly={Boolean(approvedBusinessName)}
-            type="text"
-            placeholder="Nile Market Co."
-            className={`${baseInputClasses} mt-1.5`}
-          />
-          {form.formState.errors.businessName && (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.businessName.message}
-            </p>
-          )}
-        </label>
-
-        {/* Business profile + Size grid */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 text-sm font-medium text-foreground">
-            Business category
-            <input
-              aria-label="Search business categories"
+      <form
+        onSubmit={form.handleSubmit(onNext, (errors) => {
+          if (
+            errors.businessSize ||
+            errors.operatingModel ||
+            errors.orderChannels
+          )
+            setPreferencesOpen(true)
+        })}
+      >
+        <FieldGroup className="signup-fields">
+          {/* Business name */}
+          <Field data-invalid={Boolean(form.formState.errors.businessName)}>
+            <FieldLabel htmlFor="signup-businessName">Business name</FieldLabel>
+            <Input
+              id="signup-businessName"
+              aria-invalid={Boolean(form.formState.errors.businessName)}
+              {...form.register("businessName")}
+              readOnly={Boolean(approvedBusinessName)}
+              type="text"
+              placeholder="Nile Market Co."
               className={`${baseInputClasses} mt-1.5`}
-              onChange={(event) => setProfileQuery(event.target.value)}
-              placeholder="Search laundry, feed, groceries…"
-              type="search"
-              value={profileQuery}
             />
-            <div className="max-h-52 overflow-y-auto rounded-lg border border-border/70">
-              {visibleProfiles.map((profile) => {
-                const selected = profile.key === selectedProfileKey
-                return (
-                  <button
-                    aria-pressed={selected}
-                    className={`block w-full border-b border-border/60 px-3 py-2.5 text-left last:border-b-0 ${selected ? "bg-primary/10" : "hover:bg-muted/60"}`}
-                    key={profile.key}
-                    onClick={() => {
-                      form.setValue("businessProfileKey", profile.key, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      })
-                      setProfileQuery("")
+            {form.formState.errors.businessName && (
+              <FieldError>
+                {form.formState.errors.businessName.message}
+              </FieldError>
+            )}
+          </Field>
+
+          <Field
+            data-invalid={Boolean(form.formState.errors.businessProfileKey)}
+          >
+            <FieldLabel htmlFor="signup-businessProfileKey">
+              Business category
+            </FieldLabel>
+            <Controller
+              name="businessProfileKey"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <SignupSelect
+                  id="signup-businessProfileKey"
+                  name={field.name}
+                  value={field.value}
+                  triggerRef={field.ref}
+                  onBlur={field.onBlur}
+                  invalid={fieldState.invalid}
+                  placeholder="Choose a category"
+                  options={listBusinessProfiles().map((profile) => ({
+                    value: profile.key,
+                    label: profile.title,
+                  }))}
+                  onValueChange={(value) => {
+                    field.onChange(value)
+                    const profile = findBusinessProfile(value)
+                    if (profile)
                       form.setValue(
                         "operatingModel",
                         profile.recommendedItemKinds.length === 1
@@ -134,244 +170,331 @@ export function StepBusiness({
                           : "products_and_services",
                         { shouldValidate: true },
                       )
-                    }}
-                    type="button"
-                  >
-                    <span className="block font-medium">{profile.title}</span>
-                    <span className="block text-xs font-normal leading-5 text-muted-foreground">
-                      {profile.description}
-                    </span>
-                  </button>
-                )
-              })}
-              {visibleProfiles.length === 0 ? (
-                <p className="px-3 py-5 text-center text-xs font-normal text-muted-foreground">
-                  No category matches “{profileQuery.trim()}”.
-                </p>
-              ) : null}
-            </div>
-            <input {...form.register("businessProfileKey")} type="hidden" />
-            {form.formState.errors.businessProfileKey && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.businessProfileKey.message}
-              </p>
-            )}
-            {selectedProfile ? (
-              <span className="block text-xs font-normal leading-5 text-muted-foreground">
-                {selectedProfile.description}
-              </span>
-            ) : null}
-          </div>
-
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            Team size
-            <select
-              {...form.register("businessSize")}
-              className={`${baseInputClasses} mt-1.5`}
-            >
-              <option value="">Select size…</option>
-              {BUSINESS_TEAM_SIZES.map((size) => (
-                <option key={size.key} value={size.key}>
-                  {size.label}
-                </option>
-              ))}
-            </select>
-            {form.formState.errors.businessSize && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.businessSize.message}
-              </p>
-            )}
-          </label>
-        </div>
-
-        {selectedProfileKey === "other-mixed-business" ? (
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            What does your business do?
-            <input
-              {...form.register("otherBusinessDescription")}
-              className={`${baseInputClasses} mt-1.5`}
-              placeholder="Describe your products or services"
-              type="text"
-            />
-            {form.formState.errors.otherBusinessDescription ? (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.otherBusinessDescription.message}
-              </p>
-            ) : null}
-          </label>
-        ) : null}
-
-        <label className="block space-y-1.5 text-sm font-medium text-foreground">
-          What will you manage?
-          <select
-            {...form.register("operatingModel")}
-            className={`${baseInputClasses} mt-1.5`}
-          >
-            {BUSINESS_OPERATING_MODELS.map((model) => (
-              <option key={model.key} value={model.key}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs font-normal text-muted-foreground">
-            This personalizes your starting suggestions and never limits what
-            you can add later.
-          </p>
-        </label>
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-foreground">
-            How do customers order?
-          </legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {BUSINESS_ORDER_CHANNELS.map((channel) => (
-              <label
-                className="flex min-h-11 items-center gap-3 rounded-lg border border-border/70 px-3 text-sm text-foreground"
-                key={channel.key}
-              >
-                <input
-                  {...form.register("orderChannels")}
-                  className="size-4 accent-primary"
-                  type="checkbox"
-                  value={channel.key}
+                  }}
                 />
-                {channel.label}
-              </label>
-            ))}
-          </div>
-          {form.formState.errors.orderChannels ? (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.orderChannels.message}
-            </p>
-          ) : null}
-        </fieldset>
-
-        <label className="block space-y-1.5 text-sm font-medium text-foreground">
-          Business address
-          <input
-            {...form.register("addressLine1")}
-            type="text"
-            placeholder="Street address"
-            className={`${baseInputClasses} mt-1.5`}
-          />
-          {form.formState.errors.addressLine1 && (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.addressLine1.message}
-            </p>
-          )}
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            City
-            <input
-              {...form.register("city")}
-              type="text"
-              placeholder="City"
-              className={`${baseInputClasses} mt-1.5`}
+              )}
             />
-            {form.formState.errors.city && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.city.message}
-              </p>
+            {form.formState.errors.businessProfileKey && (
+              <FieldError>
+                {form.formState.errors.businessProfileKey.message}
+              </FieldError>
             )}
-          </label>
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            State or region{" "}
-            <span className="font-normal text-muted-foreground">
-              (optional)
-            </span>
-            <input
-              {...form.register("region")}
-              type="text"
-              placeholder="State or region"
-              className={`${baseInputClasses} mt-1.5`}
-            />
-          </label>
-        </div>
+            {selectedProfile && (
+              <FieldDescription>{selectedProfile.description}</FieldDescription>
+            )}
+          </Field>
 
-        {/* Country + Phone grid */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            Country
-            <select
-              {...form.register("countryCode", {
-                onChange: (event) => {
-                  form.setValue(
-                    "currencyCode",
-                    suggestCurrencyForCountry(event.target.value),
-                    { shouldValidate: true },
-                  )
-                },
-              })}
-              className={`${baseInputClasses} mt-1.5`}
+          {selectedProfileKey === "other-mixed-business" ? (
+            <Field
+              data-invalid={Boolean(
+                form.formState.errors.otherBusinessDescription,
+              )}
             >
-              <option value="">Select country…</option>
-              {COUNTRIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            {form.formState.errors.countryCode && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.countryCode.message}
-              </p>
-            )}
-          </label>
+              <FieldLabel htmlFor="signup-otherBusinessDescription">
+                What does your business do?
+              </FieldLabel>
+              <Input
+                id="signup-otherBusinessDescription"
+                aria-invalid={Boolean(
+                  form.formState.errors.otherBusinessDescription,
+                )}
+                {...form.register("otherBusinessDescription")}
+                className={`${baseInputClasses} mt-1.5`}
+                placeholder="Describe your products or services"
+                type="text"
+              />
+              {form.formState.errors.otherBusinessDescription ? (
+                <FieldError>
+                  {form.formState.errors.otherBusinessDescription.message}
+                </FieldError>
+              ) : null}
+            </Field>
+          ) : null}
 
-          <label className="block space-y-1.5 text-sm font-medium text-foreground">
-            Phone number
-            <input
-              {...form.register("phone")}
-              type="tel"
-              placeholder="+234 801 234 5678"
+          <details
+            className="signup-disclosure"
+            open={preferencesOpen}
+            onToggle={(event) => setPreferencesOpen(event.currentTarget.open)}
+          >
+            <summary>Your starting preferences</summary>
+            <FieldGroup className="signup-fields">
+              <Field data-invalid={Boolean(form.formState.errors.businessSize)}>
+                <FieldLabel htmlFor="signup-businessSize">Team size</FieldLabel>
+                <Controller
+                  name="businessSize"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <SignupSelect
+                      id="signup-businessSize"
+                      name={field.name}
+                      value={field.value}
+                      triggerRef={field.ref}
+                      onBlur={field.onBlur}
+                      onValueChange={field.onChange}
+                      invalid={fieldState.invalid}
+                      options={BUSINESS_TEAM_SIZES.map((option) => ({
+                        value: option.key,
+                        label: option.label,
+                      }))}
+                    />
+                  )}
+                />
+                {form.formState.errors.businessSize && (
+                  <FieldError>
+                    {form.formState.errors.businessSize.message}
+                  </FieldError>
+                )}
+              </Field>
+              <Field
+                data-invalid={Boolean(form.formState.errors.operatingModel)}
+              >
+                <FieldLabel htmlFor="signup-operatingModel">
+                  What will you manage?
+                </FieldLabel>
+                <Controller
+                  name="operatingModel"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <SignupSelect
+                      id="signup-operatingModel"
+                      name={field.name}
+                      value={field.value}
+                      triggerRef={field.ref}
+                      onBlur={field.onBlur}
+                      onValueChange={field.onChange}
+                      invalid={fieldState.invalid}
+                      options={BUSINESS_OPERATING_MODELS.map((option) => ({
+                        value: option.key,
+                        label: option.label,
+                      }))}
+                    />
+                  )}
+                />
+                <p className="text-xs font-normal text-muted-foreground">
+                  This personalizes your starting suggestions and never limits
+                  what you can add later.
+                </p>
+              </Field>
+
+              <FieldSet className="signup-channel-set">
+                <FieldLegend variant="label">
+                  How do customers order?
+                </FieldLegend>
+                <FieldGroup className="signup-row">
+                  {BUSINESS_ORDER_CHANNELS.map((channel) => (
+                    <label className="signup-channel" key={channel.key}>
+                      <input
+                        {...form.register("orderChannels")}
+                        className="size-4 accent-primary"
+                        type="checkbox"
+                        value={channel.key}
+                      />
+                      {channel.label}
+                    </label>
+                  ))}
+                </FieldGroup>
+                {form.formState.errors.orderChannels ? (
+                  <FieldError>
+                    {form.formState.errors.orderChannels.message}
+                  </FieldError>
+                ) : null}
+              </FieldSet>
+            </FieldGroup>
+          </details>
+
+          <Field data-invalid={Boolean(form.formState.errors.addressLine1)}>
+            <FieldLabel htmlFor="signup-addressLine1">
+              Business address
+            </FieldLabel>
+            <Input
+              id="signup-addressLine1"
+              aria-invalid={Boolean(form.formState.errors.addressLine1)}
+              {...form.register("addressLine1")}
+              type="text"
+              placeholder="Street address"
               className={`${baseInputClasses} mt-1.5`}
             />
-            {form.formState.errors.phone && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.phone.message}
-              </p>
+            {form.formState.errors.addressLine1 && (
+              <FieldError>
+                {form.formState.errors.addressLine1.message}
+              </FieldError>
             )}
-          </label>
-        </div>
+          </Field>
+          <FieldGroup className="signup-row">
+            <Field data-invalid={Boolean(form.formState.errors.city)}>
+              <FieldLabel htmlFor="signup-city">City</FieldLabel>
+              <Input
+                id="signup-city"
+                aria-invalid={Boolean(form.formState.errors.city)}
+                {...form.register("city")}
+                type="text"
+                placeholder="City"
+                className={`${baseInputClasses} mt-1.5`}
+              />
+              {form.formState.errors.city && (
+                <FieldError>{form.formState.errors.city.message}</FieldError>
+              )}
+            </Field>
+            <Field data-invalid={Boolean(form.formState.errors.region)}>
+              <FieldLabel htmlFor="signup-region">
+                State or region{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <Input
+                id="signup-region"
+                aria-invalid={Boolean(form.formState.errors.region)}
+                {...form.register("region")}
+                type="text"
+                placeholder="State or region"
+                className={`${baseInputClasses} mt-1.5`}
+              />
+            </Field>
+          </FieldGroup>
 
-        <label className="block space-y-1.5 text-sm font-medium text-foreground">
-          Operating currency
-          <select
-            {...form.register("currencyCode")}
-            className={`${baseInputClasses} mt-1.5`}
-          >
-            {OPERATING_CURRENCIES.map((currency) => (
-              <option key={currency.code} value={currency.code}>
-                {currency.symbol} — {currency.label} ({currency.code})
-              </option>
-            ))}
-          </select>
-          <p className="text-xs font-normal text-muted-foreground">
-            This prefix will appear on prices, totals, reports, and customer
-            pages.
-          </p>
-          {form.formState.errors.currencyCode && (
-            <p className="text-xs text-destructive">
-              {form.formState.errors.currencyCode.message}
+          {/* Country + Phone grid */}
+          <FieldGroup className="signup-row">
+            <Field data-invalid={Boolean(form.formState.errors.countryCode)}>
+              <FieldLabel htmlFor="signup-countryCode">Country</FieldLabel>
+              <Controller
+                name="countryCode"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <SignupSelect
+                    id="signup-countryCode"
+                    name={field.name}
+                    value={field.value}
+                    triggerRef={field.ref}
+                    onBlur={field.onBlur}
+                    invalid={fieldState.invalid}
+                    placeholder="Select country…"
+                    options={[...COUNTRIES]}
+                    onValueChange={(nextCountry) => {
+                      const currentPhone = form.getValues("phone")
+                      form.setValue(
+                        "phone",
+                        getSignupPhoneForCountry(
+                          currentPhone,
+                          selectedCountry,
+                          nextCountry,
+                        ),
+                        { shouldDirty: true },
+                      )
+                      field.onChange(nextCountry)
+                      form.setValue(
+                        "currencyCode",
+                        suggestCurrencyForCountry(nextCountry),
+                        { shouldValidate: true },
+                      )
+                    }}
+                  />
+                )}
+              />
+              {form.formState.errors.countryCode && (
+                <FieldError>
+                  {form.formState.errors.countryCode.message}
+                </FieldError>
+              )}
+            </Field>
+
+            <Field data-invalid={Boolean(form.formState.errors.phone)}>
+              <FieldLabel htmlFor="signup-phone">Phone number</FieldLabel>
+              <Controller
+                name="phone"
+                control={form.control}
+                render={({ field }) => (
+                  <InputGroup className="signup-phone-input">
+                    <InputGroupInput
+                      {...field}
+                      id="signup-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete={
+                        selectedCountry === "OTHER" ? "tel" : "tel-national"
+                      }
+                      value={getNationalSignupPhone(
+                        field.value ?? "",
+                        selectedCountry,
+                      )}
+                      aria-invalid={Boolean(form.formState.errors.phone)}
+                      aria-describedby="signup-phone-hint"
+                      placeholder={
+                        selectedCountry === "OTHER"
+                          ? "Country code and number"
+                          : "Phone number"
+                      }
+                      className="signup-input"
+                    />
+                    <InputGroupAddon align="inline-start">
+                      <InputGroupText aria-label="Country calling code">
+                        {phonePrefix || "+"}
+                      </InputGroupText>
+                    </InputGroupAddon>
+                  </InputGroup>
+                )}
+              />
+              <FieldDescription id="signup-phone-hint">
+                {selectedCountry === "OTHER"
+                  ? "Include your country code before the number."
+                  : !selectedCountry
+                    ? "Choose your country to set the calling code."
+                    : "Your country’s calling code is included automatically."}
+              </FieldDescription>
+              <FieldError errors={[form.formState.errors.phone]} />
+            </Field>
+          </FieldGroup>
+
+          <Field data-invalid={Boolean(form.formState.errors.currencyCode)}>
+            <FieldLabel htmlFor="signup-currencyCode">
+              Operating currency
+            </FieldLabel>
+            <Controller
+              name="currencyCode"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <SignupSelect
+                  id="signup-currencyCode"
+                  name={field.name}
+                  value={field.value}
+                  triggerRef={field.ref}
+                  onBlur={field.onBlur}
+                  onValueChange={field.onChange}
+                  invalid={fieldState.invalid}
+                  options={OPERATING_CURRENCIES.map((currency) => ({
+                    value: currency.code,
+                    label: `${currency.symbol} — ${currency.label} (${currency.code})`,
+                  }))}
+                />
+              )}
+            />
+            <p className="text-xs font-normal text-muted-foreground">
+              This prefix will appear on prices, totals, reports, and customer
+              pages.
             </p>
-          )}
-        </label>
+            {form.formState.errors.currencyCode && (
+              <FieldError>
+                {form.formState.errors.currencyCode.message}
+              </FieldError>
+            )}
+          </Field>
 
-        <div className="flex items-center justify-between border-t border-border/60 pt-5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="rounded-lg"
-            onClick={onBack}
-          >
-            Back
-          </Button>
-          <Button type="submit" size="lg" className="rounded-lg px-8">
-            Continue
-          </Button>
-        </div>
+          <div className="signup-actions">
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="signup-secondary"
+              disabled
+              title="Address setup is coming later"
+            >
+              Back
+            </Button>
+            <Button type="submit" size="lg" className="signup-primary">
+              Continue
+            </Button>
+          </div>
+        </FieldGroup>
       </form>
 
       <QaQuickFillButton

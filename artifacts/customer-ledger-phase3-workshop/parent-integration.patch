@@ -1,0 +1,105 @@
+--- a/apps/dashboard/src/utils/table-settings.ts
++++ b/apps/dashboard/src/utils/table-settings.ts
+@@ -13,6 +13,7 @@
+   "prescriptions",
+   "expenses",
+   "finance-suppliers",
++  "customer-ledger",
+   "inventory",
+   "customers",
+   "staff",
+--- a/apps/dashboard/src/lib/navigation.ts
++++ b/apps/dashboard/src/lib/navigation.ts
+@@ -205,6 +205,13 @@
+         canAccess: canManageTenantRole,
+       },
+       {
++        description: "Customer statements and collections",
++        href: "/customer-ledger",
++        icon: "analytics",
++        label: "Customer accounts",
++        canAccess: canManageTenantRole,
++      },
++      {
+         description: "Financial reports and exports",
+         href: "/finance/reports",
+         icon: "analytics",
+--- a/apps/dashboard/src/components/sheets/global-sheets.tsx
++++ b/apps/dashboard/src/components/sheets/global-sheets.tsx
+@@ -1,6 +1,7 @@
+ "use client"
+ 
+ import { DomainSheet } from "./domain-sheet"
++import { CustomerLedgerSheet } from "./customer-ledger-sheet"
+ import { FinanceSheet } from "./finance-sheet"
+ import { PrescriptionRequestSheet } from "./prescription-request-sheet"
+ import { ServiceCommerceSheet } from "./service-commerce-sheet"
+@@ -29,6 +30,9 @@
+     <>
+       <DomainSheet store={store} />
+       {access.finance ? (
++        <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
++      ) : null}
++      {access.finance ? (
+         <FinanceSheet
+           actorUserId={actorUserId}
+           storeId={store.id}
+--- a/apps/dashboard/src/components/customer-ledger/customer-ledger-workspace.tsx
++++ b/apps/dashboard/src/components/customer-ledger/customer-ledger-workspace.tsx
+@@ -1,6 +1,5 @@
+ "use client"
+ import { ScrollableContent } from "@/components/scrollable-content"
+-import { CustomerLedgerSheet } from "@/components/sheets/customer-ledger-sheet"
+ import { useCustomerLedgerParams } from "@/hooks/use-customer-ledger-params"
+ import { useTRPC } from "@/trpc/client"
+ import type { TableSettings } from "@/utils/table-settings"
+@@ -17,13 +16,9 @@
+ import { CustomerLedgerStatement } from "./customer-ledger-statement"
+ export function CustomerLedgerWorkspace({
+   customerId,
+-  actorUserId,
+-  tenantId,
+   initialSettings,
+ }: {
+   customerId: string
+-  actorUserId: string
+-  tenantId: string
+   initialSettings?: Partial<TableSettings>
+ }) {
+   const trpc = useTRPC()
+@@ -166,12 +161,6 @@
+             )}
+           </>
+         )}
+-        {/* Route-contained mount until the parent moves this single domain sheet into GlobalSheets. */}
+-        <CustomerLedgerSheet
+-          actorUserId={actorUserId}
+-          tenantId={tenantId}
+-          customerId={customerId}
+-        />
+       </div>
+     </ScrollableContent>
+   )
+--- a/apps/dashboard/src/components/customer-ledger/customer-ledger-route.tsx
++++ b/apps/dashboard/src/components/customer-ledger/customer-ledger-route.tsx
+@@ -33,8 +33,6 @@
+       <Suspense fallback={<PageLoading />}>
+         <CustomerLedgerWorkspace
+           key={`${session.user.id}:${tenant.tenant.id}:${customerId}`}
+-          actorUserId={session.user.id}
+-          tenantId={tenant.tenant.id}
+           customerId={customerId}
+           initialSettings={initialSettings}
+         />
+--- a/apps/mobile/src/app/_layout.tsx
++++ b/apps/mobile/src/app/_layout.tsx
+@@ -196,6 +196,9 @@
+         <Stack.Protected
+           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
+         >
++          <Stack.Screen name="customer-ledger-modal" options={{ headerShown: false, presentation: "modal" }} />
++          <Stack.Screen name="customer-ledger/[customerId]" options={{ headerShown: false, presentation: "modal" }} />
++          <Stack.Screen name="customer-ledger-action/[accountId]" options={{ headerShown: false, presentation: "modal" }} />
+           <Stack.Screen
+             name="finance-modal"
+             options={{ headerShown: false, presentation: "modal" }}

@@ -1,0 +1,138 @@
+{
+  "checks": [
+    "unfinished item → resume",
+    "sellable item → first order",
+    "first order → facts and optional team",
+    "invitation → pending",
+    "simulated acceptance → everyday",
+    "solo dismissal → everyday",
+    "history + empty recent slice stays established",
+    "existing team + no order stays guided",
+    "unknown → recovery without zeros",
+    "exact cents and precision rejection",
+    "literal markup rendered safely",
+    "reset clears connected state"
+  ],
+  "layouts": [
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "01",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "02",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "03",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "04",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "05",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "06",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "07",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "08",
+      "text": "200%",
+      "theme": "light"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "01",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "02",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "03",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "04",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "05",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "06",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "07",
+      "text": "200%",
+      "theme": "dark"
+    },
+    {
+      "buttonsBelow48": 0,
+      "horizontalOverflow": false,
+      "stage": "08",
+      "text": "200%",
+      "theme": "dark"
+    }
+  ],
+  "draftRetained": "Draft customer",
+  "resetHome": "Let’s get your business ready.",
+  "console": [],
+  "mobile": {
+    "viewport": "390×844",
+    "noHorizontalOverflow": true,
+    "lowerCatalogActionReachableAt200": true
+  }
+}

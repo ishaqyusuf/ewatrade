@@ -1,0 +1,27 @@
+[
+  {
+    "guard": "dashboard-redesign",
+    "pass": true,
+    "log": "guard-dashboard-redesign.log"
+  },
+  {
+    "guard": "admin-tabs",
+    "pass": false,
+    "log": "guard-admin-tabs.log"
+  },
+  {
+    "guard": "app-shell",
+    "pass": true,
+    "log": "guard-app-shell.log"
+  },
+  {
+    "guard": "large-text-layout",
+    "pass": false,
+    "log": "guard-large-text-layout.log"
+  },
+  {
+    "guard": "nativewind-style-mix",
+    "pass": false,
+    "log": "guard-nativewind-style-mix.log"
+  }
+]

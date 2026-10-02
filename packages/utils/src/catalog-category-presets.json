@@ -1,0 +1,612 @@
+{
+  "schemaVersion": 1,
+  "categories": [
+    {
+      "key": "poultry",
+      "label": "Poultry",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "poultry:eggs",
+          "label": "Eggs"
+        },
+        {
+          "key": "poultry:live-birds",
+          "label": "Live birds"
+        },
+        {
+          "key": "poultry:dressed-poultry",
+          "label": "Dressed poultry"
+        },
+        {
+          "key": "poultry:hatching-eggs",
+          "label": "Hatching eggs"
+        }
+      ]
+    },
+    {
+      "key": "animal-feed",
+      "label": "Animal feed",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "animal-feed:poultry-feed",
+          "label": "Poultry feed"
+        },
+        {
+          "key": "animal-feed:fish-feed",
+          "label": "Fish feed"
+        },
+        {
+          "key": "animal-feed:livestock-feed",
+          "label": "Livestock feed"
+        },
+        {
+          "key": "animal-feed:pet-food",
+          "label": "Pet food"
+        }
+      ]
+    },
+    {
+      "key": "farm-supplies",
+      "label": "Farm supplies",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "farm-supplies:seeds",
+          "label": "Seeds"
+        },
+        {
+          "key": "farm-supplies:fertilizers",
+          "label": "Fertilizers"
+        },
+        {
+          "key": "farm-supplies:farm-tools",
+          "label": "Farm tools"
+        },
+        {
+          "key": "farm-supplies:packaging",
+          "label": "Packaging"
+        }
+      ]
+    },
+    {
+      "key": "fresh-produce",
+      "label": "Fresh produce",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "food-bakery-catering",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "fresh-produce:vegetables",
+          "label": "Vegetables"
+        },
+        {
+          "key": "fresh-produce:fruit",
+          "label": "Fruit"
+        },
+        {
+          "key": "fresh-produce:tubers",
+          "label": "Tubers"
+        },
+        {
+          "key": "fresh-produce:herbs",
+          "label": "Herbs"
+        }
+      ]
+    },
+    {
+      "key": "groceries",
+      "label": "Groceries",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "wholesale-distribution",
+        "food-bakery-catering"
+      ],
+      "subcategories": [
+        {
+          "key": "groceries:grains-flour",
+          "label": "Grains and flour"
+        },
+        {
+          "key": "groceries:cooking-ingredients",
+          "label": "Cooking ingredients"
+        },
+        {
+          "key": "groceries:canned-food",
+          "label": "Canned food"
+        },
+        {
+          "key": "groceries:snacks",
+          "label": "Snacks"
+        }
+      ]
+    },
+    {
+      "key": "drinks-water",
+      "label": "Drinks and water",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "general-retail-groceries",
+        "food-bakery-catering",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "drinks-water:drinking-water",
+          "label": "Drinking water"
+        },
+        {
+          "key": "drinks-water:soft-drinks",
+          "label": "Soft drinks"
+        },
+        {
+          "key": "drinks-water:juice",
+          "label": "Juice"
+        },
+        {
+          "key": "drinks-water:tea-coffee",
+          "label": "Tea and coffee"
+        }
+      ]
+    },
+    {
+      "key": "bakery-prepared-food",
+      "label": "Bakery and prepared food",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries"
+      ],
+      "subcategories": [
+        {
+          "key": "bakery-prepared-food:bread",
+          "label": "Bread"
+        },
+        {
+          "key": "bakery-prepared-food:cakes",
+          "label": "Cakes"
+        },
+        {
+          "key": "bakery-prepared-food:pastries",
+          "label": "Pastries"
+        },
+        {
+          "key": "bakery-prepared-food:ready-meals",
+          "label": "Ready meals"
+        }
+      ]
+    },
+    {
+      "key": "clothing",
+      "label": "Clothing",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "fashion-apparel",
+        "fabrics-tailoring",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "clothing:womenswear",
+          "label": "Womenswear"
+        },
+        {
+          "key": "clothing:menswear",
+          "label": "Menswear"
+        },
+        {
+          "key": "clothing:childrenswear",
+          "label": "Childrenswear"
+        },
+        {
+          "key": "clothing:workwear",
+          "label": "Workwear"
+        }
+      ]
+    },
+    {
+      "key": "footwear-accessories",
+      "label": "Footwear and accessories",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "fashion-apparel",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "footwear-accessories:shoes",
+          "label": "Shoes"
+        },
+        {
+          "key": "footwear-accessories:bags",
+          "label": "Bags"
+        },
+        {
+          "key": "footwear-accessories:jewellery",
+          "label": "Jewellery"
+        },
+        {
+          "key": "footwear-accessories:accessories",
+          "label": "Accessories"
+        }
+      ]
+    },
+    {
+      "key": "fabrics-sewing",
+      "label": "Fabrics and sewing supplies",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "fabrics-sewing:fabric",
+          "label": "Fabric"
+        },
+        {
+          "key": "fabrics-sewing:thread-notions",
+          "label": "Thread and notions"
+        },
+        {
+          "key": "fabrics-sewing:patterns",
+          "label": "Patterns"
+        },
+        {
+          "key": "fabrics-sewing:sewing-tools",
+          "label": "Sewing tools"
+        }
+      ]
+    },
+    {
+      "key": "beauty-personal-care",
+      "label": "Beauty and personal care",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "beauty-personal-care:hair-care",
+          "label": "Hair care"
+        },
+        {
+          "key": "beauty-personal-care:skin-care",
+          "label": "Skin care"
+        },
+        {
+          "key": "beauty-personal-care:cosmetics",
+          "label": "Cosmetics"
+        },
+        {
+          "key": "beauty-personal-care:personal-hygiene",
+          "label": "Personal hygiene"
+        }
+      ]
+    },
+    {
+      "key": "health-wellness",
+      "label": "Health and wellness",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "pharmacy-health-retail",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "health-wellness:health-supplies",
+          "label": "Health supplies"
+        },
+        {
+          "key": "health-wellness:wellness-products",
+          "label": "Wellness products"
+        },
+        {
+          "key": "health-wellness:first-aid",
+          "label": "First aid"
+        },
+        {
+          "key": "health-wellness:medical-equipment",
+          "label": "Medical equipment"
+        }
+      ]
+    },
+    {
+      "key": "electronics",
+      "label": "Electronics",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "electronics:phones",
+          "label": "Phones"
+        },
+        {
+          "key": "electronics:computers",
+          "label": "Computers"
+        },
+        {
+          "key": "electronics:accessories",
+          "label": "Accessories"
+        },
+        {
+          "key": "electronics:appliances",
+          "label": "Appliances"
+        }
+      ]
+    },
+    {
+      "key": "hardware-building",
+      "label": "Hardware and building materials",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "hardware-building:hand-tools",
+          "label": "Hand tools"
+        },
+        {
+          "key": "hardware-building:electrical-supplies",
+          "label": "Electrical supplies"
+        },
+        {
+          "key": "hardware-building:plumbing-supplies",
+          "label": "Plumbing supplies"
+        },
+        {
+          "key": "hardware-building:building-materials",
+          "label": "Building materials"
+        }
+      ]
+    },
+    {
+      "key": "home-household",
+      "label": "Home and household",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "home-household:cleaning-supplies",
+          "label": "Cleaning supplies"
+        },
+        {
+          "key": "home-household:kitchenware",
+          "label": "Kitchenware"
+        },
+        {
+          "key": "home-household:home-textiles",
+          "label": "Home textiles"
+        },
+        {
+          "key": "home-household:furniture",
+          "label": "Furniture"
+        }
+      ]
+    },
+    {
+      "key": "spare-parts",
+      "label": "Spare parts",
+      "itemKinds": ["product"],
+      "businessProfileKeys": [
+        "repair-maintenance",
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "subcategories": [
+        {
+          "key": "spare-parts:vehicle-parts",
+          "label": "Vehicle parts"
+        },
+        {
+          "key": "spare-parts:appliance-parts",
+          "label": "Appliance parts"
+        },
+        {
+          "key": "spare-parts:phone-parts",
+          "label": "Phone parts"
+        },
+        {
+          "key": "spare-parts:machine-parts",
+          "label": "Machine parts"
+        }
+      ]
+    },
+    {
+      "key": "tailoring-services",
+      "label": "Tailoring services",
+      "itemKinds": ["service"],
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "professional-services"
+      ],
+      "subcategories": [
+        {
+          "key": "tailoring-services:custom-sewing",
+          "label": "Custom sewing"
+        },
+        {
+          "key": "tailoring-services:alterations",
+          "label": "Alterations"
+        },
+        {
+          "key": "tailoring-services:repairs",
+          "label": "Repairs"
+        },
+        {
+          "key": "tailoring-services:embroidery",
+          "label": "Embroidery"
+        }
+      ]
+    },
+    {
+      "key": "beauty-services",
+      "label": "Beauty services",
+      "itemKinds": ["service"],
+      "businessProfileKeys": ["beauty-salon-spa", "professional-services"],
+      "subcategories": [
+        {
+          "key": "beauty-services:hair-services",
+          "label": "Hair services"
+        },
+        {
+          "key": "beauty-services:nail-services",
+          "label": "Nail services"
+        },
+        {
+          "key": "beauty-services:skin-treatments",
+          "label": "Skin treatments"
+        },
+        {
+          "key": "beauty-services:spa-treatments",
+          "label": "Spa treatments"
+        }
+      ]
+    },
+    {
+      "key": "clothing-care",
+      "label": "Laundry and clothing care",
+      "itemKinds": ["service"],
+      "businessProfileKeys": [
+        "laundry-dry-cleaning",
+        "fabrics-tailoring",
+        "fashion-apparel"
+      ],
+      "subcategories": [
+        {
+          "key": "clothing-care:laundry",
+          "label": "Laundry"
+        },
+        {
+          "key": "clothing-care:dry-cleaning",
+          "label": "Dry cleaning"
+        },
+        {
+          "key": "clothing-care:ironing",
+          "label": "Ironing"
+        },
+        {
+          "key": "clothing-care:specialist-cleaning",
+          "label": "Specialist cleaning"
+        }
+      ]
+    },
+    {
+      "key": "repair-services",
+      "label": "Repair and maintenance",
+      "itemKinds": ["service"],
+      "businessProfileKeys": [
+        "repair-maintenance",
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "professional-services"
+      ],
+      "subcategories": [
+        {
+          "key": "repair-services:phone-repairs",
+          "label": "Phone repairs"
+        },
+        {
+          "key": "repair-services:appliance-repairs",
+          "label": "Appliance repairs"
+        },
+        {
+          "key": "repair-services:vehicle-servicing",
+          "label": "Vehicle servicing"
+        },
+        {
+          "key": "repair-services:property-maintenance",
+          "label": "Property maintenance"
+        }
+      ]
+    },
+    {
+      "key": "food-services",
+      "label": "Food and catering services",
+      "itemKinds": ["service"],
+      "businessProfileKeys": ["food-bakery-catering", "professional-services"],
+      "subcategories": [
+        {
+          "key": "food-services:catering",
+          "label": "Catering"
+        },
+        {
+          "key": "food-services:meal-preparation",
+          "label": "Meal preparation"
+        },
+        {
+          "key": "food-services:event-service",
+          "label": "Event service"
+        },
+        {
+          "key": "food-services:baking-services",
+          "label": "Baking services"
+        }
+      ]
+    },
+    {
+      "key": "professional-services",
+      "label": "Professional services",
+      "itemKinds": ["service"],
+      "businessProfileKeys": ["professional-services", "other-mixed-business"],
+      "subcategories": [
+        {
+          "key": "professional-services:consulting",
+          "label": "Consulting"
+        },
+        {
+          "key": "professional-services:design",
+          "label": "Design"
+        },
+        {
+          "key": "professional-services:training",
+          "label": "Training"
+        },
+        {
+          "key": "professional-services:administrative-services",
+          "label": "Administrative services"
+        }
+      ]
+    }
+  ]
+}

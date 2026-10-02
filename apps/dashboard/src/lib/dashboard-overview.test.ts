@@ -27,11 +27,11 @@ describe("dashboard getting started actions", () => {
     ).toEqual([
       {
         disabled: false,
-        href: "/catalog?catalogItem=create&catalogKind=product",
+        href: "/?catalogItem=create&catalogCreateKind=product",
       },
       {
         disabled: false,
-        href: "/catalog?catalogItem=create&catalogKind=service",
+        href: "/?catalogItem=create&catalogCreateKind=service",
       },
       { disabled: true, href: "/sales?orderSheet=create" },
       { disabled: false, href: "/staff?staffSheet=invite" },

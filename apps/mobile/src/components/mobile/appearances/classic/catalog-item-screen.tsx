@@ -1,4 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import {
+  catalogItemOfferings,
+  catalogItemUnavailable,
+} from "@/components/mobile/catalog-item/catalog-item-model"
+import type {
+  CatalogItemOverviewProps,
+  CatalogItemScreenProps,
+} from "@/components/mobile/catalog-item/catalog-item-presentation"
+import { CatalogSavedPhotos } from "@/components/mobile/catalog-item/catalog-saved-photos"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
@@ -7,16 +16,8 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import type {
-  CatalogItemOverviewProps,
-  CatalogItemScreenProps,
-} from "@/components/mobile/catalog-item/catalog-item-presentation"
-import {
-  catalogItemOfferings,
-  catalogItemUnavailable,
-} from "@/components/mobile/catalog-item/catalog-item-model"
-import { StatusBar } from "expo-status-bar"
 import { useColorScheme } from "@/hooks/use-color"
+import { StatusBar } from "expo-status-bar"
 
 export function ClassicCatalogItemOverview({
   item,
@@ -82,6 +83,8 @@ export function ClassicCatalogItemOverview({
           </Text>
         </View>
       </View>
+
+      <CatalogSavedPhotos item={item} />
 
       <ActionButton icon="PlusCircle" onPress={onCreateOrder}>
         Create order with this {item.kind}

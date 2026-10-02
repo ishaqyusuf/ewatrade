@@ -27,6 +27,7 @@ import {
 } from "react"
 import { AppState } from "react-native"
 import { useAuthContext } from "./use-auth"
+import { useAuthenticatedQaTools } from "./use-authenticated-qa-tools"
 
 type QaProfile = {
   business: {
@@ -42,14 +43,15 @@ type QaProfile = {
   store: { currencyCode: string; id: string; name: string; slug: string }
 }
 
-type QaAcceleratorContextValue = {
+export type QaAcceleratorContextValue = {
   authorization: StoredQaAuthorization | null
   authorizationError: string | null
   authorizationSheetRequest: number
-  authorize(input: { credential: string; qaDomain: string }): void
+  authorize(input: { qaDomain: string }): void
   capabilityAvailable: boolean
   capabilityCategory: string | null
   clientEnabled: boolean
+  toolingAvailable: boolean
   clearQaData(): Promise<void>
   isAuthorizing: boolean
   isLoading: boolean
@@ -70,6 +72,7 @@ type QaAcceleratorContextValue = {
   profiles: QaProfile[]
   retryCapability(): Promise<void>
   refreshProfiles(): Promise<void>
+  refreshFixtureContext(): Promise<QaAcceleratorContextValue["fixtureContext"]>
   selectProfile(profileReference: string): void
 }
 
@@ -80,6 +83,7 @@ const QaAcceleratorContext = createContext<QaAcceleratorContextValue | null>(
 export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC()
   const auth = useAuthContext()
+  const authenticatedTools = useAuthenticatedQaTools()
   const [authorization, setAuthorization] =
     useState<StoredQaAuthorization | null>(() => getStoredQaAuthorization())
   const [authorizationError, setAuthorizationError] = useState<string | null>(
@@ -203,7 +207,6 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         void exchangeCredential({
           clientId,
           contractVersion: QA_ACCELERATOR_CONTRACT_VERSION,
-          credential: input.credential,
           qaDomain: input.qaDomain,
         })
           .then((result) => {
@@ -233,6 +236,14 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
           ? capability.data.category
           : null,
       clientEnabled,
+      toolingAvailable: Boolean(
+        authenticatedTools.fixtureContext ||
+          (clientEnabled &&
+            authorization &&
+            !revalidation.isError &&
+            (!auth.isAuthenticated ||
+              (!fixtureContextQuery.isError && fixtureContextQuery.data))),
+      ),
       clearQaData,
       isAuthorizing,
       isLoading:
@@ -244,7 +255,11 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       },
       profilesLoading: profilesQuery.isLoading || profilesQuery.isFetching,
       selectingProfileReference: select.variables?.profileReference ?? null,
-      fixtureContext: fixtureContextQuery.data ?? null,
+      fixtureContext:
+        authenticatedTools.fixtureContext ??
+        (fixtureContextQuery.isError || revalidation.isError
+          ? null
+          : (fixtureContextQuery.data ?? null)),
       profileError:
         profilesQuery.isError && !profilesQuery.isFetching
           ? profilesQuery.error.message
@@ -256,6 +271,18 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       async refreshProfiles() {
         await profilesQuery.refetch()
       },
+      async refreshFixtureContext() {
+        const ordinary = await authenticatedTools.refreshFixtureContext()
+        if (ordinary) return ordinary
+        if (
+          !authorization ||
+          !capability.data?.available ||
+          revalidation.isError
+        )
+          return null
+        const result = await fixtureContextQuery.refetch()
+        return result.isError ? null : (result.data ?? null)
+      },
       selectProfile(profileReference) {
         select.mutate({
           contractVersion: QA_ACCELERATOR_CONTRACT_VERSION,
@@ -266,6 +293,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
     }),
     [
       authorization,
+      authenticatedTools,
       authorizationError,
       authorizationSheetRequest,
       capability.data,
@@ -276,6 +304,9 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       clearQaData,
       exchangeCredential,
       fixtureContextQuery.data,
+      fixtureContextQuery.isError,
+      fixtureContextQuery.refetch,
+      auth.isAuthenticated,
       isAuthorizing,
       profileError,
       profilesQuery,

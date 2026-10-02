@@ -1,0 +1,128 @@
+enum CustomerLedgerEntryKind {
+  OPENING_DEBT
+  OPENING_CREDIT
+  ORDER_CHARGE
+  ORDER_PAYMENT
+  RECEIPT
+  CREDIT_NOTE
+  REFUND
+  REVERSAL
+}
+
+enum CustomerLedgerSide {
+  DEBIT
+  CREDIT
+}
+
+model CustomerLedgerAccount {
+  id           String                  @id @default(cuid())
+  tenantId     String
+  customerId   String
+  currencyCode String
+  lastSequence BigInt                  @default(0)
+  revision     BigInt                  @default(0)
+  createdAt    DateTime                @default(now())
+  customer     Customer                @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  entries      CustomerLedgerEntry[]
+  commands     CustomerLedgerCommand[]
+
+  @@unique([tenantId, customerId, currencyCode])
+  @@unique([tenantId, id])
+}
+
+model CustomerLedgerEntry {
+  receipt      CustomerLedgerReceipt?
+  id           String                     @id @default(cuid())
+  tenantId     String
+  accountId    String
+  sequence     BigInt
+  kind         CustomerLedgerEntryKind
+  side         CustomerLedgerSide
+  amountMinor  BigInt
+  sourceKind   String
+  sourceId     String
+  orderId      String?
+  storeId      String?
+  actorUserId  String
+  effectiveAt  DateTime
+  recordedAt   DateTime                   @default(now())
+  description  String
+  reversalOfId String?                    @unique
+  account      CustomerLedgerAccount      @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Restrict)
+  order        CommercialOrder?           @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  reversalOf   CustomerLedgerEntry?       @relation("CustomerLedgerReversal", fields: [accountId, reversalOfId], references: [accountId, id], onDelete: Restrict)
+  reversals    CustomerLedgerEntry[]      @relation("CustomerLedgerReversal")
+  creditsUsed  CustomerLedgerAllocation[] @relation("CustomerLedgerCredit")
+  chargesPaid  CustomerLedgerAllocation[] @relation("CustomerLedgerCharge")
+
+  @@unique([accountId, id])
+  @@unique([accountId, sequence])
+  @@unique([tenantId, sourceKind, sourceId])
+  @@index([accountId, effectiveAt, sequence])
+  @@index([tenantId, storeId, effectiveAt])
+  @@index([orderId])
+}
+
+model CustomerLedgerAllocation {
+  orderSettlement CommercialOrderPayment?
+  sequence        BigInt
+  id              String                            @id @default(cuid())
+  accountId       String
+  creditEntryId   String
+  chargeEntryId   String
+  amountMinor     BigInt
+  actorUserId     String
+  createdAt       DateTime                          @default(now())
+  credit          CustomerLedgerEntry               @relation("CustomerLedgerCredit", fields: [accountId, creditEntryId], references: [accountId, id], onDelete: Restrict)
+  charge          CustomerLedgerEntry               @relation("CustomerLedgerCharge", fields: [accountId, chargeEntryId], references: [accountId, id], onDelete: Restrict)
+  releases        CustomerLedgerAllocationRelease[]
+
+  @@index([accountId, creditEntryId])
+  @@index([accountId, chargeEntryId])
+}
+
+model CustomerLedgerAllocationRelease {
+  orderSettlementReversal CommercialOrderPayment?
+  sequence                BigInt
+  id                      String                   @id @default(cuid())
+  allocationId            String
+  amountMinor             BigInt
+  reason                  String
+  actorUserId             String
+  createdAt               DateTime                 @default(now())
+  allocation              CustomerLedgerAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+
+  @@index([allocationId, createdAt])
+}
+
+model CustomerLedgerCommand {
+  id              String                @id @default(cuid())
+  tenantId        String
+  accountId       String
+  clientCommandId String
+  kind            String
+  payloadHash     String
+  actorUserId     String
+  result          Json
+  createdAt       DateTime              @default(now())
+  account         CustomerLedgerAccount @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, clientCommandId])
+  @@index([accountId, createdAt])
+}
+
+model CustomerLedgerReceipt {
+  id             String                  @id @default(cuid())
+  accountId      String
+  entryId        String                  @unique
+  bookId         String
+  moneyAccountId String
+  method         CommercialPaymentMethod
+  reference      String?
+  createdAt      DateTime                @default(now())
+  entry          CustomerLedgerEntry     @relation(fields: [accountId, entryId], references: [accountId, id], onDelete: Restrict)
+  moneyAccount   FinanceAccount          @relation(fields: [bookId, moneyAccountId], references: [bookId, id], onDelete: Restrict)
+
+  @@unique([accountId, entryId])
+  @@index([bookId, moneyAccountId, createdAt])
+}

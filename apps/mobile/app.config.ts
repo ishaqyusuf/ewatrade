@@ -242,6 +242,15 @@ const config: ExpoConfig = {
     "expo-font",
     "expo-asset",
     [
+      "expo-camera",
+      {
+        cameraPermission:
+          "Allow $(PRODUCT_NAME) to scan product barcodes and capture photos.",
+        recordAudioAndroid: false,
+        barcodeScannerEnabled: true,
+      },
+    ],
+    [
       "expo-audio",
       {
         microphonePermission:

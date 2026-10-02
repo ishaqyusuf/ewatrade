@@ -14,6 +14,7 @@ export function PrescriptionEmptyState() {
         link.
       </p>
       <Button
+        appearance="form"
         className="mt-4"
         variant="outline"
         onClick={() => setParams({ prescriptionSheet: "intake" })}
@@ -33,6 +34,7 @@ export function PrescriptionNoResults() {
         Change the search or clear the filters.
       </p>
       <Button
+        appearance="form"
         className="mt-4"
         variant="outline"
         onClick={() => setFilter(null)}

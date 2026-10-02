@@ -1,9 +1,22 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  Badge,
+  Button,
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  Input,
+  MoneyInput,
+  SelectControl,
+  Textarea,
+} from "@ewatrade/ui"
 
+import { useStoreCurrency } from "@/hooks/use-store-currency"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { buildPrescriptionQuoteCommand } from "@ewatrade/prescriptions/quotes"
-import { Badge, Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useFormContext } from "react-hook-form"
@@ -18,9 +31,6 @@ import { formatPrescriptionStatus } from "./prescription-presentation"
 import { PrescriptionSheetHeader } from "./prescription-sheet-header"
 
 type RequestDetail = RouterOutputs["prescriptions"]["detail"]
-
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 function currentTranscript(request: RequestDetail) {
   return request.transcriptions.find(
@@ -37,6 +47,7 @@ export function PrescriptionRequestWorkspace({
   requestId: string
   storeId: string
 }) {
+  const currencyCode = useStoreCurrency(storeId)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const detail = useQuery(
@@ -127,13 +138,13 @@ export function PrescriptionRequestWorkspace({
     ),
   )
   if (detail.isLoading) {
-    return <div className="h-48 animate-pulse rounded-lg bg-muted" />
+    return <div className="h-48 animate-pulse bg-muted" />
   }
   if (detail.error || !detail.data) {
     return (
-      <p role="alert" className="text-sm text-destructive">
+      <FormFeedback appearance="dashboard">
         {detail.error?.message ?? "Prescription Request not found."}
-      </p>
+      </FormFeedback>
     )
   }
   const request = detail.data
@@ -156,10 +167,10 @@ export function PrescriptionRequestWorkspace({
   const allowed = allowedStatuses[mode]
   if (allowed && !allowed.includes(request.status)) {
     return (
-      <p role="alert" className="text-sm text-destructive">
+      <FormFeedback appearance="dashboard">
         This request has moved to {formatPrescriptionStatus(request.status)}.
         Close and reopen it from the queue to continue in the current workflow.
-      </p>
+      </FormFeedback>
     )
   }
   const isPending =
@@ -279,7 +290,7 @@ export function PrescriptionRequestWorkspace({
             .sort((left, right) => right.revision - left.revision)
             .map((revision) => (
               <details
-                className="rounded-lg border border-border p-3"
+                className="rounded-none border border-border p-3"
                 key={revision.id}
                 open={revision.revision === request.currentTranscriptRevision}
               >
@@ -302,13 +313,14 @@ export function PrescriptionRequestWorkspace({
       {mode === "media-review" &&
       (request.status === "RECEIVED" || request.status === "MEDIA_REVIEW") &&
       currentMedia.length ? (
-        <section className="grid gap-3 rounded-lg border border-border p-4">
+        <section className="grid gap-3 rounded-none border border-border p-4">
           <h4 className="font-medium">Media review</h4>
           <p className="text-sm text-muted-foreground">
             Every page must pass the private safety scan before transcription.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
+              appearance="form"
               disabled={isPending}
               onClick={() => startTranscription.mutate({ requestId, storeId })}
             >
@@ -316,8 +328,7 @@ export function PrescriptionRequestWorkspace({
             </Button>
           </div>
           <div className="grid gap-2">
-            <input
-              className={fieldClass}
+            <Input
               value={clearerReason}
               onChange={(event) =>
                 setValue("clearerReason", event.target.value, {
@@ -327,6 +338,7 @@ export function PrescriptionRequestWorkspace({
               placeholder="Neutral reason for clearer images"
             />
             <Button
+              appearance="form"
               variant="outline"
               disabled={isPending || !clearerReason.trim()}
               onClick={() =>
@@ -353,10 +365,8 @@ export function PrescriptionRequestWorkspace({
             <p className="text-sm text-muted-foreground">
               OCR is a draft only. Confirmation here is not clinical approval.
             </p>
-            <label className="grid gap-1 text-sm">
-              Correct, delete, or add draft lines
-              <textarea
-                className="min-h-32 rounded-lg border border-border bg-background p-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            <ControlField label={<>Correct, delete, or add draft lines</>}>
+              <Textarea
                 value={editableRevisionText}
                 onChange={(event) =>
                   setValue("revisionText", event.target.value, {
@@ -364,8 +374,9 @@ export function PrescriptionRequestWorkspace({
                   })
                 }
               />
-            </label>
+            </ControlField>
             <Button
+              appearance="form"
               disabled={isPending || !editableRevisionText.trim()}
               onClick={() =>
                 reviseTranscription.mutate({
@@ -383,12 +394,11 @@ export function PrescriptionRequestWorkspace({
               Save transcription revision
             </Button>
             {transcript.lines.map((line) => (
-              <div key={line.id} className="grid gap-2 rounded-lg border p-3">
+              <div key={line.id} className="grid gap-2 rounded-none border p-3">
                 <p className="text-xs text-muted-foreground">
                   Draft line {line.lineNumber}
                 </p>
-                <input
-                  className={fieldClass}
+                <Input
                   value={
                     verifiedText[line.id] ?? line.verifiedText ?? line.draftText
                   }
@@ -402,6 +412,7 @@ export function PrescriptionRequestWorkspace({
                 />
                 <div className="flex gap-2">
                   <Button
+                    appearance="form"
                     size="sm"
                     disabled={verifyLine.isPending}
                     onClick={() =>
@@ -419,6 +430,7 @@ export function PrescriptionRequestWorkspace({
                     Verify line
                   </Button>
                   <Button
+                    appearance="form"
                     size="sm"
                     variant="outline"
                     disabled={verifyLine.isPending}
@@ -436,6 +448,7 @@ export function PrescriptionRequestWorkspace({
               </div>
             ))}
             <Button
+              appearance="form"
               disabled={isPending}
               onClick={() => submitForPharmacist.mutate({ requestId, storeId })}
             >
@@ -465,60 +478,57 @@ export function PrescriptionRequestWorkspace({
               quantity: "1",
             }
             return (
-              <div key={line.id} className="grid gap-2 rounded-lg border p-3">
+              <div key={line.id} className="grid gap-2 rounded-none border p-3">
                 <p className="font-medium">
                   {line.verifiedText ?? "Unreadable line"}
                 </p>
-                <select
-                  className={fieldClass}
+                <SelectControl
                   value={mapping.availability}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setValue(
                       "lineMapping",
                       {
                         ...lineMapping,
                         [line.id]: {
                           ...mapping,
-                          availability: event.target
-                            .value as typeof mapping.availability,
+                          availability: value as typeof mapping.availability,
                         },
                       },
                       { shouldDirty: true },
                     )
                   }
-                >
-                  <option value="available">Available</option>
-                  <option value="partial">Partially available</option>
-                  <option value="unavailable">Unavailable</option>
-                  <option value="restricted">Restricted</option>
-                  <option value="declined">Declined</option>
-                </select>
-                <select
-                  className={fieldClass}
+                  options={[
+                    { value: "available", label: <>Available</> },
+                    { value: "partial", label: <>Partially available</> },
+                    { value: "unavailable", label: <>Unavailable</> },
+                    { value: "restricted", label: <>Restricted</> },
+                    { value: "declined", label: <>Declined</> },
+                  ]}
+                />
+                <SelectControl
                   value={mapping.offeringId}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setValue(
                       "lineMapping",
                       {
                         ...lineMapping,
                         [line.id]: {
                           ...mapping,
-                          offeringId: event.target.value,
+                          offeringId: value,
                         },
                       },
                       { shouldDirty: true },
                     )
                   }
-                >
-                  <option value="">No Product Offering</option>
-                  {(offerings.data ?? []).map((offering) => (
-                    <option key={offering.id} value={offering.id}>
-                      {offering.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className={fieldClass}
+                  options={[
+                    { value: "", label: <>No Product Offering</> },
+                    ...((offerings.data ?? []).map((offering) => ({
+                      value: offering.id,
+                      label: offering.label,
+                    })) ?? []),
+                  ]}
+                />
+                <Input
                   value={mapping.quantity}
                   onChange={(event) =>
                     setValue(
@@ -536,8 +546,7 @@ export function PrescriptionRequestWorkspace({
                   inputMode="decimal"
                   placeholder="Quantity"
                 />
-                <input
-                  className={fieldClass}
+                <Input
                   value={mapping.customerWording}
                   onChange={(event) =>
                     setValue(
@@ -554,37 +563,39 @@ export function PrescriptionRequestWorkspace({
                   }
                   placeholder="Customer-visible wording"
                 />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
+                <CheckboxField
+                  label={<>Explicit alternative or substitution</>}
+                >
+                  <Checkbox
                     checked={mapping.isAlternative}
-                    type="checkbox"
-                    onChange={(event) =>
+                    onCheckedChange={(checked) =>
                       setValue(
                         "lineMapping",
                         {
                           ...lineMapping,
                           [line.id]: {
                             ...mapping,
-                            isAlternative: event.target.checked,
+                            isAlternative: checked,
                           },
                         },
                         { shouldDirty: true },
                       )
                     }
                   />
-                  Explicit alternative or substitution
-                </label>
+                </CheckboxField>
               </div>
             )
           })}
           <div className="grid gap-2 sm:grid-cols-3">
             <Button
+              appearance="form"
               disabled={isPending}
               onClick={() => setPendingDecision("released")}
             >
               Release for quote
             </Button>
             <Button
+              appearance="form"
               variant="outline"
               disabled={isPending}
               onClick={() => setPendingDecision("needs_clarification")}
@@ -592,6 +603,7 @@ export function PrescriptionRequestWorkspace({
               Request clarification
             </Button>
             <Button
+              appearance="form"
               variant="destructive"
               disabled={isPending}
               onClick={() => setPendingDecision("declined")}
@@ -601,7 +613,7 @@ export function PrescriptionRequestWorkspace({
           </div>
           {pendingDecision ? (
             <div
-              className="grid gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950"
+              className="grid gap-3 rounded-none border border-amber-300 bg-amber-50 p-4 text-amber-950"
               role="alertdialog"
               aria-labelledby="pharmacist-decision-title"
             >
@@ -618,6 +630,7 @@ export function PrescriptionRequestWorkspace({
               </div>
               <div className="flex gap-2">
                 <Button
+                  appearance="form"
                   disabled={pharmacistReview.isPending}
                   onClick={confirmPharmacistDecision}
                 >
@@ -626,6 +639,7 @@ export function PrescriptionRequestWorkspace({
                     : "Confirm decision"}
                 </Button>
                 <Button
+                  appearance="form"
                   disabled={pharmacistReview.isPending}
                   onClick={() => setPendingDecision(null)}
                   variant="outline"
@@ -648,9 +662,9 @@ export function PrescriptionRequestWorkspace({
                 "Unavailable line"}
               {line.mapping?.availability === "AVAILABLE" ||
               line.mapping?.availability === "PARTIAL" ? (
-                <input
+                <MoneyInput
+                  currencyCode={currencyCode}
                   aria-label={`Unit price for ${line.mapping?.customerWording ?? line.verifiedText ?? "prescription line"}`}
-                  className={fieldClass}
                   inputMode="decimal"
                   placeholder="Unit price"
                   value={prices[line.id] ?? ""}
@@ -671,16 +685,14 @@ export function PrescriptionRequestWorkspace({
               )}
             </div>
           ))}
-          <Button disabled={isPending} onClick={quote}>
+          <Button appearance="form" disabled={isPending} onClick={quote}>
             Issue pickup quote
           </Button>
         </section>
       ) : null}
 
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
     </div>
   )

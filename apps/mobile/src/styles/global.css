@@ -71,17 +71,17 @@
   :root {
     --radius: 0.65rem;
 
-    --background: rgb(247, 249, 247);
-    --foreground: rgb(17, 24, 20);
+    --background: #F3F4F5;
+    --foreground: #182420;
 
-    --card: rgb(255, 255, 255);
-    --card-foreground: rgb(17, 24, 20);
+    --card: #FFFFFF;
+    --card-foreground: #182420;
 
-    --popover: rgb(255, 255, 255);
-    --popover-foreground: rgb(17, 24, 20);
+    --popover: #FFFFFF;
+    --popover-foreground: #182420;
 
-    --primary: rgb(13, 94, 82);
-    --primary-foreground: rgb(240, 253, 250);
+    --primary: #17684F;
+    --primary-foreground: #FFF9ED;
 
     --success: rgb(34, 197, 94);
     --success-foreground: rgb(240, 253, 244);
@@ -89,24 +89,24 @@
     --warn: rgb(245, 158, 11);
     --warn-foreground: rgb(69, 26, 3);
 
-    --secondary: rgb(238, 243, 240);
-    --secondary-foreground: rgb(34, 48, 42);
+    --secondary: #ECF3EE;
+    --secondary-foreground: #182420;
 
-    --muted: rgb(225, 233, 229);
-    --muted-foreground: rgb(92, 106, 100);
+    --muted: #F6F7F7;
+    --muted-foreground: #626D69;
 
-    --accent: rgb(219, 245, 239);
-    --accent-foreground: rgb(13, 94, 82);
+    --accent: #ECF3EE;
+    --accent-foreground: #17684F;
 
     --destructive: rgb(185, 28, 28);
     --destructive-foreground: rgb(254, 242, 242);
 
-    --border: rgb(203, 215, 209);
-    --input: rgb(225, 233, 229);
+    --border: #DCE2DF;
+    --input: #F6F7F7;
     --overlay: rgba(0, 0, 0, 0.48);
-    --ring: rgb(20, 184, 166);
+    --ring: #17684F;
 
-    --chart-1: rgb(13, 94, 82);
+    --chart-1: #17684F;
     --chart-2: rgb(13, 148, 136);
     --chart-3: rgb(217, 119, 6);
     --chart-4: rgb(31, 41, 55);
@@ -117,17 +117,17 @@
 @media (prefers-color-scheme: dark) {
   @layer base {
     :root {
-      --background: rgb(18, 18, 18);
-      --foreground: rgb(250, 250, 250);
+      --background: #111715;
+      --foreground: #F0F3F1;
 
-      --card: rgb(30, 30, 30);
-      --card-foreground: rgb(250, 250, 250);
+      --card: #1B2320;
+      --card-foreground: #F0F3F1;
 
-      --popover: rgb(30, 30, 30);
-      --popover-foreground: rgb(250, 250, 250);
+      --popover: #1B2320;
+      --popover-foreground: #F0F3F1;
 
-      --primary: rgb(45, 212, 191);
-      --primary-foreground: rgb(4, 47, 46);
+      --primary: #8CD5B5;
+      --primary-foreground: #10271D;
 
       --success: rgb(34, 197, 94);
       --success-foreground: rgb(236, 253, 245);
@@ -135,24 +135,24 @@
       --warn: rgb(245, 158, 11);
       --warn-foreground: rgb(255, 251, 235);
 
-      --secondary: rgb(46, 46, 46);
-      --secondary-foreground: rgb(245, 245, 245);
+      --secondary: #26372D;
+      --secondary-foreground: #F0F3F1;
 
-      --muted: rgb(38, 38, 38);
-      --muted-foreground: rgb(163, 163, 163);
+      --muted: #232E28;
+      --muted-foreground: #AAB7AF;
 
-      --accent: rgb(64, 64, 64);
-      --accent-foreground: rgb(245, 245, 245);
+      --accent: #26372D;
+      --accent-foreground: #8CD5B5;
 
       --destructive: rgb(220, 38, 38);
       --destructive-foreground: rgb(254, 242, 242);
 
-      --border: rgb(46, 46, 46);
-      --input: rgb(56, 56, 56);
+      --border: #3D4A43;
+      --input: #232E28;
       --overlay: rgba(0, 0, 0, 0.68);
-      --ring: rgb(45, 212, 191);
+      --ring: #8CD5B5;
 
-      --chart-1: rgb(45, 212, 191);
+      --chart-1: #8CD5B5;
       --chart-2: rgb(34, 197, 94);
       --chart-3: rgb(251, 191, 36);
       --chart-4: rgb(115, 115, 115);

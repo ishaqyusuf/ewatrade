@@ -23,6 +23,7 @@ export type PendingCommerceOrder = {
 }
 
 export type CommerceCustomer = {
+  directoryId?: string
   createdAt?: Date | string
   currencyTotals: Array<{ currencyCode: string; totalMinor: number }>
   email: string | null

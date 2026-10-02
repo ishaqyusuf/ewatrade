@@ -1,16 +1,23 @@
 "use client"
+import {
+  Button,
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
 
 import { useDomainParams } from "@/hooks/use-domain-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type FormEvent, useRef, useState } from "react"
 import { useDomainForm } from "./domain/form-context"
 
 type Store = { id: string; name: string }
-
-const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 function formatMoney(amountMinor: number, currencyCode: string) {
   return new Intl.NumberFormat("en-NG", {
@@ -100,96 +107,81 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
 
   if (step === "owner") {
     return (
-      <form className="grid gap-4" onSubmit={saveOwner}>
-        <div className="rounded-lg border border-border bg-muted/40 p-4">
-          <p className="font-medium">{form.quote?.normalizedDomain}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The domain owner must match a real person or registered business.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="grid gap-1.5 text-sm">
-            First name
-            <input className={inputClass} name="firstName" required />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Last name
-            <input className={inputClass} name="lastName" required />
-          </label>
-        </div>
-        <label className="grid gap-1.5 text-sm">
-          Business name
-          <input className={inputClass} name="companyName" />
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          Email
-          <input className={inputClass} name="email" type="email" required />
-        </label>
-        <div className="grid grid-cols-[100px_1fr] gap-3">
-          <label className="grid gap-1.5 text-sm">
-            Code
-            <input
-              className={inputClass}
-              defaultValue="234"
-              name="phoneCountryCode"
-              required
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Phone
-            <input className={inputClass} name="phoneNumber" required />
-          </label>
-        </div>
-        <label className="grid gap-1.5 text-sm">
-          Address
-          <input className={inputClass} name="addressLine1" required />
-        </label>
-        <input
-          aria-label="Address line 2"
-          className={inputClass}
-          name="addressLine2"
-          placeholder="Address line 2 (optional)"
-        />
-        <div className="grid grid-cols-2 gap-3">
-          <label className="grid gap-1.5 text-sm">
-            City
-            <input className={inputClass} name="city" required />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            State
-            <input className={inputClass} name="region" required />
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="grid gap-1.5 text-sm">
-            Country
-            <input
-              className={inputClass}
-              defaultValue="NG"
-              name="countryCode"
-              required
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Postal code
-            <input className={inputClass} name="postalCode" />
-          </label>
-        </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <div className="flex justify-between gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setParams({ domainMode: "buy", domainStep: "search" })
-            }
-          >
-            Back
-          </Button>
-          <Button type="submit" disabled={saveProfile.isPending}>
-            {saveProfile.isPending ? "Saving…" : "Continue"}
-          </Button>
-        </div>
+      <form onSubmit={saveOwner}>
+        <FieldGroup className="min-w-0 grid gap-4">
+          <div className="border border-border bg-muted/40 p-4">
+            <p className="font-medium">{form.quote?.normalizedDomain}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The domain owner must match a real person or registered business.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ControlField label={<>First name</>}>
+              <Input name="firstName" required />
+            </ControlField>
+            <ControlField label={<>Last name</>}>
+              <Input name="lastName" required />
+            </ControlField>
+          </div>
+          <ControlField label={<>Business name</>}>
+            <Input name="companyName" />
+          </ControlField>
+          <ControlField label={<>Email</>}>
+            <Input name="email" type="email" required />
+          </ControlField>
+          <div className="grid grid-cols-[100px_1fr] gap-3">
+            <ControlField label={<>Code</>}>
+              <Input defaultValue="234" name="phoneCountryCode" required />
+            </ControlField>
+            <ControlField label={<>Phone</>}>
+              <Input name="phoneNumber" required />
+            </ControlField>
+          </div>
+          <ControlField label={<>Address</>}>
+            <Input name="addressLine1" required />
+          </ControlField>
+          <Input
+            aria-label="Address line 2"
+            name="addressLine2"
+            placeholder="Address line 2 (optional)"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <ControlField label={<>City</>}>
+              <Input name="city" required />
+            </ControlField>
+            <ControlField label={<>State</>}>
+              <Input name="region" required />
+            </ControlField>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <ControlField label={<>Country</>}>
+              <Input defaultValue="NG" name="countryCode" required />
+            </ControlField>
+            <ControlField label={<>Postal code</>}>
+              <Input name="postalCode" />
+            </ControlField>
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <FormActions className="pt-2">
+            <Button
+              appearance="form"
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setParams({ domainMode: "buy", domainStep: "search" })
+              }
+            >
+              Back
+            </Button>
+            <SubmitButton
+              isSubmitting={saveProfile.isPending}
+              type="submit"
+              disabled={saveProfile.isPending}
+            >
+              {saveProfile.isPending ? "Saving…" : "Continue"}
+            </SubmitButton>
+          </FormActions>
+        </FieldGroup>
       </form>
     )
   }
@@ -198,7 +190,7 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
     const profileId = form.profileId ?? profileQuery.data?.id ?? null
     return (
       <div className="grid gap-5">
-        <div className="rounded-xl border border-border p-5">
+        <div className="border border-border p-5">
           <p className="text-sm text-muted-foreground">Domain</p>
           <p className="mt-1 text-lg font-semibold">
             {form.quote?.normalizedDomain}
@@ -218,14 +210,8 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
           using the saved legal owner details. Provider costs and taxes are
           included in the displayed price.
         </p>
-        <label className="flex items-start gap-3 rounded-lg border border-border p-4 text-sm">
-          <input
-            checked={form.termsAccepted}
-            className="mt-0.5 size-4 rounded border-border"
-            type="checkbox"
-            onChange={(event) => form.setTermsAccepted(event.target.checked)}
-          />
-          <span>
+        <CheckboxField
+          label=<span>
             I am authorized by the domain owner and accept the{" "}
             <a
               className="font-medium text-primary underline underline-offset-4"
@@ -241,9 +227,15 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
             </a>
             , including applicable ICANN or NiRA dispute rules.
           </span>
-        </label>
+        >
+          <Checkbox
+            checked={form.termsAccepted}
+            onCheckedChange={(checked) => form.setTermsAccepted(checked)}
+          />
+        </CheckboxField>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button
+          appearance="form"
           disabled={
             !form.quote ||
             !profileId ||
@@ -268,26 +260,32 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
   }
 
   return (
-    <form className="grid gap-5" onSubmit={search}>
-      <div>
-        <label className="grid gap-1.5 text-sm font-medium">
-          Find your domain
-          <input
-            className={inputClass}
-            placeholder="yourbusiness.com.ng"
-            value={form.domain}
-            onChange={(event) => form.setDomain(event.target.value)}
-          />
-        </label>
-        <p className="mt-2 text-xs text-muted-foreground">
-          .com.ng is registered through GO54. .com is registered through
-          Openprovider. You always see one final NGN price.
-        </p>
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={availability.isPending}>
-        {availability.isPending ? "Checking…" : "Check availability"}
-      </Button>
+    <form onSubmit={search}>
+      <FieldGroup className="min-w-0 grid gap-5">
+        <div>
+          <ControlField label={<>Find your domain</>}>
+            <Input
+              placeholder="yourbusiness.com.ng"
+              value={form.domain}
+              onChange={(event) => form.setDomain(event.target.value)}
+            />
+          </ControlField>
+          <p className="mt-2 text-xs text-muted-foreground">
+            .com.ng is registered through GO54. .com is registered through
+            Openprovider. You always see one final NGN price.
+          </p>
+        </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <FormActions>
+          <SubmitButton
+            isSubmitting={availability.isPending}
+            type="submit"
+            disabled={availability.isPending}
+          >
+            {availability.isPending ? "Checking…" : "Check availability"}
+          </SubmitButton>
+        </FormActions>
+      </FieldGroup>
     </form>
   )
 }

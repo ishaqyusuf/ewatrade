@@ -1,5 +1,6 @@
 import {
   QaAccessError,
+  authorizeQaDomain,
   exchangeQaTesterCredential,
   listQaAccessProfiles,
   revalidateQaClientAuthorization,
@@ -142,7 +143,7 @@ export const qaAccessRouter = createTRPCRouter({
         .object({
           clientId: clientIdSchema,
           contractVersion: z.literal(QA_ACCELERATOR_CONTRACT_VERSION),
-          credential: z.string().trim().min(32).max(256),
+          credential: z.string().trim().min(32).max(256).optional(),
           qaDomain: z.string().trim().min(3).max(253),
         })
         .strict(),
@@ -157,6 +158,13 @@ export const qaAccessRouter = createTRPCRouter({
         mapQaAccessError(new QaAccessError("authorization_required"))
       }
       try {
+        if (!input.credential)
+          return await authorizeQaDomain(ctx.db, {
+            clientId: input.clientId,
+            clientPlatform: "mobile",
+            networkSource: ctx.clientIp,
+            qaDomain: input.qaDomain,
+          })
         return await exchangeQaTesterCredential(ctx.db, {
           clientId: input.clientId,
           clientPlatform: "mobile",

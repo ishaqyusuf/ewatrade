@@ -52,3 +52,34 @@ test("exact current version and digest permit account and Store staff posting", 
     assertAccountStoreConversationTermsAccepted(db, "user-1", publication),
   ).resolves.toBeUndefined()
 })
+
+test("explicit local and preview profiles skip Terms reads, including built preview", async () => {
+  const { db, reads } = fakeDb(null)
+  for (const env of [
+    { DEV_PROFILE: "local" },
+    { APP_ENV: "preview", NODE_ENV: "production" },
+  ]) {
+    await expect(
+      assertAccountStoreConversationTermsAccepted(db, "user-1", null, env),
+    ).resolves.toBeUndefined()
+    await expect(
+      assertAccountStoreConversationTermsAccepted(
+        db,
+        "user-1",
+        publication,
+        env,
+      ),
+    ).resolves.toBeUndefined()
+  }
+  expect(reads).toHaveLength(0)
+  await expect(
+    assertAccountStoreConversationTermsAccepted(db, "user-1", null, {
+      APP_ENV: "production",
+    }),
+  ).rejects.toThrow("Messaging is paused")
+  await expect(
+    assertAccountStoreConversationTermsAccepted(db, "user-1", publication, {
+      APP_ENV: "production",
+    }),
+  ).rejects.toThrow("Review and accept")
+})

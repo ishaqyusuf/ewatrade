@@ -28,6 +28,10 @@ type WorkflowModalScreenProps = {
     | "/admin-home"
     | "/business-switch-modal"
     | "/dashboard"
+    | "/finance-modal"
+    | "/finance-accounts-modal"
+    | "/finance-reports-modal"
+    | "/finance-counts-modal"
     | "/sales-rep-home"
   closeLabel: string
   hideHeader?: boolean

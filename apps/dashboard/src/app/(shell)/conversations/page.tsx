@@ -9,6 +9,7 @@ import {
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import { getInitialTableSettings } from "@/utils/columns"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -29,6 +30,10 @@ export default async function ConversationsPage({
   if (!activeStore) redirect("/setup")
 
   const params = await loadStoreConversationParams(searchParams)
+  const initialSettings = await getInitialTableSettings("store-conversations", {
+    userId: session.user.id,
+    tenantId: ctx.tenant.id,
+  })
   const selectedStore =
     params.store && ctx.stores.some((store) => store.id === params.store)
       ? params.store
@@ -38,10 +43,12 @@ export default async function ConversationsPage({
     activeStore.id,
   )
   await prefetch(
-    trpc.serviceCommerce.storeConversationQueue.queryOptions(input),
+    trpc.serviceCommerce.storeConversationQueue.queryOptions(input, {
+      retry: false,
+    }),
   ).catch(() => undefined)
   if (params.conversationId && params.conversationSheet === "detail") {
-    await prefetch(
+    void prefetch(
       trpc.serviceCommerce.storeConversationTimeline.queryOptions({
         conversationId: params.conversationId,
         limit: 50,
@@ -52,7 +59,11 @@ export default async function ConversationsPage({
 
   return (
     <HydrateClient>
-      <Suspense fallback={<ConversationQueueSkeleton />}>
+      <Suspense
+        fallback={
+          <ConversationQueueSkeleton initialSettings={initialSettings} />
+        }
+      >
         <ConversationWorkspace
           activeStoreId={activeStore.id}
           stores={ctx.stores.map((store) => ({
@@ -60,6 +71,7 @@ export default async function ConversationsPage({
             name: store.name,
           }))}
           timeZone={ctx.tenant.timezone}
+          initialSettings={initialSettings}
         />
       </Suspense>
     </HydrateClient>

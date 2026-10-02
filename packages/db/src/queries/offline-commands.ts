@@ -16,6 +16,7 @@ import {
 import type { DbClient } from "./types"
 
 type CommercialOrderPayload = {
+  customerId?: string
   customerEmail?: string
   customerName?: string
   customerPhone?: string

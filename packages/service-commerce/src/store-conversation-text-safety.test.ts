@@ -93,3 +93,27 @@ describe("Store Conversation text safety gate", () => {
     expect(signal?.aborted).toBe(true)
   })
 })
+
+test("local development defaults to the QA screen without activating preview or production", async () => {
+  for (const env of [{ APP_ENV: "local" }, { DEV_PROFILE: "local" }]) {
+    const provider = getConfiguredStoreConversationTextSafetyProvider(env)
+    await expect(
+      requireStoreConversationTextSafety("Layers flock", provider),
+    ).resolves.toBeUndefined()
+    await expect(
+      requireStoreConversationTextSafety("[[qa-reject]]", provider),
+    ).rejects.toMatchObject({ kind: "rejected" })
+  }
+  expect(
+    getConfiguredStoreConversationTextSafetyProvider({
+      APP_ENV: "local",
+      DEV_PROFILE: "production",
+    }),
+  ).toBeNull()
+  expect(
+    getConfiguredStoreConversationTextSafetyProvider({
+      APP_ENV: "local",
+      STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "unconfigured",
+    }),
+  ).toBeNull()
+})

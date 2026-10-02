@@ -1,3 +1,4 @@
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import {
   EXACT_FACTOR_MAX_SCALE,
   EXACT_QUANTITY_MAX_SCALE,
@@ -146,11 +147,44 @@ function catalogVariantSchema<T extends z.ZodType>(offeringSchema: T) {
 }
 
 const catalogItemFields = {
+  categoryId: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[a-zA-Z0-9_-]+$/)
+    .optional(),
+  subcategoryId: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[a-zA-Z0-9_-]+$/)
+    .optional(),
   category: z.string().trim().max(120).optional(),
   clientOperationId: z.string().trim().min(8).max(160),
   description: z.string().trim().max(2_000).optional(),
   imageLinks: z.array(catalogImageUrlSchema).max(8).default([]),
   imageUrl: catalogImageUrlSchema.optional(),
+  illustrationId: z
+    .string()
+    .refine(
+      (id) => Boolean(findCatalogIllustration(id)),
+      "Unknown catalog illustration.",
+    )
+    .optional(),
+  photoAssetIds: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .max(128)
+        .regex(/^[a-zA-Z0-9_-]+$/),
+    )
+    .max(8)
+    .refine(
+      (ids) => new Set(ids).size === ids.length,
+      "Choose distinct photos.",
+    )
+    .optional(),
   name: z.string().trim().min(1).max(160),
   optionGroups: z
     .array(
@@ -237,10 +271,15 @@ export const catalogCreateServiceSchema = z
   })
   .strict()
 
-export const catalogCreateItemSchema = z.discriminatedUnion("kind", [
-  catalogCreateProductSchema,
-  catalogCreateServiceSchema,
-])
+export const catalogCreateItemSchema = z
+  .discriminatedUnion("kind", [
+    catalogCreateProductSchema,
+    catalogCreateServiceSchema,
+  ])
+  .refine(
+    (input) => !input.illustrationId || !input.photoAssetIds?.length,
+    "Choose an illustration or photos, exclusively.",
+  )
 
 const simpleCatalogItemFields = {
   clientOperationId: z.string().trim().min(8).max(160),
@@ -291,6 +330,13 @@ export const catalogListItemsPageSchema = catalogListItemsSchema.extend({
   direction: z.enum(["forward", "backward"]).optional(),
   limit: z.number().int().min(1).max(50).default(20),
   query: z.string().trim().max(160).optional(),
+  sort: z
+    .object({
+      field: z.enum(["name", "kind", "status", "updatedAt"]),
+      direction: z.enum(["asc", "desc"]),
+    })
+    .strict()
+    .optional(),
 })
 
 export const catalogArchiveOfferingSchema = z

@@ -80,7 +80,7 @@ export type DashboardCustomerRow = {
   name: string
   orderCount: number
   phone: string | null
-  totalMinor: number
+  totalMinor: string
 }
 
 export function canUseSalesOperations(role: string | null | undefined) {

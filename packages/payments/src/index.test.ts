@@ -9,6 +9,57 @@ import {
 } from "./index"
 
 describe("hosted payment provider contract", () => {
+  test("retains canonical refund IDs without treating processor references as API IDs", () => {
+    const adapter = new PaystackWebhookAdapter("test-secret")
+    const data = {
+      amount: 2500,
+      currency: "NGN",
+      transaction_reference: "payment-1",
+      refund_reference: "processor-ref-1",
+      id: 42,
+    }
+    expect(
+      adapter.parse(JSON.stringify({ event: "refund.processed", data })),
+    ).toEqual({
+      amountMinor: 2500,
+      currencyCode: "NGN",
+      eventId: "refund.processed:processor-ref-1",
+      providerReference: "payment-1",
+      providerRefundId: "42",
+      status: "refund_succeeded",
+    })
+    expect(
+      adapter.parse(
+        JSON.stringify({
+          event: "refund.processed",
+          data: { ...data, id: undefined },
+        }),
+      )?.providerRefundId,
+    ).toBeUndefined()
+  })
+
+  test("keeps a refund response with no provider ID uncertain instead of inventing its identity", async () => {
+    const provider = new PaystackHostedPaymentProvider({
+      secretKey: "test-secret",
+      fetch: Object.assign(
+        async () =>
+          new Response(
+            JSON.stringify({ status: true, data: { status: "pending" } }),
+          ),
+        { preconnect: () => {} },
+      ),
+    })
+    await expect(
+      provider.refund({
+        amountMinor: 2500,
+        currencyCode: "NGN",
+        providerReference: "payment-1",
+        reason: "Correction",
+        claimedAt: new Date(),
+        commandReference: "refund-1",
+      }),
+    ).rejects.toThrow("no valid provider refund identity")
+  })
   test("creates a provider-hosted URL without collecting card data", async () => {
     const checkout =
       await createDeterministicHostedPaymentProvider().createCheckout({

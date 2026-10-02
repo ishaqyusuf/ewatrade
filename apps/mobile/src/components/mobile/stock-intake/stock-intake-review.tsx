@@ -1,16 +1,16 @@
+import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
 import {
-  BottomSheetFooter,
-  BottomSheetScrollView,
-  type BottomSheetFooterProps,
   type BottomSheetBackdropProps,
+  BottomSheetFooter,
+  type BottomSheetFooterProps,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useCallback, useState } from "react"
@@ -177,9 +177,30 @@ export function StockIntakeReview({
                           : "Decrease this balance."}
                   </Text>
                 </View>
-                <Text className={cn("text-sm [-rn-line-height:21]", ink)}>
-                  Reason: {review.draft.reason}
-                </Text>
+                {review.draft.mode === "receipt" ||
+                review.draft.mode === "adjustment" ? (
+                  <View className="flex-row flex-wrap gap-2">
+                    {review.draft.categories.map((category) => (
+                      <View
+                        key={category.name}
+                        className={cn(
+                          "rounded-full border px-3 py-2",
+                          market
+                            ? "border-market-line bg-market-canvas"
+                            : "border-border bg-muted",
+                        )}
+                      >
+                        <Text className={cn("text-sm", ink)}>
+                          {category.name}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text className={cn("text-sm [-rn-line-height:21]", ink)}>
+                    Reason: {review.draft.reason}
+                  </Text>
+                )}
               </>
             ) : null}
             {model.offline || model.scopeChanged || !model.canManage ? (

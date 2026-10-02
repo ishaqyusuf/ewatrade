@@ -37,7 +37,7 @@ export default async function ServiceCommerceReportsPage({
     ? params.store
     : undefined
 
-  await prefetch(
+  void prefetch(
     trpc.serviceCommerce.report.queryOptions({
       end: range.to,
       ...(storeId ? { storeId } : {}),

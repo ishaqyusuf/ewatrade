@@ -11,6 +11,11 @@ import {
   StockOperationType,
 } from "../../generated/prisma/enums"
 
+import {
+  serializeStockCategories,
+  stockOperationCategoryGraph,
+} from "./inventory-categories"
+
 const balanceReportGraph = {
   inventoryUnit: { include: { configurationVersion: true } },
   product: { include: { catalogItem: true } },
@@ -146,6 +151,7 @@ export async function getStockOperationAudit(
 ) {
   const operation = await db.stockOperation.findFirst({
     include: {
+      categories: stockOperationCategoryGraph,
       corrections: { select: { id: true } },
       linkedOperation: { select: { id: true, type: true } },
       linkedOperations: { select: { id: true, type: true } },
@@ -167,6 +173,7 @@ export async function getStockOperationAudit(
     "0",
   )
   return {
+    categories: serializeStockCategories(operation.categories),
     actorUserId: operation.actorUserId,
     canonicalNetEffect,
     clientOperationId: operation.clientOperationId,
@@ -224,7 +231,7 @@ export async function listInventoryOperationHistory(
   },
 ) {
   const operations = await db.stockOperation.findMany({
-    include: { movements: true },
+    include: { movements: true, categories: stockOperationCategoryGraph },
     orderBy: [{ effectiveAt: "desc" }, { createdAt: "desc" }],
     take: Math.min(Math.max(input.limit ?? 50, 1), 200),
     where: {
@@ -234,6 +241,7 @@ export async function listInventoryOperationHistory(
     },
   })
   return operations.map((operation) => ({
+    categories: serializeStockCategories(operation.categories),
     actorUserId: operation.actorUserId,
     canonicalNetEffect: operation.movements.reduce(
       (total, movement) =>
@@ -312,7 +320,7 @@ export async function exportInventoryAuditRows(
     include: {
       balanceSource: { include: balanceReportGraph },
       enteredInventoryUnit: true,
-      operation: true,
+      operation: { include: { categories: stockOperationCategoryGraph } },
     },
     orderBy: [{ operation: { effectiveAt: "asc" } }, { createdAt: "asc" }],
     where: {
@@ -323,6 +331,13 @@ export async function exportInventoryAuditRows(
     },
   })
   return movements.map((movement) => ({
+    categoryNameIds: movement.operation.categories
+      .map((row) => row.categoryNameId)
+      .join(" | "),
+    categories: movement.operation.categories
+      .map((row) => row.categoryName.name)
+      .join(" | "),
+    reason: movement.operation.reason,
     actorUserId: movement.operation.actorUserId,
     balanceSourceId: movement.balanceSourceId,
     configurationVersionId: movement.configurationVersionId,

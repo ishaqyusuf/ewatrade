@@ -1,0 +1,130 @@
+[
+  {
+    "state": "new-business",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Let\u2019s get your business ready.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-new-business"
+  },
+  {
+    "state": "unfinished-catalog",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Let\u2019s finish your catalog.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-unfinished-catalog"
+  },
+  {
+    "state": "catalog-ready",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Ready for your first order.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-catalog-ready"
+  },
+  {
+    "state": "first-order",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-first-order"
+  },
+  {
+    "state": "solo",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-solo"
+  },
+  {
+    "state": "invitation-pending",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-invitation-pending"
+  },
+  {
+    "state": "team-active",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-team-active"
+  },
+  {
+    "state": "everyday",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-everyday"
+  },
+  {
+    "state": "returning-empty",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-returning-empty"
+  },
+  {
+    "state": "queued",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-queued"
+  },
+  {
+    "state": "offline-cached",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Cached business status",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-offline-cached"
+  },
+  {
+    "state": "offline-empty",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Business status unavailable offline",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-offline-empty"
+  },
+  {
+    "state": "loading",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Loading your business",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-loading"
+  },
+  {
+    "state": "unavailable",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Business status unavailable",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-unavailable"
+  },
+  {
+    "state": "orders-unavailable",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-orders-unavailable"
+  },
+  {
+    "state": "stock-work",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Stock balances",
+    "pass": true,
+    "capture": "matrix-200-fresh-light-stock-work"
+  }
+]

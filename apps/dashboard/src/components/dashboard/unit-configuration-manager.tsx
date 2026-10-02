@@ -1,7 +1,9 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { Button, ControlField, Input, SelectControl } from "@ewatrade/ui"
 
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import {
   type CatalogUnitRelationDirection,
   catalogUnitFactorToRelation,
@@ -22,9 +24,6 @@ type EditableUnit = {
   unitDefinitionId?: string
 }
 
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-
 function blankUnit(index: number): EditableUnit {
   return {
     key: `unit-${index + 1}`,
@@ -39,12 +38,10 @@ function blankUnit(index: number): EditableUnit {
 
 export function UnitConfigurationManager({
   productId,
-  productName,
-  onClose,
+  popupClassName,
 }: {
   productId: string
-  productName: string
-  onClose: () => void
+  popupClassName?: string
 }) {
   const trpc = useTRPC()
   const configurations = useQuery(
@@ -198,21 +195,30 @@ export function UnitConfigurationManager({
     }
   }
 
-  return (
-    <section className="grid gap-5 rounded-xl border border-border bg-background p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">{productName}</p>
-          <h2 className="text-lg font-semibold">Unit configuration versions</h2>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            One Main unit anchors stock. Shared selling units affect its
-            balance; Packaged Stock keeps an independent balance.
-          </p>
-        </div>
-        <Button variant="ghost" onClick={onClose}>
-          Close
+  if (configurations.isPending)
+    return <output>Loading unit configurations…</output>
+  if (configurations.isError)
+    return (
+      <div className="grid gap-3">
+        <FormFeedback appearance="dashboard">
+          {configurations.error.message}
+        </FormFeedback>
+        <Button
+          appearance="form"
+          variant="outline"
+          onClick={() => void configurations.refetch()}
+        >
+          Try again
         </Button>
       </div>
+    )
+
+  return (
+    <section className="grid min-w-0 gap-5">
+      <p className="text-sm text-muted-foreground">
+        One Main unit anchors stock. Shared selling units affect its balance;
+        Packaged Stock keeps an independent balance.
+      </p>
 
       {error ? (
         <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -238,6 +244,7 @@ export function UnitConfigurationManager({
 
       {!draft ? (
         <Button
+          appearance="form"
           className="w-fit"
           disabled={createDraft.isPending || !current}
           onClick={() => createDraft.mutate({ productId })}
@@ -246,10 +253,8 @@ export function UnitConfigurationManager({
         </Button>
       ) : (
         <>
-          <label className="grid max-w-xs gap-1.5 text-sm">
-            <span className="font-medium">Main-unit stock precision</span>
-            <input
-              className={fieldClass}
+          <ControlField label={<>Main-unit stock precision</>}>
+            <Input
               max={18}
               min={0}
               type="number"
@@ -258,26 +263,24 @@ export function UnitConfigurationManager({
                 setCanonicalBalanceScale(Number(event.target.value))
               }
             />
-          </label>
+          </ControlField>
 
           <div className="grid gap-3">
             {units.map((unit, index) => (
               <div
-                className="grid gap-2 rounded-lg border border-border p-3 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_1.4fr_1.2fr_0.8fr_1.3fr_auto]"
+                className="grid min-w-0 gap-2 border border-border p-3"
                 key={`${unit.key}:${index}`}
               >
-                <input
+                <Input
                   aria-label={`Unit ${index + 1} name`}
-                  className={fieldClass}
                   placeholder="Unit name"
                   value={unit.name}
                   onChange={(event) =>
                     patchUnit(index, { name: event.target.value })
                   }
                 />
-                <input
+                <Input
                   aria-label={`Unit ${index + 1} key`}
-                  className={fieldClass}
                   placeholder="Stable key"
                   value={unit.key}
                   onChange={(event) =>
@@ -289,30 +292,41 @@ export function UnitConfigurationManager({
                   }
                 />
                 {unit.stockBehavior === "canonical_shared" ? (
-                  <div className="flex h-10 items-center rounded-lg border border-border bg-muted px-3 text-sm text-muted-foreground">
+                  <div className="flex h-10 items-center border border-border bg-muted px-3 text-sm text-muted-foreground">
                     Main unit
                   </div>
                 ) : (
-                  <select
+                  <SelectControl
+                    popupClassName={popupClassName}
                     aria-label={`Unit ${index + 1} relationship direction`}
-                    className={fieldClass}
                     value={unit.relationDirection}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       changeRelationDirection(
                         index,
-                        event.target.value as CatalogUnitRelationDirection,
+                        value as CatalogUnitRelationDirection,
                       )
                     }
-                  >
-                    <option value="units_per_canonical">
-                      {unit.name || "This unit"} inside 1 {mainUnitName}
-                    </option>
-                    <option value="canonical_per_unit">
-                      1 {unit.name || "unit"} contains {mainUnitName}
-                    </option>
-                  </select>
+                    options={[
+                      {
+                        value: "units_per_canonical",
+                        label: (
+                          <>
+                            {unit.name || "This unit"} inside 1 {mainUnitName}
+                          </>
+                        ),
+                      },
+                      {
+                        value: "canonical_per_unit",
+                        label: (
+                          <>
+                            1 {unit.name || "unit"} contains {mainUnitName}
+                          </>
+                        ),
+                      },
+                    ]}
+                  />
                 )}
-                <input
+                <Input
                   aria-label={
                     unit.stockBehavior === "canonical_shared"
                       ? `Unit ${index + 1} main-unit count`
@@ -320,7 +334,6 @@ export function UnitConfigurationManager({
                         ? `How many ${unit.name || "of this unit"} are in 1 ${mainUnitName}?`
                         : `How many ${mainUnitName} are in 1 ${unit.name || "of this unit"}?`
                   }
-                  className={fieldClass}
                   disabled={unit.stockBehavior === "canonical_shared"}
                   inputMode="decimal"
                   placeholder="Count"
@@ -333,9 +346,8 @@ export function UnitConfigurationManager({
                     patchUnit(index, { relationCount: event.target.value })
                   }
                 />
-                <input
+                <Input
                   aria-label={`Unit ${index + 1} precision`}
-                  className={fieldClass}
                   max={6}
                   min={0}
                   type="number"
@@ -346,26 +358,29 @@ export function UnitConfigurationManager({
                     })
                   }
                 />
-                <select
+                <SelectControl
+                  popupClassName={popupClassName}
                   aria-label={`Unit ${index + 1} stock behavior`}
-                  className={fieldClass}
                   value={unit.stockBehavior}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     patchUnit(index, {
-                      stockBehavior: event.target
-                        .value as EditableUnit["stockBehavior"],
+                      stockBehavior: value as EditableUnit["stockBehavior"],
                     })
                   }
-                >
-                  <option value="canonical_shared">Main unit</option>
-                  <option value="alternate_transaction">
-                    Shared selling unit
-                  </option>
-                  <option value="packaged_stock">
-                    Independent Packaged Stock
-                  </option>
-                </select>
+                  options={[
+                    { value: "canonical_shared", label: <>Main unit</> },
+                    {
+                      value: "alternate_transaction",
+                      label: <>Shared selling unit</>,
+                    },
+                    {
+                      value: "packaged_stock",
+                      label: <>Independent Packaged Stock</>,
+                    },
+                  ]}
+                />
                 <Button
+                  appearance="form"
                   size="sm"
                   variant="ghost"
                   disabled={units.length === 1}
@@ -377,7 +392,7 @@ export function UnitConfigurationManager({
                 >
                   Remove
                 </Button>
-                <p className="text-xs text-muted-foreground lg:col-span-2 xl:col-span-7">
+                <p className="text-xs text-muted-foreground">
                   {unit.stockBehavior === "canonical_shared"
                     ? `1 ${unit.name || "unit"} is the Main unit.`
                     : unit.relationDirection === "units_per_canonical"
@@ -390,6 +405,7 @@ export function UnitConfigurationManager({
 
           <div className="flex flex-wrap gap-2">
             <Button
+              appearance="form"
               variant="outline"
               onClick={() =>
                 setUnits((rows) => [...rows, blankUnit(rows.length)])
@@ -398,6 +414,7 @@ export function UnitConfigurationManager({
               Add unit
             </Button>
             <Button
+              appearance="form"
               disabled={
                 updateDraft.isPending ||
                 units.some(
@@ -420,8 +437,7 @@ export function UnitConfigurationManager({
               the ID of an explicit Stock Transition operation. The server
               rejects semantic changes without it.
             </p>
-            <input
-              className={`${fieldClass} max-w-xl`}
+            <Input
               placeholder="Stock Transition operation ID, only when required"
               value={stockTransitionOperationId}
               onChange={(event) =>
@@ -429,6 +445,7 @@ export function UnitConfigurationManager({
               }
             />
             <Button
+              appearance="form"
               className="w-fit"
               disabled={publishDraft.isPending}
               onClick={() =>

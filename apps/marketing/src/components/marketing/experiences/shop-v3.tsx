@@ -1,6 +1,7 @@
 "use client"
 
 import { LeadCaptureForm } from "@/components/lead-capture-form"
+import { getDashboardLoginUrl } from "@/lib/auth-navigation"
 import { useEffect, useRef, useState } from "react"
 import type { MarketingExperienceProps } from "../marketing-experience-contract"
 import "./shop-v3.css"
@@ -224,6 +225,9 @@ function Header({ signupEnabled }: MarketingExperienceProps) {
         </a>
       </nav>
       <div className="shop-header-actions">
+        <a className="shop-sign-in" href={getDashboardLoginUrl()}>
+          Sign in
+        </a>
         <a
           className="shop-header-cta"
           href={signupEnabled ? "/signup" : "#early-access"}
@@ -796,6 +800,7 @@ export function ShopV3Landing({ signupEnabled }: MarketingExperienceProps) {
           </div>
           <div className="shop-access-grid">
             <LeadCaptureForm
+              appearance="shop"
               type="early-access"
               title="Request early access"
               description="Share your merchant, operations or service use case."
@@ -803,6 +808,7 @@ export function ShopV3Landing({ signupEnabled }: MarketingExperienceProps) {
             />
             <div id="waitlist">
               <LeadCaptureForm
+                appearance="shop"
                 type="waitlist"
                 title="Join the waitlist"
                 description="Get an update when EwaTrade opens wider access."

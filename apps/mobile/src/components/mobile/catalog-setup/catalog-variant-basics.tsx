@@ -1,15 +1,15 @@
+import { ClassicServicePricingModeOption } from "@/components/mobile/appearances/classic/catalog-variant-manager"
+import { MarketServicePricingModeOption } from "@/components/mobile/appearances/market-day/catalog-variant-manager"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import type { CatalogVariantManagerProps } from "./catalog-variant-model"
 import type { CatalogVariantsModel } from "./use-catalog-variants"
-import { ClassicServicePricingModeOption } from "@/components/mobile/appearances/classic/catalog-variant-manager"
-import { MarketServicePricingModeOption } from "@/components/mobile/appearances/market-day/catalog-variant-manager"
 
 export function CatalogVariantBasics({
   model,
@@ -135,7 +135,7 @@ export function CatalogVariantBasics({
               editorUnit
                 ? `${editorUnit.name} price`
                 : kind === "service"
-                  ? "Fixed price (optional)"
+                  ? "Fixed price"
                   : "Price"
             }
             onChangeValue={(price) =>
@@ -302,7 +302,9 @@ export function CatalogVariantBasics({
           >
             {kind === "service"
               ? "Image and availability"
-              : "Image, inventory codes, and availability"}
+              : market
+                ? "Image, inventory codes, and availability"
+                : "Image and availability"}
           </Text>
         </View>
         <Icon

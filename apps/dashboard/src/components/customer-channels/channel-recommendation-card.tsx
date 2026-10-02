@@ -37,7 +37,7 @@ export function ChannelRecommendationCard({
   return (
     <section
       aria-labelledby="channel-recommendation-title"
-      className="grid gap-5 rounded-xl border border-primary/25 bg-primary/5 p-5"
+      className="grid gap-5 rounded-none border border-primary/25 bg-primary/5 p-5"
     >
       <div className="grid gap-2">
         <p className="w-fit rounded-full border border-primary/25 bg-background px-2.5 py-1 text-xs font-medium text-primary">
@@ -85,7 +85,7 @@ export function ChannelRecommendationCard({
       </div>
 
       {recommendation.policyReviewRequired ? (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-100">
+        <p className="rounded-none border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-950 dark:text-amber-100">
           Pharmacy policy review is separate and must pass before regulated
           customer actions become available.
         </p>
@@ -104,7 +104,7 @@ function RecommendationFact({
   value,
 }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-background/80 p-3">
+    <div className="rounded-none border border-border/70 bg-background/80 p-3">
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>

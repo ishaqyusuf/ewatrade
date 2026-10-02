@@ -87,6 +87,7 @@
       "outputs": ["generated/**"]
     }
   },
+  "globalPassThroughEnv": ["*_PORT", "PORTLESS_*", "EWATRADE_ENV_MODE"],
   "globalEnv": [
     "APP_ENV",
     "NEXT_PUBLIC_APP_ENV",

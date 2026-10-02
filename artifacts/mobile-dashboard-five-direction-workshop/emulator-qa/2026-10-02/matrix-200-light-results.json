@@ -1,0 +1,82 @@
+[
+  {
+    "state": "new-business",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Let\u2019s get your business ready.",
+    "pass": true,
+    "capture": "matrix-200-light-new-business"
+  },
+  {
+    "state": "unfinished-catalog",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Let\u2019s finish your catalog.",
+    "pass": true,
+    "capture": "matrix-200-light-unfinished-catalog"
+  },
+  {
+    "state": "catalog-ready",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Ready for your first order.",
+    "pass": true,
+    "capture": "matrix-200-light-catalog-ready"
+  },
+  {
+    "state": "first-order",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-first-order"
+  },
+  {
+    "state": "solo",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-solo"
+  },
+  {
+    "state": "invitation-pending",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-invitation-pending"
+  },
+  {
+    "state": "team-active",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-team-active"
+  },
+  {
+    "state": "everyday",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-everyday"
+  },
+  {
+    "state": "returning-empty",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-returning-empty"
+  },
+  {
+    "state": "queued",
+    "theme": "light",
+    "scope": "business-b",
+    "expected": "Your store, at a glance.",
+    "pass": true,
+    "capture": "matrix-200-light-queued"
+  }
+]

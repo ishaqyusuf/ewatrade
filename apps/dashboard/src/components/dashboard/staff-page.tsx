@@ -1,38 +1,22 @@
 "use client"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
-import { DashboardTable } from "@/components/dashboard/dashboard-table"
-import { createStaffFixture } from "@/components/qa/fixture-recipes"
-import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import { CollapsibleSummary } from "@/components/collapsible-summary"
+import { StaffDirectoryHeader } from "@/components/dashboard/staff-directory-header"
+import { StaffInviteModal } from "@/components/modals/staff-invite-modal"
+import { MetricCard } from "@/components/reports/metric-card"
+import { ScrollableContent } from "@/components/scrollable-content"
+import { StaffDataTable } from "@/components/tables/staff/data-table"
+import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
 import { useStaffParams } from "@/hooks/use-staff-params"
 import {
-  type StaffInviteRole,
   type StaffMemberRow,
   type StaffRoleFilter,
   type StaffStatusFilter,
   canUpdateStaffStatus,
-  filterStaffRows,
   getNextStaffStatus,
-  getStaffDisplayName,
-  getStaffRoleLabel,
-  getStaffStatusLabel,
 } from "@/lib/staff-management"
-import { cn } from "@/utils"
-import { Badge, Button } from "@ewatrade/ui"
-import {
-  Add01Icon,
-  Edit02Icon,
-  Search01Icon,
-  UserCircle02Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { Alert, AlertDescription, AlertTitle, Button } from "@ewatrade/ui"
 import { useRouter } from "next/navigation"
-import type {
-  FormEvent,
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-} from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type StaffResponse = {
@@ -44,119 +28,61 @@ type StaffResponse = {
   }
 }
 
-type InviteForm = {
-  email: string
-  name: string
-  role: StaffInviteRole
-}
-
-const emptyInviteForm: InviteForm = {
-  email: "",
-  name: "",
-  role: "cashier",
-}
-
-function statusTone(status: string) {
-  const normalized = status.trim().toUpperCase()
-
-  if (normalized === "ACTIVE") return "bg-emerald-50 text-emerald-700"
-  if (normalized === "INVITED") return "bg-amber-50 text-amber-700"
-  if (normalized === "SUSPENDED") return "bg-destructive/10 text-destructive"
-
-  return "bg-muted text-muted-foreground"
-}
-
-function roleTone(role: string) {
-  const normalized = role.trim().toUpperCase()
-
-  if (normalized === "OWNER" || normalized === "ADMIN") {
-    return "bg-primary/10 text-primary"
-  }
-
-  if (normalized === "MANAGER") return "bg-sky-50 text-sky-700"
-
-  return "bg-muted text-muted-foreground"
-}
-
-function Field({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <div className="grid gap-1.5 text-sm">
-      <span className="font-medium text-foreground">{label}</span>
-      {children}
-    </div>
-  )
-}
-
-function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={cn(
-        "h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20",
-        props.className,
-      )}
-    />
-  )
-}
-
-function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={cn(
-        "h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20",
-        props.className,
-      )}
-    />
-  )
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "Not yet"
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return value
-
-  return new Intl.DateTimeFormat("en-NG", {
-    dateStyle: "medium",
-  }).format(date)
-}
-
 export function StaffPage({
+  initialQuery,
+  initialRole,
   initialStaff,
+  initialStatus,
   store,
 }: {
+  initialQuery: string
+  initialRole: StaffRoleFilter
   initialStaff: StaffMemberRow[]
+  initialStatus: StaffStatusFilter
   store: StaffResponse["store"]
 }) {
   const router = useRouter()
-  const { inviteOpen, setInviteOpen } = useStaffParams()
+  const { setInviteOpen } = useStaffParams()
+  const { setParams, staffQuery, staffRole, staffStatus } =
+    useStaffDirectoryParams()
   const [staff, setStaff] = useState(initialStaff)
-  const [search, setSearch] = useState("")
-  const [role, setRole] = useState<StaffRoleFilter>("all")
-  const [status, setStatus] = useState<StaffStatusFilter>("all")
-  const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm)
   const [isLoading, setIsLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [updatingStaffUserId, setUpdatingStaffUserId] = useState<string | null>(
     null,
   )
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const quickFillSnapshot = useRef<InviteForm | null>(null)
-  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
+  const [qaInviteUrl, setQaInviteUrl] = useState<string | null>(null)
+
+  const lastFilters = useRef({
+    search: initialQuery,
+    role: initialRole,
+    status: initialStatus,
+  })
 
   useEffect(() => {
+    const previous = lastFilters.current
+    if (
+      previous.search === staffQuery &&
+      previous.role === staffRole &&
+      previous.status === staffStatus
+    )
+      return
+    lastFilters.current = {
+      search: staffQuery,
+      role: staffRole,
+      status: staffStatus,
+    }
+    setError(null)
     const controller = new AbortController()
     const timeout = setTimeout(async () => {
       setIsLoading(true)
 
       try {
         const params = new URLSearchParams()
-        if (search.trim()) params.set("search", search.trim())
-        if (role !== "all") params.set("role", role)
-        if (status !== "all") params.set("status", status)
+        if (staffQuery.trim()) params.set("search", staffQuery.trim())
+        if (staffRole !== "all") params.set("role", staffRole)
+        if (staffStatus !== "all") params.set("status", staffStatus)
 
         const response = await fetch(`/api/staff?${params.toString()}`, {
           signal: controller.signal,
@@ -191,12 +117,8 @@ export function StaffPage({
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [search, role, status])
+  }, [staffQuery, staffRole, staffStatus])
 
-  const visibleStaff = useMemo(
-    () => filterStaffRows(staff, { role, search, status }),
-    [staff, role, search, status],
-  )
   const summary = useMemo(() => {
     const active = staff.filter((member) => member.status === "ACTIVE").length
     const invited = staff.filter((member) => member.status === "INVITED").length
@@ -219,15 +141,21 @@ export function StaffPage({
   function openInvite() {
     setError(null)
     setNotice(null)
-    setInviteForm(emptyInviteForm)
-    setInviteOpen(true)
+    setQaInviteUrl(null)
+    void setInviteOpen(true).catch((failure: unknown) => {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "The invitation sheet could not be opened.",
+      )
+    })
   }
 
   async function refreshStaff() {
     const params = new URLSearchParams()
-    if (search.trim()) params.set("search", search.trim())
-    if (role !== "all") params.set("role", role)
-    if (status !== "all") params.set("status", status)
+    if (staffQuery.trim()) params.set("search", staffQuery.trim())
+    if (staffRole !== "all") params.set("role", staffRole)
+    if (staffStatus !== "all") params.set("status", staffStatus)
 
     const response = await fetch(`/api/staff?${params.toString()}`)
     const result = (await response.json()) as StaffResponse
@@ -237,46 +165,13 @@ export function StaffPage({
     }
   }
 
-  async function submitInvite(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
-    setNotice(null)
-
-    if (!inviteForm.email.trim()) {
-      setError("Enter a staff email.")
-      return
-    }
-
-    setIsSaving(true)
-
-    try {
-      const response = await fetch("/api/staff", {
-        body: JSON.stringify({
-          email: inviteForm.email.trim(),
-          name: inviteForm.name.trim() || undefined,
-          operation: "invite",
-          role: inviteForm.role,
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      })
-      const result = (await response.json()) as { error?: string }
-
-      if (!response.ok) {
-        throw new Error(result.error ?? "Staff invite failed.")
-      }
-
-      await refreshStaff()
-      setInviteOpen(false)
-      setNotice("Staff invite sent.")
-      router.refresh()
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error ? saveError.message : "Staff invite failed.",
-      )
-    } finally {
-      setIsSaving(false)
-    }
+  async function onInvited(inviteUrl: string | null) {
+    setQaInviteUrl(inviteUrl)
+    setNotice("Staff invite sent.")
+    router.refresh()
+    await refreshStaff().catch(() => {
+      setError("Invitation sent. Refresh the page to update the staff list.")
+    })
   }
 
   async function updateStatus(member: StaffMemberRow) {
@@ -317,303 +212,83 @@ export function StaffPage({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 lg:p-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            <HugeiconsIcon icon={UserCircle02Icon} className="size-4" />
-            Staff
+    <ScrollableContent>
+      <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
+        <CollapsibleSummary>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            {[
+              ["Staff", summary.total],
+              ["Active", summary.active],
+              ["Invited", summary.invited],
+              ["Suspended", summary.suspended],
+              ["Attendants", summary.attendants],
+            ].map(([label, value]) => (
+              <MetricCard key={label} label={String(label)} value={value} />
+            ))}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Staff management
-          </h1>
-          <p className="text-sm text-muted-foreground">{store.name}</p>
-        </div>
-        <Button type="button" className="gap-2 rounded-lg" onClick={openInvite}>
-          <HugeiconsIcon icon={Add01Icon} className="size-4" />
-          Invite staff
-        </Button>
-      </div>
+        </CollapsibleSummary>
 
-      {error ? (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
+        <StaffDirectoryHeader storeName={store.name} onInvite={openInvite} />
 
-      {notice ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {notice}
-        </div>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {[
-          ["Staff", summary.total],
-          ["Active", summary.active],
-          ["Invited", summary.invited],
-          ["Suspended", summary.suspended],
-          ["Attendants", summary.attendants],
-        ].map(([label, value]) => (
-          <div
-            key={label}
-            className="rounded-lg border border-border bg-background p-4"
-          >
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              {label}
-            </p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">
-              {value}
-            </p>
+        {error ? (
+          <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
           </div>
-        ))}
-      </div>
+        ) : null}
 
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4 xl:flex-row xl:items-center">
-          <div className="relative flex-1">
-            <HugeiconsIcon
-              icon={Search01Icon}
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <TextInput
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search staff"
-              className="pl-9"
-            />
+        {notice ? (
+          <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {notice}
           </div>
-          <Select
-            value={role}
-            onChange={(event) => setRole(event.target.value as StaffRoleFilter)}
-            className="xl:w-[180px]"
-            aria-label="Staff role"
+        ) : null}
+        {qaInviteUrl ? (
+          <Alert
+            appearance="dashboard"
+            aria-label="QA staff invitation"
+            className="flex flex-col gap-3 border border-border bg-muted/30 p-4"
           >
-            <option value="all">All roles</option>
-            <option value="owner">Owner</option>
-            <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="cashier">Cashier</option>
-            <option value="operator">Operator</option>
-          </Select>
-          <Select
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as StaffStatusFilter)
-            }
-            className="xl:w-[180px]"
-            aria-label="Staff status"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="invited">Invited</option>
-            <option value="suspended">Suspended</option>
-          </Select>
-        </div>
-
-        <DashboardTable
-          rows={visibleStaff}
-          isLoading={isLoading}
-          getRowKey={(member) => member.id}
-          emptyState={
-            <div className="flex flex-col items-center justify-center gap-3 text-center">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-                <HugeiconsIcon
-                  icon={UserCircle02Icon}
-                  className="size-5 text-muted-foreground"
-                />
-              </div>
-              <div>
-                <p className="text-sm font-medium">No staff found</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Invite a staff member or adjust the current filters.
-                </p>
-              </div>
-            </div>
-          }
-          columns={[
-            {
-              header: "Staff",
-              key: "staff",
-              render: (member) => (
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <HugeiconsIcon
-                      icon={UserCircle02Icon}
-                      className="size-5 text-muted-foreground"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">
-                      {getStaffDisplayName(member)}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {member.user.email}
-                    </p>
-                  </div>
-                </div>
-              ),
-            },
-            {
-              header: "Role",
-              key: "role",
-              render: (member) => (
-                <Badge className={cn("rounded-full", roleTone(member.role))}>
-                  {getStaffRoleLabel(member.role)}
-                </Badge>
-              ),
-            },
-            {
-              header: "Status",
-              key: "status",
-              render: (member) => (
-                <Badge
-                  className={cn("rounded-full", statusTone(member.status))}
-                >
-                  {getStaffStatusLabel(member.status)}
-                </Badge>
-              ),
-            },
-            {
-              header: "Invited",
-              key: "invited",
-              render: (member) => (
-                <span className="text-muted-foreground">
-                  {formatDate(member.invitedAt)}
-                </span>
-              ),
-            },
-            {
-              header: "Accepted",
-              key: "accepted",
-              render: (member) => (
-                <span className="text-muted-foreground">
-                  {formatDate(member.acceptedAt)}
-                </span>
-              ),
-            },
-            {
-              className: "text-right",
-              header: "",
-              key: "actions",
-              render: (member) => {
-                const nextStatus = getNextStaffStatus(member)
-                const canUpdate = canUpdateStaffStatus(member)
-                const isUpdating = updatingStaffUserId === member.user.id
-
-                return (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 rounded-lg"
-                    disabled={!canUpdate || isUpdating}
-                    onClick={() => updateStatus(member)}
-                  >
-                    <HugeiconsIcon icon={Edit02Icon} className="size-4" />
-                    {isUpdating
-                      ? "Saving"
-                      : nextStatus === "active"
-                        ? "Reactivate"
-                        : "Suspend"}
-                  </Button>
-                )
-              },
-            },
-          ]}
-        />
-      </section>
-
-      <DashboardSheet
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
-        title="Invite staff"
-        description="Cashier, operator, or manager access"
-      >
-        <form className="grid gap-4" onSubmit={submitInvite}>
-          <QaDashboardQuickFill
-            canUndo={canUndoQuickFill}
-            formId="dashboard.staff.invite"
-            isDirty={Boolean(inviteForm.email || inviteForm.name)}
-            onFill={(context, sequence) => {
-              quickFillSnapshot.current = inviteForm
-              const fixture = createStaffFixture(context, sequence)
-              setInviteForm({
-                email: fixture.email,
-                name: fixture.name,
-                role: "cashier",
-              })
-              setCanUndoQuickFill(true)
-            }}
-            onUndo={() => {
-              if (!quickFillSnapshot.current) return
-              setInviteForm(quickFillSnapshot.current)
-              quickFillSnapshot.current = null
-              setCanUndoQuickFill(false)
-            }}
-          />
-          <Field label="Email">
-            <TextInput
-              type="email"
-              value={inviteForm.email}
-              onChange={(event) =>
-                setInviteForm((current) => ({
-                  ...current,
-                  email: event.target.value,
-                }))
-              }
-              required
-            />
-          </Field>
-
-          <Field label="Name">
-            <TextInput
-              value={inviteForm.name}
-              onChange={(event) =>
-                setInviteForm((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-            />
-          </Field>
-
-          <Field label="Role">
-            <Select
-              value={inviteForm.role}
-              onChange={(event) =>
-                setInviteForm((current) => ({
-                  ...current,
-                  role: event.target.value as StaffInviteRole,
-                }))
-              }
+            <AlertTitle>QA staff invitation</AlertTitle>
+            <AlertDescription>
+              Open this link to create the staff password and complete setup
+              without checking email.
+            </AlertDescription>
+            <a
+              href={qaInviteUrl}
+              className="break-all text-sm underline"
+              target="_blank"
+              rel="noreferrer"
             >
-              <option value="cashier">Cashier</option>
-              <option value="operator">Operator</option>
-              <option value="manager">Manager</option>
-            </Select>
-          </Field>
-
-          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-            Invited staff complete onboarding from the staff invite link using
-            the existing OTP-backed staff onboarding flow.
-          </div>
-
-          <div className="flex justify-end gap-2 border-t border-border pt-4">
+              {qaInviteUrl}
+            </a>
             <Button
+              appearance="form"
               type="button"
               variant="outline"
-              className="rounded-lg"
-              onClick={() => setInviteOpen(false)}
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(qaInviteUrl)
+                  .then(() => setNotice("Invitation link copied."))
+                  .catch(() =>
+                    setError("Select and copy the invitation link above."),
+                  )
+              }}
             >
-              Cancel
+              Copy invitation link
             </Button>
-            <Button type="submit" className="rounded-lg" disabled={isSaving}>
-              {isSaving ? "Sending..." : "Send invite"}
-            </Button>
-          </div>
-        </form>
-      </DashboardSheet>
-    </div>
+          </Alert>
+        ) : null}
+
+        <section className="flex flex-col gap-4">
+          <StaffDataTable
+            rows={staff}
+            isLoading={isLoading}
+            updatingId={updatingStaffUserId}
+            onUpdateStatus={updateStatus}
+          />
+        </section>
+
+        <StaffInviteModal storeId={store.id} onInvited={onInvited} />
+      </div>
+    </ScrollableContent>
   )
 }

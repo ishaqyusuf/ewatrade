@@ -63,7 +63,7 @@ export function MobileBottomTabItem({
         largeTextLayout && !isAction && "min-h-14",
       )}
       disabled={tab.disabled}
-      haptic={haptic && !tab.disabled}
+      haptic={haptic && !tab.disabled ? "selection" : false}
       href={tab.disabled ? undefined : tab.href}
       onPress={
         tab.disabled

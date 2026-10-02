@@ -1,24 +1,28 @@
-import { CustomersPage } from "@/components/dashboard/customers-page"
-import { getDashboardCustomerBook } from "@/lib/sales-data"
+import { CustomersContent } from "@/components/dashboard/customers-content"
+import { PageLoading } from "@/components/dashboard/page-loading"
+import { loadCustomerDirectoryParams } from "@/hooks/customer-directory-params"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
+import { getInitialTableSettings } from "@/utils/columns"
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
-
-export default async function CustomersRoutePage() {
+export default async function CustomersRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await getServerSession()
 
   if (!session) {
-    redirect(`${MARKETING_URL}/login`)
+    redirect("/login")
   }
 
   const ctx = await getActiveTenant(session.user.id)
 
   if (!ctx) {
-    redirect(`${MARKETING_URL}/login?error=no_tenant`)
+    redirect("/login?error=no_tenant")
   }
 
   if (!canUseSalesOperations(ctx.membership.role)) {
@@ -31,12 +35,23 @@ export default async function CustomersRoutePage() {
     redirect("/setup")
   }
 
-  const customers = await getDashboardCustomerBook({
-    role: ctx.membership.role,
-    storeId: store.id,
-    tenantId: ctx.tenant.id,
-    userId: session.user.id,
-  })
+  const { customerQuery } = await loadCustomerDirectoryParams(searchParams)
 
-  return <CustomersPage initialCustomers={customers} store={store} />
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <CustomersContent
+        store={store}
+        role={ctx.membership.role}
+        tenantId={ctx.tenant.id}
+        userId={session.user.id}
+        search={customerQuery}
+        initialSettings={
+          await getInitialTableSettings("customers", {
+            userId: session.user.id,
+            tenantId: ctx.tenant.id,
+          })
+        }
+      />
+    </Suspense>
+  )
 }

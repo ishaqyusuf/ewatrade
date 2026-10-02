@@ -1,0 +1,135 @@
+enum FinanceInventoryValuationKind {
+  PURCHASE_RECEIPT
+  OPENING
+  ISSUE
+  CUSTOMER_RETURN
+  SUPPLIER_RETURN
+  TRANSFER_OUT
+  TRANSFER_IN
+  ADJUSTMENT
+}
+
+enum FinanceInventoryUnknownReason {
+  MISSING_OPENING_COST
+  UNCAPTURED_MOVEMENTS
+  PRIOR_UNKNOWN_COST
+  MISSING_ISSUE_COST
+  UNCAPTURED_RETURNS
+}
+
+model FinanceInventoryPool {
+  id                       String                                 @id @default(cuid())
+  tenantId                 String
+  bookId                   String
+  balanceSourceId          String
+  quantity                 Decimal                                @db.Decimal(38, 18)
+  valueMinor               BigInt?
+  unknownReason            FinanceInventoryUnknownReason?
+  lastStockRevision        Int
+  lastMovementCount        BigInt
+  lastSequence             BigInt                                 @default(0)
+  latestEffectiveAt        DateTime
+  createdAt                DateTime                               @default(now())
+  updatedAt                DateTime                               @updatedAt
+  book                     FinanceBook                            @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  balanceSource            StockBalanceSource                     @relation(fields: [tenantId, balanceSourceId], references: [tenantId, id], onDelete: Restrict)
+  events                   FinanceInventoryValuationEvent[]
+  costReviewAllocations    FinanceInventoryCostReviewAllocation[]
+  costReviewSnapshots      FinanceInventoryCostReviewPool[]       @relation("InventoryCostReviewPool")
+  lastCostReviewSnapshotId String?
+  lastCostReviewSnapshot   FinanceInventoryCostReviewPool?        @relation("CurrentInventoryCostReview", fields: [bookId, id, balanceSourceId, lastCostReviewSnapshotId], references: [bookId, poolId, balanceSourceId, id], onDelete: Restrict)
+
+  @@unique([bookId, balanceSourceId])
+  @@unique([bookId, id, balanceSourceId])
+}
+
+model FinanceInventoryValuationEvent {
+  id                    String                                 @id @default(cuid())
+  tenantId              String
+  bookId                String
+  poolId                String
+  balanceSourceId       String
+  sequence              BigInt
+  kind                  FinanceInventoryValuationKind
+  sourceKind            String
+  sourceId              String
+  stockOperationId      String
+  stockMovementId       String                                 @unique
+  purchaseReceiptId     String?                                @unique
+  productReturnCostId   String?                                @unique
+  canonicalEffect       Decimal                                @db.Decimal(38, 18)
+  quantityBefore        Decimal                                @db.Decimal(38, 18)
+  quantityAfter         Decimal                                @db.Decimal(38, 18)
+  valueBeforeMinor      BigInt?
+  valueDeltaMinor       BigInt?
+  valueAfterMinor       BigInt?
+  sourceCostMinor       BigInt?
+  unknownReason         FinanceInventoryUnknownReason?
+  effectiveAt           DateTime
+  actorUserId           String
+  createdAt             DateTime                               @default(now())
+  book                  FinanceBook                            @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  pool                  FinanceInventoryPool                   @relation(fields: [bookId, poolId, balanceSourceId], references: [bookId, id, balanceSourceId], onDelete: Restrict)
+  stockOperation        StockOperation                         @relation(fields: [tenantId, stockOperationId], references: [tenantId, id], onDelete: Restrict)
+  stockMovement         StockMovement                          @relation(fields: [stockOperationId, stockMovementId, balanceSourceId], references: [operationId, id, balanceSourceId], onDelete: Restrict)
+  purchaseReceipt       FinancePurchaseReceiptLine?            @relation(fields: [bookId, purchaseReceiptId, stockOperationId, stockMovementId], references: [bookId, id, stockOperationId, stockMovementId], onDelete: Restrict)
+  productReturnCost     FinanceProductReturnCost?              @relation(fields: [tenantId, bookId, productReturnCostId], references: [tenantId, bookId, id], onDelete: Restrict)
+  returnAllocations     FinanceProductReturnCostAllocation[]   @relation("OriginalProductIssueCost")
+  costReviewAllocations FinanceInventoryCostReviewAllocation[]
+
+  @@unique([tenantId, bookId, id])
+  @@unique([tenantId, bookId, id, balanceSourceId])
+  @@unique([tenantId, bookId, productReturnCostId])
+  @@unique([poolId, sequence])
+  @@unique([stockOperationId, stockMovementId, balanceSourceId])
+  @@unique([bookId, purchaseReceiptId, stockOperationId, stockMovementId])
+  @@unique([bookId, sourceKind, sourceId, stockMovementId])
+  @@index([bookId, effectiveAt, id])
+}
+
+/// Immutable allocation of a physical return to its original fulfilled cost.
+model FinanceProductReturnCost {
+  id                String                               @id @default(cuid())
+  tenantId          String
+  bookId            String
+  orderLineId       String
+  productReturnId   String                               @unique
+  canonicalQuantity Decimal                              @db.Decimal(38, 18)
+  sourceCostMinor   BigInt?
+  unknownReason     FinanceInventoryUnknownReason?
+  createdAt         DateTime                             @default(now())
+  book              FinanceBook                          @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  productReturn     ProductReturn                        @relation(fields: [tenantId, orderLineId, productReturnId], references: [tenantId, orderLineId, id], onDelete: Restrict)
+  allocations       FinanceProductReturnCostAllocation[]
+  valuationEvent    FinanceInventoryValuationEvent?
+
+  @@unique([tenantId, bookId, id])
+  @@unique([tenantId, orderLineId, productReturnId])
+  @@unique([tenantId, bookId, orderLineId, id])
+  @@index([bookId, orderLineId])
+}
+
+model FinanceProductReturnCostAllocation {
+  id                       String                                 @id @default(cuid())
+  tenantId                 String
+  bookId                   String
+  orderLineId              String
+  returnCostId             String
+  fulfillmentId            String
+  originalIssueId          String?
+  canonicalQuantity        Decimal                                @db.Decimal(38, 18)
+  remainingQuantityBefore  Decimal                                @db.Decimal(38, 18)
+  remainingQuantityAfter   Decimal                                @db.Decimal(38, 18)
+  sourceCostMinor          BigInt?
+  remainingCostBeforeMinor BigInt?
+  remainingCostAfterMinor  BigInt?
+  unknownReason            FinanceInventoryUnknownReason?
+  returnCost               FinanceProductReturnCost               @relation(fields: [tenantId, bookId, orderLineId, returnCostId], references: [tenantId, bookId, orderLineId, id], onDelete: Restrict)
+  fulfillment              ProductFulfillment                     @relation(fields: [orderLineId, fulfillmentId], references: [orderLineId, id], onDelete: Restrict)
+  originalIssue            FinanceInventoryValuationEvent?        @relation("OriginalProductIssueCost", fields: [tenantId, bookId, originalIssueId], references: [tenantId, bookId, id], onDelete: Restrict)
+  costReviewAllocations    FinanceInventoryCostReviewAllocation[]
+
+  @@unique([returnCostId, fulfillmentId])
+  @@unique([tenantId, bookId, id])
+  @@index([bookId, fulfillmentId])
+}

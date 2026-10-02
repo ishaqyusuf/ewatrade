@@ -1,0 +1,90 @@
+enum FinanceFiscalCloseEventKind {
+  CLOSE
+  REVERSE
+}
+
+model FinanceFiscalCalendar {
+  id String @id @default(cuid())
+  bookId String @unique
+  startMonth Int
+  startDay Int
+  revision Int @default(1)
+  retainedEarningsAccountId String
+  createdById String
+  updatedById String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  book FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  retainedEarningsAccount FinanceAccount @relation(fields: [bookId, retainedEarningsAccountId], references: [bookId, id], onDelete: Restrict)
+  years FinanceFiscalYear[]
+
+  @@unique([bookId, id])
+}
+
+model FinanceFiscalYear {
+  id String @id @default(cuid())
+  bookId String
+  calendarId String
+  calendarRevision Int
+  startMonth Int
+  startDay Int
+  startsAt DateTime
+  endsAt DateTime
+  firstPeriodStub Boolean
+  activeCloseId String? @unique
+  createdAt DateTime @default(now())
+  book FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  calendar FinanceFiscalCalendar @relation(fields: [bookId, calendarId], references: [bookId, id], onDelete: Restrict)
+  events FinanceFiscalCloseEvent[] @relation("FiscalYearEvents")
+  activeClose FinanceFiscalCloseEvent? @relation("FiscalYearActiveClose", fields: [bookId, id, activeCloseId], references: [bookId, fiscalYearId, id], onDelete: Restrict, map: "FinanceFiscalYear_activeClose_fkey")
+
+  @@unique([bookId, id])
+  @@unique([bookId, startsAt])
+  @@unique([bookId, id, activeCloseId])
+  @@index([bookId, endsAt])
+}
+
+model FinanceFiscalCloseEvent {
+  id String @id @default(cuid())
+  bookId String
+  fiscalYearId String
+  kind FinanceFiscalCloseEventKind
+  clientCommandId String
+  retainedEarningsAccountId String
+  snapshotSequence BigInt
+  resultingSequence BigInt
+  earningsMinor String
+  accountBalances Json
+  sourceEvidence Json
+  reason String
+  actorUserId String
+  effectiveAt DateTime
+  recordedAt DateTime @default(now())
+  reversalOfId String? @unique
+  book FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  fiscalYear FinanceFiscalYear @relation("FiscalYearEvents", fields: [bookId, fiscalYearId], references: [bookId, id], onDelete: Restrict)
+  retainedEarningsAccount FinanceAccount @relation(fields: [bookId, retainedEarningsAccountId], references: [bookId, id], onDelete: Restrict)
+  activeForYear FinanceFiscalYear? @relation("FiscalYearActiveClose")
+  reversalOf FinanceFiscalCloseEvent? @relation("FiscalCloseReversal", fields: [bookId, fiscalYearId, reversalOfId], references: [bookId, fiscalYearId, id], onDelete: Restrict, map: "FinanceFiscalCloseEvent_original_fkey")
+  reversal FinanceFiscalCloseEvent? @relation("FiscalCloseReversal")
+  journals FinanceFiscalCloseJournal[]
+
+  @@unique([bookId, id])
+  @@unique([bookId, fiscalYearId, id])
+  @@unique([bookId, clientCommandId])
+  @@unique([bookId, fiscalYearId, reversalOfId])
+  @@index([bookId, fiscalYearId, recordedAt])
+}
+
+model FinanceFiscalCloseJournal {
+  id String @id @default(cuid())
+  bookId String
+  eventId String
+  journalEntryId String @unique
+  position Int
+  event FinanceFiscalCloseEvent @relation(fields: [bookId, eventId], references: [bookId, id], onDelete: Restrict)
+  journalEntry FinanceJournalEntry @relation(fields: [bookId, journalEntryId], references: [bookId, id], onDelete: Restrict)
+
+  @@unique([eventId, position])
+  @@unique([bookId, journalEntryId])
+}

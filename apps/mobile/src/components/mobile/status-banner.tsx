@@ -25,6 +25,7 @@ const statusBannerTextClasses: Record<MobileDesignStatusTone, string> = {
 }
 
 type StatusBannerProps = {
+  actionDisabled?: boolean
   actionLabel?: string
   children?: ReactNode
   className?: string
@@ -36,6 +37,7 @@ type StatusBannerProps = {
 }
 
 export function StatusBanner({
+  actionDisabled,
   actionLabel,
   children,
   className,
@@ -74,6 +76,7 @@ export function StatusBanner({
       {actionLabel && onActionPress ? (
         <Pressable
           className="mt-3 min-h-11 items-center justify-center rounded-xl bg-card px-4"
+          disabled={actionDisabled}
           haptic
           onPress={onActionPress}
           transition

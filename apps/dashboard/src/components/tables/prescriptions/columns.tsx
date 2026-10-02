@@ -1,18 +1,11 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import type { PrescriptionRequestStatus } from "@ewatrade/prescriptions/schemas"
 import { Badge } from "@ewatrade/ui"
-
+import type { ColumnDef } from "@tanstack/react-table"
 import { PrescriptionActionsMenu } from "./actions-menu"
-import { PrescriptionSortableHeader } from "./table-header"
 
 export type PrescriptionQueueRow =
   RouterOutputs["prescriptions"]["queue"]["data"][number]
-
-export type PrescriptionColumn = {
-  className?: string
-  header: React.ReactNode
-  key: string
-  render: (request: PrescriptionQueueRow) => React.ReactNode
-}
 
 function label(value: string) {
   return value
@@ -36,66 +29,125 @@ const statusTone: Record<string, string> = {
 
 export function createPrescriptionColumns(
   timeZone: string,
-): PrescriptionColumn[] {
+  open: (id: string, status: PrescriptionRequestStatus) => void,
+): ColumnDef<PrescriptionQueueRow>[] {
   const dateFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone,
   })
+
   return [
     {
-      header: (
-        <PrescriptionSortableHeader field="reference" label="Reference" />
-      ),
-      key: "reference",
-      render: (request) => (
-        <span className="font-medium tabular-nums">{request.reference}</span>
-      ),
-    },
-    {
-      header: <PrescriptionSortableHeader field="status" label="Status" />,
-      key: "status",
-      render: (request) => (
-        <Badge className={`rounded-full ${statusTone[request.status] ?? ""}`}>
-          {label(request.status)}
-        </Badge>
-      ),
-    },
-    {
-      header: <PrescriptionSortableHeader field="source" label="Channel" />,
-      key: "source",
-      render: (request) => (
-        <span className="text-muted-foreground">{label(request.source)}</span>
-      ),
-    },
-    {
-      header: "Fulfilment",
-      key: "fulfilment",
-      render: (request) => (
-        <span className="text-muted-foreground">
-          {label(request.fulfilmentPreference)}
+      accessorKey: "reference",
+      header: "Reference",
+      size: 170,
+      minSize: 140,
+      maxSize: 260,
+      enableHiding: false,
+      meta: {
+        headerLabel: "Reference",
+        sortField: "reference",
+        sticky: true,
+        reorderable: false,
+        className: "z-20 bg-background md:sticky",
+        skeleton: { type: "text" as const, width: "w-28" },
+      },
+      cell: ({ row }) => (
+        <span className="font-medium tabular-nums">
+          {row.original.reference}
         </span>
       ),
     },
     {
-      header: (
-        <PrescriptionSortableHeader field="created_at" label="Received" />
+      accessorKey: "status",
+      header: "Status",
+      size: 190,
+      minSize: 150,
+      maxSize: 260,
+      meta: {
+        headerLabel: "Status",
+        sortField: "status",
+        skeleton: { type: "badge" as const, width: "w-28" },
+      },
+      cell: ({ row }) => (
+        <Badge
+          className={`rounded-full ${statusTone[row.original.status] ?? ""}`}
+        >
+          {label(row.original.status)}
+        </Badge>
       ),
-      key: "received",
-      render: (request) => (
-        <time dateTime={request.createdAt.toISOString()}>
-          {dateFormatter.format(request.createdAt)}
+    },
+    {
+      accessorKey: "source",
+      header: "Channel",
+      size: 150,
+      minSize: 120,
+      maxSize: 200,
+      meta: {
+        headerLabel: "Channel",
+        sortField: "source",
+        skeleton: { type: "text" as const, width: "w-24" },
+      },
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {label(row.original.source)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "fulfilmentPreference",
+      header: "Fulfilment",
+      size: 160,
+      minSize: 130,
+      maxSize: 220,
+      meta: {
+        headerLabel: "Fulfilment",
+        skeleton: { type: "text" as const, width: "w-24" },
+      },
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {label(row.original.fulfilmentPreference)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Received",
+      size: 190,
+      minSize: 160,
+      maxSize: 240,
+      meta: {
+        headerLabel: "Received",
+        sortField: "created_at",
+        skeleton: { type: "text" as const, width: "w-32" },
+      },
+      cell: ({ row }) => (
+        <time dateTime={row.original.createdAt.toISOString()}>
+          {dateFormatter.format(row.original.createdAt)}
         </time>
       ),
     },
     {
-      className: "w-24 text-right",
+      id: "actions",
       header: "Actions",
-      key: "actions",
-      render: (request) => (
+      size: 90,
+      minSize: 90,
+      maxSize: 90,
+      enableHiding: false,
+      enableResizing: false,
+      meta: {
+        headerLabel: "Actions",
+        sticky: true,
+        reorderable: false,
+        className: "z-20 border-l bg-background md:sticky",
+        skeleton: { type: "icon" as const },
+      },
+      cell: ({ row }) => (
         <PrescriptionActionsMenu
-          requestId={request.id}
-          status={request.status}
+          requestId={row.original.id}
+          status={row.original.status}
+          onOpen={open}
         />
       ),
     },

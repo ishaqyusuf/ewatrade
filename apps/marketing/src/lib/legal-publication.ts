@@ -1,4 +1,5 @@
 export type PublicLegalPublication = {
+  acceptanceRequired: boolean
   approved: boolean
   signupAvailable: boolean
   version: string | null

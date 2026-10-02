@@ -1,25 +1,32 @@
 model CatalogItem {
-  id               String                  @id @default(cuid())
-  tenantId         String
-  slug             String
-  kind             CatalogItemKind
-  status           CatalogRecordStatus     @default(DRAFT)
-  name             String
-  description      String?
-  category         String?
-  imageUrl         String?
-  imageLinks       String[]                @default([])
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  archivedAt       DateTime?
-  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  product          CatalogProduct?
-  service          CatalogService?
-  variants         SellableVariant[]
-  optionGroups     VariantOptionGroup[]
-  offerings        SellableOffering[]
-  creationCommands CatalogCommandReceipt[]
+  id                String                  @id @default(cuid())
+  tenantId          String
+  slug              String
+  kind              CatalogItemKind
+  status            CatalogRecordStatus     @default(DRAFT)
+  name              String
+  description       String?
+  category          String?
+  categoryId        String?
+  subcategoryId     String?
+  imageUrl          String?
+  imageLinks        String[]                @default([])
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  archivedAt        DateTime?
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product           CatalogProduct?
+  service           CatalogService?
+  variants          SellableVariant[]
+  optionGroups      VariantOptionGroup[]
+  offerings         SellableOffering[]
+  creationCommands  CatalogCommandReceipt[]
+  illustrations     CatalogItemIllustration[]
+  photoAssets       CatalogPhotoAsset[]
+  categoryRecord    CatalogCategory?        @relation("CatalogItemCategory", fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict)
+  subcategoryRecord CatalogCategory?        @relation("CatalogItemSubcategory", fields: [tenantId, subcategoryId], references: [tenantId, id], onDelete: Restrict)
 
+  @@unique([tenantId, id])
   @@unique([tenantId, slug])
   @@index([tenantId, kind, status])
   @@index([tenantId, updatedAt])
@@ -208,6 +215,7 @@ model UnitDefinition {
 }
 
 model UnitConfigurationVersion {
+  purchaseRecognitionLines        FinancePurchaseRecognitionLine[]
   id                              String                           @id @default(cuid())
   productId                       String
   version                         Int
@@ -232,6 +240,7 @@ model UnitConfigurationVersion {
 }
 
 model InventoryUnit {
+  purchaseRecognitionLines FinancePurchaseRecognitionLine[]
   id                      String                     @id @default(cuid())
   configurationVersionId  String
   unitDefinitionId        String?
@@ -313,6 +322,8 @@ model CatalogCommandReceipt {
 }
 
 model StockBalanceSource {
+  purchaseRecognitionLines        FinancePurchaseRecognitionLine[]
+  financeInventoryPools           FinanceInventoryPool[]
   id                              String                           @id @default(cuid())
   tenantId                        String
   storeId                         String
@@ -346,6 +357,7 @@ model StockBalanceSource {
   productReturns                  ProductReturn[]
 
   @@unique([storeId, variantId, inventoryUnitId, custodyType, custodyReferenceId])
+  @@unique([tenantId, id])
   @@index([tenantId, storeId, kind])
   @@index([productId, variantId])
   @@index([parentBalanceSourceId])
@@ -361,6 +373,7 @@ model StockReservation {
   enteredInventoryUnitId  String
   clientReservationId     String
   commercialOrderLineId   String?                  @unique
+  committedOperationId    String?
   payloadHash             String
   schemaVersion           Int                      @default(1)
   status                  StockReservationStatus   @default(ACTIVE)
@@ -382,14 +395,19 @@ model StockReservation {
   commercialOrderLine     CommercialOrderLine?     @relation(fields: [commercialOrderLineId], references: [id], onDelete: Restrict)
   productFulfillments     ProductFulfillment[]
 
+  committedOperation StockOperation? @relation("StockReservationCommit", fields: [tenantId, committedOperationId], references: [tenantId, id], onDelete: Restrict)
+
   @@unique([tenantId, clientReservationId])
+  @@unique([tenantId, committedOperationId])
   @@index([balanceSourceId, status, expiresAt])
   @@index([offeringId, status])
   @@index([tenantId, storeId, createdAt])
 }
 
 model StockOperation {
-  id                      String               @id @default(cuid())
+  valuationEvents         FinanceInventoryValuationEvent[]
+  purchaseReceipts        FinancePurchaseReceiptLine[]
+  id                      String                           @id @default(cuid())
   tenantId                String
   storeId                 String
   type                    StockOperationType
@@ -400,23 +418,26 @@ model StockOperation {
   reason                  String?
   linkedOperationId       String?
   correctionOfOperationId String?
-  effectiveAt             DateTime             @default(now())
-  createdAt               DateTime             @default(now())
-  tenant                  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  store                   Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  effectiveAt             DateTime                         @default(now())
+  createdAt               DateTime                         @default(now())
+  tenant                  Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                   Store                            @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  categories              StockOperationCategory[]
   movements               StockMovement[]
-  linkedOperation         StockOperation?      @relation("StockOperationLinks", fields: [linkedOperationId], references: [id], onDelete: Restrict)
-  linkedOperations        StockOperation[]     @relation("StockOperationLinks")
-  correctionOf            StockOperation?      @relation("StockOperationCorrections", fields: [correctionOfOperationId], references: [id], onDelete: Restrict)
-  corrections             StockOperation[]     @relation("StockOperationCorrections")
+  linkedOperation         StockOperation?                  @relation("StockOperationLinks", fields: [linkedOperationId], references: [id], onDelete: Restrict)
+  linkedOperations        StockOperation[]                 @relation("StockOperationLinks")
+  correctionOf            StockOperation?                  @relation("StockOperationCorrections", fields: [correctionOfOperationId], references: [id], onDelete: Restrict)
+  corrections             StockOperation[]                 @relation("StockOperationCorrections")
   finalizedCounts         StockCount[]
-  dispatchedTransfers     StockTransfer[]      @relation("StockTransferDispatchedOperation")
-  receivedTransfers       StockTransfer[]      @relation("StockTransferReceivedOperation")
-  cancelledTransfers      StockTransfer[]      @relation("StockTransferCancelledOperation")
+  dispatchedTransfers     StockTransfer[]                  @relation("StockTransferDispatchedOperation")
+  receivedTransfers       StockTransfer[]                  @relation("StockTransferReceivedOperation")
+  cancelledTransfers      StockTransfer[]                  @relation("StockTransferCancelledOperation")
   finalizedCloseouts      InventoryCloseout[]
   productFulfillments     ProductFulfillment[]
   productReturns          ProductReturn[]
+  committedReservation    StockReservation?                @relation("StockReservationCommit")
 
+  @@unique([tenantId, id])
   @@unique([tenantId, clientOperationId])
   @@index([tenantId, storeId, effectiveAt])
   @@index([type, effectiveAt])
@@ -424,30 +445,62 @@ model StockOperation {
   @@index([correctionOfOperationId])
 }
 
+model StockOperationCategoryName {
+  id             Int                      @id @default(autoincrement())
+  tenantId       String
+  name           String                   @db.VarChar(80)
+  normalizedName String                   @db.VarChar(80)
+  createdAt      DateTime                 @default(now())
+  tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categories     StockOperationCategory[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, normalizedName])
+}
+
+model StockOperationCategory {
+  id               Int                        @id @default(autoincrement())
+  tenantId         String
+  stockOperationId String
+  categoryNameId   Int
+  position         Int
+  stockOperation   StockOperation             @relation(fields: [tenantId, stockOperationId], references: [tenantId, id], onDelete: Cascade)
+  categoryName     StockOperationCategoryName @relation(fields: [tenantId, categoryNameId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, stockOperationId, categoryNameId])
+  @@unique([tenantId, stockOperationId, position])
+  @@index([tenantId, categoryNameId, stockOperationId])
+}
+
 model StockMovement {
-  id                       String                   @id @default(cuid())
+  costReviewAllocations    FinanceInventoryCostReviewAllocation[]
+  valuationEvent           FinanceInventoryValuationEvent?
+  purchaseReceipt          FinancePurchaseReceiptLine?
+  id                       String                                 @id @default(cuid())
   operationId              String
   balanceSourceId          String
   configurationVersionId   String
   enteredInventoryUnitId   String
-  enteredQuantity          Decimal                  @db.Decimal(38, 6)
+  enteredQuantity          Decimal                                @db.Decimal(38, 6)
   transactionScaleSnapshot Int
-  unitFactorSnapshot       Decimal                  @db.Decimal(38, 12)
-  signedCanonicalEffect    Decimal                  @db.Decimal(38, 18)
-  previousOnHandQuantity   Decimal                  @db.Decimal(38, 18)
-  resultingOnHandQuantity  Decimal                  @db.Decimal(38, 18)
+  unitFactorSnapshot       Decimal                                @db.Decimal(38, 12)
+  signedCanonicalEffect    Decimal                                @db.Decimal(38, 18)
+  previousOnHandQuantity   Decimal                                @db.Decimal(38, 18)
+  resultingOnHandQuantity  Decimal                                @db.Decimal(38, 18)
   unitCostMinorSnapshot    Int?
-  totalCostMinorSnapshot   Decimal?                 @db.Decimal(38, 6)
+  totalCostMinorSnapshot   Decimal?                               @db.Decimal(38, 6)
   currencyCodeSnapshot     String?
   reversalOfMovementId     String?
-  createdAt                DateTime                 @default(now())
-  operation                StockOperation           @relation(fields: [operationId], references: [id], onDelete: Restrict)
-  balanceSource            StockBalanceSource       @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
-  configurationVersion     UnitConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
-  enteredInventoryUnit     InventoryUnit            @relation(fields: [enteredInventoryUnitId], references: [id], onDelete: Restrict)
-  reversalOfMovement       StockMovement?           @relation("StockMovementReversals", fields: [reversalOfMovementId], references: [id], onDelete: Restrict)
-  reversals                StockMovement[]          @relation("StockMovementReversals")
+  createdAt                DateTime                               @default(now())
+  operation                StockOperation                         @relation(fields: [operationId], references: [id], onDelete: Restrict)
+  balanceSource            StockBalanceSource                     @relation(fields: [balanceSourceId], references: [id], onDelete: Restrict)
+  configurationVersion     UnitConfigurationVersion               @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  enteredInventoryUnit     InventoryUnit                          @relation(fields: [enteredInventoryUnitId], references: [id], onDelete: Restrict)
+  reversalOfMovement       StockMovement?                         @relation("StockMovementReversals", fields: [reversalOfMovementId], references: [id], onDelete: Restrict)
+  reversals                StockMovement[]                        @relation("StockMovementReversals")
 
+  @@unique([operationId, id])
+  @@unique([operationId, id, balanceSourceId])
   @@index([operationId])
   @@index([balanceSourceId, createdAt])
   @@index([configurationVersionId])

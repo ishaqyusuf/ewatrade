@@ -10,6 +10,7 @@ import { Button } from "@ewatrade/ui"
 
 import { AnimateIn } from "@/components/animate-in"
 import { LeadCaptureForm } from "@/components/lead-capture-form"
+import type { MarketingExperienceProps } from "../marketing-experience-contract"
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ function heroStyle(delay: number): React.CSSProperties {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function LegacyV1Landing() {
+export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
   return (
     <div className="min-h-screen">
       {/* ── Nav ── */}
@@ -119,7 +120,7 @@ export function LegacyV1Landing() {
               >
                 How it works
               </a>
-              {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" ? (
+              {signupEnabled ? (
                 <a
                   href="/signup"
                   className="font-medium text-primary transition-colors duration-200 hover:text-primary/80"
@@ -137,7 +138,7 @@ export function LegacyV1Landing() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true" && (
+            {!signupEnabled && (
               <>
                 <Button
                   variant="ghost"
@@ -155,7 +156,7 @@ export function LegacyV1Landing() {
                 </Button>
               </>
             )}
-            {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" && (
+            {signupEnabled && (
               <>
                 <Button
                   variant="ghost"
@@ -224,7 +225,7 @@ export function LegacyV1Landing() {
                 className="animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-3 sm:flex-row duration-700"
                 style={heroStyle(460)}
               >
-                {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" ? (
+                {signupEnabled ? (
                   <>
                     <Button
                       size="lg"
@@ -573,7 +574,7 @@ export function LegacyV1Landing() {
       </section>
 
       {/* ── Signup CTA (shown only when signup is enabled) ───────────────────── */}
-      {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" && (
+      {signupEnabled && (
         <section className="relative overflow-hidden px-6 py-20 sm:px-10 lg:px-16 lg:py-28">
           {/* Decorative background */}
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_70%_60%_at_50%_50%,color-mix(in_oklab,var(--primary)_10%,transparent),transparent)]" />
@@ -656,7 +657,7 @@ export function LegacyV1Landing() {
               >
                 How it works
               </a>
-              {process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true" ? (
+              {signupEnabled ? (
                 <a
                   href="/signup"
                   className="font-medium text-primary transition-colors duration-200 hover:text-primary/80"

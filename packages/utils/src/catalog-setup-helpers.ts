@@ -22,6 +22,7 @@ export type CatalogSetupUnit = {
 }
 
 type CatalogSetupHelperFields = {
+  businessProfileKeys?: readonly string[]
   classification: CatalogSetupHelperClassification
   description: string
   key: string
@@ -165,6 +166,7 @@ function assertCommonHelper(
   assertOnlyKeys(
     helper,
     [
+      "businessProfileKeys",
       "classification",
       "description",
       "key",
@@ -191,6 +193,21 @@ function assertCommonHelper(
     )
   }
   assertStringArray(helper.tags, `${helper.key} tags`)
+  if (helper.businessProfileKeys !== undefined) {
+    assertStringArray(
+      helper.businessProfileKeys,
+      `${helper.key} business profiles`,
+    )
+    if (
+      new Set(helper.businessProfileKeys).size !==
+      helper.businessProfileKeys.length
+    ) {
+      throw new Error(`${helper.key} has duplicate business profiles.`)
+    }
+  }
+  if (helper.classification === "example" && !helper.businessProfileKeys) {
+    throw new Error(`${helper.key} examples require business profiles.`)
+  }
   if (
     helper.suggestedName !== undefined &&
     (typeof helper.suggestedName !== "string" || !helper.suggestedName.trim())

@@ -1,6 +1,8 @@
 "use client"
 
+import { ConfirmDraftModal } from "@/components/modals/confirm-draft-modal"
 import { useTRPC } from "@/trpc/client"
+import { Badge, Button } from "@ewatrade/ui"
 import {
   type QaFixtureContext,
   createQaFixtureContext,
@@ -12,6 +14,7 @@ import {
   useContext,
   useMemo,
   useRef,
+  useState,
 } from "react"
 
 type QaDashboardContextValue = {
@@ -71,42 +74,45 @@ export function QaDashboardQuickFill({
 }) {
   const qa = useContext(QaDashboardContext)
   const sequence = useRef(0)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   if (!qa) return null
 
   function fill() {
     if (!qa) return
-    if (
-      isDirty &&
-      !window.confirm("Replace your current draft with QA fixture values?")
-    ) {
-      return
-    }
     sequence.current += 1
     onFill(qa.createContext(formId, sequence.current), sequence.current)
   }
 
   return (
     <div className="flex items-center justify-end gap-2">
+      <ConfirmDraftModal
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Replace current draft?"
+        description="Replace your current draft with QA fixture values?"
+        onConfirm={fill}
+      />
       {canUndo && onUndo ? (
-        <button
-          className="min-h-10 rounded-xl px-3 text-xs font-bold text-muted-foreground hover:bg-muted"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-none"
           onClick={onUndo}
           type="button"
         >
           Undo
-        </button>
+        </Button>
       ) : null}
-      <button
+      <Button
         aria-label={`${label} using ${qa.qaDomain}`}
-        className="min-h-10 rounded-xl bg-primary px-4 text-xs font-bold text-primary-foreground hover:brightness-95"
-        onClick={fill}
+        className="rounded-none"
+        size="sm"
+        onClick={() => (isDirty ? setConfirmOpen(true) : fill())}
         type="button"
       >
         {label}
-        <span className="ml-2 rounded bg-primary-foreground/15 px-1.5 py-0.5 text-[9px] font-black uppercase">
-          QA
-        </span>
-      </button>
+        <Badge variant="secondary">QA</Badge>
+      </Button>
     </div>
   )
 }

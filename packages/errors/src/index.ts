@@ -1,4 +1,5 @@
 export type ErrorCode =
+  | "CATALOG_TERMS_REQUIRED"
   | "AUTHENTICATION_REQUIRED"
   | "BAD_REQUEST"
   | "CONFLICT"
@@ -35,6 +36,13 @@ type ErrorDescriptor = {
 }
 
 const descriptors: Record<ErrorCode, ErrorDescriptor> = {
+  CATALOG_TERMS_REQUIRED: {
+    message:
+      "Catalog publication requires effective EwaTrade Terms and your acceptance of them.",
+    reportable: false,
+    retryable: false,
+    status: 412,
+  },
   AUTHENTICATION_REQUIRED: {
     message: "Sign in again to continue.",
     reportable: false,
@@ -290,6 +298,7 @@ function classifyCode(error: unknown): ErrorCode {
   const errorRecord = record(error)
   const code = codeOf(error)
   const externalProviderCode = providerCode(error)
+  if (code === "CATALOG_TERMS_REQUIRED") return "CATALOG_TERMS_REQUIRED"
   if (externalProviderCode) return externalProviderCode
   if (errorRecord?.name === "ZodError" || Array.isArray(errorRecord?.issues))
     return "VALIDATION_FAILED"

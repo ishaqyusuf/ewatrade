@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-02",
+  "scope": "Isolated Direction 02 workshop, local drafts only; no save/provider/native action.",
+  "measurements": [
+    {
+      "editor": "Opening stock",
+      "action": "Done",
+      "baseline": 598,
+      "returned": 598,
+      "draftPreserved": true,
+      "focus": "Opening stock42 Egg✓"
+    },
+    {
+      "editor": "Opening stock",
+      "action": "Back",
+      "baseline": 598,
+      "returned": 598,
+      "draftPreserved": true,
+      "focus": "Opening stock43 Egg✓"
+    },
+    {
+      "editor": "SKU & barcode",
+      "action": "Done",
+      "baseline": 0,
+      "returned": 0,
+      "draftPreserved": true,
+      "focus": "SKU & barcodeCodes added. Open to review or edit.›",
+      "draftEvidence": "Name and exact SKU/barcode verified in reopened input values; summaries intentionally omit code values."
+    },
+    {
+      "editor": "Advanced options",
+      "action": "Done",
+      "baseline": 599.5,
+      "returned": 599.5,
+      "draftPreserved": true,
+      "focus": "Advanced optionsInventory codes added✓",
+      "draftEvidence": "Name and exact SKU/barcode verified in reopened input values; summaries intentionally omit code values."
+    },
+    {
+      "editor": "SKU & barcode",
+      "action": "Back",
+      "baseline": 0,
+      "returned": 0,
+      "focus": "SKU & barcodeCodes added. Open to review or edit.›",
+      "draftPreserved": true
+    },
+    {
+      "editor": "Advanced options",
+      "action": "Back",
+      "baseline": 599.5,
+      "returned": 599.5,
+      "focus": "Advanced optionsInventory codes added✓",
+      "draftPreserved": true
+    }
+  ],
+  "codesBackValues": {
+    "codes": [
+      {
+        "field": "codeSku",
+        "value": "RET-EGG-43"
+      },
+      {
+        "field": "codeBarcode",
+        "value": "001235"
+      }
+    ],
+    "inactiveParents": [
+      {
+        "excluded": true,
+        "screen": "main"
+      },
+      {
+        "excluded": true,
+        "screen": "advanced"
+      }
+    ],
+    "name": "Retention audit product"
+  }
+}

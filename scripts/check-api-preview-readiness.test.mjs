@@ -38,7 +38,11 @@ function fixture(previewDatabase = preview) {
       "BETTER_AUTH_SECRET=preview-only-secret",
       "BETTER_AUTH_URL=https://preview-api.example.test",
       "ALLOWED_API_ORIGINS=https://preview.example.test",
-      "QA_ACCELERATOR_ENABLED=false",
+      "QA_ACCELERATOR_ENABLED=true",
+      "QA_TOOLS_ENABLED=true",
+      "QA_ACCELERATOR_SECRET=preview-qa-signing-secret-at-least-32-characters",
+      "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
+      'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
       "ACCOUNT_PRIVACY_REQUESTS_ENABLED=false",
       "ACCOUNT_PRIVACY_PROCESSING_ENABLED=false",
       "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED=false",
@@ -90,6 +94,17 @@ test("rejects enabled conversation outcome processing in Preview", () => {
   )
 })
 
+test("requires Preview authenticated QA tooling as well as domain entry", () => {
+  const root = fixture()
+  const previewPath = path.join(root, ".env.preview")
+  const profile = readFileSync(previewPath, "utf8")
+  writeFileSync(
+    previewPath,
+    profile.replace("QA_TOOLS_ENABLED=true", "QA_TOOLS_ENABLED=false"),
+  )
+  expect(inspectApiPreviewReadiness(root)).toContain("QA_TOOLS_NOT_ENABLED")
+})
+
 test("rejects a Preview profile pointed at development through a pooled hostname", () => {
   const root = fixture(
     development.replace("ep-development.", "ep-development-pooler."),
@@ -132,7 +147,11 @@ test("rejects enabled account-deletion intake and a wrong project link", () => {
       "BETTER_AUTH_SECRET=preview-only-secret",
       "BETTER_AUTH_URL=https://preview-api.example.test",
       "ALLOWED_API_ORIGINS=https://preview.example.test",
-      "QA_ACCELERATOR_ENABLED=false",
+      "QA_ACCELERATOR_ENABLED=true",
+      "QA_TOOLS_ENABLED=true",
+      "QA_ACCELERATOR_SECRET=preview-qa-signing-secret-at-least-32-characters",
+      "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
+      'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
       "ACCOUNT_PRIVACY_REQUESTS_ENABLED=true",
       "ACCOUNT_PRIVACY_PROCESSING_ENABLED=false",
       "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED=false",

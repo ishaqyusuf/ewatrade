@@ -4,6 +4,7 @@ import {
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import { CatalogPhotoError } from "@ewatrade/db/catalog-photos"
 import {
   CatalogError,
   archiveCatalogOffering,
@@ -22,6 +23,9 @@ import {
   updateProductUnitConfigurationDraft,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
+import { catalogPhotoActorScope } from "../../catalog/photo-access"
+import { catalogCategoriesRouter } from "./catalog-categories"
+import { catalogPhotoTRPCError, catalogPhotosRouter } from "./catalog-photos"
 
 import {
   catalogArchiveOfferingSchema,
@@ -101,6 +105,13 @@ function resolveStoreId(
 }
 
 function catalogTRPCError(error: CatalogError) {
+  if (error.code === "CATALOG_TERMS_REQUIRED") {
+    return new TRPCError({
+      cause: error,
+      code: "PRECONDITION_FAILED",
+      message: error.message,
+    })
+  }
   if (
     error.code === "CATALOG_ITEM_NOT_FOUND" ||
     error.code === "CATALOG_OFFERING_NOT_FOUND" ||
@@ -133,6 +144,8 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  photos: catalogPhotosRouter,
+  categories: catalogCategoriesRouter,
   archiveOffering: protectedProcedure
     .input(catalogArchiveOfferingSchema)
     .mutation(async ({ ctx, input }) => {
@@ -211,6 +224,8 @@ export const catalogRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
+        if (error instanceof CatalogPhotoError)
+          throw catalogPhotoTRPCError(error)
         if (error instanceof CatalogError) {
           throw catalogTRPCError(error)
         }
@@ -228,6 +243,10 @@ export const catalogRouter = createTRPCRouter({
         input.storeId,
       )
 
+      if (input.illustrationId !== undefined || input.photoAssetIds?.length) {
+        catalogPhotoActorScope(ctx, storeId)
+      }
+
       try {
         return await createCatalogItem(ctx.db, {
           ...input,
@@ -236,6 +255,8 @@ export const catalogRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
+        if (error instanceof CatalogPhotoError)
+          throw catalogPhotoTRPCError(error)
         if (error instanceof CatalogError) {
           throw catalogTRPCError(error)
         }

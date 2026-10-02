@@ -1,16 +1,21 @@
 "use client"
 
+import { DateRangeFilter } from "@/components/date-range-filter"
+import { SearchFilter } from "@/components/search-filter"
 import {
   PRESCRIPTION_SOURCES,
   PRESCRIPTION_STATUSES,
   usePrescriptionFilterParams,
 } from "@/hooks/use-prescription-filter-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
-import { Search01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
 
 function label(value: string) {
   return value
@@ -21,113 +26,151 @@ function label(value: string) {
 
 export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
-  const { filter, hasFilters, setFilter } = usePrescriptionFilterParams()
+  const { filter, setFilter } = usePrescriptionFilterParams()
   const context = useQuery(
     trpc.prescriptions.queueContext.queryOptions({ storeId }),
   )
-  const [query, setQuery] = useState(filter.q ?? "")
-
-  useEffect(() => setQuery(filter.q ?? ""), [filter.q])
-
+  const assignees = context.data?.assignees ?? []
+  const rangeActive = Boolean(filter.from || filter.to)
+  const toggleArray = <T extends string>(
+    values: T[] | null,
+    value: T,
+    checked: boolean,
+  ): T[] | null => {
+    const next = checked
+      ? [...new Set([...(values ?? []), value])]
+      : (values ?? []).filter((entry) => entry !== value)
+    return next.length ? next : null
+  }
+  const chips = [
+    ...(filter.statuses ?? []).map((status) => ({
+      id: `status-${status}`,
+      label: label(status),
+      onRemove: () =>
+        void setFilter({
+          statuses: toggleArray(filter.statuses, status, false),
+        }),
+    })),
+    ...(filter.assignees ?? []).map((id) => ({
+      id: `assignee-${id}`,
+      label: assignees.find((person) => person.id === id)?.name ?? "Assignee",
+      onRemove: () =>
+        void setFilter({ assignees: toggleArray(filter.assignees, id, false) }),
+    })),
+    ...(rangeActive
+      ? [
+          {
+            id: "date-range",
+            label: `${filter.from ?? "Any date"} – ${filter.to ? `before ${filter.to}` : "Any date"}`,
+            onRemove: () => void setFilter({ from: null, to: null }),
+          },
+        ]
+      : []),
+    ...(filter.sources ?? []).map((source) => ({
+      id: `source-${source}`,
+      label: label(source),
+      onRemove: () =>
+        void setFilter({ sources: toggleArray(filter.sources, source, false) }),
+    })),
+  ]
   return (
-    <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center">
-      <form
-        className="relative w-full max-w-md"
-        onSubmit={(event) => {
-          event.preventDefault()
-          setFilter({ q: query.trim() || null })
-        }}
-      >
-        <HugeiconsIcon
-          icon={Search01Icon}
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-        />
-        <input
-          aria-label="Search prescription requests"
-          className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search request reference"
-        />
-      </form>
-      <select
-        aria-label="Filter by status"
-        className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
-        value={filter.statuses?.[0] ?? ""}
-        onChange={(event) =>
-          setFilter({
-            statuses: event.target.value
-              ? [event.target.value as (typeof PRESCRIPTION_STATUSES)[number]]
-              : null,
-          })
-        }
-      >
-        <option value="">All statuses</option>
-        {PRESCRIPTION_STATUSES.map((status) => (
-          <option key={status} value={status}>
-            {label(status)}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Filter by assignee"
-        className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
-        value={filter.assignees?.[0] ?? ""}
-        onChange={(event) =>
-          setFilter({
-            assignees: event.target.value ? [event.target.value] : null,
-          })
-        }
-      >
-        <option value="">All assignees</option>
-        {(context.data?.assignees ?? []).map((assignee) => (
-          <option key={assignee.id} value={assignee.id}>
-            {assignee.name}
-          </option>
-        ))}
-      </select>
-      <label className="grid gap-1 text-xs text-muted-foreground">
-        From
-        <input
-          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
-          type="date"
-          value={filter.from ?? ""}
-          onChange={(event) => setFilter({ from: event.target.value || null })}
-        />
-      </label>
-      <label className="grid gap-1 text-xs text-muted-foreground">
-        Before
-        <input
-          className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
-          type="date"
-          value={filter.to ?? ""}
-          onChange={(event) => setFilter({ to: event.target.value || null })}
-        />
-      </label>
-      <select
-        aria-label="Filter by source"
-        className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
-        value={filter.sources?.[0] ?? ""}
-        onChange={(event) =>
-          setFilter({
-            sources: event.target.value
-              ? [event.target.value as (typeof PRESCRIPTION_SOURCES)[number]]
-              : null,
-          })
-        }
-      >
-        <option value="">All channels</option>
-        {PRESCRIPTION_SOURCES.map((source) => (
-          <option key={source} value={source}>
-            {label(source)}
-          </option>
-        ))}
-      </select>
-      {hasFilters ? (
-        <Button type="button" variant="ghost" onClick={() => setFilter(null)}>
-          Clear
-        </Button>
-      ) : null}
-    </div>
+    <SearchFilter
+      placeholder="Search prescription requests..."
+      value={filter.q ?? ""}
+      onSearch={(q) => void setFilter({ q: q || null })}
+      onClear={() => void setFilter(null)}
+      filters={chips}
+    >
+      <DropdownMenuGroup>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent
+            appearance="dashboard"
+            className="min-w-52 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+          >
+            {PRESCRIPTION_STATUSES.map((status) => (
+              <DropdownMenuCheckboxItem
+                key={status}
+                checked={filter.statuses?.includes(status) ?? false}
+                closeOnClick={false}
+                onCheckedChange={(checked) =>
+                  void setFilter({
+                    statuses: toggleArray(filter.statuses, status, checked),
+                  })
+                }
+              >
+                {label(status)}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Assignee</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent
+            appearance="dashboard"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+          >
+            {assignees.map((assignee) => (
+              <DropdownMenuCheckboxItem
+                key={assignee.id}
+                checked={filter.assignees?.includes(assignee.id) ?? false}
+                closeOnClick={false}
+                onCheckedChange={(checked) =>
+                  void setFilter({
+                    assignees: toggleArray(
+                      filter.assignees,
+                      assignee.id,
+                      checked,
+                    ),
+                  })
+                }
+              >
+                {assignee.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Date range</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent
+            appearance="dashboard"
+            className="w-[min(680px,calc(100vw-32px))] max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            sideOffset={14}
+            alignOffset={-4}
+          >
+            <DateRangeFilter
+              start={filter.from}
+              end={filter.to}
+              endExclusive
+              onSelect={({ start, end }) =>
+                void setFilter({ from: start, to: end })
+              }
+            />
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Source</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent
+            appearance="dashboard"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+          >
+            {PRESCRIPTION_SOURCES.map((source) => (
+              <DropdownMenuCheckboxItem
+                key={source}
+                checked={filter.sources?.includes(source) ?? false}
+                closeOnClick={false}
+                onCheckedChange={(checked) =>
+                  void setFilter({
+                    sources: toggleArray(filter.sources, source, checked),
+                  })
+                }
+              >
+                {label(source)}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuGroup>
+    </SearchFilter>
   )
 }

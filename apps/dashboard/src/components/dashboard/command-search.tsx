@@ -1,5 +1,7 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
 
+import { OpenSearchButton } from "@/components/dashboard/open-search-button"
 import {
   type DashboardSearchResponse,
   filterDashboardCommands,
@@ -8,7 +10,15 @@ import {
 } from "@/lib/dashboard-search"
 import type { DashboardNavItem } from "@/lib/navigation"
 import { cn } from "@/utils"
-import { Badge, Button } from "@ewatrade/ui"
+import {
+  Button,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@ewatrade/ui"
 import {
   Cancel01Icon,
   Search01Icon,
@@ -80,12 +90,22 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
         const isTyping =
           target instanceof HTMLInputElement ||
           target instanceof HTMLTextAreaElement ||
-          target instanceof HTMLSelectElement
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable)
 
         if (!isTyping) {
           event.preventDefault()
           setOpen(true)
         }
+      }
+
+      if (
+        event.key.toLowerCase() === "k" &&
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey
+      ) {
+        event.preventDefault()
+        setOpen(true)
       }
 
       if (event.key === "Escape") setOpen(false)
@@ -108,6 +128,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
       if (query.trim().length < 2) {
         setResults([])
         setError(null)
+        setIsLoading(false)
         return
       }
 
@@ -157,173 +178,124 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
 
   return (
     <>
-      <button
-        type="button"
-        className="flex size-9 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:border-primary/40 hover:text-foreground lg:hidden"
-        aria-label="Open dashboard search"
-        onClick={() => setOpen(true)}
-      >
-        <HugeiconsIcon icon={Search01Icon} className="size-4" />
-      </button>
-
-      <button
-        type="button"
-        className="hidden min-w-[220px] items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition hover:border-primary/40 hover:text-foreground lg:flex"
-        aria-label="Open dashboard search"
-        onClick={() => setOpen(true)}
-      >
-        <HugeiconsIcon icon={Search01Icon} className="size-4" />
-        <span className="flex-1 text-left">Find anything...</span>
-        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-          /
-        </kbd>
-      </button>
-
-      {open ? (
-        <div className="fixed inset-0 z-50">
-          <button
-            type="button"
-            aria-label="Close search"
-            className="absolute inset-0 bg-foreground/30"
-            onClick={() => setOpen(false)}
+      <OpenSearchButton onClick={() => setOpen(true)} />
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <div className="relative border-b border-border">
+          <CommandInput
+            ref={inputRef}
+            aria-label="Search pages, records, and commands"
+            placeholder="Search pages, records, and commands"
+            maxLength={160}
+            value={query}
+            onValueChange={setQuery}
+            className="h-[55px] px-4 pr-12 py-0"
           />
-          <section className="absolute left-1/2 top-8 flex w-[min(720px,calc(100vw-24px))] -translate-x-1/2 flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
-            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-              <HugeiconsIcon
-                icon={Search01Icon}
-                className="size-4 text-muted-foreground"
-              />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search pages, records, and commands"
-                className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-              >
-                <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
-              </Button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-y-auto p-3">
-              {error ? (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </div>
-              ) : null}
-
-              {isLoading ? (
-                <p className="px-3 py-4 text-sm text-muted-foreground">
-                  Searching...
-                </p>
-              ) : null}
-
-              {!isLoading &&
-              !error &&
-              pages.length === 0 &&
-              commands.length === 0 &&
-              groupedResults.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-muted-foreground">
-                  {query.trim().length < 2
-                    ? "Type at least two characters to search records."
-                    : "No matching pages, records, or commands."}
-                </p>
-              ) : null}
-
-              {commands.length ? (
-                <div className="mb-3">
-                  <p className="px-3 py-2 text-xs font-medium uppercase text-muted-foreground">
-                    Commands
-                  </p>
-                  {commands.map((command) => (
-                    <button
-                      key={command.id}
-                      type="button"
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
-                      onClick={() => goTo(command.href)}
-                    >
-                      <HugeiconsIcon
-                        icon={SquareArrowRight01Icon}
-                        className="size-4 text-muted-foreground"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {command.title}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {command.description}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {pages.length ? (
-                <div className="mb-3">
-                  <p className="px-3 py-2 text-xs font-medium uppercase text-muted-foreground">
-                    Pages
-                  </p>
-                  {pages.map((page) => (
-                    <button
-                      key={page.href}
-                      type="button"
-                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted"
-                      onClick={() => goTo(page.href)}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">
-                          {page.label}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {page.description}
-                        </span>
-                      </span>
-                      <Badge className="rounded-full">{page.href}</Badge>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
-              {groupedResults.map(([group, items]) => (
-                <div key={group} className="mb-3">
-                  <p className="px-3 py-2 text-xs font-medium uppercase text-muted-foreground">
-                    {groupLabel(group)}
-                  </p>
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-muted",
-                      )}
-                      onClick={() => goTo(item.href)}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">
-                          {item.title}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {item.description}
-                        </span>
-                      </span>
-                      <Badge className="rounded-full">
-                        {groupLabel(item.group)}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </section>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close search"
+            className="absolute right-3 top-3 rounded-none"
+            onClick={() => setOpen(false)}
+          >
+            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+          </Button>
         </div>
-      ) : null}
+        <CommandList className="max-h-[min(480px,calc(100dvh-140px))] px-2">
+          {error ? (
+            <FormFeedback appearance="dashboard">{error}</FormFeedback>
+          ) : null}
+          {isLoading ? (
+            <output className="block px-3 py-3 text-sm text-muted-foreground">
+              Searching...
+            </output>
+          ) : null}
+          {!isLoading &&
+          !error &&
+          !pages.length &&
+          !commands.length &&
+          !groupedResults.length ? (
+            <CommandEmpty>
+              {query.trim().length < 2
+                ? "Type at least two characters to search records."
+                : "No matching pages, records, or commands."}
+            </CommandEmpty>
+          ) : null}
+          {commands.length ? (
+            <CommandGroup heading="Commands">
+              {commands.map((command) => (
+                <CommandItem
+                  key={command.id}
+                  value={command.id}
+                  onSelect={() => goTo(command.href)}
+                  className="gap-3 rounded-none"
+                >
+                  <HugeiconsIcon
+                    icon={SquareArrowRight01Icon}
+                    className="size-4 text-muted-foreground"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">
+                      {command.title}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {command.description}
+                    </span>
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : null}
+          {pages.length ? (
+            <CommandGroup heading="Pages">
+              {pages.map((page) => (
+                <CommandItem
+                  key={page.href}
+                  value={`page:${page.href}`}
+                  onSelect={() => goTo(page.href)}
+                  className="justify-between gap-3 rounded-none"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">
+                      {page.label}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {page.description}
+                    </span>
+                  </span>
+                  <span className="max-w-[45%] truncate text-xs text-muted-foreground">
+                    {page.href}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ) : null}
+          {groupedResults.map(([group, items]) => (
+            <CommandGroup key={group} heading={groupLabel(group)}>
+              {items.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={item.id}
+                  onSelect={() => goTo(item.href)}
+                  className="justify-between gap-3 rounded-none"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">
+                      {item.title}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {item.description}
+                    </span>
+                  </span>
+                  <span className="max-w-[45%] truncate text-xs text-muted-foreground">
+                    {groupLabel(item.group)}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+        </CommandList>
+      </CommandDialog>
     </>
   )
 }

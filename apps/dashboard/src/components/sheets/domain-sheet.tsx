@@ -1,48 +1,61 @@
 "use client"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
-import { DomainContent } from "@/components/domains/domain-content"
-import { getDomainSheetHeader } from "@/components/domains/domain-sheet-header"
-import { DomainFormProvider } from "@/components/domains/domain/form-context"
+import { DomainSheetContent } from "@/components/domains/domain-sheet-content"
 import { useDomainParams } from "@/hooks/use-domain-params"
 import { useTRPC } from "@/trpc/client"
+import { Sheet } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 
 export function DomainSheet({
   store,
 }: {
   store: { id: string; name: string }
 }) {
+  const { domainId, domainOrderId, mode, setParams } = useDomainParams()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const { mode, setParams } = useDomainParams()
-  const header = mode ? getDomainSheetHeader(mode) : null
-
-  async function close() {
-    setParams(null)
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: trpc.domains.list.queryKey() }),
-      queryClient.invalidateQueries({
-        queryKey: trpc.domains.registrantProfile.queryKey(),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: trpc.domains.order.queryKey(),
-      }),
-    ])
-  }
+  const open = Boolean(mode)
+  const [closeError, setCloseError] = useState<string | null>(null)
 
   return (
-    <DashboardSheet
-      description={header?.description}
-      onClose={close}
-      open={Boolean(mode)}
-      title={header?.title ?? "Domain"}
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) return
+        setCloseError(null)
+        void (async () => {
+          try {
+            await Promise.all([
+              queryClient.invalidateQueries({
+                queryKey: trpc.domains.list.queryKey(),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: trpc.domains.registrantProfile.queryKey(),
+              }),
+              queryClient.invalidateQueries({
+                queryKey: trpc.domains.order.queryKey(),
+              }),
+            ])
+            await setParams(null)
+          } catch (error) {
+            setCloseError(
+              error instanceof Error
+                ? error.message
+                : "The domain sheet could not be closed.",
+            )
+          }
+        })()
+      }}
     >
-      {mode ? (
-        <DomainFormProvider key={mode}>
-          <DomainContent store={store} />
-        </DomainFormProvider>
+      {open ? (
+        <DomainSheetContent
+          key={`${store.id}:${mode}:${domainId}:${domainOrderId}`}
+          closeError={closeError}
+          mode={mode}
+          store={store}
+        />
       ) : null}
-    </DashboardSheet>
+    </Sheet>
   )
 }

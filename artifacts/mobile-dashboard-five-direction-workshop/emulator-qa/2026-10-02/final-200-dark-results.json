@@ -1,0 +1,62 @@
+[
+  {
+    "state": "established-unready",
+    "theme": "dark",
+    "scale": "200",
+    "themeMatch": true,
+    "captures": [
+      "final-200-dark-established-unready-top",
+      "final-200-dark-established-unready-middle",
+      "final-200-dark-established-unready-bottom"
+    ],
+    "visualAcceptance": "pending review"
+  },
+  {
+    "state": "team-unknown",
+    "theme": "dark",
+    "scale": "200",
+    "themeMatch": true,
+    "captures": [
+      "final-200-dark-team-unknown-top",
+      "final-200-dark-team-unknown-middle",
+      "final-200-dark-team-unknown-bottom"
+    ],
+    "visualAcceptance": "pending review"
+  },
+  {
+    "state": "team-existing",
+    "theme": "dark",
+    "scale": "200",
+    "themeMatch": true,
+    "captures": [
+      "final-200-dark-team-existing-top",
+      "final-200-dark-team-existing-middle",
+      "final-200-dark-team-existing-bottom"
+    ],
+    "visualAcceptance": "pending review"
+  },
+  {
+    "state": "team-restricted",
+    "theme": "dark",
+    "scale": "200",
+    "themeMatch": true,
+    "captures": [
+      "final-200-dark-team-restricted-top",
+      "final-200-dark-team-restricted-middle",
+      "final-200-dark-team-restricted-bottom"
+    ],
+    "visualAcceptance": "pending review"
+  },
+  {
+    "state": "everyday",
+    "theme": "dark",
+    "scale": "200",
+    "themeMatch": true,
+    "captures": [
+      "final-200-dark-everyday-top",
+      "final-200-dark-everyday-middle",
+      "final-200-dark-everyday-bottom"
+    ],
+    "visualAcceptance": "pending review"
+  }
+]

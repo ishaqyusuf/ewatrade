@@ -1,10 +1,21 @@
 "use client"
+import {
+  Badge,
+  Button,
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { ServiceCommerceCatalogDraftFormValues } from "@ewatrade/service-commerce"
-import { Badge, Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useFormContext } from "react-hook-form"
@@ -127,29 +138,30 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
   )
 
   if (matches.isLoading) {
-    return <div className="h-64 animate-pulse rounded-lg bg-muted" />
+    return <div className="h-64 animate-pulse bg-muted" />
   }
   if (matches.isError || !matches.data) {
     return (
-      <div className="grid gap-3">
-        <p className="text-sm text-destructive" role="alert">
+      <FieldGroup className="grid gap-3">
+        <FormFeedback appearance="dashboard">
           {matches.error?.message ?? "Catalog matches are unavailable."}
-        </p>
+        </FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() => void matches.refetch()}
           variant="outline"
         >
           Try again
         </Button>
-      </div>
+      </FieldGroup>
     )
   }
 
   const pending = createDraft.isPending || linkOffering.isPending
 
   return (
-    <div className="grid gap-6">
+    <FieldGroup className="grid gap-6">
       <section className="grid gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -192,7 +204,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             ))}
           </div>
         ) : (
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          <p className="border border-dashed p-4 text-sm text-muted-foreground">
             No suitable Offering was found. Create a private draft below; it
             will not be published or given invented stock.
           </p>
@@ -200,7 +212,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
       </section>
 
       {selected ? (
-        <section className="grid gap-3 rounded-lg border border-border p-4">
+        <section className="grid gap-3 border border-border p-4">
           <div>
             <h3 className="font-medium">Confirm existing Offering</h3>
             <p className="text-sm text-muted-foreground">
@@ -215,15 +227,14 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             isLoading={prices.isLoading}
             onRetry={() => void prices.refetch()}
           />
-          <label className="grid gap-1 text-sm">
-            Confirmed Catalog alias
-            <input
-              className="h-10 rounded-lg border border-border bg-background px-3"
+          <ControlField label={<>Confirmed Catalog alias</>}>
+            <Input
               readOnly={Boolean(verifiedObservation)}
               {...form.register("verifiedAlias")}
             />
-          </label>
+          </ControlField>
           <Button
+            appearance="form"
             disabled={pending || !form.watch("verifiedAlias").trim()}
             onClick={() => {
               linkCommandId.current ??= crypto.randomUUID()
@@ -246,7 +257,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
       ) : null}
 
       <form
-        className="grid gap-3 rounded-lg border border-border p-4"
+        className="border border-border p-4"
         onSubmit={form.handleSubmit((values) => {
           draftCommandId.current ??= crypto.randomUUID()
           createDraft.mutate({
@@ -262,44 +273,44 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
           })
         })}
       >
-        <div>
-          <h3 className="font-medium">Create private Catalog draft</h3>
-          <p className="text-sm text-muted-foreground">
-            Review the suggested name and enter a confirmed Catalog alias. Raw
-            customer wording is never treated as verified Catalog truth.
-          </p>
-        </div>
-        <label className="grid gap-1 text-sm">
-          Catalog name
-          <input
-            className="h-10 rounded-lg border border-border bg-background px-3"
-            {...form.register("name")}
-          />
-          {form.formState.errors.name ? (
-            <span className="text-xs text-destructive">
-              {form.formState.errors.name.message}
-            </span>
-          ) : null}
-        </label>
-        <label className="grid gap-1 text-sm">
-          Confirmed Catalog alias
-          <input
-            className="h-10 rounded-lg border border-border bg-background px-3"
-            readOnly={Boolean(verifiedObservation)}
-            {...form.register("verifiedAlias")}
-          />
-        </label>
-        <Button disabled={pending} type="submit">
-          {createDraft.isPending ? "Creating…" : "Create private draft"}
-        </Button>
+        <FieldGroup className="min-w-0 grid gap-3">
+          <div>
+            <h3 className="font-medium">Create private Catalog draft</h3>
+            <p className="text-sm text-muted-foreground">
+              Review the suggested name and enter a confirmed Catalog alias. Raw
+              customer wording is never treated as verified Catalog truth.
+            </p>
+          </div>
+          <ControlField
+            label={<>Catalog name</>}
+            error={form.formState.errors.name?.message}
+          >
+            <Input {...form.register("name")} />
+          </ControlField>
+          <ControlField label={<>Confirmed Catalog alias</>}>
+            <Input
+              readOnly={Boolean(verifiedObservation)}
+              {...form.register("verifiedAlias")}
+            />
+          </ControlField>
+          <FormActions>
+            <SubmitButton
+              isSubmitting={pending}
+              disabled={pending}
+              type="submit"
+            >
+              {createDraft.isPending ? "Creating…" : "Create private draft"}
+            </SubmitButton>
+          </FormActions>
+        </FieldGroup>
       </form>
 
       {message ? (
-        <output className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+        <FormFeedback appearance="dashboard" variant="default">
           {message}
-        </output>
+        </FormFeedback>
       ) : null}
-    </div>
+    </FieldGroup>
   )
 }
 
@@ -320,7 +331,12 @@ function PriceSuggestionState({
     )
   if (isError) {
     return (
-      <Button className="w-fit" onClick={onRetry} variant="outline">
+      <Button
+        appearance="form"
+        className="w-fit"
+        onClick={onRetry}
+        variant="outline"
+      >
         Retry price history
       </Button>
     )

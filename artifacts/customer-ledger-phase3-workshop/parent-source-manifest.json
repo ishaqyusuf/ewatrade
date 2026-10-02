@@ -1,0 +1,242 @@
+[
+  {
+    "path": "apps/api/src/schemas/customer-ledger-allocation-history.test.ts",
+    "sha256": "3fc9b8906da3521b3b7d6019f20937737ef409b964cc296934253814423a6796"
+  },
+  {
+    "path": "apps/api/src/schemas/customer-ledger.ts",
+    "sha256": "a4dfd376c82cf718d30d1ed28cf052f7db5971551d79b3592a0681a88f5d7340"
+  },
+  {
+    "path": "apps/api/src/trpc/routers/customer-ledger.test.ts",
+    "sha256": "bb788f128e51b11872a0613531c8990ea42a6ac27577cc375ac0ab4a1ea0cfd9"
+  },
+  {
+    "path": "apps/api/src/trpc/routers/customer-ledger.ts",
+    "sha256": "8538285d9a14c69b31d243342a32c375c4cb55b0ee06be0ae3fc5a47f3e18617"
+  },
+  {
+    "path": "apps/dashboard/src/app/(shell)/customer-ledger/page.tsx",
+    "sha256": "543e0291d6205c6bb2dcff7f26d260fab87d2d78fa9e60b3d0baaa6b0f380c66"
+  },
+  {
+    "path": "apps/dashboard/src/app/(shell)/customers/[customerId]/statement/error.tsx",
+    "sha256": "9c46fd17409487d505f775393a51979bd03dd08f21787be31215caecb7a88732"
+  },
+  {
+    "path": "apps/dashboard/src/app/(shell)/customers/[customerId]/statement/loading.tsx",
+    "sha256": "7b4ab8ea8deb6e07904d7026f444a05a432265f7ffc866e001f4224ea2448b90"
+  },
+  {
+    "path": "apps/dashboard/src/app/(shell)/customers/[customerId]/statement/page.tsx",
+    "sha256": "75d7a92226e8245add3e6658d30434b56cff43575009452190c73d25aef084e3"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/allocation-history.tsx",
+    "sha256": "5b5e846064f23bafd7d42f05aedd89821fc5fb3dd93d90b5bb02de3ed429f9f4"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-content.tsx",
+    "sha256": "0d40544c4d4dc6e4a8d33fd3ed08dfd5430be668b7a54110f72ae983415d66ba"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-directory.tsx",
+    "sha256": "64fa3c2cb45bf2db868e2cb9a4a3c02392e3d9bbfafd5dbc17c129a6ebf719f6"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-entry-detail.tsx",
+    "sha256": "abdcd70553ef02048a6fd2182f7c2a5ec3041652f6742e3a8eae382746c6f214"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-route.tsx",
+    "sha256": "12499cea08e8cccc848a1673aa9e0c0a8c47211400d9c8ff605ddf7ce028666c"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-sheet-header.ts",
+    "sha256": "b96e50b10a0abab38a1f25c47f0a026d698ce53a03158583eb8a96394240b833"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-statement.tsx",
+    "sha256": "e9d19683cdaeca9a0a6297a00f3e6d88d0e846dc6ed0374adae2cf1304990d4e"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/customer-ledger-workspace.tsx",
+    "sha256": "ff6d83e7b8a9326879defb573fe44cc55c872dabb86c5f0150b1e573cfd540b8"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/forms/command-form.tsx",
+    "sha256": "c890a45385b6b68cf6ddb50feb2f5970f635b0fc06f14f5e3b10c9366b1ab5f2"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/forms/form-context.tsx",
+    "sha256": "75c9ef40e0558ae9d4f67b641fe7f008dd5573ffba25a675a5ec9b22ae617ffe"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/statement-export.tsx",
+    "sha256": "02429011395693590f5294b6c68dcd8360c57b8bdb7631fc01ac47cc8ec7861a"
+  },
+  {
+    "path": "apps/dashboard/src/components/customer-ledger/types.ts",
+    "sha256": "fc3363e40c244e7b708bd6a3abfefd8202b7d2886591716acc84356620ad5580"
+  },
+  {
+    "path": "apps/dashboard/src/components/sheets/customer-ledger-sheet.tsx",
+    "sha256": "ee2a78d417aeb41d1aa088dde50edeb33effa821ea3b506b29e6152d0ba6ec12"
+  },
+  {
+    "path": "apps/dashboard/src/components/sheets/global-sheets.tsx",
+    "sha256": "c75d78e0f6da082a0c3270c8acfe375f76a81752796e1b54032376a16004f695"
+  },
+  {
+    "path": "apps/dashboard/src/components/store-conversations/conversation-moderation-form.tsx",
+    "sha256": "38e3215d70f895370f566d54e2234b71a74fe6ae8dce0c1f2cd7434e758ea617"
+  },
+  {
+    "path": "apps/dashboard/src/components/tables/customer-ledger/columns.tsx",
+    "sha256": "64d4d3d8213051e219f4f32c7f146ea7e7186e90e9668414531983b353dadebe"
+  },
+  {
+    "path": "apps/dashboard/src/components/tables/customer-ledger/data-table.tsx",
+    "sha256": "d7a60fbf5d1080aee9e8bda99381f997c500111abd071ddafbb219d5edf192d1"
+  },
+  {
+    "path": "apps/dashboard/src/components/tables/customer-ledger/empty-states.tsx",
+    "sha256": "be5068343a2059201f9adf5b3a56f646be4881491589c4bf6edea9cc917101e2"
+  },
+  {
+    "path": "apps/dashboard/src/components/tables/customer-ledger/skeleton.tsx",
+    "sha256": "7a842e735fd0ed2f58a6165e3a0c2943fd0f099e0f13c20ad4475d2b189fa75c"
+  },
+  {
+    "path": "apps/dashboard/src/components/tables/customer-ledger/table-header.tsx",
+    "sha256": "5aefebb76413627f97301068fcec8e71cdeaf4712e3a518e88a305fc3ae6fdff"
+  },
+  {
+    "path": "apps/dashboard/src/hooks/use-customer-ledger-command.ts",
+    "sha256": "5e6996618457ea7775e734ed7c801f61cac44d8db24d5bdcc704b61dc23fca64"
+  },
+  {
+    "path": "apps/dashboard/src/hooks/use-customer-ledger-params.ts",
+    "sha256": "02598f69e5711fab04037db51b73a258767d7706496ad6a7577adaceaf178544"
+  },
+  {
+    "path": "apps/dashboard/src/lib/customer-ledger/command-input.test.ts",
+    "sha256": "f4dafdc0fe3d5150eb49f77d55da08f567f52765eb3e5da165ae29ea7f8c36b7"
+  },
+  {
+    "path": "apps/dashboard/src/lib/customer-ledger/command-input.ts",
+    "sha256": "be9e4d45099d662841f812756f70c2336238441c965b56cbd65bcf79b1d9fd9c"
+  },
+  {
+    "path": "apps/dashboard/src/lib/customer-ledger/command-runner.test.ts",
+    "sha256": "5774e8ed499dcddeeda2b8beaac8254d0644d8a341c9e2749d87e3da8db2a9a3"
+  },
+  {
+    "path": "apps/dashboard/src/lib/customer-ledger/command-runner.ts",
+    "sha256": "ae3bfc91e04da606c0a9c6b6085899bfe2f0852bee9eec672ad5e0a3114b78cf"
+  },
+  {
+    "path": "apps/dashboard/src/lib/customer-ledger/statement-export.test.ts",
+    "sha256": "71ccfe0e89f6225a44e7a8d04bfba355b287170a48cb440c7542f7c2ce46939d"
+  },
+  {
+    "path": "apps/dashboard/src/lib/customer-ledger/statement-export.ts",
+    "sha256": "802abc750549d815e3065be1434fe4ae3a11b0b8b3451e88419b1fa8307a21fd"
+  },
+  {
+    "path": "apps/dashboard/src/lib/navigation.ts",
+    "sha256": "816c9b2c57212a1b1b9f0958308c88b06d8538b4c7c32d647aa8ad5c4ea40217"
+  },
+  {
+    "path": "apps/dashboard/src/utils/table-settings.ts",
+    "sha256": "ef3192f20463422a42f2140bc65bf1008d08f0263f23b84a4ec72120f23bb307"
+  },
+  {
+    "path": "apps/mobile/src/app/_layout.tsx",
+    "sha256": "da6352d452e28924f485403903d13c3494d5f15ed21f480bb14a3b8a2c8ed62d"
+  },
+  {
+    "path": "apps/mobile/src/app/customer-ledger-action/[accountId].tsx",
+    "sha256": "0fd35da0b0374e3494a646ec806d3435212aa41bd37cd122fdc3415730c40f8d"
+  },
+  {
+    "path": "apps/mobile/src/app/customer-ledger-modal.tsx",
+    "sha256": "7a50e7651e214c88aa6f7772915c19abd14efd971168b1017eafdf6c27326971"
+  },
+  {
+    "path": "apps/mobile/src/app/customer-ledger/[customerId].tsx",
+    "sha256": "0e96edb481c853c50cb141c734cf263722fba327cfcdaac37bea6754dc4939d1"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-book/customer-book-screen.tsx",
+    "sha256": "b7bf114b867978bd3ef829c65abb16129dd8243235ebdd7b998c3710e3be09cb"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/allocation-history.tsx",
+    "sha256": "1a6c6b62bff8c808840857ba418784ed4b33ae22ab3da44b7fa978ff83d5b539"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-action-screen.tsx",
+    "sha256": "091b359a6b57e8d223b86e5b2b6de88686e27df8b2130fd68d66043be371526a"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-command-form.tsx",
+    "sha256": "8655dda2f2d7db8fd956117eaee607632113a904a10d03c396832fe07c4a6075"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-directory.tsx",
+    "sha256": "6995fe9d0aec70c24e8938e11dcce3ce443481dae5472e664635864a5c001f05"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-entry-detail.tsx",
+    "sha256": "c08c541efe46ad6600ad2b7961a8840a3950ac9427b029865dc3366c78365139"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-gate.tsx",
+    "sha256": "0c5c1891c5e7a575108a8fc58e69a18e9c3b0a2f895823b195226a1c65df2d38"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-screen.tsx",
+    "sha256": "ed9c87e6c8d3cd68651a79deb2ddad8df9f037461d7800cf9a11a3fd1a440927"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/types.ts",
+    "sha256": "0dd7a5a4af9dcecffa69399736007c51ab2d46a8446b26103ca420e0e1abc359"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/customer-ledger/use-mobile-customer-ledger-command.ts",
+    "sha256": "2422fdd0ffaa06f4a6bd1e7475b81902d7ad3f441a5ccdf1200def19eb0c086a"
+  },
+  {
+    "path": "apps/mobile/src/components/mobile/finance/finance-screen.tsx",
+    "sha256": "a24a60f646981b5599f2cba33986d65a9e85ce1e3cadff291adfd02d51c93847"
+  },
+  {
+    "path": "apps/mobile/src/lib/customer-ledger/command-input.test.ts",
+    "sha256": "12e2d778fc3cdaf96a7119ce8edaa2cc337a0c963e02c0b89ec62762d4c4104b"
+  },
+  {
+    "path": "apps/mobile/src/lib/customer-ledger/command-input.ts",
+    "sha256": "8c21c8a203c7e15f2c35d7e89ad4ea9430b27c34c7c37282487b9ce37e6a479b"
+  },
+  {
+    "path": "apps/mobile/src/lib/customer-ledger/command-runner.test.ts",
+    "sha256": "959ee8532ae2a2903a6d55e0c40d9b82a9f274c394b8dd1cd5490714c5d1b042"
+  },
+  {
+    "path": "apps/mobile/src/lib/customer-ledger/command-runner.ts",
+    "sha256": "d332d01874d4e5077ff019240ca65a3a4163d3f123dbc7f133442249a94958d0"
+  },
+  {
+    "path": "packages/db/src/queries/customer-ledger/allocation-history.test.ts",
+    "sha256": "0a4dbe15f044106b5ad07d95c8e545986fe92efd61c6c9f2a2368a172c7e5367"
+  },
+  {
+    "path": "packages/db/src/queries/customer-ledger/allocation-history.ts",
+    "sha256": "d002bd3e4489acfc764ab34038e1b95b43a2d6e58f2343041a6e3cf2d55e5a04"
+  },
+  {
+    "path": "packages/db/src/queries/customer-ledger/index.ts",
+    "sha256": "864388a6a54e6c62fb7fdf1e88e22af73bfd4b8bb105d211937753cca4b5fc63"
+  }
+]

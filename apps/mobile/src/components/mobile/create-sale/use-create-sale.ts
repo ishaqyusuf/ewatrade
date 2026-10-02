@@ -1,4 +1,3 @@
-import { buildCommerceCustomers } from "@/components/mobile/commerce"
 import type { SaleCustomerDraft } from "@/components/mobile/create-sale-customer-sheet"
 import { CUSTOMER_SHEET_PRESENT_DELAY_MS } from "@/components/mobile/create-sale-customer-sheet-model"
 import {
@@ -51,14 +50,15 @@ import {
 } from "react"
 import { Keyboard, Platform } from "react-native"
 import {
-  type CreateSaleContentProps,
   type CreateSaleCompletion,
+  type CreateSaleContentProps,
+  type OfferingRow,
   type PaymentMethod,
   type SaleStep,
   type SelectedCustomer,
-  type OfferingRow,
   flattenSaleOfferings,
 } from "./create-sale-model"
+import { buildSaleCustomerSuggestions } from "./sale-customer-suggestions"
 import { useSaleFulfillment } from "./use-sale-fulfillment"
 
 export function useCreateSale({
@@ -322,9 +322,8 @@ export function useCreateSale({
   })
   const loadedCustomers = useMemo(
     () =>
-      buildCommerceCustomers(
+      buildSaleCustomerSuggestions(
         recentOrders.data?.pages.flatMap((page) => page.items) ?? [],
-        [],
         customerDirectory.data?.pages.flatMap((page) => page.items) ?? [],
       ),
     [customerDirectory.data?.pages, recentOrders.data?.pages],
@@ -596,6 +595,7 @@ export function useCreateSale({
       ])
       selectCustomer({
         email: customer.email ?? undefined,
+        directoryId: customer.id,
         id: customer.id,
         name: customer.name,
         phone: customer.phone ?? undefined,
@@ -673,6 +673,7 @@ export function useCreateSale({
     }
 
     const payload = {
+      customerId: selectedCustomer?.directoryId,
       customerEmail: selectedCustomer?.email,
       customerName: selectedCustomer?.name,
       customerPhone: selectedCustomer?.phone,

@@ -8,6 +8,17 @@ import {
 } from "."
 
 describe("EwaTrade error contract", () => {
+  test("explains the Catalog Terms gate through a wrapped error without leaking details", () => {
+    const cause = Object.assign(new Error("private account detail"), {
+      code: "CATALOG_TERMS_REQUIRED",
+    })
+    const response = toPublicErrorEnvelope(new Error("wrapper", { cause }))
+    expect(response.error.code).toBe("CATALOG_TERMS_REQUIRED")
+    expect(response.error.message).toContain("effective EwaTrade Terms")
+    expect(response.error.retryable).toBe(false)
+    expect(JSON.stringify(response)).not.toContain("private account detail")
+    expect(classifyError(cause).reportable).toBe(false)
+  })
   test("suppresses expected offline and stock conflicts", () => {
     for (const code of [
       "OFFLINE_COMMAND_CONFLICT",

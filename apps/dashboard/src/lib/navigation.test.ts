@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import type { DashboardNavContext } from "./navigation"
+import type { DashboardNavContext, DashboardNavItem } from "./navigation"
 import {
   canAccessDashboardPath,
+  getDashboardNavItem,
   getDashboardNavigation,
   getDashboardRoleLabel,
 } from "./navigation"
@@ -24,84 +25,43 @@ function context(
   }
 }
 
+function flatten(items: DashboardNavItem[]): DashboardNavItem[] {
+  return items.flatMap((item) => [item, ...flatten(item.children ?? [])])
+}
+
 describe("dashboard navigation policy", () => {
-  test("shows owner and admin the full established dashboard surface", () => {
-    const ownerItems = getDashboardNavigation("OWNER")
-    const adminItems = getDashboardNavigation("ADMIN")
+  test("keeps permitted primary pages available when a new business has no records", () => {
+    const ownerItems = getDashboardNavigation("OWNER", context())
 
     expect(ownerItems.map((item) => item.href)).toEqual([
       "/",
+      "/conversations",
       "/catalog",
       "/inventory",
       "/sales",
       "/services",
-      "/prescriptions",
       "/customers",
       "/staff",
+      "/finance",
       "/analytics",
       "/settings",
     ])
-    expect(adminItems.map((item) => item.href)).toEqual(
-      ownerItems.map((item) => item.href),
-    )
+    expect(canAccessDashboardPath("/sales", "OWNER", context())).toBe(true)
+    expect(canAccessDashboardPath("/services", "OWNER", context())).toBe(true)
+    expect(ownerItems.some((item) => item.href === "/customers")).toBe(true)
   })
 
-  test("keeps a new owner workspace focused while preserving creation access", () => {
-    const empty = context()
-
-    expect(
-      getDashboardNavigation("OWNER", empty).map((item) => item.href),
-    ).toEqual(["/", "/settings"])
-    expect(canAccessDashboardPath("/catalog", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/staff", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/customers", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/analytics", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/sales", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/inventory", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/services", "OWNER", empty)).toBe(true)
-    expect(canAccessDashboardPath("/prescriptions", "OWNER", empty)).toBe(true)
-  })
-
-  test("reveals catalog and inventory from item history without revealing work", () => {
-    const productOnly = context({
-      hasActiveSellableItems: true,
-      hasCatalogItems: true,
-      hasProductItems: true,
+  test("shows full page coverage for a mixed pharmacy business", () => {
+    const fullBusiness = context({
+      businessProfileKey: "pharmacy-health-retail",
+      operatingModel: "products_and_services",
     })
-    const serviceOnly = context({
-      hasActiveSellableItems: true,
-      hasCatalogItems: true,
-      hasServiceItems: true,
-    })
+    const ownerItems = getDashboardNavigation("OWNER", fullBusiness)
+    const adminItems = getDashboardNavigation("ADMIN", fullBusiness)
 
-    expect(
-      getDashboardNavigation("OWNER", productOnly).map((item) => item.href),
-    ).toEqual(["/", "/catalog", "/inventory", "/settings"])
-    expect(
-      getDashboardNavigation("OWNER", serviceOnly).map((item) => item.href),
-    ).toEqual(["/", "/catalog", "/settings"])
-    expect(canAccessDashboardPath("/sales", "OWNER", productOnly)).toBe(true)
-    expect(canAccessDashboardPath("/services", "OWNER", serviceOnly)).toBe(true)
-  })
-
-  test("reveals operational modules from their own records", () => {
-    const established = context({
-      hasActiveSellableItems: true,
-      hasCatalogItems: true,
-      hasCustomers: true,
-      hasOrders: true,
-      hasPrescriptionCommerce: true,
-      hasProductItems: true,
-      hasReportableActivity: true,
-      hasServiceItems: true,
-      hasServiceJobs: true,
-      hasStaff: true,
-    })
-
-    expect(
-      getDashboardNavigation("OWNER", established).map((item) => item.href),
-    ).toEqual([
+    expect(ownerItems.map((item) => item.href)).toEqual([
       "/",
+      "/conversations",
       "/catalog",
       "/inventory",
       "/sales",
@@ -109,50 +69,175 @@ describe("dashboard navigation policy", () => {
       "/prescriptions",
       "/customers",
       "/staff",
+      "/finance",
       "/analytics",
       "/settings",
     ])
+    expect(adminItems).toEqual(ownerItems)
+    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(23)
   })
 
-  test("shows managers operational administration without owner settings", () => {
-    expect(getDashboardNavigation("MANAGER").map((item) => item.href)).toEqual([
-      "/",
-      "/catalog",
-      "/inventory",
-      "/sales",
-      "/services",
-      "/prescriptions",
-      "/customers",
-      "/staff",
+  test("nests every existing Finance, Reports, and Settings page", () => {
+    const items = getDashboardNavigation(
+      "OWNER",
+      context({ businessProfileKey: "pharmacy-health-retail" }),
+    )
+    const finance = items.find((item) => item.href === "/finance")
+    const reports = items.find((item) => item.href === "/analytics")
+    const settings = items.find((item) => item.href === "/settings")
+
+    expect(finance?.children?.map((item) => item.href)).toEqual([
+      "/finance",
+      "/finance/spending",
+      "/finance/accounts",
+      "/finance/suppliers",
+      "/finance/reports",
+    ])
+    expect(reports?.children?.map((item) => item.href)).toEqual([
       "/analytics",
+      "/service-commerce/reports",
+      "/prescriptions/reports",
     ])
+    expect(settings?.children?.map((item) => item.href)).toEqual([
+      "/settings",
+      "/settings/domains",
+      "/settings/channels",
+      "/settings/service-commerce",
+      "/settings/compliance",
+      "/settings/billing",
+    ])
+    expect(
+      flatten(items).some((item) => item.href === "/settings/prescriptions"),
+    ).toBe(false)
   })
 
-  test("shows attendants only revealed permitted work surfaces", () => {
-    const established = context({
-      hasCustomers: true,
-      hasOrders: true,
-      hasProductItems: true,
-      hasServiceJobs: true,
-    })
-    const cashierItems = getDashboardNavigation("CASHIER", established).map(
-      (item) => item.href,
-    )
-    const operatorItems = getDashboardNavigation("OPERATOR", established).map(
-      (item) => item.href,
+  test("keeps child route permissions aligned with their specific pages", () => {
+    const managerItems = getDashboardNavigation("MANAGER")
+    const managerReports = managerItems.find(
+      (item) => item.href === "/analytics",
     )
 
-    expect(cashierItems).toEqual([
+    expect(managerItems.some((item) => item.href === "/finance")).toBe(false)
+    expect(managerItems.some((item) => item.href === "/settings")).toBe(false)
+    expect(managerReports?.children?.map((item) => item.href)).toEqual([
+      "/analytics",
+      "/service-commerce/reports",
+    ])
+    expect(canAccessDashboardPath("/analytics", "MANAGER")).toBe(true)
+    expect(canAccessDashboardPath("/service-commerce/reports", "MANAGER")).toBe(
+      true,
+    )
+    expect(canAccessDashboardPath("/prescriptions/reports", "MANAGER")).toBe(
+      false,
+    )
+    expect(canAccessDashboardPath("/prescriptions", "MANAGER")).toBe(true)
+    expect(canAccessDashboardPath("/settings", "MANAGER")).toBe(false)
+  })
+
+  test("uses the selected operating model to show matching work families", () => {
+    const productsContext = context({ operatingModel: "products" })
+    const servicesContext = context({ operatingModel: "services" })
+    const mixedContext = context({ operatingModel: "products_and_services" })
+    const products = getDashboardNavigation("OWNER", productsContext)
+    const services = getDashboardNavigation("OWNER", servicesContext)
+    const mixed = getDashboardNavigation("OWNER", mixedContext)
+
+    expect(products.some((item) => item.href === "/sales")).toBe(true)
+    expect(products.some((item) => item.href === "/services")).toBe(false)
+    expect(services.some((item) => item.href === "/sales")).toBe(false)
+    expect(services.some((item) => item.href === "/services")).toBe(true)
+    expect(mixed.some((item) => item.href === "/sales")).toBe(true)
+    expect(mixed.some((item) => item.href === "/services")).toBe(true)
+    expect(products.some((item) => item.href === "/customers")).toBe(true)
+    expect(services.some((item) => item.href === "/customers")).toBe(true)
+    expect(getDashboardNavItem("/services", "OWNER", productsContext)).toBe(
+      undefined,
+    )
+    expect(
+      getDashboardNavItem("/services", "OWNER", servicesContext)?.label,
+    ).toBe("Service jobs")
+    expect(canAccessDashboardPath("/services", "OWNER", productsContext)).toBe(
+      true,
+    )
+    expect(
+      canAccessDashboardPath("/prescriptions", "OWNER", productsContext),
+    ).toBe(true)
+  })
+
+  test("derives work families from profiles and reserves prescription surfaces for pharmacy", () => {
+    const productProfile = getDashboardNavigation(
+      "OWNER",
+      context({ businessProfileKey: "general-retail-groceries" }),
+    )
+    const serviceProfile = getDashboardNavigation(
+      "OWNER",
+      context({ businessProfileKey: "laundry-dry-cleaning" }),
+    )
+    const pharmacyProfile = getDashboardNavigation(
+      "OWNER",
+      context({ businessProfileKey: "pharmacy-health-retail" }),
+    )
+    const explicitServices = getDashboardNavigation(
+      "OWNER",
+      context({
+        businessProfileKey: "general-retail-groceries",
+        operatingModel: "services",
+      }),
+    )
+
+    expect(productProfile.some((item) => item.href === "/sales")).toBe(true)
+    expect(productProfile.some((item) => item.href === "/services")).toBe(false)
+    expect(serviceProfile.some((item) => item.href === "/sales")).toBe(false)
+    expect(serviceProfile.some((item) => item.href === "/services")).toBe(true)
+    expect(serviceProfile.some((item) => item.href === "/customers")).toBe(true)
+    expect(explicitServices.some((item) => item.href === "/sales")).toBe(false)
+    expect(explicitServices.some((item) => item.href === "/services")).toBe(
+      true,
+    )
+    expect(pharmacyProfile.some((item) => item.href === "/prescriptions")).toBe(
+      true,
+    )
+    expect(
+      pharmacyProfile
+        .find((item) => item.href === "/analytics")
+        ?.children?.some((item) => item.href === "/prescriptions/reports"),
+    ).toBe(true)
+    expect(
+      pharmacyProfile
+        .find((item) => item.href === "/settings")
+        ?.children?.some((item) => item.href === "/settings/compliance"),
+    ).toBe(true)
+    expect(
+      canAccessDashboardPath(
+        "/prescriptions/reports",
+        "OWNER",
+        context({
+          businessProfileKey: "general-retail-groceries",
+        }),
+      ),
+    ).toBe(true)
+    expect(
+      canAccessDashboardPath(
+        "/settings/compliance",
+        "OWNER",
+        context({
+          businessProfileKey: "general-retail-groceries",
+        }),
+      ),
+    ).toBe(true)
+  })
+
+  test("preserves attendant and limited-role access", () => {
+    expect(getDashboardNavigation("CASHIER").map((item) => item.href)).toEqual([
       "/",
-      "/inventory",
+      "/conversations",
       "/sales",
       "/services",
       "/customers",
     ])
-    expect(operatorItems).toEqual(cashierItems)
-  })
-
-  test("keeps support and member roles limited to overview", () => {
+    expect(getDashboardNavigation("OPERATOR").map((item) => item.href)).toEqual(
+      getDashboardNavigation("CASHIER").map((item) => item.href),
+    )
     expect(getDashboardNavigation("SUPPORT").map((item) => item.href)).toEqual([
       "/",
     ])
@@ -161,12 +246,35 @@ describe("dashboard navigation policy", () => {
     ])
   })
 
-  test("gates known paths by permission without treating visibility as authorization", () => {
-    expect(canAccessDashboardPath("/settings", "OWNER")).toBe(true)
-    expect(canAccessDashboardPath("/settings", "MANAGER")).toBe(false)
-    expect(canAccessDashboardPath("/analytics", "CASHIER")).toBe(false)
-    expect(canAccessDashboardPath("/sales", "CASHIER")).toBe(true)
-    expect(canAccessDashboardPath("/inventory/stock", "OPERATOR")).toBe(true)
+  test("requires the platform-admin context for QA maintenance", () => {
+    expect(
+      getDashboardNavigation("OWNER").some(
+        (item) => item.href === "/platform/qa-maintenance",
+      ),
+    ).toBe(false)
+    expect(
+      getDashboardNavigation("MEMBER", { isPlatformAdmin: true }).some(
+        (item) => item.href === "/platform/qa-maintenance",
+      ),
+    ).toBe(true)
+    expect(canAccessDashboardPath("/platform/qa-maintenance", "OWNER")).toBe(
+      false,
+    )
+    expect(
+      canAccessDashboardPath("/platform/qa-maintenance", "MEMBER", {
+        isPlatformAdmin: true,
+      }),
+    ).toBe(true)
+  })
+
+  test("matches the most specific permitted child route", () => {
+    expect(getDashboardNavItem("/finance/accounts", "OWNER")?.label).toBe(
+      "Accounts",
+    )
+    expect(canAccessDashboardPath("/finance/reports/export", "OWNER")).toBe(
+      true,
+    )
+    expect(canAccessDashboardPath("/inventory/stock", "OPERATOR")).toBe(false)
     expect(canAccessDashboardPath("/staff", "MEMBER")).toBe(false)
     expect(canAccessDashboardPath("/unknown-future-page", "MEMBER")).toBe(true)
   })

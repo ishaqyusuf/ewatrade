@@ -1,0 +1,2 @@
+NativeWind style mix check failed. Do not put className and style on the same native element.
+- src/components/mobile/barcode-camera-screen.tsx:213:7 <View> has both className and style

@@ -1,4 +1,5 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 
@@ -137,12 +138,5 @@ export function ServiceCommerceSheetContent({
 }
 
 function Unavailable({ message }: { message: string }) {
-  return (
-    <p
-      className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
-      role="alert"
-    >
-      {message}
-    </p>
-  )
+  return <FormFeedback appearance="dashboard">{message}</FormFeedback>
 }

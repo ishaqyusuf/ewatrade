@@ -149,16 +149,16 @@ model StoreBillingAccount {
 }
 
 model StoreSubscriptionPurchase {
-  id             String          @id @default(cuid())
-  tenantId       String
-  provider       BillingProvider
-  purchaseDigest String
+  id                String          @id @default(cuid())
+  tenantId          String
+  provider          BillingProvider
+  purchaseDigest    String
   latestOrderDigest String?
-  productId      String
-  environment    String
-  verifiedAt     DateTime        @default(now())
-  expiresAt      DateTime
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId         String
+  environment       String
+  verifiedAt        DateTime        @default(now())
+  expiresAt         DateTime
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([provider, purchaseDigest])
   @@index([tenantId, expiresAt])
@@ -167,8 +167,8 @@ model StoreSubscriptionPurchase {
 // One pending Play chargeback review. The provider's one-time token is
 // encrypted outside the database query layer and never enters billing events.
 model PlayRefundReviewCase {
-  id                    String   @id @default(cuid())
-  tokenDigest           String   @unique
+  id                    String                    @id @default(cuid())
+  tokenDigest           String                    @unique
   encryptedPendingToken String
   encryptedOrderId      String?
   encryptionKeyId       String
@@ -178,9 +178,9 @@ model PlayRefundReviewCase {
   refundReason          Int
   occurredAt            DateTime
   responseDueAt         DateTime
-  receivedAt            DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  tenant                Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  receivedAt            DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  tenant                Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   response              PlayRefundReviewResponse?
 
   @@index([responseDueAt])
@@ -191,19 +191,19 @@ model PlayRefundReviewCase {
 // A case can have only one explicit operator response intent. Claiming is
 // single-use; an uncertain provider outcome must be reconciled, not resent.
 model PlayRefundReviewResponse {
-  id                    String                         @id @default(cuid())
-  caseId                String                         @unique
-  preference            PlayRefundReviewPreference
-  sampleContentProvided Boolean
-  policyVersion         String?
+  id                     String                         @id @default(cuid())
+  caseId                 String                         @unique
+  preference             PlayRefundReviewPreference
+  sampleContentProvided  Boolean
+  policyVersion          String?
   decisionEvidenceDigest String?
-  actorUserId           String
-  status                PlayRefundReviewResponseStatus @default(PREPARED)
-  preparedAt            DateTime                       @default(now())
-  claimedAt             DateTime?
-  confirmedAt           DateTime?
-  uncertainAt           DateTime?
-  case                  PlayRefundReviewCase           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actorUserId            String
+  status                 PlayRefundReviewResponseStatus @default(PREPARED)
+  preparedAt             DateTime                       @default(now())
+  claimedAt              DateTime?
+  confirmedAt            DateTime?
+  uncertainAt            DateTime?
+  case                   PlayRefundReviewCase           @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([status, preparedAt])
   @@index([actorUserId, preparedAt])

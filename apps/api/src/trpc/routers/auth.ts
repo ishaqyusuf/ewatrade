@@ -32,6 +32,7 @@ import {
 } from "@ewatrade/utils"
 import {
   currentEffectiveLegalPublication,
+  isLegalTestingEnvironment,
   isSignupAvailableForLegalPublication,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
@@ -44,8 +45,8 @@ import {
 import { verifyAppleIdToken } from "../../auth/mobile-apple"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
 import {
-  authenticatedProcedure,
   createTRPCRouter,
+  mobileEntryProcedure,
   publicProcedure,
 } from "../init"
 
@@ -289,12 +290,14 @@ export const authRouter = createTRPCRouter({
     const publication = currentEffectiveLegalPublication()
     return publication
       ? {
+          acceptanceRequired: !isLegalTestingEnvironment(),
           effective: true,
           signupAvailable: true,
           version: publication.version,
           effectiveDate: publication.effectiveDate,
         }
       : {
+          acceptanceRequired: !isLegalTestingEnvironment(),
           effective: false,
           signupAvailable: isSignupAvailableForLegalPublication(false),
           version: null,
@@ -420,13 +423,37 @@ export const authRouter = createTRPCRouter({
         })
       }
     }),
-  getMobileAccessProfile: authenticatedProcedure.query(async ({ ctx }) => {
+  getMobileAccessProfile: mobileEntryProcedure.query(async ({ ctx }) => {
     const age = await getCustomerAccountAgeStatus(ctx.db, ctx.session.user.id)
     if (!age.eligible)
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message: "Choose an eligible age range before opening your workspace.",
       })
+    if (ctx.qaSessionScope) {
+      const scope = ctx.qaSessionScope
+      const membership = await ctx.db.membership.findFirst({
+        where: {
+          id: scope.membershipId,
+          userId: ctx.session.user.id,
+          status: "ACTIVE",
+          tenant: {
+            id: scope.tenantId,
+            dataClassification: "QA",
+            isActive: true,
+            qaPurgeStartedAt: null,
+            stores: { some: { id: scope.storeId, status: "ACTIVE" } },
+          },
+        },
+        select: { id: true },
+      })
+      if (!membership)
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Your selected QA business or Store is no longer available.",
+        })
+      return { hasBusinessAccess: true, hasCustomerHistory: false }
+    }
     return getMobileAccessProfile(ctx.db, { userId: ctx.session.user.id })
   }),
 

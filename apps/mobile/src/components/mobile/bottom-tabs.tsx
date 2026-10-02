@@ -3,9 +3,12 @@ import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
 import { useEffect } from "react"
 import { View as RNView } from "react-native"
 import Animated, {
+  Easing,
+  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -47,13 +50,22 @@ export function MobileBottomTabs({
       : Math.max(safeBottom + 72, 88)
 
   useEffect(() => {
-    hiddenProgress.value = withTiming(shouldHide ? 1 : 0, {
-      duration: reduceMotion ? 0 : 220,
-    })
+    hiddenProgress.value = reduceMotion
+      ? shouldHide
+        ? 1
+        : 0
+      : shouldHide
+        ? withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
+        : withSpring(0, {
+            damping: 26,
+            mass: 0.8,
+            overshootClamping: true,
+            stiffness: 240,
+          })
   }, [hiddenProgress, reduceMotion, shouldHide])
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: 1 - hiddenProgress.value,
+    opacity: interpolate(hiddenProgress.value, [0, 0.65, 1], [1, 1, 0]),
     transform: [{ translateY: hiddenProgress.value * hiddenTranslateY }],
   }))
   const tabStates = tabs.map((tab, index) => ({
@@ -67,6 +79,8 @@ export function MobileBottomTabs({
 
   return (
     <Animated.View
+      accessibilityElementsHidden={shouldHide}
+      importantForAccessibility={shouldHide ? "no-hide-descendants" : "auto"}
       pointerEvents={shouldHide ? "none" : "box-none"}
       style={[
         floating

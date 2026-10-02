@@ -40,13 +40,22 @@ describe("business profiles", () => {
         kind: "product",
         profileKey: "animal-feed-agricultural-supplies",
       }),
-    ).toEqual(["feed-bag-50kg", "feed-bag-25kg", "prepared-portions"])
+    ).toEqual([
+      "farm-eggs-tray",
+      "farm-live-poultry",
+      "farm-produce-weight",
+      "feed-bag-50kg",
+      "feed-bag-25kg",
+      "fertilizer-bag",
+      "seed-packets",
+      "prepared-portions",
+    ])
     expect(
       getRecommendedCatalogSetupHelperKeys({
         kind: "service",
         profileKey: "laundry-dry-cleaning",
       }),
-    ).toEqual(["dry-cleaning-laundry", "tracked-fixed-service"])
+    ).toEqual(["dry-cleaning-laundry", "ironing-only", "tracked-fixed-service"])
 
     for (const profile of BUSINESS_PROFILES) {
       for (const helperKey of profile.recommendedHelperKeys) {
@@ -62,10 +71,46 @@ describe("business profiles", () => {
     )
 
     expect(ranked.slice(0, 3).map((helper) => helper.key)).toEqual([
-      "feed-bag-50kg",
-      "feed-bag-25kg",
-      "prepared-portions",
+      "farm-eggs-tray",
+      "farm-live-poultry",
+      "farm-produce-weight",
     ])
+  })
+
+  test("every supported business and item kind has a tagged concrete example", () => {
+    for (const profile of BUSINESS_PROFILES) {
+      for (const kind of profile.recommendedItemKinds) {
+        const keys = getRecommendedCatalogSetupHelperKeys({
+          kind,
+          profileKey: profile.key,
+        })
+        const helpers = keys.map((key) => findCatalogSetupHelper(key))
+        const examples = helpers.filter(
+          (helper) => helper?.classification === "example",
+        )
+        expect(examples.length).toBeGreaterThan(0)
+        for (const example of examples) {
+          expect(example?.businessProfileKeys).toContain(profile.key)
+          expect(example?.kind).toBe(kind)
+        }
+        expect(helpers[0]?.classification).toBe("example")
+      }
+    }
+  })
+
+  test("electronics recommendations use phones and chargers instead of apparel", () => {
+    const keys = getRecommendedCatalogSetupHelperKeys({
+      kind: "product",
+      profileKey: "electronics-phone-shops",
+    })
+    expect(keys.slice(0, 2)).toEqual([
+      "phone-storage-colour",
+      "charger-connector",
+    ])
+    expect(keys).not.toContain("apparel-size-colour")
+    expect(
+      listBusinessProfiles({ query: "farm" }).map((profile) => profile.key),
+    ).toContain("animal-feed-agricultural-supplies")
   })
 
   test("keeps category guidance separate from runtime Catalog behavior", () => {

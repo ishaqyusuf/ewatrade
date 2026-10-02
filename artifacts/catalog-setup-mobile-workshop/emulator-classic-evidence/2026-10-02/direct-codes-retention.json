@@ -1,0 +1,31 @@
+{
+  "scope": "Classic QA draft only; no Catalog submission",
+  "doneCapture": "C19-native-code-done-return",
+  "backCapture": "C23-native-code-back-return",
+  "visibleRowsCompared": 8,
+  "exactSameBounds": true,
+  "bounds": {
+    "Images": "[37,335][1043,469]",
+    "Category": "[37,672][1043,859]",
+    "Description": "[37,869][1043,1102]",
+    "Customer choices": "[37,1111][1043,1298]",
+    "Sell another way": "[37,1308][1043,1495]",
+    "Opening stock": "[37,1504][1043,1691]",
+    "Prices & availability": "[37,1701][1043,1888]",
+    "SKU & barcode": "[37,1897][1043,2130]"
+  },
+  "choiceIsolation": {
+    "Standard": "001234",
+    "Large": "blank"
+  },
+  "choiceEvidence": [
+    "C12-native-large-settled.xml",
+    "C18-native-standard-return.xml",
+    "C20-native-code-reopened.xml"
+  ],
+  "limits": [
+    "Actual camera decoding unverified",
+    "Saved item codes unverified",
+    "TalkBack and complete inactive-parent exclusion unverified"
+  ]
+}

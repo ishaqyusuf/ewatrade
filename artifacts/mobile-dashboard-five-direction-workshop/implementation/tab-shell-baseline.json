@@ -1,0 +1,12 @@
+{
+  "apps/mobile/src/components/mobile/bottom-tabs.tsx": "ed7bbcf1bb799ec4158c9ed0a9383614903e0c97df8667598d1f9dcb036d295e",
+  "apps/mobile/src/components/mobile/app-shell.tsx": "879ad2a4085747f3b258932a7f539315ddc1aaa90ed5bd0d2bef80a0d97c264a",
+  "apps/mobile/src/app/(admin-tabs)/_layout.tsx": "53156228d191fc1729487ae45ba70882be477ce3db8174ae288a0ec44cc412f5",
+  "apps/mobile/src/app/(admin-tabs)/admin-home.tsx": "a35c67f3266e631453486a057ad612ca7161de3110bb269ed055b537de5fb42e",
+  "apps/mobile/src/components/mobile/admin-tabs/admin-tabs-context.tsx": "1914900df97d5ead0f79ae6aa5d489e96b17c96bb7de3cfaf6fdfcaf75f113ac",
+  "apps/mobile/src/components/mobile/admin-tabs/admin-more-screen.tsx": "c182398d16afe943efa5948af1937c6207077a824e87c4c55227a72d1f2a07a7",
+  "apps/mobile/src/components/mobile/admin-tabs/admin-orders-screen.tsx": "1730468149caf1d9775cbf847bbcff6cdf4ca439287cdff3d42ea5ba3a9983e9",
+  "apps/mobile/src/components/mobile/admin-tabs/index.ts": "9e388da4c2431e480d8aee1f6f53448dfa191cb229f15edc23bab5c7e7a7b64d",
+  "apps/mobile/src/components/mobile/admin-tabs/admin-tab-bar.tsx": "36bd23935afadd23992894b3d6d89f322c3f3002970365895e92ca59acdbb01c",
+  "apps/mobile/src/components/mobile/admin-tabs/admin-create-action-sheet.tsx": "b98dc2db2a91bfdddaadfacf10b4e8dad455fb4247438a6f440adb429c17cd28"
+}

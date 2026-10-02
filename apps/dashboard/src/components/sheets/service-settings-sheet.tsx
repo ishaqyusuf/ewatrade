@@ -1,8 +1,10 @@
 "use client"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { ServiceSettingsForm } from "@/components/service-work/service-settings-form"
+import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
+import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
+import { Sheet } from "@ewatrade/ui"
 
 export function ServiceSettingsSheet({
   currencyCode,
@@ -13,16 +15,27 @@ export function ServiceSettingsSheet({
 }) {
   const { setParams, sheet } = useServiceWorkParams()
   const open = sheet === "settings"
+  const { closeError, requestClose } = useSheetDismissal(() => setParams(null))
   return (
-    <DashboardSheet
-      description="Configure express turnaround, pricing, reminders, and delivery channels."
-      onClose={() => setParams(null)}
+    <Sheet
       open={open}
-      title="Service settings"
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) void requestClose()
+      }}
     >
       {open ? (
-        <ServiceSettingsForm currencyCode={currencyCode} storeId={storeId} />
+        <SheetFrame
+          closeError={closeError}
+          description="Configure express turnaround, pricing, reminders, and delivery channels."
+          title="Service settings"
+        >
+          <ServiceSettingsForm
+            key={`${storeId}:settings`}
+            currencyCode={currencyCode}
+            storeId={storeId}
+          />
+        </SheetFrame>
       ) : null}
-    </DashboardSheet>
+    </Sheet>
   )
 }

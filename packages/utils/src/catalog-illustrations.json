@@ -1,0 +1,1952 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "ill-egg",
+      "label": "Egg",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "poultry:eggs",
+        "poultry:hatching-eggs"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "egg"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-egg-tray",
+      "label": "Egg tray",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "poultry:eggs"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "egg",
+        "tray"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-chick",
+      "label": "Chick",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "poultry:live-birds"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "chick"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-chicken",
+      "label": "Chicken",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "poultry:live-birds"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "chicken"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-grain-feed-sack",
+      "label": "Grain / feed sack",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "animal-feed:poultry-feed",
+        "animal-feed:fish-feed",
+        "animal-feed:livestock-feed",
+        "animal-feed:pet-food",
+        "groceries:grains-flour"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "grain",
+        "feed",
+        "sack"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-tomato",
+      "label": "Tomato",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fresh-produce:vegetables"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "tomato"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-seed-packet",
+      "label": "Seed packet",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:seeds"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "seed",
+        "packet"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-trowel",
+      "label": "Trowel",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:farm-tools",
+        "hardware-building:hand-tools"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "trowel"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-produce-crate",
+      "label": "Produce crate",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:packaging"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "produce",
+        "crate"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-pepper",
+      "label": "Pepper",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fresh-produce:vegetables"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "pepper"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-maize",
+      "label": "Maize",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fresh-produce:vegetables",
+        "groceries:grains-flour"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "maize"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-herb-leaf",
+      "label": "Herb",
+      "primaryBusinessProfileKey": "animal-feed-agricultural-supplies",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fresh-produce:herbs"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "herb"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-shirt",
+      "label": "Shirt",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:laundry",
+        "clothing-care:dry-cleaning",
+        "clothing:menswear",
+        "clothing:workwear"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "shirt"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-folded-clothes",
+      "label": "Folded clothes",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:laundry",
+        "clothing:menswear",
+        "clothing:womenswear"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "folded",
+        "clothes"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-towel",
+      "label": "Towel",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:laundry",
+        "clothing-care:specialist-cleaning",
+        "home-household:home-textiles"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "towel"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-hanger",
+      "label": "Hanger",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "general-retail-groceries",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:dry-cleaning",
+        "footwear-accessories:accessories"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "hanger"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-iron",
+      "label": "Iron",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "laundry-dry-cleaning",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:ironing",
+        "electronics:appliances"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "iron"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-laundry-basket",
+      "label": "Laundry basket",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:laundry",
+        "home-household:cleaning-supplies"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "laundry",
+        "basket"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-detergent-jug",
+      "label": "Detergent jug",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:cleaning-supplies",
+        "clothing-care:laundry"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "detergent",
+        "jug"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-garment-bag",
+      "label": "Garment bag",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "general-retail-groceries",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "footwear-accessories:accessories",
+        "clothing-care:dry-cleaning"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "garment",
+        "bag"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-duvet",
+      "label": "Duvet",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing-care:specialist-cleaning",
+        "home-household:home-textiles"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "duvet"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-mop",
+      "label": "Mop",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "other-mixed-business",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:cleaning-supplies"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "mop"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-bucket",
+      "label": "Bucket",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "other-mixed-business",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:cleaning-supplies"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "bucket"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-spray-bottle",
+      "label": "Spray bottle",
+      "primaryBusinessProfileKey": "laundry-dry-cleaning",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "other-mixed-business",
+        "pharmacy-health-retail",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:cleaning-supplies"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "spray",
+        "bottle"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-cooking-oil",
+      "label": "Cooking oil",
+      "primaryBusinessProfileKey": "general-retail-groceries",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "groceries:cooking-ingredients"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "cooking",
+        "oil"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-cereal-box",
+      "label": "Cereal box",
+      "primaryBusinessProfileKey": "general-retail-groceries",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "groceries:grains-flour"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "cereal",
+        "box"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-food-can",
+      "label": "Food can",
+      "primaryBusinessProfileKey": "general-retail-groceries",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "groceries:canned-food"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "food",
+        "can"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-snack-packet",
+      "label": "Snack packet",
+      "primaryBusinessProfileKey": "general-retail-groceries",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "groceries:snacks"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "snack",
+        "packet"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-gift-box",
+      "label": "Gift box",
+      "primaryBusinessProfileKey": "general-retail-groceries",
+      "businessProfileKeys": [
+        "general-retail-groceries"
+      ],
+      "categoryKeys": [],
+      "itemKinds": [
+        "service"
+      ],
+      "searchTags": [
+        "gift",
+        "box"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-shopping-bag",
+      "label": "Shopping bag",
+      "primaryBusinessProfileKey": "general-retail-groceries",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:packaging"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "shopping",
+        "bag"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-trousers",
+      "label": "Trousers",
+      "primaryBusinessProfileKey": "fashion-apparel",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "laundry-dry-cleaning",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing:menswear",
+        "clothing:workwear",
+        "tailoring-services:alterations",
+        "clothing-care:laundry"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "trousers"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-dress",
+      "label": "Dress",
+      "primaryBusinessProfileKey": "fashion-apparel",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "laundry-dry-cleaning",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "clothing:womenswear",
+        "tailoring-services:custom-sewing",
+        "tailoring-services:alterations",
+        "clothing-care:dry-cleaning"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "dress"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-tote-bag",
+      "label": "Tote bag",
+      "primaryBusinessProfileKey": "fashion-apparel",
+      "businessProfileKeys": [
+        "fashion-apparel",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "footwear-accessories:bags"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "tote",
+        "bag"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-sandal",
+      "label": "Sandal",
+      "primaryBusinessProfileKey": "fashion-apparel",
+      "businessProfileKeys": [
+        "fashion-apparel",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "footwear-accessories:shoes"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "sandal"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-necklace",
+      "label": "Necklace",
+      "primaryBusinessProfileKey": "fashion-apparel",
+      "businessProfileKeys": [
+        "fashion-apparel",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "footwear-accessories:jewellery"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "necklace"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-fabric-roll",
+      "label": "Fabric roll",
+      "primaryBusinessProfileKey": "fabrics-tailoring",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fabrics-sewing:fabric"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "fabric",
+        "roll"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-thread-spool",
+      "label": "Thread spool",
+      "primaryBusinessProfileKey": "fabrics-tailoring",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fabrics-sewing:thread-notions",
+        "tailoring-services:custom-sewing",
+        "tailoring-services:embroidery"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "thread",
+        "spool"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-needle-thread",
+      "label": "Needle & thread",
+      "primaryBusinessProfileKey": "fabrics-tailoring",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fabrics-sewing:sewing-tools",
+        "tailoring-services:repairs",
+        "tailoring-services:embroidery"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "needle",
+        "&",
+        "thread"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-scissors",
+      "label": "Scissors",
+      "primaryBusinessProfileKey": "fabrics-tailoring",
+      "businessProfileKeys": [
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "fabrics-sewing:sewing-tools",
+        "tailoring-services:alterations",
+        "tailoring-services:custom-sewing"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "scissors"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-water-bottle",
+      "label": "Water bottle",
+      "primaryBusinessProfileKey": "drinks-water-distribution",
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "drinks-water:drinking-water",
+        "drinks-water:soft-drinks"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "water",
+        "bottle"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-drink-carton",
+      "label": "Drink carton",
+      "primaryBusinessProfileKey": "drinks-water-distribution",
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "drinks-water:juice"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "drink",
+        "carton"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-drinking-glass",
+      "label": "Drinking glass",
+      "primaryBusinessProfileKey": "drinks-water-distribution",
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:kitchenware",
+        "food-services:event-service"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "drinking",
+        "glass"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-water-dispenser",
+      "label": "Water dispenser",
+      "primaryBusinessProfileKey": "drinks-water-distribution",
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:appliances"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "water",
+        "dispenser"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-bread-loaf",
+      "label": "Bread loaf",
+      "primaryBusinessProfileKey": "food-bakery-catering",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "bakery-prepared-food:bread",
+        "food-services:baking-services"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "bread",
+        "loaf"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-cake",
+      "label": "Cake",
+      "primaryBusinessProfileKey": "food-bakery-catering",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "bakery-prepared-food:cakes",
+        "food-services:baking-services"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "cake"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-meat-pie",
+      "label": "Meat pie",
+      "primaryBusinessProfileKey": "food-bakery-catering",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries"
+      ],
+      "categoryKeys": [
+        "bakery-prepared-food:pastries"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "meat",
+        "pie"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-meal-plate",
+      "label": "Meal plate",
+      "primaryBusinessProfileKey": "food-bakery-catering",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "bakery-prepared-food:ready-meals",
+        "food-services:meal-preparation"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "meal",
+        "plate"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-cooking-pot",
+      "label": "Cooking pot",
+      "primaryBusinessProfileKey": "food-bakery-catering",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:kitchenware",
+        "food-services:meal-preparation"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "cooking",
+        "pot"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-serving-tray",
+      "label": "Serving tray",
+      "primaryBusinessProfileKey": "food-bakery-catering",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "food-services:catering",
+        "food-services:event-service",
+        "home-household:kitchenware"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "serving",
+        "tray"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-pump-bottle",
+      "label": "Pump bottle",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "beauty-personal-care:hair-care",
+        "beauty-personal-care:skin-care",
+        "beauty-personal-care:personal-hygiene"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "pump",
+        "bottle"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-care-tube",
+      "label": "Care tube",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "beauty-personal-care:skin-care",
+        "beauty-personal-care:personal-hygiene",
+        "beauty-services:skin-treatments"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "care",
+        "tube"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-comb",
+      "label": "Comb",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "beauty-personal-care:hair-care",
+        "beauty-services:hair-services"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "comb"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-hair-dryer",
+      "label": "Hair dryer",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "electronics-phone-shops",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:appliances",
+        "beauty-services:hair-services"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "hair",
+        "dryer"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-hair-braid",
+      "label": "Hair braid",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "beauty-services:hair-services"
+      ],
+      "itemKinds": [
+        "service"
+      ],
+      "searchTags": [
+        "hair",
+        "braid"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-nail-polish",
+      "label": "Nail polish",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "beauty-personal-care:cosmetics",
+        "beauty-services:nail-services"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "nail",
+        "polish"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-cosmetic-brush",
+      "label": "Cosmetic brush",
+      "primaryBusinessProfileKey": "beauty-salon-spa",
+      "businessProfileKeys": [
+        "beauty-salon-spa",
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "professional-services",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "beauty-personal-care:cosmetics",
+        "beauty-services:skin-treatments"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "cosmetic",
+        "brush"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-smartphone",
+      "label": "Smartphone",
+      "primaryBusinessProfileKey": "electronics-phone-shops",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:phones",
+        "repair-services:phone-repairs"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "smartphone"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-usb-charger",
+      "label": "USB charger",
+      "primaryBusinessProfileKey": "electronics-phone-shops",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:accessories"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "usb",
+        "charger"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-headphones",
+      "label": "Headphones",
+      "primaryBusinessProfileKey": "electronics-phone-shops",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:accessories"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "headphones"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-laptop",
+      "label": "Laptop",
+      "primaryBusinessProfileKey": "electronics-phone-shops",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:computers"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "laptop"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-phone-screen",
+      "label": "Phone screen",
+      "primaryBusinessProfileKey": "electronics-phone-shops",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "spare-parts:phone-parts",
+        "repair-services:phone-repairs"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "phone",
+        "screen"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-appliance",
+      "label": "Appliance",
+      "primaryBusinessProfileKey": "electronics-phone-shops",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "fabrics-tailoring",
+        "fashion-apparel",
+        "hardware-building-materials",
+        "laundry-dry-cleaning",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:appliances",
+        "repair-services:appliance-repairs",
+        "clothing-care:laundry"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "appliance"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-wrench",
+      "label": "Wrench",
+      "primaryBusinessProfileKey": "repair-maintenance",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:hand-tools",
+        "repair-services:appliance-repairs",
+        "repair-services:property-maintenance"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "wrench"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-replacement-belt",
+      "label": "Replacement belt",
+      "primaryBusinessProfileKey": "repair-maintenance",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "spare-parts:machine-parts",
+        "spare-parts:appliance-parts"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "replacement",
+        "belt"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-water-pump",
+      "label": "Water pump",
+      "primaryBusinessProfileKey": "repair-maintenance",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:plumbing-supplies",
+        "spare-parts:machine-parts",
+        "repair-services:property-maintenance"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "water",
+        "pump"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-appliance-filter",
+      "label": "Appliance filter",
+      "primaryBusinessProfileKey": "repair-maintenance",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "spare-parts:appliance-parts"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "appliance",
+        "filter"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-generator",
+      "label": "Generator",
+      "primaryBusinessProfileKey": "repair-maintenance",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "electronics:appliances"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "generator"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-wheel",
+      "label": "Wheel",
+      "primaryBusinessProfileKey": "repair-maintenance",
+      "businessProfileKeys": [
+        "electronics-phone-shops",
+        "hardware-building-materials",
+        "professional-services",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "spare-parts:vehicle-parts",
+        "repair-services:vehicle-servicing"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "wheel"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-bandage",
+      "label": "Bandage",
+      "primaryBusinessProfileKey": "pharmacy-health-retail",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "health-wellness:first-aid",
+        "health-wellness:health-supplies"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "bandage"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-thermometer",
+      "label": "Thermometer",
+      "primaryBusinessProfileKey": "pharmacy-health-retail",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "health-wellness:medical-equipment"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "thermometer"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-first-aid-kit",
+      "label": "First aid kit",
+      "primaryBusinessProfileKey": "pharmacy-health-retail",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "pharmacy-health-retail",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "health-wellness:first-aid"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "first",
+        "aid",
+        "kit"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-cement-bag",
+      "label": "Cement bag",
+      "primaryBusinessProfileKey": "hardware-building-materials",
+      "businessProfileKeys": [
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:building-materials"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "cement",
+        "bag"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-paint-tin",
+      "label": "Paint tin",
+      "primaryBusinessProfileKey": "hardware-building-materials",
+      "businessProfileKeys": [
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:building-materials"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "paint",
+        "tin"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-cable-coil",
+      "label": "Cable coil",
+      "primaryBusinessProfileKey": "hardware-building-materials",
+      "businessProfileKeys": [
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:electrical-supplies"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "cable",
+        "coil"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-pipe-elbow",
+      "label": "Pipe elbow",
+      "primaryBusinessProfileKey": "hardware-building-materials",
+      "businessProfileKeys": [
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:plumbing-supplies"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "pipe",
+        "elbow"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-hand-saw",
+      "label": "Hand saw",
+      "primaryBusinessProfileKey": "hardware-building-materials",
+      "businessProfileKeys": [
+        "hardware-building-materials",
+        "repair-maintenance",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "hardware-building:hand-tools"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "hand",
+        "saw"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-shipping-box",
+      "label": "Shipping box",
+      "primaryBusinessProfileKey": "wholesale-distribution",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:packaging"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "shipping",
+        "box"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-pallet",
+      "label": "Pallet",
+      "primaryBusinessProfileKey": "wholesale-distribution",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:packaging"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "pallet"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-label-tag",
+      "label": "Label tag",
+      "primaryBusinessProfileKey": "wholesale-distribution",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "hardware-building-materials",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "farm-supplies:packaging"
+      ],
+      "itemKinds": [
+        "product",
+        "service"
+      ],
+      "searchTags": [
+        "label",
+        "tag"
+      ],
+      "customServiceContext": true
+    },
+    {
+      "id": "ill-workbook",
+      "label": "Workbook",
+      "primaryBusinessProfileKey": "professional-services",
+      "businessProfileKeys": [
+        "other-mixed-business",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "professional-services:training"
+      ],
+      "itemKinds": [
+        "service",
+        "product"
+      ],
+      "searchTags": [
+        "workbook"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-print-sheet",
+      "label": "Print sheet",
+      "primaryBusinessProfileKey": "professional-services",
+      "businessProfileKeys": [
+        "other-mixed-business",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "professional-services:design",
+        "professional-services:administrative-services"
+      ],
+      "itemKinds": [
+        "service",
+        "product"
+      ],
+      "searchTags": [
+        "print",
+        "sheet"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-consultation",
+      "label": "Consultation",
+      "primaryBusinessProfileKey": "professional-services",
+      "businessProfileKeys": [
+        "other-mixed-business",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "professional-services:consulting"
+      ],
+      "itemKinds": [
+        "service"
+      ],
+      "searchTags": [
+        "consultation"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-training-board",
+      "label": "Training board",
+      "primaryBusinessProfileKey": "professional-services",
+      "businessProfileKeys": [
+        "other-mixed-business",
+        "professional-services"
+      ],
+      "categoryKeys": [
+        "professional-services:training"
+      ],
+      "itemKinds": [
+        "service"
+      ],
+      "searchTags": [
+        "training",
+        "board"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-generic-product",
+      "label": "Generic product",
+      "primaryBusinessProfileKey": "other-mixed-business",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "animal-feed-agricultural-supplies",
+        "fashion-apparel",
+        "fabrics-tailoring",
+        "drinks-water-distribution",
+        "food-bakery-catering",
+        "beauty-salon-spa",
+        "laundry-dry-cleaning",
+        "electronics-phone-shops",
+        "repair-maintenance",
+        "pharmacy-health-retail",
+        "hardware-building-materials",
+        "wholesale-distribution",
+        "professional-services",
+        "other-mixed-business"
+      ],
+      "categoryKeys": [],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "generic",
+        "product"
+      ],
+      "customServiceContext": false
+    },
+    {
+      "id": "ill-handmade-basket",
+      "label": "Handmade basket",
+      "primaryBusinessProfileKey": "other-mixed-business",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "hardware-building-materials",
+        "other-mixed-business",
+        "wholesale-distribution"
+      ],
+      "categoryKeys": [
+        "home-household:kitchenware"
+      ],
+      "itemKinds": [
+        "product"
+      ],
+      "searchTags": [
+        "handmade",
+        "basket"
+      ],
+      "customServiceContext": false
+    }
+  ]
+}

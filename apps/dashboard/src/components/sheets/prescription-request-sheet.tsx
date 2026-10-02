@@ -1,41 +1,68 @@
 "use client"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { PrescriptionSheetContent } from "@/components/prescriptions/prescription-sheet-content"
 import { usePrescriptionParams } from "@/hooks/use-prescription-params"
 import { useTRPC } from "@/trpc/client"
+import { Sheet } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 
-export function PrescriptionRequestSheet({ storeId }: { storeId: string }) {
+export function PrescriptionRequestSheet({
+  canManageSetup,
+  storeId,
+}: {
+  canManageSetup: boolean
+  storeId: string
+}) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { prescriptionId, setParams, sheet } = usePrescriptionParams()
   const open = Boolean(sheet)
-  const close = () => {
-    if (prescriptionId) {
-      queryClient.invalidateQueries({
-        queryKey: trpc.prescriptions.detail.queryKey({
-          requestId: prescriptionId,
-          storeId,
-        }),
+  const scopeKey = `${storeId}:${prescriptionId ?? "intake"}:${sheet}`
+  const [closeFailure, setCloseFailure] = useState<{
+    message: string
+    scopeKey: string
+  } | null>(null)
+
+  async function close() {
+    try {
+      if (prescriptionId) {
+        await queryClient.invalidateQueries({
+          queryKey: trpc.prescriptions.detail.queryKey({
+            requestId: prescriptionId,
+            storeId,
+          }),
+        })
+      }
+      await setParams(null)
+    } catch (error) {
+      setCloseFailure({
+        message:
+          error instanceof Error
+            ? error.message
+            : "The prescription request could not be closed.",
+        scopeKey,
       })
     }
-    setParams(null)
   }
+
   return (
-    <DashboardSheet
+    <Sheet
       open={open}
-      onClose={close}
-      title={
-        sheet === "intake" ? "Staff-assisted intake" : "Prescription request"
-      }
-      description={
-        sheet === "intake"
-          ? "Capture only the details needed for pharmacy review."
-          : "Sensitive media access is short-lived and audited."
-      }
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) void close()
+      }}
     >
-      {open ? <PrescriptionSheetContent storeId={storeId} /> : null}
-    </DashboardSheet>
+      {open ? (
+        <PrescriptionSheetContent
+          key={scopeKey}
+          canManageSetup={canManageSetup}
+          closeError={
+            closeFailure?.scopeKey === scopeKey ? closeFailure.message : null
+          }
+          storeId={storeId}
+        />
+      ) : null}
+    </Sheet>
   )
 }

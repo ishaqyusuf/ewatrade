@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense receipts · three UI directions</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f7f7f5; --panel:#fff; --ink:#171715; --muted:#686862; --line:#d9d9d3; --soft:#efefeb; --accent:#276449; --warn:#8a5c11; font:14px/1.45 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif }
+    @media (prefers-color-scheme: dark) { :root { --bg:#111210; --panel:#191a17; --ink:#f4f4ef; --muted:#aaa99f; --line:#393a34; --soft:#242520; --accent:#8dc9a8; --warn:#e7bd69 } }
+    * { box-sizing:border-box } body { margin:0; background:var(--bg); color:var(--ink) } main { max-width:1280px; margin:0 auto; padding:32px 20px 56px } h1 { margin:0; font-size:25px; letter-spacing:-.035em } .intro { color:var(--muted); max-width:720px; margin:8px 0 26px } .gallery { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:start } article { min-width:0; border:1px solid var(--line); background:var(--panel) } article.selected { outline:2px solid var(--accent); outline-offset:2px } .caption { padding:14px 15px 12px; border-bottom:1px solid var(--line) } .num { color:var(--muted); font-size:11px; letter-spacing:.1em; text-transform:uppercase } h2 { margin:3px 0; font-size:16px } .caption p { color:var(--muted); margin:0; font-size:12px } .preview { padding:20px 16px; min-height:330px } .bill { padding-bottom:16px; border-bottom:1px solid var(--line); margin-bottom:18px } .eyebrow { margin:0 0 5px; font-size:10px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase } .bill strong { display:block; font-size:17px; letter-spacing:-.025em } .amount { font-size:13px; color:var(--muted); margin-top:5px } .receipt-head { display:flex; justify-content:space-between; gap:8px; align-items:start; margin-bottom:12px } .receipt-head strong { font-size:14px } .sub { font-size:11px; color:var(--muted); margin-top:3px } button { border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:2px; padding:7px 10px; font:inherit; font-size:12px; cursor:pointer } button.primary { background:var(--ink); color:var(--panel); border-color:var(--ink) } button.small { padding:5px 8px; font-size:11px } .upload { display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px dashed var(--line); padding:12px; margin-bottom:12px } .upload small { display:block; color:var(--muted); font-size:10px; margin-top:3px } .rows { border-block:1px solid var(--line) } .row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; padding:12px 0; border-bottom:1px solid var(--line); align-items:center } .row:last-child { border-bottom:0 } .filename { font-weight:600; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .status { font-size:10px; color:var(--accent); margin-top:4px } .status.pending { color:var(--warn) } .actions { display:flex; gap:5px; flex-wrap:wrap; justify-content:end } .receipt-card { border:1px solid var(--line); padding:12px; margin-top:10px } .receipt-card .row { border:0; padding:0 } .inline { display:flex; align-items:center; gap:9px; min-width:0 } .file-icon { width:34px; height:38px; display:grid; place-items:center; border:1px solid var(--line); color:var(--muted); font-size:9px; font-weight:700 } .mini-note { border-left:2px solid var(--line); padding-left:10px; color:var(--muted); font-size:11px; margin-top:14px } .toast { min-height:16px; color:var(--accent); font-size:11px; margin-top:8px } @media(max-width:900px) { .gallery { grid-template-columns:1fr } .preview { min-height:0 } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Expense receipt workflow</h1>
+  <p class="intro">Three layout directions for evidence attached to a saved expense. The expense summary and sample receipt states stay constant; the comparison varies hierarchy and density. Upload and action buttons run local preview behavior only.</p>
+  <div class="gallery">
+    <article>
+      <header class="caption"><div class="num">Direction 01</div><h2>Quiet inline list</h2><p>Low visual weight, close to the existing expense detail. Tradeoff: less separation between file information and actions.</p></header>
+      <div class="preview">
+        <div class="bill"><p class="eyebrow">Expense · cancelled</p><strong>Generator service</strong><div class="amount">₦48,000.00 · 29 Sep 2026</div></div>
+        <div class="receipt-head"><strong>Receipts</strong><button class="small primary" data-action="add">Add receipt</button></div>
+        <div class="rows">
+          <div class="row"><div><div class="filename">generator-repair.pdf</div><div class="status">Attached · 340 KB · 30 Sep</div></div><div class="actions"><button class="small" data-action="download">Download</button><button class="small" data-action="withdraw">Withdraw</button></div></div>
+          <div class="row"><div><div class="filename">technician-note.jpg</div><div class="status pending">Safety review pending · 920 KB</div></div><span></span></div>
+        </div>
+        <div class="toast" aria-live="polite"></div>
+      </div>
+    </article>
+    <article class="selected">
+      <header class="caption"><div class="num">Direction 02 · selected</div><h2>Evidence locker</h2><p>Clear private-evidence boundary, explicit safety state, and actions grouped per original. Selected for the product implementation.</p></header>
+      <div class="preview">
+        <div class="bill"><p class="eyebrow">Expense · cancelled</p><strong>Generator service</strong><div class="amount">₦48,000.00 · 29 Sep 2026</div></div>
+        <div class="receipt-head"><div><strong>Receipts</strong><div class="sub">Private evidence · no effect on amount or payments</div></div><button class="small" data-action="refresh">Refresh</button></div>
+        <div class="upload"><div><strong>Add a receipt</strong><small>JPEG, PNG, WebP, HEIC, HEIF or PDF · up to 10 MB</small></div><button class="small" data-action="choose">Choose file</button></div>
+        <div class="rows">
+          <div class="row"><div><div class="filename">generator-repair.pdf</div><div class="status">Attached · 340 KB · 30 Sep</div></div><div class="actions"><button class="small" data-action="download">Original</button><button class="small" data-action="withdraw">Withdraw</button></div></div>
+          <div class="row"><div><div class="filename">technician-note.jpg</div><div class="status pending">Verified · safety review pending · 920 KB</div></div><span></span></div>
+        </div>
+        <div class="mini-note">Cancelled expenses stay readable. Existing evidence remains retained; adding another receipt is disabled.</div>
+        <div class="toast" aria-live="polite"></div>
+      </div>
+    </article>
+    <article>
+      <header class="caption"><div class="num">Direction 03</div><h2>Original-first cards</h2><p>More room for document identity and audit state. Tradeoff: heavier and taller for short receipt lists.</p></header>
+      <div class="preview">
+        <div class="bill"><p class="eyebrow">Expense · cancelled</p><strong>Generator service</strong><div class="amount">₦48,000.00 · 29 Sep 2026</div></div>
+        <div class="receipt-head"><div><strong>Evidence · 2 originals</strong><div class="sub">Stored privately and linked to this expense</div></div><button class="small" data-action="refresh">Refresh</button></div>
+        <div class="receipt-card"><div class="row"><div class="inline"><div class="file-icon">PDF</div><div><div class="filename">generator-repair.pdf</div><div class="sub">340 KB · 30 Sep 2026</div></div></div><span class="status">Attached</span></div><div class="actions" style="margin-top:10px"><button class="small" data-action="download">Download original</button><button class="small" data-action="withdraw">Withdraw</button></div></div>
+        <div class="receipt-card"><div class="row"><div class="inline"><div class="file-icon">JPG</div><div><div class="filename">technician-note.jpg</div><div class="sub">920 KB · 30 Sep 2026</div></div></div><span class="status pending">Review pending</span></div></div>
+        <div class="toast" aria-live="polite"></div>
+      </div>
+    </article>
+  </div>
+</main>
+<script>
+  document.querySelectorAll("article").forEach((card) => {
+    card.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const toast = card.querySelector(".toast");
+      const messages = { add: "Preview only: receipt picker would open.", choose: "Preview only: choose a file.", download: "Preview only: private original action.", withdraw: "Preview only: confirmation keeps retained evidence.", refresh: "Preview only: metadata refresh." };
+      toast.textContent = messages[button.dataset.action] || "";
+    });
+  });
+</script>
+</body>
+</html>

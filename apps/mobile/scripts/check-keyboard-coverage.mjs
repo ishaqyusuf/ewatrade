@@ -6,6 +6,114 @@ const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
 const SOURCE_DIR = join(MOBILE_DIR, "src")
 const contracts = [
   {
+    file: "components/mobile/finance-reports/finance-reports-screen.tsx",
+    markers: [
+      "if (editing)",
+      "FinanceFormBody",
+      'label="From (YYYY-MM-DD, UTC)"',
+      'label="Through (YYYY-MM-DD, UTC)"',
+    ],
+    reason:
+      "report date editing must use the keyboard-aware form body outside report scrolling",
+  },
+  {
+    file: "components/mobile/finance/finance-cash-count-form.tsx",
+    markers: [
+      "FinanceFormBody",
+      "MoneyField",
+      'label="Count reference"',
+      "onChangeValue={setAmount}",
+    ],
+    reason:
+      "physical cash amounts and references must remain above the software keyboard",
+  },
+  {
+    file: "components/mobile/finance/finance-cash-action-form.tsx",
+    markers: [
+      "FinanceFormBody",
+      'label="Investigated reason"',
+      'label="Correction date (YYYY-MM-DD, UTC)"',
+    ],
+    reason:
+      "cash investigation reasons and correction dates use the shared keyboard-aware body",
+  },
+  {
+    file: "components/mobile/finance/finance-counts-screen.tsx",
+    markers: ["if (creating)", "FinanceCashCountForm", "FlatList"],
+    reason:
+      "cash creation leaves the virtualized count history before the keyboard opens",
+  },
+  {
+    file: "components/mobile/finance/finance-form-body.tsx",
+    markers: [
+      "KeyboardAwareScrollView",
+      "bottomOffset={120}",
+      'keyboardDismissMode="interactive"',
+      'keyboardShouldPersistTaps="handled"',
+    ],
+    reason: "shared Finance forms must coordinate the software keyboard",
+  },
+  {
+    file: "components/mobile/finance/finance-money-form.tsx",
+    markers: [
+      "FinanceFormBody",
+      "MoneyField",
+      'label="Description"',
+      "onChangeValue={setAmount}",
+    ],
+    reason:
+      "money movement amounts and descriptions must use the keyboard-aware Finance body",
+  },
+  {
+    file: "components/mobile/finance/finance-account-screen.tsx",
+    markers: [
+      "if (editing)",
+      "FinanceFormBody",
+      'label="From (YYYY-MM-DD, UTC)"',
+      'label="Through (YYYY-MM-DD, UTC)"',
+    ],
+    reason:
+      "statement date editing must leave the virtualized history for a keyboard-aware body",
+  },
+  {
+    file: "components/mobile/finance/finance-movement-screen.tsx",
+    markers: [
+      "FinanceFormBody",
+      'label="Reason for correction"',
+      'label="Correction date (YYYY-MM-DD, UTC)"',
+    ],
+    reason:
+      "money correction reasons and dates must remain reachable above the keyboard",
+  },
+  {
+    file: "components/mobile/finance/finance-screen.tsx",
+    markers: [
+      "if (creating)",
+      "KeyboardAwareScrollView",
+      "bottomOffset={120}",
+      'keyboardDismissMode="interactive"',
+      'keyboardShouldPersistTaps="handled"',
+      "MoneyField",
+    ],
+    reason:
+      "expense creation must leave the virtualized history and use a keyboard-aware form body",
+  },
+  {
+    file: "components/mobile/finance/finance-expense-forms.tsx",
+    markers: [
+      "KeyboardAwareScrollView",
+      "bottomOffset={120}",
+      'keyboardDismissMode="interactive"',
+      'keyboardShouldPersistTaps="handled"',
+      "FinanceExpensePaymentForm",
+      "FinanceExpenseCorrectionForm",
+      "MoneyField",
+      'label="Reason for correction"',
+    ],
+    reason:
+      "expense payments and correction reasons must remain reachable above the software keyboard",
+  },
+  {
     file: "app/_layout.tsx",
     markers: ["KeyboardProvider", "<KeyboardProvider>", "</KeyboardProvider>"],
     reason: "the root must provide native keyboard coordination",

@@ -1,4 +1,16 @@
 "use client"
+import {
+  ControlField,
+  FieldDescription,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+  FormActions,
+  Input,
+  SubmitButton,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@ewatrade/ui"
 
 import type { RegisterServiceCommerceFormReset } from "@/components/service-commerce/form-context"
 import { useZodForm } from "@/hooks/use-zod-form"
@@ -12,7 +24,7 @@ import {
   serviceCommerceChangeReasonSchema,
   storeConversationDesiredModeSchema,
 } from "@ewatrade/service-commerce"
-import { Button, Input } from "@ewatrade/ui"
+
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
 import { z } from "zod"
@@ -150,77 +162,89 @@ export function ConversationModeForm({
   ]
 
   return (
-    <form className="grid gap-5" onSubmit={submit}>
-      <section className="grid gap-2 rounded-xl border border-border bg-card p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Current customer experience
-        </p>
-        <h2 className="font-semibold">
-          Effective mode: {modeLabel(settings.effectiveMode)}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          The desired mode is a business preference. EwaTrade rechecks Store
-          availability, policy, routing and provider readiness before exposing
-          either channel to a customer.
-        </p>
-        {blockers.length > 0 ? (
-          <ul className="grid gap-1 text-sm text-amber-700 dark:text-amber-300">
-            {blockers.map((blocker) => (
-              <li key={blocker}>{BLOCKER_LABELS[blocker]}</li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
+    <form onSubmit={submit}>
+      <FieldGroup className="min-w-0 grid gap-5">
+        <section className="grid gap-2 rounded-none border border-border bg-card p-5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Current customer experience
+          </p>
+          <h2 className="font-semibold">
+            Effective mode: {modeLabel(settings.effectiveMode)}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            The desired mode is a business preference. EwaTrade rechecks Store
+            availability, policy, routing and provider readiness before exposing
+            either channel to a customer.
+          </p>
+          {blockers.length > 0 ? (
+            <ul className="grid gap-1 text-sm text-amber-700 dark:text-amber-300">
+              {blockers.map((blocker) => (
+                <li key={blocker}>{BLOCKER_LABELS[blocker]}</li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
 
-      <fieldset className="grid gap-3">
-        <legend className="font-medium">Desired customer channel mode</legend>
-        {OPTIONS.map((option) => (
-          <label
-            className="flex items-start gap-3 rounded-xl border border-border p-4"
-            key={option.value}
+        <FieldSet>
+          <FieldLegend>Desired customer channel mode</FieldLegend>
+          <ToggleGroup<ConversationModeFormValues["desiredMode"]>
+            variant="outline"
+            aria-label="Desired customer channel mode"
+            value={[form.watch("desiredMode")]}
+            disabled={updateMode.isPending}
+            onValueChange={(values) => {
+              if (values[0])
+                form.setValue("desiredMode", values[0], {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+            }}
+            className="max-w-full flex-wrap"
           >
-            <input
-              className="mt-1 size-4"
-              disabled={updateMode.isPending}
-              type="radio"
-              value={option.value}
-              {...form.register("desiredMode")}
-            />
-            <span>
-              <span className="block text-sm font-medium">{option.label}</span>
-              <span className="block text-sm text-muted-foreground">
-                {option.description}
-              </span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+            {OPTIONS.map((option) => (
+              <ToggleGroupItem
+                className="rounded-none"
+                key={option.value}
+                value={option.value}
+                aria-describedby={`conversation-mode-${option.value}`}
+              >
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {OPTIONS.map((option) => (
+            <FieldDescription
+              key={option.value}
+              id={`conversation-mode-${option.value}`}
+            >
+              <strong>{option.label}:</strong> {option.description}
+            </FieldDescription>
+          ))}
+        </FieldSet>
 
-      <label
-        className="grid gap-1.5 text-sm"
-        htmlFor="conversation-mode-reason"
-      >
-        <span className="font-medium">Internal change reason</span>
-        <Input
-          disabled={updateMode.isPending}
-          id="conversation-mode-reason"
-          maxLength={240}
-          {...form.register("reason")}
-        />
-        {form.formState.errors.reason?.message ? (
-          <span className="text-xs text-destructive" role="alert">
-            {form.formState.errors.reason.message}
-          </span>
-        ) : null}
-      </label>
+        <ControlField
+          label={<>Internal change reason</>}
+          error={form.formState.errors.reason?.message}
+        >
+          <Input
+            disabled={updateMode.isPending}
+            id="conversation-mode-reason"
+            maxLength={240}
+            {...form.register("reason")}
+          />
+        </ControlField>
 
-      <Button
-        className="w-fit"
-        disabled={updateMode.isPending || !form.formState.isValid}
-        type="submit"
-      >
-        {updateMode.isPending ? "Saving…" : "Save conversation mode"}
-      </Button>
+        <FormActions>
+          <SubmitButton
+            isSubmitting={updateMode.isPending}
+            className="w-fit"
+            disabled={updateMode.isPending || !form.formState.isValid}
+            type="submit"
+          >
+            {updateMode.isPending ? "Saving…" : "Save conversation mode"}
+          </SubmitButton>
+        </FormActions>
+      </FieldGroup>
     </form>
   )
 }

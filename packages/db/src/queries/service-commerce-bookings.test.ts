@@ -520,7 +520,9 @@ describe("Service Commerce booking repository boundary", () => {
         findFirst: async () => ({
           acceptedCommerceQuoteVersion: { id: "version-1" },
           currencyCode: "NGN",
+          customerId: null,
           paymentStatus: "PENDING",
+          storeId: "store-1",
           totalMinor: 20_000,
         }),
       },
@@ -606,6 +608,15 @@ describe("Service Commerce booking repository boundary", () => {
       serviceBookingNotificationIntent: {
         create: async () => ({ id: "intent-1" }),
         updateMany: async () => ({ count: 1 }),
+      },
+      commercialOrder: {
+        findFirst: async () => ({
+          completedAt: null,
+          status: "FULFILLING",
+          currencyCode: "NGN",
+          customerId: null,
+          storeId: "store-1",
+        }),
       },
       commercialOrderPayment: {
         groupBy: async () => [
@@ -1005,6 +1016,15 @@ describe("Service Commerce booking repository boundary", () => {
         create: async () => ({ id: "booking-event-1" }),
         findFirst: async () => null,
       },
+      commercialOrder: {
+        findFirst: async () => ({
+          completedAt: null,
+          status: "FULFILLING",
+          currencyCode: "NGN",
+          customerId: null,
+          storeId: "store-1",
+        }),
+      },
       serviceJob: {
         findFirst: async () => ({
           commercialOrderId: "order-1",
@@ -1063,5 +1083,111 @@ describe("Service Commerce booking repository boundary", () => {
         toStatus: "IN_PROGRESS",
       }),
     })
+  })
+
+  test("booking completion leaves its Order incomplete while Product quantity remains unfulfilled", async () => {
+    const orderWrites: unknown[] = []
+    const workWrites: unknown[] = []
+    const linkedBooking = bookingRow({
+      commercialOrderId: "order-1",
+      customerContactCiphertext: null,
+      serviceJobId: "job-1",
+      status: "IN_SERVICE",
+    })
+    const tx = {
+      $queryRaw: async () => [{ id: "locked" }],
+      commercialOrder: {
+        findFirst: async (args: { select?: unknown }) =>
+          args.select
+            ? { customerId: null, currencyCode: "NGN" }
+            : {
+                completedAt: null,
+                status: "FULFILLING",
+                currencyCode: "NGN",
+                customerId: null,
+                storeId: "store-1",
+              },
+        updateMany: async (value: unknown) => {
+          orderWrites.push(value)
+          return { count: 1 }
+        },
+      },
+      commercialOrderLine: {
+        findMany: async () => [
+          {
+            kind: "PRODUCT_UNIT",
+            productFulfillments: [],
+            quantity: { toString: () => "1" },
+            serviceJobLines: [],
+          },
+        ],
+      },
+      membership: { findFirst: async () => ({ id: "membership-1" }) },
+      serviceBooking: {
+        findFirst: async () => linkedBooking,
+        findFirstOrThrow: async () =>
+          bookingRow({ ...linkedBooking, revision: 6, status: "COMPLETED" }),
+        updateMany: async () => ({ count: 1 }),
+      },
+      serviceBookingAccessCapability: {
+        updateMany: async () => ({ count: 1 }),
+      },
+      serviceBookingEvent: {
+        create: async () => ({ id: "booking-event-1" }),
+        findFirst: async () => null,
+      },
+      serviceJob: {
+        findFirst: async () => ({
+          commercialOrderId: "order-1",
+          id: "job-1",
+          lines: [
+            {
+              authorizationStatus: "AUTHORIZED",
+              id: "line-1",
+              revision: 3,
+              status: "IN_PROGRESS",
+            },
+          ],
+        }),
+        update: async () => ({ id: "job-1" }),
+      },
+      serviceJobLine: {
+        updateMany: async (value: unknown) => {
+          workWrites.push(value)
+          return { count: 1 }
+        },
+      },
+      serviceWorkEvent: {
+        create: async (value: unknown) => {
+          workWrites.push(value)
+          return { id: "service-event-1" }
+        },
+      },
+      store: { findFirst: async () => ({ countryCode: "NG" }) },
+      ...allowedPolicyFakes(),
+    }
+    const db = {
+      $transaction: async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    } as unknown as PrismaClient
+
+    await expect(
+      reviseServiceCommerceBooking(db, {
+        actorUserId: "attendant-1",
+        bookingId: "booking-1",
+        clientOperationId: "complete-operation-1",
+        expectedRevision: 5,
+        issueCapabilityToken,
+        now,
+        operation: "complete",
+        ...scope,
+      }),
+    ).resolves.toMatchObject({ status: "completed" })
+
+    expect(workWrites[0]).toMatchObject({
+      data: expect.objectContaining({ status: "COMPLETED" }),
+      where: { id: "line-1", revision: 3 },
+    })
+    expect(orderWrites).toEqual([])
   })
 })

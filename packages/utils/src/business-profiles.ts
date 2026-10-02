@@ -1,5 +1,6 @@
 import profileFile from "./business-profiles.json"
 import {
+  CATALOG_SETUP_HELPERS,
   type CatalogSetupHelper,
   type CatalogSetupHelperKind,
   findCatalogSetupHelper,
@@ -154,6 +155,16 @@ function assertBusinessProfileFile(
       }
     }
   }
+  for (const helper of CATALOG_SETUP_HELPERS) {
+    for (const profileKey of helper.businessProfileKeys ?? []) {
+      const profile = value.profiles.find((entry) => entry.key === profileKey)
+      if (!profile || !profile.recommendedItemKinds.includes(helper.kind)) {
+        throw new Error(
+          `${helper.key} has an incompatible business profile ${profileKey}.`,
+        )
+      }
+    }
+  }
 }
 
 function deepFreeze<T>(value: T): T {
@@ -166,10 +177,28 @@ function deepFreeze<T>(value: T): T {
 }
 
 assertBusinessProfileFile(profileFile)
+const validatedProfileFile: BusinessProfileFile = profileFile
 
 export const BUSINESS_PROFILE_SCHEMA_VERSION = profileFile.schemaVersion
 export const BUSINESS_PROFILES: readonly BusinessProfile[] = deepFreeze(
-  profileFile.profiles,
+  validatedProfileFile.profiles.map((profile) => {
+    const examples = CATALOG_SETUP_HELPERS.filter((helper) =>
+      helper.businessProfileKeys?.includes(profile.key),
+    )
+    const orderedExamples = [
+      ...profile.recommendedHelperKeys.filter((key) =>
+        examples.some((helper) => helper.key === key),
+      ),
+      ...examples.map((helper) => helper.key),
+    ]
+    const patterns = profile.recommendedHelperKeys.filter(
+      (key) => findCatalogSetupHelper(key)?.classification === "pattern",
+    )
+    return {
+      ...profile,
+      recommendedHelperKeys: [...new Set([...orderedExamples, ...patterns])],
+    }
+  }),
 )
 
 export function findBusinessProfile(key: string | null | undefined) {

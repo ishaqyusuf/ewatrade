@@ -1,15 +1,16 @@
+import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
+import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
 import { Text } from "@/components/ui/text"
 import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
-import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupEssentials({
   model,
   market,
-}: { model: CatalogSetupModel; market: boolean }) {
+  focused = false,
+}: { model: CatalogSetupModel; market: boolean; focused?: boolean }) {
   const {
     kind,
     name,
@@ -30,6 +31,7 @@ export function CatalogSetupEssentials({
     showAdvanced,
     defaultQuoteRequired,
     currencyCode,
+    formGuidance,
   } = model
   const { OptionalDetailAction, ToggleRow, CatalogEssentialsFields } = market
     ? Market
@@ -39,11 +41,13 @@ export function CatalogSetupEssentials({
     <>
       <CatalogEssentialsFields
         currencyCode={currencyCode}
+        guidance={formGuidance}
         defaultQuoteRequired={defaultQuoteRequired}
         kind={kind}
         multiplePriceOptions={multiplePriceOptions}
         name={name}
         onNameChange={setName}
+        onNameBlur={model.requestCategorySuggestions}
         onPriceChange={setPrice}
         onUnitNameChange={setUnitName}
         price={price}
@@ -58,7 +62,7 @@ export function CatalogSetupEssentials({
           onPress={() => model.setDefaultQuoteRequired(!defaultQuoteRequired)}
         />
       ) : null}
-      {kind === "product" && !showAdvanced && showOpeningStock ? (
+      {!focused && kind === "product" && !showAdvanced && showOpeningStock ? (
         <FormField
           actionLabel="Remove"
           keyboardType="decimal-pad"
@@ -77,7 +81,7 @@ export function CatalogSetupEssentials({
         />
       ) : null}
 
-      {showDescription ? (
+      {!focused && showDescription ? (
         <FormField
           actionLabel="Remove"
           label="Description"
@@ -91,13 +95,14 @@ export function CatalogSetupEssentials({
             setShowDescription(false)
           }}
           onChangeText={setDescription}
-          placeholder="Optional notes"
+          placeholder={formGuidance.description.placeholder}
+          helper={formGuidance.description.helperText}
           textAlignVertical="top"
           value={description}
         />
       ) : null}
 
-      {kind === "product" ? (
+      {!focused && kind === "product" ? (
         <View
           className={catalogSetupClassName(
             "mt-1 border-t border-border pt-4",

@@ -1,17 +1,36 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+import {
+  Button,
+  MediaPreview,
+  MediaPreviewFrame,
+  SubmitButton,
+} from "@ewatrade/ui"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
 import { MediaStatus } from "./media-status"
 
 export function MediaViewer({ storeId }: { storeId: string }) {
-  const trpc = useTRPC()
   const params = useServiceCommerceParams()
   const attachmentId = params.attachmentId ?? ""
+  return (
+    <MediaViewerContent
+      key={`${storeId}:${attachmentId}`}
+      storeId={storeId}
+      attachmentId={attachmentId}
+    />
+  )
+}
+
+function MediaViewerContent({
+  storeId,
+  attachmentId,
+}: { storeId: string; attachmentId: string }) {
+  const trpc = useTRPC()
   const attachment = useQuery(
     trpc.serviceCommerce.mediaAttachment.queryOptions(
       { attachmentId, storeId },
@@ -46,15 +65,16 @@ export function MediaViewer({ storeId }: { storeId: string }) {
   }, [grant])
 
   if (attachment.isLoading) {
-    return <div className="h-72 animate-pulse rounded-lg bg-muted" />
+    return <div className="h-72 animate-pulse bg-muted" />
   }
   if (attachment.isError || !attachment.data) {
     return (
-      <div className="grid gap-3" role="alert">
-        <p className="text-sm text-destructive">
+      <div className="grid gap-3">
+        <FormFeedback appearance="dashboard">
           {attachment.error?.message ?? "Attachment is unavailable."}
-        </p>
+        </FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() => void attachment.refetch()}
           variant="outline"
@@ -81,19 +101,15 @@ export function MediaViewer({ storeId }: { storeId: string }) {
         <MediaStatus lifecycle={media.lifecycle} />
       </div>
 
-      <div className="flex min-h-72 items-center justify-center overflow-hidden rounded-lg border bg-muted/30 p-3">
+      <MediaPreviewFrame>
         {usable && grant ? (
-          <object
-            aria-label={`Authorized private attachment ${media.fileName}`}
-            className="h-96 w-full"
-            data={grant.url}
+          <MediaPreview
+            key={grant.url}
+            label={`Authorized private attachment ${media.fileName}`}
+            url={grant.url}
             onError={() => setFailed(true)}
-            type={media.mimeType}
-          >
-            <a href={grant.url} rel="noreferrer" target="_blank">
-              Open authorized attachment
-            </a>
-          </object>
+            mimeType={media.mimeType}
+          />
         ) : (
           <div className="grid max-w-sm justify-items-center gap-3 text-center">
             <p className="text-sm text-muted-foreground">
@@ -105,7 +121,8 @@ export function MediaViewer({ storeId }: { storeId: string }) {
                     ? "Authorize a short-lived private view."
                     : "This attachment cannot be viewed until safety checks permit it."}
             </p>
-            <Button
+            <SubmitButton
+              isSubmitting={authorize.isPending}
               disabled={media.lifecycle !== "safe" || authorize.isPending}
               onClick={() =>
                 authorize.mutate({
@@ -118,14 +135,14 @@ export function MediaViewer({ storeId }: { storeId: string }) {
               variant="outline"
             >
               {authorize.isPending ? "Authorizing…" : "Authorize view"}
-            </Button>
+            </SubmitButton>
           </div>
         )}
-      </div>
+      </MediaPreviewFrame>
       {authorize.isError ? (
-        <p className="text-sm text-destructive" role="alert">
+        <FormFeedback appearance="dashboard">
           {authorize.error.message}
-        </p>
+        </FormFeedback>
       ) : null}
     </section>
   )

@@ -2,6 +2,7 @@ import {
   EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
 import { z } from "zod"
 
 const exactTransactionQuantitySchema = z
@@ -71,9 +72,46 @@ const inventoryOperationFields = {
   storeId: z.string().trim().min(1).optional(),
 }
 
+const categoryNameSchema = z
+  .string()
+  .max(160)
+  .transform((value, ctx) => {
+    try {
+      return normalizeStockCategoryName(value).name
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        message: error instanceof Error ? error.message : "Invalid category.",
+      })
+      return z.NEVER
+    }
+  })
+
+export const inventoryCategorySuggestionsSchema = z
+  .object({
+    query: z.string().trim().max(80).optional(),
+    limit: z.number().int().min(1).max(50).optional(),
+  })
+  .strict()
+
 export const inventorySingleBalanceOperationSchema = z
   .object({
     ...inventoryOperationFields,
+    reason: inventoryOperationFields.reason.optional(),
+    categories: z
+      .array(
+        z.union([
+          z
+            .object({
+              categoryNameId: z.number().int().positive().max(2_147_483_647),
+            })
+            .strict(),
+          z.object({ name: categoryNameSchema }).strict(),
+        ]),
+      )
+      .min(1)
+      .max(10)
+      .optional(),
     balanceSourceId: z.string().trim().min(1),
     direction: z.enum(["increase", "decrease"]),
     effectiveAt: z.coerce.date().optional(),
@@ -85,6 +123,23 @@ export const inventorySingleBalanceOperationSchema = z
     type: z.enum(["adjustment", "receipt", "return"]),
   })
   .strict()
+  .superRefine((value, ctx) => {
+    if (!value.reason && !value.categories?.length)
+      ctx.addIssue({
+        code: "custom",
+        path: ["categories"],
+        message: "Add categories or a legacy reason.",
+      })
+    if (
+      value.type === "return" &&
+      (!value.reason || value.categories !== undefined)
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "Returns require a reason without categories.",
+      })
+  })
 
 export const inventoryTransformationSchema = z
   .object({

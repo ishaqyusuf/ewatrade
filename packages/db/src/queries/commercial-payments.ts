@@ -8,6 +8,9 @@ import {
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import { lockCustomerLedgerAccount } from "./customer-ledger/accounts"
+import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
+import { lockFinanceBook } from "./finance/access"
 import { reconcileServiceCommerceBookingPaymentInTransaction } from "./service-commerce-bookings"
 import { loadTenantActors } from "./tenant-actors"
 
@@ -78,7 +81,7 @@ export function effectiveCommercialAmountPaid(input: {
   return input.amountPaidMinor
 }
 
-export async function recordCommercialOrderPaymentInTransaction(
+async function recordCommercialOrderPaymentCore(
   tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
@@ -91,9 +94,16 @@ export async function recordCommercialOrderPaymentInTransaction(
     tenantId: string
     type?: "payment" | "refund"
   },
+  creditSource?: { allocationId?: string; releaseId?: string },
 ) {
   assertPaymentAmount(input.amountMinor)
-  const expectedMethod = paymentMethod(input.method)
+  const financialOrder = await lockCommerceFinancialOrder(tx, input)
+  if (!financialOrder) {
+    throw new CatalogError("ORDER_NOT_FOUND", "Order not found.")
+  }
+  const expectedMethod = creditSource
+    ? CommercialPaymentMethod.CUSTOMER_CREDIT
+    : paymentMethod(input.method)
   const expectedNote = input.note?.trim() || null
   const expectedReference = input.reference?.trim() || null
   const expectedType =
@@ -112,7 +122,9 @@ export async function recordCommercialOrderPaymentInTransaction(
       previous.method !== expectedMethod ||
       previous.reference !== expectedReference ||
       previous.note !== expectedNote ||
-      previous.type !== expectedType
+      previous.type !== expectedType ||
+      previous.customerAllocationId !== (creditSource?.allocationId ?? null) ||
+      previous.customerAllocationReleaseId !== (creditSource?.releaseId ?? null)
     ) {
       throw new CatalogError(
         "IDEMPOTENCY_MISMATCH",
@@ -149,16 +161,6 @@ export async function recordCommercialOrderPaymentInTransaction(
     return serializePrevious(previous)
   }
 
-  const lockedOrder = await tx.$queryRaw<Array<{ id: string }>>`
-    SELECT "id"
-    FROM "CommercialOrder"
-    WHERE "id" = ${input.orderId}
-      AND "tenantId" = ${input.tenantId}
-    FOR UPDATE
-  `
-  if (lockedOrder.length === 0) {
-    throw new CatalogError("ORDER_NOT_FOUND", "Order not found.")
-  }
   const concurrentPrevious = await tx.commercialOrderPayment.findUnique({
     where: {
       tenantId_clientPaymentId: {
@@ -172,7 +174,11 @@ export async function recordCommercialOrderPaymentInTransaction(
   }
 
   const order = await tx.commercialOrder.findFirst({
-    include: { payments: { select: { id: true } } },
+    include: {
+      payments: {
+        select: { id: true, amountMinor: true, method: true, type: true },
+      },
+    },
     where: { id: input.orderId, tenantId: input.tenantId },
   })
   if (!order) throw new CatalogError("ORDER_NOT_FOUND", "Order not found.")
@@ -183,6 +189,29 @@ export async function recordCommercialOrderPaymentInTransaction(
     totalMinor: order.totalMinor,
   })
   const isRefund = input.type === "refund"
+  if (
+    isRefund &&
+    !creditSource &&
+    order.payments.some(
+      (payment) => payment.method === CommercialPaymentMethod.CUSTOMER_CREDIT,
+    )
+  ) {
+    const refundableCollections = order.payments.reduce((total, payment) => {
+      if (payment.method === CommercialPaymentMethod.CUSTOMER_CREDIT)
+        return total
+      return (
+        total +
+        (payment.type === CommercialPaymentType.PAYMENT
+          ? payment.amountMinor
+          : -payment.amountMinor)
+      )
+    }, 0)
+    if (input.amountMinor > refundableCollections)
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Cash refunds cannot include settlement from customer credit. Release that allocation before refunding the customer's funds.",
+      )
+  }
   const nextPaid = isRefund
     ? currentPaid - input.amountMinor
     : currentPaid + input.amountMinor
@@ -203,7 +232,7 @@ export async function recordCommercialOrderPaymentInTransaction(
     totalMinor: order.totalMinor,
   })
   const nextStatus =
-    isRefund && nextPaid === 0
+    isRefund && !creditSource && nextPaid === 0
       ? PaymentStatus.REFUNDED
       : summary.paymentStatus === "paid"
         ? PaymentStatus.PAID
@@ -223,6 +252,8 @@ export async function recordCommercialOrderPaymentInTransaction(
       storeId: order.storeId,
       tenantId: input.tenantId,
       type: expectedType,
+      customerAllocationId: creditSource?.allocationId,
+      customerAllocationReleaseId: creditSource?.releaseId,
     },
   })
   await tx.commercialOrder.update({
@@ -236,7 +267,7 @@ export async function recordCommercialOrderPaymentInTransaction(
     actorUserId: input.actorUserId,
     amountPaidMinor: nextPaid,
     commercialPaymentId: payment.id,
-    isRefund,
+    isRefund: isRefund && !creditSource,
     orderId: order.id,
     storeId: order.storeId,
     tenantId: input.tenantId,
@@ -287,6 +318,90 @@ export async function recordCommercialOrderPaymentInTransaction(
   }
 }
 
+export async function recordCommercialOrderPaymentInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Parameters<typeof recordCommercialOrderPaymentCore>[1],
+) {
+  return recordCommercialOrderPaymentCore(tx, input)
+}
+
+/** Consumes a posted allocation under book -> customer -> Order lock ordering. */
+export async function recordCommercialCreditSettlementInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Parameters<typeof recordCommercialOrderPaymentCore>[1],
+  source: { bookId: string; allocationId?: string; releaseId?: string },
+) {
+  assertPaymentAmount(input.amountMinor)
+  if (Boolean(source.allocationId) === Boolean(source.releaseId))
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "One durable credit settlement source is required.",
+    )
+  const book = await lockFinanceBook(tx, { ...input, bookId: source.bookId })
+  const release = source.releaseId
+    ? await tx.customerLedgerAllocationRelease.findUnique({
+        where: { id: source.releaseId },
+      })
+    : null
+  const allocation = await tx.customerLedgerAllocation.findFirst({
+    where: {
+      id: source.allocationId ?? release?.allocationId ?? "",
+      credit: { tenantId: input.tenantId },
+    },
+    include: { charge: true },
+  })
+  if (!allocation || (source.releaseId && !release))
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Customer allocation source not found.",
+    )
+  const account = await lockCustomerLedgerAccount(tx, {
+    ...input,
+    accountId: allocation.accountId,
+  })
+  await tx.$queryRaw`SELECT id FROM "CommercialOrder" WHERE id = ${input.orderId} AND "tenantId" = ${input.tenantId} FOR UPDATE`
+  const order = await tx.commercialOrder.findFirst({
+    where: { id: input.orderId, tenantId: input.tenantId },
+  })
+  const sourceId = release?.id ?? allocation.id
+  const expectedCommand = release
+    ? `customer-allocation-release:${sourceId}`
+    : `customer-allocation:${sourceId}`
+  if (
+    !order ||
+    allocation.charge.orderId !== order.id ||
+    allocation.charge.kind !== "ORDER_CHARGE" ||
+    order.customerId !== account.customerId ||
+    order.currencyCode !== account.currencyCode ||
+    book.currencyCode !== account.currencyCode ||
+    BigInt(input.amountMinor) !==
+      (release?.amountMinor ?? allocation.amountMinor) ||
+    input.clientPaymentId !== expectedCommand ||
+    (input.type === "refund") !== Boolean(release)
+  )
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Order settlement must match its customer allocation source.",
+    )
+  const posting = await tx.financeJournalEntry.findUnique({
+    where: {
+      bookId_sourceKind_sourceId: {
+        bookId: book.id,
+        sourceId,
+        sourceKind: release
+          ? "CUSTOMER_ALLOCATION_RELEASE"
+          : "CUSTOMER_CREDIT_ALLOCATION",
+      },
+    },
+  })
+  if (!posting)
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "The customer allocation must be posted before Order settlement.",
+    )
+  return recordCommercialOrderPaymentCore(tx, input, source)
+}
+
 export async function recordCommercialOrderPayment(
   db: PrismaClient,
   input: Parameters<typeof recordCommercialOrderPaymentInTransaction>[1],
@@ -324,6 +439,7 @@ export async function listCommercialOrderPaymentsPage(
   const baseWhere: Prisma.CommercialOrderPaymentWhereInput = {
     tenantId: input.tenantId,
     type: CommercialPaymentType.PAYMENT,
+    method: { not: CommercialPaymentMethod.CUSTOMER_CREDIT },
   }
   const where: Prisma.CommercialOrderPaymentWhereInput = query
     ? {
@@ -411,6 +527,7 @@ export async function listCommercialOrderPaymentsPage(
         AND orders."tenantId" = payments."tenantId"
       WHERE payments."tenantId" = ${input.tenantId}
         AND payments."type" = ${CommercialPaymentType.PAYMENT}
+        AND payments."method" <> ${CommercialPaymentMethod.CUSTOMER_CREDIT}
       GROUP BY orders."currencyCode"
       ORDER BY orders."currencyCode" ASC
     `),

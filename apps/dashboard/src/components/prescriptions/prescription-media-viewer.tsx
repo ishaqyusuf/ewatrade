@@ -82,7 +82,7 @@ export function PrescriptionMediaViewer({
         </Badge>
       </div>
 
-      <div className="flex min-h-80 items-center justify-center overflow-auto rounded-lg border border-border bg-muted/30 p-3">
+      <div className="flex min-h-80 items-center justify-center overflow-auto rounded-none border border-border bg-muted/30 p-3">
         {selectedUrl ? (
           <object
             aria-label={`Authorized prescription page ${selected.pageNumber}`}

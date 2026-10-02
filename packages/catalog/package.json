@@ -1,0 +1,32 @@
+{
+  "name": "@ewatrade/catalog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./photo-contracts": "./src/photo-contracts.ts",
+    "./photo-client": "./src/photo-client.ts",
+    "./photo-storage": "./src/photo-storage.ts",
+    "./photo-upload": "./src/photo-upload.ts",
+    "./photo-processing": "./src/photo-processing.ts",
+    "./photo-derivatives": "./src/photo-derivatives.ts",
+    "./photo-review": "./src/photo-review.ts"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ewatrade/utils": "workspace:*",
+    "libheif-js": "1.23.2",
+    "sharp": "0.35.5",
+    "@ewatrade/private-media": "workspace:*"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@types/node": "24.12.0",
+    "typescript": "catalog:"
+  }
+}

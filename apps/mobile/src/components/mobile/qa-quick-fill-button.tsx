@@ -47,26 +47,28 @@ export function QaQuickFillButton({
       : null
 
   if (
-    !qa.clientEnabled ||
-    !qa.authorization ||
+    !qa.toolingAvailable ||
     !fixtureFacts ||
     (auth.isAuthenticated && !auth.profile?.businessId)
   ) {
     return null
   }
 
-  function fill() {
-    if (!fixtureFacts) return
+  async function fill() {
+    const currentFacts = auth.isAuthenticated
+      ? await qa.refreshFixtureContext()
+      : fixtureFacts
+    if (!currentFacts) return
     sequence.current += 1
     onFill(
       createQaFixtureContext({
-        currencyCode: fixtureFacts.currencyCode,
-        domain: fixtureFacts.qaDomain,
+        currencyCode: currentFacts.currencyCode,
+        domain: currentFacts.qaDomain,
         invocationId: Crypto.randomUUID(),
-        seed: `${fixtureFacts.seed}:${formId}`,
-        storeId: fixtureFacts.storeId ?? "unselected",
-        tenantId: fixtureFacts.tenantId,
-        timezone: fixtureFacts.timezone,
+        seed: `${currentFacts.seed}:${formId}`,
+        storeId: currentFacts.storeId ?? "unselected",
+        tenantId: currentFacts.tenantId,
+        timezone: currentFacts.timezone,
       }),
       sequence.current,
     )
@@ -127,7 +129,7 @@ export function QaQuickFillButton({
         </Pressable>
       ) : null}
       <Pressable
-        accessibilityHint={`Uses ${qa.authorization.qaDomain} and never submits the form`}
+        accessibilityHint={`Uses ${fixtureFacts.qaDomain} and never submits the form`}
         accessibilityLabel={label}
         accessibilityRole="button"
         className="min-h-11 flex-row items-center gap-2 rounded-xl bg-primary px-4"

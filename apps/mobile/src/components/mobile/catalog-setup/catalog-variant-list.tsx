@@ -3,8 +3,8 @@ import { MarketCatalogVariantRow } from "@/components/mobile/appearances/market-
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { View } from "react-native"
 import { useState } from "react"
+import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogVariantRow } from "./catalog-variant-model"
 

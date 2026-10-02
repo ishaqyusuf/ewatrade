@@ -1,0 +1,27 @@
+[
+  {
+    "source": "artifacts/catalog-setup-mobile-workshop/emulator-classic-evidence/2026-10-02/B05-current-qa-state.png",
+    "archive": "artifacts/mobile-dashboard-five-direction-workshop/references/B05-current-qa-state.png",
+    "sha256": "50b411a0c127a69a0ab2d93eb3d7d564c710bf09440d06d0d4bd644983460847"
+  },
+  {
+    "source": "artifacts/catalog-setup-mobile-workshop/emulator-classic-evidence/2026-10-02/B05-current-qa-state.xml",
+    "archive": "artifacts/mobile-dashboard-five-direction-workshop/references/B05-current-qa-state.xml",
+    "sha256": "b2c90d3fe20d1eeb0eaf278c8201ef709bbb9fa16aae251d47fde566f437fd5f"
+  },
+  {
+    "source": "artifacts/catalog-setup-mobile-workshop/emulator-classic-evidence/2026-10-02/17-current-session.png",
+    "archive": "artifacts/mobile-dashboard-five-direction-workshop/references/17-current-session.png",
+    "sha256": "2f307a3f503a7c15ac8261056f14fa6ef783d573141f621ff6de20a345ac0edb"
+  },
+  {
+    "source": "artifacts/catalog-setup-mobile-workshop/emulator-classic-evidence/2026-10-02/17-current-session.xml",
+    "archive": "artifacts/mobile-dashboard-five-direction-workshop/references/17-current-session.xml",
+    "sha256": "9066d4aeff5eaba3af3bc3b81687ae10b4503795977bf6e85bcad3de36f708b2"
+  },
+  {
+    "source": "artifacts/catalog-setup-mobile-workshop/emulator-classic-evidence/2026-10-02/16-auto-renderer-session.png",
+    "archive": "artifacts/mobile-dashboard-five-direction-workshop/references/16-auto-renderer-session.png",
+    "sha256": "e001944cd240d2975c5052a924e9a26746a4e8fcc4f8db4d15fbea8a6e29cc07"
+  }
+]

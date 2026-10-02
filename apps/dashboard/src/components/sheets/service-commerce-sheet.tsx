@@ -1,25 +1,43 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { ModalFrame } from "@/components/modals/modal-frame"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { SERVICE_COMMERCE_CONTROLLERS } from "@/components/service-commerce/service-commerce-controllers"
 import { ServiceCommerceSheetContent } from "@/components/service-commerce/service-commerce-sheet-content"
+import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { useCustomerChannelParams } from "@/hooks/use-customer-channel-params"
 import {
   SERVICE_COMMERCE_SHEET_RESET_PARAMS,
   useServiceCommerceParams,
 } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { Dialog, Sheet } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
-import { useCallback, useRef } from "react"
+import { useCallback, useRef, useState } from "react"
 
-export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
+export function ServiceCommerceSheet({
+  storeId,
+  storeIds,
+}: {
+  storeId: string
+  storeIds: string[]
+}) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const params = useServiceCommerceParams()
+  const channelParams = useCustomerChannelParams()
   const formResets = useRef(new Set<() => void>())
   const mode = params.serviceCommerceSheet
-  const resolvedStoreId = params.storeId ?? storeId
+  const requestedStoreId = params.storeId
+  const resolvedStoreId =
+    requestedStoreId && storeIds.includes(requestedStoreId)
+      ? requestedStoreId
+      : storeId
   const controller = mode ? SERVICE_COMMERCE_CONTROLLERS[mode] : null
+  const Root = mode === "quote_policy" ? Dialog : Sheet
+  const Frame = mode === "quote_policy" ? ModalFrame : SheetFrame
+  const [closeError, setCloseError] = useState<string | null>(null)
 
   const registerFormReset = useCallback((reset: () => void) => {
     formResets.current.add(reset)
@@ -27,7 +45,7 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
   }, [])
 
   const close = async () => {
-    for (const reset of formResets.current) reset()
+    setCloseError(null)
     const invalidations: Array<Promise<unknown>> = []
     if (mode === "connection" || mode === "team" || mode === "entry_point") {
       invalidations.push(
@@ -185,22 +203,43 @@ export function ServiceCommerceSheet({ storeId }: { storeId: string }) {
       }
     }
     await Promise.all(invalidations)
-    await params.setParams(SERVICE_COMMERCE_SHEET_RESET_PARAMS)
+    for (const reset of formResets.current) reset()
+    await Promise.all([
+      params.setParams(SERVICE_COMMERCE_SHEET_RESET_PARAMS),
+      channelParams.setParams({ whatsapp: null }),
+    ])
+  }
+
+  const requestClose = () => {
+    void close().catch(() => {
+      setCloseError(
+        "Some Service Commerce data could not be refreshed. Try closing again.",
+      )
+    })
   }
 
   return (
-    <DashboardSheet
-      description={controller?.description}
-      onClose={close}
+    <Root
       open={Boolean(mode)}
-      title={controller?.title ?? "Service Commerce"}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) requestClose()
+      }}
     >
       {mode ? (
-        <ServiceCommerceSheetContent
-          registerFormReset={registerFormReset}
-          storeId={resolvedStoreId}
-        />
+        <Frame
+          description={controller?.description}
+          title={controller?.title ?? "Service Commerce"}
+        >
+          {closeError ? (
+            <FormFeedback appearance="dashboard">{closeError}</FormFeedback>
+          ) : null}
+          <ServiceCommerceSheetContent
+            key={`${resolvedStoreId}:${JSON.stringify(params)}`}
+            registerFormReset={registerFormReset}
+            storeId={resolvedStoreId}
+          />
+        </Frame>
       ) : null}
-    </DashboardSheet>
+    </Root>
   )
 }

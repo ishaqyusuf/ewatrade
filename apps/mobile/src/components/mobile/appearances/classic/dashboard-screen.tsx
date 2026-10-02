@@ -31,7 +31,12 @@ export function ClassicDashboardScreen({
   ...props
 }: DashboardScreenProps) {
   return (
-    <MobileAppShell {...props} keyboardBottomOffset={12} showHeader={false}>
+    <MobileAppShell
+      {...props}
+      keyboardBottomOffset={12}
+      showHeader={false}
+      translucentStatusBar
+    >
       {hero}
       {children}
     </MobileAppShell>

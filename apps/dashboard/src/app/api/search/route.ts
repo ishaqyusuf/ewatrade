@@ -1,4 +1,7 @@
-import type { DashboardSearchResult } from "@/lib/dashboard-search"
+import {
+  type DashboardSearchResult,
+  getDashboardRecordHref,
+} from "@/lib/dashboard-search"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import { canManageProductCatalog } from "@/lib/product-catalog"
 import { getDashboardCustomerBook } from "@/lib/sales-data"
@@ -7,7 +10,7 @@ import { getServerSession } from "@/lib/session"
 import { canManageStaff } from "@/lib/staff-management"
 import { getActiveTenant } from "@/lib/tenant"
 import { prisma } from "@ewatrade/db"
-import { listCommercialOrders } from "@ewatrade/db/queries"
+import { listCommercialOrdersPage } from "@ewatrade/db/queries"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -50,7 +53,7 @@ async function getSearchContext(requestedStoreId?: string) {
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
-  const query = url.searchParams.get("q")?.trim() ?? ""
+  const query = url.searchParams.get("q")?.trim().slice(0, 160) ?? ""
   const storeId = url.searchParams.get("storeId") ?? undefined
   const searchContext = await getSearchContext(storeId)
 
@@ -132,20 +135,20 @@ export async function GET(request: NextRequest) {
         })
       : [],
     canSearchSales
-      ? listCommercialOrders(prisma, {
+      ? listCommercialOrdersPage(prisma, {
           limit: 8,
+          query,
           ...storeScope,
         })
-      : [],
+      : { items: [] },
   ])
 
-  const normalizedQuery = query.toLowerCase()
   const results = [
     ...products.map((product) =>
       result({
         description: `${product.status} ${product.kind.toLowerCase()} item`,
         group: "products",
-        href: `/catalog?search=${encodeURIComponent(product.name)}`,
+        href: getDashboardRecordHref("products", product.name),
         id: `product:${product.id}`,
         title: product.name,
       }),
@@ -155,7 +158,7 @@ export async function GET(request: NextRequest) {
         description:
           customer.phone ?? customer.email ?? `${customer.orderCount} orders`,
         group: "customers",
-        href: `/customers?search=${encodeURIComponent(customer.name)}`,
+        href: getDashboardRecordHref("customers", customer.name),
         id: `customer:${customer.id}`,
         title: customer.name,
       }),
@@ -164,34 +167,20 @@ export async function GET(request: NextRequest) {
       result({
         description: `${member.role} / ${member.status}`,
         group: "staff",
-        href: `/staff?search=${encodeURIComponent(member.user.email)}`,
+        href: getDashboardRecordHref("staff", member.user.email),
         id: `staff:${member.id}`,
         title: member.user.displayName || member.user.name || member.user.email,
       }),
     ),
-    ...sales
-      .filter((sale) =>
-        [
-          sale.orderNumber,
-          sale.customerName ?? "",
-          sale.customerEmail ?? "",
-          sale.customerPhone ?? "",
-          sale.status,
-          sale.paymentStatus,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-      .map((sale) =>
-        result({
-          description: `${sale.paymentStatus.toLowerCase()} order`,
-          group: "sales",
-          href: `/sales?search=${encodeURIComponent(sale.orderNumber)}`,
-          id: `sale:${sale.id}`,
-          title: sale.orderNumber,
-        }),
-      ),
+    ...sales.items.map((sale) =>
+      result({
+        description: `${sale.paymentStatus.toLowerCase()} order`,
+        group: "sales",
+        href: getDashboardRecordHref("sales", sale.orderNumber),
+        id: `sale:${sale.id}`,
+        title: sale.orderNumber,
+      }),
+    ),
   ].slice(0, 30)
 
   return NextResponse.json({ query, results })

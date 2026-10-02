@@ -92,6 +92,7 @@ import {
 } from "../../../service-commerce/conversation-attachments"
 
 import {
+  accountAgeProcedure,
   authenticatedProcedure,
   createTRPCRouter,
   eligibleAccountProcedure,
@@ -104,7 +105,7 @@ import {
 } from "./customer-conversation-auth"
 
 export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
-  accountAgeStatus: authenticatedProcedure.query(async ({ ctx }) => {
+  accountAgeStatus: accountAgeProcedure.query(async ({ ctx }) => {
     try {
       return await getCustomerAccountAgeStatus(ctx.db, ctx.session.user.id)
     } catch (error) {
@@ -124,7 +125,7 @@ export const serviceCommerceCustomerConversationsRouter = createTRPCRouter({
       mapCustomerConversationError(error)
     }
   }),
-  accountDeclareAgeBand: authenticatedProcedure
+  accountDeclareAgeBand: accountAgeProcedure
     .input(
       z
         .object({

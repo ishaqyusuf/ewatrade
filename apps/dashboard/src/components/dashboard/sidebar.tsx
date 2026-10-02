@@ -3,37 +3,12 @@
 import { type DashboardNavItem, getDashboardRoleLabel } from "@/lib/navigation"
 import type { SessionUser } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
-import { getUserInitials } from "@/lib/user-display"
 import { cn } from "@/utils"
-import {
-  Analytics01Icon,
-  Archive01Icon,
-  BubbleChatIcon,
-  Home01Icon,
-  Package01Icon,
-  Settings01Icon,
-  ShoppingCart01Icon,
-  Store04Icon,
-  UserCircle02Icon,
-} from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-
-// biome-ignore lint/suspicious/noExplicitAny: HugeIcons icon data is package-defined.
-const NAV_ICONS: Record<DashboardNavItem["icon"], any> = {
-  analytics: Analytics01Icon,
-  customers: UserCircle02Icon,
-  conversations: BubbleChatIcon,
-  home: Home01Icon,
-  inventory: Archive01Icon,
-  products: Package01Icon,
-  prescriptions: Store04Icon,
-  sales: ShoppingCart01Icon,
-  services: Store04Icon,
-  settings: Settings01Icon,
-  staff: UserCircle02Icon,
-}
+import { useState } from "react"
+import { DashboardLogo } from "./dashboard-logo"
+import { MainMenu } from "./main-menu"
+import { UserMenu } from "./user-menu"
+import { WorkspaceDropdown } from "./workspace-dropdown"
 
 type Props = {
   navItems: DashboardNavItem[]
@@ -42,126 +17,47 @@ type Props = {
 }
 
 export function DashboardSidebar({ navItems, user, ctx }: Props) {
-  const pathname = usePathname()
-  const initials = getUserInitials(user)
-  const roleLabel = getDashboardRoleLabel(ctx.membership.role)
+  const [isPointerInside, setIsPointerInside] = useState(false)
+  const [isFocusWithin, setIsFocusWithin] = useState(false)
+  const isExpanded = isPointerInside || isFocusWithin
+  const settingsHref = navItems.find((item) => item.href === "/settings")?.href
 
   return (
-    <aside className="group/sidebar fixed left-0 top-0 z-40 hidden h-screen w-[70px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar pb-4 transition-all duration-200 hover:w-[240px] md:flex">
-      <div className="relative flex h-[70px] items-center border-b border-sidebar-border px-[18px]">
-        <Link
-          href="/"
-          aria-label="EwaTrade dashboard home"
-          className="flex min-w-0 items-center gap-2"
-        >
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <HugeiconsIcon
-              icon={Store04Icon}
-              className="size-5 text-primary-foreground"
-            />
-          </div>
-          <div className="min-w-0 opacity-0 transition-opacity group-hover/sidebar:opacity-100">
-            <p className="truncate text-sm font-semibold text-sidebar-foreground">
-              ewatrade
-            </p>
-            <p className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Dashboard
-            </p>
-          </div>
-        </Link>
+    <aside
+      aria-label="Dashboard sidebar"
+      className={cn(
+        "group/sidebar fixed left-0 top-0 z-50 hidden h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar pb-4 transition-[width] duration-200 ease-out md:flex",
+        isExpanded ? "w-[240px]" : "w-[70px]",
+      )}
+      onBlur={(event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(event.relatedTarget)
+        ) {
+          setIsFocusWithin(false)
+        }
+      }}
+      onFocusCapture={() => setIsFocusWithin(true)}
+      onMouseEnter={() => setIsPointerInside(true)}
+      onMouseLeave={() => setIsPointerInside(false)}
+    >
+      <div className="flex h-[70px] shrink-0 items-center border-b border-sidebar-border px-[22px]">
+        <DashboardLogo />
       </div>
 
-      <div className="border-b border-sidebar-border px-[18px] py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent">
-            <HugeiconsIcon
-              icon={Store04Icon}
-              className="size-4 text-sidebar-foreground"
-            />
-          </div>
-          <div className="min-w-0 opacity-0 transition-opacity group-hover/sidebar:opacity-100">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {ctx.tenant.name}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {ctx.activeStore?.name ?? ctx.tenant.slug}
-            </p>
-          </div>
-        </div>
+      <div className="shrink-0 border-b border-sidebar-border px-2 py-3">
+        <WorkspaceDropdown ctx={ctx} isExpanded={isExpanded} />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-0 py-4">
-        {navItems.map((item) => {
-          const icon = NAV_ICONS[item.icon]
-          const isActive = item.end
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`)
+      <MainMenu isExpanded={isExpanded} navItems={navItems} />
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              aria-label={item.label}
-              className="group block"
-            >
-              <div className="relative mx-[15px] h-10">
-                <div
-                  className={cn(
-                    "absolute inset-0 border border-transparent transition-colors group-hover:border-sidebar-border group-hover:bg-sidebar-accent",
-                    isActive
-                      ? "border-sidebar-border bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground",
-                  )}
-                />
-                <div
-                  className={cn(
-                    "absolute left-0 top-0 flex size-10 items-center justify-center transition-colors",
-                    isActive
-                      ? "text-sidebar-primary-foreground"
-                      : "text-muted-foreground group-hover:text-sidebar-foreground",
-                  )}
-                >
-                  <HugeiconsIcon icon={icon} className="size-4 shrink-0" />
-                </div>
-                <div className="absolute left-10 right-2 top-0 flex h-10 items-center overflow-hidden opacity-0 transition-opacity group-hover/sidebar:opacity-100">
-                  <span
-                    className={cn(
-                      "truncate text-sm font-medium",
-                      isActive
-                        ? "text-sidebar-primary-foreground"
-                        : "text-sidebar-foreground",
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="px-[18px]">
-        <div className="flex items-center gap-2">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-            {initials}
-          </div>
-          <div className="min-w-0 opacity-0 transition-opacity group-hover/sidebar:opacity-100">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {user.displayName ??
-                (`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-                  user.email)}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {roleLabel}
-            </p>
-          </div>
-          <HugeiconsIcon
-            icon={UserCircle02Icon}
-            className="ml-auto hidden size-4 shrink-0 text-muted-foreground group-hover/sidebar:block"
-          />
-        </div>
+      <div className="shrink-0 border-t border-sidebar-border px-2 pt-3">
+        <UserMenu
+          isExpanded={isExpanded}
+          roleLabel={getDashboardRoleLabel(ctx.membership.role)}
+          settingsHref={settingsHref}
+          user={user}
+        />
       </div>
     </aside>
   )

@@ -1,0 +1,50 @@
+[
+  {
+    "state": "established-unready",
+    "theme": "light",
+    "scale": "100",
+    "themeMatch": true,
+    "captures": [
+      "final-100-light-established-unready-top",
+      "final-100-light-established-unready-middle",
+      "final-100-light-established-unready-bottom"
+    ],
+    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+  },
+  {
+    "state": "team-unknown",
+    "theme": "light",
+    "scale": "100",
+    "themeMatch": true,
+    "captures": [
+      "final-100-light-team-unknown-top",
+      "final-100-light-team-unknown-middle",
+      "final-100-light-team-unknown-bottom"
+    ],
+    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+  },
+  {
+    "state": "team-existing",
+    "theme": "light",
+    "scale": "100",
+    "themeMatch": true,
+    "captures": [
+      "final-100-light-team-existing-top",
+      "final-100-light-team-existing-middle",
+      "final-100-light-team-existing-bottom"
+    ],
+    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+  },
+  {
+    "state": "team-restricted",
+    "theme": "light",
+    "scale": "100",
+    "themeMatch": true,
+    "captures": [
+      "final-100-light-team-restricted-top",
+      "final-100-light-team-restricted-middle",
+      "final-100-light-team-restricted-bottom"
+    ],
+    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+  }
+]

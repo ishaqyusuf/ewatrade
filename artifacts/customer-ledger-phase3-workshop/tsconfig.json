@@ -1,0 +1,1 @@
+{"extends":"../../apps/dashboard/tsconfig.json","compilerOptions":{"baseUrl":"../../apps/dashboard","jsx":"react-jsx","incremental":false},"include":["browser-fixture.tsx"]}

@@ -1,14 +1,28 @@
 "use client"
+import {
+  Button,
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  MoneyInput,
+  SelectControl,
+  SubmitButton,
+} from "@ewatrade/ui"
 
+import { FormFeedback } from "@/components/forms/form-feedback"
+
+import { useStoreCurrency } from "@/hooks/use-store-currency"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
+import { formatMinorMoney, majorToMinor } from "@ewatrade/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
-const fieldClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary"
-
 export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
+  const currencyCode = useStoreCurrency(storeId)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [message, setMessage] = useState<string | null>(null)
@@ -124,16 +138,15 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   )
   const requiredQueries = [zones, retention, manualReviews, compliance]
   if (requiredQueries.some((query) => query.isLoading)) {
-    return <div className="h-72 animate-pulse rounded-xl bg-muted" />
+    return <div className="h-72 animate-pulse bg-muted" />
   }
   const queryError = requiredQueries.find((query) => query.error)?.error
   if (queryError) {
     return (
-      <div className="grid gap-3 rounded-xl border border-destructive/30 p-5">
-        <p role="alert" className="text-sm text-destructive">
-          {queryError.message}
-        </p>
+      <div className="grid gap-3 rounded-none border border-destructive/30 p-5">
+        <FormFeedback appearance="dashboard">{queryError.message}</FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() =>
             void Promise.all(requiredQueries.map((query) => query.refetch()))
@@ -152,7 +165,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
       {message ? (
         <p className="xl:col-span-2 bg-muted px-4 py-3 text-sm">{message}</p>
       ) : null}
-      <section className="grid content-start gap-4 rounded-xl border border-border bg-card p-5">
+      <section className="grid content-start gap-4 rounded-none border border-border bg-card p-5">
         <div>
           <h2 className="font-semibold">Delivery zones</h2>
           <p className="text-sm text-muted-foreground">
@@ -170,25 +183,25 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
           </div>
         ))}
         <form
-          className="grid gap-3"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
-            const fee = Number(data.get("fixedFeeMinor"))
+            const fee = majorToMinor(String(data.get("fixedFee") ?? ""))
             const feePolicy = String(data.get("feePolicy")) as
               | "fixed"
               | "manual"
             if (
               feePolicy === "fixed" &&
-              !String(data.get("fixedFeeMinor") ?? "").trim()
+              (fee === null || fee < 0 || !currencyCode)
             ) {
               setMessage("Enter the disclosed fixed delivery fee.")
               return
             }
             saveZone.mutate({
-              currencyCode: "NGN",
+              currencyCode,
               feePolicy,
-              fixedFeeMinor: feePolicy === "fixed" ? fee : undefined,
+              fixedFeeMinor:
+                feePolicy === "fixed" ? (fee ?? undefined) : undefined,
               matchType: "locality",
               matchValues: String(data.get("matchValues") ?? "")
                 .split(",")
@@ -200,90 +213,102 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             })
           }}
         >
-          <input
-            className={fieldClass}
-            name="name"
-            placeholder="Zone name"
-            required
-          />
-          <input
-            className={fieldClass}
-            name="matchValues"
-            placeholder="Localities, comma separated"
-            required
-          />
-          <select className={fieldClass} name="feePolicy">
-            <option value="fixed">Fixed disclosed fee</option>
-            <option value="manual">Authorized manual review</option>
-          </select>
-          <input
-            className={fieldClass}
-            min="0"
-            name="fixedFeeMinor"
-            placeholder="Fee in minor units (fixed only)"
-            type="number"
-          />
-          <input
-            className={fieldClass}
-            name="promiseText"
-            placeholder="Delivery promise"
-            required
-          />
-          <Button disabled={saveZone.isPending} type="submit">
-            Add delivery zone
-          </Button>
+          <FieldGroup className="min-w-0 grid gap-3">
+            <Input name="name" placeholder="Zone name" required />
+            <Input
+              name="matchValues"
+              placeholder="Localities, comma separated"
+              required
+            />
+            <SelectControl
+              name="feePolicy"
+              options={[
+                { value: "fixed", label: <>Fixed disclosed fee</> },
+                { value: "manual", label: <>Authorized manual review</> },
+              ]}
+            />
+            <MoneyInput
+              currencyCode={currencyCode}
+              disabled={!currencyCode}
+              aria-label="Fixed delivery fee"
+              name="fixedFee"
+              placeholder="Fixed delivery fee"
+            />
+            <Input name="promiseText" placeholder="Delivery promise" required />
+            <FormActions>
+              <SubmitButton
+                isSubmitting={saveZone.isPending}
+                disabled={saveZone.isPending}
+                type="submit"
+              >
+                Add delivery zone
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
         </form>
         {manualReviews.data?.length ? (
           <div className="grid gap-3 border-t border-border pt-4">
             <h3 className="text-sm font-medium">Manual delivery fee reviews</h3>
             {manualReviews.data.map((review) => (
               <form
-                className="grid gap-2 border border-border p-3"
+                className="border border-border p-3"
                 key={review.id}
                 onSubmit={(event) => {
                   event.preventDefault()
                   const data = new FormData(event.currentTarget)
+                  const feeMinor = majorToMinor(String(data.get("fee") ?? ""))
+                  if (feeMinor === null || feeMinor < 0) {
+                    setMessage("Enter a valid delivery fee.")
+                    return
+                  }
                   approveManualFee.mutate({
                     addressId: review.id,
                     clientDecisionId: crypto.randomUUID(),
-                    feeMinor: Number(data.get("feeMinor")),
+                    feeMinor,
                     reason: String(data.get("reason") ?? ""),
                     storeId,
                   })
                 }}
               >
-                <p className="text-sm">
-                  Current basket: {review.quoteVersion.totalMinor} minor units ·{" "}
-                  {review.promiseText}
-                </p>
-                <input
-                  className={fieldClass}
-                  min="0"
-                  name="feeMinor"
-                  placeholder="Approved delivery fee in minor units"
-                  required
-                  type="number"
-                />
-                <input
-                  className={fieldClass}
-                  name="reason"
-                  placeholder="Required fee decision reason"
-                  required
-                />
-                <Button
-                  disabled={approveManualFee.isPending}
-                  size="sm"
-                  type="submit"
-                >
-                  Approve exact fee
-                </Button>
+                <FieldGroup className="min-w-0 grid gap-2">
+                  <p className="text-sm">
+                    Current basket:{" "}
+                    {formatMinorMoney(
+                      review.quoteVersion.totalMinor,
+                      review.quoteVersion.currencyCode,
+                    )}{" "}
+                    · {review.promiseText}
+                  </p>
+                  <MoneyInput
+                    currencyCode={review.quoteVersion.currencyCode}
+                    aria-label="Approved delivery fee"
+                    name="fee"
+                    placeholder="Approved delivery fee"
+                    required
+                  />
+                  <Input
+                    name="reason"
+                    placeholder="Required fee decision reason"
+                    required
+                  />
+                  <FormActions>
+                    <SubmitButton
+                      isSubmitting={approveManualFee.isPending}
+                      disabled={approveManualFee.isPending}
+                      size="sm"
+                      type="submit"
+                    >
+                      Approve exact fee
+                    </SubmitButton>
+                  </FormActions>
+                </FieldGroup>
               </form>
             ))}
           </div>
         ) : null}
       </section>
 
-      <section className="grid content-start gap-4 rounded-xl border border-border bg-card p-5">
+      <section className="grid content-start gap-4 rounded-none border border-border bg-card p-5">
         <div>
           <h2 className="font-semibold">Privacy and retention</h2>
           <p className="text-sm text-muted-foreground">
@@ -292,7 +317,6 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
           </p>
         </div>
         <form
-          className="grid gap-3 sm:grid-cols-2"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
@@ -311,53 +335,58 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             })
           }}
         >
-          {[
-            ["rawMediaDays", "Raw media", policy?.rawMediaDays ?? 30],
-            ["transcriptDays", "Transcripts", policy?.transcriptDays ?? 90],
-            ["messageDays", "Messages", policy?.messageDays ?? 90],
-            ["addressDays", "Addresses", policy?.addressDays ?? 30],
-            [
-              "auditEvidenceDays",
-              "Audit evidence",
-              policy?.auditEvidenceDays ?? 2555,
-            ],
-            ["secureTokenDays", "Secure tokens", policy?.secureTokenDays ?? 30],
-            [
-              "commercialRecordDays",
-              "Commercial records",
-              policy?.commercialRecordDays ?? 2555,
-            ],
-          ].map(([name, label, value]) => (
-            <label className="grid gap-1 text-sm" key={String(name)}>
-              <span>{label} (days)</span>
-              <input
-                className={fieldClass}
-                defaultValue={Number(value)}
-                min="1"
-                name={String(name)}
-                type="number"
+          <FieldGroup className="min-w-0 grid gap-3 sm:grid-cols-2">
+            {[
+              ["rawMediaDays", "Raw media", policy?.rawMediaDays ?? 30],
+              ["transcriptDays", "Transcripts", policy?.transcriptDays ?? 90],
+              ["messageDays", "Messages", policy?.messageDays ?? 90],
+              ["addressDays", "Addresses", policy?.addressDays ?? 30],
+              [
+                "auditEvidenceDays",
+                "Audit evidence",
+                policy?.auditEvidenceDays ?? 2555,
+              ],
+              [
+                "secureTokenDays",
+                "Secure tokens",
+                policy?.secureTokenDays ?? 30,
+              ],
+              [
+                "commercialRecordDays",
+                "Commercial records",
+                policy?.commercialRecordDays ?? 2555,
+              ],
+            ].map(([name, label, value]) => (
+              <ControlField key={name} label={<>{label} (days)</>}>
+                <Input
+                  defaultValue={Number(value)}
+                  min="1"
+                  name={String(name)}
+                  type="number"
+                />
+              </ControlField>
+            ))}
+            <CheckboxField label={<> Legal hold—pause automated deletion</>}>
+              <Checkbox
+                defaultChecked={policy?.legalHold}
+                name="legalHold"
+                value="yes"
               />
-            </label>
-          ))}
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input
-              defaultChecked={policy?.legalHold}
-              name="legalHold"
-              type="checkbox"
-              value="yes"
-            />{" "}
-            Legal hold—pause automated deletion
-          </label>
-          <Button
-            className="sm:col-span-2"
-            disabled={saveRetention.isPending}
-            type="submit"
-          >
-            Save retention policy
-          </Button>
+            </CheckboxField>
+            <FormActions>
+              <SubmitButton
+                isSubmitting={saveRetention.isPending}
+                className="sm:col-span-2"
+                disabled={saveRetention.isPending}
+                type="submit"
+              >
+                Save retention policy
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
         </form>
         <form
-          className="grid gap-3 border-t border-border pt-4"
+          className="border-t border-border pt-4"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
@@ -380,38 +409,43 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             })
           }}
         >
-          <h3 className="text-sm font-medium">Customer privacy request</h3>
-          <select className={fieldClass} name="privacyType">
-            <option value="access">Access</option>
-            <option value="export">Export</option>
-            <option value="correction">Correction</option>
-            <option value="restriction">Restriction</option>
-            <option value="erasure">Erasure</option>
-          </select>
-          <input
-            className={fieldClass}
-            name="subjectReference"
-            placeholder="Request reference, phone, or email"
-            required
-          />
-          <input
-            className={fieldClass}
-            name="correctedName"
-            placeholder="Corrected name (correction only)"
-          />
-          <input
-            className={fieldClass}
-            name="privacyReason"
-            placeholder="Structured request reason"
-            required
-          />
-          <Button
-            disabled={createPrivacy.isPending}
-            type="submit"
-            variant="outline"
-          >
-            Record privacy request
-          </Button>
+          <FieldGroup className="min-w-0 grid gap-3">
+            <h3 className="text-sm font-medium">Customer privacy request</h3>
+            <SelectControl
+              name="privacyType"
+              options={[
+                { value: "access", label: <>Access</> },
+                { value: "export", label: <>Export</> },
+                { value: "correction", label: <>Correction</> },
+                { value: "restriction", label: <>Restriction</> },
+                { value: "erasure", label: <>Erasure</> },
+              ]}
+            />
+            <Input
+              name="subjectReference"
+              placeholder="Request reference, phone, or email"
+              required
+            />
+            <Input
+              name="correctedName"
+              placeholder="Corrected name (correction only)"
+            />
+            <Input
+              name="privacyReason"
+              placeholder="Structured request reason"
+              required
+            />
+            <FormActions>
+              <SubmitButton
+                isSubmitting={createPrivacy.isPending}
+                disabled={createPrivacy.isPending}
+                type="submit"
+                variant="outline"
+              >
+                Record privacy request
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
         </form>
         {compliance.data?.privacyRequests.length ? (
           <div className="grid gap-2 border-t border-border pt-4">
@@ -427,8 +461,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
                 <div className="flex gap-2">
                   {request.status === "PENDING" ? (
                     <div className="grid gap-2">
-                      <input
-                        className={fieldClass}
+                      <Input
                         aria-label="Identity verification evidence"
                         placeholder="Verification method and evidence reference"
                         value={identityVerificationEvidence}
@@ -492,7 +525,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
           </div>
         ) : null}
         <form
-          className="grid gap-3 border-t border-border pt-4"
+          className="border-t border-border pt-4"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
@@ -513,27 +546,46 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             })
           }}
         >
-          <h3 className="text-sm font-medium">Incident controls</h3>
-          <select className={fieldClass} name="type">
-            <option value="freeze_processing">Freeze processing</option>
-            <option value="suspend_commerce">
-              Suspend Prescription Commerce
-            </option>
-            <option value="revoke_public_links">Revoke public links</option>
-            <option value="revoke_whatsapp">Suspend WhatsApp routing</option>
-            <option value="break_glass">
-              Personal emergency access (30 minutes)
-            </option>
-          </select>
-          <input
-            className={fieldClass}
-            name="reason"
-            placeholder="Required incident reason"
-            required
-          />
-          <Button disabled={incident.isPending} type="submit" variant="outline">
-            Activate control
-          </Button>
+          <FieldGroup className="min-w-0 grid gap-3">
+            <h3 className="text-sm font-medium">Incident controls</h3>
+            <SelectControl
+              name="type"
+              options={[
+                { value: "freeze_processing", label: <>Freeze processing</> },
+                {
+                  value: "suspend_commerce",
+                  label: <>Suspend Prescription Commerce</>,
+                },
+                {
+                  value: "revoke_public_links",
+                  label: <>Revoke public links</>,
+                },
+                {
+                  value: "revoke_whatsapp",
+                  label: <>Suspend WhatsApp routing</>,
+                },
+                {
+                  value: "break_glass",
+                  label: <>Personal emergency access (30 minutes)</>,
+                },
+              ]}
+            />
+            <Input
+              name="reason"
+              placeholder="Required incident reason"
+              required
+            />
+            <FormActions>
+              <SubmitButton
+                isSubmitting={incident.isPending}
+                disabled={incident.isPending}
+                type="submit"
+                variant="outline"
+              >
+                Activate control
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
         </form>
         {compliance.data?.incidents.some(
           (control) => control.status === "ACTIVE",
@@ -544,7 +596,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
               .filter((control) => control.status === "ACTIVE")
               .map((control) => (
                 <form
-                  className="grid gap-2 border border-border p-3 text-sm"
+                  className="border border-border p-3 text-sm"
                   key={control.id}
                   onSubmit={(event) => {
                     event.preventDefault()
@@ -556,23 +608,27 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
                     })
                   }}
                 >
-                  <span className="font-medium">
-                    {control.type.toLowerCase().replaceAll("_", " ")}
-                  </span>
-                  <input
-                    className={fieldClass}
-                    name="reviewReason"
-                    placeholder="Required outcome and post-use review"
-                    required
-                  />
-                  <Button
-                    disabled={resolveIncident.isPending}
-                    size="sm"
-                    type="submit"
-                    variant="outline"
-                  >
-                    Resolve
-                  </Button>
+                  <FieldGroup className="min-w-0 grid gap-2">
+                    <span className="font-medium">
+                      {control.type.toLowerCase().replaceAll("_", " ")}
+                    </span>
+                    <Input
+                      name="reviewReason"
+                      placeholder="Required outcome and post-use review"
+                      required
+                    />
+                    <FormActions>
+                      <SubmitButton
+                        isSubmitting={resolveIncident.isPending}
+                        disabled={resolveIncident.isPending}
+                        size="sm"
+                        type="submit"
+                        variant="outline"
+                      >
+                        Resolve
+                      </SubmitButton>
+                    </FormActions>
+                  </FieldGroup>
                 </form>
               ))}
           </div>

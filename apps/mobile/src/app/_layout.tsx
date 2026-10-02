@@ -197,6 +197,58 @@ const InitialLayout = () => {
           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
         >
           <Stack.Screen
+            name="customer-ledger-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="customer-ledger/[customerId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="customer-ledger-action/[accountId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-accounts-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-reports-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-periods-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-report-account/[accountId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-counts-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-count/[countId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-account/[accountId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-movement/[entryId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-expense/[billId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
             name="subscription-modal"
             options={{ headerShown: false, presentation: "modal" }}
           />

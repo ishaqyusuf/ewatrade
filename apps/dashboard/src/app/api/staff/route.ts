@@ -11,6 +11,10 @@ import {
   updateRetailOpsStaffStatus,
 } from "@ewatrade/db/queries"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
+import {
+  buildStaffInvitationLinks,
+  isQaStaffInvitation,
+} from "@ewatrade/utils/staff-invitation-links"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod/v4"
@@ -64,32 +68,6 @@ function getStaffErrorStatus(error: RetailOpsStaffError) {
   return 404
 }
 
-function getRetailOpsAppUrl() {
-  return (
-    process.env.MOBILE_APP_URL ??
-    process.env.NEXT_PUBLIC_MOBILE_APP_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "https://ewatrade.com/download"
-  )
-}
-
-function getRetailOpsStaffInviteUrl(token: string | null | undefined) {
-  const appUrl = getRetailOpsAppUrl()
-
-  if (!token) return appUrl
-
-  try {
-    const url = new URL(appUrl)
-    url.pathname = "/staff-onboarding"
-    url.searchParams.set("inviteToken", token)
-    return url.toString()
-  } catch {
-    return `${appUrl.replace(/\/$/, "")}/staff-onboarding?inviteToken=${encodeURIComponent(
-      token,
-    )}`
-  }
-}
-
 async function enqueueStaffInviteNotification(input: {
   businessName: string
   invitedByName: string
@@ -97,12 +75,14 @@ async function enqueueStaffInviteNotification(input: {
 }) {
   if (!input.invitedStaff.notification.shouldSend) return
 
+  const links = buildStaffInvitationLinks(
+    process.env,
+    input.invitedStaff.invite.acceptanceToken,
+  )
   await enqueueRetailOpsStaffInviteNotification({
-    appUrl: getRetailOpsAppUrl(),
+    appUrl: links.appUrl,
     businessName: input.businessName,
-    inviteUrl: getRetailOpsStaffInviteUrl(
-      input.invitedStaff.invite.acceptanceToken,
-    ),
+    inviteUrl: links.inviteUrl,
     invitedByName: input.invitedByName,
     inviteeEmail: input.invitedStaff.staff.email,
     inviteeName:
@@ -236,9 +216,21 @@ export async function POST(request: NextRequest) {
         invitedStaff,
       })
 
-      return NextResponse.json({
-        result: hideStaffInviteAcceptanceToken(invitedStaff),
-      })
+      return NextResponse.json(
+        {
+          result: hideStaffInviteAcceptanceToken(invitedStaff),
+          ...(invitedStaff.invite.acceptanceToken &&
+          isQaStaffInvitation(invitedStaff.staff.email, process.env)
+            ? {
+                qaInviteUrl: buildStaffInvitationLinks(
+                  process.env,
+                  invitedStaff.invite.acceptanceToken,
+                ).inviteUrl,
+              }
+            : {}),
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      )
     }
 
     const result = await updateRetailOpsStaffStatus(prisma, {

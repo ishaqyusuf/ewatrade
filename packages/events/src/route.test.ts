@@ -68,7 +68,7 @@ test("forwards only safe project-scoped events and propagates failures", async (
     expect(body.events[0]).toMatchObject({
       project: "ewatrade-web",
       route: "/members",
-      properties: {},
+      properties: { audience: "anonymous" },
     })
     expect(new Headers(init?.headers).get("x-logly-origin")).toBe(
       "https://ewatrade.com",

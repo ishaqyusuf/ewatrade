@@ -1,4 +1,6 @@
 model Tenant {
+  financeExpenseReceiptAssets                       FinanceExpenseReceiptAsset[]
+  financeBooks                                      FinanceBook[]
   storeBillingAccount                               StoreBillingAccount?
   playRefundReviewCases                             PlayRefundReviewCase[]
   storeSubscriptionPurchases                        StoreSubscriptionPurchase[]
@@ -21,6 +23,9 @@ model Tenant {
   updatedAt                                         DateTime                                             @updatedAt
   users                                             Membership[]
   stores                                            Store[]
+  catalogItemIllustrations                          CatalogItemIllustration[]
+  catalogPhotoAssets                                CatalogPhotoAsset[]
+  catalogCategories                                 CatalogCategory[]
   sites                                             Site[]
   hostnames                                         TenantHostname[]
   conversations                                     Conversation[]
@@ -167,6 +172,7 @@ model Tenant {
   catalogAvailabilityAttestations                   CatalogAvailabilityAttestation[]
   catalogPricePromotions                            CatalogPricePromotion[]
   stockBalanceSources                               StockBalanceSource[]
+  stockOperationCategoryNames                       StockOperationCategoryName[]
   stockOperations                                   StockOperation[]
   stockReservations                                 StockReservation[]
   stockCounts                                       StockCount[]

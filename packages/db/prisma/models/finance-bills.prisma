@@ -1,0 +1,103 @@
+enum FinanceBillKind {
+  EXPENSE
+  PURCHASE
+  PURCHASE_ACCRUAL
+}
+
+model FinanceBill {
+  expenseReceiptAssets FinanceExpenseReceiptAsset[]
+  costRecognition     FinancePurchaseRecognition? @relation("PurchaseRecognitionCosts")
+  recognitionEvent    FinancePurchaseRecognitionEvent? @relation("PurchaseRecognitionInvoice")
+  id                  String                      @id @default(cuid())
+  bookId              String
+  supplierId          String?
+  kind                FinanceBillKind             @default(EXPENSE)
+  payeeName           String
+  reference           String?
+  description         String
+  incurredAt          DateTime
+  dueAt               DateTime?
+  storeId             String?
+  totalMinor          BigInt
+  paidMinor           BigInt                      @default(0)
+  voidedAt            DateTime?
+  voidEffectiveAt     DateTime?
+  voidedById          String?
+  voidReason          String?
+  actorUserId         String
+  createdAt           DateTime                    @default(now())
+  book                FinanceBook                 @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  supplier            FinanceSupplierAccount?     @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  store               Store?                      @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  lines               FinanceBillLine[]
+  payments            FinanceBillPayment[]
+  supplierEntries     FinanceSupplierEntry[]      @relation("SupplierBillSources")
+  supplierAllocations FinanceSupplierAllocation[]
+
+  @@unique([bookId, id])
+  @@unique([bookId, supplierId, id])
+  @@index([bookId, incurredAt, id])
+  @@index([bookId, storeId, dueAt])
+}
+
+model FinanceBillLine {
+  recognitionLine             FinancePurchaseRecognitionLine?
+  inventoryCostReviewEvidence FinanceInventoryCostReviewEvidence[]
+  id                          String                               @id @default(cuid())
+  bookId                      String
+  billId                      String
+  accountId                   String
+  position                    Int
+  description                 String
+  amountMinor                 BigInt
+  bill                        FinanceBill                          @relation(fields: [bookId, billId], references: [bookId, id], onDelete: Restrict)
+  account                     FinanceAccount                       @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict)
+  purchaseReceipt             FinancePurchaseReceiptLine?
+
+  @@unique([bookId, id])
+  @@unique([bookId, billId, id])
+  @@unique([billId, position])
+  @@index([bookId, accountId])
+}
+
+model FinanceBillPayment {
+  id                  String                @id @default(cuid())
+  bookId              String
+  billId              String
+  accountId           String
+  amountMinor         BigInt
+  effectiveAt         DateTime
+  reference           String?
+  reversedAt          DateTime?
+  reversalEffectiveAt DateTime?
+  reversedById        String?
+  reversalReason      String?
+  actorUserId         String
+  createdAt           DateTime              @default(now())
+  bill                FinanceBill           @relation(fields: [bookId, billId], references: [bookId, id], onDelete: Restrict)
+  account             FinanceAccount        @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict)
+  supplierEntry       FinanceSupplierEntry?
+
+  @@unique([bookId, billId, id])
+  @@index([bookId, billId, effectiveAt])
+}
+
+model FinancePurchaseReceiptLine {
+  valuationEvent   FinanceInventoryValuationEvent?
+  id               String                          @id @default(cuid())
+  tenantId         String
+  bookId           String
+  billLineId       String                          @unique
+  stockOperationId String
+  stockMovementId  String                          @unique
+  createdAt        DateTime                        @default(now())
+  book             FinanceBook                     @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  billLine         FinanceBillLine                 @relation(fields: [bookId, billLineId], references: [bookId, id], onDelete: Restrict)
+  stockOperation   StockOperation                  @relation(fields: [tenantId, stockOperationId], references: [tenantId, id], onDelete: Restrict)
+  stockMovement    StockMovement                   @relation(fields: [stockOperationId, stockMovementId], references: [operationId, id], onDelete: Restrict)
+
+  @@unique([bookId, billLineId])
+  @@unique([bookId, id, stockOperationId, stockMovementId])
+  @@unique([stockOperationId, stockMovementId])
+  @@index([bookId, stockOperationId])
+}

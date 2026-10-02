@@ -1,4 +1,5 @@
 export const QA_LIVE_EFFECT_OPERATIONS = [
+  "ai_analysis",
   "destructive",
   "domain_hosting",
   "domain_registration",

@@ -119,12 +119,17 @@ export function ActionButton({
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
             numberOfLines={1}
             className={cn(
-              "text-[14px] font-bold text-[color:var(--action-foreground)] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+              "text-[14px] font-bold [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+              foregroundColorOverride || disabledForegroundColor
+                ? "text-[color:var(--action-foreground)]"
+                : foregroundClassName,
               largeTextLayout ? "[-rn-line-height:28]" : "[-rn-line-height:20]",
               labelClassName,
             )}
           >
-            {isLoading && loadingLabel ? loadingLabel : children}
+            <NativeText style={{ color: foregroundColor }}>
+              {isLoading && loadingLabel ? loadingLabel : children}
+            </NativeText>
           </NativeText>
           {!isLoading && trailingIcon ? (
             <Icon

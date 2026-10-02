@@ -1,11 +1,20 @@
 "use client"
+import {
+  ControlField,
+  FieldGroup,
+  FormActions,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { createOrderFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Button } from "@ewatrade/ui"
+
 import { getSaleOfferingDisabledReasons } from "@ewatrade/utils"
 import {
   useMutation,
@@ -14,12 +23,13 @@ import {
 } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
+import {
+  OrderCustomerPicker,
+  type OrderCustomerSelection,
+} from "./order-customer-picker"
 
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 type StoreSummary = { currencyCode: string; id: string; name: string }
-
-const inputClass =
-  "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-NG", {
@@ -89,11 +99,14 @@ export function OrderForm({ store }: { store: StoreSummary }) {
   )
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [customerName, setCustomerName] = useState("")
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<OrderCustomerSelection | null>(null)
   const [customerPhone, setCustomerPhone] = useState("")
   const [customerEmail, setCustomerEmail] = useState("")
   const [showCustomer, setShowCustomer] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const quickFillSnapshot = useRef<{
+    selectedCustomer: OrderCustomerSelection | null
     customerEmail: string
     customerName: string
     customerPhone: string
@@ -114,10 +127,16 @@ export function OrderForm({ store }: { store: StoreSummary }) {
             queryKey: trpc.orders.list.queryKey(),
           }),
           queryClient.invalidateQueries({
+            queryKey: trpc.orders.listPage.queryKey(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: trpc.orders.reportSummary.queryKey(),
+          }),
+          queryClient.invalidateQueries({
             queryKey: trpc.tenant.featureAvailability.queryKey(),
           }),
         ])
-        setParams(null)
+        setParams({ orderSheet: null })
         router.refresh()
       },
     }),
@@ -165,6 +184,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
     }
     createMutation.mutate({
       clientOrderId: crypto.randomUUID(),
+      customerId: selectedCustomer?.id,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
@@ -175,14 +195,9 @@ export function OrderForm({ store }: { store: StoreSummary }) {
   }
 
   return (
-    <div className="grid gap-5">
+    <FieldGroup className="grid gap-5">
       {error ? (
-        <p
-          role="alert"
-          className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
       <QaDashboardQuickFill
         canUndo={canUndoQuickFill}
@@ -202,6 +217,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
             return
           }
           quickFillSnapshot.current = {
+            selectedCustomer,
             customerEmail,
             customerName,
             customerPhone,
@@ -209,6 +225,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
             showCustomer,
           }
           const fixture = createOrderFixture(context, sequence)
+          setSelectedCustomer(null)
           setQuantities({ [offering.id]: "1" })
           setCustomerEmail(fixture.customerEmail)
           setCustomerName(fixture.customerName)
@@ -219,6 +236,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
         }}
         onUndo={() => {
           if (!quickFillSnapshot.current) return
+          setSelectedCustomer(quickFillSnapshot.current.selectedCustomer)
           setCustomerEmail(quickFillSnapshot.current.customerEmail)
           setCustomerName(quickFillSnapshot.current.customerName)
           setCustomerPhone(quickFillSnapshot.current.customerPhone)
@@ -230,28 +248,29 @@ export function OrderForm({ store }: { store: StoreSummary }) {
       />
       <div className="grid gap-2">
         {offerings.map((offering) => (
-          <label
-            className={`grid grid-cols-[1fr_90px] items-center gap-3 border-b border-border py-3 ${offering.disabledReason ? "opacity-60" : ""}`}
+          <ControlField
+            className="grid grid-cols-[minmax(0,1fr)_90px] items-center gap-3 border-b border-border py-3 [&>[data-slot=field-label]]:flex-col [&>[data-slot=field-label]]:items-start"
             key={offering.id}
-          >
-            <span>
-              <span className="block text-sm font-medium">
-                {offering.displayName}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {offering.fixedPriceMinor === null
-                  ? "Price not set"
-                  : money(offering.fixedPriceMinor, store.currencyCode)}
-              </span>
-              {offering.disabledReason ? (
-                <span className="block text-xs font-medium text-destructive">
-                  {offering.disabledReason}
+            label={
+              <>
+                <span className="block text-sm font-medium">
+                  {offering.displayName}
                 </span>
-              ) : null}
-            </span>
-            <input
+                <span className="text-xs text-muted-foreground">
+                  {offering.fixedPriceMinor === null
+                    ? "Price not set"
+                    : money(offering.fixedPriceMinor, store.currencyCode)}
+                </span>
+                {offering.disabledReason ? (
+                  <span className="block text-xs font-medium text-destructive">
+                    {offering.disabledReason}
+                  </span>
+                ) : null}
+              </>
+            }
+          >
+            <Input
               aria-label={`${offering.displayName} quantity`}
-              className={inputClass}
               disabled={Boolean(offering.disabledReason)}
               inputMode="decimal"
               placeholder="Qty"
@@ -263,7 +282,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
                 }))
               }
             />
-          </label>
+          </ControlField>
         ))}
       </div>
       <button
@@ -275,37 +294,49 @@ export function OrderForm({ store }: { store: StoreSummary }) {
       </button>
       {showCustomer ? (
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Customer name</span>
-            <input
-              className={inputClass}
+          <div className="sm:col-span-3">
+            <OrderCustomerPicker
+              selected={selectedCustomer}
+              onSelect={(customer) => {
+                setSelectedCustomer(customer)
+                setCustomerName(customer?.name ?? "")
+                setCustomerEmail(customer?.email ?? "")
+                setCustomerPhone(customer?.phone ?? "")
+              }}
+            />
+          </div>
+          <ControlField label={<>Customer name</>}>
+            <Input
               value={customerName}
               onChange={(event) => setCustomerName(event.target.value)}
             />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Email</span>
-            <input
-              className={inputClass}
+          </ControlField>
+          <ControlField label={<>Email</>}>
+            <Input
               onChange={(event) => setCustomerEmail(event.target.value)}
               type="email"
               value={customerEmail}
             />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Phone</span>
-            <input
-              className={inputClass}
+          </ControlField>
+          <ControlField label={<>Phone</>}>
+            <Input
               inputMode="tel"
               value={customerPhone}
               onChange={(event) => setCustomerPhone(event.target.value)}
             />
-          </label>
+          </ControlField>
         </div>
       ) : null}
-      <Button disabled={createMutation.isPending} onClick={submit}>
-        {createMutation.isPending ? "Confirming…" : "Confirm order"}
-      </Button>
-    </div>
+      <FormActions>
+        <SubmitButton
+          type="button"
+          isSubmitting={createMutation.isPending}
+          disabled={createMutation.isPending}
+          onClick={submit}
+        >
+          {createMutation.isPending ? "Confirming…" : "Confirm order"}
+        </SubmitButton>
+      </FormActions>
+    </FieldGroup>
   )
 }

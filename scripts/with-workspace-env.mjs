@@ -3,6 +3,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import {
   applyDatabaseProfile,
+  databaseProfileForEnv,
   loadProductionDatabaseUrl,
 } from "./database-profile.mjs"
 import { loadRootEnvironment } from "./environment-profile.mjs"
@@ -87,10 +88,29 @@ const env = applyDatabaseProfile(
 )
 
 env.DATABASE_PROFILE_VERIFIED = "1"
+env.EWATRADE_ENV_MODE = databaseProfileForEnv(env)
 
 assertProdDatabaseUrl(env)
 
-const child = spawn(command, args, {
+// Use the same Portless conflict/retry launcher as Halaalvest and GND,
+// after enforcing EwaTrade's stricter selected-profile database contract.
+const launchCommand = command === "portless" ? "bun" : command
+const launchArgs =
+  command === "portless"
+    ? [
+        "--env-file=/dev/null",
+        path.resolve(repoRoot, "../local-infra-kit/bin/with-env.ts"),
+        "--profile",
+        "ewatrade",
+        "--mode",
+        env.EWATRADE_ENV_MODE,
+        "--",
+        command,
+        ...args,
+      ]
+    : args
+
+const child = spawn(launchCommand, launchArgs, {
   cwd: workspaceDir,
   env,
   stdio: "inherit",

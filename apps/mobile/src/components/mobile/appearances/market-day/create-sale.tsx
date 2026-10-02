@@ -1,19 +1,19 @@
 import type {
-  SaleStageHeaderProps,
-  SelectedOrderLineProps,
   CustomerActionRowProps,
   CustomerSuggestionRowProps,
+  SaleStageHeaderProps,
+  SelectedOrderLineProps,
 } from "@/components/mobile/create-sale/create-sale-presentation"
+import type { SaleTotalProps } from "@/components/mobile/create-sale/create-sale-presentation"
 import { FormField } from "@/components/mobile/form-field"
 import { saleLineTotalMinor } from "@/components/mobile/sale-checkout-model"
+import type { SaleSegmentOptionProps } from "@/components/mobile/sale-flow"
 import {
   SaleItemAvatar,
   saleOfferingTitle,
 } from "@/components/mobile/sale-item-picker"
 import { getSaleOfferingStockLabel } from "@/components/mobile/sale-item-picker-model"
-import type { SaleTotalProps } from "@/components/mobile/create-sale/create-sale-presentation"
 import { Icon } from "@/components/ui/icon"
-import type { SaleSegmentOptionProps } from "@/components/mobile/sale-flow"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -212,8 +212,13 @@ export function MarketDayCustomerSuggestionRow({
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-market-ink">{customer.name}</Text>
         <Text className="text-xs text-market-muted-ink">
-          {[customer.phone, customer.email].filter(Boolean).join(" · ") ||
-            "Recent customer"}
+          {[
+            customer.directoryId ? "Saved customer" : "Previous sale contact",
+            customer.phone,
+            customer.email,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </Text>
       </View>
       <Icon className="size-sm text-market-muted-ink" name="ChevronRight" />

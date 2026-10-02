@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto"
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 
 import {
   EXACT_CANONICAL_MAX_SCALE,
   EXACT_FACTOR_MAX_SCALE,
   EXACT_QUANTITY_MAX_SCALE,
+  ExactDecimalError,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
 import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
@@ -21,6 +23,21 @@ import {
   UnitConfigurationStatus,
   WorkAuthorizationPolicy,
 } from "../../generated/prisma/enums"
+import { resolveCatalogCategorySelection } from "./catalog-categories"
+import { lockCatalogCommandInTransaction } from "./catalog-command-locks"
+import {
+  assertCatalogPhotoCreationReplay,
+  attachCatalogPhotoAssets,
+  authorizeCatalogPhotoScope,
+} from "./catalog-photos"
+import { lockCommerceFinancialContext } from "./customer-ledger/commerce-locks"
+import { FinanceError } from "./finance/rules"
+import { recordInventoryOpeningValuationInTransaction } from "./finance/valuation-openings"
+import {
+  type ListSortKey,
+  buildScopedListCursorWhere,
+  buildScopedListPageWhere,
+} from "./list-sort"
 import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { StoreConversationError } from "./store-conversations-core"
@@ -75,12 +92,16 @@ type CatalogOptionGroupInput = {
 }
 
 export type CreateCatalogProductInput = {
+  categoryId?: string
+  subcategoryId?: string
   actorUserId: string
   category?: string
   clientOperationId: string
   description?: string
   imageLinks?: string[]
   imageUrl?: string
+  illustrationId?: string
+  photoAssetIds?: string[]
   kind: "product"
   name: string
   optionGroups?: CatalogOptionGroupInput[]
@@ -112,12 +133,16 @@ export type CreateCatalogProductInput = {
 }
 
 export type CreateCatalogServiceInput = {
+  categoryId?: string
+  subcategoryId?: string
   actorUserId: string
   category?: string
   clientOperationId: string
   description?: string
   imageLinks?: string[]
   imageUrl?: string
+  illustrationId?: string
+  photoAssetIds?: string[]
   kind: "service"
   name: string
   optionGroups?: CatalogOptionGroupInput[]
@@ -183,6 +208,10 @@ export type ListCatalogItemsPageInput = ListCatalogItemsInput & {
   cursor?: string
   limit?: number
   query?: string
+  sort?: {
+    direction: "asc" | "desc"
+    field: "name" | "kind" | "status" | "updatedAt"
+  }
 }
 
 export type GetCatalogItemInput = {
@@ -191,6 +220,7 @@ export type GetCatalogItemInput = {
 }
 
 type CatalogErrorCode =
+  | "CATALOG_TERMS_REQUIRED"
   | "CATALOG_ITEM_NOT_FOUND"
   | "CATALOG_OFFERING_NOT_FOUND"
   | "CATALOG_VARIANT_NOT_FOUND"
@@ -257,6 +287,15 @@ const catalogItemGraph = {
     },
   },
   service: true,
+  illustrations: {
+    select: { storeId: true, illustrationId: true },
+    orderBy: { storeId: "asc" },
+  },
+  photoAssets: {
+    where: { state: { in: ["PENDING_REVIEW", "APPROVED"] } },
+    select: { id: true, storeId: true, state: true, sortOrder: true },
+    orderBy: { sortOrder: "asc" },
+  },
   variants: {
     include: {
       offerings: {
@@ -307,7 +346,7 @@ export async function assertCatalogPublicationSafety(
   } catch (error) {
     if (error instanceof StoreConversationError) {
       throw new CatalogError(
-        "INVALID_CATALOG_ITEM",
+        "CATALOG_TERMS_REQUIRED",
         "Review and accept the current EwaTrade Terms before publishing Catalog content.",
       )
     }
@@ -740,6 +779,16 @@ function assertProductUnitConfiguration(input: CreateCatalogProductInput) {
 }
 
 function assertCreateCatalogItem(input: CreateCatalogItemInput) {
+  if (
+    input.illustrationId !== undefined &&
+    (!findCatalogIllustration(input.illustrationId) ||
+      input.photoAssetIds?.length)
+  ) {
+    throw new CatalogError(
+      "INVALID_CATALOG_ITEM",
+      "Choose a known illustration or photos, exclusively.",
+    )
+  }
   if (!input.name.trim()) {
     throw new CatalogError(
       "INVALID_CATALOG_ITEM",
@@ -758,11 +807,36 @@ function assertCreateCatalogItem(input: CreateCatalogItemInput) {
 
   if (input.kind === "product") {
     assertProductUnitConfiguration(input)
-    if (input.openingStockQuantity !== undefined) {
+    if (input.openingStockQuantity !== undefined)
       parseExactDecimal(input.openingStockQuantity, {
         maxScale: EXACT_QUANTITY_MAX_SCALE,
       })
-    }
+  }
+}
+
+function assertFreshOpeningStockPrecision(input: CreateCatalogItemInput) {
+  if (input.kind === "product") {
+    const canonical = input.unitConfiguration.units.find(
+      (unit) => unit.stockBehavior === "canonical_shared",
+    )
+    if (!canonical)
+      throw new CatalogError(
+        "INVALID_UNIT_CONFIGURATION",
+        "A Canonical Inventory Unit is required for opening stock.",
+      )
+    for (const quantity of [
+      input.openingStockQuantity,
+      ...input.variants.map((variant) => variant.openingStockQuantity),
+    ])
+      if (quantity !== undefined) {
+        try {
+          parseExactDecimal(quantity, { maxScale: canonical.transactionScale })
+        } catch (error) {
+          if (error instanceof ExactDecimalError)
+            throw new CatalogError("INVALID_STOCK_OPERATION", error.message)
+          throw error
+        }
+      }
   }
 }
 
@@ -792,6 +866,15 @@ async function createUniqueCatalogSlug(
 function serializeCatalogItem(item: CatalogItemGraph) {
   return {
     category: item.category,
+    categoryId: item.categoryId,
+    subcategoryId: item.subcategoryId,
+    illustrations: item.illustrations ?? [],
+    photos: (item.photoAssets ?? []).map((photo) => ({
+      assetId: photo.id,
+      storeId: photo.storeId,
+      state: photo.state,
+      sortOrder: photo.sortOrder,
+    })),
     description: item.description,
     id: item.id,
     imageLinks: item.imageLinks,
@@ -911,26 +994,40 @@ export async function createCatalogItem(
   const payloadHash = catalogPayloadHash(input)
 
   return db.$transaction(async (tx) => {
-    const previousCommand = await tx.catalogCommandReceipt.findUnique({
-      where: {
-        tenantId_clientOperationId: {
-          clientOperationId: input.clientOperationId,
-          tenantId: input.tenantId,
+    if (input.illustrationId !== undefined)
+      await authorizeCatalogPhotoScope(tx, input)
+    const readPrevious = () =>
+      tx.catalogCommandReceipt.findUnique({
+        where: {
+          tenantId_clientOperationId: {
+            clientOperationId: input.clientOperationId,
+            tenantId: input.tenantId,
+          },
         },
-      },
-    })
+      })
 
-    if (previousCommand) {
-      if (previousCommand.payloadHash !== payloadHash) {
+    const replay = async (
+      previousCommand: NonNullable<Awaited<ReturnType<typeof readPrevious>>>,
+    ) => {
+      if (
+        previousCommand.payloadHash !== payloadHash ||
+        previousCommand.commandType !== "CREATE_CATALOG_ITEM" ||
+        previousCommand.storeId !== input.storeId
+      ) {
         throw new CatalogError(
           "IDEMPOTENCY_MISMATCH",
           "This client operation identity was already used with different input.",
         )
       }
 
+      if (input.illustrationId !== undefined) {
+        await tx.$queryRaw`SELECT "id" FROM "CatalogItem"
+          WHERE "id" = ${previousCommand.catalogItemId} AND "tenantId" = ${input.tenantId}
+          FOR SHARE`
+      }
       const previousItem = await tx.catalogItem.findUnique({
         include: catalogItemGraph,
-        where: { id: previousCommand.catalogItemId },
+        where: { id: previousCommand.catalogItemId, tenantId: input.tenantId },
       })
 
       if (!previousItem) {
@@ -940,8 +1037,36 @@ export async function createCatalogItem(
         )
       }
 
+      if (input.illustrationId !== undefined) {
+        await authorizeCatalogPhotoScope(tx, input)
+        if (
+          !previousItem.illustrations.some(
+            (entry) =>
+              entry.storeId === input.storeId &&
+              entry.illustrationId === input.illustrationId,
+          )
+        ) {
+          throw new CatalogError(
+            "IDEMPOTENCY_MISMATCH",
+            "The previous item no longer owns this Store illustration.",
+          )
+        }
+      }
+      if (input.photoAssetIds?.length) {
+        await assertCatalogPhotoCreationReplay(tx, {
+          actorUserId: input.actorUserId,
+          tenantId: input.tenantId,
+          storeId: input.storeId,
+          assetIds: input.photoAssetIds,
+          catalogItemId: previousItem.id,
+        })
+      }
+
       return serializeCatalogItem(previousItem)
     }
+
+    const previousCommand = await readPrevious()
+    if (previousCommand) return replay(previousCommand)
 
     await assertCatalogPublicationSafety(tx, {
       actorUserId: input.actorUserId,
@@ -992,6 +1117,17 @@ export async function createCatalogItem(
       )
     }
 
+    const financialContext = await lockCommerceFinancialContext(tx, {
+      tenantId: input.tenantId,
+      currencyCode: store.currencyCode,
+    })
+    await lockCatalogCommandInTransaction(tx, input)
+    const concurrentPrevious = await readPrevious()
+    if (concurrentPrevious) return replay(concurrentPrevious)
+    assertFreshOpeningStockPrecision(input)
+    const openingEffectiveAt = new Date()
+    let hasOpeningStock = false
+
     const requestedAvailabilityStoreIds = Array.from(
       new Set(
         input.variants.flatMap((variant) =>
@@ -1019,9 +1155,19 @@ export async function createCatalogItem(
     }
 
     const slug = await createUniqueCatalogSlug(tx, input.tenantId, input.name)
+    const selectedCategory = await resolveCatalogCategorySelection(tx, input)
+    if (
+      selectedCategory.category &&
+      selectedCategory.category !== input.category?.trim()
+    )
+      await assertCatalogPublicationSafety(tx, {
+        actorUserId: input.actorUserId,
+        mediaUrls: [],
+        texts: [selectedCategory.category],
+      })
     const item = await tx.catalogItem.create({
       data: {
-        category: input.category?.trim() || null,
+        ...selectedCategory,
         description: input.description?.trim() || null,
         imageLinks: input.imageLinks ?? [],
         imageUrl: input.imageUrl?.trim() || null,
@@ -1311,6 +1457,7 @@ export async function createCatalogItem(
             variantId: openingStock.variantId,
           },
         })
+        hasOpeningStock = true
         const operation = await tx.stockOperation.create({
           data: {
             actorUserId: input.actorUserId,
@@ -1321,6 +1468,7 @@ export async function createCatalogItem(
             storeId: store.id,
             tenantId: input.tenantId,
             type: StockOperationType.OPENING_STOCK,
+            effectiveAt: openingEffectiveAt,
           },
         })
 
@@ -1341,7 +1489,27 @@ export async function createCatalogItem(
       }
     }
 
-    await tx.catalogCommandReceipt.create({
+    if (input.photoAssetIds?.length) {
+      await attachCatalogPhotoAssets(tx, {
+        actorUserId: input.actorUserId,
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+        assetIds: input.photoAssetIds,
+        catalogItemId: item.id,
+      })
+    }
+
+    if (input.illustrationId !== undefined) {
+      await tx.catalogItemIllustration.create({
+        data: {
+          tenantId: input.tenantId,
+          storeId: input.storeId,
+          catalogItemId: item.id,
+          illustrationId: input.illustrationId,
+        },
+      })
+    }
+    const receipt = await tx.catalogCommandReceipt.create({
       data: {
         catalogItemId: item.id,
         clientOperationId: input.clientOperationId,
@@ -1351,6 +1519,20 @@ export async function createCatalogItem(
         tenantId: input.tenantId,
       },
     })
+
+    if (hasOpeningStock && financialContext) {
+      try {
+        await recordInventoryOpeningValuationInTransaction(tx, {
+          tenantId: input.tenantId,
+          receiptId: receipt.id,
+          expectedBookId: financialContext.bookId,
+        })
+      } catch (error) {
+        if (error instanceof FinanceError)
+          throw new CatalogError("INVALID_STOCK_OPERATION", error.message)
+        throw error
+      }
+    }
 
     const created = await tx.catalogItem.findUnique({
       include: catalogItemGraph,
@@ -1492,6 +1674,7 @@ export async function listCatalogItemsPage(
         ...baseWhere,
         OR: [
           { name: { contains: normalizedQuery, mode: "insensitive" } },
+          { slug: { contains: normalizedQuery, mode: "insensitive" } },
           { description: { contains: normalizedQuery, mode: "insensitive" } },
           { category: { contains: normalizedQuery, mode: "insensitive" } },
           ...(normalizedKind === "product"
@@ -1552,14 +1735,70 @@ export async function listCatalogItemsPage(
         ],
       }
     : baseWhere
+  const sortFields: Array<{
+    direction: "asc" | "desc"
+    field: "name" | "kind" | "status" | "updatedAt"
+    queryField: "name" | "kind" | "status" | "updatedAt"
+  }> = input.sort
+    ? [
+        {
+          field: input.sort.field,
+          direction: input.sort.direction,
+          queryField: input.sort.field,
+        },
+      ]
+    : [{ field: "updatedAt", direction: "desc", queryField: "updatedAt" }]
+  const cursor = input.cursor
+    ? await db.catalogItem.findFirst({
+        where: buildScopedListCursorWhere(
+          where,
+          input.cursor,
+        ) as Prisma.CatalogItemWhereInput,
+      })
+    : null
+  if (input.cursor && !cursor) {
+    throw new CatalogError(
+      "INVALID_CATALOG_ITEM",
+      "The catalog list changed. Refresh to continue.",
+    )
+  }
+  const orderBy = [
+    ...sortFields.map(({ queryField, direction }) => ({
+      [queryField]: direction,
+    })),
+    { id: input.sort ? "asc" : "desc" },
+  ] as Prisma.CatalogItemOrderByWithRelationInput[]
+  const continuationKeys: ListSortKey[] = cursor
+    ? [
+        ...sortFields.map(({ field, direction }) => ({
+          field,
+          direction,
+          value: cursor[field],
+          enumValues:
+            field === "kind"
+              ? Object.values(CatalogItemKind)
+              : field === "status"
+                ? Object.values(CatalogRecordStatus)
+                : undefined,
+        })),
+        {
+          field: "id",
+          direction: input.sort ? "asc" : "desc",
+          value: cursor.id,
+        },
+      ]
+    : []
   const [records, totalCount] = await Promise.all([
     db.catalogItem.findMany({
-      cursor: input.cursor ? { id: input.cursor } : undefined,
       include: catalogItemGraph,
-      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-      skip: input.cursor ? 1 : 0,
+      orderBy,
       take: limit + 1,
-      where,
+      where: cursor
+        ? (buildScopedListPageWhere(
+            where,
+            continuationKeys,
+          ) as Prisma.CatalogItemWhereInput)
+        : where,
     }),
     db.catalogItem.count({ where: baseWhere }),
   ])

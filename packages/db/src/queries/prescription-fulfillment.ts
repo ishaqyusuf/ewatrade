@@ -27,10 +27,12 @@ import {
   PrescriptionPickupEventType,
   PrescriptionPickupStatus,
 } from "../../generated/prisma/enums"
+import { CatalogError } from "./catalog"
 import {
   resolveCommerceQuoteAccess,
   resolveCommerceQuotePayableState,
 } from "./commerce-quotes"
+import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import { assertAnyPrescriptionStoreRole } from "./prescription-settings"
 import {
   ServiceCommerceFulfillmentError,
@@ -54,6 +56,51 @@ export class PrescriptionFulfillmentError extends Error {
     message: string,
   ) {
     super(message)
+  }
+}
+
+async function lockPrescriptionFinancialOrder(
+  tx: Prisma.TransactionClient,
+  input: { orderId: string; storeId: string; tenantId: string },
+) {
+  let locked: Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  try {
+    locked = await lockCommerceFinancialOrder(tx, input)
+  } catch (error) {
+    if (error instanceof CatalogError && error.code === "REVISION_CONFLICT") {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_CONFLICT",
+        "The Order's financial ownership changed. Reload fulfilment before retrying.",
+      )
+    }
+    throw error
+  }
+  if (
+    !locked ||
+    locked.order.storeId !== input.storeId ||
+    locked.order.tenantId !== input.tenantId
+  ) {
+    throw new PrescriptionFulfillmentError(
+      "FULFILLMENT_NOT_FOUND",
+      "The Commerce Order was not found for this Store.",
+    )
+  }
+  return locked.order
+}
+
+function assertPrescriptionSourceOrderLinkage(
+  source: { orderId: string; storeId: string; tenantId: string },
+  input: { orderId: string; storeId: string; tenantId: string },
+) {
+  if (
+    source.orderId !== input.orderId ||
+    source.storeId !== input.storeId ||
+    source.tenantId !== input.tenantId
+  ) {
+    throw new PrescriptionFulfillmentError(
+      "FULFILLMENT_CONFLICT",
+      "Fulfilment is now linked to a different Commerce Order. Reload before retrying.",
+    )
   }
 }
 
@@ -821,7 +868,6 @@ export async function markPrescriptionPickupReady(
       userId: input.actorUserId,
     })
     const identity = await tx.prescriptionPickupFulfillment.findFirst({
-      select: { id: true },
       where: {
         id: input.fulfillmentId,
         storeId: input.storeId,
@@ -834,6 +880,11 @@ export async function markPrescriptionPickupReady(
         "A paid pickup order was not found.",
       )
     }
+    await lockPrescriptionFinancialOrder(tx, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.$queryRaw`
       SELECT "id"
       FROM "PrescriptionPickupFulfillment"
@@ -850,10 +901,18 @@ export async function markPrescriptionPickupReady(
         tenantId: input.tenantId,
       },
     })
-    if (
-      !fulfillment ||
-      fulfillment.order.paymentStatus !== PaymentStatus.PAID
-    ) {
+    if (!fulfillment) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "A paid pickup order was not found.",
+      )
+    }
+    assertPrescriptionSourceOrderLinkage(fulfillment, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
+    if (fulfillment.order.paymentStatus !== PaymentStatus.PAID) {
       throw new PrescriptionFulfillmentError(
         "FULFILLMENT_NOT_FOUND",
         "A paid pickup order was not found.",
@@ -1014,7 +1073,6 @@ export async function handoffPrescriptionPickup(
       userId: input.actorUserId,
     })
     const identity = await tx.prescriptionPickupFulfillment.findFirst({
-      select: { id: true },
       where: {
         id: input.fulfillmentId,
         storeId: input.storeId,
@@ -1027,6 +1085,11 @@ export async function handoffPrescriptionPickup(
         "Pickup was not found.",
       )
     }
+    const lockedOrder = await lockPrescriptionFinancialOrder(tx, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.$queryRaw`
       SELECT "id"
       FROM "PrescriptionPickupFulfillment"
@@ -1048,6 +1111,11 @@ export async function handoffPrescriptionPickup(
         "Pickup was not found.",
       )
     }
+    assertPrescriptionSourceOrderLinkage(fulfillment, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await assertPrescriptionFulfillmentOperationInTransaction(tx, {
       actorUserId: input.actorUserId,
       eligible: true,
@@ -1141,7 +1209,10 @@ export async function handoffPrescriptionPickup(
       },
     })
     await tx.commercialOrder.update({
-      data: { completedAt: handedOffAt, status: OrderStatus.COMPLETED },
+      data: {
+        completedAt: lockedOrder.completedAt ?? handedOffAt,
+        status: OrderStatus.COMPLETED,
+      },
       where: { id: fulfillment.orderId },
     })
     await tx.prescriptionUsageEvent.upsert({
@@ -1210,7 +1281,7 @@ export async function markPrescriptionDeliveryReady(
       userId: input.actorUserId,
     })
     const identity = await tx.commercialOrder.findFirst({
-      select: { id: true },
+      select: { id: true, storeId: true, tenantId: true },
       where: {
         id: input.orderId,
         storeId: input.storeId,
@@ -1223,14 +1294,11 @@ export async function markPrescriptionDeliveryReady(
         "A paid, delivery-eligible order was not found.",
       )
     }
-    await tx.$queryRaw`
-      SELECT "id"
-      FROM "CommercialOrder"
-      WHERE "id" = ${identity.id}
-        AND "tenantId" = ${input.tenantId}
-        AND "storeId" = ${input.storeId}
-      FOR UPDATE
-    `
+    await lockPrescriptionFinancialOrder(tx, {
+      orderId: identity.id,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     const order = await tx.commercialOrder.findFirst({
       include: {
         prescriptionDeliveryAddress: true,
@@ -1246,6 +1314,8 @@ export async function markPrescriptionDeliveryReady(
     })
     if (
       !order?.prescriptionDeliveryAddress ||
+      order.storeId !== input.storeId ||
+      order.tenantId !== input.tenantId ||
       order.prescriptionDeliveryAddress.eligibilityStatus !==
         DeliveryEligibilityStatus.ELIGIBLE
     ) {
@@ -1390,7 +1460,6 @@ export async function recordPrescriptionPickupException(
       userId: input.actorUserId,
     })
     const identity = await tx.prescriptionPickupFulfillment.findFirst({
-      select: { id: true },
       where: {
         id: input.fulfillmentId,
         storeId: input.storeId,
@@ -1403,6 +1472,11 @@ export async function recordPrescriptionPickupException(
         "Pickup was not found.",
       )
     }
+    await lockPrescriptionFinancialOrder(tx, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.$queryRaw`
       SELECT "id"
       FROM "PrescriptionPickupFulfillment"
@@ -1424,6 +1498,11 @@ export async function recordPrescriptionPickupException(
         "Pickup was not found.",
       )
     }
+    assertPrescriptionSourceOrderLinkage(fulfillment, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await assertPrescriptionFulfillmentOperationInTransaction(tx, {
       actorUserId: input.actorUserId,
       eligible: true,
@@ -1533,7 +1612,6 @@ export async function createPrescriptionDeliveryAssignment(
     })
     const assignmentIdentity =
       await tx.prescriptionDeliveryAssignment.findFirst({
-        select: { id: true },
         where: {
           orderId: input.orderId,
           storeId: input.storeId,
@@ -1546,6 +1624,11 @@ export async function createPrescriptionDeliveryAssignment(
         "A prepared delivery assignment is required.",
       )
     }
+    await lockPrescriptionFinancialOrder(tx, {
+      orderId: assignmentIdentity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.$queryRaw`
       SELECT "id"
       FROM "PrescriptionDeliveryAssignment"
@@ -1554,13 +1637,31 @@ export async function createPrescriptionDeliveryAssignment(
         AND "storeId" = ${input.storeId}
       FOR UPDATE
     `
+    const assignment = await tx.prescriptionDeliveryAssignment.findFirst({
+      where: {
+        id: assignmentIdentity.id,
+        storeId: input.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    if (!assignment) {
+      throw new PrescriptionFulfillmentError(
+        "FULFILLMENT_NOT_FOUND",
+        "A prepared delivery assignment is required.",
+      )
+    }
+    assertPrescriptionSourceOrderLinkage(assignment, {
+      orderId: assignmentIdentity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     const order = await tx.commercialOrder.findFirst({
       include: {
         prescriptionDeliveryAddress: true,
         prescriptionDeliveryAssignment: true,
       },
       where: {
-        id: input.orderId,
+        id: assignment.orderId,
         paymentStatus: PaymentStatus.PAID,
         status: OrderStatus.FULFILLING,
         storeId: input.storeId,
@@ -1569,6 +1670,8 @@ export async function createPrescriptionDeliveryAssignment(
     })
     if (
       !order?.prescriptionDeliveryAddress?.packedAt ||
+      order.storeId !== input.storeId ||
+      order.tenantId !== input.tenantId ||
       !order.prescriptionDeliveryAssignment ||
       (order.prescriptionDeliveryAssignment.status !==
         PrescriptionDeliveryStatus.ASSIGNED &&
@@ -1696,7 +1799,6 @@ export async function transitionPrescriptionDelivery(
       userId: input.actorUserId,
     })
     const identity = await tx.prescriptionDeliveryAssignment.findFirst({
-      select: { id: true },
       where: {
         id: input.assignmentId,
         storeId: input.storeId,
@@ -1709,6 +1811,11 @@ export async function transitionPrescriptionDelivery(
         "Delivery was not found.",
       )
     }
+    const lockedOrder = await lockPrescriptionFinancialOrder(tx, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await tx.$queryRaw`
       SELECT "id"
       FROM "PrescriptionDeliveryAssignment"
@@ -1730,6 +1837,11 @@ export async function transitionPrescriptionDelivery(
         "Delivery was not found.",
       )
     }
+    assertPrescriptionSourceOrderLinkage(assignment, {
+      orderId: identity.orderId,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    })
     await assertPrescriptionFulfillmentOperationInTransaction(tx, {
       actorUserId: input.actorUserId,
       eligible: true,
@@ -1803,7 +1915,7 @@ export async function transitionPrescriptionDelivery(
       data: {
         completedAt:
           mapped === PrescriptionDeliveryStatus.DELIVERED
-            ? transitionAt
+            ? (lockedOrder.completedAt ?? transitionAt)
             : undefined,
         status:
           mapped === PrescriptionDeliveryStatus.DELIVERED

@@ -119,7 +119,6 @@ export function inspectApiPreviewReadiness(root = repoRoot) {
     issues.push("PREVIEW_ALLOWED_ORIGINS_INVALID")
 
   for (const key of [
-    "QA_ACCELERATOR_ENABLED",
     "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
     "ACCOUNT_PRIVACY_PROCESSING_ENABLED",
     "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED",
@@ -135,6 +134,39 @@ export function inspectApiPreviewReadiness(root = repoRoot) {
     "PRESCRIPTION_COMMERCE_LAUNCH_APPROVED",
   ]) {
     if (preview[key] !== "false") issues.push(`${key}_NOT_DISABLED`)
+  }
+
+  if (preview.QA_ACCELERATOR_ENABLED !== "true")
+    issues.push("QA_ACCELERATOR_NOT_ENABLED")
+  if (preview.QA_TOOLS_ENABLED !== "true") issues.push("QA_TOOLS_NOT_ENABLED")
+  if ((preview.QA_ACCELERATOR_SECRET?.trim().length ?? 0) < 32)
+    issues.push("QA_ACCELERATOR_SECRET_MISSING_OR_SHORT")
+  const qaOrigins = preview.QA_ACCELERATOR_ALLOWED_ORIGINS?.split(",").map(
+    (origin) => origin.trim(),
+  )
+  if (
+    !qaOrigins?.length ||
+    qaOrigins.some((origin) => !exactHttpsOrigin(origin))
+  )
+    issues.push("QA_ACCELERATOR_ORIGINS_INVALID")
+  try {
+    const routes = JSON.parse(preview.EMAIL_QA_DOMAIN_ROUTES ?? "{}")
+    if (
+      !routes ||
+      Array.isArray(routes) ||
+      typeof routes !== "object" ||
+      Object.keys(routes).length === 0 ||
+      Object.entries(routes).some(
+        ([domain, inbox]) =>
+          !domain.endsWith(".test") ||
+          typeof inbox !== "string" ||
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inbox) ||
+          inbox.endsWith(".test"),
+      )
+    )
+      issues.push("QA_EMAIL_ROUTES_INVALID")
+  } catch {
+    issues.push("QA_EMAIL_ROUTES_INVALID")
   }
 
   try {

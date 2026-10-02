@@ -127,9 +127,10 @@ export function SignUpScreen({
     orderChannels.length > 0 &&
     (businessProfileKey !== "other-mixed-business" ||
       otherBusinessDescription.trim().length >= 2)
-  const legalVersion = legalPublication.data?.effective
-    ? legalPublication.data.version
-    : null
+  const legalVersion =
+    legalPublication.data?.acceptanceRequired && legalPublication.data.effective
+      ? legalPublication.data.version
+      : null
   const acceptedTerms =
     legalChoices.version === legalVersion && legalChoices.acceptedTerms
   const acknowledgedPrivacyNotice =
@@ -139,7 +140,8 @@ export function SignUpScreen({
   const legalReady =
     legalPublication.isSuccess &&
     legalPublication.data.signupAvailable &&
-    (!legalPublication.data.effective ||
+    (!legalPublication.data.acceptanceRequired ||
+      !legalPublication.data.effective ||
       (hasLegalPages &&
         Boolean(legalVersion) &&
         acceptedTerms &&
@@ -619,36 +621,38 @@ export function SignUpScreen({
             variant="auth"
           />
           {legalPublication.isSuccess ? (
-            <SignupLegalChoices
-              effective={legalPublication.data.effective}
-              signupAvailable={legalPublication.data.signupAvailable}
-              version={legalPublication.data.version}
-              effectiveDate={legalPublication.data.effectiveDate}
-              acceptedTerms={acceptedTerms}
-              acknowledgedPrivacyNotice={acknowledgedPrivacyNotice}
-              onAcceptedTermsChange={(accepted) => {
-                if (!legalVersion) return
-                setLegalChoices((current) => ({
-                  version: legalVersion,
-                  acceptedTerms: accepted,
-                  acknowledgedPrivacyNotice:
-                    current.version === legalVersion
-                      ? current.acknowledgedPrivacyNotice
-                      : false,
-                }))
-              }}
-              onAcknowledgedPrivacyNoticeChange={(acknowledged) => {
-                if (!legalVersion) return
-                setLegalChoices((current) => ({
-                  version: legalVersion,
-                  acceptedTerms:
-                    current.version === legalVersion
-                      ? current.acceptedTerms
-                      : false,
-                  acknowledgedPrivacyNotice: acknowledged,
-                }))
-              }}
-            />
+            legalPublication.data.acceptanceRequired ? (
+              <SignupLegalChoices
+                effective={legalPublication.data.effective}
+                signupAvailable={legalPublication.data.signupAvailable}
+                version={legalPublication.data.version}
+                effectiveDate={legalPublication.data.effectiveDate}
+                acceptedTerms={acceptedTerms}
+                acknowledgedPrivacyNotice={acknowledgedPrivacyNotice}
+                onAcceptedTermsChange={(accepted) => {
+                  if (!legalVersion) return
+                  setLegalChoices((current) => ({
+                    version: legalVersion,
+                    acceptedTerms: accepted,
+                    acknowledgedPrivacyNotice:
+                      current.version === legalVersion
+                        ? current.acknowledgedPrivacyNotice
+                        : false,
+                  }))
+                }}
+                onAcknowledgedPrivacyNoticeChange={(acknowledged) => {
+                  if (!legalVersion) return
+                  setLegalChoices((current) => ({
+                    version: legalVersion,
+                    acceptedTerms:
+                      current.version === legalVersion
+                        ? current.acceptedTerms
+                        : false,
+                    acknowledgedPrivacyNotice: acknowledged,
+                  }))
+                }}
+              />
+            ) : null
           ) : legalPublication.error ? (
             <StatusBanner
               icon="TriangleAlert"

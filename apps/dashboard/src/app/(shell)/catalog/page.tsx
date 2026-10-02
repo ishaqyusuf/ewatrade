@@ -1,16 +1,20 @@
 import { CatalogItemsPage } from "@/components/dashboard/catalog-items-page"
-import { CatalogTableSkeleton } from "@/components/tables/catalog/skeleton"
+import {
+  catalogSortFields,
+  getTableSort,
+  loadSortParams,
+} from "@/hooks/sort-params"
+import {
+  getCatalogListPageInput,
+  loadCatalogFilterParams,
+} from "@/hooks/use-catalog-filter-params"
 import { canManageProductCatalog } from "@/lib/product-catalog"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
-import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
-import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
+import { getInitialTableSettings } from "@/utils/columns"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { Suspense } from "react"
-
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 
 export const metadata: Metadata = {
   title: "Catalog | EwaTrade",
@@ -25,13 +29,13 @@ export default async function CatalogRoutePage({
   const session = await getServerSession()
 
   if (!session) {
-    redirect(`${MARKETING_URL}/login`)
+    redirect("/login")
   }
 
   const ctx = await getActiveTenant(session.user.id)
 
   if (!ctx) {
-    redirect(`${MARKETING_URL}/login?error=no_tenant`)
+    redirect("/login?error=no_tenant")
   }
 
   if (!canManageProductCatalog(ctx.membership.role)) {
@@ -44,34 +48,41 @@ export default async function CatalogRoutePage({
     redirect("/setup")
   }
 
-  const kind =
-    params.catalogKind === "product" || params.catalogKind === "service"
-      ? params.catalogKind
-      : undefined
-  const availability = await getDashboardFeatureAvailability(
-    store.id,
-    ctx.tenant.id,
-  )
-  await Promise.allSettled([
-    prefetch(trpc.catalog.listItems.queryOptions({})),
-    prefetch(trpc.catalog.listItems.queryOptions({ kind })),
+  const filter = await loadCatalogFilterParams(searchParams)
+  const { sort: rawSort } = await loadSortParams(params)
+  const sort = getTableSort(rawSort, catalogSortFields)
+  const initialSettings = await getInitialTableSettings("catalog", {
+    userId: session.user.id,
+    tenantId: ctx.tenant.id,
+  })
+  const queryClient = getQueryClient()
+  void Promise.allSettled([
+    queryClient.prefetchInfiniteQuery(
+      trpc.catalog.listItemsPage.infiniteQueryOptions(
+        { ...getCatalogListPageInput(filter), sort },
+        {
+          getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+          retry: false,
+        },
+      ),
+    ),
+    ...(typeof params.productUnits === "string" && params.productUnits
+      ? [prefetch(trpc.catalog.listItems.queryOptions({}))]
+      : []),
   ])
 
   return (
     <HydrateClient>
-      <Suspense fallback={<CatalogTableSkeleton />}>
-        <CatalogItemsPage
-          availableKinds={{
-            product: availability.hasProductItems,
-            service: availability.hasServiceItems,
-          }}
-          store={{
-            currencyCode: store.currencyCode,
-            id: store.id,
-            name: store.name,
-          }}
-        />
-      </Suspense>
+      <CatalogItemsPage
+        initialSettings={initialSettings}
+        store={{
+          businessProfileKey:
+            store.businessOnboarding?.businessProfileKey ?? null,
+          currencyCode: store.currencyCode,
+          id: store.id,
+          name: store.name,
+        }}
+      />
     </HydrateClient>
   )
 }

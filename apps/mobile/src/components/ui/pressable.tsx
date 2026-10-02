@@ -6,12 +6,13 @@ import { type LinkProps, useRouter } from "expo-router"
 import {
   Pressable as BasePressable,
   type PressableProps as BasePressableProps,
+  Platform,
 } from "react-native"
 
 type Props = BasePressableProps & {
   href?: LinkProps["href"]
   allowOverflow?: boolean
-  haptic?: boolean
+  haptic?: boolean | "selection"
   noRipple?: boolean
   rippleColor?: keyof ReturnType<typeof useColors>
   rippleOpacity?: number
@@ -43,10 +44,9 @@ export function Pressable({
         !props.disabled && transition
           ? "active:scale-[0.98] transition-all"
           : undefined,
-          
       )}
       onPress={(event) => {
-        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        if (haptic && !props.disabled) void triggerPressHaptic(haptic)
         onPress?.(event)
         if (href) router.push(href)
       }}
@@ -68,4 +68,22 @@ export function Pressable({
       {children}
     </BasePressable>
   )
+}
+
+async function triggerPressHaptic(haptic: true | "selection") {
+  try {
+    if (haptic === "selection") {
+      if (Platform.OS === "android") {
+        await Haptics.performAndroidHapticsAsync(
+          Haptics.AndroidHaptics.Virtual_Key,
+        )
+      } else {
+        await Haptics.selectionAsync()
+      }
+    } else {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    }
+  } catch {
+    // Haptic support is optional; a feedback failure must not interrupt the press.
+  }
 }

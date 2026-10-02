@@ -1,0 +1,85 @@
+Mobile large-text layout check failed.
+- app/login.tsx is missing marker: useLargeTextLayout
+- app/login.tsx is missing marker: largeTextLayout ? "justify-start gap-5" : "justify-start gap-7"
+- app/sign-up.tsx is missing marker: useLargeTextLayout
+- app/sign-up.tsx is missing marker: largeTextLayout ? "justify-start gap-5" : "justify-start gap-6"
+- app/sign-up.tsx is missing marker: largeTextLayout ? "gap-3" : "flex-row gap-3"
+- app/sign-up.tsx is missing marker: "min-h-14 w-full items-center justify-center rounded-2xl
+- app/sign-up.tsx is missing marker: SignUpMarketStall
+- app/sign-up.tsx is missing marker: key={step}
+- app/verify-email.tsx is missing marker: useLargeTextLayout
+- app/verify-email.tsx is missing marker: largeTextLayout ? styles.heroLarge : styles.hero
+- app/verify-email.tsx is missing marker: numberOfLines={largeTextLayout ? 2 : 1}
+- app/verify-email.tsx is missing marker: largeTextLayout ? -58 : -48
+- app/onboarding.tsx is missing marker: useLargeTextLayout
+- app/onboarding.tsx is missing marker: largeTextLayout ? "justify-start gap-6" : "justify-between gap-8"
+- app/onboarding.tsx is missing marker: <HeroMark compact={largeTextLayout}
+- app/onboarding.tsx is missing marker: compactHeroWrap
+- app/onboarding.tsx is missing marker: largeTextLayout
+                  ? "text-4xl font-bold leading-tight text-foreground"
+- components/mobile/otp-input.tsx is missing marker: styles.largeTextReferenceCell
+- components/mobile/otp-input.tsx is missing marker: height: 64
+- components/mobile/otp-input.tsx is missing marker: width: 48
+- components/mobile/otp-keypad.tsx is missing marker: styles.marketKeyLarge
+- components/mobile/otp-keypad.tsx is missing marker: height: 94
+- components/mobile/catalog-items-sheet.tsx is missing marker: useLargeTextLayout
+- components/mobile/catalog-items-sheet.tsx is missing marker: largeTextLayout
+                  ? "min-h-[72px] flex-row items-start
+- components/mobile/catalog-items-sheet.tsx is missing marker: largeTextLayout
+                    ? "mt-1 size-11
+- components/mobile/catalog-items-sheet.tsx is missing marker: largeTextLayout
+                    ? "mt-1 size-sm text-primary"
+- components/mobile/admin-tabs/admin-more-screen.tsx is missing marker: useLargeTextLayout
+- components/mobile/admin-tabs/admin-more-screen.tsx is missing marker: largeTextLayout
+          ? "mb-5 items-start gap-3"
+- components/mobile/admin-tabs/admin-more-screen.tsx is missing marker: numberOfLines={largeTextLayout ? undefined : 1}
+- components/mobile/admin-tabs/admin-more-screen.tsx is missing marker: largeTextLayout
+            ? "min-w-0 flex-1 flex-row items-start
+- components/mobile/admin-tabs/admin-more-screen.tsx is missing marker: className={largeTextLayout ? "mt-1" : undefined}
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: useLargeTextLayout
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout ? "gap-3" : "flex-row gap-3"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout ? undefined : "min-w-0 flex-1"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "-mx-2 min-h-16 flex-row items-start gap-3
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: ? "mt-1 h-10 w-10 items-center justify-center rounded-2xl bg-muted"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: ? "mt-1 size-sm text-muted-foreground"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "-mx-2 min-h-16 flex-row items-start gap-3 border-b border-border bg-accent px-3 py-3"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "-mx-2 min-h-16 flex-row items-start gap-3 border-b border-border px-3 py-3 active:bg-accent/60"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout
+              ? "text-xs leading-5 text-muted-foreground"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "mt-1 h-5 w-5 items-center justify-center rounded-full border-[6px] border-primary"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: ? "mt-1 h-7 w-12 items-end justify-center rounded-full bg-primary px-1"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout ? "gap-3" : "flex-row items-start justify-between gap-3"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout ? "gap-1" : "min-w-0 flex-1 gap-1"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "min-h-12 w-full flex-row items-center justify-center gap-2 rounded-full bg-muted px-5"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: snapPoints={largeTextLayout ? ["96%"] : ["88%"]}
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout ? "gap-2" : "flex-row gap-2"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: ? "min-h-20 w-full justify-center rounded-2xl border border-primary bg-primary/10 px-4 py-3"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout ? "gap-3" : "flex-row gap-3"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: ? "min-h-20 flex-row items-start gap-3 rounded-2xl border border-primary bg-primary/10 px-3 py-3"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-muted"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-destructive/10"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: largeTextLayout && hasOptions
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: "min-h-12 w-full flex-row items-center justify-center gap-2 rounded-full bg-muted px-5"
+- components/mobile/simple-catalog-item-screen.tsx is missing marker: <CatalogEssentialsFields
+- components/mobile/catalog-setup-helper-picker.tsx is missing marker: useLargeTextLayout
+- components/mobile/catalog-setup-helper-picker.tsx is missing marker: largeTextLayout
+          ? "min-h-20 flex-row items-start
+- components/mobile/catalog-setup-helper-picker.tsx is missing marker: largeTextLayout && badgeLabel
+- components/mobile/catalog-setup-helper-picker.tsx is missing marker: largeTextLayout && selectedKey === null
+- components/mobile/catalog-setup-helper-picker.tsx is missing marker: ? "mt-1 size-sm text-muted-foreground"
+- components/mobile/catalog-variant-manager.tsx is missing marker: useLargeTextLayout
+- components/mobile/catalog-variant-manager.tsx is missing marker: "-mx-2 flex-row items-start gap-1 border-b border-border"
+- components/mobile/catalog-variant-manager.tsx is missing marker: kind === "service" && largeTextLayout ? undefined : 2
+- components/mobile/catalog-variant-manager.tsx is missing marker: kind === "product" && largeTextLayout
+- components/mobile/catalog-variant-manager.tsx is missing marker: numberOfLines={largeTextLayout ? undefined : 2}
+- components/mobile/catalog-variant-manager.tsx is missing marker: "mr-1 mt-4 h-11 w-11 items-center justify-center rounded-full bg-transparent active:bg-muted"
+- components/mobile/catalog-variant-manager.tsx is missing marker: "min-h-20 w-full justify-between gap-2 rounded-2xl border-2 border-primary bg-muted px-4 py-3"
+- components/mobile/catalog-variant-manager.tsx is missing marker: snapPoints={largeTextLayout ? ["96%"] : ["62%", "96%"]}
+- components/mobile/catalog-variant-manager.tsx is missing marker: largeTextLayout ? "gap-3" : "flex-row gap-3"
+- components/mobile/catalog-variant-manager.tsx is missing marker: snapToIndex(largeTextLayout ? 0 : 1)
+- components/mobile/catalog-variant-manager.tsx is missing marker: ? "min-h-16 gap-3 px-3 py-3"
+- components/mobile/catalog-variant-manager.tsx is missing marker: ? "-mx-2 min-h-16 flex-row items-start gap-3 border-y border-border px-3 py-3 pr-20"
+- components/mobile/catalog-variant-manager.tsx is missing marker: largeTextLayout
+                          ? "gap-2"
+- components/mobile/catalog-variant-manager.tsx is missing marker: "min-h-11 w-full flex-row items-center justify-end gap-1"
+- components/mobile/catalog-variant-manager.tsx is missing marker: largeTextLayout && kind === "product" && !editorUnit

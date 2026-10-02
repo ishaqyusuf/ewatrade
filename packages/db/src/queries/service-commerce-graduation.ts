@@ -28,6 +28,10 @@ import {
   CatalogError,
   assertExistingCatalogOfferingPublicationSafety,
 } from "./catalog"
+import { lockCatalogCommandInTransaction } from "./catalog-command-locks"
+import { lockCommerceFinancialContext } from "./customer-ledger/commerce-locks"
+import { FinanceError } from "./finance/rules"
+import { recordInventoryOpeningValuationInTransaction } from "./finance/valuation-openings"
 import { ServiceCommerceCatalogError } from "./service-commerce-catalog-source"
 import { assertServiceCommercePolicyAllowedInTransaction } from "./service-commerce-policy"
 import type { DbClient } from "./types"
@@ -360,18 +364,29 @@ export async function graduateServiceCommerceCatalogOffering(
   try {
     return await db.$transaction(async (tx) => {
       await assertGraduationManager(tx, input)
-      const prior = await tx.catalogCommandReceipt.findUnique({
-        where: {
-          tenantId_clientOperationId: {
-            clientOperationId: input.clientOperationId,
-            tenantId: input.tenantId,
+      const readPrevious = () =>
+        tx.catalogCommandReceipt.findUnique({
+          where: {
+            tenantId_clientOperationId: {
+              clientOperationId: input.clientOperationId,
+              tenantId: input.tenantId,
+            },
           },
-        },
-      })
-      if (prior) {
+        })
+      const replay = async (
+        prior: NonNullable<Awaited<ReturnType<typeof readPrevious>>>,
+      ) => {
         if (
           prior.payloadHash !== hash ||
-          prior.commandType !== "GRADUATE_CATALOG_OFFERING"
+          prior.commandType !== "GRADUATE_CATALOG_OFFERING" ||
+          prior.storeId !== input.storeId ||
+          prior.catalogItemId !==
+            (
+              await tx.sellableOffering.findFirst({
+                where: { id: input.offeringId, tenantId: input.tenantId },
+                select: { catalogItemId: true },
+              })
+            )?.catalogItemId
         ) {
           throw new ServiceCommerceCatalogError(
             "IDEMPOTENCY_MISMATCH",
@@ -380,6 +395,27 @@ export async function graduateServiceCommerceCatalogOffering(
         }
         return getServiceCommerceCatalogGraduationReadiness(tx, input)
       }
+      const prior = await readPrevious()
+      if (prior) return replay(prior)
+      const storeIdentity = await tx.store.findFirst({
+        where: { id: input.storeId, tenantId: input.tenantId },
+        select: { currencyCode: true },
+      })
+      if (!storeIdentity) {
+        throw new ServiceCommerceCatalogError(
+          "NOT_FOUND",
+          "The Store or Catalog Offering is unavailable.",
+        )
+      }
+      const financialContext = await lockCommerceFinancialContext(tx, {
+        tenantId: input.tenantId,
+        currencyCode: storeIdentity.currencyCode,
+      })
+      await lockCatalogCommandInTransaction(tx, input)
+      const concurrentPrior = await readPrevious()
+      if (concurrentPrior) return replay(concurrentPrior)
+      const openingEffectiveAt = new Date()
+
       const { offering, profile, store } = await loadGraduationContext(
         tx,
         input,
@@ -423,13 +459,14 @@ export async function graduateServiceCommerceCatalogOffering(
       })
 
       if (input.draftKind === "product") {
-        const productId = offering.catalogItem.product?.id
-        if (!productId || offering.serviceOffering) {
+        const product = offering.catalogItem.product
+        if (!product || offering.serviceOffering) {
           throw new ServiceCommerceCatalogError(
             "INVALID_INPUT",
             "The graduation kind does not match the Catalog Offering.",
           )
         }
+        const productId = product.id
         const existingBalance = await loadBalance(tx, input, productId)
         if (existingBalance) {
           throw new ServiceCommerceCatalogError(
@@ -441,11 +478,7 @@ export async function graduateServiceCommerceCatalogOffering(
         let configurationVersionId =
           productUnit?.inventoryUnit.configurationVersionId
         let inventoryUnitId = productUnit?.inventoryUnitId
-        let movementTransactionScale =
-          productUnit?.inventoryUnit.transactionScale ?? input.transactionScale
-        const quantity = parseExactDecimal(input.openingStockQuantity, {
-          maxScale: movementTransactionScale,
-        })
+        let movementTransactionScale = input.transactionScale
         if (!productUnit) {
           const configuration = await tx.unitConfigurationVersion.create({
             data: {
@@ -486,6 +519,35 @@ export async function graduateServiceCommerceCatalogOffering(
           inventoryUnitId = inventoryUnit.id
           movementTransactionScale = input.transactionScale
         } else {
+          const version = productUnit.inventoryUnit.configurationVersion
+          if (
+            version.productId !== productId ||
+            version.status !== UnitConfigurationStatus.CURRENT ||
+            product.currentUnitConfigurationVersionId !== version.id
+          )
+            throw new ServiceCommerceCatalogError(
+              "NOT_READY",
+              "Graduation requires the Product's current unit configuration.",
+            )
+          const canonicalUnits = await tx.inventoryUnit.findMany({
+            where: {
+              configurationVersionId: version.id,
+              stockBehavior: InventoryUnitStockBehavior.CANONICAL_SHARED,
+            },
+            take: 2,
+          })
+          const canonical = canonicalUnits[0]
+          if (
+            canonicalUnits.length !== 1 ||
+            !canonical ||
+            canonical.factor.toFixed() !== "1"
+          )
+            throw new ServiceCommerceCatalogError(
+              "NOT_READY",
+              "Graduation requires one factor-one canonical inventory unit.",
+            )
+          inventoryUnitId = canonical.id
+          movementTransactionScale = canonical.transactionScale
           const changed = await tx.productUnitOffering.updateMany({
             data: {
               barcode: input.barcode?.trim() || null,
@@ -509,6 +571,9 @@ export async function graduateServiceCommerceCatalogOffering(
             "A current Product unit configuration is required.",
           )
         }
+        const quantity = parseExactDecimal(input.openingStockQuantity, {
+          maxScale: movementTransactionScale,
+        })
         const balance = await tx.stockBalanceSource.create({
           data: {
             inventoryUnitId,
@@ -530,6 +595,7 @@ export async function graduateServiceCommerceCatalogOffering(
             storeId: input.storeId,
             tenantId: input.tenantId,
             type: StockOperationType.OPENING_STOCK,
+            effectiveAt: openingEffectiveAt,
           },
         })
         await tx.stockMovement.create({
@@ -638,7 +704,7 @@ export async function graduateServiceCommerceCatalogOffering(
           type: ServiceCommerceStoreAuditEventType.CATALOG_GRADUATED,
         },
       })
-      await tx.catalogCommandReceipt.create({
+      const receipt = await tx.catalogCommandReceipt.create({
         data: {
           catalogItemId: offering.catalogItemId,
           clientOperationId: input.clientOperationId,
@@ -648,9 +714,18 @@ export async function graduateServiceCommerceCatalogOffering(
           tenantId: input.tenantId,
         },
       })
+      if (input.draftKind === "product" && financialContext) {
+        await recordInventoryOpeningValuationInTransaction(tx, {
+          tenantId: input.tenantId,
+          receiptId: receipt.id,
+          expectedBookId: financialContext.bookId,
+        })
+      }
       return getServiceCommerceCatalogGraduationReadiness(tx, input)
     }, TRANSACTION_OPTIONS)
   } catch (error) {
+    if (error instanceof FinanceError)
+      throw new ServiceCommerceCatalogError("CONFLICT", error.message)
     if (error instanceof ServiceCommerceCatalogError) throw error
     translateWriteConflict(error)
   }

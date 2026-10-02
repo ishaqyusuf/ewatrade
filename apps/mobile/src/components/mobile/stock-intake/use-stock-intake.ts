@@ -4,19 +4,20 @@ import { createInventoryFixture } from "@/internal-tooling/fixture-recipes"
 import { canManageMobileOperations } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
+import { collectStockCategoryDraft } from "@ewatrade/utils/inventory-categories"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
   INITIAL_STOCK_DRAFT,
-  stockCommand,
-  stockCustodyLabel,
-  stockDraftReadiness,
   type StockAttempt,
   type StockDraft,
   type StockIntakeProps,
   type StockReview,
+  stockCommand,
+  stockCustodyLabel,
+  stockDraftReadiness,
 } from "./stock-intake-model"
 
 export function useStockIntake({ onComplete }: StockIntakeProps) {
@@ -41,9 +42,10 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
   const busy = useRef(false)
   const complete = useRef(false)
   const mounted = useRef(true)
-  const fillSnapshot = useRef<Pick<StockDraft, "quantity" | "reason"> | null>(
-    null,
-  )
+  const fillSnapshot = useRef<Pick<
+    StockDraft,
+    "quantity" | "reason" | "categories" | "categoryInput"
+  > | null>(null)
   const [canUndo, setCanUndo] = useState(false)
   const reviewModal = useModal()
   const origin = useRef<{ businessId: string; userId: string } | null>(null)
@@ -210,7 +212,18 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
     }
     const snapshot: StockReview = {
       balance: { ...balance },
-      draft: { ...current, reason: current.reason.trim() },
+      draft: {
+        ...current,
+        reason: current.reason.trim(),
+        categories:
+          current.mode === "receipt" || current.mode === "adjustment"
+            ? collectStockCategoryDraft(
+                current.categories,
+                current.categoryInput,
+              )
+            : [...current.categories],
+        categoryInput: "",
+      },
       quantity: ready.quantity,
       recipientName:
         current.targetCustodyType === "store"
@@ -299,6 +312,9 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
             trpc.inventory.operationHistory.queryFilter(),
           ),
           queryClient.invalidateQueries(
+            trpc.inventory.categorySuggestions.queryFilter(),
+          ),
+          queryClient.invalidateQueries(
             trpc.catalog.listItemsPage.queryFilter(),
           ),
           queryClient.invalidateQueries(
@@ -333,9 +349,16 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
     fillSnapshot.current = {
       quantity: draftRef.current.quantity,
       reason: draftRef.current.reason,
+      categories: [...draftRef.current.categories],
+      categoryInput: draftRef.current.categoryInput,
     }
     const fixture = createInventoryFixture(context)
-    edit({ quantity: fixture.quantity, reason: fixture.reason })
+    edit({
+      quantity: fixture.quantity,
+      reason: fixture.reason,
+      categories: [{ name: fixture.reason }],
+      categoryInput: "",
+    })
     setCanUndo(true)
   }
   function undo() {

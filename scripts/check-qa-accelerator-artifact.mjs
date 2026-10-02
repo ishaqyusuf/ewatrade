@@ -16,6 +16,17 @@ const PRODUCTION_MARKERS = [
   "tester credential",
   "ewatrade.qa",
 ]
+const MOBILE_BOOTSTRAP_MARKERS = [
+  "QA Test Merchant",
+  "qa-access",
+  "qa_authorization",
+  "QA Domain",
+  "QA DOMAIN",
+  "tester credential",
+  "Tester credential",
+  "Connect QA workspace",
+  "ewatrade.qa",
+]
 
 const PREVIEW_MARKERS = {
   dashboard: ["QA ONLY", "Quick Fill", "qa+"],
@@ -82,7 +93,9 @@ export function verifyQaAcceleratorArtifacts(input) {
 
   if (input.mode === "production") {
     for (const [surface, artifact] of Object.entries(artifacts)) {
-      const discovered = PRODUCTION_MARKERS.filter((marker) =>
+      const forbidden =
+        surface === "mobile" ? MOBILE_BOOTSTRAP_MARKERS : PRODUCTION_MARKERS
+      const discovered = forbidden.filter((marker) =>
         artifact.content.includes(marker),
       )
       if (discovered.length > 0) {

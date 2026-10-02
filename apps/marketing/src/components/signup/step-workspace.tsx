@@ -5,120 +5,44 @@ import { useQaFormFill } from "@/hooks/use-qa-form-fill"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { workspaceFill } from "@/lib/qa-fill-definitions"
 import { type WorkspaceValues, workspaceSchema } from "@/lib/signup-schemas"
-import { Button } from "@ewatrade/ui"
-import { buildInternalTenantHostname } from "@ewatrade/utils"
+import {
+  Button,
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@ewatrade/ui"
+import { withQaWorkspaceSuffix } from "@ewatrade/utils"
 import {
   Alert01Icon,
-  CashierIcon,
   CheckmarkCircle01Icon,
-  DashboardCircleIcon,
   Loading03Icon,
-  Store04Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useCallback, useEffect, useState } from "react"
+import { SignupAddresses, getSignupAddresses } from "./signup-addresses"
 
 const PLATFORM_DOMAIN =
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"
-const DASHBOARD_URL =
-  process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "https://ewatrade.com/dashboard"
-
-function getDisplayHost(url: string) {
-  try {
-    return new URL(url).host
-  } catch {
-    return url.replace(/^https?:\/\//, "")
-  }
-}
-
 type SlugAvailability = "idle" | "checking" | "available" | "taken" | "invalid"
 
 type StepWorkspaceProps = {
+  isQa?: boolean
+  ownerEmail?: string
   defaultValues?: Partial<WorkspaceValues>
   onNext: (data: WorkspaceValues) => void
 }
 
-function SubdomainPreview({ slug }: { slug: string }) {
-  const isValid = slug.length >= 3
-  const previewSlug = slug || "yourname"
-
-  const surfaces = [
-    {
-      icon: Store04Icon,
-      label: "Reserved storefront",
-      domain: buildInternalTenantHostname({
-        localProjectSlug: previewSlug,
-        tenantSlug: previewSlug,
-        surface: "storefront",
-        platformDomain: PLATFORM_DOMAIN,
-      }),
-      color: "text-primary",
-      bg: "bg-primary/8",
-    },
-    {
-      icon: CashierIcon,
-      label: "POS",
-      domain: buildInternalTenantHostname({
-        localProjectSlug: previewSlug,
-        tenantSlug: previewSlug,
-        surface: "pos",
-        platformDomain: PLATFORM_DOMAIN,
-      }),
-      color: "text-amber-700",
-      bg: "bg-amber-500/8",
-    },
-    {
-      icon: DashboardCircleIcon,
-      label: "Dashboard",
-      domain: getDisplayHost(DASHBOARD_URL),
-      color: "text-emerald-700",
-      bg: "bg-emerald-500/8",
-    },
-  ]
-
-  return (
-    <div
-      className={`overflow-hidden rounded-lg border transition-all duration-300 ${
-        isValid
-          ? "border-primary/20 bg-primary/3"
-          : "border-border/50 bg-muted/30"
-      }`}
-    >
-      <div className="border-b border-border/40 px-4 py-2.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Your business addresses
-        </p>
-      </div>
-      <div className="divide-y divide-border/30">
-        {surfaces.map((s) => (
-          <div key={s.label} className="flex items-center gap-3 px-4 py-3">
-            <div
-              className={`flex size-7 shrink-0 items-center justify-center rounded-md ${s.bg} ${s.color}`}
-            >
-              <HugeiconsIcon
-                icon={s.icon}
-                strokeWidth={2}
-                className="size-3.5"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-muted-foreground">
-                {s.label}
-              </p>
-              <p
-                className={`truncate font-mono text-xs ${isValid ? "text-foreground" : "text-muted-foreground/50"}`}
-              >
-                {s.domain}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
+export function StepWorkspace({
+  defaultValues,
+  onNext,
+  isQa = false,
+  ownerEmail,
+}: StepWorkspaceProps) {
   const form = useZodForm<WorkspaceValues>(workspaceSchema, {
     defaultValues: defaultValues ?? { subdomain: "" },
     mode: "onChange",
@@ -129,31 +53,37 @@ export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
     form,
   )
   const subdomain = form.watch("subdomain") ?? ""
+  const effectiveSubdomain = withQaWorkspaceSuffix(subdomain, isQa)
   const [slugStatus, setSlugStatus] = useState<SlugAvailability>("idle")
 
-  const checkSlug = useCallback(async (slug: string) => {
-    if (slug.length < 3) {
-      setSlugStatus("idle")
-      return
-    }
+  const checkSlug = useCallback(
+    async (slug: string) => {
+      if (slug.length < 3) {
+        setSlugStatus("idle")
+        return
+      }
 
-    const schemaCheck = workspaceSchema.shape.subdomain.safeParse(slug)
-    if (!schemaCheck.success) {
-      setSlugStatus("invalid")
-      return
-    }
+      const schemaCheck = workspaceSchema.shape.subdomain.safeParse(slug)
+      if (!schemaCheck.success) {
+        setSlugStatus("invalid")
+        return
+      }
 
-    setSlugStatus("checking")
-    try {
-      const res = await fetch(
-        `/api/auth/check-slug?slug=${encodeURIComponent(slug)}`,
-      )
-      const data = (await res.json()) as { available: boolean }
-      setSlugStatus(data.available ? "available" : "taken")
-    } catch {
-      setSlugStatus("idle")
-    }
-  }, [])
+      setSlugStatus("checking")
+      try {
+        const res = await fetch("/api/auth/check-slug", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ slug, email: ownerEmail }),
+        })
+        const data = (await res.json()) as { available: boolean }
+        setSlugStatus(!res.ok ? "idle" : data.available ? "available" : "taken")
+      } catch {
+        setSlugStatus("idle")
+      }
+    },
+    [ownerEmail],
+  )
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -206,73 +136,99 @@ export function StepWorkspace({ defaultValues, onNext }: StepWorkspaceProps) {
 
   return (
     <div>
-      <div className="mb-8 text-center">
-        <h2
-          className="text-2xl font-semibold text-foreground sm:text-3xl"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          Reserve your storefront address
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          This address is for your future public storefront. Your private
-          dashboard uses one shared ewatrade address.
+      <div className="signup-heading">
+        <h1>
+          Choose your
+          <br />
+          storefront address.
+        </h1>
+        <p className="signup-intro">
+          A simple address for your future public store. Your dashboard stays in
+          one shared place.
         </p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onNext)} className="space-y-5">
-        {/* Subdomain input */}
-        <label className="block space-y-2 text-sm font-medium text-foreground">
-          <span>Storefront address</span>
-          <div className="flex overflow-hidden rounded-lg border border-border/70 bg-background focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">
-            <input
-              {...form.register("subdomain")}
-              type="text"
-              placeholder="yourname"
-              autoComplete="off"
-              spellCheck={false}
-              className="min-w-0 flex-1 scroll-mt-24 bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
-            />
-            <div className="flex shrink-0 items-center border-l border-border/50 bg-muted/40 px-3 py-3">
-              <span className="text-xs text-muted-foreground">
-                .{PLATFORM_DOMAIN}
+      <form
+        onSubmit={form.handleSubmit((data) =>
+          onNext({ subdomain: withQaWorkspaceSuffix(data.subdomain, isQa) }),
+        )}
+      >
+        <FieldGroup className="signup-fields">
+          {/* Subdomain input */}
+          <Field data-invalid={Boolean(form.formState.errors.subdomain)}>
+            <FieldLabel htmlFor="signup-subdomain">
+              Storefront address
+            </FieldLabel>
+            <InputGroup className="signup-address-input">
+              <InputGroupInput
+                id="signup-subdomain"
+                aria-invalid={Boolean(form.formState.errors.subdomain)}
+                {...form.register("subdomain")}
+                type="text"
+                placeholder="yourname"
+                autoComplete="off"
+                spellCheck={false}
+                className="signup-input"
+                maxLength={32}
+              />
+              <InputGroupAddon
+                align="inline-end"
+                className="signup-address-suffix"
+              >
+                <InputGroupText>
+                  {isQa && !subdomain.endsWith("-qa") ? "-qa" : ""}
+                  {PLATFORM_DOMAIN === "localhost" ||
+                  PLATFORM_DOMAIN.endsWith(".localhost")
+                    ? "-storefront"
+                    : ""}
+                  .{PLATFORM_DOMAIN}
+                </InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
+
+            {/* Availability indicator */}
+            <div className="flex items-center justify-between pl-1">
+              {form.formState.errors.subdomain ? (
+                <FieldError>
+                  {form.formState.errors.subdomain.message}
+                </FieldError>
+              ) : (
+                <div>{slugStatusEl}</div>
+              )}
+              <span className="text-xs text-muted-foreground/60">
+                {subdomain.length}/32
               </span>
             </div>
+          </Field>
+
+          <output className="signup-address-output">
+            {
+              getSignupAddresses(
+                effectiveSubdomain || withQaWorkspaceSuffix("yourname", isQa),
+              ).storefront
+            }
+          </output>
+          {/* Live preview */}
+          {isQa ? (
+            <p className="text-xs text-muted-foreground">
+              QA addresses automatically use -qa so ordinary business names stay
+              available.
+            </p>
+          ) : null}
+          <SignupAddresses slug={effectiveSubdomain} />
+
+          <div className="signup-actions">
+            <p className="signup-hint">Three short steps to your workspace.</p>
+            <Button
+              type="submit"
+              size="lg"
+              className="signup-primary"
+              disabled={slugStatus === "checking" || slugStatus === "taken"}
+            >
+              Continue
+            </Button>
           </div>
-
-          {/* Availability indicator */}
-          <div className="flex items-center justify-between pl-1">
-            {form.formState.errors.subdomain ? (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.subdomain.message}
-              </p>
-            ) : (
-              <div>{slugStatusEl}</div>
-            )}
-            <span className="text-xs text-muted-foreground/60">
-              {subdomain.length}/32
-            </span>
-          </div>
-        </label>
-
-        {/* Live preview */}
-        <SubdomainPreview slug={subdomain} />
-
-        <p className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-xs leading-5 text-muted-foreground">
-          Your free storefront address is ready immediately. After signup, use
-          Website & domains in the dashboard or app to buy a .com.ng or .com, or
-          securely connect one you already own.
-        </p>
-
-        <div className="flex items-center justify-end border-t border-border/60 pt-5">
-          <Button
-            type="submit"
-            size="lg"
-            className="rounded-lg px-8"
-            disabled={slugStatus === "checking" || slugStatus === "taken"}
-          >
-            Continue
-          </Button>
-        </div>
+        </FieldGroup>
       </form>
 
       <QaQuickFillButton

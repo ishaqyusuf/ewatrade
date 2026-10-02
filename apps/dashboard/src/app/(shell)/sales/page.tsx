@@ -1,31 +1,42 @@
 import { SalesPage } from "@/components/dashboard/sales-page"
 import { OrdersTableSkeleton } from "@/components/tables/orders/skeleton"
+import {
+  getTableSort,
+  loadSortParams,
+  orderSortFields,
+} from "@/hooks/sort-params"
+import {
+  getOrderListPageInput,
+  loadOrderFilterParams,
+} from "@/hooks/use-order-filter-params"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
-import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
+import { getInitialTableSettings } from "@/utils/columns"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
-
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
 
 export const metadata: Metadata = {
   title: "Orders | EwaTrade",
 }
 
-export default async function SalesRoutePage() {
+export default async function SalesRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await getServerSession()
 
   if (!session) {
-    redirect(`${MARKETING_URL}/login`)
+    redirect("/login")
   }
 
   const ctx = await getActiveTenant(session.user.id)
 
   if (!ctx) {
-    redirect(`${MARKETING_URL}/login?error=no_tenant`)
+    redirect("/login?error=no_tenant")
   }
 
   if (!canUseSalesOperations(ctx.membership.role)) {
@@ -38,15 +49,38 @@ export default async function SalesRoutePage() {
     redirect("/setup")
   }
 
-  await Promise.allSettled([
-    prefetch(trpc.catalog.listItems.queryOptions({})),
-    prefetch(trpc.orders.list.queryOptions({ limit: 100, storeId: store.id })),
+  const params = await searchParams
+  const [filter, sortParams, initialSettings] = await Promise.all([
+    loadOrderFilterParams(params),
+    loadSortParams(params),
+    getInitialTableSettings("orders", {
+      userId: session.user.id,
+      tenantId: ctx.tenant.id,
+    }),
+  ])
+  const sort = getTableSort(sortParams.sort, orderSortFields)
+  const queryClient = getQueryClient()
+  void Promise.allSettled([
+    ...(params.orderSheet === "create"
+      ? [prefetch(trpc.catalog.listItems.queryOptions({}))]
+      : []),
+    queryClient.prefetchInfiniteQuery(
+      trpc.orders.listPage.infiniteQueryOptions(
+        { ...getOrderListPageInput(filter), sort, storeId: store.id },
+        {
+          getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+          retry: false,
+        },
+      ),
+    ),
   ])
 
   return (
     <HydrateClient>
-      <Suspense fallback={<OrdersTableSkeleton />}>
-        <SalesPage store={store} />
+      <Suspense
+        fallback={<OrdersTableSkeleton initialSettings={initialSettings} />}
+      >
+        <SalesPage store={store} initialSettings={initialSettings} />
       </Suspense>
     </HydrateClient>
   )

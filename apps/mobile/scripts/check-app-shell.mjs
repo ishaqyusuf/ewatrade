@@ -26,9 +26,24 @@ const contracts = [
       'variant="operational-detail"',
       "Math.max(insets.bottom + 116, 152)",
       "statusBarFollowsHero ? insets.top : 0",
+      "translucentStatusBar = false",
+      "opacity: translucentStatusBar ? 0.7 : 1",
+      "style={translucentStatusBar ? contentStatusBarStyle : statusBarStyle}",
+      "automaticallyAdjustContentInsets: false",
+      'contentInsetAdjustmentBehavior: "never"',
     ],
     reason:
       "the shared shell must preserve role-aware navigation, safe areas, and its central action",
+  },
+  {
+    file: "components/mobile/appearances/classic/dashboard-screen.tsx",
+    markers: [
+      "translucentStatusBar",
+      "keyboardBottomOffset={12}",
+      "showHeader={false}",
+    ],
+    reason:
+      "Classic Home must scroll beneath a theme-aware translucent status-area scrim while preserving safe content spacing",
   },
   {
     file: "components/mobile/bottom-tabs.types.ts",

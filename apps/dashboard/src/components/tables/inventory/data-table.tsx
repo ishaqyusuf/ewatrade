@@ -1,41 +1,47 @@
 "use client"
 
-import { DashboardTable } from "@/components/dashboard/dashboard-table"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
+import { useSortParams } from "@/hooks/use-sort-params"
+import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+import { type TableSettings, getColumnIds } from "@/utils/table-settings"
+import { useSuspenseQuery } from "@tanstack/react-query"
 import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query"
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
 import { useMemo } from "react"
-import { inventoryColumns } from "./columns"
-import { InventoryEmptyState } from "./empty-states"
+import { inventoryColumns, inventorySortFields } from "./columns"
+import { InventoryOperations } from "./operations"
+import { InventoryTableView } from "./table-view"
 
-function label(value: string) {
-  return value.toLowerCase().replaceAll("_", " ")
-}
+const SORT_COLUMN_IDS = {
+  productName: "product",
+  kind: "source",
+  onHandQuantity: "onHand",
+  reservedQuantity: "reserved",
+  availableQuantity: "available",
+  custodyType: "custody",
+} as const
 
-export function InventoryDataTable({ storeId }: { storeId: string }) {
+export function InventoryDataTable({
+  storeId,
+  initialSettings,
+}: {
+  storeId: string
+  initialSettings?: Partial<TableSettings>
+}) {
   const trpc = useTRPC()
-  const queryClient = useQueryClient()
   const { query } = useInventoryParams()
+  const { sorting: urlSorting } = useSortParams({ fields: inventorySortFields })
+  const sorting = useMemo(
+    () => urlSorting.map(({ id, desc }) => ({ id: SORT_COLUMN_IDS[id], desc })),
+    [urlSorting],
+  )
   const { data: balances } = useSuspenseQuery(
     trpc.inventory.balanceReport.queryOptions(
       { includeCompatibleTotals: true, storeId },
-      { retry: false },
-    ),
-  )
-  const { data: history } = useSuspenseQuery(
-    trpc.inventory.operationHistory.queryOptions(
-      { limit: 50, storeId },
-      { retry: false },
-    ),
-  )
-  const { data: transfers } = useSuspenseQuery(
-    trpc.inventory.transfers.queryOptions(
-      { limit: 100, storeId },
       { retry: false },
     ),
   )
@@ -49,126 +55,41 @@ export function InventoryDataTable({ storeId }: { storeId: string }) {
         .includes(normalized),
     )
   }, [balances.rows, query])
-  const transitionMutation = useMutation(
-    trpc.inventory.transitionTransfer.mutationOptions({
-      onSuccess: async () => {
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: trpc.inventory.transfers.queryKey(),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: trpc.inventory.balanceReport.queryKey(),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: trpc.inventory.operationHistory.queryKey(),
-          }),
-        ])
-      },
-    }),
-  )
+  const columnIds = useMemo(() => getColumnIds(inventoryColumns), [])
+  const tableSettings = useTableSettings({
+    tableId: "inventory",
+    initialSettings,
+    columnIds,
+    fixedColumnIds: ["product"],
+  })
+  const table = useReactTable({
+    data: rows,
+    columns: inventoryColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getRowId: (row) => row.balanceSourceId,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    state: {
+      sorting,
+      columnVisibility: tableSettings.columnVisibility,
+      columnSizing: tableSettings.columnSizing,
+      columnOrder: tableSettings.columnOrder,
+    },
+    onColumnVisibilityChange: tableSettings.setColumnVisibility,
+    onColumnSizingChange: tableSettings.setColumnSizing,
+    onColumnOrderChange: tableSettings.setColumnOrder,
+  })
 
   return (
     <div className="grid gap-6">
-      <DashboardTable
-        rows={rows}
-        columns={inventoryColumns}
-        getRowKey={(row) => row.balanceSourceId}
-        emptyState={<InventoryEmptyState filtered={Boolean(query.trim())} />}
+      <InventoryTableView
+        table={table}
+        filtered={Boolean(query.trim())}
+        persistenceError={tableSettings.persistenceError}
+        retryPersistence={tableSettings.retryPersistence}
       />
-      <section className="grid gap-3">
-        <h2 className="font-semibold">Recent operations</h2>
-        {history.slice(0, 12).map((operation) => (
-          <div
-            className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 text-sm"
-            key={operation.id}
-          >
-            <div>
-              <p className="font-medium capitalize">{label(operation.type)}</p>
-              <p className="text-xs text-muted-foreground">
-                {operation.reason}
-              </p>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {operation.movementCount} movement
-              {operation.movementCount === 1 ? "" : "s"}
-            </span>
-          </div>
-        ))}
-      </section>
-      <section className="grid gap-3">
-        <h2 className="font-semibold">Stock transfers</h2>
-        {transfers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No transfers for this Store.
-          </p>
-        ) : (
-          transfers.map((transfer) => (
-            <div
-              className="flex flex-col gap-3 border-b border-border px-1 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-              key={transfer.id}
-            >
-              <div>
-                <p className="font-medium">
-                  {transfer.productName} · {transfer.variantName}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {transfer.quantity} {transfer.inventoryUnitName} ·{" "}
-                  {transfer.sourceStore.name} → {transfer.targetStore.name} ·{" "}
-                  {label(transfer.status)}
-                </p>
-              </div>
-              {transfer.status === "IN_TRANSIT" &&
-              transfer.transitRevision !== null ? (
-                <div className="flex gap-2">
-                  {transfer.targetStore.id === storeId ? (
-                    <Button
-                      size="sm"
-                      disabled={transitionMutation.isPending}
-                      onClick={() => {
-                        const transitRevision = transfer.transitRevision
-                        if (transitRevision === null) return
-                        transitionMutation.mutate({
-                          clientOperationId: crypto.randomUUID(),
-                          expectedTransitRevision: transitRevision,
-                          reason: "Received at target Store",
-                          schemaVersion: 1,
-                          source: "dashboard_inventory",
-                          transferId: transfer.id,
-                          transition: "receive",
-                        })
-                      }}
-                    >
-                      Receive
-                    </Button>
-                  ) : null}
-                  {transfer.sourceStore.id === storeId ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={transitionMutation.isPending}
-                      onClick={() => {
-                        const transitRevision = transfer.transitRevision
-                        if (transitRevision === null) return
-                        transitionMutation.mutate({
-                          clientOperationId: crypto.randomUUID(),
-                          expectedTransitRevision: transitRevision,
-                          reason: "Cancelled by source Store",
-                          schemaVersion: 1,
-                          source: "dashboard_inventory",
-                          transferId: transfer.id,
-                          transition: "cancel",
-                        })
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ))
-        )}
-      </section>
+      <InventoryOperations storeId={storeId} />
     </div>
   )
 }

@@ -1,4 +1,16 @@
 "use client"
+import {
+  ControlField,
+  FieldGroup,
+  FieldSet,
+  FormActions,
+  Input,
+  SelectControl,
+  SubmitButton,
+  Textarea,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import {
   createInventoryConversionFixture,
@@ -7,7 +19,13 @@ import {
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+
+import {
+  type StockCategoryDraft,
+  collectStockCategoryDraft,
+  stockCategorySelectors,
+} from "@ewatrade/utils/inventory-categories"
 import {
   useMutation,
   useQuery,
@@ -15,6 +33,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { useRef, useState } from "react"
+import { StockCategoriesInput } from "./stock-categories-input"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
@@ -46,6 +65,12 @@ export function InventoryOperationForm({
     "increase",
   )
   const [reason, setReason] = useState("")
+  const [categories, setCategories] = useState<StockCategoryDraft[]>([])
+  const [categoryInput, setCategoryInput] = useState("")
+  const retainedOperation = useRef<
+    RouterInputs["inventory"]["postBalanceOperation"] | null
+  >(null)
+  const usesCategories = operation === "receipt" || operation === "adjustment"
   const [targetCustodyType, setTargetCustodyType] = useState<"staff" | "store">(
     "staff",
   )
@@ -53,6 +78,8 @@ export function InventoryOperationForm({
   const [targetStoreId, setTargetStoreId] = useState("")
   const [error, setError] = useState<string | null>(null)
   const qaSnapshot = useRef<{
+    categories: StockCategoryDraft[]
+    categoryInput: string
     quantity: string
     reason: string
     sourceId: string
@@ -73,6 +100,9 @@ export function InventoryOperationForm({
         queryKey: trpc.inventory.operationHistory.queryKey(),
       }),
       queryClient.invalidateQueries({
+        queryKey: trpc.inventory.categorySuggestions.queryKey(),
+      }),
+      queryClient.invalidateQueries({
         queryKey: trpc.inventory.transfers.queryKey(),
       }),
     ])
@@ -81,7 +111,18 @@ export function InventoryOperationForm({
   const fail = (failure: { message: string }) => setError(failure.message)
   const operationMutation = useMutation(
     trpc.inventory.postBalanceOperation.mutationOptions({
-      onError: fail,
+      onError: (failure) => {
+        // Validation/permission failures never reached a stock commit; allow repair.
+        // Unknown outcomes keep the original identity and payload for safe retry.
+        if (
+          ["BAD_REQUEST", "FORBIDDEN", "NOT_FOUND"].includes(
+            failure.data?.code ?? "",
+          )
+        ) {
+          retainedOperation.current = null
+        }
+        fail(failure)
+      },
       onSuccess: complete,
     }),
   )
@@ -123,8 +164,21 @@ export function InventoryOperationForm({
   )
 
   function submit() {
-    if (!operation || !selected || !quantity.trim() || !reason.trim()) {
-      setError("Choose a balance, enter a quantity, and add a reason.")
+    if (retainedOperation.current) {
+      operationMutation.mutate(retainedOperation.current)
+      return
+    }
+    if (
+      !operation ||
+      !selected ||
+      !quantity.trim() ||
+      (!usesCategories && !reason.trim())
+    ) {
+      setError(
+        usesCategories
+          ? "Choose a balance, enter a quantity, and add categories."
+          : "Choose a balance, enter a quantity, and add a reason.",
+      )
       return
     }
     if (operation === "transformation") {
@@ -206,7 +260,16 @@ export function InventoryOperationForm({
       })
       return
     }
-    operationMutation.mutate({
+    let selectedCategories: StockCategoryDraft[]
+    try {
+      selectedCategories = collectStockCategoryDraft(categories, categoryInput)
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : "Choose categories.",
+      )
+      return
+    }
+    const input: RouterInputs["inventory"]["postBalanceOperation"] = {
       balanceSourceId: selected.balanceSourceId,
       clientOperationId: crypto.randomUUID(),
       direction: operation === "receipt" ? "increase" : direction,
@@ -219,7 +282,13 @@ export function InventoryOperationForm({
       source: "dashboard_inventory",
       storeId: store.id,
       type: operation,
-    })
+    }
+    input.reason = undefined
+    input.categories = stockCategorySelectors(selectedCategories)
+    setCategories(selectedCategories)
+    setCategoryInput("")
+    retainedOperation.current = input
+    operationMutation.mutate(input)
   }
 
   const pending =
@@ -231,242 +300,258 @@ export function InventoryOperationForm({
     transferMutation.isPending
 
   return (
-    <div className="grid gap-4">
+    <FieldGroup className="grid gap-4">
       {error ? (
-        <p
-          role="alert"
-          className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
-      <QaDashboardQuickFill
-        canUndo={Boolean(qaSnapshot.current)}
-        formId="dashboard.inventory.operation"
-        isDirty={Boolean(
-          sourceId ||
-            quantity ||
-            reason ||
-            targetId ||
-            targetQuantity ||
-            targetCustodyReferenceId ||
-            targetStoreId,
-        )}
-        onFill={(context) => {
-          const conversion = createInventoryConversionFixture(rows)
-          const firstSource =
-            operation === "transformation"
-              ? rows.find(
-                  (row) =>
-                    row.balanceSourceId === conversion?.sourceBalanceSourceId,
-                )
-              : rows[0]
-          if (!firstSource) {
-            setError(
-              "Create an eligible Product and Inventory Unit before filling this draft.",
-            )
-            return
-          }
-          const packagedTarget = rows.find(
-            (row) => row.balanceSourceId === conversion?.targetBalanceSourceId,
-          )
-          const assignee = assigneesQuery.data?.[0]
-          const targetStore = storesQuery.data?.find(
-            (candidate) => candidate.id !== store.id,
-          )
-          if (operation === "transformation" && !conversion) {
-            setError(
-              "Add a compatible packaged stock balance before filling a transformation draft.",
-            )
-            return
-          }
-          if (operation === "custody" && !assignee) {
-            setError("Add an active team member before filling custody.")
-            return
-          }
-          if (operation === "transfer" && !targetStore) {
-            setError(
-              "Add another active Store before filling a transfer draft.",
-            )
-            return
-          }
-          qaSnapshot.current = {
-            quantity,
-            reason,
-            sourceId,
-            targetCustodyReferenceId,
-            targetId,
-            targetQuantity,
-            targetStoreId,
-          }
-          const fixture = createInventoryFixture(context)
-          setSourceId(firstSource.balanceSourceId)
-          setQuantity(conversion?.sourceQuantity ?? fixture.quantity)
-          setReason(fixture.reason)
-          setTargetId(packagedTarget?.balanceSourceId ?? "")
-          setTargetQuantity(conversion?.targetQuantity ?? "")
-          setTargetCustodyReferenceId(assignee?.id ?? "")
-          setTargetStoreId(targetStore?.id ?? "")
-          setError(null)
-        }}
-        onUndo={() => {
-          const snapshot = qaSnapshot.current
-          if (!snapshot) return
-          setQuantity(snapshot.quantity)
-          setReason(snapshot.reason)
-          setSourceId(snapshot.sourceId)
-          setTargetCustodyReferenceId(snapshot.targetCustodyReferenceId)
-          setTargetId(snapshot.targetId)
-          setTargetQuantity(snapshot.targetQuantity)
-          setTargetStoreId(snapshot.targetStoreId)
-          qaSnapshot.current = null
-        }}
-      />
-      <label className="grid gap-1.5 text-sm">
-        <span className="font-medium">Balance source</span>
-        <select
-          className={field}
-          value={sourceId}
-          onChange={(event) => setSourceId(event.target.value)}
-        >
-          <option value="">Choose balance</option>
-          {rows.map((row) => (
-            <option key={row.balanceSourceId} value={row.balanceSourceId}>
-              {row.productName} · {row.variantName} · {row.inventoryUnitName} (
-              {row.onHandQuantity})
-            </option>
-          ))}
-        </select>
-      </label>
-      {operation === "adjustment" ? (
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Direction</span>
-          <select
-            className={field}
-            value={direction}
-            onChange={(event) =>
-              setDirection(event.target.value as typeof direction)
+      <FieldSet
+        disabled={pending || Boolean(retainedOperation.current)}
+        className="grid min-w-0 gap-4 border-0 p-0"
+      >
+        <QaDashboardQuickFill
+          canUndo={Boolean(qaSnapshot.current)}
+          formId="dashboard.inventory.operation"
+          isDirty={Boolean(
+            sourceId ||
+              quantity ||
+              reason ||
+              categories.length ||
+              categoryInput ||
+              targetId ||
+              targetQuantity ||
+              targetCustodyReferenceId ||
+              targetStoreId,
+          )}
+          onFill={(context) => {
+            const conversion = createInventoryConversionFixture(rows)
+            const firstSource =
+              operation === "transformation"
+                ? rows.find(
+                    (row) =>
+                      row.balanceSourceId === conversion?.sourceBalanceSourceId,
+                  )
+                : rows[0]
+            if (!firstSource) {
+              setError(
+                "Create an eligible Product and Inventory Unit before filling this draft.",
+              )
+              return
             }
-          >
-            <option value="increase">Increase</option>
-            <option value="decrease">Decrease</option>
-          </select>
-        </label>
-      ) : null}
-      {operation === "custody" ? (
-        <>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Move to</span>
-            <select
-              className={field}
-              value={targetCustodyType}
-              onChange={(event) =>
-                setTargetCustodyType(
-                  event.target.value as typeof targetCustodyType,
-                )
-              }
-            >
-              <option value="staff">Team member</option>
-              <option value="store">Central Store custody</option>
-            </select>
-          </label>
-          {targetCustodyType === "staff" ? (
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Team member</span>
-              <select
-                className={field}
-                value={targetCustodyReferenceId}
-                onChange={(event) =>
-                  setTargetCustodyReferenceId(event.target.value)
-                }
-              >
-                <option value="">Choose team member</option>
-                {assigneesQuery.data?.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </>
-      ) : null}
-      {operation === "transfer" ? (
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">Target Store</span>
-          <select
-            className={field}
-            value={targetStoreId}
-            onChange={(event) => setTargetStoreId(event.target.value)}
-          >
-            <option value="">Choose Store</option>
-            {storesQuery.data
-              ?.filter((candidate) => candidate.id !== store.id)
-              .map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.name}
-                </option>
-              ))}
-          </select>
-        </label>
-      ) : null}
-      <label className="grid gap-1.5 text-sm">
-        <span className="font-medium">
-          {operation === "count" ? "Observed quantity" : "Quantity"}
-        </span>
-        <input
-          className={field}
-          inputMode="decimal"
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
+            const packagedTarget = rows.find(
+              (row) =>
+                row.balanceSourceId === conversion?.targetBalanceSourceId,
+            )
+            const assignee = assigneesQuery.data?.[0]
+            const targetStore = storesQuery.data?.find(
+              (candidate) => candidate.id !== store.id,
+            )
+            if (operation === "transformation" && !conversion) {
+              setError(
+                "Add a compatible packaged stock balance before filling a transformation draft.",
+              )
+              return
+            }
+            if (operation === "custody" && !assignee) {
+              setError("Add an active team member before filling custody.")
+              return
+            }
+            if (operation === "transfer" && !targetStore) {
+              setError(
+                "Add another active Store before filling a transfer draft.",
+              )
+              return
+            }
+            qaSnapshot.current = {
+              categories: [...categories],
+              categoryInput,
+              quantity,
+              reason,
+              sourceId,
+              targetCustodyReferenceId,
+              targetId,
+              targetQuantity,
+              targetStoreId,
+            }
+            const fixture = createInventoryFixture(context)
+            setSourceId(firstSource.balanceSourceId)
+            setQuantity(conversion?.sourceQuantity ?? fixture.quantity)
+            setReason(fixture.reason)
+            setCategories([{ name: fixture.reason }])
+            setCategoryInput("")
+            setTargetId(packagedTarget?.balanceSourceId ?? "")
+            setTargetQuantity(conversion?.targetQuantity ?? "")
+            setTargetCustodyReferenceId(assignee?.id ?? "")
+            setTargetStoreId(targetStore?.id ?? "")
+            setError(null)
+          }}
+          onUndo={() => {
+            const snapshot = qaSnapshot.current
+            if (!snapshot) return
+            setQuantity(snapshot.quantity)
+            setReason(snapshot.reason)
+            setCategories(snapshot.categories)
+            setCategoryInput(snapshot.categoryInput)
+            setSourceId(snapshot.sourceId)
+            setTargetCustodyReferenceId(snapshot.targetCustodyReferenceId)
+            setTargetId(snapshot.targetId)
+            setTargetQuantity(snapshot.targetQuantity)
+            setTargetStoreId(snapshot.targetStoreId)
+            qaSnapshot.current = null
+          }}
         />
-      </label>
-      {operation === "transformation" ? (
-        <>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Target packaged balance</span>
-            <select
-              className={field}
-              value={targetId}
-              onChange={(event) => setTargetId(event.target.value)}
-            >
-              <option value="">Choose target</option>
-              {rows
-                .filter(
-                  (row) =>
-                    row.balanceSourceId !== sourceId &&
-                    row.kind === "PACKAGED_STOCK",
-                )
-                .map((row) => (
-                  <option key={row.balanceSourceId} value={row.balanceSourceId}>
+        <ControlField label={<>Balance source</>}>
+          <SelectControl
+            value={sourceId}
+            onValueChange={(value) => setSourceId(value)}
+            options={[
+              { value: "", label: <>Choose balance</> },
+              ...(rows.map((row) => ({
+                value: row.balanceSourceId,
+                label: (
+                  <>
                     {row.productName} · {row.variantName} ·{" "}
-                    {row.inventoryUnitName}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Target quantity</span>
-            <input
-              className={field}
-              inputMode="decimal"
-              value={targetQuantity}
-              onChange={(event) => setTargetQuantity(event.target.value)}
+                    {row.inventoryUnitName} ({row.onHandQuantity})
+                  </>
+                ),
+              })) ?? []),
+            ]}
+          />
+        </ControlField>
+        {operation === "adjustment" ? (
+          <ControlField label={<>Direction</>}>
+            <SelectControl
+              value={direction}
+              onValueChange={(value) => setDirection(value as typeof direction)}
+              options={[
+                { value: "increase", label: <>Increase</> },
+                { value: "decrease", label: <>Decrease</> },
+              ]}
             />
-          </label>
-        </>
-      ) : null}
-      <label className="grid gap-1.5 text-sm">
-        <span className="font-medium">Reason</span>
-        <textarea
-          className={`${field} min-h-24 py-2`}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-        />
-      </label>
-      <Button disabled={pending} onClick={submit}>
-        {pending ? "Posting…" : "Review and confirm"}
-      </Button>
-    </div>
+          </ControlField>
+        ) : null}
+        {operation === "custody" ? (
+          <>
+            <ControlField label={<>Move to</>}>
+              <SelectControl
+                value={targetCustodyType}
+                onValueChange={(value) =>
+                  setTargetCustodyType(value as typeof targetCustodyType)
+                }
+                options={[
+                  { value: "staff", label: <>Team member</> },
+                  { value: "store", label: <>Central Store custody</> },
+                ]}
+              />
+            </ControlField>
+            {targetCustodyType === "staff" ? (
+              <ControlField label={<>Team member</>}>
+                <SelectControl
+                  value={targetCustodyReferenceId}
+                  onValueChange={(value) => setTargetCustodyReferenceId(value)}
+                  options={[
+                    { value: "", label: <>Choose team member</> },
+                    ...(assigneesQuery.data?.map((person) => ({
+                      value: person.id,
+                      label: person.name,
+                    })) ?? []),
+                  ]}
+                />
+              </ControlField>
+            ) : null}
+          </>
+        ) : null}
+        {operation === "transfer" ? (
+          <ControlField label={<>Target Store</>}>
+            <SelectControl
+              value={targetStoreId}
+              onValueChange={(value) => setTargetStoreId(value)}
+              options={[
+                { value: "", label: <>Choose Store</> },
+                ...(storesQuery.data
+                  ?.filter((candidate) => candidate.id !== store.id)
+                  .map((candidate) => ({
+                    value: candidate.id,
+                    label: candidate.name,
+                  })) ?? []),
+              ]}
+            />
+          </ControlField>
+        ) : null}
+        <ControlField
+          label={operation === "count" ? "Observed quantity" : "Quantity"}
+        >
+          <Input
+            inputMode="decimal"
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+          />
+        </ControlField>
+        {operation === "transformation" ? (
+          <>
+            <ControlField label={<>Target packaged balance</>}>
+              <SelectControl
+                value={targetId}
+                onValueChange={(value) => setTargetId(value)}
+                options={[
+                  { value: "", label: <>Choose target</> },
+                  ...(rows
+                    .filter(
+                      (row) =>
+                        row.balanceSourceId !== sourceId &&
+                        row.kind === "PACKAGED_STOCK",
+                    )
+                    .map((row) => ({
+                      value: row.balanceSourceId,
+                      label: (
+                        <>
+                          {row.productName} · {row.variantName} ·{" "}
+                          {row.inventoryUnitName}
+                        </>
+                      ),
+                    })) ?? []),
+                ]}
+              />
+            </ControlField>
+            <ControlField label={<>Target quantity</>}>
+              <Input
+                inputMode="decimal"
+                value={targetQuantity}
+                onChange={(event) => setTargetQuantity(event.target.value)}
+              />
+            </ControlField>
+          </>
+        ) : null}
+        {usesCategories ? (
+          <StockCategoriesInput
+            value={categories}
+            input={categoryInput}
+            onChange={setCategories}
+            onInputChange={setCategoryInput}
+            disabled={pending || Boolean(retainedOperation.current)}
+          />
+        ) : (
+          <ControlField label={<>Reason</>}>
+            <Textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </ControlField>
+        )}
+      </FieldSet>
+      <FormActions>
+        <SubmitButton
+          type="button"
+          isSubmitting={pending}
+          disabled={pending}
+          onClick={submit}
+        >
+          {pending
+            ? "Posting…"
+            : retainedOperation.current
+              ? "Retry same operation"
+              : "Review and confirm"}
+        </SubmitButton>
+      </FormActions>
+    </FieldGroup>
   )
 }

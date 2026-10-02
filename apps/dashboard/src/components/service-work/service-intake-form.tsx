@@ -1,4 +1,22 @@
 "use client"
+import {
+  Button,
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  DateControl,
+  FieldGroup,
+  FieldLabel,
+  FormActions,
+  Input,
+  MoneyInput,
+  SelectControl,
+  SubmitButton,
+  Textarea,
+  Field as UiField,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import {
   createCustomerFixture,
@@ -11,7 +29,7 @@ import {
 } from "@/components/service-work/service-utils"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import {
   useMutation,
   useQuery,
@@ -100,7 +118,16 @@ export function ServiceIntakeForm({
             queryKey: trpc.services.queue.queryKey(),
           }),
           queryClient.invalidateQueries({
+            queryKey: trpc.services.queuePage.queryKey(),
+          }),
+          queryClient.invalidateQueries({
             queryKey: trpc.orders.list.queryKey(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: trpc.orders.listPage.queryKey(),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: trpc.orders.reportSummary.queryKey(),
           }),
           queryClient.invalidateQueries({
             queryKey: trpc.tenant.featureAvailability.queryKey(),
@@ -165,14 +192,9 @@ export function ServiceIntakeForm({
   }
 
   return (
-    <div className="grid gap-5">
+    <FieldGroup className="grid gap-5">
       {error ? (
-        <p
-          role="alert"
-          className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {error}
-        </p>
+        <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}
       <QaDashboardQuickFill
         canUndo={canUndoQuickFill}
@@ -232,6 +254,7 @@ export function ServiceIntakeForm({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Items</h3>
           <Button
+            appearance="form"
             type="button"
             variant="outline"
             size="sm"
@@ -251,32 +274,37 @@ export function ServiceIntakeForm({
             key={`${index}-${line.offeringId}`}
             className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_88px_auto]"
           >
-            <select
+            <SelectControl
               aria-label={`Service item ${index + 1}`}
-              className={fieldClass}
               value={line.offeringId}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setLines((current) =>
                   current.map((entry, entryIndex) =>
                     entryIndex === index
-                      ? { ...entry, offeringId: event.target.value }
+                      ? { ...entry, offeringId: value }
                       : entry,
                   ),
                 )
               }
-            >
-              <option value="">Choose Service</option>
-              {offerings.map((offering) => (
-                <option key={offering.id} value={offering.id}>
-                  {offering.displayName} ·{" "}
-                  {formatMoney(offering.fixedPriceMinor, offering.currencyCode)}
-                </option>
-              ))}
-            </select>
-            <input
+              options={[
+                { value: "", label: <>Choose Service</> },
+                ...(offerings.map((offering) => ({
+                  value: offering.id,
+                  label: (
+                    <>
+                      {offering.displayName} ·{" "}
+                      {formatMoney(
+                        offering.fixedPriceMinor,
+                        offering.currencyCode,
+                      )}
+                    </>
+                  ),
+                })) ?? []),
+              ]}
+            />
+            <Input
               aria-label={`Quantity ${index + 1}`}
               inputMode="decimal"
-              className={fieldClass}
               value={line.quantity}
               onChange={(event) =>
                 setLines((current) =>
@@ -289,6 +317,7 @@ export function ServiceIntakeForm({
               }
             />
             <Button
+              appearance="form"
               type="button"
               variant="ghost"
               size="sm"
@@ -309,45 +338,57 @@ export function ServiceIntakeForm({
         ) : null}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">
-            Customer name{" "}
-            <span className="font-normal text-muted-foreground">Optional</span>
-          </span>
-          <input
-            className={fieldClass}
+        <ControlField
+          label={
+            <>
+              Customer name{" "}
+              <span className="font-normal text-muted-foreground">
+                Optional
+              </span>
+            </>
+          }
+        >
+          <Input
             value={customerName}
             onChange={(event) => setCustomerName(event.target.value)}
           />
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">
-            Email{" "}
-            <span className="font-normal text-muted-foreground">Optional</span>
-          </span>
-          <input
-            className={fieldClass}
+        </ControlField>
+        <ControlField
+          label={
+            <>
+              Email{" "}
+              <span className="font-normal text-muted-foreground">
+                Optional
+              </span>
+            </>
+          }
+        >
+          <Input
             onChange={(event) => setCustomerEmail(event.target.value)}
             type="email"
             value={customerEmail}
           />
-        </label>
-        <label className="grid gap-1.5 text-sm">
-          <span className="font-medium">
-            Phone{" "}
-            <span className="font-normal text-muted-foreground">Optional</span>
-          </span>
-          <input
-            className={fieldClass}
+        </ControlField>
+        <ControlField
+          label={
+            <>
+              Phone{" "}
+              <span className="font-normal text-muted-foreground">
+                Optional
+              </span>
+            </>
+          }
+        >
+          <Input
             inputMode="tel"
             value={customerPhone}
             onChange={(event) => setCustomerPhone(event.target.value)}
           />
-        </label>
+        </ControlField>
       </div>
       {settingsQuery.data.expressEnabled ? (
-        <label className="flex items-center justify-between gap-3 border-y border-border py-4 text-sm">
-          <span>
+        <CheckboxField
+          label=<span>
             <span className="block font-medium">
               {settingsQuery.data.expressLabel}
             </span>
@@ -360,12 +401,12 @@ export function ServiceIntakeForm({
                 : `${settingsQuery.data.expressSurchargeValue / 100}% surcharge`}
             </span>
           </span>
-          <input
-            type="checkbox"
+        >
+          <Checkbox
             checked={express}
-            onChange={(event) => setExpress(event.target.checked)}
+            onCheckedChange={(checked) => setExpress(checked)}
           />
-        </label>
+        </CheckboxField>
       ) : null}
       <section className="grid gap-3 border-b border-border pb-5">
         <div className="flex justify-between text-sm">
@@ -393,65 +434,53 @@ export function ServiceIntakeForm({
       {showDetails ? (
         <div className="grid gap-4 border-t border-border pt-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Customer requested</span>
-              <input
+            <ControlField label={<>Customer requested</>}>
+              <DateControl
                 type="datetime-local"
-                className={fieldClass}
                 value={requestedAt}
-                onChange={(event) => setRequestedAt(event.target.value)}
+                onValueChange={(value) => setRequestedAt(value)}
               />
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Promised delivery</span>
-              <input
+            </ControlField>
+            <ControlField label={<>Promised delivery</>}>
+              <DateControl
                 type="datetime-local"
-                className={fieldClass}
                 value={dueAt}
-                onChange={(event) => setDueAt(event.target.value)}
+                onValueChange={(value) => setDueAt(value)}
               />
-            </label>
+            </ControlField>
           </div>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Instructions</span>
-            <textarea
-              className={areaClass}
+          <ControlField label={<>Instructions</>}>
+            <Textarea
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
             />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Condition at intake</span>
-            <textarea
-              className={areaClass}
+          </ControlField>
+          <ControlField label={<>Condition at intake</>}>
+            <Textarea
               value={conditionNote}
               onChange={(event) => setConditionNote(event.target.value)}
             />
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+          </ControlField>
+          <CheckboxField label={<>Mark urgent</>}>
+            <Checkbox
               checked={urgent}
-              onChange={(event) => setUrgent(event.target.checked)}
+              onCheckedChange={(checked) => setUrgent(checked)}
             />
-            Mark urgent
-          </label>
+          </CheckboxField>
           {canManage ? (
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium">Assign to</span>
-              <select
-                className={fieldClass}
+            <ControlField label={<>Assign to</>}>
+              <SelectControl
                 value={assigneeId}
-                onChange={(event) => setAssigneeId(event.target.value)}
-              >
-                <option value="">Leave unassigned</option>
-                {assigneesQuery.data?.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onValueChange={(value) => setAssigneeId(value)}
+                options={[
+                  { value: "", label: <>Leave unassigned</> },
+                  ...(assigneesQuery.data?.map((person) => ({
+                    value: person.id,
+                    label: person.name,
+                  })) ?? []),
+                ]}
+              />
+            </ControlField>
           ) : null}
         </div>
       ) : null}
@@ -463,63 +492,63 @@ export function ServiceIntakeForm({
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">
+          <UiField className="gap-1.5">
+            <FieldLabel htmlFor={`service-intake-payment-${store.id}`}>
               Amount paid now ({store.currencyCode})
-            </span>
-            <input
-              className={fieldClass}
+            </FieldLabel>
+            <MoneyInput
+              id={`service-intake-payment-${store.id}`}
+              currencyCode={store.currencyCode}
               inputMode="decimal"
               value={amountPaid}
               onChange={(event) => setAmountPaid(event.target.value)}
             />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">Method</span>
-            <select
-              className={fieldClass}
+          </UiField>
+          <ControlField label={<>Method</>}>
+            <SelectControl
               value={paymentMethod}
-              onChange={(event) =>
-                setPaymentMethod(event.target.value as typeof paymentMethod)
+              onValueChange={(value) =>
+                setPaymentMethod(value as typeof paymentMethod)
               }
-            >
-              <option value="cash">Cash</option>
-              <option value="bank_transfer">Bank transfer</option>
-              <option value="pos">POS</option>
-              <option value="card">Card</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
+              options={[
+                { value: "cash", label: <>Cash</> },
+                { value: "bank_transfer", label: <>Bank transfer</> },
+                { value: "pos", label: <>POS</> },
+                { value: "card", label: <>Card</> },
+                { value: "other", label: <>Other</> },
+              ]}
+            />
+          </ControlField>
         </div>
-        <input
-          className={fieldClass}
+        <Input
           placeholder="Payment reference (optional)"
           value={paymentReference}
           onChange={(event) => setPaymentReference(event.target.value)}
         />
       </section>
-      <label className="grid gap-1.5 text-sm">
-        <span className="font-medium">Customer updates</span>
-        <select
-          className={fieldClass}
+      <ControlField label={<>Customer updates</>}>
+        <SelectControl
           value={notificationChannel}
-          onChange={(event) =>
-            setNotificationChannel(
-              event.target.value as typeof notificationChannel,
-            )
+          onValueChange={(value) =>
+            setNotificationChannel(value as typeof notificationChannel)
           }
+          options={[
+            { value: "", label: <>No automatic updates</> },
+            { value: "sms", label: <>SMS</> },
+            { value: "whatsapp", label: <>WhatsApp</> },
+          ]}
+        />
+      </ControlField>
+      <FormActions>
+        <SubmitButton
+          type="button"
+          isSubmitting={intakeMutation.isPending}
+          disabled={intakeMutation.isPending || lines.length === 0}
+          onClick={submit}
         >
-          <option value="">No automatic updates</option>
-          <option value="sms">SMS</option>
-          <option value="whatsapp">WhatsApp</option>
-        </select>
-      </label>
-      <Button
-        disabled={intakeMutation.isPending || lines.length === 0}
-        onClick={submit}
-      >
-        {intakeMutation.isPending ? "Creating…" : "Create service order"}
-      </Button>
-    </div>
+          {intakeMutation.isPending ? "Creating…" : "Create service order"}
+        </SubmitButton>
+      </FormActions>
+    </FieldGroup>
   )
 }

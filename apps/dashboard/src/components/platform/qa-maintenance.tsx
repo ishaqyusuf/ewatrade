@@ -1,7 +1,18 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { MetricCard } from "@/components/reports/metric-card"
+import { ReportSection } from "@/components/reports/report-section"
+import {
+  Checkbox,
+  CheckboxField,
+  ControlField,
+  FieldGroup,
+  Input,
+  SubmitButton,
+} from "@ewatrade/ui"
 
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
@@ -35,80 +46,133 @@ export function QaMaintenance() {
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="font-medium">Candidate QA tenants</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Adoption is explicit; matching an email domain alone never makes a
-          tenant purgeable.
-        </p>
-        <div className="mt-4 grid gap-2">
+      <ReportSection
+        title="Candidate QA tenants"
+        description="Adoption is explicit; matching an email domain alone never makes a tenant purgeable."
+      >
+        {candidates.isPending ? (
+          <output className="text-sm text-muted-foreground">
+            Loading candidates…
+          </output>
+        ) : null}
+        {candidates.isError ? (
+          <FormFeedback appearance="dashboard">
+            {candidates.error.message}
+          </FormFeedback>
+        ) : null}
+        <FieldGroup className="gap-3">
           {candidates.data?.map((candidate) => (
-            <label
+            <CheckboxField
               key={candidate.id}
-              className="flex items-center gap-3 text-sm"
+              label={<span>{candidate.name}</span>}
             >
-              <input
-                type="checkbox"
+              <Checkbox
+                disabled={adopt.isPending || purge.isPending}
                 checked={selected.includes(candidate.id)}
-                onChange={(event) =>
+                onCheckedChange={(checked) =>
                   setSelected((current) =>
-                    event.target.checked
+                    checked
                       ? [...current, candidate.id]
                       : current.filter((id) => id !== candidate.id),
                   )
                 }
               />
-              <span>{candidate.name}</span>
-            </label>
+            </CheckboxField>
           ))}
-          {!candidates.data?.length && (
+          {candidates.isSuccess && !candidates.data.length && (
             <p className="text-sm text-muted-foreground">
               No candidates found.
             </p>
           )}
-        </div>
-        <Button
-          className="mt-4"
+        </FieldGroup>
+        {adopt.isError ? (
+          <FormFeedback appearance="dashboard">
+            {adopt.error.message}
+          </FormFeedback>
+        ) : null}
+        {adopt.isSuccess ? (
+          <FormFeedback appearance="dashboard" variant="default">
+            Selected tenants were adopted as QA.
+          </FormFeedback>
+        ) : null}
+        <SubmitButton
+          type="button"
+          isSubmitting={adopt.isPending}
+          className="w-fit"
           variant="outline"
-          disabled={!selected.length || adopt.isPending}
+          disabled={
+            !selected.length ||
+            adopt.isPending ||
+            purge.isPending ||
+            !candidates.isSuccess
+          }
           onClick={() => adopt.mutate({ tenantIds: selected })}
         >
           Adopt selected as QA
-        </Button>
-      </section>
+        </SubmitButton>
+      </ReportSection>
 
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="font-medium">Purge preview</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      <ReportSection title="Purge preview">
+        {preview.isPending ? (
+          <output className="text-sm text-muted-foreground">
+            Loading preview…
+          </output>
+        ) : null}
+        {preview.isError ? (
+          <FormFeedback appearance="dashboard">
+            {preview.error.message}
+          </FormFeedback>
+        ) : null}
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Object.entries(preview.data?.counts ?? {}).map(([label, value]) => (
-            <div key={label} className="rounded-lg border p-3">
-              <div className="text-muted-foreground">{label}</div>
-              <div className="mt-1 text-lg font-semibold">{String(value)}</div>
-            </div>
+            <MetricCard
+              key={label}
+              label={label.replaceAll("_", " ")}
+              value={String(value)}
+            />
           ))}
         </div>
         {!!preview.data?.blockers.length && (
-          <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+          <FormFeedback appearance="dashboard">
             Deletion is blocked by {preview.data.blockers.length} live
             commercial resource(s).
-          </div>
+          </FormFeedback>
         )}
-        <label className="mt-5 grid gap-2 text-sm">
-          Type <strong>PURGE ALL QA DATA</strong> to permanently continue.
-          <input
-            className="h-10 rounded-md border bg-background px-3"
+        <ControlField
+          label={
+            <>
+              Type <strong>PURGE ALL QA DATA</strong> to permanently continue.
+            </>
+          }
+        >
+          <Input
+            disabled={purge.isPending || adopt.isPending}
             value={confirmation}
             onChange={(event) => setConfirmation(event.target.value)}
           />
-        </label>
-        <Button
-          className="mt-3"
+        </ControlField>
+        {purge.isError ? (
+          <FormFeedback appearance="dashboard">
+            {purge.error.message}
+          </FormFeedback>
+        ) : null}
+        {purge.isSuccess ? (
+          <FormFeedback appearance="dashboard" variant="default">
+            The QA purge was requested.
+          </FormFeedback>
+        ) : null}
+        <SubmitButton
+          type="button"
+          isSubmitting={purge.isPending}
+          className="w-fit"
           variant="destructive"
           disabled={
             confirmation !== "PURGE ALL QA DATA" ||
             !preview.data?.previewToken ||
             !!preview.data.blockers.length ||
-            purge.isPending
+            purge.isPending ||
+            adopt.isPending ||
+            !preview.isSuccess
           }
           onClick={() =>
             preview.data?.previewToken &&
@@ -119,8 +183,8 @@ export function QaMaintenance() {
           }
         >
           Permanently purge all QA data
-        </Button>
-      </section>
+        </SubmitButton>
+      </ReportSection>
     </div>
   )
 }

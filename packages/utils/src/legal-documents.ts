@@ -1,6 +1,6 @@
 /** Source versions stay immutable once approved and used for acceptance. */
-export const LEGAL_DOCUMENT_VERSION = "2026-09-29-candidate-4"
-export const LEGAL_DOCUMENT_STATUS: "draft" | "approved" = "draft"
+export const LEGAL_DOCUMENT_VERSION = "2026-10-01-approved-1"
+export const LEGAL_DOCUMENT_STATUS: "draft" | "approved" = "approved"
 
 export type LegalDocumentKey =
   | "terms"

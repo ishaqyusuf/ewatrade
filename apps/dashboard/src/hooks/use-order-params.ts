@@ -1,34 +1,33 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useQueryStates } from "nuqs"
+import { parseAsStringEnum } from "nuqs/server"
+import { type OrderFilters, orderFilterParams } from "./use-order-filter-params"
 
 export function useOrderParams() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const query = searchParams.get("orderQuery") ?? ""
-  const sheet = searchParams.get("orderSheet") === "create" ? "create" : null
-
-  function setParams(
-    values: {
-      orderQuery?: string | null
-      orderSheet?: "create" | null
-    } | null,
-  ) {
-    const next = new URLSearchParams(searchParams.toString())
-    if (values === null) {
-      next.delete("orderSheet")
-    } else {
-      for (const [key, value] of Object.entries(values)) {
-        if (value) next.set(key, value)
-        else next.delete(key)
-      }
-    }
-    const nextQuery = next.toString()
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-      scroll: false,
-    })
+  const [params, setParams] = useQueryStates({
+    orderSheet: parseAsStringEnum(["create"] as const),
+    ...orderFilterParams,
+  })
+  const filter: OrderFilters = {
+    query: params.orderQuery,
+    status: params.orderStatus,
   }
 
-  return { query, setParams, sheet }
+  return {
+    filter,
+    hasFilters: Boolean(filter.query?.trim() || filter.status),
+    query: params.orderQuery ?? "",
+    setFilter: (values: Partial<OrderFilters> | null) =>
+      setParams(
+        values === null
+          ? { orderQuery: null, orderStatus: null }
+          : {
+              orderQuery: values.query,
+              orderStatus: values.status,
+            },
+      ),
+    setParams,
+    sheet: params.orderSheet,
+  }
 }

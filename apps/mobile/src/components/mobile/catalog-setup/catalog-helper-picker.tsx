@@ -1,14 +1,14 @@
-import { FormField } from "@/components/mobile/form-field"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { ClassicHelperRow } from "@/components/mobile/appearances/classic/catalog-helper-picker"
 import { MarketHelperRow } from "@/components/mobile/appearances/market-day/catalog-helper-picker"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { FormField } from "@/components/mobile/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { shouldShowListSearch } from "@/lib/list-pagination"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
 import {
   findBusinessProfile,

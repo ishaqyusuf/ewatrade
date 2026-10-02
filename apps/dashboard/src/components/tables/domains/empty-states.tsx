@@ -17,7 +17,10 @@ export function DomainsEmptyState({ filtered }: { filtered: boolean }) {
           : "Buy a local .com.ng, a global .com, or connect one you already own."}
       </p>
       {!filtered ? (
-        <Button onClick={() => setParams({ domainMode: "buy" })}>
+        <Button
+          appearance="form"
+          onClick={() => setParams({ domainMode: "buy" })}
+        >
           Buy your first domain
         </Button>
       ) : null}

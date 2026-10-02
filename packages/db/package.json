@@ -5,15 +5,26 @@
   "type": "module",
   "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
+    "./catalog-category-suggestions": "./src/queries/catalog-category-suggestions.ts",
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./queries": "./src/queries/index.ts",
+    "./staff-onboarding": "./src/staff-onboarding.ts",
     "./account-privacy-access": "./src/queries/account-privacy-access.ts",
     "./legal-session-access": "./src/queries/legal-session-access.ts",
+    "./finance-expense-receipt-upload": "./src/queries/finance/expense-receipt-upload-entrypoints.ts",
+    "./finance-expense-receipt-delivery": "./src/queries/finance/expense-receipt-delivery-entrypoints.ts",
+    "./catalog-photos": "./src/queries/catalog-photos.ts",
+    "./catalog-photo-derivatives": "./src/queries/catalog-photo-derivatives.ts",
+    "./catalog-photo-deletion": "./src/queries/catalog-photo-deletion.ts",
+    "./catalog-photo-lifecycle": "./src/queries/catalog-photo-lifecycle.ts",
+    "./catalog-photo-replacement": "./src/queries/catalog-photo-replacement.ts",
+    "./catalog-categories": "./src/queries/catalog-categories.ts",
     "./enums": "./generated/prisma/enums.ts",
     "./browser": "./generated/prisma/browser.ts"
   },
   "scripts": {
+    "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",
     "build": "bun run db:generate && tsc --noEmit",
     "seed:catalog-units": "bun scripts/seed-catalog-unit-definitions.ts",
     "qa:issue-tester-credential": "bun scripts/issue-qa-tester-credential.ts",
@@ -32,6 +43,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@ewatrade/catalog": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",

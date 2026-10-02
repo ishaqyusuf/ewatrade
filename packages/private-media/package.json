@@ -1,0 +1,29 @@
+{
+  "name": "@ewatrade/private-media",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./object-storage": "./src/object-storage.ts",
+    "./vercel-blob": "./src/vercel-blob.ts",
+    "./expense-receipts": "./src/expense-receipts.ts",
+    "./expense-receipt-upload": "./src/expense-receipt-upload.ts",
+    "./expense-receipt-download-token": "./src/expense-receipt-download-token.ts"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ewatrade/service-commerce": "workspace:*",
+    "@ewatrade/utils": "workspace:*",
+    "@vercel/blob": "2.8.0"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@types/node": "24.12.0",
+    "typescript": "catalog:"
+  }
+}

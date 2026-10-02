@@ -41,6 +41,7 @@ const exactOrderQuantitySchema = z
 export const commercialOrderCreateSchema = z
   .object({
     clientOrderId: z.string().trim().min(8).max(160),
+    customerId: z.string().trim().min(1).max(128).optional(),
     customerEmail: z.string().trim().email().max(320).optional(),
     customerName: z.string().trim().min(1).max(160).optional(),
     customerPhone: z.string().trim().min(3).max(40).optional(),
@@ -91,6 +92,10 @@ export const commercialOrderListSchema = z
   })
   .strict()
 
+export const commercialOrderReportSummarySchema = z
+  .object({ storeId: z.string().trim().min(1).optional() })
+  .strict()
+
 const commercialOrderStatusSchema = z.enum([
   "DRAFT",
   "PENDING",
@@ -111,6 +116,13 @@ export const commercialOrderListPageSchema = z
     limit: z.number().int().min(1).max(50).default(20),
     query: z.string().trim().max(160).optional(),
     queryMode: z.enum(["all", "customer"]).default("all"),
+    sort: z
+      .object({
+        field: z.enum(["orderNumber", "status", "createdAt", "total"]),
+        direction: z.enum(["asc", "desc"]),
+      })
+      .strict()
+      .optional(),
     statuses: z.array(commercialOrderStatusSchema).max(9).optional(),
     storeId: z.string().trim().min(1).optional(),
   })
@@ -121,6 +133,24 @@ export const commercialOrderFulfillLineSchema = z
     clientOperationId: z.string().trim().min(8).max(160),
     orderLineId: z.string().trim().min(1),
     reason: z.string().trim().min(1).max(500).optional(),
+    schemaVersion: z.literal(1),
+  })
+  .strict()
+
+export const commercialOrderFulfillChargeOnlyServiceLineSchema = z
+  .object({
+    clientOperationId: z.string().trim().min(8).max(160),
+    orderLineId: z.string().trim().min(1).max(128),
+    reason: z.string().trim().min(1).max(500),
+    schemaVersion: z.literal(1),
+  })
+  .strict()
+
+export const commercialOrderAuthorizeChargeOnlyServiceLineSchema = z
+  .object({
+    clientOperationId: z.string().trim().min(8).max(160),
+    orderLineId: z.string().trim().min(1).max(128),
+    reason: z.string().trim().min(1).max(500),
     schemaVersion: z.literal(1),
   })
   .strict()

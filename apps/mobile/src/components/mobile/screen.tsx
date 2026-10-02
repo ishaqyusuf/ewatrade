@@ -1,4 +1,5 @@
 import { useColors } from "@/hooks/use-color"
+import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import { cn } from "@/lib/utils"
 import type { ReactElement, ReactNode } from "react"
 import {
@@ -39,6 +40,7 @@ export function MobileScreen({
   scroll = true,
   testID,
 }: MobileScreenProps) {
+  const edgeFeedback = useScrollEdgeFeedback()
   const colors = useColors()
   const insets = useSafeAreaInsets()
   const bottomPadding = Math.max(insets.bottom + 24, 40)
@@ -60,6 +62,7 @@ export function MobileScreen({
       >
         {scroll ? (
           <KeyboardAwareScrollView
+            {...edgeFeedback}
             className="flex-1"
             bottomOffset={keyboardBottomOffset}
             contentContainerStyle={[

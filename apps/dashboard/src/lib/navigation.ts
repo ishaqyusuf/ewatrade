@@ -7,6 +7,12 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
+import {
+  BUSINESS_OPERATING_MODEL_KEYS,
+  type BusinessOperatingModel,
+  findBusinessProfile,
+} from "@ewatrade/utils"
+import { canOperateInventory } from "./inventory-operations"
 
 export type DashboardNavIcon =
   | "analytics"
@@ -22,6 +28,7 @@ export type DashboardNavIcon =
   | "staff"
 
 export type DashboardNavItem = {
+  children?: DashboardNavItem[]
   description: string
   end?: boolean
   href: string
@@ -29,30 +36,21 @@ export type DashboardNavItem = {
   label: string
 }
 
-type DashboardNavDefinition = DashboardNavItem & {
+type DashboardNavDefinition = Omit<DashboardNavItem, "children"> & {
   canAccess: (
     role: EwaTradeRole | null,
     context: DashboardNavContext,
   ) => boolean
-  canSee: (role: EwaTradeRole | null, context: DashboardNavContext) => boolean
+  children?: DashboardNavDefinition[]
+  isVisible?: (context: DashboardNavContext) => boolean
 }
 
-export type DashboardNavContext = Omit<
-  WorkspaceFeatureAvailability,
-  "hasInventoryActivity" | "storeId"
->
-
-const DEFAULT_NAV_CONTEXT: DashboardNavContext = {
-  hasActiveSellableItems: true,
-  hasCatalogItems: true,
-  hasCustomers: true,
-  hasOrders: true,
-  hasPrescriptionCommerce: true,
-  hasProductItems: true,
-  hasReportableActivity: true,
-  hasServiceItems: true,
-  hasServiceJobs: true,
-  hasStaff: true,
+export type DashboardNavContext = Partial<
+  Omit<WorkspaceFeatureAvailability, "hasInventoryActivity" | "storeId">
+> & {
+  businessProfileKey?: string | null
+  isPlatformAdmin?: boolean
+  operatingModel?: BusinessOperatingModel | null
 }
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
@@ -63,6 +61,46 @@ const canManageCatalog = (role: EwaTradeRole | null) =>
 const canUseRetailOps = (role: EwaTradeRole | null) =>
   role ? canOperatePos(role) : false
 
+const canManageTenantRole = (role: EwaTradeRole | null) =>
+  role ? canManageTenant(role) : false
+
+function getRecommendedItemKinds(context: DashboardNavContext) {
+  const operatingModel = context.operatingModel
+  if (
+    operatingModel &&
+    BUSINESS_OPERATING_MODEL_KEYS.includes(operatingModel)
+  ) {
+    if (operatingModel === "products") return ["product"]
+    if (operatingModel === "services") return ["service"]
+    return ["product", "service"]
+  }
+
+  return findBusinessProfile(context.businessProfileKey)?.recommendedItemKinds
+}
+
+function isProductOrMixedBusiness(context: DashboardNavContext) {
+  const recommendedItemKinds = getRecommendedItemKinds(context)
+  return (
+    recommendedItemKinds === undefined ||
+    recommendedItemKinds.includes("product")
+  )
+}
+
+function isServiceOrMixedBusiness(context: DashboardNavContext) {
+  const recommendedItemKinds = getRecommendedItemKinds(context)
+  return (
+    recommendedItemKinds === undefined ||
+    recommendedItemKinds.includes("service")
+  )
+}
+
+function isPharmacyBusiness(context: DashboardNavContext) {
+  return (
+    findBusinessProfile(context.businessProfileKey)?.key ===
+    "pharmacy-health-retail"
+  )
+}
+
 const DASHBOARD_NAV: DashboardNavDefinition[] = [
   {
     description: "Daily business overview",
@@ -71,7 +109,6 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "home",
     label: "Overview",
     canAccess: canUseDashboard,
-    canSee: canUseDashboard,
   },
   {
     description: "Customer requests, response SLA, and team handoff",
@@ -79,7 +116,6 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "conversations",
     label: "Conversations",
     canAccess: canUseRetailOps,
-    canSee: canUseRetailOps,
   },
   {
     description: "Product and service item setup",
@@ -87,16 +123,13 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "products",
     label: "Catalog",
     canAccess: canManageCatalog,
-    canSee: (role, context) =>
-      canManageCatalog(role) && context.hasCatalogItems,
   },
   {
     description: "Stock, inbounds, and movement controls",
     href: "/inventory",
     icon: "inventory",
     label: "Inventory",
-    canAccess: canUseRetailOps,
-    canSee: (role, context) => canUseRetailOps(role) && context.hasProductItems,
+    canAccess: canOperateInventory,
   },
   {
     description: "Sales sessions and order operations",
@@ -104,7 +137,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "sales",
     label: "Sales",
     canAccess: canUseRetailOps,
-    canSee: (role, context) => canUseRetailOps(role) && context.hasOrders,
+    isVisible: isProductOrMixedBusiness,
   },
   {
     description: "Tracked service work, requests, and due dates",
@@ -112,7 +145,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "services",
     label: "Service jobs",
     canAccess: canUseRetailOps,
-    canSee: (role, context) => canUseRetailOps(role) && context.hasServiceJobs,
+    isVisible: isServiceOrMixedBusiness,
   },
   {
     description: "Private prescription intake and pharmacy review",
@@ -120,8 +153,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "prescriptions",
     label: "Prescriptions",
     canAccess: canUseRetailOps,
-    canSee: (role, context) =>
-      canUseRetailOps(role) && context.hasPrescriptionCommerce,
+    isVisible: isPharmacyBusiness,
   },
   {
     description: "Customer book and follow-up records",
@@ -129,7 +161,6 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "customers",
     label: "Customers",
     canAccess: canUseRetailOps,
-    canSee: (role, context) => canUseRetailOps(role) && context.hasCustomers,
   },
   {
     description: "Staff invitations and role administration",
@@ -137,7 +168,57 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "staff",
     label: "Staff",
     canAccess: canManageCatalog,
-    canSee: (role, context) => canManageCatalog(role) && context.hasStaff,
+  },
+  {
+    description: "Spending, money accounts and financial records",
+    href: "/finance",
+    icon: "analytics",
+    label: "Finance",
+    canAccess: canManageTenantRole,
+    children: [
+      {
+        description: "Financial overview",
+        href: "/finance",
+        icon: "analytics",
+        label: "Overview",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Review spending records",
+        href: "/finance/spending",
+        icon: "analytics",
+        label: "Spending",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Manage money accounts",
+        href: "/finance/accounts",
+        icon: "analytics",
+        label: "Accounts",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Manage supplier balances and bills",
+        href: "/finance/suppliers",
+        icon: "analytics",
+        label: "Suppliers",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Customer statements and collections",
+        href: "/customer-ledger",
+        icon: "analytics",
+        label: "Customer accounts",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Financial reports and exports",
+        href: "/finance/reports",
+        icon: "analytics",
+        label: "Finance reports",
+        canAccess: canManageTenantRole,
+      },
+    ],
   },
   {
     description: "Analytics, reports, exports, and sync review",
@@ -145,16 +226,89 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "analytics",
     label: "Reports",
     canAccess: canManageCatalog,
-    canSee: (role, context) =>
-      canManageCatalog(role) && context.hasReportableActivity,
+    children: [
+      {
+        description: "Analytics, exports, and sync review",
+        href: "/analytics",
+        icon: "analytics",
+        label: "Overview",
+        canAccess: canManageCatalog,
+      },
+      {
+        description: "Service Commerce operational reports",
+        href: "/service-commerce/reports",
+        icon: "analytics",
+        label: "Service commerce",
+        canAccess: canManageCatalog,
+      },
+      {
+        description: "Prescription operations reports",
+        href: "/prescriptions/reports",
+        icon: "prescriptions",
+        label: "Prescription operations",
+        canAccess: canManageTenantRole,
+        isVisible: isPharmacyBusiness,
+      },
+    ],
   },
   {
     description: "Business settings, subscription, and billing",
     href: "/settings",
     icon: "settings",
     label: "Settings",
-    canAccess: (role) => (role ? canManageTenant(role) : false),
-    canSee: (role) => (role ? canManageTenant(role) : false),
+    canAccess: canManageTenantRole,
+    children: [
+      {
+        description: "General business settings",
+        href: "/settings",
+        icon: "settings",
+        label: "General",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Business domain settings",
+        href: "/settings/domains",
+        icon: "settings",
+        label: "Domains",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Customer communication channels",
+        href: "/settings/channels",
+        icon: "settings",
+        label: "Channels",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Service Commerce setup",
+        href: "/settings/service-commerce",
+        icon: "settings",
+        label: "Service Commerce",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Pharmacy compliance settings",
+        href: "/settings/compliance",
+        icon: "settings",
+        label: "Compliance",
+        canAccess: canManageTenantRole,
+        isVisible: isPharmacyBusiness,
+      },
+      {
+        description: "Business and subscription billing",
+        href: "/settings/billing",
+        icon: "settings",
+        label: "Billing",
+        canAccess: canManageTenantRole,
+      },
+    ],
+  },
+  {
+    description: "Platform quality assurance tools",
+    href: "/platform/qa-maintenance",
+    icon: "settings",
+    label: "QA maintenance",
+    canAccess: (_role, context) => context.isPlatformAdmin === true,
   },
 ]
 
@@ -170,36 +324,86 @@ function matchesPath(pathname: string, href: string, end?: boolean) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+function flattenDefinitions(
+  items: DashboardNavDefinition[],
+): DashboardNavDefinition[] {
+  return items.flatMap((item) => [
+    item,
+    ...flattenDefinitions(item.children ?? []),
+  ])
+}
+
+function flattenNavItems(items: DashboardNavItem[]): DashboardNavItem[] {
+  return items.flatMap((item) => [
+    item,
+    ...flattenNavItems(item.children ?? []),
+  ])
+}
+
+function filterAndStripDefinitions(
+  items: DashboardNavDefinition[],
+  role: EwaTradeRole | null,
+  context: DashboardNavContext,
+): DashboardNavItem[] {
+  return items.flatMap((item) => {
+    if (
+      !item.canAccess(role, context) ||
+      (item.isVisible && !item.isVisible(context))
+    ) {
+      return []
+    }
+
+    const {
+      canAccess: _canAccess,
+      children,
+      isVisible: _isVisible,
+      ...visibleItem
+    } = item
+    const visibleChildren = filterAndStripDefinitions(
+      children ?? [],
+      role,
+      context,
+    )
+
+    return [
+      {
+        ...visibleItem,
+        ...(visibleChildren.length ? { children: visibleChildren } : {}),
+      },
+    ]
+  })
+}
+
 export function getDashboardNavigation(
   role: string | null | undefined,
-  context: DashboardNavContext = DEFAULT_NAV_CONTEXT,
+  context: DashboardNavContext = {},
 ) {
-  const normalizedRole = getNormalizedRole(role)
-
-  return DASHBOARD_NAV.filter((item) =>
-    item.canSee(normalizedRole, context),
-  ).map(({ canAccess: _canAccess, canSee: _canSee, ...item }) => item)
+  return filterAndStripDefinitions(
+    DASHBOARD_NAV,
+    getNormalizedRole(role),
+    context,
+  )
 }
 
 export function getDashboardNavItem(
   pathname: string,
   role: string | null | undefined,
-  context: DashboardNavContext = DEFAULT_NAV_CONTEXT,
+  context: DashboardNavContext = {},
 ) {
-  return getDashboardNavigation(role, context).find((item) =>
-    matchesPath(pathname, item.href, item.end),
-  )
+  return flattenNavItems(getDashboardNavigation(role, context))
+    .filter((item) => matchesPath(pathname, item.href, item.end))
+    .sort((left, right) => right.href.length - left.href.length)[0]
 }
 
 export function canAccessDashboardPath(
   pathname: string,
   role: string | null | undefined,
-  context: DashboardNavContext = DEFAULT_NAV_CONTEXT,
+  context: DashboardNavContext = {},
 ) {
   const normalizedRole = getNormalizedRole(role)
-  const matchedKnownPath = DASHBOARD_NAV.find((item) =>
-    matchesPath(pathname, item.href, item.end),
-  )
+  const matchedKnownPath = flattenDefinitions(DASHBOARD_NAV)
+    .filter((item) => matchesPath(pathname, item.href, item.end))
+    .sort((left, right) => right.href.length - left.href.length)[0]
 
   if (!matchedKnownPath) {
     return true

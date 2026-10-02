@@ -13,7 +13,7 @@ import { z } from "zod/v4"
 
 const inputSchema = z.object({
   contractVersion: z.literal(QA_ACCELERATOR_CONTRACT_VERSION),
-  credential: z.string().trim().min(32).max(256),
+  credential: z.string().trim().min(32).max(256).optional(),
   qaDomain: z.string().trim().min(3).max(253),
 })
 

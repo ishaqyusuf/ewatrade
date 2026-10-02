@@ -1,0 +1,16 @@
+// Curated identity has no uploaded bytes or photo-review authority.
+model CatalogItemIllustration {
+  id             String      @id @default(cuid())
+  tenantId       String
+  storeId        String
+  catalogItemId  String
+  illustrationId String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store       @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Restrict)
+  catalogItem    CatalogItem @relation(fields: [tenantId, catalogItemId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, catalogItemId, storeId])
+  @@index([tenantId, storeId])
+}

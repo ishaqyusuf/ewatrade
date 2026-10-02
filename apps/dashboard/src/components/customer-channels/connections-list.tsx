@@ -1,4 +1,5 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { Button } from "@ewatrade/ui"
 import type { CustomerChannelConnection } from "./types"
@@ -23,7 +24,7 @@ export function ConnectionsList({
   onManage: (connectionId: string) => void
 }) {
   return (
-    <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
+    <section className="grid gap-4 rounded-none border border-border bg-card p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Configure and test
@@ -36,7 +37,7 @@ export function ConnectionsList({
       </div>
 
       {connections.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+        <div className="rounded-none border border-dashed border-border px-4 py-8 text-center">
           <p className="font-medium">No connections yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Start with Connect WhatsApp. Web entry remains a separate channel.
@@ -46,7 +47,7 @@ export function ConnectionsList({
         <div className="grid gap-3">
           {connections.map((connection) => (
             <article
-              className="grid gap-4 rounded-lg border border-border p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+              className="grid gap-4 rounded-none border border-border p-4 lg:grid-cols-[1fr_auto] lg:items-center"
               key={connection.id}
             >
               <div className="min-w-0">
@@ -71,9 +72,9 @@ export function ConnectionsList({
                     : "No Store assignments"}
                 </p>
                 {connection.lastTestFailureCode ? (
-                  <p className="mt-2 text-xs text-destructive" role="alert">
+                  <FormFeedback appearance="dashboard">
                     Last test: {label(connection.lastTestFailureCode)}
-                  </p>
+                  </FormFeedback>
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -82,6 +83,7 @@ export function ConnectionsList({
                   size="sm"
                   type="button"
                   variant="outline"
+                  appearance="form"
                 >
                   Manage connection
                 </Button>

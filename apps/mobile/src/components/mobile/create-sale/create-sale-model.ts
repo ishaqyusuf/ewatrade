@@ -1,5 +1,5 @@
 import type { CommerceCustomer } from "@/components/mobile/commerce"
-import { type SaleOfferingChoice } from "@/components/mobile/sale-item-picker"
+import type { SaleOfferingChoice } from "@/components/mobile/sale-item-picker"
 import { getSelectableSaleItemChoices } from "@/components/mobile/sale-item-picker-model"
 import type {
   RouterInputs,
@@ -16,6 +16,7 @@ export type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
 export type SaleStep = "customer" | "items" | "review"
 
 export type SelectedCustomer = {
+  directoryId?: string
   email?: string
   id: string
   name: string
@@ -150,6 +151,7 @@ export function customerFromSuggestion(
   customer: CommerceCustomer,
 ): SelectedCustomer {
   return {
+    directoryId: customer.directoryId,
     email: customer.email ?? undefined,
     id: customer.id,
     name: customer.name,

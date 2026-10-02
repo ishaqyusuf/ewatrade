@@ -8,10 +8,13 @@ import {
 } from "./legal-documents"
 
 // Set these only after the owner approves the exact versioned document snapshot.
-export const LEGAL_DOCUMENT_EFFECTIVE_DATE: string | null = null
-export const LEGAL_DOCUMENT_APPROVED_SHA256: string | null = null
-export const LEGAL_DOCUMENT_APPROVED_AT: string | null = null
-export const LEGAL_DOCUMENT_APPROVAL_REFERENCE: string | null = null
+export const LEGAL_DOCUMENT_EFFECTIVE_DATE: string | null = "2026-10-01"
+export const LEGAL_DOCUMENT_APPROVED_SHA256: string | null =
+  "5ccf3c2cb8b9f3d671d9cca307beceb4df12df69fb3df746d094898fd8e1c3fa"
+export const LEGAL_DOCUMENT_APPROVED_AT: string | null =
+  "2026-10-01T09:47:26.000Z"
+export const LEGAL_DOCUMENT_APPROVAL_REFERENCE: string | null =
+  "owner-confirmation-2026-10-01-codex-jawdah-poultry-qa"
 
 type LegalPublication = {
   status: "draft" | "approved"
@@ -92,7 +95,7 @@ export function matchesApprovedLegalPublication(
       publication.effectiveDate ||
     !Number.isFinite(approvedAt) ||
     new Date(approvedAt).toISOString() !== publication.approvedAt ||
-    approvedAt > effectiveAt ||
+    approvedAt > now.getTime() ||
     !Number.isFinite(now.getTime()) ||
     now.getTime() < effectiveAt
   )
@@ -129,18 +132,55 @@ export function currentEffectiveLegalPublication() {
   }
 }
 
+/** Same-day publication must not treat earlier draft signups as incomplete. */
+export function legalPublicationEffectiveAt(publication: {
+  version: string
+  effectiveDate: string
+}) {
+  const date = Date.parse(`${publication.effectiveDate}T00:00:00.000Z`)
+  const approval =
+    publication.version === LEGAL_DOCUMENT_VERSION && LEGAL_DOCUMENT_APPROVED_AT
+      ? Date.parse(LEGAL_DOCUMENT_APPROVED_AT)
+      : date
+  return new Date(Math.max(date, approval))
+}
+
 export type LegalSignupChoice = {
   legalVersion?: string
   acceptedTerms?: true
   acknowledgedPrivacyNotice?: true
 }
 
+export type LegalRuntimeEnvironment = {
+  APP_ENV?: string
+  NODE_ENV?: string
+  DEV_PROFILE?: string
+}
+
+/** Server-selected testing profiles only; production always keeps legal gates. */
+export function isLegalTestingEnvironment(
+  env: LegalRuntimeEnvironment = process.env,
+) {
+  if (
+    env.APP_ENV === "production" ||
+    ["prod", "production"].includes(env.DEV_PROFILE ?? "")
+  )
+    return false
+  if (["local", "preview"].includes(env.APP_ENV ?? "")) return true
+  return !env.APP_ENV && ["local", "preview"].includes(env.DEV_PROFILE ?? "")
+}
+
 export function isSignupAvailableForLegalPublication(
   effective: boolean,
-  env: { APP_ENV?: string; NODE_ENV?: string } = process.env,
+  env: LegalRuntimeEnvironment = process.env,
 ) {
-  if (effective) return true
-  if (env.NODE_ENV === "production") return false
+  if (isLegalTestingEnvironment(env) || effective) return true
+  if (
+    env.NODE_ENV === "production" ||
+    env.APP_ENV === "production" ||
+    ["prod", "production"].includes(env.DEV_PROFILE ?? "")
+  )
+    return false
   return (
     ["local", "dev", "preview"].includes(env.APP_ENV ?? "") ||
     (!env.APP_ENV && env.NODE_ENV === "test")
@@ -150,8 +190,9 @@ export function isSignupAvailableForLegalPublication(
 export function resolveLegalSignupChoice(
   choice: LegalSignupChoice,
   publication = currentEffectiveLegalPublication(),
-  env: { APP_ENV?: string; NODE_ENV?: string } = process.env,
+  env: LegalRuntimeEnvironment = process.env,
 ) {
+  if (isLegalTestingEnvironment(env)) return null
   if (!isSignupAvailableForLegalPublication(Boolean(publication), env))
     throw new Error(
       "Signup is unavailable until the Terms and Privacy Notice are effective.",

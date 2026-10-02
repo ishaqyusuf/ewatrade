@@ -50,7 +50,11 @@ describe("listCommercialOrderPaymentsPage", () => {
     })
     expect(totalCalls).toHaveLength(1)
     const query = totalCalls[0] as { strings: string[]; values: unknown[] }
-    expect(query.values).toEqual(["tenant_123", CommercialPaymentType.PAYMENT])
+    expect(query.values).toEqual([
+      "tenant_123",
+      CommercialPaymentType.PAYMENT,
+      "CUSTOMER_CREDIT",
+    ])
     expect(query.strings.join("?")).toContain(
       'JOIN "CommercialOrder" AS orders',
     )

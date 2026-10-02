@@ -1,31 +1,43 @@
-import { CatalogSetupEssentials } from "./catalog-setup-essentials"
-import { CatalogSetupService } from "./catalog-setup-service"
-import { CatalogSetupOptions } from "./catalog-setup-options"
-import { CatalogSetupUnits } from "./catalog-setup-units"
-import { CatalogSetupPricing } from "./catalog-setup-pricing"
 import { ActionButton } from "@/components/mobile/action-button"
-import { CatalogSetupHelperPicker } from "./catalog-helper-picker"
+import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
+import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { KeyboardInlineComposer } from "@/components/mobile/keyboard-inline-composer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { RetainedEditorStack } from "@/components/mobile/retained-editor-stack"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { Keyboard, ScrollView, View } from "react-native"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import type { CatalogSetupModel } from "./use-catalog-setup"
-import { SellingUnitEditor } from "./selling-unit-editor"
-import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
+import {
+  findCatalogOptionSuggestion,
+  getCatalogOptionValueHint,
+} from "@ewatrade/utils/business-catalog-guidance"
+import type { CatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
 import { VariableContextProvider } from "nativewind"
 import { useRef, useState } from "react"
+import { Keyboard, ScrollView, View } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import {
+  CatalogCategoryEditor,
+  CatalogSubcategoryEditor,
+} from "./catalog-category-editor"
+import { CatalogSetupHelperPicker } from "./catalog-helper-picker"
 import { CatalogSetupConfirmation } from "./catalog-setup-confirmation"
+import {
+  CATALOG_EDITOR_TITLES,
+  type CatalogEditorKey,
+  CatalogFocusedEditor,
+  CatalogSetupDetailRows,
+} from "./catalog-setup-details"
+import { CatalogSetupEssentials } from "./catalog-setup-essentials"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
+import { SellingUnitEditor } from "./selling-unit-editor"
+import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const largeTextLayout = useLargeTextLayout()
@@ -34,8 +46,9 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const [footerHeight, setFooterHeight] = useState(88)
   const [composerHeight, setComposerHeight] = useState(88)
   const scrollRef = useRef<ScrollView>(null)
-  const bodyTop = useRef(0)
-  const pricingTop = useRef(0)
+  const [editors, setEditors] = useState<
+    Array<{ key: CatalogEditorKey; parent?: CatalogCategoryPreset }>
+  >([])
   const { KindChoice } = market ? Market : Classic
   const {
     isOffline,
@@ -60,6 +73,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     isEditingUnit,
     businessProfileKey,
     businessProfile,
+    formGuidance,
     selectedHelper,
     activeGroup,
     composerPills,
@@ -80,6 +94,17 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     saveReadiness,
     canUndoFill,
   } = model
+  const openEditor = (key: CatalogEditorKey) => {
+    if (model.locked) return
+    hideVariantComposer()
+    Keyboard.dismiss()
+    if (key === "pricing") model.openPricingDetails()
+    setEditors((current) => [...current, { key }])
+  }
+  const backEditor = () => {
+    hideVariantComposer()
+    setEditors((current) => current.slice(0, -1))
+  }
   const activeFooterHeight = variantComposerMode ? composerHeight : footerHeight
   if (model.scopeChanged || !model.canManage)
     return (
@@ -173,6 +198,85 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     )
   }
 
+  const unitOverlay = unitEditorDraft ? (
+    <SellingUnitEditor
+      currencyCode={currencyCode}
+      referenceUnits={model.additionalUnits}
+      isEditingUnit={isEditingUnit}
+      multiplePriceOptions={multiplePriceOptions}
+      onChangeDirection={changeUnitEditorDirection}
+      onChangeDraft={updateUnitEditorDraft}
+      onSave={saveUnitEditorDraft}
+      onClose={() => {
+        Keyboard.dismiss()
+        setUnitEditorDraft(null)
+        setUnitEditorError(null)
+      }}
+      unitEditorDraft={unitEditorDraft}
+      unitEditorError={unitEditorError}
+      unitName={unitName}
+    />
+  ) : null
+  const composer = (
+    <KeyboardInlineComposer
+      disabled={model.locked}
+      appearance={market ? "market-day" : "classic"}
+      onHeightChange={setComposerHeight}
+      closedOffset={0}
+      canSubmit={
+        variantComposerMode === "variant-value"
+          ? composerText.trim().length > 0 ||
+            (activeGroup?.values.length ?? 0) > 0
+          : undefined
+      }
+      dismissKeyboardOnSubmit={variantComposerMode === "variant-value"}
+      helperText={
+        variantComposerMode === "variant-value"
+          ? getCatalogOptionValueHint(formGuidance, activeGroup?.name ?? "")
+          : formGuidance.options.helperText
+      }
+      largeTextPlaceholder={
+        variantComposerMode === "variant-value"
+          ? `${activeGroup?.name || "Option"} values`
+          : "Option name"
+      }
+      onChangeText={changeVariantComposerText}
+      onPillPress={pressVariantComposerPill}
+      onRemovePill={removeComposerValue}
+      onSubmit={submitVariantComposer}
+      pills={composerPills}
+      placeholder={
+        variantComposerMode === "variant-value"
+          ? (findCatalogOptionSuggestion(formGuidance, activeGroup?.name ?? "")
+              ?.valuePlaceholder ?? "Enter values, separated by commas")
+          : editingGroupId
+            ? "Update option name"
+            : formGuidance.options.namePlaceholder
+      }
+      ref={variantComposerInputRef}
+      submitAccessibilityLabel={
+        variantComposerMode === "variant-value"
+          ? "Complete option values"
+          : editingGroupId
+            ? "Save option name"
+            : "Add option"
+      }
+      submitIconName={
+        variantComposerMode === "variant-value" ? "Check" : "Plus"
+      }
+      submitLabel={
+        variantComposerMode === "variant-value" ? "Done" : "Add option"
+      }
+      title={
+        variantComposerMode === "variant-value"
+          ? `${activeGroup?.name || "Option"} choices`
+          : `Add a ${kind} option`
+      }
+      value={composerText}
+      visible={!!variantComposerMode}
+    />
+  )
+
   return (
     <VariableContextProvider
       value={{ "--setup-main-bottom": activeFooterHeight + 24 }}
@@ -189,6 +293,9 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
         />
         <KeyboardAwareScrollView
           ref={scrollRef}
+          enabled={
+            editors.length === 0 && !unitEditorDraft && !helperPickerOpen
+          }
           bottomOffset={activeFooterHeight + 12}
           extraKeyboardSpace={0}
           className={catalogSetupClassName("flex-1", market)}
@@ -200,9 +307,6 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
           {market ? <Market.MarketSetupHeader kind={kind} /> : null}
           <View
             pointerEvents={model.locked ? "none" : "auto"}
-            onLayout={(event) => {
-              bodyTop.current = event.nativeEvent.layout.y
-            }}
             className={catalogSetupClassName(
               "gap-5 px-4 pt-4 pb-[var(--setup-main-bottom)]",
               market,
@@ -332,26 +436,11 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               onUndo={undoFill}
             />
 
-            <CatalogSetupEssentials model={model} market={market} />
-            <CatalogSetupService model={model} market={market} />
-            <CatalogSetupOptions model={model} market={market} />
-            <CatalogSetupUnits model={model} market={market} />
-            <CatalogSetupPricing
-              model={model}
-              market={market}
-              onLayout={(event) => {
-                pricingTop.current = event.nativeEvent.layout.y
-              }}
-              onPageChange={() =>
-                scrollRef.current?.scrollTo({
-                  y: bodyTop.current + pricingTop.current,
-                  animated: true,
-                })
-              }
-            />
+            <CatalogSetupEssentials model={model} market={market} focused />
+            <CatalogSetupDetailRows model={model} open={openEditor} />
           </View>
         </KeyboardAwareScrollView>
-        {!variantComposerMode ? (
+        {!variantComposerMode && editors.length === 0 ? (
           <BottomSearchFooter
             accessibilityLabel="Catalog setup actions"
             onHeightChange={setFooterHeight}
@@ -381,7 +470,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               disabled={!model.canSave}
               isLoading={isSaving}
               loadingLabel="Saving item"
-              onPress={submit}
+              onPress={model.hasAttempt ? submit : () => openEditor("review")}
               foregroundColor={market ? palette.onPalm : undefined}
               disabledForegroundColor={market ? palette.mutedInk : undefined}
               className={
@@ -398,91 +487,88 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                 : model.hasAttempt
                   ? "Retry same item"
                   : kind === "product"
-                    ? "Save product"
-                    : "Save service"}
+                    ? "Review product"
+                    : "Review service"}
             </ActionButton>
           </BottomSearchFooter>
         ) : null}
 
-        {unitEditorDraft ? (
-          <SellingUnitEditor
-            currencyCode={currencyCode}
-            isEditingUnit={isEditingUnit}
-            multiplePriceOptions={multiplePriceOptions}
-            onChangeDirection={changeUnitEditorDirection}
-            onChangeDraft={updateUnitEditorDraft}
-            onSave={saveUnitEditorDraft}
-            onClose={() => {
-              Keyboard.dismiss()
-              setUnitEditorDraft(null)
-              setUnitEditorError(null)
-            }}
-            unitEditorDraft={unitEditorDraft}
-            unitEditorError={unitEditorError}
-            unitName={unitName}
-          />
-        ) : null}
-
-        <CatalogSetupConfirmation model={model} market={market} />
-
-        <KeyboardInlineComposer
-          disabled={model.locked}
-          appearance={market ? "market-day" : "classic"}
-          onHeightChange={setComposerHeight}
-          closedOffset={0}
-          canSubmit={
-            variantComposerMode === "variant-value"
-              ? composerText.trim().length > 0 ||
-                (activeGroup?.values.length ?? 0) > 0
-              : undefined
-          }
-          dismissKeyboardOnSubmit={variantComposerMode === "variant-value"}
-          helperText={
-            variantComposerMode === "variant-value"
-              ? "Add one or more customer choices."
-              : kind === "service"
-                ? "What changes the price, delivery, or experience?"
-                : "What changes the price, stock, or customer choice?"
-          }
-          largeTextPlaceholder={
-            variantComposerMode === "variant-value"
-              ? `${activeGroup?.name || "Option"} values`
-              : "Option name"
-          }
-          onChangeText={changeVariantComposerText}
-          onPillPress={pressVariantComposerPill}
-          onRemovePill={removeComposerValue}
-          onSubmit={submitVariantComposer}
-          pills={composerPills}
-          placeholder={
-            variantComposerMode === "variant-value"
-              ? `${activeGroup?.name || "Option"} values, separated by commas`
-              : editingGroupId
-                ? "Update option name"
-                : "Option name or choose a suggestion"
-          }
-          ref={variantComposerInputRef}
-          submitAccessibilityLabel={
-            variantComposerMode === "variant-value"
-              ? "Complete option values"
-              : editingGroupId
-                ? "Save option name"
-                : "Add option"
-          }
-          submitIconName={
-            variantComposerMode === "variant-value" ? "Check" : "Plus"
-          }
-          submitLabel={
-            variantComposerMode === "variant-value" ? "Done" : "Add option"
-          }
-          title={
-            variantComposerMode === "variant-value"
-              ? `${activeGroup?.name || "Option"} choices`
-              : `Add a ${kind} option`
-          }
-          value={composerText}
-          visible={!!variantComposerMode}
-        />
+        {editors.length > 0 ? (
+          <RetainedEditorStack
+            editors={editors.map((entry, index) => ({
+              key: `${index}-${entry.key}-${entry.parent?.key ?? "root"}`,
+              title: entry.parent?.label ?? CATALOG_EDITOR_TITLES[entry.key],
+              footer:
+                entry.key === "units" || entry.key === "images" ? (
+                  <BottomSearchFooter
+                    searchVisible={false}
+                    totalCount={0}
+                    value=""
+                    onChangeText={() => undefined}
+                    placeholder=""
+                    accessibilityLabel={
+                      entry.key === "images"
+                        ? "Image actions"
+                        : "Selling units actions"
+                    }
+                  >
+                    <ActionButton
+                      disabled={
+                        entry.key === "images" && model.imageDraft.selecting
+                      }
+                      onPress={backEditor}
+                    >
+                      {entry.key === "images"
+                        ? "Done with image"
+                        : "Done with selling units"}
+                    </ActionButton>
+                  </BottomSearchFooter>
+                ) : undefined,
+              content:
+                entry.key === "category" ? (
+                  entry.parent ? (
+                    <CatalogSubcategoryEditor
+                      category={entry.parent}
+                      model={model}
+                    />
+                  ) : (
+                    <CatalogCategoryEditor
+                      model={model}
+                      onAppliedSuggestion={() => {
+                        Keyboard.dismiss()
+                        setEditors([])
+                      }}
+                      onSelectParent={(parent) =>
+                        setEditors((current) => [
+                          ...current,
+                          { key: "category", parent },
+                        ])
+                      }
+                    />
+                  )
+                ) : (
+                  <CatalogFocusedEditor
+                    editor={entry.key}
+                    model={model}
+                    open={openEditor}
+                  />
+                ),
+            }))}
+            onBack={backEditor}
+            bottomOffset={variantComposerMode ? composerHeight + 12 : 24}
+            obscured={!!unitEditorDraft}
+            onScrollTouch={hideVariantComposer}
+          >
+            {unitOverlay}
+            <CatalogSetupConfirmation model={model} market={market} />
+            {composer}
+          </RetainedEditorStack>
+        ) : (
+          <>
+            {unitOverlay}
+            <CatalogSetupConfirmation model={model} market={market} />
+          </>
+        )}
       </View>
     </VariableContextProvider>
   )

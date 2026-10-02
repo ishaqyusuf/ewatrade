@@ -1,4 +1,8 @@
-import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
+import {
+  currentEffectiveLegalPublication,
+  isLegalTestingEnvironment,
+  legalPublicationEffectiveAt,
+} from "@ewatrade/utils/legal-approval"
 import type { DbClient } from "./types"
 
 type EffectivePublication = NonNullable<
@@ -10,7 +14,7 @@ export async function isLegalSignupSessionBlockedForPublication(
   userId: string,
   publication: EffectivePublication,
 ) {
-  const effectiveAt = new Date(`${publication.effectiveDate}T00:00:00.000Z`)
+  const effectiveAt = legalPublicationEffectiveAt(publication)
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { createdAt: true },
@@ -30,6 +34,7 @@ export async function isLegalSignupSessionBlocked(
   db: DbClient,
   userId: string,
 ) {
+  if (isLegalTestingEnvironment()) return false
   if (
     process.env.APP_ENV !== "production" &&
     process.env.NODE_ENV !== "production"

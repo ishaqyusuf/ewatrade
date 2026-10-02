@@ -1,4 +1,8 @@
 model Store {
+  catalogItemIllustrations                          CatalogItemIllustration[]
+  catalogPhotoAssets                                CatalogPhotoAsset[]
+  financeBills                                      FinanceBill[]
+  financeJournalEntries                             FinanceJournalEntry[]
   id                                                String                                               @id @default(cuid())
   tenantId                                          String
   slug                                              String
@@ -167,22 +171,26 @@ model Store {
   managedDomains                                    ManagedDomain[]
   domainConnections                                 DomainConnection[]
 
+  @@unique([tenantId, id])
   @@unique([tenantId, slug])
   @@index([tenantId, status])
 }
 
 model Customer {
-  id              String   @id @default(cuid())
-  tenantId        String
-  name            String
-  email           String?
-  normalizedEmail String?
-  phone           String?
-  normalizedPhone String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledgerAccounts   CustomerLedgerAccount[]
+  commercialOrders CommercialOrder[]
+  id               String                  @id @default(cuid())
+  tenantId         String
+  name             String
+  email            String?
+  normalizedEmail  String?
+  phone            String?
+  normalizedPhone  String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, id])
   @@unique([tenantId, normalizedEmail])
   @@unique([tenantId, normalizedPhone])
   @@index([tenantId, createdAt])

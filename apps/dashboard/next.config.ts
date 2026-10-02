@@ -25,6 +25,14 @@ function getApiOrigin() {
 export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
   return [
     {
+      source: "/api/finance/expense-receipts/:path*",
+      destination: `${apiOrigin}/api/finance/expense-receipts/:path*`,
+    },
+    {
+      source: "/api/catalog/photos/:path*",
+      destination: `${apiOrigin}/api/catalog/photos/:path*`,
+    },
+    {
       source: "/api/trpc/:path*",
       destination: `${apiOrigin}/api/trpc/:path*`,
     },
@@ -46,6 +54,7 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: process.env.VERCEL === "1" },
   transpilePackages: [
     "@ewatrade/events",
+    "@ewatrade/catalog",
     "@ewatrade/api",
     "@ewatrade/db",
     "@ewatrade/errors",

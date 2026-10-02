@@ -1,23 +1,42 @@
 "use client"
 
-import { DashboardSheet } from "@/components/dashboard/dashboard-sheet"
 import { ServiceJobWorkspace } from "@/components/service-work/service-job-workspace"
+import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
+import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
+import { Sheet } from "@ewatrade/ui"
 
-export function ServiceJobSheet({ canManage }: { canManage: boolean }) {
+export function ServiceJobSheet({
+  canManage,
+  storeId,
+}: {
+  canManage: boolean
+  storeId: string
+}) {
   const { jobId, setParams, sheet } = useServiceWorkParams()
   const open = sheet === "job" && Boolean(jobId)
+  const { closeError, requestClose } = useSheetDismissal(() => setParams(null))
 
   return (
-    <DashboardSheet
+    <Sheet
       open={open}
-      onClose={() => setParams(null)}
-      title="Service Job"
-      description="Line progress, evidence, assignment, promises, and customer-safe updates."
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) void requestClose()
+      }}
     >
-      {jobId ? (
-        <ServiceJobWorkspace canManage={canManage} jobId={jobId} />
+      {open && jobId ? (
+        <SheetFrame
+          closeError={closeError}
+          title="Service Job"
+          description="Line progress, evidence, assignment, promises, and customer-safe updates."
+        >
+          <ServiceJobWorkspace
+            canManage={canManage}
+            jobId={jobId}
+            key={`${storeId}:${jobId}:${canManage}`}
+          />
+        </SheetFrame>
       ) : null}
-    </DashboardSheet>
+    </Sheet>
   )
 }

@@ -76,6 +76,35 @@ describe("QA accelerator artifact boundary", () => {
     ).toThrow("marketing production artifact exposes QA markers")
   })
 
+  test("retains mobile authenticated Quick Fill recipes without public QA bootstrap", () => {
+    const artifacts = createArtifacts({
+      dashboard: "ordinary dashboard",
+      marketing: "ordinary website",
+      mobile: "Quick Fill qa+ createQaFixture qaTools.fixtureContext",
+      routes: [],
+    })
+    expect(
+      verifyQaAcceleratorArtifacts({ ...artifacts, mode: "production" }).mode,
+    ).toBe("production")
+  })
+
+  test.each([
+    "Connect QA workspace",
+    "QA Domain",
+    "Tester credential",
+    "qa_authorization",
+  ])("rejects public mobile bootstrap marker %s in Production", (marker) => {
+    const artifacts = createArtifacts({
+      dashboard: "ordinary dashboard",
+      marketing: "ordinary website",
+      mobile: `Quick Fill ${marker}`,
+      routes: [],
+    })
+    expect(() =>
+      verifyQaAcceleratorArtifacts({ ...artifacts, mode: "production" }),
+    ).toThrow("mobile production artifact exposes QA markers")
+  })
+
   test("accepts preview artifacts with controls and six website routes", () => {
     const artifacts = createArtifacts({
       dashboard: "QA ONLY Quick Fill qa+",

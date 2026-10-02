@@ -1,10 +1,42 @@
 import { describe, expect, test } from "bun:test"
 import {
+  PRESCRIPTION_OPERATING_DAYS,
+  prescriptionComplianceSettingsFormSchema,
   prescriptionStaffIntakeFormSchema,
   prescriptionStoreSettingsFormSchema,
 } from "./schemas"
 
 describe("Prescription form schemas", () => {
+  test("compliance can validate policies independently of fulfilment settings", () => {
+    const policies = {
+      consentVersion: "2026-08-09",
+      contactPolicy: "Contact customers only about their request.",
+      operatingHours: PRESCRIPTION_OPERATING_DAYS.map((day) => ({
+        day,
+        isClosed: true,
+      })),
+      servicePolicy: "Require pharmacist release before quotation.",
+    }
+    expect(
+      prescriptionComplianceSettingsFormSchema.safeParse(policies).success,
+    ).toBe(true)
+    expect(
+      prescriptionComplianceSettingsFormSchema.safeParse({
+        ...policies,
+        operatingHours: policies.operatingHours.slice(1),
+      }).success,
+    ).toBe(false)
+    expect(
+      prescriptionComplianceSettingsFormSchema.safeParse({
+        ...policies,
+        operatingHours: [
+          ...policies.operatingHours.slice(1),
+          policies.operatingHours[1],
+        ],
+      }).success,
+    ).toBe(false)
+  })
+
   test("allows an empty manual draft for media-only staff intake", () => {
     expect(
       prescriptionStaffIntakeFormSchema.parse({

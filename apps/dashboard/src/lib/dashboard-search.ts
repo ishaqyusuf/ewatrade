@@ -13,11 +13,32 @@ export type DashboardSearchResponse = {
   results: DashboardSearchResult[]
 }
 
+export function getDashboardRecordHref(
+  group: DashboardSearchResult["group"],
+  query: string,
+) {
+  const targets = {
+    products: ["/catalog", "catalogQuery"],
+    sales: ["/sales", "orderQuery"],
+    customers: ["/customers", "customerQuery"],
+    staff: ["/staff", "staffQuery"],
+  } as const
+  const [path, key] = targets[group]
+  return `${path}?${new URLSearchParams({ [key]: query })}`
+}
+
 export type DashboardCommand = {
   description: string
   href: string
   id: string
   title: string
+}
+
+function flattenPages(navItems: DashboardNavItem[]): DashboardNavItem[] {
+  return navItems.flatMap(({ children, ...item }) => [
+    item,
+    ...flattenPages(children ?? []),
+  ])
 }
 
 export function filterSearchablePages(
@@ -26,14 +47,20 @@ export function filterSearchablePages(
 ) {
   const search = query.trim().toLowerCase()
 
-  return navItems.filter((item) =>
-    search
-      ? [item.label, item.description, item.href]
-          .join(" ")
-          .toLowerCase()
-          .includes(search)
-      : true,
-  )
+  const seen = new Set<string>()
+
+  return flattenPages(navItems).filter((item) => {
+    const matches =
+      !search ||
+      [item.label, item.description, item.href]
+        .join(" ")
+        .toLowerCase()
+        .includes(search)
+    if (!matches || seen.has(item.href)) return false
+
+    seen.add(item.href)
+    return true
+  })
 }
 
 export function getDashboardCommands(
@@ -41,7 +68,7 @@ export function getDashboardCommands(
   accessiblePaths: string[] = [],
 ) {
   const available = new Set([
-    ...navItems.map((item) => item.href),
+    ...flattenPages(navItems).map((item) => item.href),
     ...accessiblePaths,
   ])
   const commands: DashboardCommand[] = []
@@ -67,7 +94,7 @@ export function getDashboardCommands(
   if (available.has("/inventory")) {
     commands.push({
       description: "Open inventory operations and record stock intake.",
-      href: "/inventory",
+      href: "/inventory?inventoryOperation=receipt",
       id: "record-stock-intake",
       title: "Record stock intake",
     })

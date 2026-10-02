@@ -892,7 +892,6 @@ export async function listDomainConnections(
       store: { select: { id: true, name: true } },
     },
     orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
-    take: 100,
     where: {
       hostname: input.query
         ? { contains: input.query.trim().toLowerCase(), mode: "insensitive" }

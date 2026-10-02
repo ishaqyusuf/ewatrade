@@ -2,6 +2,7 @@ import type {
   BusinessOperatingModel,
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
+import { withQaWorkspaceSuffix } from "@ewatrade/utils"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
@@ -75,7 +76,11 @@ async function createUniqueTenant(
     qaSourceDomain?: string | null
   },
 ) {
-  const baseSlug = toSlug(input.businessName) || "business"
+  const baseSlug = withQaWorkspaceSuffix(
+    toSlug(input.businessName) || "business",
+    Boolean(input.qaSourceDomain),
+    48,
+  )
 
   for (let attempt = 0; attempt < 50; attempt++) {
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt}`

@@ -1,12 +1,23 @@
-export function PrescriptionTableSkeleton() {
+"use client"
+
+import { TableSkeleton } from "@/components/tables/core"
+import type { TableSettings } from "@/utils/table-settings"
+import { createPrescriptionColumns } from "./columns"
+
+export function PrescriptionTableSkeleton({
+  initialSettings,
+}: {
+  initialSettings?: Partial<TableSettings>
+} = {}) {
   return (
-    <div className="grid gap-2 rounded-lg border border-border p-4">
-      {Array.from({ length: 10 }, (_, index) => (
-        <div
-          key={`prescription-skeleton-${index + 1}`}
-          className="h-12 animate-pulse rounded bg-muted"
-        />
-      ))}
-    </div>
+    <TableSkeleton
+      columns={createPrescriptionColumns("UTC", () => {})}
+      rowCount={8}
+      rowHeight={57}
+      stickyColumnIds={["reference"]}
+      columnVisibility={initialSettings?.columns}
+      columnSizing={initialSettings?.sizing}
+      columnOrder={initialSettings?.order}
+    />
   )
 }

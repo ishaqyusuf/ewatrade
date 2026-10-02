@@ -1,11 +1,12 @@
+import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
+import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { SetupCheckboxRow } from "@/components/mobile/setup-flow"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { getCatalogOptionValueHint } from "@ewatrade/utils/business-catalog-guidance"
 import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
-import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupOptions({
@@ -14,6 +15,7 @@ export function CatalogSetupOptions({
 }: { model: CatalogSetupModel; market: boolean }) {
   const {
     kind,
+    formGuidance,
     multiplePriceOptions,
     showAdvanced,
     optionGroups,
@@ -36,7 +38,7 @@ export function CatalogSetupOptions({
       {kind === "product" ? (
         <SetupCheckboxRow
           checked={multiplePriceOptions}
-          description="Use this for sizes, colours, or units that need their own prices."
+          description={formGuidance.options.helperText}
           label="Different prices or options"
           onPress={model.toggleOptionPricing}
         />
@@ -50,9 +52,13 @@ export function CatalogSetupOptions({
           )}
         >
           {kind === "service" ? (
-            <ServiceChoicesSectionHeader onAddOption={openVariantComposer} />
+            <ServiceChoicesSectionHeader
+              helperText={formGuidance.options.helperText}
+              onAddOption={openVariantComposer}
+            />
           ) : (
             <ProductOptionsSectionHeader
+              helperText={formGuidance.options.helperText}
               hasOptions={optionGroups.length > 0}
               onAddOption={openVariantComposer}
             />
@@ -69,11 +75,13 @@ export function CatalogSetupOptions({
                     market,
                   )}
                 >
-                  No service choices yet. Add a Package, Service level, or
-                  Turnaround option.
+                  {formGuidance.options.helperText}
                 </Text>
               ) : (
-                <ProductFirstOptionAction onPress={openVariantComposer} />
+                <ProductFirstOptionAction
+                  helperText={formGuidance.options.helperText}
+                  onPress={openVariantComposer}
+                />
               )
             ) : null}
             {optionGroups.map((group, index) => (
@@ -168,6 +176,10 @@ export function CatalogSetupOptions({
 
                 {kind === "product" && group.values.length === 0 ? (
                   <ProductFirstOptionValueAction
+                    helperText={getCatalogOptionValueHint(
+                      formGuidance,
+                      group.name,
+                    )}
                     groupName={group.name}
                     onPress={() => openVariantValueComposer(group.id)}
                   />

@@ -1,3 +1,4 @@
+import { PageHeader, PageToolbar } from "@/components/page-header"
 import { PrescriptionReport } from "@/components/prescriptions/prescription-report"
 import { loadPrescriptionReportParams } from "@/hooks/use-prescription-report-params"
 import { getServerSession } from "@/lib/session"
@@ -27,7 +28,7 @@ export default async function Page({
   const reportStoreId = reportParams.storeId
     ? (ctx.stores.find((item) => item.id === reportParams.storeId)?.id ?? null)
     : null
-  await prefetch(
+  void prefetch(
     trpc.prescriptions.report.queryOptions({
       from,
       storeId: reportStoreId,
@@ -36,23 +37,24 @@ export default async function Page({
   )
   return (
     <HydrateClient>
-      <div className="grid flex-1 gap-6 p-6 lg:p-8">
-        <header className="flex items-end justify-between gap-4 border-b border-border pb-6">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              All tenant stores · Last 30 days
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold">
-              Prescription operations
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              De-identified lifecycle and commercial metrics.
-            </p>
-          </div>
-          <Button render={<Link href="/prescriptions" />} variant="outline">
-            Back to queue
-          </Button>
-        </header>
+      <div className="grid min-w-0 flex-1 gap-6 pt-6">
+        <PageHeader
+          eyebrow="All tenant stores · Last 30 days"
+          title="Prescription operations"
+          description="De-identified lifecycle and commercial metrics."
+        >
+          <PageToolbar
+            actions={
+              <Button
+                render={<Link href="/prescriptions" />}
+                variant="outline"
+                className="h-9 rounded-none"
+              >
+                Back to queue
+              </Button>
+            }
+          />
+        </PageHeader>
         <Suspense fallback={<div className="h-72 animate-pulse bg-muted" />}>
           <PrescriptionReport
             from={from}

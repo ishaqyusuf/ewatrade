@@ -64,10 +64,19 @@ export function buildCommercialOrderActivity(
       new Date(right.recordedAt).getTime(),
   )) {
     const amount = formatMinorMoney(payment.amountMinor, order.currencyCode)
+    const creditSettlement = payment.method === "CUSTOMER_CREDIT"
     rows.push({
-      detail: `${payment.type === "REFUND" ? "Refund" : "Payment"} of ${amount} by ${commerceStatusLabel(payment.method)}${payment.reference ? ` · ${payment.reference}` : ""} · ${payment.type === "REFUND" ? "Recorded" : "Received"} by ${payment.recordedBy?.name ?? "Unknown team member"}.`,
+      detail: creditSettlement
+        ? `${amount} of existing customer credit ${payment.type === "REFUND" ? "released" : "applied"} by ${payment.recordedBy?.name ?? "Unknown team member"}.`
+        : `${payment.type === "REFUND" ? "Refund" : "Payment"} of ${amount} by ${commerceStatusLabel(payment.method)}${payment.reference ? ` · ${payment.reference}` : ""} · ${payment.type === "REFUND" ? "Recorded" : "Received"} by ${payment.recordedBy?.name ?? "Unknown team member"}.`,
       key: `payment:${payment.id}`,
-      label: payment.type === "REFUND" ? "Refund recorded" : "Payment recorded",
+      label: creditSettlement
+        ? payment.type === "REFUND"
+          ? "Customer credit released"
+          : "Customer credit applied"
+        : payment.type === "REFUND"
+          ? "Refund recorded"
+          : "Payment recorded",
       time: formatCommerceDateTime(payment.recordedAt),
     })
   }

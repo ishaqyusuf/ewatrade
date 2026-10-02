@@ -1,4 +1,5 @@
 import type { AnalyticsBatch } from "@ishaqyusuf/logly-core"
+import { isEventName, safeEventMetadata } from "./event-metadata"
 
 const routeNames = new Set([
   "",
@@ -48,9 +49,7 @@ export function safeBatch(
     sentAt: batch.sentAt,
     sdk: batch.sdk,
     events: batch.events
-      .filter(
-        (event) => event.name === "site_visit" || event.name === "page_view",
-      )
+      .filter((event) => isEventName(event.name))
       .map((event) => ({
         eventId: event.eventId,
         project,
@@ -61,7 +60,7 @@ export function safeBatch(
         visitorId: event.visitorId,
         visitKind: event.visitKind,
         route: safeRoute(event.route),
-        properties: {},
+        properties: safeEventMetadata(event.properties),
       })),
   }
 }

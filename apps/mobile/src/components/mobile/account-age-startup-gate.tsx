@@ -55,8 +55,14 @@ export function AccountAgeStartupGate({
   return (
     <MobileScreen contentClassName="justify-center gap-6">
       <AuthBrandHeader
-        subtitle="EwaTrade is for people aged 13 or older. Choose your own age range before opening your workspace."
-        title="Confirm your age range"
+        subtitle={
+          ageStatus.isSuccess
+            ? "EwaTrade is for people aged 13 or older. Choose your own age range before opening your workspace."
+            : "Checking your saved age range before opening your workspace."
+        }
+        title={
+          ageStatus.isSuccess ? "Confirm your age range" : "Checking your account"
+        }
       />
       {ageStatus.isPending ? (
         <Text className="text-sm text-muted-foreground">

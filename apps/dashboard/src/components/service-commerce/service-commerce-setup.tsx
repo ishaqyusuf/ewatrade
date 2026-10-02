@@ -1,5 +1,31 @@
 "use client"
+import {
+  Badge,
+  Button,
+  CheckboxField,
+  ControlField,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  FieldDescription,
+  FieldGroup,
+  FieldLegend,
+  FieldSet,
+  FormActions,
+  SelectControl,
+  SubmitButton,
+  Textarea,
+} from "@ewatrade/ui"
 
+import {
+  FormCheckboxControl,
+  FormSelectControl,
+} from "@/components/forms/form-controls"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
+import { PageHeader, PageToolbar } from "@/components/page-header"
 import { flattenServiceOfferings } from "@/components/service-work/service-utils"
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useServiceCommerceSetupParams } from "@/hooks/use-service-commerce-setup-params"
@@ -10,7 +36,7 @@ import {
   type ServiceCommerceProfileConfiguration,
   serviceCommerceProfileSettingsSchema,
 } from "@ewatrade/service-commerce"
-import { Button } from "@ewatrade/ui"
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
@@ -152,12 +178,13 @@ export function ServiceCommerceSetup({
   if (state === "loading") return <ServiceCommerceSetupSkeleton />
   if (state === "error" || !accessQuery.data || !selectedStore) {
     return (
-      <div className="grid gap-3 p-6 lg:p-8">
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+      <div className="grid min-w-0 gap-3">
+        <p className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {accessQuery.error?.message ??
             "Service Commerce setup is unavailable."}
         </p>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() => void accessQuery.refetch()}
           variant="outline"
@@ -179,82 +206,78 @@ export function ServiceCommerceSetup({
   const isPending = updateMutation.isPending || activationMutation.isPending
 
   return (
-    <div className="grid flex-1 gap-6 p-6 lg:p-8">
-      <header className="flex flex-col gap-4 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">{selectedStore.name}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Service Commerce
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Choose which assisted-commerce capabilities this Store can prepare
-            and operate.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {canManage ? (
-            <Button
-              render={
-                <Link href={`/service-commerce/reports?store=${storeId}`} />
-              }
-              variant="outline"
-            >
-              Reports
-            </Button>
-          ) : null}
-          {stores.length > 1 ? (
-            <label className="grid gap-1 text-xs text-muted-foreground">
-              Store
-              <select
-                aria-label="Service Commerce Store"
-                className="h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
-                onChange={(event) => void params.setStoreId(event.target.value)}
-                value={storeId}
+    <div className="grid min-w-0 flex-1 gap-6">
+      <PageHeader
+        eyebrow={selectedStore.name}
+        title="Service Commerce"
+        description="Choose which assisted-commerce capabilities this Store can prepare and operate."
+      >
+        <PageToolbar
+          actions={
+            <>
+              {canManage ? (
+                <Button
+                  render={
+                    <Link href={`/service-commerce/reports?store=${storeId}`} />
+                  }
+                  variant="outline"
+                  className="h-9 rounded-none"
+                >
+                  Reports
+                </Button>
+              ) : null}
+              {stores.length > 1 ? (
+                <ControlField label={<>Store</>}>
+                  <SelectControl
+                    aria-label="Service Commerce Store"
+                    onValueChange={(value) => void params.setStoreId(value)}
+                    value={storeId}
+                    options={[
+                      ...(stores.map((store) => ({
+                        value: store.id,
+                        label: store.name,
+                      })) ?? []),
+                    ]}
+                  />
+                </ControlField>
+              ) : null}
+              <Badge
+                variant={
+                  suspended ? "destructive" : active ? "default" : "secondary"
+                }
               >
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              active
-                ? "bg-emerald-100 text-emerald-800"
-                : suspended
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            {active ? "Active" : suspended ? "Suspended" : "Disabled"}
-          </span>
-          {canManage && !suspended ? (
-            <Button
-              disabled={
-                isPending || (!active && data.activationBlockers.length > 0)
-              }
-              onClick={() => setConfirmation(!active)}
-              variant={active ? "outline" : "default"}
-            >
-              {active ? "Deactivate" : "Activate"}
-            </Button>
-          ) : null}
-        </div>
-      </header>
+                {active ? "Active" : suspended ? "Suspended" : "Disabled"}
+              </Badge>
+              {canManage && !suspended ? (
+                <Button
+                  className="h-9 rounded-none"
+                  disabled={
+                    isPending || (!active && data.activationBlockers.length > 0)
+                  }
+                  onClick={() => setConfirmation(!active)}
+                  variant={active ? "outline" : "default"}
+                >
+                  {active ? "Deactivate" : "Activate"}
+                </Button>
+              ) : null}
+            </>
+          }
+        />
+      </PageHeader>
 
       {message ? (
-        <p className="rounded-lg bg-muted px-4 py-3 text-sm">{message}</p>
+        <FormFeedback appearance="dashboard" variant="default">
+          {message}
+        </FormFeedback>
       ) : null}
       {!canManage ? (
-        <p className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
+        <FormFeedback appearance="dashboard" variant="default">
           You can view this Store&apos;s readiness, but only a Tenant owner or
           admin can change it.
-        </p>
+        </FormFeedback>
       ) : null}
       {data.activationBlockers.length > 0 ? (
-        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+        <section className="border border-border bg-background p-5">
           <h2 className="font-medium">Activation requirements</h2>
           <ul className="mt-2 grid gap-1 text-sm">
             {data.activationBlockers.map((blocker) => (
@@ -264,41 +287,81 @@ export function ServiceCommerceSetup({
         </section>
       ) : null}
 
-      {confirmation !== null ? (
-        <section className="rounded-xl border border-primary/30 bg-primary/5 p-5">
-          <h2 className="font-medium">
-            Confirm {confirmation ? "activation" : "deactivation"}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            This changes what customers and operators can use for{" "}
-            {selectedStore.name}.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              disabled={
-                reason.trim().length < 3 || activationMutation.isPending
-              }
-              onClick={() =>
-                activationMutation.mutate({
-                  active: confirmation,
-                  expectedRevision: data.revision,
-                  reason,
-                  storeId,
-                })
-              }
+      <Dialog
+        open={confirmation !== null}
+        onOpenChange={(open, details) => {
+          if (!open && activationMutation.isPending) {
+            details.cancel()
+            return
+          }
+          if (!open) setConfirmation(null)
+        }}
+      >
+        <DialogContent
+          className="max-w-[455px] p-4"
+          hideClose={activationMutation.isPending}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              Confirm {confirmation ? "activation" : "deactivation"}
+            </DialogTitle>
+            <DialogDescription>
+              This changes what customers and operators can use for{" "}
+              {selectedStore.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <FieldGroup className="mt-4 gap-4">
+            <ControlField
+              label="Change reason"
+              description="Enter at least 3 characters to confirm this configuration change."
             >
-              Confirm
-            </Button>
-            <Button onClick={() => setConfirmation(null)} variant="outline">
-              Cancel
-            </Button>
-          </div>
-        </section>
-      ) : null}
+              <Textarea
+                disabled={activationMutation.isPending}
+                maxLength={240}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </ControlField>
+            {activationMutation.error ? (
+              <FormFeedback appearance="dashboard">
+                {activationMutation.error.message}
+              </FormFeedback>
+            ) : null}
+            <FormActions>
+              <Button
+                appearance="form"
+                type="button"
+                variant="outline"
+                className="rounded-none"
+                disabled={activationMutation.isPending}
+                onClick={() => setConfirmation(null)}
+              >
+                Cancel
+              </Button>
+              <SubmitButton
+                type="button"
+                isSubmitting={activationMutation.isPending}
+                disabled={reason.trim().length < 3}
+                onClick={() => {
+                  if (confirmation === null) return
+                  activationMutation.mutate({
+                    active: confirmation,
+                    expectedRevision: data.revision,
+                    reason,
+                    storeId,
+                  })
+                }}
+              >
+                Confirm
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]">
         <form
-          className="grid gap-6 rounded-xl border border-border bg-card p-5"
+          className="border border-border bg-background p-5"
           onSubmit={form.handleSubmit((settings) =>
             updateMutation.mutate({
               expectedRevision: data.revision,
@@ -308,70 +371,73 @@ export function ServiceCommerceSetup({
             }),
           )}
         >
-          <div>
-            <h2 className="font-semibold">Capabilities</h2>
-            <p className="text-sm text-muted-foreground">
-              Disabled or incomplete capabilities remain unavailable to
-              customers.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {SERVICE_COMMERCE_CAPABILITIES.map((capability) => (
-              <label
-                className="flex items-center gap-3 rounded-lg border border-border p-3 text-sm"
-                key={capability}
-              >
-                <input
-                  disabled={!canManage}
-                  type="checkbox"
-                  {...form.register(`capabilities.${capability}`)}
-                />
-                {CAPABILITY_LABELS[capability]}
-              </label>
-            ))}
-          </div>
-          <label className="grid gap-2 text-sm">
-            Catalog adoption mode
-            <select
-              className="h-10 rounded-lg border border-border bg-background px-3"
-              disabled={!canManage}
-              {...form.register("catalogAdoptionMode")}
+          <FieldGroup className="min-w-0 grid gap-6">
+            <FieldSet>
+              <FieldLegend>Capabilities</FieldLegend>
+              <FieldDescription>
+                Disabled or incomplete capabilities remain unavailable to
+                customers.
+              </FieldDescription>
+              <FieldGroup className="grid gap-3 sm:grid-cols-2">
+                {SERVICE_COMMERCE_CAPABILITIES.map((capability) => (
+                  <CheckboxField
+                    key={capability}
+                    label={CAPABILITY_LABELS[capability]}
+                  >
+                    <FormCheckboxControl
+                      disabled={!canManage}
+                      control={form.control}
+                      name={`capabilities.${capability}`}
+                    />
+                  </CheckboxField>
+                ))}
+              </FieldGroup>
+            </FieldSet>
+            <ControlField label={<>Catalog adoption mode</>}>
+              <FormSelectControl
+                disabled={!canManage}
+                control={form.control}
+                name={"catalogAdoptionMode"}
+                options={[
+                  { value: "progressive", label: <>Progressive Catalog</> },
+                  { value: "inventory_managed", label: <>Managed inventory</> },
+                ]}
+              />
+            </ControlField>
+            <CheckboxField
+              label={<>Allow policy-approved procure-to-order commitments</>}
             >
-              <option value="progressive">Progressive Catalog</option>
-              <option value="inventory_managed">Managed inventory</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-3 text-sm">
-            <input
-              disabled={!canManage}
-              type="checkbox"
-              {...form.register("procureToOrderEnabled")}
-            />
-            Allow policy-approved procure-to-order commitments
-          </label>
-          <label className="grid gap-2 text-sm">
-            Change reason
-            <textarea
-              className="min-h-24 rounded-lg border border-border bg-background px-3 py-2"
-              disabled={!canManage}
-              maxLength={240}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="Explain why this Store configuration is changing"
-              value={reason}
-            />
-          </label>
-          {canManage ? (
-            <Button
-              className="w-fit"
-              disabled={isPending || reason.trim().length < 3}
-              type="submit"
-            >
-              {updateMutation.isPending ? "Saving…" : "Save settings"}
-            </Button>
-          ) : null}
+              <FormCheckboxControl
+                disabled={!canManage}
+                control={form.control}
+                name={"procureToOrderEnabled"}
+              />
+            </CheckboxField>
+            <ControlField label={<>Change reason</>}>
+              <Textarea
+                disabled={!canManage}
+                maxLength={240}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Explain why this Store configuration is changing"
+                value={reason}
+              />
+            </ControlField>
+            {canManage ? (
+              <FormActions>
+                <SubmitButton
+                  isSubmitting={isPending}
+                  className="w-fit"
+                  disabled={isPending || reason.trim().length < 3}
+                  type="submit"
+                >
+                  {updateMutation.isPending ? "Saving…" : "Save settings"}
+                </SubmitButton>
+              </FormActions>
+            ) : null}
+          </FieldGroup>
         </form>
 
-        <aside className="grid content-start gap-4 rounded-xl border border-border bg-card p-5">
+        <aside className="grid content-start gap-4 border border-border bg-background p-5">
           <div>
             <h2 className="font-semibold">Readiness</h2>
             <p className="text-sm text-muted-foreground">
@@ -403,7 +469,7 @@ export function ServiceCommerceSetup({
               </p>
             </div>
             {serviceItems.isLoading ? (
-              <div className="h-10 animate-pulse rounded-lg bg-muted" />
+              <div className="h-10 animate-pulse bg-muted" />
             ) : serviceItems.isError ? (
               <div className="grid gap-2 text-sm text-destructive" role="alert">
                 <p>
@@ -411,6 +477,7 @@ export function ServiceCommerceSetup({
                   configuring booking.
                 </p>
                 <Button
+                  appearance="form"
                   className="w-fit"
                   onClick={() => void serviceItems.refetch()}
                   size="sm"
@@ -424,30 +491,27 @@ export function ServiceCommerceSetup({
                 Add an available Service offering before configuring booking.
               </p>
             ) : (
-              <label className="grid gap-2 text-sm">
-                Service offering
-                <select
-                  className="h-10 rounded-lg border border-border bg-background px-3"
-                  defaultValue=""
+              <ControlField label={<>Service offering</>}>
+                <SelectControl
+                  value=""
                   disabled={!canManage}
-                  onChange={(event) => {
-                    const offeringId = event.target.value
+                  onValueChange={(value) => {
+                    const offeringId = value
                     if (!offeringId) return
                     void sheetParams.setParams({
                       offeringId,
                       serviceCommerceSheet: "booking",
                     })
-                    event.currentTarget.value = ""
                   }}
-                >
-                  <option value="">Choose an offering</option>
-                  {bookingOfferings.map((offering) => (
-                    <option key={offering.id} value={offering.id}>
-                      {offering.displayName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={[
+                    { value: "", label: <>Choose an offering</> },
+                    ...(bookingOfferings.map((offering) => ({
+                      value: offering.id,
+                      label: offering.displayName,
+                    })) ?? []),
+                  ]}
+                />
+              </ControlField>
             )}
           </section>
         </aside>
@@ -458,9 +522,9 @@ export function ServiceCommerceSetup({
 
 export function ServiceCommerceSetupSkeleton() {
   return (
-    <div className="grid flex-1 gap-6 p-6 lg:p-8">
-      <div className="h-24 animate-pulse rounded-xl bg-muted" />
-      <div className="h-96 animate-pulse rounded-xl bg-muted" />
+    <div className="grid min-w-0 flex-1 gap-6">
+      <div className="h-24 animate-pulse bg-muted" />
+      <div className="h-96 animate-pulse bg-muted" />
     </div>
   )
 }

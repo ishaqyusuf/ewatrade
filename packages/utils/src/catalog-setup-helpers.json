@@ -220,7 +220,8 @@
             "values": ["Starter", "Grower", "Layer"]
           }
         ]
-      }
+      },
+      "businessProfileKeys": ["animal-feed-agricultural-supplies"]
     },
     {
       "key": "feed-bag-50kg",
@@ -274,7 +275,8 @@
             "values": ["Starter", "Grower", "Layer"]
           }
         ]
-      }
+      },
+      "businessProfileKeys": ["animal-feed-agricultural-supplies"]
     },
     {
       "key": "apparel-size-colour",
@@ -304,7 +306,8 @@
             "values": ["Black", "White", "Blue"]
           }
         ]
-      }
+      },
+      "businessProfileKeys": ["fashion-apparel"]
     },
     {
       "key": "drinks-bottle-crate",
@@ -330,7 +333,11 @@
           }
         ],
         "optionGroups": []
-      }
+      },
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "wholesale-distribution"
+      ]
     },
     {
       "key": "fabric-roll-metre",
@@ -364,7 +371,8 @@
           }
         ],
         "optionGroups": []
-      }
+      },
+      "businessProfileKeys": ["fabrics-tailoring"]
     },
     {
       "key": "simple-fixed-service",
@@ -449,7 +457,8 @@
         "pricingPolicy": "fixed",
         "quantityScale": 0,
         "workPolicy": "tracked"
-      }
+      },
+      "businessProfileKeys": ["laundry-dry-cleaning"]
     },
     {
       "key": "device-repair",
@@ -474,7 +483,8 @@
         "pricingPolicy": "quote_required",
         "quantityScale": 0,
         "workPolicy": "tracked"
-      }
+      },
+      "businessProfileKeys": ["electronics-phone-shops", "repair-maintenance"]
     },
     {
       "key": "professional-consultation",
@@ -499,6 +509,842 @@
         "pricingPolicy": "quote_required",
         "quantityScale": 0,
         "workPolicy": "tracked"
+      },
+      "businessProfileKeys": ["professional-services"]
+    },
+    {
+      "key": "farm-eggs-tray",
+      "kind": "product",
+      "classification": "example",
+      "title": "Eggs by piece and tray",
+      "description": "Track individual eggs and sell trays from the same balance. The example tray holds 30 eggs; edit it to match your farm.",
+      "suggestedName": "Eggs",
+      "businessProfileKeys": ["animal-feed-agricultural-supplies"],
+      "tags": ["farm", "poultry", "eggs", "layer", "tray"],
+      "setup": {
+        "units": [
+          {
+            "name": "Egg",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "name": "Tray",
+            "factor": "30",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "farm-live-poultry",
+      "kind": "product",
+      "classification": "example",
+      "title": "Live poultry by bird type",
+      "description": "Count live birds with separate stock and prices for broilers, layers and cockerels.",
+      "suggestedName": "Live Poultry",
+      "businessProfileKeys": ["animal-feed-agricultural-supplies"],
+      "tags": ["farm", "poultry", "bird", "broiler", "layer", "cockerel"],
+      "setup": {
+        "units": [
+          {
+            "name": "Bird",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Bird type",
+            "values": ["Broiler", "Layer", "Cockerel"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "farm-produce-weight",
+      "kind": "product",
+      "classification": "example",
+      "title": "Farm produce by kilogram",
+      "description": "Weigh harvested produce and sell kilograms or grams from shared stock.",
+      "suggestedName": "Farm Produce",
+      "businessProfileKeys": [
+        "animal-feed-agricultural-supplies",
+        "general-retail-groceries"
+      ],
+      "tags": ["farm", "harvest", "produce", "vegetables", "kilogram"],
+      "setup": {
+        "units": [
+          {
+            "name": "Kilogram",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 2
+          },
+          {
+            "name": "Gram",
+            "factor": "0.001",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "fertilizer-bag",
+      "kind": "product",
+      "classification": "example",
+      "title": "Fertilizer by sealed bag",
+      "description": "Count sealed fertilizer bags with separate stock for each bag weight. Selling a bag does not open or divide it.",
+      "suggestedName": "Fertilizer",
+      "businessProfileKeys": ["animal-feed-agricultural-supplies"],
+      "tags": ["farm", "fertilizer", "bag", "agriculture"],
+      "setup": {
+        "units": [
+          {
+            "name": "Bag",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Bag weight",
+            "values": ["25 kg", "50 kg"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "seed-packets",
+      "kind": "product",
+      "classification": "example",
+      "title": "Seed packets by crop",
+      "description": "Count seed packets with separate maize, tomato and pepper stock and prices.",
+      "suggestedName": "Seed Packet",
+      "businessProfileKeys": ["animal-feed-agricultural-supplies"],
+      "tags": ["farm", "seed", "packet", "maize", "tomato", "pepper"],
+      "setup": {
+        "units": [
+          {
+            "name": "Packet",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Crop",
+            "values": ["Maize", "Tomato", "Pepper"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "rice-kilogram",
+      "kind": "product",
+      "classification": "example",
+      "title": "Rice by kilogram",
+      "description": "Track loose rice by kilogram and sell grams from the same balance.",
+      "suggestedName": "Rice",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "food-bakery-catering"
+      ],
+      "tags": ["rice", "groceries", "food", "kilogram", "gram"],
+      "setup": {
+        "units": [
+          {
+            "name": "Kilogram",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 2
+          },
+          {
+            "name": "Gram",
+            "factor": "0.001",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 2
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "biscuits-piece-carton",
+      "kind": "product",
+      "classification": "example",
+      "title": "Biscuits by packet and carton",
+      "description": "Count biscuit packets and sell cartons from shared stock. Edit the example 24-packet carton quantity.",
+      "suggestedName": "Biscuits",
+      "businessProfileKeys": [
+        "general-retail-groceries",
+        "wholesale-distribution"
+      ],
+      "tags": ["biscuit", "groceries", "packet", "carton"],
+      "setup": {
+        "units": [
+          {
+            "name": "Packet",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "name": "Carton",
+            "factor": "24",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "shoes-size",
+      "kind": "product",
+      "classification": "example",
+      "title": "Shoes by size",
+      "description": "Count pairs with separate stock and prices for each shoe size.",
+      "suggestedName": "Shoes",
+      "businessProfileKeys": ["fashion-apparel"],
+      "tags": ["shoes", "fashion", "pair", "size"],
+      "setup": {
+        "units": [
+          {
+            "name": "Pair",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Size",
+            "values": ["38", "39", "40", "41", "42", "43"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "trouser-alteration",
+      "kind": "service",
+      "classification": "example",
+      "title": "Trouser alteration",
+      "description": "Track hemming, waist adjustments and zip replacements with an editable fixed price for each.",
+      "suggestedName": "Trouser Alteration",
+      "businessProfileKeys": ["fabrics-tailoring"],
+      "tags": ["tailoring", "alteration", "trousers", "hemming"],
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Alteration",
+            "values": ["Hemming", "Waist adjustment", "Zip replacement"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "custom-outfit-sewing",
+      "kind": "service",
+      "classification": "example",
+      "title": "Custom outfit sewing",
+      "description": "Agree a quote for each outfit before releasing sewing work.",
+      "suggestedName": "Custom Outfit Sewing",
+      "businessProfileKeys": ["fabrics-tailoring"],
+      "tags": ["tailoring", "sewing", "outfit", "quote"],
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Outfit",
+            "values": ["Dress", "Suit", "Caftan"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "bottled-water-pack",
+      "kind": "product",
+      "classification": "example",
+      "title": "Bottled water by bottle and pack",
+      "description": "Count bottles and sell packs from shared stock. Edit the example 12-bottle pack quantity.",
+      "suggestedName": "Bottled Water",
+      "businessProfileKeys": [
+        "drinks-water-distribution",
+        "wholesale-distribution",
+        "general-retail-groceries"
+      ],
+      "tags": ["water", "bottle", "pack", "drinks"],
+      "setup": {
+        "units": [
+          {
+            "name": "Bottle",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "name": "Pack",
+            "factor": "12",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "bread-loaf-size",
+      "kind": "product",
+      "classification": "example",
+      "title": "Bread by loaf size",
+      "description": "Count loaves with separate stock and prices for each size.",
+      "suggestedName": "Bread",
+      "businessProfileKeys": [
+        "food-bakery-catering",
+        "general-retail-groceries"
+      ],
+      "tags": ["bread", "bakery", "loaf", "food"],
+      "setup": {
+        "units": [
+          {
+            "name": "Loaf",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Size",
+            "values": ["Small", "Medium", "Large"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "cake-size-flavour",
+      "kind": "product",
+      "classification": "example",
+      "title": "Cake by size and flavour",
+      "description": "Count ready-made cakes with independent stock and prices for every size and flavour.",
+      "suggestedName": "Cake",
+      "businessProfileKeys": ["food-bakery-catering"],
+      "tags": ["cake", "bakery", "size", "flavour"],
+      "setup": {
+        "units": [
+          {
+            "name": "Cake",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Size",
+            "values": ["6 inch", "8 inch", "10 inch"]
+          },
+          {
+            "name": "Flavour",
+            "values": ["Vanilla", "Chocolate", "Red velvet"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "event-catering",
+      "kind": "service",
+      "classification": "example",
+      "title": "Event catering",
+      "description": "Quote and track event catering by package. Review scope and guest numbers with the customer before agreeing a price.",
+      "suggestedName": "Event Catering",
+      "businessProfileKeys": ["food-bakery-catering"],
+      "tags": ["food", "catering", "event", "quote"],
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Package",
+            "values": ["Food only", "Food and serving", "Full catering"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "shampoo-bottle-size",
+      "kind": "product",
+      "classification": "example",
+      "title": "Shampoo by bottle size",
+      "description": "Count sealed shampoo bottles with separate stock and prices for each volume.",
+      "suggestedName": "Shampoo",
+      "businessProfileKeys": ["beauty-salon-spa", "pharmacy-health-retail"],
+      "tags": ["shampoo", "hair", "beauty", "bottle"],
+      "setup": {
+        "units": [
+          {
+            "name": "Bottle",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Bottle size",
+            "values": ["250 mL", "500 mL", "1 L"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "haircut-style",
+      "kind": "service",
+      "classification": "example",
+      "title": "Haircut by style",
+      "description": "Charge a fixed price for each haircut style without creating tracked service work.",
+      "suggestedName": "Haircut",
+      "businessProfileKeys": ["beauty-salon-spa"],
+      "tags": ["haircut", "barber", "salon", "style"],
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "charge_only",
+        "optionGroups": [
+          {
+            "name": "Style",
+            "values": ["Standard cut", "Fade", "Children cut"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "hair-braiding",
+      "kind": "service",
+      "classification": "example",
+      "title": "Hair braiding by style and length",
+      "description": "Track braiding work with an editable fixed price for each style and length.",
+      "suggestedName": "Hair Braiding",
+      "businessProfileKeys": ["beauty-salon-spa"],
+      "tags": ["hair", "braiding", "salon", "length"],
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Style",
+            "values": ["Box braids", "Cornrows", "Twists"]
+          },
+          {
+            "name": "Length",
+            "values": ["Short", "Medium", "Long"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "ironing-only",
+      "kind": "service",
+      "classification": "example",
+      "title": "Ironing by garment",
+      "description": "Track ironing-only work with an editable fixed price for each garment.",
+      "suggestedName": "Ironing",
+      "businessProfileKeys": ["laundry-dry-cleaning"],
+      "tags": ["ironing", "garment", "laundry"],
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Garment",
+            "values": ["Shirt", "Trousers", "Dress", "Caftan"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "phone-storage-colour",
+      "kind": "product",
+      "classification": "example",
+      "title": "Phone by storage and colour",
+      "description": "Count phones with separate stock and prices for every storage and colour combination.",
+      "suggestedName": "Phone",
+      "businessProfileKeys": ["electronics-phone-shops"],
+      "tags": ["phone", "electronics", "storage", "colour"],
+      "setup": {
+        "units": [
+          {
+            "name": "Piece",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Storage",
+            "values": ["64 GB", "128 GB", "256 GB"]
+          },
+          {
+            "name": "Colour",
+            "values": ["Black", "Blue", "Silver"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "charger-connector",
+      "kind": "product",
+      "classification": "example",
+      "title": "Charger by connector type",
+      "description": "Count chargers with separate stock and prices for each connector.",
+      "suggestedName": "Charger",
+      "businessProfileKeys": ["electronics-phone-shops"],
+      "tags": ["charger", "electronics", "accessories", "connector"],
+      "setup": {
+        "units": [
+          {
+            "name": "Piece",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Connector",
+            "values": ["USB-C", "Micro USB", "Lightning"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "appliance-repair",
+      "kind": "service",
+      "classification": "example",
+      "title": "Appliance diagnosis and repair",
+      "description": "Quote and track diagnosis or repair by appliance type.",
+      "suggestedName": "Appliance Repair",
+      "businessProfileKeys": ["repair-maintenance"],
+      "tags": ["appliance", "repair", "maintenance", "diagnosis"],
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Appliance",
+            "values": ["Refrigerator", "Washing machine", "Air conditioner"]
+          },
+          {
+            "name": "Work type",
+            "values": ["Diagnosis", "Repair"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "replacement-parts",
+      "kind": "product",
+      "classification": "example",
+      "title": "Replacement parts by type",
+      "description": "Count replacement parts with separate stock and prices for each type.",
+      "suggestedName": "Replacement Part",
+      "businessProfileKeys": [
+        "repair-maintenance",
+        "hardware-building-materials"
+      ],
+      "tags": ["parts", "repair", "replacement", "hardware"],
+      "setup": {
+        "units": [
+          {
+            "name": "Piece",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Part type",
+            "values": ["Belt", "Filter", "Switch"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "bandages-piece-box",
+      "kind": "product",
+      "classification": "example",
+      "title": "Bandages by piece and box",
+      "description": "Count individually wrapped bandages and sell boxes from shared stock. Edit the example 20-piece box quantity.",
+      "suggestedName": "Bandage",
+      "businessProfileKeys": ["pharmacy-health-retail"],
+      "tags": ["bandage", "health", "piece", "box"],
+      "setup": {
+        "units": [
+          {
+            "name": "Piece",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "name": "Box",
+            "factor": "20",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "wellness-pack-size",
+      "kind": "product",
+      "classification": "example",
+      "title": "Packaged wellness goods",
+      "description": "Count sealed wellness products with separate stock and prices for each pack size.",
+      "suggestedName": "Wellness Product",
+      "businessProfileKeys": ["pharmacy-health-retail"],
+      "tags": ["wellness", "health", "pack", "size"],
+      "setup": {
+        "units": [
+          {
+            "name": "Pack",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Pack size",
+            "values": ["Small", "Large"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "cement-bag",
+      "kind": "product",
+      "classification": "example",
+      "title": "Cement by sealed bag",
+      "description": "Count sealed cement bags with separate stock and prices for each bag weight.",
+      "suggestedName": "Cement",
+      "businessProfileKeys": ["hardware-building-materials"],
+      "tags": ["cement", "building", "bag", "hardware"],
+      "setup": {
+        "units": [
+          {
+            "name": "Bag",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Bag weight",
+            "values": ["25 kg", "50 kg"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "paint-tin-size-colour",
+      "kind": "product",
+      "classification": "example",
+      "title": "Paint by tin size and colour",
+      "description": "Count sealed paint tins with independent stock and prices for each size and colour.",
+      "suggestedName": "Paint",
+      "businessProfileKeys": ["hardware-building-materials"],
+      "tags": ["paint", "building", "tin", "colour"],
+      "setup": {
+        "units": [
+          {
+            "name": "Tin",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": [
+          {
+            "name": "Tin size",
+            "values": ["1 L", "4 L", "20 L"]
+          },
+          {
+            "name": "Colour",
+            "values": ["White", "Cream", "Grey"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "cable-metre-roll",
+      "kind": "product",
+      "classification": "example",
+      "title": "Cable by metre and roll",
+      "description": "Track loose cable in metres and keep unopened rolls as separate stock. Edit the example 100-metre roll length.",
+      "suggestedName": "Cable",
+      "businessProfileKeys": ["hardware-building-materials"],
+      "tags": ["cable", "electrical", "metre", "roll"],
+      "setup": {
+        "units": [
+          {
+            "name": "Metre",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 2
+          },
+          {
+            "name": "Roll",
+            "factor": "100",
+            "stockBehavior": "packaged_stock",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "wholesale-piece-pack-carton",
+      "kind": "product",
+      "classification": "example",
+      "title": "Wholesale goods by piece, pack and carton",
+      "description": "Count individual pieces and sell packs and cartons from shared stock. Edit the example 12-piece pack and 144-piece carton quantities.",
+      "suggestedName": "Wholesale Goods",
+      "businessProfileKeys": ["wholesale-distribution"],
+      "tags": ["wholesale", "piece", "pack", "carton", "bulk"],
+      "setup": {
+        "units": [
+          {
+            "name": "Piece",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          },
+          {
+            "name": "Pack",
+            "factor": "12",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          },
+          {
+            "name": "Carton",
+            "factor": "144",
+            "stockBehavior": "alternate_transaction",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "design-project",
+      "kind": "service",
+      "classification": "example",
+      "title": "Design project by deliverable",
+      "description": "Agree a quote and track design work for each deliverable.",
+      "suggestedName": "Design Project",
+      "businessProfileKeys": ["professional-services"],
+      "tags": ["design", "professional", "project", "quote"],
+      "setup": {
+        "authorizationPolicy": "manual_release",
+        "pricingPolicy": "quote_required",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Deliverable",
+            "values": ["Logo", "Brand identity", "Website design"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "training-session",
+      "kind": "service",
+      "classification": "example",
+      "title": "Training session by format",
+      "description": "Track training sessions with an editable fixed price for each delivery format. Scheduling is configured separately.",
+      "suggestedName": "Training Session",
+      "businessProfileKeys": ["professional-services"],
+      "tags": ["training", "professional", "session", "delivery"],
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "tracked",
+        "optionGroups": [
+          {
+            "name": "Format",
+            "values": ["Remote", "On-site"]
+          }
+        ]
+      }
+    },
+    {
+      "key": "mixed-everyday-item",
+      "kind": "product",
+      "classification": "example",
+      "title": "Everyday item by piece",
+      "description": "Start with a counted item, then rename it and add the options your business uses.",
+      "suggestedName": "Everyday Item",
+      "businessProfileKeys": ["other-mixed-business"],
+      "tags": ["mixed", "everyday", "piece", "general"],
+      "setup": {
+        "units": [
+          {
+            "name": "Piece",
+            "factor": "1",
+            "stockBehavior": "canonical_shared",
+            "transactionScale": 0
+          }
+        ],
+        "optionGroups": []
+      }
+    },
+    {
+      "key": "mixed-basic-service",
+      "kind": "service",
+      "classification": "example",
+      "title": "Basic service charge",
+      "description": "Start with a fixed service charge, then rename it and set your own price.",
+      "suggestedName": "Basic Service",
+      "businessProfileKeys": ["other-mixed-business"],
+      "tags": ["mixed", "basic", "service", "charge"],
+      "setup": {
+        "authorizationPolicy": "on_order_confirmation",
+        "pricingPolicy": "fixed",
+        "quantityScale": 0,
+        "workPolicy": "charge_only",
+        "optionGroups": []
       }
     }
   ]

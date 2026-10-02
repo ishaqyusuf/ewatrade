@@ -1,0 +1,165 @@
+enum FinanceInventoryCostReviewNodeKind {
+  ORIGIN
+  WITHDRAWAL
+  TRANSFER_OUT
+  TRANSFER_IN
+  RETURN_RESTOCK
+  RETURN_NON_RESTOCK
+  RESTORATION
+}
+
+enum FinanceInventoryCostReviewEvidenceMode {
+  RESOLVE_UNKNOWN
+  CORRECT_RECORDED
+}
+
+enum FinanceInventoryCostReviewClassification {
+  OPENING_BALANCE
+  ACQUISITION
+  OWNER_CONTRIBUTION
+  INVENTORY_GAIN
+  SOURCE_CORRECTION
+}
+
+/// Confirmed immutable monetary review. This does not create or replace physical stock facts.
+model FinanceInventoryCostReview {
+  id                   String                                 @id @default(cuid())
+  tenantId             String
+  bookId               String
+  clientCommandId      String
+  payloadHash          String
+  costTraceHash        String
+  reviewedSnapshotHash String
+  algorithmVersion     String
+  evidenceCutoff       DateTime
+  historyThrough       DateTime
+  reviewedBookSequence BigInt
+  reason               String
+  sourceSnapshot       Json
+  postingPlan          Json
+  actorUserId          String
+  createdAt            DateTime                               @default(now())
+  book                 FinanceBook                            @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  allocations          FinanceInventoryCostReviewAllocation[]
+  evidence             FinanceInventoryCostReviewEvidence[]
+  poolSnapshots        FinanceInventoryCostReviewPool[]
+  journals             FinanceInventoryCostReviewJournal[]
+
+  @@unique([bookId, clientCommandId])
+  @@unique([tenantId, bookId, id])
+  @@index([bookId, createdAt, id])
+}
+
+/// One resolved shadow node. Original event/return/movement amounts remain immutable.
+model FinanceInventoryCostReviewAllocation {
+  id                              String                                 @id @default(cuid())
+  tenantId                        String
+  bookId                          String
+  reviewId                        String
+  poolId                          String
+  balanceSourceId                 String
+  sourceKey                       String
+  kind                            FinanceInventoryCostReviewNodeKind
+  withdrawalPurpose               String?
+  ordinal                         BigInt
+  effectiveAt                     DateTime
+  quantity                        Decimal                                @db.Decimal(38, 18)
+  quantityBefore                  Decimal                                @db.Decimal(38, 18)
+  quantityAfter                   Decimal                                @db.Decimal(38, 18)
+  recordedCostMinor               BigInt?
+  resolvedCostMinor               BigInt
+  valuationEventId                String?
+  stockOperationId                String?
+  stockMovementId                 String?
+  productReturnAllocationId       String?
+  originalSourceKey               String?
+  originalRemainingQuantityBefore Decimal?                               @db.Decimal(38, 18)
+  returnOrdinal                   BigInt?
+  previousResolutionId            String?
+  review                          FinanceInventoryCostReview             @relation(fields: [tenantId, bookId, reviewId], references: [tenantId, bookId, id], onDelete: Restrict)
+  pool                            FinanceInventoryPool                   @relation(fields: [bookId, poolId, balanceSourceId], references: [bookId, id, balanceSourceId], onDelete: Restrict)
+  valuationEvent                  FinanceInventoryValuationEvent?        @relation(fields: [tenantId, bookId, valuationEventId, balanceSourceId], references: [tenantId, bookId, id, balanceSourceId], onDelete: Restrict)
+  stockMovement                   StockMovement?                         @relation(fields: [stockOperationId, stockMovementId, balanceSourceId], references: [operationId, id, balanceSourceId], onDelete: Restrict)
+  productReturnAllocation         FinanceProductReturnCostAllocation?    @relation(fields: [tenantId, bookId, productReturnAllocationId], references: [tenantId, bookId, id], onDelete: Restrict)
+  originalAllocation              FinanceInventoryCostReviewAllocation?  @relation("ReviewedCostOriginal", fields: [bookId, reviewId, originalSourceKey], references: [bookId, reviewId, sourceKey], onDelete: Restrict)
+  dependentAllocations            FinanceInventoryCostReviewAllocation[] @relation("ReviewedCostOriginal")
+  previousResolution              FinanceInventoryCostReviewAllocation?  @relation("ReviewedCostPrevious", fields: [bookId, sourceKey, previousResolutionId], references: [bookId, sourceKey, id], onDelete: Restrict)
+  nextResolution                  FinanceInventoryCostReviewAllocation?  @relation("ReviewedCostPrevious")
+  evidence                        FinanceInventoryCostReviewEvidence?
+
+  @@unique([tenantId, bookId, reviewId, id])
+  @@unique([bookId, reviewId, sourceKey])
+  @@unique([bookId, reviewId, balanceSourceId, ordinal])
+  @@unique([bookId, sourceKey, id])
+  @@unique([bookId, sourceKey, previousResolutionId])
+  @@index([bookId, sourceKey])
+  @@index([tenantId, bookId, valuationEventId])
+  @@index([tenantId, bookId, productReturnAllocationId])
+  @@index([stockOperationId, stockMovementId, balanceSourceId])
+}
+
+/// Original evidence and reviewed classification; FK validity alone grants no posting authority.
+model FinanceInventoryCostReviewEvidence {
+  id                   String                                   @id @default(cuid())
+  tenantId             String
+  bookId               String
+  reviewId             String
+  allocationId         String
+  mode                 FinanceInventoryCostReviewEvidenceMode
+  classification       FinanceInventoryCostReviewClassification
+  originalCostMinor    BigInt
+  evidenceReference    String
+  sourceDocumentKind   String
+  sourceDocumentId     String?
+  sourceEffectiveAt    DateTime
+  postingEffectiveAt   DateTime
+  counterAccountId     String?
+  billLineId           String?
+  sourceJournalEntryId String?
+  basis                Json
+  review               FinanceInventoryCostReview               @relation(fields: [tenantId, bookId, reviewId], references: [tenantId, bookId, id], onDelete: Restrict, map: "InventoryCostReviewEvidence_review_fkey")
+  allocation           FinanceInventoryCostReviewAllocation     @relation(fields: [tenantId, bookId, reviewId, allocationId], references: [tenantId, bookId, reviewId, id], onDelete: Restrict, map: "InventoryCostReviewEvidence_allocation_fkey")
+  counterAccount       FinanceAccount?                          @relation(fields: [bookId, counterAccountId], references: [bookId, id], onDelete: Restrict)
+  billLine             FinanceBillLine?                         @relation(fields: [bookId, billLineId], references: [bookId, id], onDelete: Restrict)
+  sourceJournalEntry   FinanceJournalEntry?                     @relation("InventoryCostReviewOriginalJournal", fields: [bookId, sourceJournalEntryId], references: [bookId, id], onDelete: Restrict)
+
+  @@unique([tenantId, bookId, reviewId, allocationId])
+}
+
+/// Immutable before/after monetary projection bound to the actual stock snapshot.
+model FinanceInventoryCostReviewPool {
+  id                        String                     @id @default(cuid())
+  tenantId                  String
+  bookId                    String
+  reviewId                  String
+  poolId                    String
+  balanceSourceId           String
+  quantity                  Decimal                    @db.Decimal(38, 18)
+  valueBeforeMinor          BigInt?
+  valueAfterMinor           BigInt
+  expectedStockRevision     Int
+  expectedMovementCount     BigInt
+  expectedValuationSequence BigInt
+  review                    FinanceInventoryCostReview @relation(fields: [tenantId, bookId, reviewId], references: [tenantId, bookId, id], onDelete: Restrict)
+  pool                      FinanceInventoryPool       @relation("InventoryCostReviewPool", fields: [bookId, poolId, balanceSourceId], references: [bookId, id, balanceSourceId], onDelete: Restrict)
+  currentPools              FinanceInventoryPool[]     @relation("CurrentInventoryCostReview")
+
+  @@unique([bookId, reviewId, poolId])
+  @@unique([bookId, poolId, balanceSourceId, id])
+}
+
+/// New adjustment journal owned by this review, separate from original posted-source proof.
+model FinanceInventoryCostReviewJournal {
+  id             String                     @id @default(cuid())
+  tenantId       String
+  bookId         String
+  reviewId       String
+  journalEntryId String
+  groupKey       String
+  basis          Json
+  review         FinanceInventoryCostReview @relation(fields: [tenantId, bookId, reviewId], references: [tenantId, bookId, id], onDelete: Restrict)
+  journalEntry   FinanceJournalEntry        @relation("InventoryCostReviewAdjustmentJournal", fields: [bookId, journalEntryId], references: [bookId, id], onDelete: Restrict)
+
+  @@unique([bookId, journalEntryId])
+  @@unique([bookId, reviewId, groupKey])
+}

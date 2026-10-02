@@ -35,7 +35,7 @@ export function QaAccountChooser() {
   if (!qa.capabilityAvailable || !qa.authorization) {
     return (
       <Pressable
-        accessibilityHint="Opens optional QA Domain and tester credential setup"
+        accessibilityHint="Opens optional QA domain setup"
         accessibilityLabel="Set up QA"
         accessibilityRole="button"
         className="min-h-11 flex-row items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-3 active:bg-primary/20"

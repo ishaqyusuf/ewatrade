@@ -12,5 +12,11 @@ export function OpenDomainSheet({
   ...props
 }: ComponentProps<typeof Button> & { mode: DomainSheetMode }) {
   const { setParams } = useDomainParams()
-  return <Button {...props} onClick={() => setParams({ domainMode: mode })} />
+  return (
+    <Button
+      appearance="form"
+      {...props}
+      onClick={() => setParams({ domainMode: mode })}
+    />
+  )
 }

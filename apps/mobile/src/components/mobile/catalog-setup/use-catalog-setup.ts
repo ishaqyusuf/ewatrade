@@ -1,15 +1,14 @@
-import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
-import { TRPCClientError } from "@trpc/client"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
-import type { CatalogVariantDraft } from "./catalog-variant-model"
 import type { KeyboardInlineComposerPill } from "@/components/mobile/keyboard-inline-composer"
 import { useModal } from "@/components/ui/modal"
 import { useAuthContext } from "@/hooks/use-auth"
 import { createCatalogFixture } from "@/internal-tooling/fixture-recipes"
 import { getCatalogItemSaveReadiness } from "@/lib/catalog-item-save-readiness"
 import { resolveCatalogOptionUnitPriceMinor } from "@/lib/catalog-option-pricing"
+import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
+import { canManageMobileOperations } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   type CatalogSetupHelper,
   type CatalogUnitRelationDirection,
@@ -24,8 +23,15 @@ import {
   majorToMinor,
   transposeCatalogUnitRelation,
 } from "@ewatrade/utils"
+import {
+  canAddCatalogOptionValue,
+  getCatalogOptionSuggestions,
+  getCatalogOptionValueSuggestions,
+  resolveCatalogFormGuidance,
+} from "@ewatrade/utils/business-catalog-guidance"
 import { EXACT_CANONICAL_MAX_SCALE } from "@ewatrade/utils/exact-decimal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { TRPCClientError } from "@trpc/client"
 import * as Crypto from "expo-crypto"
 import {
   type Dispatch,
@@ -38,21 +44,30 @@ import {
 import { Keyboard, type TextInput } from "react-native"
 import {
   type CatalogItemKind,
-  type SimpleCatalogItemScreenProps,
+  DEFAULT_UNIT_TRANSACTION_SCALE,
   type MobileOptionGroup,
   type MobileUnitDraft,
-  type VariantComposerMode,
+  type SimpleCatalogItemScreenProps,
   VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
-  DEFAULT_UNIT_TRANSACTION_SCALE,
-  PRODUCT_VARIANT_TYPES,
-  SERVICE_OPTION_TYPES,
-  getVariantValueSuggestions,
-  newUnit,
-  unitKey,
+  type VariantComposerMode,
   catalogCreateErrorMessage,
-  requirePriceMinor,
   getExactOpeningStock,
+  newUnit,
+  requirePriceMinor,
+  unitKey,
 } from "./catalog-setup-model"
+import type { CatalogVariantDraft } from "./catalog-variant-model"
+import type { CatalogCategorySuggestion } from "@ewatrade/utils/catalog-category-suggestions"
+import { useCategorySuggestions } from "./use-category-suggestions"
+import {
+  removeSellingUnitPreservingFactors,
+  requireSellingUnitFactor,
+  resolveSellingUnitFactors,
+} from "./selling-unit-relations"
+import {
+  type CatalogImageDraft,
+  useCatalogImageDraft,
+} from "./use-catalog-image-draft"
 
 type SetupConfirmation =
   | { kind: "replace"; helper: CatalogSetupHelper | null }
@@ -70,6 +85,8 @@ type SetupAttempt = SetupCommand & {
   businessId: string
   userId: string
   storeId: string
+  photo?: CatalogImageDraft
+  photoAssetId?: string
 }
 
 export function useCatalogSetup({
@@ -193,6 +210,8 @@ export function useCatalogSetup({
     composerText: string
     defaultQuoteRequired: boolean
     description: string
+    imageUrl: string
+    category: string
     editingGroupId: string | null
     helperPickerOpen: boolean
     multiplePriceOptions: boolean
@@ -233,6 +252,20 @@ export function useCatalogSetup({
   const [unitName, setUnitName] = useState("")
   const [openingStock, setOpeningStock] = useState("")
   const [description, setDescription] = useState("")
+  const [imageUrl, setImageUrl] = useState("")
+  const imageDraft = useCatalogImageDraft({
+    canEdit: () =>
+      !editsLocked() &&
+      !currentScope.current.offline &&
+      Boolean(currentScope.current.storeId),
+    scopeKey: [profile?.id, profile?.businessId, activeStoreId].join(":"),
+  })
+  const [category, setCategory] = useState("")
+  const [suggestedCategorySelection, setSuggestedCategorySelection] = useState<{
+    category: string
+    categoryId?: string
+    subcategoryId?: string
+  } | null>(null)
   const [showOpeningStock, setShowOpeningStock] = useState(false)
   const [showDescription, setShowDescription] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -275,6 +308,35 @@ export function useCatalogSetup({
     stores.find((store) => store.id === activeStoreId)?.businessProfileKey ??
     null
   const businessProfile = findBusinessProfile(businessProfileKey)
+  const categorySuggestions = useCategorySuggestions({
+    title: name,
+    kind,
+    actorId: profile?.id,
+    tenantId: profile?.businessId,
+    storeId: activeStoreId,
+    businessProfileKey,
+    enabled: !editsLocked() && !isOffline && storesQuery.isSuccess,
+  })
+  function applyCategorySuggestion(suggestion: CatalogCategorySuggestion) {
+    if (editsLocked() || !categorySuggestions.isCurrentSuggestion(suggestion))
+      return false
+    setCategory(suggestion.category)
+    setSuggestedCategorySelection({
+      category: suggestion.category,
+      categoryId: suggestion.categoryId,
+      subcategoryId: suggestion.subcategoryId,
+    })
+    return true
+  }
+  const formGuidance = useMemo(
+    () =>
+      resolveCatalogFormGuidance({
+        businessProfileKey,
+        kind: kind ?? "product",
+        selectedHelperKey,
+      }),
+    [businessProfileKey, kind, selectedHelperKey],
+  )
   const selectedHelper = selectedHelperKey
     ? findCatalogSetupHelper(selectedHelperKey)
     : undefined
@@ -326,49 +388,25 @@ export function useCatalogSetup({
     [normalizedOptionGroups, optionIssue],
   )
   const activeGroup = optionGroups.find((group) => group.id === activeGroupId)
-  const inlineVariantTypeSuggestions = useMemo(() => {
-    const knownOptionTypes =
-      kind === "service" ? SERVICE_OPTION_TYPES : PRODUCT_VARIANT_TYPES
-    const defaultSuggestions = knownOptionTypes.slice(
-      0,
-      VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
-    )
-    const normalizedSearch = composerText.trim().toLowerCase()
-
-    if (!normalizedSearch) return defaultSuggestions
-
-    const matches = knownOptionTypes
-      .filter((variantType) =>
-        variantType.toLowerCase().includes(normalizedSearch),
-      )
-      .slice(0, VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT)
-
-    return matches.length > 0 ? matches : defaultSuggestions
-  }, [composerText, kind])
+  const inlineVariantTypeSuggestions = useMemo(
+    () =>
+      getCatalogOptionSuggestions(formGuidance, {
+        query: composerText,
+        usedNames: optionGroups
+          .filter((group) => group.id !== editingGroupId)
+          .map((group) => group.name),
+        limit: VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
+      }).map((option) => option.label),
+    [formGuidance, composerText, optionGroups, editingGroupId],
+  )
   const availableVariantValueSuggestions = useMemo(() => {
     if (!activeGroup || !kind) return []
-
-    const selectedValues = new Set(
-      activeGroup.values.map((value) => value.label.trim().toLowerCase()),
-    )
-    const suggestions = getVariantValueSuggestions(
-      activeGroup.name,
-      kind,
-    ).filter((value) => !selectedValues.has(value.trim().toLowerCase()))
-    const defaultSuggestions = suggestions.slice(
-      0,
-      VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
-    )
-    const normalizedSearch = composerText.trim().toLowerCase()
-
-    if (!normalizedSearch) return defaultSuggestions
-
-    const matches = suggestions
-      .filter((value) => value.toLowerCase().includes(normalizedSearch))
-      .slice(0, VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT)
-
-    return matches.length > 0 ? matches : defaultSuggestions
-  }, [activeGroup, composerText, kind])
+    return getCatalogOptionValueSuggestions(formGuidance, activeGroup.name, {
+      query: composerText,
+      selectedValues: activeGroup.values.map((value) => value.label),
+      limit: VARIANT_COMPOSER_DEFAULT_SUGGESTION_COUNT,
+    })
+  }, [activeGroup, composerText, kind, formGuidance])
   const composerPills = useMemo<KeyboardInlineComposerPill[]>(() => {
     if (variantComposerMode === "variant-type") {
       return inlineVariantTypeSuggestions.map((variantType) => ({
@@ -404,6 +442,9 @@ export function useCatalogSetup({
   )
   const createAdvancedMutation = useMutation(
     trpc.catalog.createItem.mutationOptions(),
+  )
+  const createPhotoIntentMutation = useMutation(
+    trpc.catalog.photos.createIntent.mutationOptions(),
   )
   const defaultStoreId = stores.find(
     (store) => store.id === draftScope.current.storeId,
@@ -447,6 +488,30 @@ export function useCatalogSetup({
     setSubmitError(null)
     Keyboard.dismiss()
     try {
+      if (request.photo && request.mode === "advanced") {
+        if (!request.photoAssetId)
+          request.photoAssetId = await uploadMobileCatalogPhoto({
+            image: request.photo,
+            storeId: request.storeId,
+            clientOperationId: `${request.input.clientOperationId}:photo:${request.photo.id}`,
+            assertCurrent: () => {
+              if (
+                !mounted.current ||
+                currentScope.current.offline ||
+                !attemptScopeMatches(request)
+              )
+                throw new Error(
+                  "Reconnect in the original account, business and Store before saving.",
+                )
+            },
+            createIntent: (input) =>
+              createPhotoIntentMutation.mutateAsync(input),
+          })
+        request.input = {
+          ...request.input,
+          photoAssetIds: [request.photoAssetId],
+        }
+      }
       if (request.mode === "simple")
         await createItemMutation.mutateAsync(request.input)
       else await createAdvancedMutation.mutateAsync(request.input)
@@ -527,6 +592,7 @@ export function useCatalogSetup({
       businessId,
       userId,
       storeId: defaultStoreId,
+      ...(imageDraft.image ? { photo: { ...imageDraft.image } } : {}),
     })
   }
   const dispatchSimple = (input: RouterInputs["catalog"]["createSimpleItem"]) =>
@@ -537,7 +603,11 @@ export function useCatalogSetup({
   const dispatchAdvanced = (input: RouterInputs["catalog"]["createItem"]) =>
     dispatchCreate({
       mode: "advanced",
-      input: { ...input, storeId: defaultStoreId },
+      input: {
+        ...input,
+        storeId: defaultStoreId,
+        illustrationId: imageDraft.illustrationId ?? undefined,
+      },
     })
 
   const makeDefaultVariantDraft = (): CatalogVariantDraft => ({
@@ -808,6 +878,7 @@ export function useCatalogSetup({
     }
 
     try {
+      resolveSellingUnitFactors(additionalUnits)
       for (const unit of additionalUnits) {
         if (!unit.name.trim())
           throw new Error("Enter a name for every selling unit.")
@@ -870,6 +941,14 @@ export function useCatalogSetup({
       dispatchAdvanced({
         clientOperationId: clientOperationIdRef.current,
         description: description.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined,
+        category: category.trim() || undefined,
+        ...(suggestedCategorySelection?.category === category.trim()
+          ? {
+              categoryId: suggestedCategorySelection.categoryId,
+              subcategoryId: suggestedCategorySelection.subcategoryId,
+            }
+          : {}),
         kind: "product",
         name: trimmedName,
         openingStockQuantity: showOpeningStock
@@ -889,10 +968,10 @@ export function useCatalogSetup({
               transactionScale: canonicalTransactionScale,
             },
             ...additionalUnits.map((unit, unitIndex) => ({
-              factor: catalogUnitRelationToFactor({
-                count: unit.relationCount,
-                direction: unit.relationDirection,
-              }),
+              factor: requireSellingUnitFactor(
+                resolveSellingUnitFactors(additionalUnits),
+                unit.id,
+              ),
               key: unitKey(unitIndex),
               name: unit.name.trim(),
               stockBehavior: unit.stockBehavior,
@@ -962,6 +1041,8 @@ export function useCatalogSetup({
     dispatchAdvanced({
       clientOperationId: clientOperationIdRef.current,
       description: description.trim() || undefined,
+      imageUrl: imageUrl.trim() || undefined,
+      category: category.trim() || undefined,
       kind: "service",
       name: trimmedName,
       optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
@@ -1018,12 +1099,38 @@ export function useCatalogSetup({
       return
     }
 
+    if (imageDraft.selecting || imageUrl.trim()) {
+      setSubmitError(
+        "Finish choosing a photo. Hosted image links are unavailable; choose a photo from this device.",
+      )
+      return
+    }
+
     const trimmedName = name.trim()
     const quoteOnlyService = kind === "service" && defaultQuoteRequired
     const parsedPriceMinor = majorToMinor(price)
 
     if (!trimmedName) {
       setSubmitError("Enter an item name.")
+      return
+    }
+    if (imageUrl.trim()) {
+      try {
+        const url = new URL(imageUrl.trim())
+        if (
+          !["https:", "http:"].includes(url.protocol) ||
+          imageUrl.trim().length > 2000
+        )
+          throw new Error("invalid image URL")
+      } catch {
+        setSubmitError(
+          "Enter a valid http or https image URL, or remove the image.",
+        )
+        return
+      }
+    }
+    if (category.trim().length > 120) {
+      setSubmitError("Use a category name of 120 characters or fewer.")
       return
     }
     const invalidEnteredPrice =
@@ -1044,7 +1151,14 @@ export function useCatalogSetup({
         showAdvanced ||
         (kind === "product" &&
           (additionalUnits.length > 0 || selectedHelperKey !== null)) ||
-        quoteOnlyService
+        quoteOnlyService ||
+        imageDraft.illustrationId ||
+        imageDraft.image ||
+        imageUrl.trim() ||
+        category.trim() ||
+        Object.values(variantDrafts).some(
+          (draft) => draft.sku.trim() || draft.barcode.trim(),
+        )
       ) {
         submitAdvanced(kind, trimmedName, priceMinor)
         return
@@ -1126,10 +1240,10 @@ export function useCatalogSetup({
     }
 
     try {
-      catalogUnitRelationToFactor({
-        count: unitEditorDraft.relationCount,
-        direction: unitEditorDraft.relationDirection,
-      })
+      resolveSellingUnitFactors([
+        ...additionalUnits.filter((unit) => unit.id !== unitEditorDraft.id),
+        unitEditorDraft,
+      ])
     } catch {
       setUnitEditorError(
         "Enter a positive count that can be converted exactly without rounding.",
@@ -1159,7 +1273,7 @@ export function useCatalogSetup({
   const removeUnit = (unitId: string) => {
     if (editsLocked()) return
     setAdditionalUnits((current) =>
-      current.filter((unit) => unit.id !== unitId),
+      removeSellingUnitPreservingFactors(current, unitId),
     )
     setVariantDrafts((current) =>
       Object.fromEntries(
@@ -1279,6 +1393,16 @@ export function useCatalogSetup({
       return
     }
     const normalizedLabel = label.toLowerCase()
+    if (
+      !editingGroupId &&
+      optionGroups.length >= 12 &&
+      !optionGroups.some(
+        (group) => group.name.trim().toLowerCase() === normalizedLabel,
+      )
+    ) {
+      setSubmitError("Use no more than 12 option groups.")
+      return
+    }
     if (editingGroupId) {
       const duplicateGroup = optionGroups.find(
         (group) =>
@@ -1370,7 +1494,7 @@ export function useCatalogSetup({
       current.map((group) =>
         group.id === activeGroupId &&
         !group.values.some(
-          (value) => value.label.toLowerCase() === label.toLowerCase(),
+          (value) => value.label.trim().toLowerCase() === label.toLowerCase(),
         )
           ? {
               ...group,
@@ -1423,6 +1547,22 @@ export function useCatalogSetup({
       return
     }
 
+    const activeIndex = optionGroups.findIndex(
+      (group) => group.id === activeGroupId,
+    )
+    if (
+      !canAddCatalogOptionValue(
+        optionGroups.map((group) => ({
+          values: group.values.map((value) => value.label),
+        })),
+        activeIndex,
+      )
+    ) {
+      setSubmitError(
+        "Keep the item within 100 values per option and 96 combinations.",
+      )
+      return
+    }
     addComposerValueByName(pill.label)
     setComposerText("")
     focusVariantComposerInput()
@@ -1529,9 +1669,14 @@ export function useCatalogSetup({
       : confirmation?.kind === "options" ||
           confirmation?.kind === "option-pricing"
         ? {
-            title: "Add stock for each option?",
+            title:
+              kind === "product"
+                ? "Add stock for each option?"
+                : "Add service choices?",
             message:
-              "Adding options clears the single opening-stock quantity. Enter current stock for each combination instead.",
+              kind === "product"
+                ? "Adding options clears the single opening-stock quantity. Enter current stock for each combination instead."
+                : "Create separate choices and set a fixed price or quote policy for each.",
             action: "Continue with options",
           }
         : confirmation?.kind === "remove-options"
@@ -1545,12 +1690,7 @@ export function useCatalogSetup({
               action: "Clear option setup",
             }
           : {
-              title:
-                "Remove " +
-                (confirmation && "name" in confirmation
-                  ? confirmation.name
-                  : "selling units") +
-                "?",
+              title: `Remove ${confirmation && "name" in confirmation ? confirmation.name : "selling units"}?`,
               message:
                 "This removes the selected setup and its related pricing choices from this draft. No saved inventory is changed.",
               action: "Remove from draft",
@@ -1568,6 +1708,8 @@ export function useCatalogSetup({
       composerText,
       defaultQuoteRequired,
       description,
+      imageUrl,
+      category,
       editingGroupId,
       helperPickerOpen,
       multiplePriceOptions,
@@ -1664,6 +1806,8 @@ export function useCatalogSetup({
     if (!snapshot) return
     setActiveGroupId(snapshot.activeGroupId)
     setDescription(snapshot.description)
+    setImageUrl(snapshot.imageUrl)
+    setCategory(snapshot.category)
     setAdditionalUnits(snapshot.additionalUnits)
     setCanonicalTransactionScale(snapshot.canonicalTransactionScale)
     setComposerText(snapshot.composerText)
@@ -1699,6 +1843,10 @@ export function useCatalogSetup({
         unitName ||
         openingStock ||
         description ||
+        imageUrl ||
+        imageDraft.illustrationId ||
+        imageDraft.image ||
+        category ||
         optionGroups.length ||
         additionalUnits.length ||
         selectedHelperKey ||
@@ -1712,7 +1860,7 @@ export function useCatalogSetup({
     serviceAuthorization !== "on_order_confirmation" ||
     serviceQuantityScale !== 0
 
-  const saveReadiness = kind
+  const itemSaveReadiness = kind
     ? getCatalogItemSaveReadiness({
         defaultQuoteRequired,
         kind,
@@ -1722,6 +1870,14 @@ export function useCatalogSetup({
         unitName,
       })
     : { canSave: false, hint: "Choose a Product or Service." }
+  const saveReadiness = imageDraft.selecting
+    ? { canSave: false, hint: "Finish choosing your image." }
+    : imageUrl.trim()
+      ? {
+          canSave: false,
+          hint: "Choose a photo from this device instead of a hosted image link.",
+        }
+      : itemSaveReadiness
 
   const canUndoFill = Boolean(qaSnapshotRef.current)
 
@@ -1744,6 +1900,39 @@ export function useCatalogSetup({
     confirmSetupChange,
     dismissSetupConfirmation,
     cancelSetupConfirmation,
+    openPricingDetails: () => {
+      if (editsLocked()) return
+      if (
+        !showAdvanced &&
+        showOpeningStock &&
+        openingStock.trim() &&
+        combinations[0]
+      ) {
+        const key = combinations[0].key
+        setVariantDrafts((current) => ({
+          ...current,
+          [key]: {
+            ...makeDefaultVariantDraft(),
+            ...current.default,
+            ...current[key],
+            quantity: openingStock,
+          },
+        }))
+        setOpeningStock("")
+        setShowOpeningStock(false)
+      } else if (!showAdvanced && combinations[0] && variantDrafts.default) {
+        const key = combinations[0].key
+        setVariantDrafts((current) => ({
+          ...current,
+          [key]: {
+            ...makeDefaultVariantDraft(),
+            ...current.default,
+            ...current[key],
+          },
+        }))
+      }
+      setShowAdvanced(true)
+    },
     setDefaultQuoteRequired: guardEdit(setDefaultQuoteRequired),
     locked,
     canSave,
@@ -1778,6 +1967,20 @@ export function useCatalogSetup({
     setOpeningStock: guardEdit(setOpeningStock),
     description,
     setDescription: guardEdit(setDescription),
+    imageUrl,
+    imageDraft,
+    setImageUrl: guardEdit(setImageUrl),
+    category,
+    setCategory: (value: string) => {
+      if (editsLocked()) return
+      setSuggestedCategorySelection(null)
+      setCategory(value)
+    },
+    categorySuggestions: categorySuggestions.suggestions,
+    requestCategorySuggestions: () => {
+      if (!editsLocked()) void categorySuggestions.request()
+    },
+    applyCategorySuggestion,
     showOpeningStock,
     setShowOpeningStock: guardEdit(setShowOpeningStock),
     showDescription,
@@ -1815,6 +2018,7 @@ export function useCatalogSetup({
     isEditingUnit,
     businessProfileKey,
     businessProfile,
+    formGuidance,
     selectedHelper,
     combinations,
     activeGroup,

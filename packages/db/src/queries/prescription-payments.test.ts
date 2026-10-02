@@ -14,6 +14,36 @@ import {
 } from "./prescription-payments"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
+function financeOrder(overrides: Record<string, unknown> = {}) {
+  return {
+    amountPaidMinor: 0,
+    currencyCode: "NGN",
+    customerId: null,
+    id: "order-1",
+    paymentStatus: "PENDING",
+    payments: [],
+    storeId: "store-1",
+    tenantId: "tenant-1",
+    totalMinor: 2_500,
+    ...overrides,
+  }
+}
+
+function callbackPaymentIntent(overrides: Record<string, unknown> = {}) {
+  return {
+    amountMinor: 2_500,
+    currencyCode: "NGN",
+    id: "intent-1",
+    orderId: "order-1",
+    provider: "fake-hosted",
+    providerReference: "payment-reference-1",
+    status: "PENDING",
+    storeId: "store-1",
+    tenantId: "tenant-1",
+    ...overrides,
+  }
+}
+
 describe("prescription payment provider failures", () => {
   test("atomically claims one hosted-checkout initializer", async () => {
     let status = "CREATED"
@@ -120,6 +150,9 @@ describe("prescription payment provider failures", () => {
       },
       serviceCommercePolicyDecision: { findMany: async () => [] },
       store: { findFirst: async () => ({ countryCode: "NG" }) },
+      tenant: {
+        findUniqueOrThrow: async () => ({ dataClassification: "GENERAL" }),
+      },
     }
     const db = {
       $transaction: async (callback: (tx: typeof transaction) => unknown) =>
@@ -150,14 +183,7 @@ describe("prescription payment provider failures", () => {
     const transaction = {
       $queryRaw: async () => [{ id: "order-1" }],
       commercialOrder: {
-        findFirst: async () => ({
-          amountPaidMinor: 0,
-          id: "order-1",
-          paymentStatus: "PENDING",
-          payments: [],
-          storeId: "store-1",
-          totalMinor: 2_500,
-        }),
+        findFirst: async () => financeOrder(),
         findUnique: async () => ({ customerPhone: "+2348000000000" }),
         update: async () => ({ id: "order-1" }),
       },
@@ -172,16 +198,7 @@ describe("prescription payment provider failures", () => {
         },
       },
       prescriptionPaymentIntent: {
-        findUnique: async () => ({
-          amountMinor: 2_500,
-          currencyCode: "NGN",
-          id: "intent-1",
-          orderId: "order-1",
-          providerReference: "payment-reference-1",
-          status: "PENDING",
-          storeId: "store-1",
-          tenantId: "tenant-1",
-        }),
+        findUnique: async () => callbackPaymentIntent(),
         update: async () => ({ id: "intent-1" }),
       },
       prescriptionPaymentProviderEvent: {
@@ -197,6 +214,9 @@ describe("prescription payment provider failures", () => {
       serviceBooking: { findMany: async () => [] },
       serviceJobLine: { findMany: async () => [] },
       store: { findFirst: async () => ({ countryCode: "NG" }) },
+      tenant: {
+        findUniqueOrThrow: async () => ({ dataClassification: "GENERAL" }),
+      },
     }
     const db = {
       $transaction: async (callback: (tx: typeof transaction) => unknown) =>
@@ -216,19 +236,93 @@ describe("prescription payment provider failures", () => {
     expect(communicationWritten).toBe(false)
   })
 
+  test("does not record a second payment when the locked intent is already paid", async () => {
+    let intentReads = 0
+    const paymentCreates: unknown[] = []
+    const intentUpdates: unknown[] = []
+    const orderUpdates: unknown[] = []
+    const eventUpdates: unknown[] = []
+    const transaction = {
+      $queryRaw: async (parts: TemplateStringsArray) => {
+        const sql = parts.join("")
+        return sql.includes('FROM "FinanceBook"')
+          ? []
+          : [
+              {
+                id: sql.includes('FROM "PrescriptionPaymentIntent"')
+                  ? "intent-1"
+                  : "order-1",
+              },
+            ]
+      },
+      commercialOrder: {
+        findFirst: async () => financeOrder({ paymentStatus: "PAID" }),
+        update: async (input: unknown) => {
+          orderUpdates.push(input)
+          return input
+        },
+      },
+      commercialOrderPayment: {
+        create: async (input: unknown) => {
+          paymentCreates.push(input)
+          return { id: "ledger-payment-1" }
+        },
+      },
+      prescriptionPaymentIntent: {
+        findUnique: async () => {
+          intentReads += 1
+          return callbackPaymentIntent({
+            status: intentReads === 1 ? "PENDING" : "PAID",
+          })
+        },
+        update: async (input: unknown) => {
+          intentUpdates.push(input)
+          return input
+        },
+      },
+      prescriptionPaymentProviderEvent: {
+        create: async () => ({ id: "event-1" }),
+        findUnique: async () => null,
+        update: async (input: unknown) => {
+          eventUpdates.push(input)
+          return input
+        },
+      },
+    }
+    const db = {
+      $transaction: async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    } as unknown as PrismaClient
+
+    await expect(
+      processPrescriptionPaymentProviderEvent(db, {
+        amountMinor: 2_500,
+        currencyCode: "NGN",
+        eventId: "charge.success:payment-already-paid",
+        provider: "fake-hosted",
+        providerReference: "payment-reference-1",
+        status: "paid",
+      }),
+    ).resolves.toEqual({ communicationIntentId: null, replay: false })
+    expect(intentReads).toBe(2)
+    expect(paymentCreates).toHaveLength(0)
+    expect(intentUpdates).toHaveLength(0)
+    expect(orderUpdates).toHaveLength(0)
+    expect(eventUpdates).toEqual([
+      {
+        data: { outcome: "PROCESSED", processedAt: expect.any(Date) },
+        where: { id: "event-1" },
+      },
+    ])
+  })
+
   test("records a failed callback without creating payment or receipt facts", async () => {
     const intentUpdates: unknown[] = []
     const transaction = {
+      $queryRaw: async () => [{ id: "order-1" }],
+      commercialOrder: { findFirst: async () => financeOrder() },
       prescriptionPaymentIntent: {
-        findUnique: async () => ({
-          amountMinor: 2_500,
-          currencyCode: "NGN",
-          id: "payment-1",
-          orderId: "order-1",
-          status: "PENDING",
-          storeId: "store-1",
-          tenantId: "tenant-1",
-        }),
+        findUnique: async () => callbackPaymentIntent({ id: "payment-1" }),
         update: async (input: unknown) => {
           intentUpdates.push(input)
           return input
@@ -266,16 +360,10 @@ describe("prescription payment provider failures", () => {
   test("rejects a mismatched amount before creating payment ledger facts", async () => {
     const eventUpdates: unknown[] = []
     const transaction = {
+      $queryRaw: async () => [{ id: "order-1" }],
+      commercialOrder: { findFirst: async () => financeOrder() },
       prescriptionPaymentIntent: {
-        findUnique: async () => ({
-          amountMinor: 2_500,
-          currencyCode: "NGN",
-          id: "payment-1",
-          orderId: "order-1",
-          status: "PENDING",
-          storeId: "store-1",
-          tenantId: "tenant-1",
-        }),
+        findUnique: async () => callbackPaymentIntent({ id: "payment-1" }),
       },
       prescriptionPaymentProviderEvent: {
         create: async () => ({ id: "event-1" }),
@@ -472,14 +560,20 @@ describe("prescription refund provider result", () => {
     const transaction = {
       $queryRaw: async () => [{ id: "order-1" }],
       commercialOrder: {
-        findFirst: async () => ({
-          amountPaidMinor: 10_000,
-          id: "order-1",
-          paymentStatus: "PAID",
-          payments: [{ id: "payment-1" }],
-          storeId: "store-1",
-          totalMinor: 10_000,
-        }),
+        findFirst: async () =>
+          financeOrder({
+            amountPaidMinor: 10_000,
+            paymentStatus: "PAID",
+            payments: [
+              {
+                amountMinor: 10_000,
+                id: "payment-1",
+                method: "CARD",
+                type: "PAYMENT",
+              },
+            ],
+            totalMinor: 10_000,
+          }),
         update: async (input: unknown) => {
           orderUpdates.push(input)
           return input
@@ -493,6 +587,8 @@ describe("prescription refund provider result", () => {
         findUnique: async () => null,
       },
       prescriptionPaymentIntent: {
+        findUnique: async () =>
+          callbackPaymentIntent({ amountMinor: 10_000, status: "PAID" }),
         update: async (input: unknown) => input,
       },
       prescriptionPaymentRefund: {
@@ -502,7 +598,11 @@ describe("prescription refund provider result", () => {
           id: "refund-1",
           paymentIntent: {
             amountMinor: 10_000,
+            currencyCode: "NGN",
+            id: "intent-1",
             orderId: "order-1",
+            storeId: "store-1",
+            tenantId: "tenant-1",
           },
           paymentIntentId: "intent-1",
           providerRefundId: null,
@@ -545,10 +645,20 @@ describe("prescription refund provider result", () => {
     let created = false
     const transaction = {
       $queryRaw: async () => [{ id: "intent-1" }],
+      commercialOrder: { findFirst: async () => financeOrder() },
       prescriptionPaymentIntent: {
+        findUnique: async () =>
+          callbackPaymentIntent({ amountMinor: 10_000, status: "PAID" }),
         findFirst: async () => ({
           amountMinor: 10_000,
+          currencyCode: "NGN",
           id: "intent-1",
+          orderId: "order-1",
+          provider: "fake-hosted",
+          providerReference: "payment-reference-1",
+          status: "PAID",
+          storeId: "store-1",
+          tenantId: "tenant-1",
         }),
       },
       prescriptionPaymentRefund: {

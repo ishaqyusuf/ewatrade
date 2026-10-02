@@ -49,7 +49,7 @@ export function VerifyApprovedEmail({
       </p>
       <button
         type="button"
-        className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground disabled:opacity-50"
+        className="signup-primary"
         disabled={busy}
         onClick={() => void send()}
       >

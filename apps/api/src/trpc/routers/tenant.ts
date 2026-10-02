@@ -8,6 +8,8 @@ import {
   getWorkspaceFeatureAvailability,
   requireEligibleOwnerAge,
 } from "@ewatrade/db/queries"
+import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
+import { issueAnalyticsContext } from "@ewatrade/events/identity-server"
 import { TRPCError } from "@trpc/server"
 import { createBusinessSchema, createStoreSchema } from "../../schemas/tenant"
 import {
@@ -96,6 +98,27 @@ export const tenantRouter = createTRPCRouter({
       role: membership.role,
       slug: membership.tenant.slug,
     }))
+  }),
+
+  analyticsContext: protectedProcedure.query(({ ctx }) => {
+    const enabled = !isQaAnalyticsPrincipal({
+      email: ctx.session.user.email,
+      qaSession: Boolean(ctx.qaSessionScope),
+      dataClassification: ctx.tenantContext.tenant.dataClassification,
+    })
+    return {
+      enabled,
+      context: enabled
+        ? issueAnalyticsContext({
+            project: "ewatrade-mobile",
+            userId: ctx.session.user.id,
+            tenantId: ctx.tenantContext.tenant.id,
+            tenantName: ctx.tenantContext.tenant.name,
+            role: ctx.tenantContext.membership.role,
+            internal: Boolean(ctx.session.user.isPlatformAdmin),
+          })
+        : null,
+    }
   }),
 
   current: protectedProcedure.query(async ({ ctx }) => {

@@ -36,7 +36,7 @@ describe("Catalog publication safety", () => {
         publication: null,
         texts: ["Bread"],
       }),
-    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
+    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
     expect(reads).toHaveLength(0)
   })
 
@@ -56,11 +56,11 @@ describe("Catalog publication safety", () => {
     }
     await expect(
       assertCatalogPublicationSafety(tx as never, input),
-    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
+    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
     acceptedHash = "b".repeat(64)
     await expect(
       assertCatalogPublicationSafety(tx as never, input),
-    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
+    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
     acceptedHash = publication.documentHash
     await expect(
       assertCatalogPublicationSafety(tx as never, input),
@@ -196,7 +196,7 @@ describe("Catalog publication safety", () => {
           },
         ],
       }),
-    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
+    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
     expect(writes).toEqual([])
   })
 
@@ -261,7 +261,7 @@ describe("Catalog publication safety", () => {
         ...input,
         isAvailable: true,
       }),
-    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
+    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
     expect(writes).toEqual([])
     await expect(
       setCatalogOfferingStoreAvailability(db as never, {

@@ -1,4 +1,5 @@
 "use client"
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
@@ -75,13 +76,10 @@ export function CustomerChannelsWorkspace({
     !approvals.data
   ) {
     return (
-      <div className="grid gap-3 p-6 lg:p-8">
-        <p
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
-          role="alert"
-        >
+      <div className="grid min-w-0 gap-3">
+        <FormFeedback appearance="dashboard">
           {error?.message ?? "Customer channels are unavailable."}
-        </p>
+        </FormFeedback>
         <Button
           className="w-fit"
           onClick={() =>
@@ -93,6 +91,7 @@ export function CustomerChannelsWorkspace({
             ])
           }
           variant="outline"
+          appearance="form"
         >
           Try again
         </Button>
@@ -102,7 +101,7 @@ export function CustomerChannelsWorkspace({
 
   const data = workspace.data
   return (
-    <div className="grid flex-1 gap-6 p-6 lg:p-8">
+    <div className="grid min-w-0 flex-1 gap-6">
       <ChannelsHeader
         canManage={data.access.canManage}
         onConnect={() =>
@@ -233,7 +232,7 @@ export function CustomerChannelsWorkspace({
           <div className="grid gap-3 lg:grid-cols-2">
             {approvals.data.map((approval) => (
               <article
-                className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
+                className="flex flex-col gap-4 rounded-none border border-border bg-card p-5"
                 key={approval.id}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -265,6 +264,7 @@ export function CustomerChannelsWorkspace({
                     })
                   }
                   variant="outline"
+                  appearance="form"
                 >
                   Review exact version
                 </Button>
@@ -272,7 +272,7 @@ export function CustomerChannelsWorkspace({
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
+          <p className="rounded-none border border-dashed border-border p-5 text-sm text-muted-foreground">
             No quotations are waiting for approval.
           </p>
         )}
@@ -307,12 +307,17 @@ function ChannelTaskCard({
   title: string
 }) {
   return (
-    <article className="grid gap-4 rounded-xl border border-border bg-card p-5">
+    <article className="grid gap-4 rounded-none border border-border bg-card p-5">
       <div>
         <h2 className="font-semibold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      <Button className="w-fit" onClick={onOpen} variant="outline">
+      <Button
+        className="w-fit"
+        onClick={onOpen}
+        variant="outline"
+        appearance="form"
+      >
         {action}
       </Button>
     </article>
@@ -321,12 +326,12 @@ function ChannelTaskCard({
 
 export function CustomerChannelsSkeleton() {
   return (
-    <div className="grid flex-1 gap-6 p-6 lg:p-8">
-      <div className="h-24 animate-pulse rounded-xl bg-muted" />
-      <div className="h-72 animate-pulse rounded-xl bg-muted" />
+    <div className="grid min-w-0 flex-1 gap-6">
+      <div className="h-24 animate-pulse rounded-none bg-muted" />
+      <div className="h-72 animate-pulse rounded-none bg-muted" />
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-48 animate-pulse rounded-xl bg-muted" />
-        <div className="h-48 animate-pulse rounded-xl bg-muted" />
+        <div className="h-48 animate-pulse rounded-none bg-muted" />
+        <div className="h-48 animate-pulse rounded-none bg-muted" />
       </div>
     </div>
   )

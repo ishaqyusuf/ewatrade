@@ -1,5 +1,9 @@
 import { createHmac, randomBytes, randomUUID } from "node:crypto"
-import { normalizeQaDomain } from "@ewatrade/utils/qa-accelerator"
+import {
+  getQaAcceleratorAvailability,
+  isConfiguredQaDomain,
+  normalizeQaDomain,
+} from "@ewatrade/utils/qa-accelerator"
 import type { DbClient } from "./types"
 
 const AUTHORIZATION_TTL_HOURS = 12
@@ -322,6 +326,94 @@ export async function exchangeQaTesterCredential(
     throw new QaAccessError("authorization_required")
   }
 
+  await db.qaAccessAttemptBucket.deleteMany({
+    where: { bucketDigest: { in: bucketDigests } },
+  })
+  return createQaAuthorizationForGrant(db, {
+    ...input,
+    clientIdentityDigest,
+    eventType: "credential_exchange",
+    grant,
+    now,
+    qaDomain,
+  })
+}
+
+export async function authorizeQaDomain(
+  db: DbClient,
+  input: {
+    clientId: string
+    clientPlatform: "mobile" | "web"
+    networkSource?: string | null
+    qaDomain: string
+  },
+  env = process.env,
+) {
+  const availability = getQaAcceleratorAvailability({ env, platform: "mobile" })
+  if (!availability.available) throw new QaAccessError("unavailable")
+  const qaDomain = normalizeQaDomain(input.qaDomain)
+  if (
+    !isConfiguredQaDomain(qaDomain, {
+      EMAIL_QA_DOMAIN_ROUTES: env.EMAIL_QA_DOMAIN_ROUTES,
+    }) ||
+    input.clientId.trim().length < 8
+  )
+    throw new QaAccessError("authorization_required")
+  const secret = env.QA_ACCELERATOR_SECRET?.trim()
+  if (!secret) throw new QaAccessError("unavailable")
+  const now = new Date()
+  const clientIdentityDigest = digest(
+    secret,
+    "client-identity",
+    input.clientId.trim(),
+  )
+  const window = Math.floor(
+    now.getTime() / (AUTHORIZATION_TTL_HOURS * 3_600_000),
+  )
+  // A domain-entry receipt identifies this client's expiring grant. It is not
+  // a tester credential and cannot satisfy the legacy credential exchange.
+  const receiptDigest = digest(
+    secret,
+    "domain-entry-receipt",
+    `${qaDomain}:${input.clientPlatform}:${clientIdentityDigest}:${window}`,
+  )
+  const grant = await db.qaTesterGrant.upsert({
+    where: { credentialDigest: receiptDigest },
+    create: {
+      credentialDigest: receiptDigest,
+      expiresAt: addHours(now, AUTHORIZATION_TTL_HOURS),
+      qaDomain,
+      testerIdentity: `domain-entry:${clientIdentityDigest.slice(0, 24)}`,
+    },
+    update: {},
+  })
+  if (grant.status !== "ACTIVE" || grant.revokedAt || grant.expiresAt <= now)
+    throw new QaAccessError("authorization_required")
+  return createQaAuthorizationForGrant(db, {
+    ...input,
+    clientIdentityDigest,
+    eventType: "domain_entry",
+    grant,
+    now,
+    qaDomain,
+    secret,
+  })
+}
+
+async function createQaAuthorizationForGrant(
+  db: DbClient,
+  input: {
+    clientIdentityDigest: string
+    clientPlatform: "mobile" | "web"
+    eventType: string
+    grant: { id: string; expiresAt: Date; testerIdentity: string }
+    networkSource?: string | null
+    now: Date
+    qaDomain: string
+    secret: string
+  },
+) {
+  const { clientIdentityDigest, grant, now, qaDomain } = input
   const token = createAuthorizationToken()
   const authorizationExpiresAt = earliestDate(
     addHours(now, AUTHORIZATION_TTL_HOURS),
@@ -350,14 +442,11 @@ export async function exchangeQaTesterCredential(
       },
     },
   })
-  await db.qaAccessAttemptBucket.deleteMany({
-    where: { bucketDigest: { in: bucketDigests } },
-  })
   await recordAudit(db, {
     authorizationId: authorization.id,
     clientIdentityDigest,
     domain: qaDomain,
-    eventType: "credential_exchange",
+    eventType: input.eventType,
     grantId: grant.id,
     networkSource: input.networkSource,
     outcome: "success",
@@ -468,7 +557,10 @@ export async function listQaAccessProfiles(
 
   type Membership = (typeof memberships)[number]
   const profiles: Array<{
-    business: Pick<Membership["tenant"], "currencyCode" | "id" | "name" | "slug" | "timezone">
+    business: Pick<
+      Membership["tenant"],
+      "currencyCode" | "id" | "name" | "slug" | "timezone"
+    >
     identity: { email: string; id: string; name: string }
     membership: Pick<Membership, "role">
     profileReference: string

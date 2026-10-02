@@ -1,4 +1,14 @@
 "use client"
+import {
+  Button,
+  Checkbox,
+  CheckboxField,
+  FieldGroup,
+  FormActions,
+  SubmitButton,
+} from "@ewatrade/ui"
+
+import { FormFeedback } from "@/components/forms/form-feedback"
 
 import type { RegisterServiceCommerceFormReset } from "@/components/service-commerce/form-context"
 import { useZodForm } from "@/hooks/use-zod-form"
@@ -6,7 +16,7 @@ import {
   type ServiceCommerceStoreBindingConfiguration,
   serviceCommerceStoreBindingConfigurationSchema,
 } from "@ewatrade/service-commerce"
-import { Button } from "@ewatrade/ui"
+
 import { useEffect } from "react"
 import type {
   CustomerChannelConnection,
@@ -56,7 +66,7 @@ export function StoreBindingForm({
   const selected = form.watch("storeIds") ?? []
 
   return (
-    <section className="grid gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
+    <section className="grid gap-4 rounded-none border border-primary/30 bg-primary/5 p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-primary">
           Store assignments
@@ -70,42 +80,51 @@ export function StoreBindingForm({
           content.
         </p>
       </div>
-      <form className="grid gap-3" onSubmit={form.handleSubmit(onSubmit)}>
-        <input type="hidden" {...form.register("connectionId")} />
-        {stores.map((store) => (
-          <label
-            className="flex items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm"
-            key={store.id}
-          >
-            <input
-              checked={selected.includes(store.id)}
-              onChange={(event) => {
-                const next = event.target.checked
-                  ? [...new Set([...selected, store.id])]
-                  : selected.filter((id) => id !== store.id)
-                form.setValue("storeIds", next, {
-                  shouldDirty: true,
-                  shouldValidate: true,
-                })
-              }}
-              type="checkbox"
-            />
-            <span className="font-medium">{store.name}</span>
-          </label>
-        ))}
-        {form.formState.errors.storeIds?.message ? (
-          <p className="text-sm text-destructive" role="alert">
-            {form.formState.errors.storeIds.message}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Button disabled={isPending} type="submit">
-            {isPending ? "Saving…" : "Save Store assignments"}
-          </Button>
-          <Button onClick={onCancel} type="button" variant="outline">
-            Cancel
-          </Button>
-        </div>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FieldGroup className="min-w-0 grid gap-3">
+          <input type="hidden" {...form.register("connectionId")} />
+          {stores.map((store) => (
+            <CheckboxField
+              key={store.id}
+              label=<span className="font-medium">{store.name}</span>
+            >
+              <Checkbox
+                checked={selected.includes(store.id)}
+                onCheckedChange={(checked) => {
+                  const next = checked
+                    ? [...new Set([...selected, store.id])]
+                    : selected.filter((id) => id !== store.id)
+                  form.setValue("storeIds", next, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }}
+              />
+            </CheckboxField>
+          ))}
+          {form.formState.errors.storeIds?.message ? (
+            <FormFeedback appearance="dashboard">
+              {form.formState.errors.storeIds.message}
+            </FormFeedback>
+          ) : null}
+          <FormActions className="pt-2">
+            <SubmitButton
+              isSubmitting={isPending}
+              disabled={isPending}
+              type="submit"
+            >
+              {isPending ? "Saving…" : "Save Store assignments"}
+            </SubmitButton>
+            <Button
+              appearance="form"
+              onClick={onCancel}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          </FormActions>
+        </FieldGroup>
       </form>
     </section>
   )

@@ -25,14 +25,12 @@ describe("mobile QA build aliases", () => {
     },
   )
 
-  test("aliases every QA entry point to an internal production no-op", () => {
+  test("excludes public bootstrap while retaining authenticated draft controls and recipes", () => {
     const aliases = createProductionQaAliases(__dirname)
     expect([...aliases.keys()].sort()).toEqual([
       "@/components/mobile/qa-account-chooser",
       "@/components/mobile/qa-authorization-sheet",
-      "@/components/mobile/qa-quick-fill-button",
       "@/hooks/use-qa-accelerator",
-      "@/internal-tooling/fixture-recipes",
     ])
     expect(
       [...aliases.values()].every((target) =>

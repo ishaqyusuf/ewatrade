@@ -1,11 +1,7 @@
 import {
-  CommerceFirstOrderGate,
-  CommercePendingOrderRow,
-  commercialOrderHref,
-} from "@/components/mobile/commerce"
-import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
-import { ListCreateFab } from "@/components/mobile/list-create-fab"
+  useAdminDockScroll,
+  useAdminTabs,
+} from "@/components/mobile/admin-tabs/admin-tabs-context"
 import {
   OrdersDispatchFilterRow,
   OrdersDispatchLedgerMasthead,
@@ -13,11 +9,20 @@ import {
   OrdersDispatchLedgerSummary,
   OrdersDispatchSection,
 } from "@/components/mobile/appearances/market-day/orders-dispatch-ledger"
+import {
+  CommerceFirstOrderGate,
+  CommercePendingOrderRow,
+  commercialOrderHref,
+} from "@/components/mobile/commerce"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { FormField } from "@/components/mobile/form-field"
+import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
@@ -33,24 +38,20 @@ import {
   useMemo,
   useState,
 } from "react"
-import { type NativeScrollEvent, type NativeSyntheticEvent } from "react-native"
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import {
-  useAdminDockScroll,
-  useAdminTabs,
-} from "@/components/mobile/admin-tabs/admin-tabs-context"
 
-import { FlatList } from "react-native-css/components/FlatList"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import {
-  ClassicOrdersScreen,
-  ClassicOrdersMasthead,
-  ClassicOrdersSummary,
   ClassicOrdersFilterRow,
+  ClassicOrdersMasthead,
   ClassicOrdersRow,
+  ClassicOrdersScreen,
   ClassicOrdersSection,
+  ClassicOrdersSummary,
 } from "@/components/mobile/appearances/classic/orders-screen"
 import { MarketDayOrdersScreen } from "@/components/mobile/appearances/market-day/orders-screen"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
+import { FlatList } from "react-native-css/components/FlatList"
 import type { OrderFilter } from "./orders-presentation"
 type DateFilter = "all" | "today" | "7_days" | "30_days"
 
@@ -107,6 +108,7 @@ export function OrdersScreen() {
     openCreate,
     provisionalOrders,
   } = useAdminTabs()
+  const edgeFeedback = useScrollEdgeFeedback()
   const handleDockScroll = useAdminDockScroll()
   const [dateFilter, setDateFilter] = useState<DateFilter>("30_days")
   const [filter, setFilter] = useState<OrderFilter>("all")
@@ -181,6 +183,7 @@ export function OrdersScreen() {
     },
     [handleDockScroll, insets.top, mastheadHeight],
   )
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Appearance changes invalidate measured masthead geometry.
   useEffect(() => {
     setShowCanvasStatusBar(false)
     setMastheadHeight(0)
@@ -189,6 +192,7 @@ export function OrdersScreen() {
   return (
     <Screen showCanvasStatusBar={showCanvasStatusBar}>
       <FlatList
+        {...edgeFeedback}
         contentContainerClassName="grow px-[var(--orders-list-side)] pt-[var(--orders-list-top)] pb-[var(--orders-list-bottom)]"
         data={visibleOrders}
         keyExtractor={(order) => order.id}

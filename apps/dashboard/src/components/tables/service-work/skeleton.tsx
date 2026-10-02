@@ -1,12 +1,30 @@
-export function ServiceWorkTableSkeleton() {
+"use client"
+import { TableSkeleton } from "@/components/tables/core"
+import {
+  type TableSettings,
+  getColumnIds,
+  normalizeTableSettings,
+} from "@/utils/table-settings"
+import { createServiceWorkColumns } from "./columns"
+export function ServiceWorkTableSkeleton({
+  initialSettings,
+  canManage = false,
+}: { initialSettings?: Partial<TableSettings>; canManage?: boolean }) {
+  const columns = createServiceWorkColumns(() => undefined, "UTC", canManage)
+  const normalized = normalizeTableSettings(
+    initialSettings,
+    getColumnIds(columns),
+    ["order"],
+  )
   return (
-    <div className="grid gap-2 rounded-lg border border-border p-4">
-      {Array.from({ length: 6 }, (_, index) => (
-        <div
-          key={`service-work-skeleton-${index + 1}`}
-          className="h-12 animate-pulse rounded bg-muted"
-        />
-      ))}
-    </div>
+    <TableSkeleton
+      columns={columns}
+      rowHeight={57}
+      rowCount={8}
+      columnVisibility={normalized.columns}
+      columnSizing={normalized.sizing}
+      columnOrder={normalized.order}
+      stickyColumnIds={canManage ? ["select", "order"] : ["order"]}
+    />
   )
 }

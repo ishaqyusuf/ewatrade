@@ -4,7 +4,6 @@ const { resolve } = require("node:path")
 const QA_COMPONENT_IMPORTS = [
   "@/components/mobile/qa-account-chooser",
   "@/components/mobile/qa-authorization-sheet",
-  "@/components/mobile/qa-quick-fill-button",
 ]
 
 const DESIGN_REFERENCE_IMPORTS = [
@@ -39,10 +38,6 @@ function createProductionQaAliases(appRoot) {
     [
       "@/hooks/use-qa-accelerator",
       resolve(appRoot, "src/internal-tooling/qa-provider.production.tsx"),
-    ],
-    [
-      "@/internal-tooling/fixture-recipes",
-      resolve(appRoot, "src/internal-tooling/fixture-recipes.production.ts"),
     ],
   ])
 }

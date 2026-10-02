@@ -36,7 +36,7 @@ export function DomainProgress() {
 
   return (
     <div className="grid gap-5">
-      <div className="rounded-xl border border-border p-5">
+      <div className="border border-border p-5">
         <p className="text-sm text-muted-foreground">Domain</p>
         <p className="mt-1 text-lg font-semibold">
           {data?.normalizedDomain ?? "Loading…"}
@@ -57,12 +57,12 @@ export function DomainProgress() {
         </div>
       </div>
       {uncertain ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           We could not confirm the registrar result. Your order is held for
           review and will not be charged again automatically.
         </p>
       ) : failed ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <p className="border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           Registration failed
           {data?.paymentStatus === "REFUNDED"
             ? " and your payment was refunded."
@@ -77,7 +77,11 @@ export function DomainProgress() {
             : "You can close this panel. Setup continues safely in the background."}
         </p>
       )}
-      <Button variant="outline" onClick={() => setParams(null)}>
+      <Button
+        appearance="form"
+        variant="outline"
+        onClick={() => setParams(null)}
+      >
         {complete ? "View domains" : "Close"}
       </Button>
     </div>

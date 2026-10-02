@@ -1,12 +1,16 @@
 import {
+  canManageSalesOperations,
   canManageTenant,
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import { FinanceError } from "@ewatrade/db/queries"
 import {
   CatalogError,
+  authorizeCommercialOrderChargeOnlyServiceLine,
   countCommercialOrderCustomers,
   createCommercialOrder,
+  fulfillCommercialOrderChargeOnlyServiceLine,
   fulfillCommercialOrderProductLine,
   fulfillCommercialOrderProducts,
   getCommercialOrder,
@@ -22,7 +26,9 @@ import {
 import { TRPCError } from "@trpc/server"
 
 import {
+  commercialOrderAuthorizeChargeOnlyServiceLineSchema,
   commercialOrderCreateSchema,
+  commercialOrderFulfillChargeOnlyServiceLineSchema,
   commercialOrderFulfillLineSchema,
   commercialOrderFulfillProductsSchema,
   commercialOrderGetSchema,
@@ -32,6 +38,7 @@ import {
   commercialOrderPaymentsListPageSchema,
   commercialOrderReminderSettingsGetSchema,
   commercialOrderReminderSettingsUpdateSchema,
+  commercialOrderReportSummarySchema,
   commercialOrderReturnLineSchema,
 } from "../../schemas/orders"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -52,6 +59,16 @@ function assertCanManageOrderReminders(role: string) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Only Owners and Admins can manage Order reminders.",
+    })
+  }
+}
+
+function assertCanManageSalesOperations(role: string) {
+  const normalized = normalizeRole(role)
+  if (!normalized || !canManageSalesOperations(normalized)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You do not have permission to authorize Service release.",
     })
   }
 }
@@ -80,7 +97,21 @@ function resolveStoreId(
   return storeId
 }
 
-function orderError(error: CatalogError) {
+function orderError(error: CatalogError | FinanceError) {
+  if (error instanceof FinanceError) {
+    return new TRPCError({
+      cause: error,
+      code:
+        error.code === "FORBIDDEN"
+          ? "FORBIDDEN"
+          : error.code === "NOT_FOUND"
+            ? "NOT_FOUND"
+            : error.code === "CONFLICT" || error.code === "CLOSED_PERIOD"
+              ? "CONFLICT"
+              : "BAD_REQUEST",
+      message: error.message,
+    })
+  }
   if (error.code === "ORDER_NOT_FOUND" || error.code === "STORE_NOT_FOUND") {
     return new TRPCError({
       cause: error,
@@ -116,16 +147,28 @@ export const ordersRouter = createTRPCRouter({
     })
   }),
 
-  reportSummary: protectedProcedure.query(async ({ ctx }) => {
-    assertCanOperateOrders(ctx.tenantContext.membership.role)
-    const summary = await getCommercialOrderReportSummary(ctx.db, {
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-    return {
-      ...summary,
-      currencyCode: ctx.tenantContext.tenant.currencyCode,
-    }
-  }),
+  reportSummary: protectedProcedure
+    .input(commercialOrderReportSummarySchema.optional())
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = input?.storeId
+        ? resolveStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          )
+        : undefined
+      const summary = await getCommercialOrderReportSummary(ctx.db, {
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      return {
+        ...summary,
+        currencyCode:
+          ctx.tenantContext.stores.find((store) => store.id === storeId)
+            ?.currencyCode ?? ctx.tenantContext.tenant.currencyCode,
+      }
+    }),
 
   create: protectedProcedure
     .input(commercialOrderCreateSchema)
@@ -144,7 +187,8 @@ export const ordersRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw orderError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
         throw error
       }
     }),
@@ -160,7 +204,42 @@ export const ordersRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw orderError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
+        throw error
+      }
+    }),
+
+  fulfillChargeOnlyServiceLine: protectedProcedure
+    .input(commercialOrderFulfillChargeOnlyServiceLineSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      try {
+        return await fulfillCommercialOrderChargeOnlyServiceLine(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
+        throw error
+      }
+    }),
+
+  authorizeChargeOnlyServiceLine: protectedProcedure
+    .input(commercialOrderAuthorizeChargeOnlyServiceLineSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageSalesOperations(ctx.tenantContext.membership.role)
+      try {
+        return await authorizeCommercialOrderChargeOnlyServiceLine(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
         throw error
       }
     }),
@@ -176,7 +255,8 @@ export const ordersRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw orderError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
         throw error
       }
     }),
@@ -278,7 +358,8 @@ export const ordersRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw orderError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
         throw error
       }
     }),
@@ -294,7 +375,8 @@ export const ordersRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
-        if (error instanceof CatalogError) throw orderError(error)
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw orderError(error)
         throw error
       }
     }),

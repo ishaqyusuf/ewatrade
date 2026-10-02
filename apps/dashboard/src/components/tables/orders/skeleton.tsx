@@ -1,12 +1,23 @@
-export function OrdersTableSkeleton() {
+"use client"
+
+import { TableSkeleton } from "@/components/tables/core"
+import type { TableSettings } from "@/utils/table-settings"
+import { orderColumns } from "./columns"
+
+export function OrdersTableSkeleton({
+  initialSettings,
+}: {
+  initialSettings?: Partial<TableSettings>
+} = {}) {
   return (
-    <div className="grid gap-2 rounded-lg border border-border p-4">
-      {Array.from({ length: 5 }, (_, index) => (
-        <div
-          key={`order-skeleton-${index + 1}`}
-          className="h-12 animate-pulse rounded bg-muted"
-        />
-      ))}
-    </div>
+    <TableSkeleton
+      columns={orderColumns()}
+      rowCount={8}
+      rowHeight={57}
+      stickyColumnIds={["orderNumber"]}
+      columnVisibility={initialSettings?.columns}
+      columnSizing={initialSettings?.sizing}
+      columnOrder={initialSettings?.order}
+    />
   )
 }

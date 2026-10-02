@@ -1,11 +1,12 @@
+import { BarcodeField } from "@/components/mobile/barcode-field"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import type { CatalogVariantManagerProps } from "./catalog-variant-model"
 import type { CatalogVariantsModel } from "./use-catalog-variants"
 
@@ -35,7 +36,9 @@ export function CatalogVariantDetails({
             market,
           )}
         >
-          Optional customer image, inventory codes, and Store availability.
+          {market
+            ? "Optional customer image, inventory codes, and Store availability."
+            : "Choices use the item’s image. Choose where this choice is available."}
         </Text>
       ) : (
         <View className={catalogSetupClassName("gap-1", market)}>
@@ -53,8 +56,9 @@ export function CatalogVariantDetails({
               market,
             )}
           >
-            Optional customer-facing media and where this choice can be
-            requested.
+            {market
+              ? "Optional customer-facing media and where this choice can be requested."
+              : "Choices use the service image. Choose where this choice can be requested."}
           </Text>
         </View>
       )}
@@ -68,22 +72,39 @@ export function CatalogVariantDetails({
           Full option combination settings
         </Text>
       ) : null}
-      <FormField
-        inputClassName={market ? "bg-market-field text-market-ink" : undefined}
-        autoCapitalize="none"
-        autoCorrect={false}
-        inputMode="url"
-        keyboardType="url"
-        helper="Use a secure image link customers can open."
-        label="Customer image link"
-        maxLength={2000}
-        leadingIcon="Globe"
-        onChangeText={(imageUrl) => updateEditor({ imageUrl })}
-        placeholder="https://example.com/image.jpg"
-        value={editor.draft.imageUrl}
-      />
+      {market ? (
+        <FormField
+          inputClassName="bg-market-field text-market-ink"
+          autoCapitalize="none"
+          autoCorrect={false}
+          inputMode="url"
+          keyboardType="url"
+          helper="Use a secure image link customers can open."
+          label="Customer image link"
+          maxLength={2000}
+          leadingIcon="Globe"
+          onChangeText={(imageUrl) => updateEditor({ imageUrl })}
+          placeholder="https://example.com/image.jpg"
+          value={editor.draft.imageUrl}
+        />
+      ) : editor.draft.imageUrl.trim() ? (
+        <View className="gap-3">
+          <Text className="text-sm text-muted-foreground">
+            Remove the older image link to use the image selected in Images.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: Boolean(props.disabled) }}
+            className="min-h-14 items-center justify-center rounded-xl border border-border px-4 py-3"
+            disabled={props.disabled}
+            onPress={() => updateEditor({ imageUrl: "" })}
+          >
+            <Text className="font-bold text-foreground">Remove image link</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
-      {kind === "product" ? (
+      {kind === "product" && market ? (
         <View className={catalogSetupClassName("gap-3", market)}>
           <View className={catalogSetupClassName("gap-1", market)}>
             <Text
@@ -123,7 +144,7 @@ export function CatalogVariantDetails({
               placeholder="SKU"
               value={editor.draft.sku}
             />
-            <FormField
+            <BarcodeField
               inputClassName={
                 market ? "bg-market-field text-market-ink" : undefined
               }

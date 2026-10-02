@@ -8,6 +8,7 @@ import {
 import { prisma } from "@ewatrade/db"
 import {
   QaAccessError,
+  authorizeQaDomain,
   exchangeQaTesterCredential,
   listQaAccessProfiles,
   revalidateQaClientAuthorization,
@@ -228,7 +229,7 @@ export function appendClearedWebSessionCookies(response: NextResponse) {
 
 export async function exchangeQaWebCredential(
   request: NextRequest,
-  input: { clientId: string; credential: string; qaDomain: string },
+  input: { clientId: string; credential?: string; qaDomain: string },
 ) {
   if (
     !isConfiguredQaDomain(input.qaDomain, {
@@ -237,6 +238,16 @@ export async function exchangeQaWebCredential(
   ) {
     throw new QaAccessError("authorization_required")
   }
+  if (!input.credential)
+    return authorizeQaDomain(prisma, {
+      clientId: input.clientId,
+      clientPlatform: "web",
+      networkSource: getTrustedQaNetworkSource({
+        env: process.env,
+        getHeader: (name) => request.headers.get(name),
+      }),
+      qaDomain: input.qaDomain,
+    })
   return exchangeQaTesterCredential(prisma, {
     clientId: input.clientId,
     clientPlatform: "web",

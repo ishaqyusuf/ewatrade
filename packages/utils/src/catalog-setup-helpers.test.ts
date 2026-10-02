@@ -65,7 +65,10 @@ describe("catalog setup helpers", () => {
     )
     expect(
       listCatalogSetupHelpers({ kind: "service", query: "laundry" }),
-    ).toEqual([expect.objectContaining({ key: "dry-cleaning-laundry" })])
+    ).toEqual([
+      expect.objectContaining({ key: "dry-cleaning-laundry" }),
+      expect.objectContaining({ key: "ironing-only" }),
+    ])
     expect(listCatalogSetupHelpers({ kind: "service" })).toSatisfy((helpers) =>
       helpers.every((helper) => helper.kind === "service"),
     )
@@ -155,6 +158,33 @@ describe("catalog setup helpers", () => {
         symbol: "kg",
         transactionScale: 2,
       },
+    ])
+  })
+
+  test("farm eggs use exact tray counts while live birds remain whole stock", () => {
+    const eggs = findCatalogSetupHelper("farm-eggs-tray")
+    const birds = findCatalogSetupHelper("farm-live-poultry")
+    expect(eggs?.kind).toBe("product")
+    expect(birds?.kind).toBe("product")
+    if (eggs?.kind !== "product" || birds?.kind !== "product") return
+    expect(buildCatalogSetupHelperApplication(eggs)).toMatchObject({
+      kind: "product",
+      suggestedName: "Eggs",
+      canonicalUnit: { name: "Egg", factor: "1", transactionScale: 0 },
+      additionalUnits: [
+        { name: "Tray", factor: "30", stockBehavior: "alternate_transaction" },
+      ],
+    })
+    expect(birds.setup.units).toEqual([
+      {
+        name: "Bird",
+        factor: "1",
+        stockBehavior: "canonical_shared",
+        transactionScale: 0,
+      },
+    ])
+    expect(birds.setup.optionGroups).toEqual([
+      { name: "Bird type", values: ["Broiler", "Layer", "Cockerel"] },
     ])
   })
 

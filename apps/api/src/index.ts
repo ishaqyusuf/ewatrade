@@ -15,9 +15,18 @@ import { secureHeaders } from "hono/secure-headers"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerStoreNotificationRoutes } from "./billing/store-notifications"
+import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
+import { registerCatalogPublicPhotoRoutes } from "./catalog/photo-public"
+import { registerCatalogPhotoUploadRoutes } from "./catalog/photo-upload"
 import { registerWhatsAppEmbeddedSignupRoutes } from "./communications/whatsapp-embedded-signup"
 import { registerWhatsAppWebhookRoutes } from "./communications/whatsapp-webhook"
 import { registerDomainPaystackWebhook } from "./domains/paystack-webhook"
+import { registerFinanceExpenseReceiptDeliveryRoutes } from "./finance/expense-receipt-delivery"
+import {
+  financeExpenseReceiptDeliveryStorage,
+  prepareFinanceExpenseReceiptDelivery,
+} from "./finance/expense-receipt-delivery-context"
+import { registerFinanceExpenseReceiptUploadRoutes } from "./finance/expense-receipt-upload"
 import { captureApiError } from "./observability/sentry"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
 import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
@@ -153,6 +162,15 @@ app.get("/api/health", healthHandler)
 registerBillingProviderEventRoutes(app)
 registerAccountPrivacyResendWebhook(app)
 registerStoreNotificationRoutes(app)
+registerCatalogPhotoUploadRoutes(app)
+registerCatalogPhotoPreviewRoutes(app)
+registerCatalogPublicPhotoRoutes(app)
+registerFinanceExpenseReceiptUploadRoutes(app)
+registerFinanceExpenseReceiptDeliveryRoutes(app, {
+  prepare: prepareFinanceExpenseReceiptDelivery,
+  storage: financeExpenseReceiptDeliveryStorage,
+  secret: () => process.env.RECEIPT_DOWNLOAD_SECRET,
+})
 registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)

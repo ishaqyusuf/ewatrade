@@ -1,19 +1,29 @@
-import { EventsProvider } from "@ewatrade/events/client"
+import { DashboardEventsProvider } from "@/components/analytics/events-provider"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
+import "@/styles/dashboard.css"
 import { cn } from "@/utils"
 import {
   assertQaAcceleratorStartupSafety,
   isQaAcceleratorClientMode,
 } from "@ewatrade/utils/qa-accelerator"
-import { Geist } from "next/font/google"
+import { Hedvig_Letters_Sans, Hedvig_Letters_Serif } from "next/font/google"
 import { Providers } from "./providers"
 
 assertQaAcceleratorStartupSafety(process.env)
 
-const geist = Geist({
+const hedvigSans = Hedvig_Letters_Sans({
+  weight: "400",
   subsets: ["latin"],
-  variable: "--font-sans",
+  display: "swap",
+  variable: "--font-hedvig-sans",
+})
+
+const hedvigSerif = Hedvig_Letters_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-hedvig-serif",
 })
 
 export const metadata: Metadata = {
@@ -30,10 +40,17 @@ export default function RootLayout({
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
 
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body className="bg-background">
+    <html
+      lang="en"
+      className={cn(
+        "ewatrade-dashboard",
+        hedvigSans.variable,
+        hedvigSerif.variable,
+      )}
+    >
+      <body className="bg-background font-sans antialiased">
         <Providers qaAcceleratorEnabled={qaAcceleratorEnabled}>
-          <EventsProvider surface="dashboard">{children}</EventsProvider>
+          <DashboardEventsProvider>{children}</DashboardEventsProvider>
         </Providers>
       </body>
     </html>

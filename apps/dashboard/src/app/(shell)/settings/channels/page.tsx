@@ -53,7 +53,7 @@ export default async function CustomerChannelsPage({ searchParams }: Props) {
       ),
     )
   }
-  await Promise.all(prefetches).catch(() => undefined)
+  void Promise.all(prefetches).catch(() => undefined)
 
   return (
     <HydrateClient>

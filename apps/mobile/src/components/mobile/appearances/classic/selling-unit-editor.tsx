@@ -1,3 +1,5 @@
+import type { SellingUnitEditorFieldsProps } from "@/components/mobile/catalog-setup/catalog-setup-model"
+import { SellingUnitReferenceSelector } from "@/components/mobile/catalog-setup/selling-unit-reference-selector"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -5,9 +7,9 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { View } from "react-native"
-import type { SellingUnitEditorFieldsProps } from "@/components/mobile/catalog-setup/catalog-setup-model"
 
 export function ClassicSellingUnitFields({
+  referenceUnits,
   currencyCode,
   multiplePriceOptions,
   onChangeDirection,
@@ -17,6 +19,9 @@ export function ClassicSellingUnitFields({
   unitName,
 }: SellingUnitEditorFieldsProps) {
   const largeTextLayout = useLargeTextLayout()
+  const referenceName =
+    referenceUnits?.find((unit) => unit.id === unitEditorDraft.referenceUnitId)
+      ?.name ?? unitName
 
   return (
     <View className={largeTextLayout ? "gap-4 px-4 pb-6" : "gap-4 px-5 pb-6"}>
@@ -44,22 +49,26 @@ export function ClassicSellingUnitFields({
         }
         value={unitEditorDraft.name}
       />
+      <SellingUnitReferenceSelector
+        fields={{ referenceUnits, unitEditorDraft, onChangeDraft, unitName }}
+        market={false}
+      />
       <View className="gap-2">
         <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-          How it converts
+          Relationship
         </Text>
         <View className={largeTextLayout ? "gap-2" : "flex-row gap-2"}>
           {(
             [
               [
                 "units_per_canonical",
-                "Inside main unit",
-                "A smaller unit taken from one main unit.",
+                "Inside selected unit",
+                "A smaller unit taken from one selected unit.",
               ],
               [
                 "canonical_per_unit",
-                "Contains main units",
-                "A larger pack made from main units.",
+                "Contains selected units",
+                "A larger pack made from selected units.",
               ],
             ] as const
           ).map(([value, label, description]) => (
@@ -108,8 +117,8 @@ export function ClassicSellingUnitFields({
       <View className="border-l-2 border-primary bg-muted px-3 py-3">
         <Text className="text-xs [-rn-line-height:20] text-foreground">
           {unitEditorDraft.relationDirection === "units_per_canonical"
-            ? `1 ${unitName.trim() || "main unit"} contains ${unitEditorDraft.relationCount.trim() || "…"} ${unitEditorDraft.name.trim() || "of this unit"}`
-            : `1 ${unitEditorDraft.name.trim() || "selling unit"} contains ${unitEditorDraft.relationCount.trim() || "…"} ${unitName.trim() || "main units"}`}
+            ? `1 ${referenceName.trim() || "main unit"} contains ${unitEditorDraft.relationCount.trim() || "…"} ${unitEditorDraft.name.trim() || "of this unit"}`
+            : `1 ${unitEditorDraft.name.trim() || "selling unit"} contains ${unitEditorDraft.relationCount.trim() || "…"} ${referenceName.trim() || "main units"}`}
         </Text>
       </View>
 
@@ -120,8 +129,8 @@ export function ClassicSellingUnitFields({
             keyboardType="decimal-pad"
             label={
               unitEditorDraft.relationDirection === "units_per_canonical"
-                ? `Units in 1 ${unitName.trim() || "main unit"}`
-                : `Main units in 1 ${unitEditorDraft.name.trim() || "selling unit"}`
+                ? `Units in 1 ${referenceName.trim() || "main unit"}`
+                : `Reference units in 1 ${unitEditorDraft.name.trim() || "selling unit"}`
             }
             onChangeText={(value) => onChangeDraft({ relationCount: value })}
             placeholder="e.g. 50"

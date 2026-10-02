@@ -1,5 +1,6 @@
 "use client"
 
+import { PageHeader } from "@/components/page-header"
 import type { SessionUser } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
 import { useTRPC } from "@/trpc/client"
@@ -102,7 +103,7 @@ function SettingsPanel({
   title: string
 }) {
   return (
-    <section className="rounded-lg border border-border/70 bg-background p-4 shadow-sm">
+    <section className="border border-border/70 bg-background p-4 ">
       <div className="flex items-center gap-2">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
           <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
@@ -251,7 +252,7 @@ function PlanCard({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border bg-background p-4 shadow-sm",
+        "flex flex-col border bg-background p-4 ",
         current ? "border-primary" : "border-border/70",
       )}
     >
@@ -298,12 +299,13 @@ function PlanCard({
         </div>
       </dl>
       <Button
+        appearance="form"
         type="button"
         variant={current ? "outline" : "default"}
         size="sm"
         disabled={current || checkoutPending}
         onClick={() => onCheckout(plan.id)}
-        className="mt-4 w-full rounded-lg"
+        className="mt-4 w-full rounded-none"
       >
         {current
           ? "Active plan"
@@ -317,7 +319,7 @@ function PlanCard({
 
 function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+    <div className="border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
       <p className="font-medium text-foreground">
         {intent.targetPlan.name} checkout
       </p>
@@ -349,36 +351,29 @@ export function RetailOpsSubscriptionSettings({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 lg:p-8">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          <HugeiconsIcon icon={Settings01Icon} className="size-4" />
-          Settings
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Billing and plan
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Plan limits, usage, and billing state for Retail Ops.
-        </p>
-      </div>
+    <div className="flex min-w-0 flex-1 flex-col gap-6">
+      <PageHeader
+        eyebrow="Settings"
+        title="Billing and plan"
+        description="Plan limits, usage, and billing state for Retail Ops."
+      />
 
       <SettingsOverview context={settingsContext} />
 
       {subscriptionQuery.error ? (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {subscriptionQuery.error.message}
         </div>
       ) : null}
 
       {checkoutIntentMutation.error ? (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {checkoutIntentMutation.error.message}
         </div>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-lg border border-border/70 bg-background p-5 shadow-sm">
+        <section className="border border-border/70 bg-background p-5 ">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -429,7 +424,7 @@ export function RetailOpsSubscriptionSettings({
           </dl>
         </section>
 
-        <section className="overflow-hidden rounded-lg border border-border/70 bg-background shadow-sm">
+        <section className="overflow-hidden border border-border/70 bg-background ">
           <div className="border-b border-border/70 px-4 py-3">
             <h2 className="text-sm font-semibold">Usage and limits</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -464,7 +459,7 @@ export function RetailOpsSubscriptionSettings({
         <CheckoutIntentNotice intent={checkoutIntentMutation.data} />
       ) : null}
 
-      <div className="rounded-lg border border-border/70 bg-background px-4 py-3 text-xs text-muted-foreground">
+      <div className="border border-border/70 bg-background px-4 py-3 text-xs text-muted-foreground">
         Billing checkout is provider-neutral in this phase. Plan limits are
         enforced by production Retail Ops APIs; dedicated subscription rows,
         checkout, webhooks, invoices, and app-store purchases remain future

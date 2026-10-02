@@ -67,7 +67,7 @@ test("fixed namespaces and exact origins isolate dashboard and marketing despite
       const event = JSON.parse(String(init?.body)).events[0]
       expect(event.project).toBe(`ewatrade-${surface}`)
       expect(event.route).toBe("/orders")
-      expect(event.properties).toEqual({})
+      expect(event.properties).toEqual({ audience: "anonymous" })
       expect(event).not.toHaveProperty("actorId")
       return Response.json({ accepted: 1 }, { status: 202 })
     }) as typeof fetch
@@ -111,7 +111,7 @@ test("native contract retains Android attribution while dropping private fields"
       appVersion: "1.0.0",
       appBuild: "12",
       route: "/orders",
-      properties: {},
+      properties: { audience: "anonymous" },
     })
     return Response.json({ accepted: 1 }, { status: 202 })
   }) as typeof fetch

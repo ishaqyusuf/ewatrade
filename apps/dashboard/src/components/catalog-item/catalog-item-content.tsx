@@ -1,13 +1,66 @@
 "use client"
 
+import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
+import { type ComponentProps, useState } from "react"
+import { useCatalogThemeClass } from "./catalog-appearance"
+import { CatalogItemKindChoices } from "./catalog-item-kind-choices"
+import { CatalogItemSheetHeader } from "./catalog-item-sheet-header"
 import { CatalogItemForm } from "./form"
+import { useCatalogItemForm } from "./form-context"
 
 type CatalogItemContentProps = {
+  finalFocus?: ComponentProps<typeof SheetFrame>["finalFocus"]
+  closeError?: string | null
+  allowKindChange?: boolean
+  businessProfileKey?: string | null
   currencyCode: string
   onCreated: (name: string) => void
   storeId: string
 }
 
 export function CatalogItemContent(props: CatalogItemContentProps) {
-  return <CatalogItemForm {...props} />
+  const themeClass = useCatalogThemeClass()
+  const { form, setForm } = useCatalogItemForm()
+  const { setParams } = useCatalogItemParams()
+  const [footerHost, setFooterHost] = useState<HTMLDivElement | null>(null)
+  return (
+    <SheetFrame
+      finalFocus={props.finalFocus}
+      closeError={props.closeError}
+      popupClassName={`${themeClass} sm:w-[min(900px,95vw)] sm:max-w-[900px]`}
+      mobileBottomSheet={!form.kind}
+      title={
+        form.kind === "product"
+          ? "Add product"
+          : form.kind === "service"
+            ? "Add service"
+            : "Add item"
+      }
+      description={
+        form.kind === "product"
+          ? "Name it and choose how you count it. Add details when you need them."
+          : form.kind === "service"
+            ? "Name the service, then set a fixed price or quote each job."
+            : "Choose what you want to add."
+      }
+      header={
+        props.allowKindChange === false ? null : <CatalogItemSheetHeader />
+      }
+      footer={
+        form.kind ? <div className="w-full" ref={setFooterHost} /> : undefined
+      }
+    >
+      {form.kind ? (
+        <CatalogItemForm {...props} footerHost={footerHost} />
+      ) : (
+        <CatalogItemKindChoices
+          onSelect={(kind) => {
+            setForm((current) => ({ ...current, kind }))
+            void setParams({ catalogCreateKind: kind })
+          }}
+        />
+      )}
+    </SheetFrame>
+  )
 }

@@ -21,14 +21,14 @@ export default async function DomainsSettingsPage() {
     redirect("/setup")
   }
 
-  await Promise.all([
+  void Promise.all([
     prefetch(trpc.domains.list.queryOptions({})),
     prefetch(trpc.domains.registrantProfile.queryOptions()),
   ])
 
   return (
     <HydrateClient>
-      <div className="flex flex-1 flex-col gap-6 p-6 lg:p-8">
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
         <DomainHeader storeName={store.name} />
         <Suspense fallback={<DomainTableSkeleton />}>
           <DomainDataTable />
