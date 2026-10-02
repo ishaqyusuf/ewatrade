@@ -111,6 +111,16 @@ export async function POST(request: NextRequest) {
     acknowledgedPrivacyNotice,
   } = result.data
 
+  if (!accessToken) {
+    return NextResponse.json(
+      {
+        message:
+          "Request early access to receive your secure workspace setup link.",
+      },
+      { status: 403 },
+    )
+  }
+
   const legalApproved = isApprovedLegalPublication()
   let legalAcceptance: ReturnType<typeof resolveSignupLegalAcceptance>
   try {
@@ -254,6 +264,27 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     )
   }
+  if (!accessSessionFormData?.emailVerifiedAt) {
+    return NextResponse.json(
+      {
+        message:
+          "Verify the approved contact email before creating your workspace.",
+      },
+      { status: 403 },
+    )
+  }
+  if (
+    accessSessionFormData.companyName?.trim().toLowerCase() !==
+    businessName.trim().toLowerCase()
+  ) {
+    return NextResponse.json(
+      {
+        message:
+          "Use the business name from your approved early access request.",
+      },
+      { status: 403 },
+    )
+  }
   const signupEmailRouting = (() => {
     try {
       return getTestEmailRouting({ to: normalizedEmail })
@@ -334,7 +365,7 @@ export async function POST(request: NextRequest) {
           ageDeclaredAt: new Date(),
           email: normalizedEmail,
           name: displayName || normalizedEmail,
-          emailVerified: false,
+          emailVerified: true,
           image: null,
           firstName,
           lastName,

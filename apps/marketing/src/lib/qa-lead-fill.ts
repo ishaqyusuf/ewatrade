@@ -20,6 +20,10 @@ export function createLeadDraft(input: {
     formId: "marketing.lead",
   })
   return {
+    businessSize: "2_to_10",
+    recordSystem: "spreadsheets",
+    launchTimeline: "as_soon_as_possible",
+    setupNeeds: ["catalog", "inventory", "sales"],
     companyName: "QA Test Merchant",
     email: identity.email,
     fullName: identity.fullName,

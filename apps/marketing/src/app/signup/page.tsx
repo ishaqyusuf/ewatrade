@@ -5,6 +5,7 @@ import { StepBusiness } from "@/components/signup/step-business"
 import { StepOwner } from "@/components/signup/step-owner"
 import { StepSuccess } from "@/components/signup/step-success"
 import { StepWorkspace } from "@/components/signup/step-workspace"
+import { VerifyApprovedEmail } from "@/components/signup/verify-approved-email"
 import type {
   PublicLegalPublication,
   SignupLegalAcceptance,
@@ -25,6 +26,7 @@ type SignupFormState = {
 }
 
 type EarlyAccessSessionResponse = {
+  emailVerified: boolean
   accessToken: string
   expiresAt: string
   lead: {
@@ -72,6 +74,14 @@ export default function SignupPage() {
   const [submitError, setSubmitError] = useState("")
   const [success, setSuccess] = useState<SuccessState | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [entryReady, setEntryReady] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(
+    null,
+  )
+  const [approvedIdentity, setApprovedIdentity] = useState<{
+    businessName: string
+    email: string
+  } | null>(null)
   const [accessNotice, setAccessNotice] = useState<string | null>(null)
   const [legalPublication, setLegalPublication] =
     useState<PublicLegalPublication | null>(null)
@@ -117,7 +127,10 @@ export default function SignupPage() {
       .get("access_token")
       ?.trim()
 
-    if (!token) return
+    if (!token) {
+      window.location.assign("/#early-access")
+      return
+    }
 
     const earlyAccessToken = token
     let cancelled = false
@@ -148,8 +161,16 @@ export default function SignupPage() {
       }
 
       setAccessNotice(
-        "Early access link verified. Finish your workspace setup.",
+        body.emailVerified
+          ? "Early access and email verified. Finish your workspace setup."
+          : "Early access approved. Verify your email to continue.",
       )
+      setApprovedIdentity({
+        businessName: body.lead.businessName,
+        email: body.lead.email,
+      })
+      setVerificationEmail(body.emailVerified ? null : body.lead.email)
+      setEntryReady(body.emailVerified)
       setFormState((current) => ({
         ...current,
         business: {
@@ -259,6 +280,7 @@ export default function SignupPage() {
         posUrl: result.posUrl,
         storefrontUrl: result.storefrontUrl,
       })
+      window.history.replaceState(null, "", "/signup")
       setStep(4)
     } catch {
       setSubmitError(
@@ -315,6 +337,23 @@ export default function SignupPage() {
     )
   }
 
+  if (!entryReady) {
+    return (
+      <main className="mx-auto max-w-lg px-6 py-12">
+        {accessToken && verificationEmail ? (
+          <VerifyApprovedEmail
+            accessToken={accessToken}
+            email={verificationEmail}
+          />
+        ) : (
+          <p role="alert">
+            {accessNotice ?? "Checking your approved early access link…"}
+          </p>
+        )}
+      </main>
+    )
+  }
+
   return (
     <div className="min-h-[calc(100vh-8rem)] px-6 pb-16 sm:px-10">
       <div className="mx-auto max-w-2xl">
@@ -341,6 +380,7 @@ export default function SignupPage() {
 
           {step === 2 && (
             <StepBusiness
+              approvedBusinessName={approvedIdentity?.businessName}
               defaultValues={formState.business}
               onNext={handleBusiness}
               onBack={() => setStep(1)}
@@ -349,6 +389,7 @@ export default function SignupPage() {
 
           {step === 3 && (
             <StepOwner
+              approvedEmail={approvedIdentity?.email}
               defaultValues={formState.owner}
               onNext={handleOwner}
               onBack={() => setStep(2)}

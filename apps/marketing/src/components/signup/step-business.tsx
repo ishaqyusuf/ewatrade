@@ -25,12 +25,14 @@ const baseInputClasses =
   "w-full scroll-mt-24 rounded-lg border border-border/70 bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 appearance-none"
 
 type StepBusinessProps = {
+  approvedBusinessName?: string
   defaultValues?: Partial<BusinessValues>
   onNext: (data: BusinessValues) => void
   onBack: () => void
 }
 
 export function StepBusiness({
+  approvedBusinessName,
   defaultValues,
   onNext,
   onBack,
@@ -85,6 +87,7 @@ export function StepBusiness({
           Business name
           <input
             {...form.register("businessName")}
+            readOnly={Boolean(approvedBusinessName)}
             type="text"
             placeholder="Nile Market Co."
             className={`${baseInputClasses} mt-1.5`}

@@ -7,6 +7,7 @@ import {
   parseEarlyAccessOnboardingFormData,
   splitLeadFullName,
 } from "@/lib/early-access-onboarding"
+import { shouldPreviewEarlyAccess } from "@/lib/early-access-preview"
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token")?.trim()
@@ -53,16 +54,21 @@ export async function GET(request: NextRequest) {
 
   const { firstName, lastName } = splitLeadFullName(formData.fullName)
 
-  return NextResponse.json({
-    accessToken: session.token,
-    expiresAt: session.expiresAt.toISOString(),
-    lead: {
-      businessName: formData.companyName ?? "",
-      email: formData.email,
-      firstName,
-      fullName: formData.fullName,
-      lastName,
-      phone: formData.phone ?? "",
+  return NextResponse.json(
+    {
+      qaWorkspace: shouldPreviewEarlyAccess({ email: formData.email }),
+      accessToken: session.token,
+      expiresAt: session.expiresAt.toISOString(),
+      emailVerified: Boolean(formData.emailVerifiedAt),
+      lead: {
+        businessName: formData.companyName ?? "",
+        email: formData.email,
+        firstName,
+        fullName: formData.fullName,
+        lastName,
+        phone: formData.phone ?? "",
+      },
     },
-  })
+    { headers: { "Cache-Control": "no-store" } },
+  )
 }

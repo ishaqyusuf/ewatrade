@@ -71,6 +71,7 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 type StepOwnerProps = {
+  approvedEmail?: string
   defaultValues?: Partial<OwnerValues>
   onNext: (data: OwnerValues, legalAcceptance?: SignupLegalAcceptance) => void
   onBack: () => void
@@ -81,6 +82,7 @@ type StepOwnerProps = {
 }
 
 export function StepOwner({
+  approvedEmail,
   defaultValues,
   onNext,
   onBack,
@@ -203,6 +205,7 @@ export function StepOwner({
           Email address
           <input
             {...form.register("email")}
+            readOnly={Boolean(approvedEmail)}
             type="email"
             placeholder="ada@merchant.com"
             autoComplete="email"

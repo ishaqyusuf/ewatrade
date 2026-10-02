@@ -1,6 +1,8 @@
 import { getEmailDomain, parseQaDomainRoutes } from "@ewatrade/email"
 
 export type EarlyAccessQaPreview = {
+  emailSent?: boolean
+  stage?: "approval" | "verification"
   accessUrl: string
   emailHtml: string
   expiresAt: string

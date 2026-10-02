@@ -85,6 +85,7 @@ type ResendEmailResponse = {
 
 export * from "../defaults"
 export * from "../templates/marketing-early-access-admin"
+export * from "../templates/early-access-verification"
 export * from "../templates/marketing-early-access-confirmation"
 export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
