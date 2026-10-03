@@ -27,6 +27,8 @@ run([
 const configPath = resolve(root, "apps/api/tsconfig.json")
 const config = JSON.parse(readFileSync(configPath, "utf8"))
 config.compilerOptions = { ...config.compilerOptions, noCheck: true }
+// Vercel needs to compile only the generated forwarding entry, not the source graph.
+config.include = ["src/index.ts"]
 writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
 writeFileSync(
   resolve(root, "apps/api/src/index.ts"),
