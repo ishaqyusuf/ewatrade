@@ -75,3 +75,17 @@ unchanged. Collection reports application environment separately from Trigger's
 provider label and remains unsigned/unready until source, effective configuration
 and fresh active-worker proof are authenticated. Project creation and passing
 local tests do not establish hosted readiness.
+
+## API deployment identity and artifact facts
+
+API deployment commands use the reviewed Vercel CLI54.4.1, keep its exact returned
+deployment ID and independently check that ID against the owned API project/team,
+selected environment and Ready artifact URL. Preview retains its protected smoke
+checks before moving its alias; Production retains its profile/project safeguards.
+The operator commands stay `api:preview:deploy` and `api:deploy`.
+
+These identity checks do not certify uploaded source. Exact committed staging,
+actual upload inventory and protected producer provenance remain required. The
+readonly selected-file observer hashes only explicitly requested public artifact
+files; it preserves missing directory children as unknown and never marks complete
+inventory, source verification or release readiness true.

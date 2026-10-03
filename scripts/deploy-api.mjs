@@ -20,6 +20,12 @@ import {
   probeProductionApi,
   validateProductionApiHostConfiguration,
 } from "./production-api-readiness.mjs"
+import {
+  EWATRADE_VERCEL_API_TARGET,
+  RELEASE_VERCEL_CLI,
+  assertOwnedVercelDeployment,
+  parseVercelDeploymentOutput,
+} from "./release-vercel-deployment-output.mjs"
 
 const rootDir = new URL("../", import.meta.url).pathname
 const apiDir = new URL("../apps/api/", import.meta.url).pathname
@@ -116,23 +122,6 @@ function runStage(command, args) {
       `API_DEPLOY_STAGE_FAILED:${command}:${args[0] ?? ""}:${result.status ?? "unknown"}`,
     )
   return result
-}
-
-function getDeploymentUrl(output) {
-  try {
-    const parsed = JSON.parse(output)
-    return parsed.url || parsed.deployment?.url || parsed.inspectorUrl || ""
-  } catch {
-    const jsonStart = output.lastIndexOf("{")
-    if (jsonStart === -1) return ""
-
-    try {
-      const parsed = JSON.parse(output.slice(jsonStart))
-      return parsed.url || parsed.deployment?.url || parsed.inspectorUrl || ""
-    } catch {
-      return ""
-    }
-  }
 }
 
 function stageProductionApi() {
@@ -241,6 +230,12 @@ try {
     env.VERCEL_API_PROJECT_ID?.trim(),
     env.VERCEL_API_ORG_ID?.trim(),
   )
+  if (
+    env.VERCEL_API_PROJECT_ID?.trim() !==
+      EWATRADE_VERCEL_API_TARGET.projectId ||
+    env.VERCEL_API_ORG_ID?.trim() !== EWATRADE_VERCEL_API_TARGET.teamId
+  )
+    throw new Error("API_DEPLOY_TARGET_MISMATCH")
   if (!skipTest && hostCheck.failures.length)
     throw new Error(hostCheck.failures.join(" "))
 } catch (error) {
@@ -270,19 +265,15 @@ const vercelScopeArgs = scope ? ["--scope", scope] : []
 // application. Sensitive values are unreadable after creation and never enter
 // deployment command arguments or this process's output.
 try {
-  const inventory = run(
-    "bunx",
-    [
-      "vercel",
-      "api",
-      `/v9/projects/${env.VERCEL_API_PROJECT_ID}/env`,
-      "--cwd",
-      apiDir,
-      "--raw",
-      ...vercelScopeArgs,
-    ],
-    { capture: true },
-  )
+  const inventory = runStage("bunx", [
+    RELEASE_VERCEL_CLI,
+    "api",
+    `/v9/projects/${env.VERCEL_API_PROJECT_ID}/env`,
+    "--cwd",
+    apiDir,
+    "--raw",
+    ...vercelScopeArgs,
+  ])
   assertProductionApiProjectEnvironment(JSON.parse(inventory.stdout))
 } catch (error) {
   console.error(
@@ -301,11 +292,11 @@ console.log(`Env:     ${envFile}`)
 
 console.log("Building isolated Production artifact...")
 run("bun", ["run", "--cwd", "apps/api", "typecheck"], { env })
-let deploymentUrl
+let deployment
 const stage = stageProductionApi()
 try {
   runStage("bunx", [
-    "vercel",
+    RELEASE_VERCEL_CLI,
     "pull",
     "--yes",
     "--environment=production",
@@ -315,7 +306,7 @@ try {
   ])
   console.log("Starting deployment...")
   const deploy = runStage("bunx", [
-    "vercel",
+    RELEASE_VERCEL_CLI,
     "deploy",
     stage,
     "--project",
@@ -327,21 +318,33 @@ try {
     ...(force ? ["--force"] : []),
     ...vercelScopeArgs,
   ])
-  deploymentUrl = getDeploymentUrl(deploy.stdout)
+  const cliDeployment = parseVercelDeploymentOutput(deploy.stdout)
+  const readback = runStage("bunx", [
+    RELEASE_VERCEL_CLI,
+    "api",
+    `/v13/deployments/${cliDeployment.id}?teamId=${EWATRADE_VERCEL_API_TARGET.teamId}`,
+    "--method",
+    "GET",
+    "--raw",
+    ...vercelScopeArgs,
+  ])
+  let rawDeployment
+  try {
+    rawDeployment = JSON.parse(readback.stdout)
+  } catch {
+    throw new Error("VERCEL_DEPLOYMENT_INVALID_RECORD")
+  }
+  deployment = assertOwnedVercelDeployment(rawDeployment, {
+    ...cliDeployment,
+    ...EWATRADE_VERCEL_API_TARGET,
+    environment: "production",
+  })
 } finally {
   rmSync(stage, { recursive: true, force: true })
 }
 
-if (!deploymentUrl) {
-  console.error("Could not read deployment URL from Vercel output.")
-  process.exit(1)
-}
-
-const url = deploymentUrl.startsWith("http")
-  ? deploymentUrl
-  : `https://${deploymentUrl}`
-
-console.log(`Deployment URL: ${url}`)
+console.log(`Deployment ID: ${deployment.id}`)
+console.log(`Deployment URL: ${deployment.url}`)
 
 if (!skipTest) {
   console.log(`Testing Production API routes at ${hostCheck.origin}...`)

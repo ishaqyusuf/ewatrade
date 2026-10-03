@@ -13,10 +13,16 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { inspectApiPreviewReadiness } from "./check-api-preview-readiness.mjs"
 import { readEnvironmentFile } from "./environment-profile.mjs"
+import {
+  EWATRADE_VERCEL_API_TARGET,
+  RELEASE_VERCEL_CLI,
+  assertOwnedVercelDeployment,
+  parseVercelDeploymentOutput,
+} from "./release-vercel-deployment-output.mjs"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const api = path.join(root, "apps/api")
-const projectId = "prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh"
+const { projectId, teamId } = EWATRADE_VERCEL_API_TARGET
 const scope = "ishaqyusufs-projects"
 const alias = "ewatrade-api-preview-ishaqyusufs-projects.vercel.app"
 const prepareOnly = process.argv.includes("--prepare-only")
@@ -60,16 +66,21 @@ function run(command, args, cwd = root) {
   return result.stdout
 }
 
+function runVercel(args, cwd = api) {
+  return run("bunx", [RELEASE_VERCEL_CLI, ...args], cwd)
+}
+
 function vercelJson(command, args, cwd = api) {
-  const output = run("vercel", [command, ...args], cwd)
-  const start = output.indexOf("{")
-  if (start < 0) throw new Error(`Vercel ${command} returned no JSON.`)
-  return JSON.parse(output.slice(start))
+  const output = runVercel([command, ...args], cwd)
+  try {
+    return JSON.parse(output)
+  } catch {
+    throw new Error("VERCEL_DEPLOYMENT_INVALID_RECORD")
+  }
 }
 
 function protectedGet(route, deployment, curlArgs = []) {
-  return run(
-    "vercel",
+  return runVercel(
     [
       "curl",
       route,
@@ -84,7 +95,7 @@ function protectedGet(route, deployment, curlArgs = []) {
   )
 }
 
-function verifyDeployment(url) {
+function verifyDeployment(url, expectedId) {
   const inspected = vercelJson("inspect", [
     url,
     "--format=json",
@@ -95,7 +106,8 @@ function verifyDeployment(url) {
     inspected.name !== "ewatrade-api" ||
     inspected.target !== "preview" ||
     inspected.readyState !== "READY" ||
-    !inspected.id?.startsWith("dpl_")
+    !inspected.id?.startsWith("dpl_") ||
+    (expectedId !== undefined && inspected.id !== expectedId)
   ) {
     throw new Error(
       "Deployment is not a Ready ewatrade-api Preview; alias was not moved.",
@@ -184,47 +196,6 @@ function verifyDeployment(url) {
     throw new Error("Preview direct-signup gate failed; alias was not moved.")
   }
   return inspected.id
-}
-
-function deploymentUrl(payload) {
-  const candidates = new Set()
-  const ids = new Set()
-  function visit(value) {
-    if (typeof value === "string") {
-      const candidate = value.startsWith("https://")
-        ? value
-        : `https://${value}`
-      if (/^dpl_[A-Za-z0-9]+$/.test(value)) ids.add(value)
-      if (
-        /^https:\/\/ewatrade-(?!api-preview-)[a-z0-9-]+-ishaqyusufs-projects\.vercel\.app$/.test(
-          candidate,
-        )
-      ) {
-        candidates.add(candidate)
-      }
-    } else if (Array.isArray(value)) {
-      value.forEach(visit)
-    } else if (value && typeof value === "object") {
-      Object.values(value).forEach(visit)
-    }
-  }
-  visit(payload)
-  if (ids.size === 1) {
-    candidates.clear()
-    const inspected = vercelJson("inspect", [
-      [...ids][0],
-      "--format=json",
-      "--scope",
-      scope,
-    ])
-    visit(inspected.url)
-  }
-  if (candidates.size !== 1) {
-    throw new Error(
-      "Vercel did not return one exact Preview deployment URL; alias was not moved.",
-    )
-  }
-  return [...candidates][0]
 }
 
 function assertNoSecrets(bundle) {
@@ -320,33 +291,52 @@ try {
       path.join(stage, ".vercel/project.json"),
     )
     console.log("Pulling Preview-only Vercel settings...")
-    run("vercel", [
-      "pull",
-      "--yes",
-      "--environment=preview",
-      "--cwd",
-      stage,
-      "--scope",
-      scope,
-    ])
-    console.log("Deploying to the exact Preview API project...")
-    const deployment = vercelJson(
-      "deploy",
+    runVercel(
       [
+        "pull",
+        "--yes",
+        "--environment=preview",
+        "--cwd",
         stage,
-        "--project",
-        projectId,
-        "--target=preview",
         "--scope",
         scope,
-        "--yes",
-        "--format=json",
       ],
       root,
     )
-    const url = deploymentUrl(deployment)
-    const id = verifyDeployment(url)
-    run("vercel", ["alias", "set", url, alias, "--scope", scope], api)
+    console.log("Deploying to the exact Preview API project...")
+    const cliDeployment = parseVercelDeploymentOutput(
+      runVercel(
+        [
+          "deploy",
+          stage,
+          "--project",
+          projectId,
+          "--target=preview",
+          "--scope",
+          scope,
+          "--yes",
+          "--format=json",
+        ],
+        root,
+      ),
+    )
+    const rawDeployment = vercelJson("api", [
+      `/v13/deployments/${cliDeployment.id}?teamId=${teamId}`,
+      "--method",
+      "GET",
+      "--raw",
+      "--scope",
+      scope,
+    ])
+    const deployment = assertOwnedVercelDeployment(rawDeployment, {
+      ...cliDeployment,
+      projectId,
+      teamId,
+      environment: "preview",
+    })
+    const { url } = deployment
+    const id = verifyDeployment(url, deployment.id)
+    runVercel(["alias", "set", url, alias, "--scope", scope], api)
     console.log(
       `Preview deployment ${id} passed protected smoke and now serves https://${alias}`,
     )
