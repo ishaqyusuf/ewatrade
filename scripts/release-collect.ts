@@ -23,6 +23,7 @@ import {
 } from "./release-source"
 import { collectTriggerFacts } from "./release-trigger-collect"
 import type { TriggerCollection } from "./release-trigger-collect"
+import { EWATRADE_TRIGGER_TARGET } from "./release-trigger-target"
 import { collectVercelFacts } from "./release-vercel-collect"
 import type { VercelCollection } from "./release-vercel-collect"
 import {
@@ -345,14 +346,9 @@ export async function collectReleaseFacts(input: {
 
   const expectedOrganizationId =
     input.expectedTriggerOrganizationId ??
-    process.env.TRIGGER_EXPECTED_ORGANIZATION_ID ??
-    ""
-  if (!expectedOrganizationId) {
-    result.blockers.push({
-      targetId: "jobs",
-      reason: "owned-trigger-organization-id-not-configured",
-    })
-  } else if (adapters.trigger) {
+    (process.env.TRIGGER_EXPECTED_ORGANIZATION_ID?.trim() || undefined) ??
+    EWATRADE_TRIGGER_TARGET.organizationId
+  if (adapters.trigger) {
     try {
       const facts = await adapters.trigger({
         revision: input.revision,
@@ -375,7 +371,7 @@ export async function collectReleaseFacts(input: {
         reason: "trigger-fact-collection-failed",
       })
     }
-  } else if (expectedOrganizationId) {
+  } else {
     try {
       const facts = await collectTriggerFacts({
         revision: input.revision,

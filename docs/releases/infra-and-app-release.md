@@ -54,3 +54,7 @@ jobs cannot reuse Production evidence. Collection currently emits partial
 unsigned facts; it does not produce ready signed release evidence. Hosted
 protection, signing and live acceptance must be configured before treating the
 application gate as active. Planning and local tests do not establish readiness.
+
+Trigger collection defaults to the verified School Clerk/EwaTrade ownership
+identifiers. Explicit protected overrides remain supported. Preview jobs still
+require verified isolation or a protected waiver before acceptance.

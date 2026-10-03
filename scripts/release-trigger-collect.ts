@@ -10,6 +10,7 @@ import {
   collectTriggerActiveDeployment,
   normalizeTriggerWorker,
 } from "./release-trigger-deployment"
+import { EWATRADE_TRIGGER_TARGET } from "./release-trigger-target"
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/
 const PROJECT_REF = /^proj_[A-Za-z0-9]+$/
@@ -43,16 +44,18 @@ export type TriggerCollection = {
 export async function collectTriggerFacts(input: {
   environment: "preview" | "production"
   revision: string
-  expectedOrganizationId: string
+  expectedOrganizationId?: string
   expectedProjectId?: string
   get?: ProviderGet
   environmentGet?: ProviderGet
 }): Promise<TriggerCollection> {
+  const expectedOrganizationId =
+    input.expectedOrganizationId ?? EWATRADE_TRIGGER_TARGET.organizationId
   if (input.environment !== "preview" && input.environment !== "production")
     throw new Error("Choose a release environment.")
   if (!SHA.test(input.revision))
     throw new Error("Expected release revision is invalid.")
-  if (!SAFE_ID.test(input.expectedOrganizationId))
+  if (!SAFE_ID.test(expectedOrganizationId))
     throw new Error("Expected Trigger organization ID is required.")
   if (input.expectedProjectId && !SAFE_ID.test(input.expectedProjectId))
     throw new Error("Expected Trigger project ID is invalid.")
@@ -95,7 +98,7 @@ export async function collectTriggerFacts(input: {
     typeof projectId !== "string" ||
     !SAFE_ID.test(projectId) ||
     (input.expectedProjectId && projectId !== input.expectedProjectId) ||
-    organizationId !== input.expectedOrganizationId ||
+    organizationId !== expectedOrganizationId ||
     !referenceMatches
   )
     throw new Error("Trigger project or organization ownership mismatch.")

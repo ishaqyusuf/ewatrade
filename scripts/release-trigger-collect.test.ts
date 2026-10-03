@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test"
 import { JOBS_TARGET } from "../.release/ewatrade-provider-bundle"
 import { type ProviderGet, providerGetClient } from "./release-provider-http"
 import { collectTriggerFacts } from "./release-trigger-collect"
+import { EWATRADE_TRIGGER_TARGET } from "./release-trigger-target"
 
 const organizationId = "org_ewatrade"
 const projectId = "project_ewatrade"
@@ -16,7 +17,9 @@ afterEach(() => {
   else process.env.TRIGGER_RELEASE_READ_KEY = originalReadKey
 })
 
-function mockProvider(options: { wrongOrganization?: boolean } = {}) {
+function mockProvider(
+  options: { wrongOrganization?: boolean; organizationId?: string } = {},
+) {
   const calls: string[] = []
   const get: ProviderGet = async (path) => {
     calls.push(path)
@@ -25,7 +28,9 @@ function mockProvider(options: { wrongOrganization?: boolean } = {}) {
         id: projectId,
         externalRef: JOBS_TARGET.projectRef,
         organization: {
-          id: options.wrongOrganization ? "org_foreign" : organizationId,
+          id: options.wrongOrganization
+            ? "org_foreign"
+            : (options.organizationId ?? organizationId),
           slug: "ewatrade",
         },
         name: "EwaTrade jobs",
@@ -80,6 +85,30 @@ test("collects project ownership and current worker facts without claiming sourc
   expect(result.releaseReady).toBe(false)
   expect(JSON.stringify(result)).not.toContain("example.invalid")
   expect(JSON.stringify(result)).not.toContain("task_record_cleanup")
+})
+
+test("defaults to the independently verified EwaTrade Trigger organization and project reference", async () => {
+  const mock = mockProvider({
+    organizationId: EWATRADE_TRIGGER_TARGET.organizationId,
+  })
+  const result = await collectTriggerFacts({
+    environment: "production",
+    revision,
+    get: mock.get,
+  })
+
+  expect(JOBS_TARGET.projectRef).toBe(EWATRADE_TRIGGER_TARGET.projectRef)
+  expect(mock.calls).toEqual([
+    `/api/v1/projects/${EWATRADE_TRIGGER_TARGET.projectRef}`,
+    `/api/v1/projects/${EWATRADE_TRIGGER_TARGET.projectRef}/prod/workers/current`,
+  ])
+  expect(result.project).toEqual({
+    projectRef: EWATRADE_TRIGGER_TARGET.projectRef,
+    projectId,
+    organizationId: EWATRADE_TRIGGER_TARGET.organizationId,
+  })
+  expect(result.blockers.length).toBeGreaterThan(0)
+  expect(result.releaseReady).toBe(false)
 })
 
 test("exports logical dotted task identifiers instead of provider database row IDs", async () => {

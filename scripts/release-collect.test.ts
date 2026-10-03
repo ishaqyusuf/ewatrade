@@ -18,6 +18,7 @@ import {
 import type { ExpoSourceState } from "./release-expo-collect"
 import { resolveNativeEnvironment } from "./release-mobile-environment"
 import type { TriggerCollection } from "./release-trigger-collect"
+import { EWATRADE_TRIGGER_TARGET } from "./release-trigger-target"
 import type { VercelCollection } from "./release-vercel-collect"
 
 const root = resolve(import.meta.dir, "..")
@@ -165,6 +166,36 @@ test("preflights trusted Git and collects only injected unsigned app/provider fa
     targetId: "jobs",
     reason: "source-attribution-unavailable",
   })
+})
+
+test("empty exported organization variable falls back to verified Trigger ownership", async () => {
+  const { repository, revision } = fixture()
+  const previous = process.env.TRIGGER_EXPECTED_ORGANIZATION_ID
+  process.env.TRIGGER_EXPECTED_ORGANIZATION_ID = ""
+  try {
+    const calls: string[] = []
+    const adapters = inertAdapters(calls, revision)
+    adapters.trigger = async (input) => {
+      expect(input.expectedOrganizationId).toBe(
+        EWATRADE_TRIGGER_TARGET.organizationId,
+      )
+      calls.push("trigger")
+      return triggerCollection(input.environment, input.revision)
+    }
+    const report = await collectReleaseFacts({
+      repository,
+      revision,
+      environment: "production",
+      adapters,
+    })
+    expect(calls).toEqual(["vercel", "trigger"])
+    expect(report.fragments.trigger?.releaseReady).toBe(false)
+    expect(report.releaseReady).toBe(false)
+  } finally {
+    if (previous === undefined)
+      Reflect.deleteProperty(process.env, "TRIGGER_EXPECTED_ORGANIZATION_ID")
+    else process.env.TRIGGER_EXPECTED_ORGANIZATION_ID = previous
+  }
 })
 
 test("bad full revision and weakened committed topology fail before provider stage", async () => {

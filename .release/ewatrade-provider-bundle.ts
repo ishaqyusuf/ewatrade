@@ -9,6 +9,7 @@ import { assertMobileEnvironmentReceipt } from "../scripts/release-mobile-prefli
 import { MOBILE_TARGET } from "../scripts/release-mobile-target"
 export { MOBILE_PROJECT, MOBILE_TARGET } from "../scripts/release-mobile-target"
 import { toolkitExpoFingerprint } from "../scripts/release-mobile-fingerprint"
+import { EWATRADE_TRIGGER_TARGET } from "../scripts/release-trigger-target"
 import type {
   ConsumerProviderBindings,
   ConsumerReleaseContext,
@@ -125,7 +126,7 @@ export const WEB_TARGETS: VercelWebTarget[] = [
 export const JOBS_TARGET: JobsTargetConfig = {
   targetId: "jobs",
   provider: "trigger",
-  projectRef: "proj_pdnthdiwdevukelgmvzc",
+  projectRef: EWATRADE_TRIGGER_TARGET.projectRef,
   preview: {
     capability: "unsupported",
     reason:
