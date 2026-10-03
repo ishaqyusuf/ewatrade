@@ -37,7 +37,9 @@ describe("shared database command contract", () => {
   test("keeps only raw package commands", () => {
     const packageScripts = scripts("packages/db/package.json")
 
-    expect(packageScripts["db:generate"]).toBe("prisma generate")
+    expect(packageScripts["db:generate"]).toMatch(
+      /^prisma generate(?: --config prisma\.generate\.config\.ts)?$/,
+    )
     expect(packageScripts["db:migrate"]).toBe("prisma migrate dev")
     expect(packageScripts["db:migrate:deploy"]).toBe("prisma migrate deploy")
     expect(packageScripts["db:pull"]).toBe("prisma db pull")
@@ -50,17 +52,32 @@ describe("shared database command contract", () => {
     expect(existsSync(resolve(root, "scripts/db-push.ts"))).toBe(false)
   })
 
-  test("routes API deployment migrations through the guarded production command", () => {
+  test("keeps Production API deployment app-only after explicit infra DB preparation", () => {
     const deploySource = readFileSync(
       resolve(root, "scripts/deploy-api.mjs"),
       "utf8",
     )
-
     expect(deploySource).toContain(
-      'run("bun", ["run", "db:migrate", "--prod"], { env })',
+      "Run database push separately through local-infra-kit or release:run first.",
     )
-    expect(deploySource).toContain("delete env.DATABASE_URL")
+    expect(deploySource).toContain("env.DATABASE_URL = undefined")
     expect(deploySource).toContain('"EWATRADE_DATABASE_URL"')
-    expect(deploySource).not.toContain("db:migrate:deploy")
+    for (const retired of [
+      "release:database:operation",
+      "reviewedDatabaseOperationSource",
+      "skipMigrations",
+      "EWATRADE_RELEASE_EXPECTED_COMMIT",
+      "db:migrate",
+      "assertProductionMigrationGate",
+      "inspectFreshProductionDatabase",
+    ]) {
+      expect(deploySource).not.toContain(retired)
+    }
+    expect(scripts("package.json")["release:run"]).toBe(
+      "bun --env-file=/dev/null scripts/release.ts run",
+    )
+    expect(
+      scripts("package.json")["release:database:operation"],
+    ).toBeUndefined()
   })
 })

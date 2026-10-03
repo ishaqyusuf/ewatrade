@@ -15,13 +15,11 @@ import {
   assertApiDeployTarget,
   assertProductionApiDeployMode,
   assertProductionApiProjectEnvironment,
-  assertProductionMigrationGate,
 } from "./api-deploy-target.mjs"
 import {
   probeProductionApi,
   validateProductionApiHostConfiguration,
 } from "./production-api-readiness.mjs"
-import { inspectFreshProductionDatabase } from "./production-empty-database.mjs"
 
 const rootDir = new URL("../", import.meta.url).pathname
 const apiDir = new URL("../apps/api/", import.meta.url).pathname
@@ -33,7 +31,8 @@ function usage() {
   console.log(`Usage: bun run api:deploy
 
 Deploys @ewatrade/api to Vercel using project-scoped Production variables.
-The local ${envFile} selects the migration target and deploy safeguards.
+The local ${envFile} selects the Production deploy safeguards.
+Run database push separately through local-infra-kit or release:run first.
 
 Required in ${envFile}:
   EWATRADE_DATABASE_URL
@@ -45,7 +44,6 @@ Optional deployment config in ${envFile}:
   VERCEL_API_PROJECT=ewatrade-api
   VERCEL_API_TARGET=production (this helper is production-only)
   VERCEL_API_SKIP_TEST=false
-  VERCEL_API_SKIP_MIGRATIONS=false
   VERCEL_API_FORCE=false
 `)
 }
@@ -228,14 +226,13 @@ const scope = env.VERCEL_SCOPE?.trim() || ""
 const target = env.VERCEL_API_TARGET?.trim() || "production"
 const isProduction = target === "production"
 const skipTest = bool(env.VERCEL_API_SKIP_TEST, false)
-const skipMigrations = bool(env.VERCEL_API_SKIP_MIGRATIONS, false)
 const force = bool(env.VERCEL_API_FORCE, false)
 const hostCheck = validateProductionApiHostConfiguration(fileEnv)
 
-// The checkout may be linked to Marketing. Refuse to run migrations or deploy
+// The checkout may be linked to Marketing. Refuse to deploy
 // until the exact API project is linked; `vercel deploy` uses that local link.
 try {
-  // This helper reads .env.production and runs --prod migrations. A preview
+  // This helper reads .env.production. A preview
   // target must use an isolated profile and cannot be selected here.
   assertProductionApiDeployMode(target)
   assertApiDeployTarget(
@@ -244,30 +241,6 @@ try {
     env.VERCEL_API_PROJECT_ID?.trim(),
     env.VERCEL_API_ORG_ID?.trim(),
   )
-  const readonlyDatabaseUrl = env.PRODUCTION_READONLY_DATABASE_URL?.trim()
-  const backupReference = env.VERCEL_API_BACKUP_REFERENCE?.trim()
-  const migrationApproved = env.VERCEL_API_PROD_MIGRATION_APPROVED?.trim()
-  const freshDatabaseVerified =
-    !skipMigrations &&
-    !readonlyDatabaseUrl &&
-    backupReference &&
-    migrationApproved === "true"
-      ? inspectFreshProductionDatabase({
-          productionUrl: env.EWATRADE_DATABASE_URL,
-          localUrl: parseEnvFile(".env.local").EWATRADE_DATABASE_URL,
-          previewUrl: parseEnvFile(".env.preview").EWATRADE_DATABASE_URL,
-          backupReference,
-          rootDir,
-        })
-      : false
-  assertProductionMigrationGate({
-    isProduction,
-    skipMigrations,
-    readonlyDatabaseUrl,
-    freshDatabaseVerified,
-    backupReference,
-    migrationApproved,
-  })
   if (!skipTest && hostCheck.failures.length)
     throw new Error(hostCheck.failures.join(" "))
 } catch (error) {
@@ -294,7 +267,7 @@ if (/localhost|127\.0\.0\.1/.test(env.EWATRADE_DATABASE_URL)) {
 const vercelScopeArgs = scope ? ["--scope", scope] : []
 
 // Verify the exact linked project's Production inventory before mutating its
-// database. Sensitive values are unreadable after creation and never enter
+// application. Sensitive values are unreadable after creation and never enter
 // deployment command arguments or this process's output.
 try {
   const inventory = run(
@@ -325,12 +298,6 @@ console.log(`Project: ${project}`)
 if (scope) console.log(`Scope:   ${scope}`)
 console.log(`Target:  ${target}`)
 console.log(`Env:     ${envFile}`)
-console.log(`Migrate: ${skipMigrations ? "skip" : "deploy"}`)
-
-if (!skipMigrations) {
-  console.log("Running database migrations...")
-  run("bun", ["run", "db:migrate", "--prod"], { env })
-}
 
 console.log("Building isolated Production artifact...")
 run("bun", ["run", "--cwd", "apps/api", "typecheck"], { env })
@@ -366,7 +333,6 @@ try {
 }
 
 if (!deploymentUrl) {
-  console.log(deploy.stdout)
   console.error("Could not read deployment URL from Vercel output.")
   process.exit(1)
 }
