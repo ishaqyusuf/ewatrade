@@ -1,3 +1,4 @@
+const { existsSync } = require("node:fs")
 const { withNativewind } = require("nativewind/metro")
 const { resolve, sep } = require("node:path")
 const { getSentryExpoConfig } = require("@sentry/react-native/metro")
@@ -23,7 +24,10 @@ const productionDesignReferenceAliases =
   createProductionDesignReferenceAliases(__dirname)
 
 nativewindConfig.watchFolders = Array.from(
-  new Set([...(nativewindConfig.watchFolders ?? []), designRoot]),
+  new Set([
+    ...(nativewindConfig.watchFolders ?? []),
+    ...(existsSync(designRoot) ? [designRoot] : []),
+  ]),
 )
 const nativewindResolveRequest = nativewindConfig.resolver.resolveRequest
 const singletonPackages = [

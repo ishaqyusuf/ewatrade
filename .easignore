@@ -48,3 +48,6 @@ credentials.json
 .design/
 .release/
 tmp/
+
+# Local review screenshots and recordings are not application assets.
+artifacts/
