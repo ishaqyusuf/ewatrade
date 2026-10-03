@@ -14,18 +14,11 @@ const { withGoogleSignInModularHeaders } =
 export const UPDATE_VERSION = "2026.09.22"
 
 const PROJECT = {
-  default: {
-    id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
-    slug: "ewatrade",
-    owner: "cipron-startups",
-  },
-  fallback: {
-    id: "5d765962-42a1-4a9e-a01c-122149c3cec4",
-    slug: "ewatrade-2",
-    owner: "startups-2",
-  },
+  id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
+  slug: "ewatrade",
+  owner: "cipron-startups",
 }
-const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT.default
+const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT
 const appVariant =
   process.env.APP_VARIANT ??
   process.env.EXPO_PUBLIC_APP_VARIANT ??
