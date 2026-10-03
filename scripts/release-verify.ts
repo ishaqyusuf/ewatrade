@@ -5,12 +5,12 @@ import {
   createEwaTradeProviderBindings,
   loadSignedProviderBundle,
 } from "../.release/ewatrade-provider-bundle"
-import { runConsumerReleaseCheck } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/consumer"
-import type { VerifiedReleaseEvidence } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/evidence"
-import { isGenuineReleaseGate } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/gate"
-import { validateReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/manifest"
-import type { ReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
-import { verifyVendorSnapshot } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/vendor"
+import { runConsumerReleaseCheck } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/consumer"
+import type { VerifiedReleaseEvidence } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/evidence"
+import { isGenuineReleaseGate } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/gate"
+import { validateReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/manifest"
+import type { ReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
+import { verifyVendorSnapshot } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/vendor"
 import {
   assertBundleContract,
   assertProviderTargetBindings,

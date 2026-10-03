@@ -8,9 +8,10 @@
   },
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
-    "deploy": "node ../../scripts/with-workspace-env.mjs APP_ENV=production REQUIRE_PROD_DATABASE_URL=1 bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
+    "deploy": "node ../../scripts/with-workspace-env.mjs APP_ENV=production DEV_PROFILE=production REQUIRE_PROD_DATABASE_URL=1 bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
     "lint": "biome check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "deploy:preview": "node ../../scripts/with-workspace-env.mjs APP_ENV=preview DEV_PROFILE=preview bun ../../scripts/with-trigger-profile.mjs -- trigger deploy"
   },
   "dependencies": {
     "@ewatrade/communications": "workspace:*",

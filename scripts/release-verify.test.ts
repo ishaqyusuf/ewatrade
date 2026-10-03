@@ -12,16 +12,17 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import {
   type EwaTradeProviderBundle,
+  JOBS_TARGET,
   MOBILE_TARGET,
   WEB_TARGETS,
   createEwaTradeProviderBindings,
 } from "../.release/ewatrade-provider-bundle"
 import { checkRelease } from "../.release/release-adapter"
-import { verifyReleaseEvidence } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/evidence"
+import { verifyReleaseEvidence } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/evidence"
 import {
   type ReleaseManifest,
   planRelease,
-} from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+} from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import { releaseContract } from "./release-contract"
 import { compareExpoNativeEnvironment } from "./release-expo-environment"
 import { resolveNativeEnvironment } from "./release-mobile-environment"
@@ -199,9 +200,8 @@ function fingerprints(repository: string, revision: string) {
   }))
   const contract = releaseContract(
     root,
-    "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+    "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
   )
-  const waiverId = "fixture-jobs-preview-waiver"
   const bundle: EwaTradeProviderBundle = {
     version: 1 as const,
     project: "ewatrade" as const,
@@ -280,22 +280,28 @@ function fingerprints(repository: string, revision: string) {
       ],
     },
     jobs: {
-      deploymentIds: {},
+      deploymentIds: {
+        jobs: receipts.find((receipt) => receipt.targetId === "jobs")
+          ?.deploymentId,
+      },
       configurationFingerprints: { jobs: targetFingerprints.jobs.value },
-      deployments: [],
-      previewWaiverIds: { jobs: waiverId },
-      waivers: [
+      deployments: [
         {
-          id: waiverId,
-          project: "ewatrade",
-          targetId: "jobs",
-          environment: "preview" as const,
+          id:
+            receipts.find((receipt) => receipt.targetId === "jobs")
+              ?.deploymentId ?? "",
+          provider: "trigger",
+          projectRef:
+            JOBS_TARGET.preview.capability === "isolated"
+              ? (JOBS_TARGET.preview.projectRef ?? JOBS_TARGET.projectRef)
+              : "",
+          providerEnvironment: "prod",
+          branch: null,
           revision,
-          status: "approved" as const,
-          protectedApproval: true,
-          approvedBy: "release-reviewer",
-          reason: "Synthetic local release verifier fixture.",
-          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          configurationFingerprint: targetFingerprints.jobs.value,
+          version: "fixture-jobs-1",
+          status: "deployed" as const,
+          current: true,
         },
       ],
     },
@@ -380,9 +386,32 @@ test("verifies an unchanged candidate from committed Git, source, policy, and pr
     repository,
     revision,
     environment: "preview",
-    toolkitRevision: "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+    toolkitRevision: "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
   })
   expect(adapterReport).toEqual(report)
+})
+
+test("Preview jobs proof cannot use the real Production project or an invented provider branch", async () => {
+  const { repository, revision } = fixture()
+  const { bundle } = fingerprints(repository, revision)
+  for (const changes of [
+    { projectRef: JOBS_TARGET.production.projectRef ?? JOBS_TARGET.projectRef },
+    { branch: "preview" },
+    { providerEnvironment: "preview" },
+  ]) {
+    const copy: EwaTradeProviderBundle = structuredClone(bundle)
+    copy.jobs.deployments = copy.jobs.deployments.map((deployment) => ({
+      ...deployment,
+      ...changes,
+    }))
+    configure(copy)
+    const report = await verifyCandidateRelease({
+      repository,
+      revision,
+      environment: "preview",
+    })
+    expect(report.ready).toBe(false)
+  }
 })
 
 test("rejects missing or mismatched trusted policy and source fingerprints", async () => {
@@ -587,7 +616,7 @@ test("raw Expo SHA1 reaches the immutable toolkit through an explicit digest ada
     repository,
     revision,
     environment: "preview" as const,
-    toolkitRevision: "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+    toolkitRevision: "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
   }
   const bindings = createEwaTradeProviderBindings(context, bundle)
   const evidence = await verifyReleaseEvidence(

@@ -5,7 +5,7 @@ import { assertBundleContract, releaseContract } from "./release-contract"
 test("signed contract rejects policy and toolkit substitution", () => {
   const contract = releaseContract(
     resolve(import.meta.dir, ".."),
-    "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+    "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
   )
   expect(() => assertBundleContract(contract, contract)).not.toThrow()
   expect(() =>

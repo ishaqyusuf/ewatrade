@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { WEB_TARGETS } from "../.release/ewatrade-provider-bundle"
-import type { ReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
-import { verifyVendorSnapshot } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/vendor"
+import type { ReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
+import { verifyVendorSnapshot } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/vendor"
 import { releaseContract } from "./release-contract"
 import {
   collectNeutralExpoProviderState,

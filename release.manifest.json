@@ -41,6 +41,8 @@
         "scripts/release-source.ts",
         "scripts/release-verify.ts",
         "scripts/release-*.ts",
+        "scripts/release-*.mjs",
+        "scripts/release-*.mts",
         ".release/policy.json",
         ".github/workflows/release-assurance.yml",
         ".github/workflows/release-*.yml",
@@ -88,6 +90,8 @@
         "scripts/release-source.ts",
         "scripts/release-verify.ts",
         "scripts/release-*.ts",
+        "scripts/release-*.mjs",
+        "scripts/release-*.mts",
         ".release/policy.json",
         ".github/workflows/release-assurance.yml",
         ".github/workflows/release-*.yml",
@@ -132,6 +136,8 @@
         "scripts/release-source.ts",
         "scripts/release-verify.ts",
         "scripts/release-*.ts",
+        "scripts/release-*.mjs",
+        "scripts/release-*.mts",
         ".release/policy.json",
         ".github/workflows/release-assurance.yml",
         ".github/workflows/release-*.yml",
@@ -181,6 +187,8 @@
         "scripts/release-source.ts",
         "scripts/release-verify.ts",
         "scripts/release-*.ts",
+        "scripts/release-*.mjs",
+        "scripts/release-*.mts",
         ".release/policy.json",
         ".github/workflows/release-assurance.yml",
         ".github/workflows/release-*.yml"
@@ -229,13 +237,16 @@
         "scripts/release-source.ts",
         "scripts/release-verify.ts",
         "scripts/release-*.ts",
+        "scripts/release-*.mjs",
+        "scripts/release-*.mts",
         ".release/policy.json",
         ".github/workflows/release-assurance.yml",
         ".github/workflows/release-*.yml",
         "scripts/environment-profile.*",
         "scripts/database-profile.*",
         "scripts/with-workspace-env.mjs",
-        "scripts/with-trigger-profile.mjs"
+        "scripts/with-trigger-profile.mjs",
+        "scripts/trigger-deploy-profile.*"
       ]
     }
   ]

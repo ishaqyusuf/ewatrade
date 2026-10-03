@@ -13,7 +13,7 @@ Both must succeed before the application command starts. Normal interactive
 confirmation and Prisma warnings remain visible. No data-loss flags are supplied.
 
 Default application command: release:plan (shows a plan; does not deploy).
-Deployment commands: api:preview:deploy (Preview), api:deploy or deploy:api
+Deployment commands: api:preview:deploy or jobs:preview:deploy (Preview), api:deploy or deploy:api
 (Production), jobs:deploy (Production). Other supported commands: release:status,
 release:collect and release:check. A failed/cancelled stage stops the sequence.
 `
@@ -46,7 +46,7 @@ export function releaseRunOptions(args: string[]): Options {
   ]
   const deployments =
     environment === "preview"
-      ? ["api:preview:deploy"]
+      ? ["api:preview:deploy", "jobs:preview:deploy"]
       : ["api:deploy", "deploy:api", "jobs:deploy"]
   if (![...shared, ...deployments].includes(then))
     throw new Error(

@@ -7,7 +7,7 @@ import {
   MOBILE_PROJECT,
   MOBILE_TARGET,
 } from "../.release/ewatrade-provider-bundle"
-import type { ExpoPlatform } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/expo"
+import type { ExpoPlatform } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/expo"
 import {
   assertExpoNativeEnvironmentReceipt,
   collectExpoNativeEnvironment,

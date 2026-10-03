@@ -1,7 +1,11 @@
-/** Verified, non-secret ownership identifiers for EwaTrade's Trigger project. */
+import { EWATRADE_TRIGGER_TARGETS } from "./release-trigger-target.mjs"
+
+export { EWATRADE_TRIGGER_TARGETS }
+
+/** Production alias retained for existing production-only release consumers. */
 export const EWATRADE_TRIGGER_TARGET = {
-  organizationId: "cmcu9njpv03uln128dm2y3xyz",
-  organizationSlug: "school-clerk-7783",
-  projectRef: "proj_pdnthdiwdevukelgmvzc",
-  projectSlug: "ewatrade-deLw",
+  organizationId: EWATRADE_TRIGGER_TARGETS.organizationId,
+  organizationSlug: EWATRADE_TRIGGER_TARGETS.organizationSlug,
+  projectRef: EWATRADE_TRIGGER_TARGETS.production.projectRef,
+  projectSlug: EWATRADE_TRIGGER_TARGETS.production.projectSlug,
 } as const

@@ -9,16 +9,16 @@ import { assertMobileEnvironmentReceipt } from "../scripts/release-mobile-prefli
 import { MOBILE_TARGET } from "../scripts/release-mobile-target"
 export { MOBILE_PROJECT, MOBILE_TARGET } from "../scripts/release-mobile-target"
 import { toolkitExpoFingerprint } from "../scripts/release-mobile-fingerprint"
-import { EWATRADE_TRIGGER_TARGET } from "../scripts/release-trigger-target"
+import { EWATRADE_TRIGGER_TARGETS } from "../scripts/release-trigger-target"
 import type {
   ConsumerProviderBindings,
   ConsumerReleaseContext,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/consumer"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/consumer"
 import type {
   ProviderReleaseMetadata,
   ReleaseFingerprint,
   ReleaseReceipt,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/evidence"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/evidence"
 import {
   type ExpoBuildRecord,
   type ExpoChannelRecord,
@@ -26,24 +26,24 @@ import {
   type ExpoUpdateRecord,
   decideExpoRelease,
   generateExpoCurrentState,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/expo"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/expo"
 import {
   type JobsDeploymentRecord,
   type JobsPreviewWaiverRecord,
   type JobsTargetConfig,
   verifyJobsDeployments,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/jobs"
-import type { ProviderLiveStateMetadata } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/live-state"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/jobs"
+import type { ProviderLiveStateMetadata } from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/live-state"
 import type {
   ReleaseManifest,
   ReleasePlan,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import {
   type VercelDeploymentMetadata,
   type VercelDomainAssignment,
   type VercelWebTarget,
   verifyVercelWebDeployments,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/vercel"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/vercel"
 
 const MAX_EVIDENCE_BYTES = 1024 * 1024
 const MAX_EVIDENCE_AGE_MS = 5 * 60 * 1000
@@ -126,15 +126,18 @@ export const WEB_TARGETS: VercelWebTarget[] = [
 export const JOBS_TARGET: JobsTargetConfig = {
   targetId: "jobs",
   provider: "trigger",
-  projectRef: EWATRADE_TRIGGER_TARGET.projectRef,
+  projectRef: EWATRADE_TRIGGER_TARGETS.production.projectRef,
   preview: {
-    capability: "unsupported",
-    reason:
-      "Trigger Preview branch ownership and protected provider lookup are not yet verified for Ewa Trade.",
+    capability: "isolated",
+    projectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+    providerEnvironment: EWATRADE_TRIGGER_TARGETS.preview.providerEnvironment,
+    branch: null,
   },
   production: {
     capability: "isolated",
-    providerEnvironment: "prod",
+    projectRef: EWATRADE_TRIGGER_TARGETS.production.projectRef,
+    providerEnvironment:
+      EWATRADE_TRIGGER_TARGETS.production.providerEnvironment,
     branch: null,
   },
 }
@@ -341,6 +344,7 @@ export function createEwaTradeProviderBindings(
         manifest,
         plan,
         configs: [JOBS_TARGET],
+        verifyUnchanged: true,
         deploymentIds: bundle.jobs.deploymentIds,
         currentConfigurationFingerprints: bundle.jobs.configurationFingerprints,
         lookupDeployment: async (id) =>

@@ -2,13 +2,13 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { loadSignedProviderBundle } from "../.release/ewatrade-provider-bundle"
-import { readBaselineClaims } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/baselines"
-import { collectGitTargetChanges } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/git-changes"
-import { validateReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/manifest"
+import { readBaselineClaims } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/baselines"
+import { collectGitTargetChanges } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/git-changes"
+import { validateReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/manifest"
 import {
   type ReleaseManifest,
   planRelease,
-} from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+} from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import { assertBundleContract, releaseContract } from "./release-contract"
 import { assertCompatibleMobileBaseline } from "./release-mobile-preflight"
 import { notifyLocalReleaseChecklist } from "./release-notify"
@@ -70,13 +70,13 @@ export function localReleaseChecklist(
       repository: root,
       revision,
       environment,
-      toolkitRevision: "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+      toolkitRevision: "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
     })
     assertBundleContract(
       bundle,
       releaseContract(
         resolve(import.meta.dir, ".."),
-        "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+        "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
       ),
     )
     signedEvidence = "available"

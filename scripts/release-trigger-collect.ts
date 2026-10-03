@@ -1,4 +1,3 @@
-import { JOBS_TARGET } from "../.release/ewatrade-provider-bundle"
 import {
   type ProviderGet,
   providerGetClient,
@@ -10,7 +9,7 @@ import {
   collectTriggerActiveDeployment,
   normalizeTriggerWorker,
 } from "./release-trigger-deployment"
-import { EWATRADE_TRIGGER_TARGET } from "./release-trigger-target"
+import { EWATRADE_TRIGGER_TARGETS } from "./release-trigger-target"
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/
 const PROJECT_REF = /^proj_[A-Za-z0-9]+$/
@@ -25,6 +24,7 @@ export type TriggerCollection = {
     projectRef: string
     projectId: string
     organizationId: string
+    providerEnvironment: "prod"
   } | null
   environmentIdentity: null
   currentWorker: TriggerWorkerObservation | null
@@ -37,7 +37,7 @@ export type TriggerCollection = {
  * Read-only Trigger facts. Endpoint paths and method signatures follow
  * Trigger's pinned CLI API client: https://github.com/triggerdotdev/trigger.dev/blob/v4.5.16/packages/cli-v3/src/apiClient.ts
  * (`getProject` and `getWorkerByTag`). The project response confirms ownership;
- * current/detail deployment reads use a separate selected-environment key.
+ * current/detail deployment reads use a separate selected-project key.
  * Reported Git/content metadata never establishes source or effective config
  * authority, and unknown environment identity remains explicitly unverified.
  */
@@ -50,7 +50,7 @@ export async function collectTriggerFacts(input: {
   environmentGet?: ProviderGet
 }): Promise<TriggerCollection> {
   const expectedOrganizationId =
-    input.expectedOrganizationId ?? EWATRADE_TRIGGER_TARGET.organizationId
+    input.expectedOrganizationId ?? EWATRADE_TRIGGER_TARGETS.organizationId
   if (input.environment !== "preview" && input.environment !== "production")
     throw new Error("Choose a release environment.")
   if (!SHA.test(input.revision))
@@ -73,22 +73,20 @@ export async function collectTriggerFacts(input: {
     releaseReady: false,
   }
 
-  if (input.environment === "preview") {
-    result.blockers.push({
-      targetId: "jobs",
-      reason:
-        "preview-environment-isolation-unverified; isolated waiver required",
-    })
-    return result
-  }
-
   const get =
     input.get ??
     providerGetClient("trigger", process.env.TRIGGER_ACCESS_TOKEN ?? "")
 
-  const projectRef = JOBS_TARGET.projectRef
+  const target = EWATRADE_TRIGGER_TARGETS[input.environment]
+  const projectRef = target.projectRef
+  const providerEnvironment = target.providerEnvironment
   if (!PROJECT_REF.test(projectRef))
-    throw new Error("Configured Trigger project reference is invalid.")
+    throw new Error("Selected Trigger project reference is invalid.")
+  if (
+    input.environment === "preview" &&
+    projectRef === EWATRADE_TRIGGER_TARGETS.production.projectRef
+  )
+    throw new Error("Trigger Preview must use its isolated project reference.")
   const project = providerRecord(await get(`/api/v1/projects/${projectRef}`))
   const organization = providerRecord(project.organization)
   const projectId = project.id
@@ -97,17 +95,26 @@ export async function collectTriggerFacts(input: {
   if (
     typeof projectId !== "string" ||
     !SAFE_ID.test(projectId) ||
+    (input.environment === "preview" &&
+      projectId === EWATRADE_TRIGGER_TARGETS.production.projectRef) ||
     (input.expectedProjectId && projectId !== input.expectedProjectId) ||
     organizationId !== expectedOrganizationId ||
     !referenceMatches
   )
     throw new Error("Trigger project or organization ownership mismatch.")
-  result.project = { projectRef, projectId, organizationId }
+  result.project = {
+    projectRef,
+    projectId,
+    organizationId,
+    providerEnvironment,
+  }
 
   const readCurrentWorker = async () =>
     normalizeTriggerWorker(
       providerRecord(
-        await get(`/api/v1/projects/${projectRef}/prod/workers/current`),
+        await get(
+          `/api/v1/projects/${projectRef}/${providerEnvironment}/workers/current`,
+        ),
       ).worker,
     )
   result.currentWorker = await readCurrentWorker()

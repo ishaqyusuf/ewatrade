@@ -13,7 +13,7 @@ import {
   type EwaTradeProviderBundle,
   MOBILE_TARGET,
 } from "../.release/ewatrade-provider-bundle"
-import type { ReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+import type { ReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import { releaseContract } from "./release-contract"
 import { compareExpoNativeEnvironment } from "./release-expo-environment"
 import {
@@ -26,7 +26,7 @@ import { assertMobilePublishReady } from "./release-mobile-preflight"
 import { committedSourceFingerprints, releaseGit } from "./release-source"
 
 const root = resolve(import.meta.dir, "..")
-const toolkitRevision = "fef51031b8964dcd8043ee5d6a7558e482e7055d"
+const toolkitRevision = "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7"
 const secret = "owned-native-build-test-secret-with-32-bytes"
 type EasProfileFixture = {
   environment: string

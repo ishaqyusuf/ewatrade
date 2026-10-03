@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { MOBILE_PROJECT } from "../.release/ewatrade-provider-bundle"
-import type { ReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+import type { ReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import {
   NATIVE_ENVIRONMENT_KEYS,
   type NativeEnvironmentBinding,

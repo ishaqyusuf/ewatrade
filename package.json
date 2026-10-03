@@ -65,6 +65,7 @@
     "email:test": "node ./scripts/with-workspace-env.mjs bun scripts/send-test-email.mjs",
     "jobs:deploy": "bun --filter @ewatrade/jobs deploy",
     "release:plan": "bun scripts/release.ts plan",
+    "jobs:preview:deploy": "bun --filter @ewatrade/jobs deploy:preview",
     "release:run": "bun --env-file=/dev/null scripts/release.ts run",
     "release:status": "bun scripts/release.ts status",
     "release:check": "bun scripts/release.ts ci",

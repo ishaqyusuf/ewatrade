@@ -72,6 +72,7 @@ test("failure or cancellation preserves exit status and prevents every later sta
 test("chosen deployment is bound to the selected environment before any DB command", async () => {
   for (const [environment, script] of [
     ["preview", "api:preview:deploy"],
+    ["preview", "jobs:preview:deploy"],
     ["production", "api:deploy"],
     ["production", "jobs:deploy"],
   ]) {
@@ -92,6 +93,7 @@ test("chosen deployment is bound to the selected environment before any DB comma
   for (const args of [
     ["--env", "preview", "--then", "api:deploy"],
     ["--env", "production", "--then", "api:preview:deploy"],
+    ["--env", "production", "--then", "jobs:preview:deploy"],
     ["--env", "preview", "--then", "jobs:deploy"],
     ["--env", "production", "--then", "db:push"],
     ["--env", "production", "--then", "release:run"],

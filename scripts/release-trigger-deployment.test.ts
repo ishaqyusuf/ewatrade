@@ -490,26 +490,3 @@ test("collector uses injected selected-environment getter and separate PAT worke
   expect(result.activeDeployment?.sourceVerified).toBe(false)
   expect(result.releaseReady).toBe(false)
 })
-
-test("Preview invokes neither PAT nor selected-environment getter", async () => {
-  const calls: string[] = []
-  const get: ProviderGet = async (path) => {
-    calls.push(`pat:${path}`)
-    throw new Error("Unexpected Preview provider call")
-  }
-  const environmentGet: ProviderGet = async (path) => {
-    calls.push(`environment:${path}`)
-    throw new Error("Unexpected Preview environment call")
-  }
-  const result = await collectTriggerFacts({
-    environment: "preview",
-    revision,
-    expectedOrganizationId: "org_test",
-    get,
-    environmentGet,
-  })
-  expect(calls).toEqual([])
-  expect(result.environment).toBe("preview")
-  expect(result.activeDeployment).toBeNull()
-  expect(result.releaseReady).toBe(false)
-})

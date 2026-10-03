@@ -11,8 +11,8 @@ import {
   writeFileSync,
 } from "node:fs"
 import { resolve } from "node:path"
-import type { ReleaseBaselineClaims } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/baselines"
-import { latestVerifiedReceiptForTarget } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/evidence"
+import type { ReleaseBaselineClaims } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/baselines"
+import { latestVerifiedReceiptForTarget } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/evidence"
 import {
   assertReleaseRevision,
   dirtyReleaseInputs,

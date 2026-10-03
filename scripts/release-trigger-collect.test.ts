@@ -2,7 +2,10 @@ import { afterEach, beforeEach, expect, test } from "bun:test"
 import { JOBS_TARGET } from "../.release/ewatrade-provider-bundle"
 import { type ProviderGet, providerGetClient } from "./release-provider-http"
 import { collectTriggerFacts } from "./release-trigger-collect"
-import { EWATRADE_TRIGGER_TARGET } from "./release-trigger-target"
+import {
+  EWATRADE_TRIGGER_TARGET,
+  EWATRADE_TRIGGER_TARGETS,
+} from "./release-trigger-target"
 
 const organizationId = "org_ewatrade"
 const projectId = "project_ewatrade"
@@ -18,15 +21,22 @@ afterEach(() => {
 })
 
 function mockProvider(
-  options: { wrongOrganization?: boolean; organizationId?: string } = {},
+  options: {
+    wrongOrganization?: boolean
+    organizationId?: string
+    requestedProjectRef?: string
+    responseProjectRef?: string
+    responseProjectId?: string
+  } = {},
 ) {
   const calls: string[] = []
+  const projectRef = options.requestedProjectRef ?? JOBS_TARGET.projectRef
   const get: ProviderGet = async (path) => {
     calls.push(path)
-    if (path === `/api/v1/projects/${JOBS_TARGET.projectRef}`)
+    if (path === `/api/v1/projects/${projectRef}`)
       return {
-        id: projectId,
-        externalRef: JOBS_TARGET.projectRef,
+        id: options.responseProjectId ?? projectId,
+        externalRef: options.responseProjectRef ?? projectRef,
         organization: {
           id: options.wrongOrganization
             ? "org_foreign"
@@ -36,9 +46,7 @@ function mockProvider(
         name: "EwaTrade jobs",
         createdAt: "2025-01-01T00:00:00.000Z",
       }
-    if (
-      path === `/api/v1/projects/${JOBS_TARGET.projectRef}/prod/workers/current`
-    )
+    if (path === `/api/v1/projects/${projectRef}/prod/workers/current`)
       return {
         worker: {
           id: "worker_current",
@@ -72,6 +80,7 @@ test("collects project ownership and current worker facts without claiming sourc
     projectRef: JOBS_TARGET.projectRef,
     projectId,
     organizationId,
+    providerEnvironment: "prod",
   })
   expect(result.currentWorker).toEqual({
     id: "worker_current",
@@ -106,6 +115,7 @@ test("defaults to the independently verified EwaTrade Trigger organization and p
     projectRef: EWATRADE_TRIGGER_TARGET.projectRef,
     projectId,
     organizationId: EWATRADE_TRIGGER_TARGET.organizationId,
+    providerEnvironment: "prod",
   })
   expect(result.blockers.length).toBeGreaterThan(0)
   expect(result.releaseReady).toBe(false)
@@ -193,26 +203,136 @@ test("rejects an organization mismatch instead of exporting a foreign project", 
   expect(mock.calls).toHaveLength(1)
 })
 
-test("Preview remains unavailable and makes no Production project or worker request", async () => {
-  const mock = mockProvider()
+test("Preview reads only the separate Preview project and identifies its provider environment", async () => {
+  const mock = mockProvider({
+    organizationId: EWATRADE_TRIGGER_TARGETS.organizationId,
+    requestedProjectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+  })
+  const environmentCalls: string[] = []
   const result = await collectTriggerFacts({
     environment: "preview",
     revision,
-    expectedOrganizationId: organizationId,
+    get: mock.get,
+    environmentGet: async (path) => {
+      environmentCalls.push(path)
+      throw new Error("fixture prevents provider reads")
+    },
+  })
+  expect(mock.calls).toEqual([
+    `/api/v1/projects/${EWATRADE_TRIGGER_TARGETS.preview.projectRef}`,
+    `/api/v1/projects/${EWATRADE_TRIGGER_TARGETS.preview.projectRef}/prod/workers/current`,
+  ])
+  expect(mock.calls).not.toContain(
+    `/api/v1/projects/${EWATRADE_TRIGGER_TARGETS.production.projectRef}`,
+  )
+  expect(environmentCalls).toEqual(["/api/v1/deployments/current"])
+  expect(result.environment).toBe("preview")
+  expect(result.project).toEqual({
+    projectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+    projectId,
+    organizationId: EWATRADE_TRIGGER_TARGETS.organizationId,
+    providerEnvironment: "prod",
+  })
+  expect(result.currentWorker).not.toBeNull()
+  expect(result.activeDeployment).toBeNull()
+  expect(result.environmentIdentity).toBeNull()
+  expect(result.blockers).toContainEqual({
+    targetId: "jobs",
+    reason: "trigger-active-deployment-unverified",
+  })
+  expect(result.releaseReady).toBe(false)
+})
+
+test("Preview refuses the Production project's identity even when returned for its selected reference", async () => {
+  for (const identity of ["externalRef", "projectId"] as const) {
+    const mock = mockProvider({
+      requestedProjectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+      ...(identity === "externalRef"
+        ? { responseProjectRef: EWATRADE_TRIGGER_TARGETS.production.projectRef }
+        : {
+            responseProjectId: EWATRADE_TRIGGER_TARGETS.production.projectRef,
+          }),
+    })
+    await expect(
+      collectTriggerFacts({
+        environment: "preview",
+        revision,
+        get: mock.get,
+      }),
+    ).rejects.toThrow("ownership mismatch")
+    expect(mock.calls).toEqual([
+      `/api/v1/projects/${EWATRADE_TRIGGER_TARGETS.preview.projectRef}`,
+    ])
+  }
+})
+
+test("Preview project still requires a Production-provider-environment read key", async () => {
+  process.env.TRIGGER_RELEASE_READ_KEY = "tr_preview_sk_fixture"
+  const mock = mockProvider({
+    organizationId: EWATRADE_TRIGGER_TARGETS.organizationId,
+    requestedProjectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+  })
+  const result = await collectTriggerFacts({
+    environment: "preview",
+    revision,
     get: mock.get,
   })
-  expect(mock.calls).toEqual([])
-  expect(result.environment).toBe("preview")
-  expect(result.project).toBeNull()
-  expect(result.currentWorker).toBeNull()
-  expect(result.blockers).toEqual([
-    {
-      targetId: "jobs",
-      reason:
-        "preview-environment-isolation-unverified; isolated waiver required",
-    },
-  ])
+  expect(result.project?.projectRef).toBe(
+    EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+  )
+  expect(result.project?.providerEnvironment).toBe("prod")
+  expect(result.activeDeployment).toBeNull()
+  expect(result.blockers).toContainEqual({
+    targetId: "jobs",
+    reason: "trigger-selected-environment-read-credential-unavailable",
+  })
+  expect(mock.calls).toHaveLength(2)
   expect(result.releaseReady).toBe(false)
+})
+
+test("Preview reads use the selected Preview environment key against the fixed deployment route", async () => {
+  const originalFetch = globalThis.fetch
+  const key = "tr_prod_sk_previewProjectFixture"
+  process.env.TRIGGER_RELEASE_READ_KEY = key
+  const requests: Array<{ path: string; authorization: string | null }> = []
+  globalThis.fetch = Object.assign(
+    async (url: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      requests.push({
+        path: new URL(String(url)).pathname,
+        authorization: new Headers(init?.headers).get("Authorization"),
+      })
+      return Response.json({ secret: "redacted" }, { status: 403 })
+    },
+    { preconnect: originalFetch.preconnect },
+  )
+  try {
+    const mock = mockProvider({
+      organizationId: EWATRADE_TRIGGER_TARGETS.organizationId,
+      requestedProjectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+    })
+    const result = await collectTriggerFacts({
+      environment: "preview",
+      revision,
+      get: mock.get,
+    })
+    expect(requests).toEqual([
+      {
+        path: "/api/v1/deployments/current",
+        authorization: `Bearer ${key}`,
+      },
+    ])
+    expect(result.project?.projectRef).toBe(
+      EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+    )
+    expect(result.project?.providerEnvironment).toBe("prod")
+    expect(result.environmentIdentity).toBeNull()
+    expect(result.activeDeployment).toBeNull()
+    expect(result.releaseReady).toBe(false)
+    expect(JSON.stringify(result)).not.toContain(key)
+    expect(JSON.stringify(result)).not.toContain("redacted")
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
 
 test("requires explicit organization ownership input", async () => {

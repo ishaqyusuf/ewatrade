@@ -27,11 +27,12 @@ To choose an existing application deployment as the final stage:
 
 ```sh
 bun run release:run --env preview --then api:preview:deploy
+bun run release:run --env preview --then jobs:preview:deploy
 bun run release:run --env production --then api:deploy
 bun run release:run --env production --then jobs:deploy
 ```
 
-These are individual continuations. Preview jobs, Dashboard, Marketing and mobile
+These are individual continuations. Dashboard, Marketing and mobile
 use their separately configured release interfaces. Unsupported commands or
 environment mismatches are rejected before a database push. Other supported
 continuations are `release:plan`, `release:status`, `release:collect` and
@@ -55,6 +56,22 @@ unsigned facts; it does not produce ready signed release evidence. Hosted
 protection, signing and live acceptance must be configured before treating the
 application gate as active. Planning and local tests do not establish readiness.
 
-Trigger collection defaults to the verified School Clerk/EwaTrade ownership
-identifiers. Explicit protected overrides remain supported. Preview jobs still
-require verified isolation or a protected waiver before acceptance.
+Trigger uses two separate projects in School Clerk. Application Preview uses
+`ewatrade preview` (`proj_hymzhteicvpixaksoyqk`); real Production uses EwaTrade
+(`proj_pdnthdiwdevukelgmvzc`). Both hosted environments are labelled `prod` by
+Trigger. Exact distinct project references establish the mapping; Preview never
+uses the real Production project or its runtime key.
+
+For a standalone jobs deployment, use `bun run jobs:preview:deploy` or
+`bun run jobs:deploy`. The commands select `.env.preview` or `.env.production`
+through the ordinary workspace profile. Each selected file must own its Trigger
+project, runtime key and database URL. Missing values, CLI overrides or copied
+Production credentials refuse before upload. The Preview project currently has
+no deployed tasks or configured runtime key. The Free plan's organization usage
+limits still apply; a second project does not add paid Preview branches.
+
+The verifier checks exact owned deployment proof even when jobs source is
+unchanged. Collection reports application environment separately from Trigger's
+provider label and remains unsigned/unready until source, effective configuration
+and fresh active-worker proof are authenticated. Project creation and passing
+local tests do not establish hosted readiness.

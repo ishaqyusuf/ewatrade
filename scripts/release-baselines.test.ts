@@ -13,10 +13,11 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import {
   type EwaTradeProviderBundle,
+  JOBS_TARGET,
   MOBILE_TARGET,
   WEB_TARGETS,
 } from "../.release/ewatrade-provider-bundle"
-import type { ReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+import type { ReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import {
   refreshReleaseBaselines,
   verifyAndRefreshReleaseBaselines,
@@ -183,9 +184,8 @@ async function validBundle(repository: string, revision: string) {
   }))
   const contract = releaseContract(
     root,
-    "fef51031b8964dcd8043ee5d6a7558e482e7055d",
+    "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
   )
-  const waiverId = "baseline-fixture-waiver"
   const nativeContext = {
     revision,
     environment: "preview" as const,
@@ -291,22 +291,28 @@ async function validBundle(repository: string, revision: string) {
       ],
     },
     jobs: {
-      deploymentIds: {},
+      deploymentIds: {
+        jobs: receipts.find((receipt) => receipt.targetId === "jobs")
+          ?.deploymentId,
+      },
       configurationFingerprints: { jobs: targetFingerprints.jobs.value },
-      deployments: [],
-      previewWaiverIds: { jobs: waiverId },
-      waivers: [
+      deployments: [
         {
-          id: waiverId,
-          project: "ewatrade",
-          targetId: "jobs",
-          environment: "preview" as const,
+          id:
+            receipts.find((receipt) => receipt.targetId === "jobs")
+              ?.deploymentId ?? "",
+          provider: "trigger",
+          projectRef:
+            JOBS_TARGET.preview.capability === "isolated"
+              ? (JOBS_TARGET.preview.projectRef ?? JOBS_TARGET.projectRef)
+              : "",
+          providerEnvironment: "prod",
+          branch: null,
           revision,
-          status: "approved" as const,
-          protectedApproval: true,
-          approvedBy: "release-reviewer",
-          reason: "Synthetic test evidence.",
-          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          configurationFingerprint: targetFingerprints.jobs.value,
+          version: "fixture-jobs-1",
+          status: "deployed" as const,
+          current: true,
         },
       ],
     },
@@ -387,7 +393,7 @@ test("rejects missing or unready proof without changing existing bytes", async (
   expect(readFileSync(output, "utf8")).toBe(previous)
 
   const bundle = await validBundle(repository, revision)
-  bundle.jobs.waivers = []
+  bundle.jobs.deployments = []
   configure(bundle)
   const proof = await verifyCandidateReleaseProof({
     repository,

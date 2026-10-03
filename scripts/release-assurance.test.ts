@@ -11,19 +11,20 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import {
   type EwaTradeProviderBundle,
+  JOBS_TARGET,
   MOBILE_PROJECT,
   MOBILE_TARGET,
   WEB_TARGETS,
   createEwaTradeProviderBindings,
   loadSignedProviderBundle,
 } from "../.release/ewatrade-provider-bundle"
-import { runConsumerReleaseCheck } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/consumer"
-import { validateReleaseManifest } from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/manifest"
+import { runConsumerReleaseCheck } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/consumer"
+import { validateReleaseManifest } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/manifest"
 import {
   type ReleaseManifest,
   type ReleaseTargetChange,
   planRelease,
-} from "../.release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+} from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import { compareExpoNativeEnvironment } from "./release-expo-environment"
 import { resolveNativeEnvironment } from "./release-mobile-environment"
 import { assertMobileEnvironmentReceipt } from "./release-mobile-preflight"
@@ -31,7 +32,7 @@ import { releaseGit } from "./release-source"
 
 const root = resolve(import.meta.dir, "..")
 const repositories: string[] = []
-const toolkitRevision = "fef51031b8964dcd8043ee5d6a7558e482e7055d"
+const toolkitRevision = "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7"
 const secret = "release-test-key-with-at-least-32-bytes"
 const originalEnvelope = process.env.EWATRADE_RELEASE_EVIDENCE_ENVELOPE
 const originalKey = process.env.EWATRADE_RELEASE_EVIDENCE_HMAC_KEY
@@ -255,6 +256,7 @@ function bundle(
     result: "succeeded" as const,
     completedAt,
   }))
+  const jobsMapping = JOBS_TARGET[environment]
   return {
     version: 1,
     project: "ewatrade",
@@ -292,28 +294,25 @@ function bundle(
       channels: [],
     },
     jobs: {
-      deploymentIds: {},
+      deploymentIds: { jobs: "deployment_5" },
       configurationFingerprints: { jobs: fingerprints.jobs.value },
-      deployments: [],
-      previewWaiverIds:
-        environment === "preview" ? { jobs: "waiver_preview_jobs" } : undefined,
-      waivers:
-        environment === "preview"
-          ? [
-              {
-                id: "waiver_preview_jobs",
-                project: "ewatrade",
-                targetId: "jobs",
-                environment: "preview",
-                revision: releaseRevision,
-                status: "approved",
-                protectedApproval: true,
-                approvedBy: "release-reviewer",
-                reason: "Preview Trigger branch is not provisioned.",
-                expiresAt: new Date(now + 60_000).toISOString(),
-              },
-            ]
-          : undefined,
+      deployments: [
+        {
+          id: "deployment_5",
+          provider: "trigger",
+          projectRef:
+            jobsMapping.capability === "isolated"
+              ? (jobsMapping.projectRef ?? JOBS_TARGET.projectRef)
+              : "",
+          providerEnvironment: "prod",
+          branch: null,
+          revision: releaseRevision,
+          configurationFingerprint: fingerprints.jobs.value,
+          version: "fixture-jobs-1",
+          status: "deployed",
+          current: true,
+        },
+      ],
     },
   }
 }
@@ -438,16 +437,11 @@ describe("Ewa Trade signed provider binding composition", () => {
       expect(report.environment).toBe(environment)
       expect(report.targets).toHaveLength(5)
       expect(
-        report.targets.every(
-          (target) =>
-            target.reason === "verified" || target.reason === "waived",
-        ),
+        report.targets.every((target) => target.reason === "verified"),
       ).toBe(true)
-      if (environment === "preview") {
-        expect(
-          report.targets.find((target) => target.targetId === "jobs")?.reason,
-        ).toBe("waived")
-      }
+      expect(
+        report.targets.find((target) => target.targetId === "jobs")?.reason,
+      ).toBe("verified")
     })
   }
 })

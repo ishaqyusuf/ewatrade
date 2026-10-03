@@ -14,6 +14,18 @@
     "automaticDataLossAcceptance": false
   },
   "previewWeb": "exact-project-ready-deployment-url",
+  "jobs": {
+    "preview": {
+      "projectRef": "proj_hymzhteicvpixaksoyqk",
+      "providerEnvironment": "prod",
+      "isolation": "separate-project"
+    },
+    "production": {
+      "projectRef": "proj_pdnthdiwdevukelgmvzc",
+      "providerEnvironment": "prod"
+    },
+    "sameProjectProductionWorkerForPreview": "forbidden"
+  },
   "verification": {
     "revision": "full-git-sha",
     "maximumEvidenceAgeSeconds": 300,
