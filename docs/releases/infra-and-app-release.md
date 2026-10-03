@@ -37,6 +37,9 @@ environment mismatches are rejected before a database push. Other supported
 continuations are `release:plan`, `release:status`, `release:collect` and
 `release:check`. Direct root database commands remain available. API deployment
 itself no longer runs database operations.
+Builds generate the Prisma client with a schema-only configuration that needs no
+database credentials. Connected push/migration commands retain the existing
+environment and target isolation checks.
 
 The application assurance gate covers API, Dashboard, Marketing, mobile and jobs.
 Prisma/schema/migration source still affects application artifact fingerprints.

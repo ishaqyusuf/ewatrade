@@ -37,14 +37,33 @@ describe("shared database command contract", () => {
   test("keeps only raw package commands", () => {
     const packageScripts = scripts("packages/db/package.json")
 
-    expect(packageScripts["db:generate"]).toMatch(
-      /^prisma generate(?: --config prisma\.generate\.config\.ts)?$/,
+    expect(packageScripts["db:generate"]).toBe(
+      "prisma generate --config prisma.generate.config.ts",
     )
     expect(packageScripts["db:migrate"]).toBe("prisma migrate dev")
     expect(packageScripts["db:migrate:deploy"]).toBe("prisma migrate deploy")
     expect(packageScripts["db:pull"]).toBe("prisma db pull")
     expect(packageScripts["db:push"]).toBe("prisma db push")
     expect(packageScripts["db:studio"]).toBe("prisma studio")
+  })
+
+  test("client generation config needs only schema files while connected commands retain isolation", () => {
+    const generation = readFileSync(
+      resolve(root, "packages/db/prisma.generate.config.ts"),
+      "utf8",
+    )
+    expect(generation).toContain('schema: "prisma"')
+    expect(generation).not.toMatch(
+      /datasource:|process\.env|loadRootEnvironment/,
+    )
+    const connected = readFileSync(
+      resolve(root, "packages/db/prisma.config.ts"),
+      "utf8",
+    )
+    expect(connected).toContain(
+      "applyDatabaseProfile(loadedEnv, productionDatabaseUrl)",
+    )
+    expect(connected).toContain('env("EWATRADE_DATABASE_URL")')
   })
 
   test("has no repository-local database profile router", () => {
