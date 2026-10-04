@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test"
-import { createOversightApp } from "./app"
+import { createOversightApp } from "./service"
 
 const originalKey = process.env.OVERSIGHT_READ_KEY
 afterEach(() => {

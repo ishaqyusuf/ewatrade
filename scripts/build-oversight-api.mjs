@@ -20,7 +20,7 @@ try {
     "bun",
     [
       "build",
-      join(root, "apps/oversight-api/src/app.ts"),
+      join(root, "apps/oversight-api/src/service.ts"),
       "--target=node",
       "--format=esm",
       "--outfile",
