@@ -16,6 +16,19 @@ try {
     { cwd: join(root, "packages/db"), stdio: "inherit" },
   )
   if (generated.status !== 0) throw new Error("Prisma generation failed")
+  const bundled = spawnSync(
+    "bun",
+    [
+      "build",
+      join(root, "apps/oversight-api/src/app.ts"),
+      "--target=node",
+      "--format=esm",
+      "--outfile",
+      join(root, "apps/oversight-api/src/bundle.js"),
+    ],
+    { cwd: root, stdio: "inherit" },
+  )
+  if (bundled.status !== 0) throw new Error("Read-service bundling failed")
 } finally {
   await rm(temp, { recursive: true, force: true })
 }

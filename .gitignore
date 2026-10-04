@@ -12,6 +12,7 @@ build
 .vercel
 .release/runtime/
 packages/db/generated
+apps/oversight-api/src/bundle.js
 .gstack/
 .local-db-sync/
 # Local project memory, design/review material, and agent state.
