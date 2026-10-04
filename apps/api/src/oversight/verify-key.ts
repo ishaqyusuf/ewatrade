@@ -1,1 +1,1 @@
-export {validOversightKey} from "@ewatrade/oversight/verify-key"
+export { validOversightKey } from "@ewatrade/oversight/verify-key"

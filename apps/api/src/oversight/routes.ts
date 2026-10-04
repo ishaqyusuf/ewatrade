@@ -1,1 +1,1 @@
-export {oversightRoutes} from "@ewatrade/oversight"
+export { oversightRoutes } from "@ewatrade/oversight"
