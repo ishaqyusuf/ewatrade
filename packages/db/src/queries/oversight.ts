@@ -134,15 +134,17 @@ export async function oversightUsers(
 ) {
   const rows = await db.user.findMany({
     where: {
-      ...accounts,
-      ...(search
-        ? {
+      AND: [
+        accounts,
+        ...(search
+          ? [{
             OR: [
               { name: { contains: search, mode: "insensitive" as const } },
               { email: { contains: search, mode: "insensitive" as const } },
             ],
-          }
-        : {}),
+          }]
+          : []),
+      ],
     },
     orderBy: { id: "asc" },
     take: 51,

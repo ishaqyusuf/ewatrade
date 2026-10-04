@@ -10,4 +10,6 @@ The separate service uses a pool capped at three connections, read-only session 
 
 The read client initializes only after a request passes authentication and input validation. Health checks and rejected requests never initialize it. `/health` reports process availability; it does not certify database connectivity. Missing or unavailable database configuration produces a sanitized 503 response for an authorized data request.
 
+The dedicated connection was approved on 2026-10-04. Role oversight_reader_20261004 passed verification: SELECT on the four named tables only, no inherited memberships, no application table writes and no schema CREATE rights. Use the direct Neon endpoint with TLS when supplying startup options; the pooled endpoint rejects those options. Search filters intersect account visibility rather than replacing it.
+
 No schema migration is required. Build-time Prisma generation does not connect to a database. Mutable business status and campaign delivery capabilities remain false until enforcement and consent integration are verified.
