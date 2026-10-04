@@ -6,4 +6,6 @@ OVERSIGHT_READ_KEY must be a unique secret of at least 32 characters. Requests a
 
 The read service is proposed for Vercel project ewatrade-oversight in ishaqyusufs-projects. It requires a separately approved SELECT-only PostgreSQL login, limited to Tenant, Membership, User and CommercialOrder, with schema USAGE, database CONNECT, read-only transactions and a 15-second statement timeout. No production credential should be transferred until approved.
 
+The separate service uses a pool capped at three connections, read-only session settings and a 15-second statement timeout. It does not reuse the main API pool.
+
 No schema migration is required. Build-time Prisma generation does not connect to a database. Mutable business status and campaign delivery capabilities remain false until enforcement and consent integration are verified.
