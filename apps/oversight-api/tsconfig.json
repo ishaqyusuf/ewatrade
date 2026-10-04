@@ -1,0 +1,12 @@
+{
+  "extends": "../../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "types": [
+      "bun"
+    ],
+    "moduleResolution": "bundler"
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}

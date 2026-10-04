@@ -1,0 +1,19 @@
+{
+  "name": "@ewatrade/oversight-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/build-oversight-api.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "4.13.9",
+    "@ewatrade/db": "workspace:*",
+    "zod": "catalog:",
+    "@ewatrade/oversight": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "catalog:"
+  }
+}

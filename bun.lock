@@ -25,6 +25,7 @@
         "@ewatrade/events": "workspace:*",
         "@ewatrade/jobs": "workspace:*",
         "@ewatrade/observability": "workspace:*",
+        "@ewatrade/oversight": "workspace:*",
         "@ewatrade/payments": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
         "@ewatrade/private-media": "workspace:*",
@@ -246,6 +247,19 @@
         "prettier-plugin-tailwindcss": "^0.7.1",
         "tailwindcss": "catalog:",
         "typescript": "~5.9.2",
+      },
+    },
+    "apps/oversight-api": {
+      "name": "@ewatrade/oversight-api",
+      "dependencies": {
+        "@ewatrade/db": "workspace:*",
+        "@ewatrade/oversight": "workspace:*",
+        "hono": "4.13.9",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "catalog:",
       },
     },
     "apps/pos": {
@@ -506,6 +520,14 @@
         "@ewatrade/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "typescript": "catalog:",
+      },
+    },
+    "packages/oversight": {
+      "name": "@ewatrade/oversight",
+      "dependencies": {
+        "@ewatrade/db": "workspace:*",
+        "hono": "4.13.9",
+        "zod": "catalog:",
       },
     },
     "packages/payments": {
@@ -1053,6 +1075,10 @@
     "@ewatrade/notifications-react": ["@ewatrade/notifications-react@workspace:packages/notifications-react"],
 
     "@ewatrade/observability": ["@ewatrade/observability@workspace:packages/observability"],
+
+    "@ewatrade/oversight": ["@ewatrade/oversight@workspace:packages/oversight"],
+
+    "@ewatrade/oversight-api": ["@ewatrade/oversight-api@workspace:apps/oversight-api"],
 
     "@ewatrade/payments": ["@ewatrade/payments@workspace:packages/payments"],
 

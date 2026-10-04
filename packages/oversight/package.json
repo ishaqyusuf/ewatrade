@@ -1,0 +1,14 @@
+{
+  "name": "@ewatrade/oversight",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/routes.ts",
+    "./verify-key": "./src/verify-key.ts"
+  },
+  "dependencies": {
+    "@ewatrade/db": "workspace:*",
+    "hono": "4.13.9",
+    "zod": "catalog:"
+  }
+}
