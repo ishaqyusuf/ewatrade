@@ -8,4 +8,6 @@ The read service is proposed for Vercel project ewatrade-oversight in ishaqyusuf
 
 The separate service uses a pool capped at three connections, read-only session settings and a 15-second statement timeout. It does not reuse the main API pool.
 
+The read client initializes only after a request passes authentication and input validation. Health checks and rejected requests never initialize it. `/health` reports process availability; it does not certify database connectivity. Missing or unavailable database configuration produces a sanitized 503 response for an authorized data request.
+
 No schema migration is required. Build-time Prisma generation does not connect to a database. Mutable business status and campaign delivery capabilities remain false until enforcement and consent integration are verified.
