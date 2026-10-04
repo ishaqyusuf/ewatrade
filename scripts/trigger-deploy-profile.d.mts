@@ -2,6 +2,7 @@ type TriggerEnvironment = Record<string, string | undefined>
 
 export const TRIGGER_JOB_ENV_KEYS: readonly string[]
 export function triggerProjectForEnv(env: TriggerEnvironment): string
+export function triggerProjectForConfigEnv(env: TriggerEnvironment): string
 export function assertTriggerDeployProfile(env: TriggerEnvironment): void
 export function selectedTriggerDeployEnvironment(
   env: TriggerEnvironment,

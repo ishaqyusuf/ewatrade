@@ -2,12 +2,12 @@ import { syncEnvVars } from "@trigger.dev/build/extensions/core"
 import { defineConfig } from "@trigger.dev/sdk/v3"
 import {
   syncedTriggerJobEnvironment,
-  triggerProjectForEnv,
+  triggerProjectForConfigEnv,
 } from "../../scripts/trigger-deploy-profile.mjs"
 import { captureTerminalJobError } from "./src/observability/sentry"
 
 export default defineConfig({
-  project: triggerProjectForEnv(process.env),
+  project: triggerProjectForConfigEnv(process.env),
   runtime: "node-22",
   logLevel: "log",
   maxDuration: 60,

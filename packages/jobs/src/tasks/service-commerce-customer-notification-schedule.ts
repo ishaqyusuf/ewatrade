@@ -1,6 +1,7 @@
 import { prisma } from "@ewatrade/db/client"
 import { listDueServiceCommerceCustomerNotificationIntents } from "@ewatrade/db/queries"
 import { logger, schedules } from "@trigger.dev/sdk/v3"
+import { automaticJobCron } from "../schedule-policy"
 
 import { serviceCommerceCustomerNotificationDispatch } from "./service-commerce-customer-notification-dispatch"
 
@@ -37,7 +38,7 @@ export async function runServiceCommerceCustomerNotificationSchedule(
 }
 
 export const serviceCommerceCustomerNotificationSchedule = schedules.task({
-  cron: "*/5 * * * *",
+  cron: automaticJobCron("*/5 * * * *"),
   id: "service-commerce.customer-notification-schedule",
   maxDuration: 120,
   run: async () => {

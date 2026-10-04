@@ -17,6 +17,7 @@ import {
   selectedTriggerDeployEnvironment,
   syncedTriggerJobEnvironment,
   triggerDeployCommand,
+  triggerProjectForConfigEnv,
 } from "./trigger-deploy-profile.mjs"
 
 const preview = {
@@ -59,6 +60,9 @@ describe("Trigger jobs selected deployment profile", () => {
       expect(command).toContain("/dev/null")
       expect(command.slice(-2)).toEqual(["--profile", "fixture-owner"])
       expect(syncedTriggerJobEnvironment(env).APP_ENV).toBe(env.APP_ENV)
+      expect(triggerProjectForConfigEnv(syncedTriggerJobEnvironment(env))).toBe(
+        env.TRIGGER_PROJECT_ID,
+      )
     }
   })
 

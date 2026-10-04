@@ -57,6 +57,15 @@ const isolatedPreviewKeys = new Set([
   "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
 ])
 
+// Hosted task loading does not receive user-defined TRIGGER_* variables.
+// Resolve the config from the application's fixed mapping, while the deploy
+// wrapper continues to require and validate the selected file's project ID.
+export function triggerProjectForConfigEnv(env) {
+  const target = EWATRADE_TRIGGER_TARGETS[env.APP_ENV]
+  if (target) return target.projectRef
+  return triggerProjectForEnv(env)
+}
+
 export function triggerProjectForEnv(env) {
   const project = env.TRIGGER_PROJECT_ID?.trim()
   if (!project)

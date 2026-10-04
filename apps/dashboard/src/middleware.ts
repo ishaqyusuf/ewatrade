@@ -29,8 +29,17 @@ export function middleware(request: NextRequest) {
     platformDomain: PLATFORM_DOMAIN,
   })
 
+  const isOwnPreviewHostname =
+    process.env.VERCEL_ENV === "preview" &&
+    Boolean(process.env.VERCEL_URL) &&
+    hostname.toLowerCase() === process.env.VERCEL_URL?.toLowerCase()
+
   // Non-dashboard hostnames redirect to marketing.
-  if (result.kind === "tenant" && result.surface !== "dashboard") {
+  if (
+    !isOwnPreviewHostname &&
+    result.kind === "tenant" &&
+    result.surface !== "dashboard"
+  ) {
     // Allow localhost through in dev
     if (!result.isLocalhost) {
       return NextResponse.redirect(new URL(MARKETING_URL))

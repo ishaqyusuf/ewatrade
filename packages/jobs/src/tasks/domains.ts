@@ -1,4 +1,5 @@
 import { schedules, task } from "@trigger.dev/sdk/v3"
+import { automaticJobCron } from "../schedule-policy"
 
 import {
   type DomainConnectionVerificationPayload,
@@ -36,7 +37,7 @@ export const domainConnectionVerification = task({
 })
 
 export const domainReconciliation = schedules.task({
-  cron: "*/15 * * * *",
+  cron: automaticJobCron("*/15 * * * *"),
   id: "domains.reconcile",
   maxDuration: 300,
   run: async () => {
