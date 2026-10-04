@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "files": ["src", "generated", "prisma", "prisma.config.ts"],
+  "files": [
+    "src",
+    "generated",
+    "prisma",
+    "prisma.config.ts"
+  ],
   "exports": {
     "./catalog-category-suggestions": "./src/queries/catalog-category-suggestions.ts",
     ".": "./src/index.ts",
@@ -21,7 +26,8 @@
     "./catalog-photo-replacement": "./src/queries/catalog-photo-replacement.ts",
     "./catalog-categories": "./src/queries/catalog-categories.ts",
     "./enums": "./generated/prisma/enums.ts",
-    "./browser": "./generated/prisma/browser.ts"
+    "./browser": "./generated/prisma/browser.ts",
+    "./oversight": "./src/queries/oversight.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

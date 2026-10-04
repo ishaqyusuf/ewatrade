@@ -1,4 +1,5 @@
 import "./instrument"
+import { oversightRoutes } from "./oversight/routes"
 
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
@@ -96,6 +97,8 @@ app.use(
     maxAge: 86400,
   }),
 )
+
+app.route("/api/oversight/v1", oversightRoutes)
 
 const debugPerf = process.env.DEBUG_PERF === "true"
 
