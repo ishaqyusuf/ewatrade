@@ -1,17 +1,23 @@
 "use client"
 
-import { HorizontalPagination, VirtualRow } from "@/components/tables/core"
+import {
+  DirectoryToolbar,
+  HorizontalPagination,
+  VirtualRow,
+} from "@/components/tables/core"
 import type { orderSortFields } from "@/hooks/sort-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Virtualizer } from "@tanstack/react-virtual"
 import type { CSSProperties, ReactNode } from "react"
+import { OrdersCollection } from "./collection"
 import type { OrderRow } from "./columns"
 import { OrdersEmptyState } from "./empty-states"
 import { OrdersTableHeader, OrdersTableSettings } from "./table-header"
@@ -29,6 +35,7 @@ type OrderSort = {
 
 export function OrdersTableView({
   table,
+  view,
   sort,
   toggleSort,
   filtered,
@@ -44,6 +51,7 @@ export function OrdersTableView({
   retryPersistence,
 }: {
   table: ReactTable<OrderRow>
+  view: DirectoryView
   sort?: OrderSort
   toggleSort: (field: OrderSort["field"]) => Promise<unknown>
   filtered: boolean
@@ -117,15 +125,18 @@ export function OrdersTableView({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {table.getRowModel().rows.length} orders loaded
-          {sort
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded orders"
+        summary={`${table.getRowModel().rows.length} orders loaded${
+          sort
             ? ` · sorted by ${sort.field} ${sort.direction === "asc" ? "ascending" : "descending"}`
-            : " · newest first"}
-        </p>
-        <OrdersTableSettings table={table} />
-      </div>
+            : " · newest first"
+        }`}
+      >
+        {view === "table" ? <OrdersTableSettings table={table} /> : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -144,6 +155,8 @@ export function OrdersTableView({
         <div className="border-y border-border py-10">
           <OrdersEmptyState filtered={filtered} />
         </div>
+      ) : view !== "table" ? (
+        <OrdersCollection view={view} rows={rows} />
       ) : (
         <section
           ref={tableScroll.setContainerRef}

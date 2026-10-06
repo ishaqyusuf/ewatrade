@@ -1,5 +1,6 @@
 "use client"
 
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { catalogSortFields } from "@/hooks/sort-params"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { getCatalogListPageInput } from "@/hooks/use-catalog-filter-params"
@@ -7,21 +8,25 @@ import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { useMemo } from "react"
-import { createCatalogColumns } from "./columns"
+import { useCallback, useMemo } from "react"
+import { type CatalogRow, createCatalogColumns } from "./columns"
 import { CatalogTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["item"]
+const FIXED_COLUMN_IDS = ["select", "item"]
+const getCatalogItemId = (item: CatalogRow) => item.id
 
 export function CatalogDataTable({
   initialSettings,
   storeId,
+  view,
 }: {
   storeId: string
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
   const { open } = useCatalogDetailParams()
@@ -43,14 +48,18 @@ export function CatalogDataTable({
     () => query.data.pages.flatMap((page) => page.items),
     [query.data],
   )
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows,
+    getRowId: getCatalogItemId,
+    scope: JSON.stringify([storeId, filter.kind, filter.status, filter.query]),
+  })
+  const openUnits = useCallback(
+    (productId: string) => void setParams({ productUnits: productId }),
+    [setParams],
+  )
   const columns = useMemo(
-    () =>
-      createCatalogColumns(
-        (productId) => setParams({ productUnits: productId }),
-        storeId,
-        open,
-      ),
-    [setParams, storeId, open],
+    () => createCatalogColumns(openUnits, storeId, open),
+    [openUnits, storeId, open],
   )
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
@@ -63,8 +72,9 @@ export function CatalogDataTable({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
+    getRowId: getCatalogItemId,
     manualSorting: true,
+    onRowSelectionChange: setRowSelection,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
@@ -74,6 +84,7 @@ export function CatalogDataTable({
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
+      rowSelection,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
     onColumnSizingChange: tableSettings.setColumnSizing,
@@ -83,6 +94,10 @@ export function CatalogDataTable({
   return (
     <CatalogTableView
       table={table}
+      view={view}
+      storeId={storeId}
+      openUnits={openUnits}
+      openDetail={open}
       hasFilters={hasFilters}
       hasNextPage={query.hasNextPage}
       isFetchingNextPage={query.isFetchingNextPage}

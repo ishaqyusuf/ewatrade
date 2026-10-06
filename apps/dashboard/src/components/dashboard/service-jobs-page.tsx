@@ -1,3 +1,5 @@
+"use client"
+
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { CustomerRequests } from "@/components/service-work/customer-requests"
@@ -9,10 +11,12 @@ import { ServiceRequestSheet } from "@/components/sheets/service-request-sheet"
 import { ServiceSettingsSheet } from "@/components/sheets/service-settings-sheet"
 import { ServiceWorkDataTable } from "@/components/tables/service-work/data-table"
 import { ServiceWorkTableSkeleton } from "@/components/tables/service-work/skeleton"
+import { useDirectoryView } from "@/hooks/use-directory-view"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
+import type { TableSettings } from "@/utils/table-settings"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { Suspense } from "react"
-
-import type { TableSettings } from "@/utils/table-settings"
 
 type StoreSummary = {
   currencyCode: string
@@ -25,23 +29,44 @@ export function ServiceJobsPage({
   store,
   timeZone,
   initialSettings,
+  initialViewSettings,
 }: {
   canManage: boolean
   store: StoreSummary
   timeZone: string
   initialSettings?: Partial<TableSettings>
+  initialViewSettings: DirectoryViewSettings
 }) {
+  const { view, setView, persistenceError, retryPersistence } =
+    useDirectoryView({
+      pageId: "service-work",
+      queryKey: "serviceView",
+      initialSettings: initialViewSettings,
+    })
   return (
     <>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <ServiceWorkHeader canManage={canManage} storeName={store.name} />
+          <ServiceWorkHeader
+            canManage={canManage}
+            storeName={store.name}
+            view={view}
+            onViewChange={setView}
+          />
+          {persistenceError ? (
+            <Alert appearance="dashboard" role="alert">
+              <AlertDescription>{persistenceError}</AlertDescription>
+              <Button variant="outline" size="sm" onClick={retryPersistence}>
+                Retry saving view
+              </Button>
+            </Alert>
+          ) : null}
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={
                 <ServiceWorkTableSkeleton
                   initialSettings={initialSettings}
-                  canManage={canManage}
+                  view={view}
                 />
               }
             >
@@ -50,6 +75,7 @@ export function ServiceJobsPage({
                 canManage={canManage}
                 storeId={store.id}
                 timeZone={timeZone}
+                view={view}
               />
             </Suspense>
           </ErrorBoundary>

@@ -17,6 +17,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -57,10 +58,11 @@ export default async function ServicesRoutePage({
     (await loadSortParams(params)).sort,
     serviceWorkSortFields,
   )
-  const initialSettings = await getInitialTableSettings("service-work", {
-    userId: session.user.id,
-    tenantId: ctx.tenant.id,
-  })
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [initialSettings, initialViewSettings] = await Promise.all([
+    getInitialTableSettings("service-work", identity),
+    getInitialDirectoryView("service-work", identity),
+  ])
   const queryClient = getQueryClient()
   const canManage = canManageSalesReports(ctx.membership.role)
   void Promise.allSettled([
@@ -95,14 +97,12 @@ export default async function ServicesRoutePage({
     <HydrateClient>
       <Suspense
         fallback={
-          <ServiceWorkTableSkeleton
-            initialSettings={initialSettings}
-            canManage={canManage}
-          />
+          <ServiceWorkTableSkeleton initialSettings={initialSettings} />
         }
       >
         <ServiceJobsPage
           initialSettings={initialSettings}
+          initialViewSettings={initialViewSettings}
           canManage={canManage}
           timeZone={ctx.tenant.timezone}
           store={{

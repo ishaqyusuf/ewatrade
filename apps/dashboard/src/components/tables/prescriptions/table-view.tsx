@@ -1,19 +1,33 @@
 "use client"
 
-import { HorizontalPagination, VirtualRow } from "@/components/tables/core"
+import {
+  DirectoryCollection,
+  DirectoryRecord,
+  DirectoryToolbar,
+  HorizontalPagination,
+  SelectionBar,
+  VirtualRow,
+} from "@/components/tables/core"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import type { PrescriptionFilters } from "@/hooks/use-prescription-filter-params"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, type DragEndEvent, closestCenter } from "@dnd-kit/core"
 import type { PrescriptionRequestStatus } from "@ewatrade/prescriptions/schemas"
 import { Button, Table, TableBody } from "@ewatrade/ui"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Virtualizer } from "@tanstack/react-virtual"
-import type { CSSProperties, ReactNode } from "react"
-import type { PrescriptionQueueRow } from "./columns"
+import { type CSSProperties, type ReactNode, useMemo } from "react"
+import { PrescriptionActionsMenu } from "./actions-menu"
+import {
+  type PrescriptionQueueRow,
+  PrescriptionStatusBadge,
+  createPrescriptionDateFormatter,
+  prescriptionLabel,
+} from "./columns"
 import {
   PrescriptionTableHeader,
   PrescriptionTableSettings,
@@ -21,16 +35,19 @@ import {
 
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
+  { id: "select", width: 50 },
   { id: "reference", width: 170 },
   { id: "actions", side: "right" as const, width: 90 },
 ]
-const NON_CLICKABLE_COLUMNS = new Set(["actions"])
+const NON_CLICKABLE_COLUMNS = new Set(["select", "actions"])
 
 type PrescriptionSort = PrescriptionFilters["sort"]
 type PrescriptionSortField = NonNullable<PrescriptionSort>[0]
 
 export function PrescriptionTableView({
   table,
+  view,
+  timeZone,
   sort,
   toggleSort,
   onRowOpen,
@@ -47,6 +64,8 @@ export function PrescriptionTableView({
   retryPersistence,
 }: {
   table: ReactTable<PrescriptionQueueRow>
+  view: DirectoryView
+  timeZone: string
   sort: PrescriptionSort
   toggleSort: (field: PrescriptionSortField) => void
   onRowOpen: (id: string, status: PrescriptionRequestStatus) => void
@@ -63,8 +82,12 @@ export function PrescriptionTableView({
   retryPersistence: () => void
 }) {
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
-    fixedColumnIds: ["reference"],
+    fixedColumnIds: ["select", "reference"],
   })
+  const dateFormatter = useMemo(
+    () => createPrescriptionDateFormatter(timeZone),
+    [timeZone],
+  )
   const { getStickyStyle, getStickyClassName, isVisible } = useStickyColumns({
     table,
     stickyColumns: STICKY_COLUMNS,
@@ -121,15 +144,18 @@ export function PrescriptionTableView({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} requests loaded
-          {sort
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded prescription requests"
+        summary={`${rows.length} requests loaded${
+          sort
             ? ` · sorted by ${sort[0]} ${sort[1] === "asc" ? "ascending" : "descending"}`
-            : " · most recently received first"}
-        </p>
-        <PrescriptionTableSettings table={table} />
-      </div>
+            : " · most recently received first"
+        }`}
+      >
+        {view === "table" ? <PrescriptionTableSettings table={table} /> : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -146,6 +172,50 @@ export function PrescriptionTableView({
 
       {!rows.length ? (
         <div className="border-y border-border py-10">{emptyState}</div>
+      ) : view !== "table" ? (
+        <DirectoryCollection view={view} label="Prescription request">
+          {rows.map((row) => {
+            const request = row.original
+            return (
+              <DirectoryRecord
+                key={row.id}
+                row={row}
+                view={view}
+                selectLabel={`Select prescription ${request.reference}`}
+                title={
+                  <span className="tabular-nums">{request.reference}</span>
+                }
+                onOpen={() => onRowOpen(request.id, request.status)}
+                badges={<PrescriptionStatusBadge status={request.status} />}
+                details={[
+                  {
+                    label: "Channel",
+                    value: prescriptionLabel(request.source),
+                  },
+                  {
+                    label: "Fulfilment",
+                    value: prescriptionLabel(request.fulfilmentPreference),
+                  },
+                  {
+                    label: "Received",
+                    value: (
+                      <time dateTime={request.createdAt.toISOString()}>
+                        {dateFormatter.format(request.createdAt)}
+                      </time>
+                    ),
+                  },
+                ]}
+                actions={
+                  <PrescriptionActionsMenu
+                    requestId={request.id}
+                    status={request.status}
+                    onOpen={onRowOpen}
+                  />
+                }
+              />
+            )
+          })}
+        </DirectoryCollection>
       ) : (
         <section
           ref={tableScroll.setContainerRef}
@@ -190,6 +260,7 @@ export function PrescriptionTableView({
           {isFetchingNextPage ? "Loading…" : "Load more requests"}
         </Button>
       ) : null}
+      <SelectionBar table={table} />
     </div>
   )
 }
@@ -262,6 +333,7 @@ function DndTable({
                 columnSizing={table.getState().columnSizing}
                 columnOrder={table.getState().columnOrder}
                 columnVisibility={table.getState().columnVisibility}
+                isSelected={row.getIsSelected()}
                 onRowOpen={(selected) =>
                   onRowOpen(selected.original.id, selected.original.status)
                 }

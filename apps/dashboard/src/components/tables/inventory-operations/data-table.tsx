@@ -3,21 +3,48 @@ import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-
 import { InventoryAuditSheet } from "@/components/sheets/inventory-audit-sheet"
 import { useInventoryLedgerParams } from "@/hooks/use-inventory-ledger-params"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { InventoryLedgerTable } from "../inventory-ledger/data-table"
-import { inventoryLabel } from "../inventory-ledger/format"
+import { inventoryDate, inventoryLabel } from "../inventory-ledger/format"
 import {
   type InventoryOperation,
   operationColumns,
   operationSortFields,
 } from "./columns"
 import { OperationsEmpty } from "./empty-states"
+const getOperationLabel = (row: InventoryOperation) =>
+  `${inventoryLabel(row.type)} ${row.id}`
+
+function describeOperation(row: InventoryOperation) {
+  const categories = row.categories.map((category) => category.name).join(", ")
+  return {
+    title: inventoryLabel(row.type),
+    description: row.id,
+    details: [
+      { label: "Effective (UTC)", value: inventoryDate(row.effectiveAt) },
+      { label: "Store", value: row.storeName },
+      { label: "Categories", value: categories || "—" },
+      { label: "Reason", value: row.reason || "—" },
+      {
+        label: "Movements",
+        value: <span className="tabular-nums">{row.movementCount}</span>,
+      },
+    ],
+  }
+}
+
 export function OperationsDataTable({
   storeId,
   initialSettings,
-}: { storeId?: string; initialSettings: TableSettings }) {
+  view,
+}: {
+  storeId?: string
+  initialSettings: TableSettings
+  view: DirectoryView
+}) {
   const trpc = useTRPC()
   const { params, setParams } = useInventoryLedgerParams()
   const { data } = useSuspenseQuery(
@@ -75,6 +102,14 @@ export function OperationsDataTable({
         initialSettings={initialSettings}
         sortFields={operationSortFields}
         label="Inventory operations"
+        view={view}
+        selectionScope={JSON.stringify([
+          storeId ?? "all",
+          query,
+          params.filter,
+        ])}
+        getRecordLabel={getOperationLabel}
+        describeRecord={describeOperation}
         onOpen={open}
         empty={
           <OperationsEmpty

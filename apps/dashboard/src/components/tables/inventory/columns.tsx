@@ -1,7 +1,7 @@
 "use client"
 
 import { InventoryOperationMenu } from "@/components/inventory/inventory-operation-menu"
-import type { TableColumnMeta } from "@/components/tables/core"
+import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import { formatInventoryQuantity } from "@/lib/inventory-view"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
@@ -22,7 +22,7 @@ export const inventorySortFields = [
   "custodyType",
 ] as const
 
-function label(value: string) {
+export function inventoryLabel(value: string) {
   return value.toLowerCase().replaceAll("_", " ")
 }
 
@@ -44,11 +44,47 @@ function meta(
   }
 }
 
+export function getInventoryRecordName(row: InventoryBalance) {
+  return [
+    row.productName,
+    row.variantName,
+    row.storeBalances ? null : row.storeName,
+  ]
+    .filter(Boolean)
+    .join(" · ")
+}
+
+export function getInventoryStoreCount(row: InventoryBalance) {
+  return new Set(row.storeBalances?.map((balance) => balance.storeId)).size
+}
+
+export function InventoryRowActions({
+  row,
+  onStores,
+}: {
+  row: InventoryBalance
+  onStores?: (row: InventoryBalance) => void
+}) {
+  return row.storeBalances ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-label={`View stores for ${row.productName}`}
+      onClick={() => onStores?.(row)}
+    >
+      Stores
+    </Button>
+  ) : (
+    <InventoryOperationMenu balance={row} />
+  )
+}
+
 export function createInventoryColumns(
   onOpen?: (catalogItemId: string) => void,
   onStores?: (row: InventoryBalance) => void,
 ): ColumnDef<InventoryBalance>[] {
   return [
+    selectColumn(getInventoryRecordName),
     {
       id: "product",
       accessorFn: (row) => row.productName,
@@ -61,7 +97,8 @@ export function createInventoryColumns(
         sticky: true,
         reorderable: false,
         sortField: "productName",
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "avatar-text", width: "w-32" },
       }),
       cell: ({ row }) => (
@@ -98,12 +135,7 @@ export function createInventoryColumns(
             className="truncate p-0"
             onClick={() => onStores?.(row.original)}
           >
-            {
-              new Set(
-                row.original.storeBalances.map((balance) => balance.storeId),
-              ).size
-            }{" "}
-            store(s)
+            {getInventoryStoreCount(row.original)} store(s)
           </Button>
         ) : (
           <span className="truncate">{row.original.storeName}</span>
@@ -120,7 +152,7 @@ export function createInventoryColumns(
       cell: ({ row }) => (
         <div>
           <Badge className="rounded-full capitalize">
-            {label(row.original.kind)}
+            {inventoryLabel(row.original.kind)}
           </Badge>
           <p className="mt-1 text-xs text-muted-foreground">
             {row.original.inventoryUnitName}
@@ -197,7 +229,7 @@ export function createInventoryColumns(
       meta: meta("Custody", "w-24", { sortField: "custodyType" }),
       cell: ({ row }) => (
         <span className="capitalize text-muted-foreground">
-          {label(row.original.custodyType)}
+          {inventoryLabel(row.original.custodyType)}
         </span>
       ),
     },
@@ -215,19 +247,9 @@ export function createInventoryColumns(
         reorderable: false,
         className: "z-20 bg-background",
       }),
-      cell: ({ row }) =>
-        row.original.storeBalances ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`View stores for ${row.original.productName}`}
-            onClick={() => onStores?.(row.original)}
-          >
-            Stores
-          </Button>
-        ) : (
-          <InventoryOperationMenu balance={row.original} />
-        ),
+      cell: ({ row }) => (
+        <InventoryRowActions row={row.original} onStores={onStores} />
+      ),
     },
   ]
 }

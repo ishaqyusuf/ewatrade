@@ -1,6 +1,7 @@
 import { CustomersPage } from "@/components/dashboard/customers-page"
 import { getDashboardCustomerBook } from "@/lib/sales-data"
 import type { TenantStore } from "@/lib/tenant"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 
 export async function CustomersContent({
@@ -10,6 +11,7 @@ export async function CustomersContent({
   role,
   search,
   initialSettings,
+  initialViewSettings,
 }: {
   store: TenantStore
   tenantId: string
@@ -17,6 +19,7 @@ export async function CustomersContent({
   role: string
   search: string
   initialSettings?: Partial<TableSettings>
+  initialViewSettings: DirectoryViewSettings
 }) {
   const customers = await getDashboardCustomerBook({
     role,
@@ -31,6 +34,7 @@ export async function CustomersContent({
       initialQuery={search}
       initialCustomers={customers}
       initialSettings={initialSettings}
+      initialViewSettings={initialViewSettings}
       store={store}
     />
   )

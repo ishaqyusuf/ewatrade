@@ -4,6 +4,8 @@ import { financeBookSchema } from "./finance"
 const id = z.string().trim().min(1).max(128)
 const revision = z.string().regex(/^(0|[1-9]\d{0,18})$/)
 const signed = z.string().regex(/^(0|-?[1-9]\d{0,18})$/)
+// tRPC infinite queries add the page direction to every list input.
+const pageDirection = z.enum(["forward", "backward"]).optional()
 export const financeBankStatementImportSchema = financeBookSchema
   .extend({
     accountId: id,
@@ -29,6 +31,7 @@ export const financeBankStatementsSchema = financeBookSchema
   .extend({
     accountId: id.optional(),
     cursor: id.optional(),
+    direction: pageDirection,
     limit: z.number().int().min(1).max(50).default(30),
   })
   .strict()
@@ -50,6 +53,7 @@ export const financeBankMatchHistorySchema = financeBookSchema
   .extend({
     accountId: id,
     cursor: revision.optional(),
+    direction: pageDirection,
     snapshotRevision: revision.optional(),
     limit: z.number().int().min(1).max(50).default(30),
   })

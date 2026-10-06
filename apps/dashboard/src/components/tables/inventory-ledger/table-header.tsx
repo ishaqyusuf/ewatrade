@@ -2,6 +2,8 @@
 
 import {
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -28,7 +30,7 @@ import {
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 
-const FIXED_COLUMNS = new Set(["identity", "actions"])
+const FIXED_COLUMNS = new Set([SELECT_COLUMN_ID, "identity", "actions"])
 
 export function LedgerTableHeader<T>({
   table,
@@ -38,6 +40,7 @@ export function LedgerTableHeader<T>({
   isVisible,
   tableScroll,
   sortFields,
+  selectAllLabel,
 }: {
   table: Table<T>
   sortableColumnIds: string[]
@@ -46,6 +49,7 @@ export function LedgerTableHeader<T>({
   isVisible: (columnId: string) => boolean
   tableScroll?: TableScrollState
   sortFields: readonly string[]
+  selectAllLabel: string
 }) {
   const { sort, toggleSort } = useSortParams({ fields: sortFields })
 
@@ -118,7 +122,9 @@ export function LedgerTableHeader<T>({
                 <span className="truncate">{label}</span>
               )
               const content =
-                id === "identity" ? (
+                id === SELECT_COLUMN_ID ? (
+                  <SelectAllCheckbox table={table} label={selectAllLabel} />
+                ) : id === "identity" ? (
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <div className="min-w-0 overflow-hidden">{sortButton}</div>
                     {tableScroll?.isScrollable ? (

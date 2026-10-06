@@ -22,7 +22,12 @@ export function transferColumns(
       header: "Product",
       size: 240,
       enableHiding: false,
-      meta: { sortField: "identity", sticky: true },
+      meta: {
+        sortField: "identity",
+        sticky: true,
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+      },
       cell: ({ row }) => (
         <div className="min-w-0">
           <p className="truncate font-medium">{row.original.productName}</p>

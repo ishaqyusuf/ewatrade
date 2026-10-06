@@ -3,6 +3,8 @@
 import {
   ACTIONS_FULL_WIDTH_HEADER_CLASS,
   ACTIONS_STICKY_HEADER_CLASS,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   getHeaderLabel,
 } from "@/components/tables/core"
@@ -124,7 +126,12 @@ export function StoreConversationRichTableHeader({
                   <span className="truncate">{label}</span>
                 )
                 const headerContent =
-                  id === "conversation" ? (
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded conversations"
+                    />
+                  ) : id === "conversation" ? (
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                       {content}
                       {scrollControls}

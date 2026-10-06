@@ -14,6 +14,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -50,14 +51,14 @@ export default async function SalesRoutePage({
   }
 
   const params = await searchParams
-  const [filter, sortParams, initialSettings] = await Promise.all([
-    loadOrderFilterParams(params),
-    loadSortParams(params),
-    getInitialTableSettings("orders", {
-      userId: session.user.id,
-      tenantId: ctx.tenant.id,
-    }),
-  ])
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [filter, sortParams, initialSettings, initialViewSettings] =
+    await Promise.all([
+      loadOrderFilterParams(params),
+      loadSortParams(params),
+      getInitialTableSettings("orders", identity),
+      getInitialDirectoryView("orders", identity),
+    ])
   const sort = getTableSort(sortParams.sort, orderSortFields)
   const queryClient = getQueryClient()
   void Promise.allSettled([
@@ -83,6 +84,7 @@ export default async function SalesRoutePage({
         <SalesPage
           store={store}
           initialSettings={initialSettings}
+          initialViewSettings={initialViewSettings}
           customerDirectory={
             ctx.membership.staffAccessMode !== "SCOPED" ||
             ["OWNER", "ADMIN"].includes(ctx.membership.role)

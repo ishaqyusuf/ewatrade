@@ -5,6 +5,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -14,13 +15,15 @@ export default async function Page() {
   if (!session) redirect("/login")
   const ctx = await getActiveTenant(session.user.id)
   if (!ctx) redirect("/login?error=no_tenant")
-  if (!canOperateInventory(ctx.membership.role, ctx.membership.staffAccessMode)) redirect("/")
+  if (!canOperateInventory(ctx.membership.role, ctx.membership.staffAccessMode))
+    redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
-  const initialSettings = await getInitialTableSettings("stock-transfers", {
-    userId: session.user.id,
-    tenantId: ctx.tenant.id,
-  })
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [initialSettings, initialViewSettings] = await Promise.all([
+    getInitialTableSettings("stock-transfers", identity),
+    getInitialDirectoryView("stock-transfers", identity),
+  ])
   prefetch(
     trpc.inventory.transfers.queryOptions({
       storeId: ctx.inventoryScope === "all" ? undefined : store.id,
@@ -34,6 +37,7 @@ export default async function Page() {
           store={store}
           allStores={ctx.inventoryScope === "all"}
           initialSettings={initialSettings}
+          initialViewSettings={initialViewSettings}
         />
       </Suspense>
     </HydrateClient>

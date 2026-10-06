@@ -2,6 +2,8 @@
 
 import {
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -29,7 +31,7 @@ import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 import { type InventoryBalance, inventorySortFields } from "./columns"
 
-const FIXED_COLUMNS = new Set(["product", "actions"])
+const FIXED_COLUMNS = new Set([SELECT_COLUMN_ID, "product", "actions"])
 
 export function InventoryTableHeader({
   table,
@@ -117,7 +119,12 @@ export function InventoryTableHeader({
                 <span className="truncate">{label}</span>
               )
               const content =
-                id === "product" ? (
+                id === SELECT_COLUMN_ID ? (
+                  <SelectAllCheckbox
+                    table={table}
+                    label="Select all loaded inventory balances"
+                  />
+                ) : id === "product" ? (
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <div className="min-w-0 overflow-hidden">{sortButton}</div>
                     {tableScroll?.isScrollable ? (

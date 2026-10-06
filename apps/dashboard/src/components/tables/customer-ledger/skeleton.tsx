@@ -6,7 +6,7 @@ export function CustomerLedgerSkeleton() {
       columns={customerLedgerColumns("NGN", () => {})}
       rowCount={8}
       rowHeight={57}
-      stickyColumnIds={["date"]}
+      stickyColumnIds={["select", "date"]}
     />
   )
 }

@@ -7,15 +7,16 @@ import { MetricCard } from "@/components/reports/metric-card"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { ManageStaffAccessModal } from "@/components/staff/manage-staff-access-modal"
 import { StaffDataTable } from "@/components/tables/staff/data-table"
+import { useDirectoryView } from "@/hooks/use-directory-view"
 import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
 import { useStaffParams } from "@/hooks/use-staff-params"
 import {
   type StaffMemberRow,
   type StaffRoleFilter,
   type StaffStatusFilter,
-  canUpdateStaffStatus,
   getNextStaffStatus,
 } from "@/lib/staff-management"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import { Alert, AlertDescription, AlertTitle, Button } from "@ewatrade/ui"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -30,22 +31,29 @@ type StaffResponse = {
 }
 
 export function StaffPage({
+  initialViewSettings,
   initialQuery,
   initialRole,
   initialStaff,
   initialStatus,
   store,
 }: {
+  initialViewSettings: DirectoryViewSettings
   initialQuery: string
   initialRole: StaffRoleFilter
   initialStaff: StaffMemberRow[]
   initialStatus: StaffStatusFilter
   store: StaffResponse["store"]
 }) {
+  const { view, setView, persistenceError, retryPersistence } =
+    useDirectoryView({
+      pageId: "staff",
+      queryKey: "staffView",
+      initialSettings: initialViewSettings,
+    })
   const router = useRouter()
   const { setInviteOpen } = useStaffParams()
-  const { setParams, staffQuery, staffRole, staffStatus } =
-    useStaffDirectoryParams()
+  const { staffQuery, staffRole, staffStatus } = useStaffDirectoryParams()
   const [staff, setStaff] = useState(initialStaff)
   const [isLoading, setIsLoading] = useState(false)
   const [updatingStaffUserId, setUpdatingStaffUserId] = useState<string | null>(
@@ -75,6 +83,7 @@ export function StaffPage({
       status: staffStatus,
     }
     setError(null)
+    setIsLoading(true)
     const controller = new AbortController()
     const timeout = setTimeout(async () => {
       setIsLoading(true)
@@ -229,7 +238,20 @@ export function StaffPage({
           </div>
         </CollapsibleSummary>
 
-        <StaffDirectoryHeader storeName={store.name} onInvite={openInvite} />
+        <StaffDirectoryHeader
+          storeName={store.name}
+          onInvite={openInvite}
+          view={view}
+          onViewChange={setView}
+        />
+        {persistenceError ? (
+          <Alert appearance="dashboard" role="alert">
+            <AlertDescription>{persistenceError}</AlertDescription>
+            <Button variant="outline" size="sm" onClick={retryPersistence}>
+              Retry saving view
+            </Button>
+          </Alert>
+        ) : null}
 
         {error ? (
           <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -281,7 +303,9 @@ export function StaffPage({
 
         <section className="flex flex-col gap-4">
           <StaffDataTable
+            key={JSON.stringify([staffQuery, staffRole, staffStatus])}
             rows={staff}
+            view={view}
             isLoading={isLoading}
             updatingId={updatingStaffUserId}
             onUpdateStatus={updateStatus}

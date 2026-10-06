@@ -1,13 +1,19 @@
 "use client"
 
-import { TableSkeleton } from "@/components/tables/core"
+import {
+  DirectoryCollectionSkeleton,
+  TableSkeleton,
+} from "@/components/tables/core"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { inventoryColumns } from "./columns"
 
 export function InventoryTableSkeleton({
   settings,
+  view = "table",
 }: {
   settings?: Partial<TableSettings>
+  view?: DirectoryView
 } = {}) {
   return (
     <div className="grid gap-6">
@@ -22,15 +28,19 @@ export function InventoryTableSkeleton({
           />
         ))}
       </div>
-      <TableSkeleton
-        columns={inventoryColumns}
-        rowCount={10}
-        rowHeight={57}
-        columnVisibility={settings?.columns}
-        columnSizing={settings?.sizing}
-        columnOrder={settings?.order}
-        stickyColumnIds={["product", "actions"]}
-      />
+      {view !== "table" ? (
+        <DirectoryCollectionSkeleton label="inventory balances" />
+      ) : (
+        <TableSkeleton
+          columns={inventoryColumns}
+          rowCount={10}
+          rowHeight={57}
+          columnVisibility={settings?.columns}
+          columnSizing={settings?.sizing}
+          columnOrder={settings?.order}
+          stickyColumnIds={["select", "product", "actions"]}
+        />
+      )}
     </div>
   )
 }

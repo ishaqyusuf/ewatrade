@@ -4,6 +4,7 @@ import { loadStaffDirectoryParams } from "@/hooks/staff-directory-params"
 import { getServerSession } from "@/lib/session"
 import { canManageStaff } from "@/lib/staff-management"
 import { getActiveTenant } from "@/lib/tenant"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
@@ -34,12 +35,19 @@ export default async function StaffRoutePage({
     redirect("/setup")
   }
 
-  const { staffQuery, staffRole, staffStatus } =
-    await loadStaffDirectoryParams(searchParams)
+  const [{ staffQuery, staffRole, staffStatus }, initialViewSettings] =
+    await Promise.all([
+      loadStaffDirectoryParams(searchParams),
+      getInitialDirectoryView("staff", {
+        userId: session.user.id,
+        tenantId: ctx.tenant.id,
+      }),
+    ])
 
   return (
     <Suspense fallback={<PageLoading />}>
       <StaffContent
+        initialViewSettings={initialViewSettings}
         store={store}
         tenantId={ctx.tenant.id}
         search={staffQuery}

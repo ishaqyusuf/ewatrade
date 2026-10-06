@@ -1,32 +1,34 @@
 "use client"
+import type { WorkJob } from "@/components/service-work/service-utils"
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { serviceWorkSortFields } from "@/hooks/sort-params"
 import { getServiceWorkQueuePageInput } from "@/hooks/use-service-work-filter-params"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
-import {
-  type RowSelectionState,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { useMemo } from "react"
 import { createServiceWorkColumns } from "./columns"
 import { ServiceWorkTableView } from "./table-view"
 import { useServiceWorkBatch } from "./use-batch-actions"
-const FIXED = ["order"]
+const FIXED = ["select", "order"]
+const getJobId = (job: WorkJob) => job.id
 export function ServiceWorkDataTable({
   canManage,
   storeId,
   timeZone,
   initialSettings,
+  view,
 }: {
   canManage: boolean
   storeId: string
   timeZone: string
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
   const { filter, hasFilters, setParams } = useServiceWorkParams()
@@ -49,9 +51,8 @@ export function ServiceWorkDataTable({
       createServiceWorkColumns(
         (id) => void setParams({ jobId: id, serviceSheet: "job" }),
         timeZone,
-        canManage,
       ),
-    [setParams, timeZone, canManage],
+    [setParams, timeZone],
   )
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const settings = useTableSettings({
@@ -60,20 +61,17 @@ export function ServiceWorkDataTable({
     fixedColumnIds: FIXED,
     initialSettings,
   })
-  const [selection, setSelection] = useState<RowSelectionState>({})
-  const scope = JSON.stringify([storeId, canManage, filter, sort])
-  const lastScope = useRef(scope)
-  useEffect(() => {
-    if (lastScope.current === scope) return
-    lastScope.current = scope
-    setSelection({})
-  }, [scope])
+  // Selection is general; batch status and message actions stay manager-only.
+  const [selection, setSelection] = useLoadedRowSelection({
+    rows: data,
+    getRowId: getJobId,
+    scope: JSON.stringify([storeId, filter]),
+  })
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
-    enableRowSelection: canManage,
+    getRowId: getJobId,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
@@ -96,6 +94,9 @@ export function ServiceWorkDataTable({
   return (
     <ServiceWorkTableView
       table={table}
+      view={view}
+      timeZone={timeZone}
+      openJob={(id) => void setParams({ jobId: id, serviceSheet: "job" })}
       filtered={hasFilters}
       sort={sort}
       batch={batch}

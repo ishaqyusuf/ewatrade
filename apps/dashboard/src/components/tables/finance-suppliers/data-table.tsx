@@ -1,9 +1,14 @@
 "use client"
 
-import type { FinanceBook } from "@/components/finance/types"
+import type {
+  FinanceBook,
+  FinanceSupplierRow,
+} from "@/components/finance/types"
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
@@ -11,14 +16,17 @@ import { useDeferredValue, useMemo } from "react"
 import { financeSupplierColumns } from "./columns"
 import { FinanceSupplierTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["code"]
+const FIXED_COLUMN_IDS = ["select", "code"]
+const getSupplierId = (supplier: FinanceSupplierRow) => supplier.id
 
 export function FinanceSupplierDataTable({
   book,
   initialSettings,
+  view,
 }: {
   book: FinanceBook
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
   const { supplierQuery, setParams } = useFinanceParams()
@@ -40,6 +48,11 @@ export function FinanceSupplierDataTable({
     () => query.data?.pages.flatMap((page) => page.data) ?? [],
     [query.data],
   )
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows: data,
+    getRowId: getSupplierId,
+    scope: JSON.stringify([book.id, deferredSearch.trim()]),
+  })
   const columns = useMemo(
     () =>
       financeSupplierColumns(
@@ -70,13 +83,15 @@ export function FinanceSupplierDataTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
+    getRowId: getSupplierId,
+    onRowSelectionChange: setRowSelection,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
+      rowSelection,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
     onColumnSizingChange: tableSettings.setColumnSizing,
@@ -86,6 +101,7 @@ export function FinanceSupplierDataTable({
   return (
     <FinanceSupplierTableView
       table={table}
+      view={view}
       filtered={Boolean(supplierQuery.trim())}
       isPending={query.isPending}
       hasData={Boolean(query.data)}

@@ -5,6 +5,7 @@ import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
@@ -35,7 +36,13 @@ export default async function CustomersRoutePage({
     redirect("/setup")
   }
 
-  const { customerQuery } = await loadCustomerDirectoryParams(searchParams)
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [{ customerQuery }, initialSettings, initialViewSettings] =
+    await Promise.all([
+      loadCustomerDirectoryParams(searchParams),
+      getInitialTableSettings("customers", identity),
+      getInitialDirectoryView("customers", identity),
+    ])
 
   return (
     <Suspense fallback={<PageLoading />}>
@@ -45,12 +52,8 @@ export default async function CustomersRoutePage({
         tenantId={ctx.tenant.id}
         userId={session.user.id}
         search={customerQuery}
-        initialSettings={
-          await getInitialTableSettings("customers", {
-            userId: session.user.id,
-            tenantId: ctx.tenant.id,
-          })
-        }
+        initialSettings={initialSettings}
+        initialViewSettings={initialViewSettings}
       />
     </Suspense>
   )

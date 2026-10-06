@@ -13,6 +13,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
@@ -56,10 +57,11 @@ export default async function CatalogRoutePage({
   const filter = await loadCatalogFilterParams(searchParams)
   const { sort: rawSort } = await loadSortParams(params)
   const sort = getTableSort(rawSort, catalogSortFields)
-  const initialSettings = await getInitialTableSettings("catalog", {
-    userId: session.user.id,
-    tenantId: ctx.tenant.id,
-  })
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [initialSettings, initialViewSettings] = await Promise.all([
+    getInitialTableSettings("catalog", identity),
+    getInitialDirectoryView("catalog", identity),
+  ])
   const queryClient = getQueryClient()
   void Promise.allSettled([
     queryClient.prefetchInfiniteQuery(
@@ -90,6 +92,7 @@ export default async function CatalogRoutePage({
     <HydrateClient>
       <CatalogItemsPage
         initialSettings={initialSettings}
+        initialViewSettings={initialViewSettings}
         store={{
           businessProfileKey:
             store.businessOnboarding?.businessProfileKey ?? null,

@@ -2,9 +2,13 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import { StoresDataTable } from "@/components/tables/stores/data-table"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { useDirectoryView } from "@/hooks/use-directory-view"
 import { useStoreParams } from "@/hooks/use-store-params"
 import { useTRPC } from "@/trpc/client"
-import { Badge, Button, Skeleton } from "@ewatrade/ui"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
+import { Alert, AlertDescription, Button, Skeleton } from "@ewatrade/ui"
 import { Add01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
@@ -20,7 +24,17 @@ export function StoresSkeleton() {
   )
 }
 
-export function StoresDirectory() {
+export function StoresDirectory({
+  initialViewSettings,
+}: {
+  initialViewSettings: DirectoryViewSettings
+}) {
+  const { view, setView, persistenceError, retryPersistence } =
+    useDirectoryView({
+      pageId: "stores",
+      queryKey: "storeView",
+      initialSettings: initialViewSettings,
+    })
   const trpc = useTRPC()
   const stores = useQuery(trpc.tenant.stores.queryOptions())
   const { setCreateOpen } = useStoreParams()
@@ -32,13 +46,29 @@ export function StoresDirectory() {
       >
         <PageToolbar
           actions={
-            <Button onClick={() => void setCreateOpen(true)}>
-              <HugeiconsIcon icon={Add01Icon} className="mr-2 size-4" />
-              Add Store
-            </Button>
+            <>
+              <ViewSwitcher
+                label="Store view"
+                value={view}
+                options={directoryViewOptions}
+                onValueChange={setView}
+              />
+              <Button onClick={() => void setCreateOpen(true)}>
+                <HugeiconsIcon icon={Add01Icon} className="mr-2 size-4" />
+                Add Store
+              </Button>
+            </>
           }
         />
       </PageHeader>
+      {persistenceError ? (
+        <Alert appearance="dashboard" role="alert">
+          <AlertDescription>{persistenceError}</AlertDescription>
+          <Button variant="outline" size="sm" onClick={retryPersistence}>
+            Retry saving view
+          </Button>
+        </Alert>
+      ) : null}
       {stores.isPending ? (
         <StoresSkeleton />
       ) : stores.isError ? (
@@ -55,26 +85,7 @@ export function StoresDirectory() {
           No Stores yet. Add your first Store to get started.
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {stores.data.map((store) => (
-            <article
-              key={store.id}
-              className="grid min-w-0 gap-4 border border-border p-5"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="break-words text-base font-medium">
-                  {store.name}
-                </h2>
-                <Badge variant="outline" className="shrink-0">
-                  {store.status.toLowerCase()}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Currency: {store.currencyCode}
-              </p>
-            </article>
-          ))}
-        </div>
+        <StoresDataTable stores={stores.data} view={view} />
       )}
       <CreateStoreModal />
     </div>

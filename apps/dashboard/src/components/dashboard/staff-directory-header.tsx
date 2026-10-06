@@ -2,6 +2,7 @@
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { SearchFilter } from "@/components/search-filter"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
 import {
   type StaffRoleFilter,
@@ -9,6 +10,7 @@ import {
   getStaffRoleLabel,
   getStaffStatusLabel,
 } from "@/lib/staff-management"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import {
   Button,
   DropdownMenuCheckboxItem,
@@ -32,9 +34,13 @@ const statuses: StaffStatusFilter[] = ["active", "invited", "suspended"]
 export function StaffDirectoryHeader({
   onInvite,
   storeName,
+  view,
+  onViewChange,
 }: {
   onInvite: () => void
   storeName: string
+  view: DirectoryView
+  onViewChange: (view: DirectoryView) => void
 }) {
   const { clearFilters, setParams, staffQuery, staffRole, staffStatus } =
     useStaffDirectoryParams()
@@ -47,15 +53,23 @@ export function StaffDirectoryHeader({
     >
       <PageToolbar
         actions={
-          <Button
-            aria-label="Invite staff"
-            type="button"
-            variant="outline"
-            className="size-9 rounded-none"
-            onClick={onInvite}
-          >
-            <HugeiconsIcon icon={Add01Icon} className="size-4" />
-          </Button>
+          <>
+            <ViewSwitcher
+              label="Staff view"
+              value={view}
+              options={directoryViewOptions}
+              onValueChange={onViewChange}
+            />
+            <Button
+              aria-label="Invite staff"
+              type="button"
+              variant="outline"
+              className="size-9 rounded-none"
+              onClick={onInvite}
+            >
+              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            </Button>
+          </>
         }
       >
         <SearchFilter

@@ -3,6 +3,8 @@
 import type { WorkJob } from "@/components/service-work/service-utils"
 import {
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -17,7 +19,6 @@ import {
 } from "@dnd-kit/sortable"
 import {
   Button,
-  Checkbox,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -30,7 +31,7 @@ import {
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 
-const STICKY_COLUMN_IDS = new Set(["select", "order", "actions"])
+const STICKY_COLUMN_IDS = new Set([SELECT_COLUMN_ID, "order", "actions"])
 
 export function ServiceWorkTableHeader({
   table,
@@ -112,17 +113,10 @@ export function ServiceWorkTableHeader({
                       : "none"
                   : undefined
                 const content =
-                  id === "select" ? (
-                    <Checkbox
-                      aria-label="Select all loaded jobs"
-                      checked={table.getIsAllRowsSelected()}
-                      indeterminate={
-                        table.getIsSomeRowsSelected() &&
-                        !table.getIsAllRowsSelected()
-                      }
-                      onCheckedChange={(checked) =>
-                        table.toggleAllRowsSelected(checked)
-                      }
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded jobs"
                     />
                   ) : isAction ? (
                     <span>Actions</span>

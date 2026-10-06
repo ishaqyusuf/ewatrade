@@ -4,6 +4,8 @@ import {
   ACTIONS_FULL_WIDTH_HEADER_CLASS,
   ACTIONS_STICKY_HEADER_CLASS,
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -33,7 +35,7 @@ import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 import type { CatalogRow } from "./columns"
 
-const FIXED_COLUMNS = new Set(["item", "actions"])
+const FIXED_COLUMNS = new Set([SELECT_COLUMN_ID, "item", "actions"])
 
 export function CatalogTableHeader({
   table,
@@ -140,7 +142,12 @@ export function CatalogTableHeader({
                   <span className="truncate">{label}</span>
                 )
                 const content =
-                  id === "item" ? (
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded catalog items"
+                    />
+                  ) : id === "item" ? (
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                       <div className="min-w-0 overflow-hidden">
                         {sortButton}
@@ -215,8 +222,10 @@ export function CatalogTableHeader({
 
 export function CatalogTableSettings({
   table,
+  showColumns = true,
 }: {
   table: Table<CatalogRow>
+  showColumns?: boolean
 }) {
   const { sort, setParams } = useSortParams({ fields: catalogSortFields })
   return (
@@ -248,44 +257,46 @@ export function CatalogTableSettings({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button type="button" variant="outline" className="rounded-none">
-              Columns
-            </Button>
-          }
-        />
-        <DropdownMenuContent
-          appearance="dashboard"
-          align="end"
-          sideOffset={8}
-          className="min-w-48"
-        >
-          <DropdownMenuGroup>
-            {table
-              .getAllLeafColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                const meta = column.columnDef.meta as
-                  | TableColumnMeta
-                  | undefined
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    closeOnClick={false}
-                    onCheckedChange={(checked) =>
-                      column.toggleVisibility(checked)
-                    }
-                  >
-                    {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {showColumns ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" variant="outline" className="rounded-none">
+                Columns
+              </Button>
+            }
+          />
+          <DropdownMenuContent
+            appearance="dashboard"
+            align="end"
+            sideOffset={8}
+            className="min-w-48"
+          >
+            <DropdownMenuGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  const meta = column.columnDef.meta as
+                    | TableColumnMeta
+                    | undefined
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      closeOnClick={false}
+                      onCheckedChange={(checked) =>
+                        column.toggleVisibility(checked)
+                      }
+                    >
+                      {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   )
 }

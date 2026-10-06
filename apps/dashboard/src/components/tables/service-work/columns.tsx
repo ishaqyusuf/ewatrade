@@ -5,41 +5,32 @@ import {
   label,
   tone,
 } from "@/components/service-work/service-utils"
-import { Badge, Button, Checkbox } from "@ewatrade/ui"
+import { selectColumn } from "@/components/tables/core"
+import { Badge, Button } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
+
+export function getServiceWorkAssignment(job: WorkJob) {
+  return job.priority === "urgent"
+    ? "Urgent"
+    : job.currentAssigneeUserId
+      ? "Assigned"
+      : "Unassigned"
+}
+
+export function ServiceWorkStatusBadge({ job }: { job: WorkJob }) {
+  return (
+    <Badge className={`rounded-none capitalize ${tone(job.summary)}`}>
+      {label(job.summary)}
+    </Badge>
+  )
+}
 
 export function createServiceWorkColumns(
   openJob: (jobId: string) => void,
   timeZone: string,
-  canManage = false,
 ): ColumnDef<WorkJob>[] {
   return [
-    ...(canManage
-      ? [
-          {
-            id: "select",
-            size: 44,
-            minSize: 44,
-            maxSize: 44,
-            enableHiding: false,
-            enableResizing: false,
-            meta: {
-              headerLabel: "Select",
-              sticky: true,
-              className: "z-20 bg-background group-hover:bg-muted/40",
-              reorderable: false,
-              skeleton: { type: "checkbox" },
-            },
-            cell: ({ row }) => (
-              <Checkbox
-                aria-label={`Select job ${row.original.orderNumber}`}
-                checked={row.getIsSelected()}
-                onCheckedChange={(checked) => row.toggleSelected(checked)}
-              />
-            ),
-          } satisfies ColumnDef<WorkJob>,
-        ]
-      : []),
+    selectColumn((job) => `job ${job.orderNumber}`),
     {
       id: "order",
       size: 280,
@@ -49,7 +40,8 @@ export function createServiceWorkColumns(
       meta: {
         headerLabel: "Order",
         sticky: true,
-        className: "z-20 bg-background group-hover:bg-muted/40",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
         reorderable: false,
         skeleton: { type: "text" },
       },
@@ -87,12 +79,7 @@ export function createServiceWorkColumns(
         sortField: "priority",
         skeleton: { type: "text" },
       },
-      cell: ({ row }) =>
-        row.original.priority === "urgent"
-          ? "Urgent"
-          : row.original.currentAssigneeUserId
-            ? "Assigned"
-            : "Unassigned",
+      cell: ({ row }) => getServiceWorkAssignment(row.original),
     },
     {
       id: "due",
@@ -120,13 +107,7 @@ export function createServiceWorkColumns(
       minSize: 150,
       maxSize: 260,
       meta: { headerLabel: "Status", skeleton: { type: "badge" } },
-      cell: ({ row }) => (
-        <Badge
-          className={`rounded-none capitalize ${tone(row.original.summary)}`}
-        >
-          {label(row.original.summary)}
-        </Badge>
-      ),
+      cell: ({ row }) => <ServiceWorkStatusBadge job={row.original} />,
     },
     {
       id: "actions",

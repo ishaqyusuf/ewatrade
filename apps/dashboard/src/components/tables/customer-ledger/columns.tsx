@@ -2,7 +2,7 @@ import {
   type LedgerEntry,
   ledgerLabels,
 } from "@/components/customer-ledger/types"
-import type { TableColumnMeta } from "@/components/tables/core"
+import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import { Badge, Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -21,13 +21,19 @@ export function customerLedgerColumns(
     ...extra,
   })
   return [
+    selectColumn((entry) => `statement entry ${entry.sequence}`),
     {
       id: "date",
       accessorKey: "effectiveAt",
       header: "Date (UTC)",
       size: 170,
       enableHiding: false,
-      meta: meta("Date (UTC)", { sticky: true, reorderable: false }),
+      meta: meta("Date (UTC)", {
+        sticky: true,
+        reorderable: false,
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+      }),
       cell: ({ row }) =>
         new Date(row.original.effectiveAt).toISOString().slice(0, 10),
     },

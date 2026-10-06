@@ -1,6 +1,10 @@
 "use client"
 import type { LedgerEntry } from "@/components/customer-ledger/types"
-import { VirtualRow } from "@/components/tables/core"
+import {
+  SelectionBar,
+  VirtualRow,
+  useLoadedRowSelection,
+} from "@/components/tables/core"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
@@ -28,10 +32,12 @@ import {
   CustomerLedgerTableSettings,
 } from "./table-header"
 const STICKY = [
+  { id: "select", width: 50 },
   { id: "date", width: 170 },
   { id: "actions", width: 96, side: "right" as const },
 ]
-const FIXED = ["date"]
+const FIXED = ["select", "date"]
+const getEntryId = (entry: LedgerEntry) => entry.id
 type Props = {
   entries: LedgerEntry[]
   currencyCode: string
@@ -118,14 +124,21 @@ function StatementTable({
     setColumnSizing,
     setColumnOrder,
   } = controls
+  // Entry selection only; balances and totals stay statement-level summaries.
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows: entries,
+    getRowId: getEntryId,
+    scope: "",
+  })
   const table = useReactTable({
     data: entries,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (r) => r.id,
+    getRowId: getEntryId,
+    onRowSelectionChange: setRowSelection,
     columnResizeMode: "onChange",
     enableColumnResizing: true,
-    state: { columnVisibility, columnSizing, columnOrder },
+    state: { columnVisibility, columnSizing, columnOrder, rowSelection },
     onColumnVisibilityChange: setColumnVisibility,
     onColumnSizingChange: setColumnSizing,
     onColumnOrderChange: setColumnOrder,
@@ -183,6 +196,7 @@ function StatementTable({
                     rowHeight={57}
                     getStickyStyle={sticky.getStickyStyle}
                     getStickyClassName={sticky.getStickyClassName}
+                    isSelected={row.getIsSelected()}
                     onRowOpen={(r) => onOpen(r.original.id)}
                   />
                 ) : null
@@ -191,6 +205,7 @@ function StatementTable({
           </Table>
         </div>
       </DndContext>
+      <SelectionBar table={table} />
     </div>
   )
 }

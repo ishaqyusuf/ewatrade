@@ -19,7 +19,7 @@ export function CatalogTableSkeleton({
       columnVisibility={settings?.columns}
       columnSizing={settings?.sizing}
       columnOrder={settings?.order}
-      stickyColumnIds={["item"]}
+      stickyColumnIds={["select", "item"]}
       actionsColumnId="actions"
     />
   )

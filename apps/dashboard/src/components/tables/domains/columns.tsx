@@ -1,3 +1,4 @@
+import { selectColumn } from "@/components/tables/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -5,14 +6,29 @@ import { DomainActionsMenu } from "./actions-menu"
 
 export type DomainRow = RouterOutputs["domains"]["list"][number]
 
-function readable(value: string) {
+export function readableDomainValue(value: string) {
   return value.toLowerCase().replaceAll("_", " ")
+}
+
+export function DomainStatusBadge({ domain }: { domain: DomainRow }) {
+  return (
+    <Badge variant={domain.status === "ACTIVE" ? "default" : "secondary"}>
+      {readableDomainValue(domain.status)}
+    </Badge>
+  )
+}
+
+export function formatDomainExpiry(domain: DomainRow) {
+  return domain.expiresAt
+    ? new Date(domain.expiresAt).toLocaleDateString()
+    : "External"
 }
 
 export function domainColumns(
   onManage: (domain: DomainRow) => void,
 ): ColumnDef<DomainRow>[] {
   return [
+    selectColumn((domain) => domain.hostname, "Select all listed domains"),
     {
       id: "hostname",
       accessorKey: "hostname",
@@ -36,28 +52,19 @@ export function domainColumns(
       id: "provider",
       accessorKey: "provider",
       header: "Registrar",
-      cell: ({ row }) => readable(row.original.provider),
+      cell: ({ row }) => readableDomainValue(row.original.provider),
     },
     {
       id: "status",
       accessorKey: "status",
       header: "Connection",
-      cell: ({ row }) => (
-        <Badge
-          variant={row.original.status === "ACTIVE" ? "default" : "secondary"}
-        >
-          {readable(row.original.status)}
-        </Badge>
-      ),
+      cell: ({ row }) => <DomainStatusBadge domain={row.original} />,
     },
     {
       id: "expiresAt",
       accessorKey: "expiresAt",
       header: "Renewal / expiry",
-      cell: ({ row }) =>
-        row.original.expiresAt
-          ? new Date(row.original.expiresAt).toLocaleDateString()
-          : "External",
+      cell: ({ row }) => formatDomainExpiry(row.original),
     },
     {
       id: "actions",

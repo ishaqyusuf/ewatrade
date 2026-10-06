@@ -1,7 +1,7 @@
 "use client"
 
 import type { FinanceSupplierRow } from "@/components/finance/types"
-import type { TableColumnMeta } from "@/components/tables/core"
+import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import { Button } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -9,6 +9,7 @@ export function financeSupplierColumns(
   openStatement: (id: string) => void,
 ): ColumnDef<FinanceSupplierRow>[] {
   return [
+    selectColumn((supplier) => supplier.name),
     {
       accessorKey: "code",
       header: "Code",
@@ -20,7 +21,8 @@ export function financeSupplierColumns(
         headerLabel: "Code",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text", width: "w-24" },
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
@@ -64,7 +66,7 @@ export function financeSupplierColumns(
   ]
 }
 
-function ViewSupplierButton({
+export function ViewSupplierButton({
   supplier,
   onOpen,
 }: {

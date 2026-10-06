@@ -25,7 +25,7 @@ export function CustomerTableSkeleton({
       columns={columns}
       rowCount={6}
       rowHeight={57}
-      stickyColumnIds={["name"]}
+      stickyColumnIds={["select", "name"]}
       columnVisibility={columnVisibility}
       columnSizing={columnSizing}
       columnOrder={columnOrder}

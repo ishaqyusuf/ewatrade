@@ -2,12 +2,15 @@
 import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-filters"
 import { StockTransferSheet } from "@/components/sheets/stock-transfer-sheet"
 import { useInventoryLedgerParams } from "@/hooks/use-inventory-ledger-params"
+import { formatInventoryQuantity } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
+import { Badge } from "@ewatrade/ui"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { InventoryLedgerTable } from "../inventory-ledger/data-table"
-import { inventoryLabel } from "../inventory-ledger/format"
+import { inventoryDate, inventoryLabel } from "../inventory-ledger/format"
 import {
   type StockTransfer,
   transferColumns,
@@ -22,10 +25,39 @@ const filters = [
   { id: "RECEIVED", label: "Received" },
   { id: "CANCELLED", label: "Cancelled" },
 ]
+const getTransferLabel = (row: StockTransfer) =>
+  `${row.productName} ${row.variantName} transfer ${row.id}`
+
+function describeTransfer(row: StockTransfer) {
+  return {
+    title: row.productName,
+    description: row.variantName,
+    badges: <Badge variant="outline">{inventoryLabel(row.status)}</Badge>,
+    details: [
+      {
+        label: "Quantity",
+        value: (
+          <span className="tabular-nums">
+            {formatInventoryQuantity(row.quantity)} {row.inventoryUnitName}
+          </span>
+        ),
+      },
+      { label: "From", value: row.sourceStore.name },
+      { label: "To", value: row.targetStore.name },
+      { label: "Created (UTC)", value: inventoryDate(row.createdAt) },
+    ],
+  }
+}
+
 export function TransfersDataTable({
   storeId,
   initialSettings,
-}: { storeId?: string; initialSettings: TableSettings }) {
+  view,
+}: {
+  storeId?: string
+  initialSettings: TableSettings
+  view: DirectoryView
+}) {
   const trpc = useTRPC()
   const { params, setParams } = useInventoryLedgerParams()
   const { data } = useSuspenseQuery(
@@ -86,6 +118,14 @@ export function TransfersDataTable({
         initialSettings={initialSettings}
         sortFields={transferSortFields}
         label="Stock transfers"
+        view={view}
+        selectionScope={JSON.stringify([
+          storeId ?? "all",
+          query,
+          params.filter,
+        ])}
+        getRecordLabel={getTransferLabel}
+        describeRecord={describeTransfer}
         onOpen={open}
         empty={
           <TransfersEmpty

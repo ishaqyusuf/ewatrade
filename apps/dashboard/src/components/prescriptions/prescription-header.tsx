@@ -2,7 +2,9 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import Link from "next/link"
 
 import { Button } from "@ewatrade/ui"
@@ -15,10 +17,14 @@ export function PrescriptionHeader({
   canManageSetup,
   storeId,
   storeName,
+  view,
+  onViewChange,
 }: {
   canManageSetup: boolean
   storeId: string
   storeName: string
+  view: DirectoryView
+  onViewChange: (view: DirectoryView) => void
 }) {
   const trpc = useTRPC()
   const context = useQuery(
@@ -49,6 +55,12 @@ export function PrescriptionHeader({
       <PageToolbar
         actions={
           <>
+            <ViewSwitcher
+              label="Prescription view"
+              value={view}
+              options={directoryViewOptions}
+              onValueChange={onViewChange}
+            />
             <Button
               render={<Link href="/prescriptions/reports" />}
               variant="outline"

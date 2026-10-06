@@ -7,6 +7,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import type { Metadata } from "next"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
@@ -34,12 +35,11 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
     membershipRole && canManageTenant(membershipRole),
   )
 
-  const [filter, initialSettings] = await Promise.all([
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [filter, initialSettings, initialViewSettings] = await Promise.all([
     loadPrescriptionFilterParams(searchParams),
-    getInitialTableSettings("prescriptions", {
-      userId: session.user.id,
-      tenantId: ctx.tenant.id,
-    }),
+    getInitialTableSettings("prescriptions", identity),
+    getInitialDirectoryView("prescriptions", identity),
   ])
   const queryClient = getQueryClient()
   const accessOptions = trpc.prescriptions.workspaceAccess.queryOptions({
@@ -97,6 +97,7 @@ export default async function PrescriptionsRoutePage({ searchParams }: Props) {
             store={{ id: store.id, name: store.name }}
             timeZone={ctx.tenant.timezone}
             initialSettings={initialSettings}
+            initialViewSettings={initialViewSettings}
           />
         </Suspense>
       </ErrorBoundary>

@@ -1,11 +1,21 @@
 "use client"
-import { TableSkeleton } from "@/components/tables/core"
+import {
+  DirectoryCollectionSkeleton,
+  TableSkeleton,
+  selectColumn,
+} from "@/components/tables/core"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { operationColumns } from "./columns"
-const columns = operationColumns(() => {})
+import { type InventoryOperation, operationColumns } from "./columns"
+const columns = [
+  selectColumn<InventoryOperation>(() => ""),
+  ...operationColumns(() => {}),
+]
 export function OperationsSkeleton({
   settings,
-}: { settings?: Partial<TableSettings> }) {
+  view = "table",
+}: { settings?: Partial<TableSettings>; view?: DirectoryView }) {
+  if (view !== "table") return <DirectoryCollectionSkeleton label="records" />
   return (
     <TableSkeleton
       columns={columns}
@@ -14,7 +24,7 @@ export function OperationsSkeleton({
       columnVisibility={settings?.columns}
       columnSizing={settings?.sizing}
       columnOrder={settings?.order}
-      stickyColumnIds={["identity", "actions"]}
+      stickyColumnIds={["select", "identity", "actions"]}
     />
   )
 }

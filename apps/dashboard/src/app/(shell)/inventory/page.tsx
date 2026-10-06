@@ -5,6 +5,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -29,7 +30,9 @@ export default async function InventoryRoutePage({
     redirect("/login?error=no_tenant")
   }
 
-  if (!canOperateInventory(ctx.membership.role, ctx.membership.staffAccessMode)) {
+  if (
+    !canOperateInventory(ctx.membership.role, ctx.membership.staffAccessMode)
+  ) {
     redirect("/")
   }
 
@@ -39,10 +42,11 @@ export default async function InventoryRoutePage({
     redirect("/setup")
   }
 
-  const initialSettings = await getInitialTableSettings("inventory", {
-    userId: session.user.id,
-    tenantId: ctx.tenant.id,
-  })
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [initialSettings, initialViewSettings] = await Promise.all([
+    getInitialTableSettings("inventory", identity),
+    getInitialDirectoryView("inventory", identity),
+  ])
 
   void Promise.allSettled([
     ...(typeof params.catalogDetail === "string" && params.catalogDetail
@@ -72,6 +76,7 @@ export default async function InventoryRoutePage({
           store={store}
           allStores={ctx.inventoryScope === "all"}
           initialSettings={initialSettings}
+          initialViewSettings={initialViewSettings}
         />
       </Suspense>
     </HydrateClient>

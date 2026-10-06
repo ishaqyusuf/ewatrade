@@ -1,44 +1,53 @@
 "use client"
 
-import { VirtualRow } from "@/components/tables/core"
-import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
+import {
+  DirectoryToolbar,
+  SelectionBar,
+  VirtualRow,
+} from "@/components/tables/core"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
 import { cn } from "@/utils"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
 import type { Table as ReactTable, Row } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useCallback } from "react"
+import { InventoryCollection } from "./collection"
 import type { InventoryBalance } from "./columns"
 import { InventoryEmptyState } from "./empty-states"
 import { InventoryTableHeader, InventoryTableSettings } from "./table-header"
 
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
+  { id: "select", width: 50 },
   { id: "product", width: 240 },
   { id: "actions", width: 84, side: "right" as const },
 ]
-const FIXED_COLUMN_IDS = ["product"]
+const FIXED_COLUMN_IDS = ["select", "product"]
 
 export function InventoryTableView({
   table,
+  view,
+  onOpen,
+  onStores,
   filtered,
   persistenceError,
   retryPersistence,
 }: {
   table: ReactTable<InventoryBalance>
+  view: DirectoryView
+  onOpen: (catalogItemId: string) => void
+  onStores: (row: InventoryBalance) => void
   filtered: boolean
   persistenceError: string | null
   retryPersistence: () => void
 }) {
-  const { open } = useCatalogDetailParams()
   const openRow = useCallback(
-    (row: Row<InventoryBalance>) => {
-      void open(row.original.catalogItemId)
-    },
-    [open],
+    (row: Row<InventoryBalance>) => onOpen(row.original.catalogItemId),
+    [onOpen],
   )
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
     fixedColumnIds: FIXED_COLUMN_IDS,
@@ -71,14 +80,14 @@ export function InventoryTableView({
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} balance{rows.length === 1 ? "" : "s"}
-        </p>
-        <div className="flex items-center gap-2">
-          <InventoryTableSettings table={table} />
-        </div>
-      </div>
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded inventory balances"
+        summary={`${rows.length} balance${rows.length === 1 ? "" : "s"}`}
+      >
+        {view === "table" ? <InventoryTableSettings table={table} /> : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -95,6 +104,13 @@ export function InventoryTableView({
 
       {!rows.length ? (
         <InventoryEmptyState filtered={filtered} />
+      ) : view !== "table" ? (
+        <InventoryCollection
+          view={view}
+          rows={rows}
+          onOpen={onOpen}
+          onStores={onStores}
+        />
       ) : (
         <section
           ref={tableScroll.setContainerRef}
@@ -138,6 +154,7 @@ export function InventoryTableView({
                       columnSizing={table.getState().columnSizing}
                       columnOrder={table.getState().columnOrder}
                       columnVisibility={table.getState().columnVisibility}
+                      isSelected={row.getIsSelected()}
                     />
                   )
                 })}
@@ -147,6 +164,7 @@ export function InventoryTableView({
           <div aria-hidden="true" className="h-1" />
         </section>
       )}
+      <SelectionBar table={table} />
     </div>
   )
 }

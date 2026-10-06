@@ -1,163 +1,55 @@
 "use client"
-
-import { staffSortFields } from "@/components/tables/staff/sort"
+import { BottomBar } from "@/components/tables/core/bottom-bar"
 import { useSortParams } from "@/hooks/use-sort-params"
-import { useStaffParams } from "@/hooks/use-staff-params"
 import type { StaffMemberRow } from "@/lib/staff-management"
+import type { DirectoryView } from "@/utils/directory-view-settings"
+import { Checkbox, Table, TableBody, TableCell, TableRow } from "@ewatrade/ui"
 import {
-  canUpdateStaffStatus,
-  getNextStaffStatus,
-  getStaffDisplayName,
-  getStaffRoleLabel,
-  getStaffStatusLabel,
-} from "@/lib/staff-management"
-import {
-  Badge,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@ewatrade/ui"
-import {
+  type RowSelectionState,
+  flexRender,
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { type ColumnDef, flexRender } from "@tanstack/react-table"
-import { useMemo } from "react"
-
-function tone(value: string) {
-  const normalized = value.toUpperCase()
-  if (normalized === "ACTIVE") return "bg-emerald-50 text-emerald-700"
-  if (normalized === "INVITED") return "bg-amber-50 text-amber-700"
-  if (normalized === "SUSPENDED") return "bg-destructive/10 text-destructive"
-  if (normalized === "OWNER" || normalized === "ADMIN")
-    return "bg-primary/10 text-primary"
-  if (normalized === "MANAGER") return "bg-sky-50 text-sky-700"
-  return "bg-muted text-muted-foreground"
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "Not yet"
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(date)
-}
+import { AnimatePresence } from "framer-motion"
+import { useEffect, useMemo, useState } from "react"
+import { StaffCollection } from "./collection"
+import { staffColumns } from "./columns"
+import { StaffEmptyState } from "./empty-states"
+import { StaffSkeleton } from "./skeleton"
+import { staffSortFields } from "./sort"
+import { StaffTableHeader } from "./table-header"
 
 export function StaffDataTable({
   rows,
+  view: staffView,
   isLoading,
   updatingId,
   onUpdateStatus,
 }: {
   rows: StaffMemberRow[]
+  view: DirectoryView
   isLoading: boolean
   updatingId: string | null
   onUpdateStatus: (staff: StaffMemberRow) => void
 }) {
-  const { setAccessUserId } = useStaffParams()
   const { sort, sorting, toggleSort } = useSortParams({
     fields: staffSortFields,
   })
-  const columns = useMemo<ColumnDef<StaffMemberRow>[]>(
-    () => [
-      {
-        id: "name",
-        accessorFn: getStaffDisplayName,
-        header: "Staff",
-        cell: ({ row }) => (
-          <div className="min-w-48">
-            <p className="font-medium">{getStaffDisplayName(row.original)}</p>
-            <p className="text-sm text-muted-foreground">
-              {row.original.user.email}
-            </p>
-          </div>
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  useEffect(() => {
+    const ids = new Set(rows.map((row) => row.id))
+    setRowSelection((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(
+          ([id, selected]) => selected && ids.has(id),
         ),
-      },
-      {
-        id: "role",
-        accessorFn: (row) => getStaffRoleLabel(row.role),
-        header: "Role",
-        cell: ({ row }) => (
-          <Badge className={`rounded-full ${tone(row.original.role)}`}>
-            {getStaffRoleLabel(row.original.role)}
-          </Badge>
-        ),
-      },
-      {
-        id: "status",
-        accessorFn: (row) => row.status,
-        header: "Status",
-        cell: ({ row }) => (
-          <Badge className={`rounded-full ${tone(row.original.status)}`}>
-            {getStaffStatusLabel(row.original.status)}
-          </Badge>
-        ),
-      },
-      {
-        id: "invitedAt",
-        accessorKey: "invitedAt",
-        header: "Invited",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap text-muted-foreground">
-            {formatDate(row.original.invitedAt)}
-          </span>
-        ),
-      },
-      {
-        id: "acceptedAt",
-        accessorKey: "acceptedAt",
-        header: "Accepted",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap text-muted-foreground">
-            {formatDate(row.original.acceptedAt)}
-          </span>
-        ),
-      },
-      {
-        id: "actions",
-        enableSorting: false,
-        header: "Actions",
-        cell: ({ row }) => {
-          const member = row.original
-          const nextStatus = getNextStaffStatus(member)
-          const isUpdating = updatingId === member.user.id
-          return (
-            <div className="flex gap-1">
-              {canUpdateStaffStatus(member) ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void setAccessUserId(member.user.id)}
-                >
-                  Manage access
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="gap-2 rounded-none"
-                disabled={!canUpdateStaffStatus(member) || isUpdating}
-                onClick={() => onUpdateStatus(member)}
-              >
-                {isUpdating
-                  ? "Saving"
-                  : nextStatus === "active"
-                    ? "Reactivate"
-                    : "Suspend"}
-              </Button>
-            </div>
-          )
-        },
-      },
-    ],
-    [onUpdateStatus, updatingId, setAccessUserId],
+      ),
+    )
+  }, [rows])
+  const columns = useMemo(
+    () => staffColumns({ updatingId, onUpdateStatus }),
+    [updatingId, onUpdateStatus],
   )
   const table = useReactTable({
     data: rows,
@@ -165,99 +57,96 @@ export function StaffDataTable({
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    state: {
-      sorting,
-    },
+    enableRowSelection: !isLoading,
+    onRowSelectionChange: setRowSelection,
+    state: { sorting, rowSelection },
   })
-
+  const selectedCount = table.getSelectedRowModel().rows.length
   return (
-    <div className="grid gap-2">
-      <p className="text-sm text-muted-foreground" aria-live="polite">
-        {rows.length} staff members{isLoading ? " · Updating…" : ""}
-        {sort ? ` · sorted by ${sort.field} ${sort.direction}` : ""}
-      </p>
-      <div className="overflow-x-auto border border-border">
-        <Table className="min-w-[760px]">
-          <TableHeader>
-            <TableRow>
-              {table.getFlatHeaders().map((header) => {
-                const id = header.column.id
-                const field = staffSortFields.find(
-                  (candidate) => candidate === id,
-                )
-                const direction =
-                  field && sort?.field === field ? sort.direction : undefined
-                return (
-                  <TableHead
-                    key={header.id}
-                    scope="col"
-                    aria-sort={
-                      field
-                        ? direction === "asc"
-                          ? "ascending"
-                          : direction === "desc"
-                            ? "descending"
-                            : "none"
-                        : undefined
-                    }
-                  >
-                    {field ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-auto rounded-none p-0 font-normal hover:bg-transparent"
-                        aria-label={`Sort by ${String(header.column.columnDef.header)}${direction ? `, currently ${direction}` : ""}`}
-                        onClick={() => void toggleSort(field)}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                        {direction === "asc"
-                          ? " ↑"
-                          : direction === "desc"
-                            ? " ↓"
-                            : ""}
-                      </Button>
-                    ) : (
-                      flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )
-                    )}
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No staff found. Invite a staff member or adjust the current
-                  filters.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+    <div className="flex min-w-0 flex-col gap-3" aria-busy={isLoading}>
+      <div className="flex flex-wrap items-center gap-3">
+        {staffView !== "table" ? (
+          <div className="flex items-center gap-2 text-sm">
+            <Checkbox
+              aria-label="Select all staff"
+              checked={table.getIsAllRowsSelected()}
+              indeterminate={table.getIsSomeRowsSelected()}
+              disabled={isLoading || !rows.length}
+              onCheckedChange={(checked) =>
+                table.toggleAllRowsSelected(checked)
+              }
+            />
+            Select all
+          </div>
+        ) : null}
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {rows.length} staff members{isLoading ? " · Updating…" : ""}
+          {sort ? ` · sorted by ${sort.field} ${sort.direction}` : ""}
+        </p>
       </div>
+      {!rows.length ? (
+        isLoading ? (
+          <StaffSkeleton />
+        ) : (
+          <StaffEmptyState />
+        )
+      ) : staffView !== "table" ? (
+        <StaffCollection
+          view={staffView}
+          rows={table.getRowModel().rows}
+          updatingId={updatingId}
+          onUpdateStatus={onUpdateStatus}
+        />
+      ) : (
+        <div className="overflow-x-auto border border-border">
+          <Table className="min-w-[760px]">
+            <StaffTableHeader
+              table={table}
+              sort={sort}
+              toggleSort={toggleSort}
+            />
+            <TableBody>
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() ? "selected" : undefined}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-3">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No staff found. Invite a staff member or adjust the current
+                    filters.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <AnimatePresence>
+        {selectedCount > 0 ? (
+          <BottomBar
+            selectedCount={selectedCount}
+            onDeselect={() => table.resetRowSelection()}
+          >
+            {null}
+          </BottomBar>
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

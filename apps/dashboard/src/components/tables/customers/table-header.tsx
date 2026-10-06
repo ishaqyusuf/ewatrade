@@ -2,6 +2,8 @@
 
 import {
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -118,7 +120,12 @@ export function CustomerTableHeader({
                   <span className="truncate">{label}</span>
                 )
                 const contents =
-                  id === "name" ? (
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded customers"
+                    />
+                  ) : id === "name" ? (
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-3 overflow-hidden">
                       {sortButton}
                       {tableScroll.isScrollable ? (

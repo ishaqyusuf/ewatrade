@@ -1,6 +1,12 @@
 "use client"
 
-import { VirtualRow } from "@/components/tables/core"
+import {
+  DirectoryCollectionSkeleton,
+  DirectoryToolbar,
+  SelectionBar,
+  VirtualRow,
+  useLoadedRowSelection,
+} from "@/components/tables/core"
 import { CustomerDirectoryEmptyState } from "@/components/tables/customers/empty-states"
 import { customerSortFields } from "@/components/tables/customers/sort"
 import {
@@ -13,6 +19,7 @@ import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
@@ -23,24 +30,33 @@ import {
 } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useMemo } from "react"
+import { CustomerCollection } from "./collection"
 import { customerColumns } from "./columns"
 import { CustomerTableSkeleton } from "./skeleton"
 
 const ROW_HEIGHT = 57
-const STICKY_COLUMNS = [{ id: "name", width: 250 }]
-const FIXED_COLUMN_IDS = ["name"]
+const STICKY_COLUMNS = [
+  { id: "select", width: 50 },
+  { id: "name", width: 250 },
+]
+const FIXED_COLUMN_IDS = ["select", "name"]
+const getCustomerId = (customer: DashboardCustomerRow) => customer.id
 
 export function CustomerDataTable({
   rows,
+  view,
   currencyCode,
   isLoading,
   filtered,
+  selectionScope,
   initialSettings,
 }: {
   rows: DashboardCustomerRow[]
+  view: DirectoryView
   currencyCode: string
   isLoading: boolean
   filtered: boolean
+  selectionScope: string
   initialSettings?: Partial<TableSettings>
 }) {
   const columns = useMemo(() => customerColumns(currencyCode), [currencyCode])
@@ -52,18 +68,26 @@ export function CustomerDataTable({
     fixedColumnIds: FIXED_COLUMN_IDS,
   })
   const { sort, sorting } = useSortParams({ fields: customerSortFields })
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows,
+    getRowId: getCustomerId,
+    scope: selectionScope,
+  })
   const table = useReactTable({
     data: rows,
     columns,
-    getRowId: (row) => row.id,
+    getRowId: getCustomerId,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableColumnResizing: true,
     columnResizeMode: "onChange",
+    enableRowSelection: !isLoading,
+    onRowSelectionChange: setRowSelection,
     state: {
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
+      rowSelection,
       sorting,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
@@ -86,6 +110,8 @@ export function CustomerDataTable({
     overscan: 8,
   })
   if (!rows.length && isLoading) {
+    if (view !== "table")
+      return <DirectoryCollectionSkeleton label="customers" />
     return (
       <CustomerTableSkeleton
         currencyCode={currencyCode}
@@ -98,75 +124,92 @@ export function CustomerDataTable({
   if (!rows.length) return <CustomerDirectoryEmptyState filtered={filtered} />
 
   return (
-    <div className="grid gap-3">
-      <div className="flex min-h-9 items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {rows.length} customers{isLoading ? " · Updating…" : ""}
-          {sort
+    <div className="grid gap-3" aria-busy={isLoading}>
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded customers"
+        disabled={isLoading}
+        summary={`${rows.length} customers${isLoading ? " · Updating…" : ""}${
+          sort
             ? ` · sorted by ${sort.field} ${sort.direction}`
-            : " · newest activity first"}
-        </p>
-        <div className="flex items-center gap-2">
-          {tableSettings.persistenceError ? (
-            <Button
-              appearance="form"
-              variant="outline"
-              onClick={tableSettings.retryPersistence}
-            >
-              Retry saving columns
-            </Button>
-          ) : null}
-          <CustomerTableSettings table={table} />
-        </div>
-      </div>
-      <div
-        ref={tableScroll.setContainerRef}
-        className="max-h-[560px] overflow-auto overscroll-contain border border-border"
-        aria-label="Customer directory"
+            : " · newest activity first"
+        }`}
       >
-        <DndContext
-          id="customers-directory-dnd"
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+        {view === "table" ? (
+          <>
+            {tableSettings.persistenceError ? (
+              <Button
+                appearance="form"
+                variant="outline"
+                onClick={tableSettings.retryPersistence}
+              >
+                Retry saving columns
+              </Button>
+            ) : null}
+            <CustomerTableSettings table={table} />
+          </>
+        ) : null}
+      </DirectoryToolbar>
+      {view !== "table" ? (
+        <CustomerCollection
+          view={view}
+          rows={tableRows}
+          currencyCode={currencyCode}
+        />
+      ) : (
+        <div
+          ref={tableScroll.setContainerRef}
+          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          aria-label="Customer directory"
         >
-          <Table
-            className="block text-sm"
-            style={{ width: table.getTotalSize(), minWidth: "100%" }}
+          <DndContext
+            id="customers-directory-dnd"
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <CustomerTableHeader
-              table={table}
-              sortableColumnIds={sortableColumnIds}
-              getStickyStyle={getStickyStyle}
-              getStickyClassName={getStickyClassName}
-              isVisible={isVisible}
-              tableScroll={tableScroll}
-            />
-            <TableBody
-              className="relative block w-full border-0"
-              style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            <Table
+              className="block text-sm"
+              style={{ width: table.getTotalSize(), minWidth: "100%" }}
             >
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const row = tableRows[virtualRow.index]
-                return row ? (
-                  <VirtualRow
-                    key={row.id}
-                    row={row}
-                    virtualStart={virtualRow.start}
-                    rowHeight={ROW_HEIGHT}
-                    getStickyStyle={getStickyStyle}
-                    getStickyClassName={getStickyClassName}
-                    columnSizing={table.getState().columnSizing}
-                    columnOrder={table.getState().columnOrder}
-                    columnVisibility={table.getState().columnVisibility}
-                    className="[&>td:last-child]:flex-1"
-                  />
-                ) : null
-              })}
-            </TableBody>
-          </Table>
-        </DndContext>
-      </div>
+              <CustomerTableHeader
+                table={table}
+                sortableColumnIds={sortableColumnIds}
+                getStickyStyle={getStickyStyle}
+                getStickyClassName={getStickyClassName}
+                isVisible={isVisible}
+                tableScroll={tableScroll}
+              />
+              <TableBody
+                className="relative block w-full border-0"
+                style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = tableRows[virtualRow.index]
+                  return row ? (
+                    <VirtualRow
+                      key={row.id}
+                      row={row}
+                      virtualStart={virtualRow.start}
+                      rowHeight={ROW_HEIGHT}
+                      getStickyStyle={getStickyStyle}
+                      getStickyClassName={getStickyClassName}
+                      columnSizing={table.getState().columnSizing}
+                      columnOrder={table.getState().columnOrder}
+                      columnVisibility={table.getState().columnVisibility}
+                      isSelected={row.getIsSelected()}
+                      isSelectionDisabled={isLoading}
+                      className="[&>td:last-child]:flex-1"
+                    />
+                  ) : null
+                })}
+              </TableBody>
+            </Table>
+          </DndContext>
+        </div>
+      )}
+      <SelectionBar table={table} />
     </div>
   )
 }

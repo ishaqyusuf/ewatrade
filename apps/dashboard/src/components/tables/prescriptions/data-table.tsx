@@ -1,5 +1,6 @@
 "use client"
 
+import { useLoadedRowSelection } from "@/components/tables/core"
 import {
   type PRESCRIPTION_SORT_FIELDS,
   usePrescriptionFilterParams,
@@ -10,24 +11,28 @@ import {
 } from "@/hooks/use-prescription-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { useCallback, useMemo } from "react"
-import { createPrescriptionColumns } from "./columns"
+import { type PrescriptionQueueRow, createPrescriptionColumns } from "./columns"
 import { PrescriptionEmptyState, PrescriptionNoResults } from "./empty-states"
 import { PrescriptionTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["reference"]
+const FIXED_COLUMN_IDS = ["select", "reference"]
+const getRequestId = (request: PrescriptionQueueRow) => request.id
 
 export function PrescriptionDataTable({
   storeId,
   timeZone,
   initialSettings,
+  view,
 }: {
   storeId: string
   timeZone: string
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
   const { filter, setFilter } = usePrescriptionFilterParams()
@@ -55,6 +60,11 @@ export function PrescriptionDataTable({
     () => query.data.pages.flatMap((page) => page.data),
     [query.data.pages],
   )
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows,
+    getRowId: getRequestId,
+    scope: JSON.stringify([storeId, { ...filter, sort: undefined }]),
+  })
   const openRequest = useCallback(
     (id: string, status: (typeof rows)[number]["status"]) => {
       void setParams({
@@ -87,13 +97,15 @@ export function PrescriptionDataTable({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
+    getRowId: getRequestId,
+    onRowSelectionChange: setRowSelection,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
+      rowSelection,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
     onColumnSizingChange: tableSettings.setColumnSizing,
@@ -119,6 +131,8 @@ export function PrescriptionDataTable({
   return (
     <PrescriptionTableView
       table={table}
+      view={view}
+      timeZone={timeZone}
       sort={filter.sort}
       toggleSort={toggleSort}
       onRowOpen={openRequest}

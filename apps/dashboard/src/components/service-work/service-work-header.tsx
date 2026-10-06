@@ -1,7 +1,9 @@
 "use client"
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { Button } from "@ewatrade/ui"
 import { Add01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -10,9 +12,13 @@ import { ServiceWorkSearchFilter } from "./service-work-search-filter"
 export function ServiceWorkHeader({
   canManage,
   storeName,
+  view,
+  onViewChange,
 }: {
   canManage: boolean
   storeName: string
+  view: DirectoryView
+  onViewChange: (view: DirectoryView) => void
 }) {
   const { setParams } = useServiceWorkParams()
   return (
@@ -24,6 +30,12 @@ export function ServiceWorkHeader({
       <PageToolbar
         actions={
           <>
+            <ViewSwitcher
+              label="Service work view"
+              value={view}
+              options={directoryViewOptions}
+              onValueChange={onViewChange}
+            />
             {canManage ? (
               <>
                 <Button

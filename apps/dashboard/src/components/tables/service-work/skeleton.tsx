@@ -1,5 +1,9 @@
 "use client"
-import { TableSkeleton } from "@/components/tables/core"
+import {
+  DirectoryCollectionSkeleton,
+  TableSkeleton,
+} from "@/components/tables/core"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import {
   type TableSettings,
   getColumnIds,
@@ -8,14 +12,15 @@ import {
 import { createServiceWorkColumns } from "./columns"
 export function ServiceWorkTableSkeleton({
   initialSettings,
-  canManage = false,
-}: { initialSettings?: Partial<TableSettings>; canManage?: boolean }) {
-  const columns = createServiceWorkColumns(() => undefined, "UTC", canManage)
+  view = "table",
+}: { initialSettings?: Partial<TableSettings>; view?: DirectoryView }) {
+  const columns = createServiceWorkColumns(() => undefined, "UTC")
   const normalized = normalizeTableSettings(
     initialSettings,
     getColumnIds(columns),
-    ["order"],
+    ["select", "order"],
   )
+  if (view !== "table") return <DirectoryCollectionSkeleton label="jobs" />
   return (
     <TableSkeleton
       columns={columns}
@@ -24,7 +29,7 @@ export function ServiceWorkTableSkeleton({
       columnVisibility={normalized.columns}
       columnSizing={normalized.sizing}
       columnOrder={normalized.order}
-      stickyColumnIds={canManage ? ["select", "order"] : ["order"]}
+      stickyColumnIds={["select", "order"]}
     />
   )
 }

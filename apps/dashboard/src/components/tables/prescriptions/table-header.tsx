@@ -3,6 +3,8 @@
 import {
   ACTIONS_FULL_WIDTH_HEADER_CLASS,
   ACTIONS_STICKY_HEADER_CLASS,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   getHeaderLabel,
 } from "@/components/tables/core"
@@ -28,7 +30,7 @@ import type { Table } from "@tanstack/react-table"
 import type { CSSProperties, ReactNode } from "react"
 import type { PrescriptionQueueRow } from "./columns"
 
-const STICKY_COLUMN_IDS = new Set(["reference", "actions"])
+const STICKY_COLUMN_IDS = new Set([SELECT_COLUMN_ID, "reference", "actions"])
 type PrescriptionSortField = (typeof PRESCRIPTION_SORT_FIELDS)[number]
 type PrescriptionSort = [PrescriptionSortField, "asc" | "desc"] | null
 
@@ -139,7 +141,12 @@ export function PrescriptionTableHeader({
                   <span className="truncate">{label}</span>
                 )
                 const content =
-                  id === "reference" ? (
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded prescription requests"
+                    />
+                  ) : id === "reference" ? (
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                       {sortControl}
                       {scrollControls}

@@ -1,42 +1,27 @@
 "use client"
 import type { FinanceBillRow } from "@/components/finance/types"
-import { Button, Checkbox } from "@ewatrade/ui"
+import { selectColumn } from "@/components/tables/core"
+import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { ColumnDef } from "@tanstack/react-table"
+export const expenseStatusLabels = {
+  PAID: "Paid",
+  PARTIAL: "Partly paid",
+  UNPAID: "Unpaid",
+  VOID: "Cancelled",
+} as const satisfies Record<FinanceBillRow["status"], string>
+
+export function formatExpenseDate(value: Date | string, timezone: string) {
+  return new Date(value).toLocaleDateString("en-NG", { timeZone: timezone })
+}
+
 export function expenseColumns(
   currency: string,
   timezone: string,
   open: (id: string) => void,
 ): ColumnDef<FinanceBillRow>[] {
   return [
-    {
-      id: "select",
-      size: 44,
-      minSize: 44,
-      maxSize: 44,
-      enableHiding: false,
-      enableResizing: false,
-      meta: {
-        headerLabel: "Select",
-        sticky: true,
-        className: "z-20 bg-background md:sticky",
-        skeleton: { type: "checkbox" as const },
-      },
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select loaded expenses"
-          checked={table.getIsAllRowsSelected()}
-          onCheckedChange={(checked) => table.toggleAllRowsSelected(checked)}
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          aria-label={`Select ${row.original.description}`}
-          checked={row.getIsSelected()}
-          onCheckedChange={(checked) => row.toggleSelected(checked)}
-        />
-      ),
-    },
+    selectColumn((bill) => bill.description, "Select all loaded expenses"),
     {
       accessorKey: "incurredAt",
       header: "Date",
@@ -49,10 +34,7 @@ export function expenseColumns(
         sortField: "incurredAt",
         skeleton: { type: "text" as const, width: "w-20" },
       },
-      cell: ({ row }) =>
-        new Date(row.original.incurredAt).toLocaleDateString("en-NG", {
-          timeZone: timezone,
-        }),
+      cell: ({ row }) => formatExpenseDate(row.original.incurredAt, timezone),
     },
     {
       accessorKey: "description",
@@ -66,7 +48,8 @@ export function expenseColumns(
         sortField: "description",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text" as const, width: "w-40" },
       },
       cell: ({ row }) => (
@@ -141,13 +124,7 @@ export function expenseColumns(
         headerLabel: "Status",
         skeleton: { type: "badge" as const, width: "w-16" },
       },
-      cell: ({ row }) =>
-        ({
-          PAID: "Paid",
-          PARTIAL: "Partly paid",
-          UNPAID: "Unpaid",
-          VOID: "Cancelled",
-        })[row.original.status],
+      cell: ({ row }) => expenseStatusLabels[row.original.status],
     },
     {
       id: "actions",

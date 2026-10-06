@@ -1,9 +1,14 @@
 "use client"
 
-import type { FinanceBook } from "@/components/finance/types"
+import type {
+  FinanceBankStatementRow,
+  FinanceBook,
+} from "@/components/finance/types"
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
@@ -11,14 +16,17 @@ import { useMemo } from "react"
 import { financeBankStatementColumns } from "./columns"
 import { FinanceBankStatementTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["reference"]
+const FIXED_COLUMN_IDS = ["select", "reference"]
+const getStatementId = (statement: FinanceBankStatementRow) => statement.id
 
 export function FinanceBankStatementDataTable({
   book,
   initialSettings,
+  view,
 }: {
   book: FinanceBook
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
   const { bankAccountId, setParams } = useFinanceParams()
@@ -39,6 +47,12 @@ export function FinanceBankStatementDataTable({
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data],
   )
+  // Selection holds original import identities; it does not authorize matching.
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows: data,
+    getRowId: getStatementId,
+    scope: JSON.stringify([book.id, bankAccountId]),
+  })
   const columns = useMemo(
     () =>
       financeBankStatementColumns(
@@ -70,13 +84,15 @@ export function FinanceBankStatementDataTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
+    getRowId: getStatementId,
+    onRowSelectionChange: setRowSelection,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
+      rowSelection,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
     onColumnSizingChange: tableSettings.setColumnSizing,
@@ -86,6 +102,8 @@ export function FinanceBankStatementDataTable({
   return (
     <FinanceBankStatementTableView
       table={table}
+      book={book}
+      view={view}
       filtered={Boolean(bankAccountId.trim())}
       isPending={query.isPending}
       hasData={Boolean(query.data)}

@@ -3,6 +3,8 @@
 import type { FinanceBillRow } from "@/components/finance/types"
 import {
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -17,7 +19,6 @@ import {
 } from "@dnd-kit/sortable"
 import {
   Button,
-  Checkbox,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -112,17 +113,10 @@ export function ExpenseTableHeader({
                       : "none"
                   : undefined
                 const content =
-                  id === "select" ? (
-                    <Checkbox
-                      aria-label="Select all loaded expenses"
-                      checked={table.getIsAllRowsSelected()}
-                      indeterminate={
-                        table.getIsSomeRowsSelected() &&
-                        !table.getIsAllRowsSelected()
-                      }
-                      onCheckedChange={(checked) =>
-                        table.toggleAllRowsSelected(checked)
-                      }
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded expenses"
                     />
                   ) : isAction ? (
                     <span>Actions</span>

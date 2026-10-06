@@ -1,15 +1,28 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { MoneyAccountsDataTable } from "@/components/tables/finance-accounts/data-table"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
-import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { useQuery } from "@tanstack/react-query"
+import { type ReactNode, useCallback } from "react"
 import { FinanceAccountStatement } from "./account-statement"
 import { OpenFinanceSheet } from "./open-finance-sheet"
 import type { FinanceBook } from "./types"
-export function FinanceAccounts({ book }: { book: FinanceBook }) {
+export function FinanceAccounts({
+  book,
+  view,
+  viewSwitcher,
+}: {
+  book: FinanceBook
+  view: DirectoryView
+  viewSwitcher: ReactNode
+}) {
   const { financeAccountId, setParams } = useFinanceParams()
+  const openStatement = useCallback(
+    (accountId: string) => void setParams({ financeAccountId: accountId }),
+    [setParams],
+  )
   const trpc = useTRPC()
   const balances = useQuery(
     trpc.finance.balances.queryOptions({ bookId: book.id }),
@@ -18,7 +31,8 @@ export function FinanceAccounts({ book }: { book: FinanceBook }) {
     <section className="grid gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-medium">Money accounts</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {viewSwitcher}
           <OpenFinanceSheet mode="account" secondary>
             Add account
           </OpenFinanceSheet>
@@ -40,47 +54,15 @@ export function FinanceAccounts({ book }: { book: FinanceBook }) {
           {balances.error.message}
         </FormFeedback>
       ) : (
-        <div>
-          {balances.data.accounts
-            .filter((account) =>
-              ["CASH", "BANK", "CLEARING"].includes(account.purpose),
-            )
-            .map((account) => (
-              <div
-                key={account.id}
-                className="flex flex-wrap items-center justify-between gap-4 border-b border-border py-4"
-              >
-                <div>
-                  <p className="font-medium">{account.name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {account.purpose === "CLEARING"
-                      ? "Awaiting settlement"
-                      : account.purpose === "CASH"
-                        ? "Cash"
-                        : "Bank"}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-lg font-medium tabular-nums">
-                    {formatFinanceMoney(
-                      account.balanceMinor,
-                      book.currencyCode,
-                    )}
-                  </p>
-                  <Button
-                    appearance="form"
-                    variant="outline"
-                    aria-label={`View ${account.name} statement`}
-                    onClick={() =>
-                      void setParams({ financeAccountId: account.id })
-                    }
-                  >
-                    View statement
-                  </Button>
-                </div>
-              </div>
-            ))}
-        </div>
+        <MoneyAccountsDataTable
+          accounts={balances.data.accounts.filter((account) =>
+            ["CASH", "BANK", "CLEARING"].includes(account.purpose),
+          )}
+          currencyCode={book.currencyCode}
+          bookId={book.id}
+          view={view}
+          onOpenStatement={openStatement}
+        />
       )}
       {financeAccountId ? (
         <FinanceAccountStatement

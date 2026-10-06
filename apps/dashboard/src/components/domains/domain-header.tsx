@@ -1,12 +1,22 @@
 "use client"
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { Add01Icon, Link01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { DomainSearchFilter } from "./domain-search-filter"
 import { OpenDomainSheet } from "./open-domain-sheet"
 
-export function DomainHeader({ storeName }: { storeName: string }) {
+export function DomainHeader({
+  storeName,
+  view,
+  onViewChange,
+}: {
+  storeName: string
+  view: DirectoryView
+  onViewChange: (view: DirectoryView) => void
+}) {
   return (
     <PageHeader
       eyebrow={storeName}
@@ -16,6 +26,12 @@ export function DomainHeader({ storeName }: { storeName: string }) {
       <PageToolbar
         actions={
           <>
+            <ViewSwitcher
+              label="Domain view"
+              value={view}
+              options={directoryViewOptions}
+              onValueChange={onViewChange}
+            />
             <OpenDomainSheet
               mode="connect"
               className="h-9 rounded-none"

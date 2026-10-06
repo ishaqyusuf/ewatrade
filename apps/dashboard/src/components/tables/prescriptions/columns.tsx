@@ -1,3 +1,4 @@
+import { selectColumn } from "@/components/tables/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { PrescriptionRequestStatus } from "@ewatrade/prescriptions/schemas"
 import { Badge } from "@ewatrade/ui"
@@ -7,7 +8,7 @@ import { PrescriptionActionsMenu } from "./actions-menu"
 export type PrescriptionQueueRow =
   RouterOutputs["prescriptions"]["queue"]["data"][number]
 
-function label(value: string) {
+export function prescriptionLabel(value: string) {
   return value
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -27,17 +28,30 @@ const statusTone: Record<string, string> = {
   transcribing: "bg-blue-100 text-blue-950",
 }
 
-export function createPrescriptionColumns(
-  timeZone: string,
-  open: (id: string, status: PrescriptionRequestStatus) => void,
-): ColumnDef<PrescriptionQueueRow>[] {
-  const dateFormatter = new Intl.DateTimeFormat(undefined, {
+export function PrescriptionStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge className={`rounded-full ${statusTone[status] ?? ""}`}>
+      {prescriptionLabel(status)}
+    </Badge>
+  )
+}
+
+export function createPrescriptionDateFormatter(timeZone: string) {
+  return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone,
   })
+}
+
+export function createPrescriptionColumns(
+  timeZone: string,
+  open: (id: string, status: PrescriptionRequestStatus) => void,
+): ColumnDef<PrescriptionQueueRow>[] {
+  const dateFormatter = createPrescriptionDateFormatter(timeZone)
 
   return [
+    selectColumn((request) => `prescription ${request.reference}`),
     {
       accessorKey: "reference",
       header: "Reference",
@@ -50,7 +64,8 @@ export function createPrescriptionColumns(
         sortField: "reference",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text" as const, width: "w-28" },
       },
       cell: ({ row }) => (
@@ -71,11 +86,7 @@ export function createPrescriptionColumns(
         skeleton: { type: "badge" as const, width: "w-28" },
       },
       cell: ({ row }) => (
-        <Badge
-          className={`rounded-full ${statusTone[row.original.status] ?? ""}`}
-        >
-          {label(row.original.status)}
-        </Badge>
+        <PrescriptionStatusBadge status={row.original.status} />
       ),
     },
     {
@@ -91,7 +102,7 @@ export function createPrescriptionColumns(
       },
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {label(row.original.source)}
+          {prescriptionLabel(row.original.source)}
         </span>
       ),
     },
@@ -107,7 +118,7 @@ export function createPrescriptionColumns(
       },
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {label(row.original.fulfilmentPreference)}
+          {prescriptionLabel(row.original.fulfilmentPreference)}
         </span>
       ),
     },

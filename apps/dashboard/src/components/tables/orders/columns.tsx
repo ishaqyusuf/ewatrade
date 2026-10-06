@@ -1,42 +1,26 @@
+import { selectColumn } from "@/components/tables/core"
 import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Badge, Checkbox } from "@ewatrade/ui"
+import { Badge } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
 import { OrderActionsMenu } from "./action-menu"
 
 export type OrderRow = RouterOutputs["orders"]["listPage"]["items"][number]
 
-function money(value: number, currency: string) {
+export function formatOrderMoney(value: number, currency: string) {
   return new Intl.NumberFormat("en-NG", {
     currency,
     style: "currency",
   }).format(value / 100)
 }
 
+export function getOrderCustomer(order: OrderRow) {
+  return order.customerName || order.customerPhone || "Walk-in"
+}
+
 export function orderColumns(): ColumnDef<OrderRow>[] {
   return [
-    {
-      id: "select",
-      size: 50,
-      minSize: 50,
-      maxSize: 50,
-      enableHiding: false,
-      enableResizing: false,
-      meta: {
-        headerLabel: "Select",
-        sticky: true,
-        reorderable: false,
-        skeleton: { type: "checkbox" as const },
-      },
-      cell: ({ row }) => (
-        <Checkbox
-          aria-label={`Select ${row.original.orderNumber}`}
-          checked={row.getIsSelected()}
-          disabled={!row.getCanSelect()}
-          onCheckedChange={(value) => row.toggleSelected(value)}
-        />
-      ),
-    },
+    selectColumn((order) => order.orderNumber),
     {
       accessorKey: "orderNumber",
       header: "Order",
@@ -49,16 +33,15 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
         sortField: "orderNumber",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text" as const, width: "w-36" },
       },
       cell: ({ row }) => (
         <div className="min-w-0">
           <p className="truncate font-medium">{row.original.orderNumber}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {row.original.customerName ||
-              row.original.customerPhone ||
-              "Walk-in"}
+            {getOrderCustomer(row.original)}
           </p>
         </div>
       ),
@@ -96,7 +79,7 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
         skeleton: { type: "text" as const, width: "w-24" },
       },
       cell: ({ row }) =>
-        money(row.original.totalMinor, row.original.currencyCode),
+        formatOrderMoney(row.original.totalMinor, row.original.currencyCode),
     },
     {
       accessorKey: "status",

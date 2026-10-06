@@ -11,6 +11,8 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { getQueryClient, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import type { FinanceDirectoryPageId } from "@/utils/directory-view-settings"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -49,6 +51,32 @@ export async function FinanceRoute({
           },
         )
       : undefined
+  const directoryPageIds: FinanceDirectoryPageId[] =
+    view === "overview"
+      ? ["finance-accounts", "expenses"]
+      : view === "spending"
+        ? ["expenses"]
+        : view === "accounts"
+          ? ["finance-accounts"]
+          : view === "suppliers"
+            ? ["finance-suppliers"]
+            : view === "bank"
+              ? ["finance-bank-statements"]
+              : []
+  const initialViewSettings = Object.fromEntries(
+    await Promise.all(
+      directoryPageIds.map(
+        async (pageId) =>
+          [
+            pageId,
+            await getInitialDirectoryView(pageId, {
+              userId: session.user.id,
+              tenantId: tenant.tenant.id,
+            }),
+          ] as const,
+      ),
+    ),
+  )
   const book = await queryClient.fetchQuery(trpc.finance.book.queryOptions())
   if (book && view === "bank") {
     const filter = await loadFinanceBankFilterParams((await searchParams) ?? {})
@@ -110,6 +138,7 @@ export async function FinanceRoute({
         <FinanceWorkspace
           view={view}
           initialTableSettings={initialTableSettings}
+          initialViewSettings={initialViewSettings}
         />
       </Suspense>
     </HydrationBoundary>

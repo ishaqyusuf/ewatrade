@@ -10,6 +10,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
@@ -30,10 +31,11 @@ export default async function ConversationsPage({
   if (!activeStore) redirect("/setup")
 
   const params = await loadStoreConversationParams(searchParams)
-  const initialSettings = await getInitialTableSettings("store-conversations", {
-    userId: session.user.id,
-    tenantId: ctx.tenant.id,
-  })
+  const identity = { userId: session.user.id, tenantId: ctx.tenant.id }
+  const [initialSettings, initialViewSettings] = await Promise.all([
+    getInitialTableSettings("store-conversations", identity),
+    getInitialDirectoryView("store-conversations", identity),
+  ])
   const selectedStore =
     params.store && ctx.stores.some((store) => store.id === params.store)
       ? params.store
@@ -72,6 +74,7 @@ export default async function ConversationsPage({
           }))}
           timeZone={ctx.tenant.timezone}
           initialSettings={initialSettings}
+          initialViewSettings={initialViewSettings}
         />
       </Suspense>
     </HydrateClient>

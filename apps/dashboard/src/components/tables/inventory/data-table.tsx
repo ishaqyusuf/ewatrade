@@ -3,6 +3,7 @@
 import { InventoryFilters } from "@/components/inventory/inventory-filters"
 import { InventorySummary } from "@/components/inventory/inventory-summary"
 import { InventoryStoresSheet } from "@/components/sheets/inventory-stores-sheet"
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useSortParams } from "@/hooks/use-sort-params"
@@ -10,6 +11,7 @@ import { useTableSettings } from "@/hooks/use-table-settings"
 import { groupInventoryStores } from "@/lib/inventory-store-totals"
 import { filterInventory, summarizeInventory } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import {
@@ -33,13 +35,16 @@ const SORT_COLUMN_IDS = {
   availableQuantity: "available",
   custodyType: "custody",
 } as const
+const getBalanceId = (row: InventoryBalance) => row.balanceSourceId
 
 export function InventoryDataTable({
   storeId,
   initialSettings,
+  view,
 }: {
   storeId?: string
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const { storesDetail, setParams } = useInventoryParams()
   const setStoreDetail = useCallback(
@@ -50,12 +55,13 @@ export function InventoryDataTable({
   )
   const trpc = useTRPC()
   const { open } = useCatalogDetailParams()
+  const openDetail = useCallback(
+    (catalogItemId: string) => void open(catalogItemId),
+    [open],
+  )
   const columns = useMemo(
-    () =>
-      createInventoryColumns((id) => {
-        void open(id)
-      }, setStoreDetail),
-    [open, setStoreDetail],
+    () => createInventoryColumns(openDetail, setStoreDetail),
+    [openDetail, setStoreDetail],
   )
   const { query, stockFilter } = useInventoryParams()
   const deferredQuery = useDeferredValue(query)
@@ -82,19 +88,29 @@ export function InventoryDataTable({
     () => filterInventory(scopedRows, deferredQuery, stockFilter),
     [scopedRows, deferredQuery, stockFilter],
   )
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows,
+    getRowId: getBalanceId,
+    scope: JSON.stringify([
+      storeId ?? "all",
+      deferredQuery.trim(),
+      stockFilter,
+    ]),
+  })
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
     tableId: "inventory",
     initialSettings,
     columnIds,
-    fixedColumnIds: ["product"],
+    fixedColumnIds: ["select", "product"],
   })
   const table = useReactTable({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getRowId: (row) => row.balanceSourceId,
+    getRowId: getBalanceId,
+    onRowSelectionChange: setRowSelection,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
@@ -102,6 +118,7 @@ export function InventoryDataTable({
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
+      rowSelection,
     },
     onColumnVisibilityChange: tableSettings.setColumnVisibility,
     onColumnSizingChange: tableSettings.setColumnSizing,
@@ -126,6 +143,9 @@ export function InventoryDataTable({
       <InventoryFilters />
       <InventoryTableView
         table={table}
+        view={view}
+        onOpen={openDetail}
+        onStores={setStoreDetail}
         filtered={Boolean(query.trim()) || stockFilter !== "all"}
         persistenceError={tableSettings.persistenceError}
         retryPersistence={tableSettings.retryPersistence}

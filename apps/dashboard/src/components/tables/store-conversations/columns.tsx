@@ -1,3 +1,4 @@
+import { selectColumn } from "@/components/tables/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -24,6 +25,29 @@ export function formatStoreConversationStatus(value: string) {
   return value.replaceAll("_", " ")
 }
 
+export function StoreConversationResponse({
+  item,
+}: {
+  item: StoreConversationQueueItem
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Badge
+        variant={item.sla.state === "overdue" ? "destructive" : "secondary"}
+      >
+        {formatStoreConversationStatus(item.sla.state)}
+      </Badge>
+      {item.unreadCustomerMessages ? (
+        <span
+          role="img"
+          aria-label="Unread customer activity"
+          className="size-2 rounded-full bg-primary"
+        />
+      ) : null}
+    </div>
+  )
+}
+
 export const storeConversationColumns = [
   "Conversation",
   "Requests and state",
@@ -37,6 +61,7 @@ export function createStoreConversationColumns(
   onOpen: (conversationId: string) => void,
 ): ColumnDef<StoreConversationQueueItem>[] {
   return [
+    selectColumn((item) => `conversation ${item.conversationId}`),
     {
       id: "conversation",
       accessorKey: "conversationId",
@@ -50,7 +75,8 @@ export function createStoreConversationColumns(
         sortField: "last_customer_activity",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text" as const, width: "w-36" },
       },
       cell: ({ row }) => (
@@ -119,23 +145,7 @@ export function createStoreConversationColumns(
         sortField: "response_due_at",
         skeleton: { type: "badge" as const, width: "w-24" },
       },
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Badge
-            variant={
-              row.original.sla.state === "overdue" ? "destructive" : "secondary"
-            }
-          >
-            {formatStoreConversationStatus(row.original.sla.state)}
-          </Badge>
-          {row.original.unreadCustomerMessages ? (
-            <span
-              aria-label="Unread customer activity"
-              className="size-2 rounded-full bg-primary"
-            />
-          ) : null}
-        </div>
-      ),
+      cell: ({ row }) => <StoreConversationResponse item={row.original} />,
     },
     {
       id: "actions",

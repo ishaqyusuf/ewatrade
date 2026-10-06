@@ -1,30 +1,31 @@
 "use client"
 
-import type { FinanceBook } from "@/components/finance/types"
+import type { FinanceBillRow, FinanceBook } from "@/components/finance/types"
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { expenseSortFields } from "@/hooks/sort-params"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { useInfiniteQuery } from "@tanstack/react-query"
-import {
-  type RowSelectionState,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { useMemo } from "react"
 import { expenseColumns } from "./columns"
 import { ExpenseTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["description"]
+const FIXED_COLUMN_IDS = ["select", "description"]
+const getBillId = (bill: FinanceBillRow) => bill.id
 
 export function ExpenseDataTable({
   book,
   initialSettings,
+  view,
 }: {
   book: FinanceBook
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
   const { expenseQuery, expenseStatus, setParams } = useFinanceParams()
@@ -68,15 +69,12 @@ export function ExpenseDataTable({
       ),
     [columns],
   )
-  const selectionScope = [
-    book.id,
-    expenseQuery,
-    expenseStatus ?? "",
-    sort?.field ?? "",
-    sort?.direction ?? "",
-  ].join(":")
-  const previousSelectionScope = useRef(selectionScope)
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  // Sorting keeps loaded selections; query, status and Book changes clear them.
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows: data,
+    getRowId: getBillId,
+    scope: JSON.stringify([book.id, expenseQuery, expenseStatus ?? ""]),
+  })
   const tableSettings = useTableSettings({
     tableId: "expenses",
     initialSettings,
@@ -84,18 +82,11 @@ export function ExpenseDataTable({
     fixedColumnIds: FIXED_COLUMN_IDS,
   })
 
-  useEffect(() => {
-    if (previousSelectionScope.current === selectionScope) return
-    previousSelectionScope.current = selectionScope
-    setRowSelection({})
-  }, [selectionScope])
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
-    enableRowSelection: true,
+    getRowId: getBillId,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     state: {
@@ -114,6 +105,7 @@ export function ExpenseDataTable({
     <ExpenseTableView
       book={book}
       table={table}
+      view={view}
       sort={sort}
       summary={query.data?.pages[0]}
       filtered={Boolean(expenseQuery || expenseStatus)}

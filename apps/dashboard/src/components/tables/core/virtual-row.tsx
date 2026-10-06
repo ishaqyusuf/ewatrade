@@ -25,6 +25,8 @@ export interface VirtualRowProps<TData> {
   columnOrder?: ColumnOrderState
   columnVisibility?: VisibilityState
   isSelected?: boolean
+  /** Re-renders memoized checkboxes when selection is paused, e.g. during refresh. */
+  isSelectionDisabled?: boolean
   isExporting?: boolean
   className?: string
 }
@@ -42,6 +44,7 @@ function VirtualRowInner<TData>({
   onRowOpen,
   nonClickableColumns = DEFAULT_NON_CLICKABLE_COLUMNS,
   isSelected = false,
+  isSelectionDisabled,
   isExporting = false,
   className,
 }: VirtualRowProps<TData>) {
@@ -77,6 +80,7 @@ function VirtualRowInner<TData>({
       data-index={row.index}
       data-row-id={row.id}
       aria-selected={isSelected || undefined}
+      data-selection-disabled={isSelectionDisabled || undefined}
       tabIndex={onRowOpen ? 0 : undefined}
       onClick={openFromClick}
       onKeyDown={openFromKeyboard}
@@ -145,6 +149,7 @@ function arePropsEqual<TData>(
     previous.virtualStart === next.virtualStart &&
     previous.rowHeight === next.rowHeight &&
     previous.isSelected === next.isSelected &&
+    previous.isSelectionDisabled === next.isSelectionDisabled &&
     previous.isExporting === next.isExporting &&
     previous.columnSizing === next.columnSizing &&
     previous.columnOrder === next.columnOrder &&

@@ -8,6 +8,7 @@ export function DomainTableSkeleton() {
         <TableHeader>
           <TableRow className="border-b border-border text-left text-muted-foreground">
             {[
+              "Select",
               "Domain",
               "Store",
               "Registrar",
@@ -31,7 +32,7 @@ export function DomainTableSkeleton() {
               key={row}
               className="border-b border-border last:border-0"
             >
-              {[0, 1, 2, 3, 4, 5].map((cell) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
                 <TableCell key={cell} className="px-4 py-4">
                   <div className="h-4 w-24 animate-pulse rounded bg-muted" />
                 </TableCell>

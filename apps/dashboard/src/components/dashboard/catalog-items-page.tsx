@@ -13,7 +13,11 @@ import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { CatalogDataTable } from "@/components/tables/catalog/data-table"
 import { CatalogTableSkeleton } from "@/components/tables/catalog/skeleton"
+import { DirectoryCollectionSkeleton } from "@/components/tables/core"
+import { useDirectoryView } from "@/hooks/use-directory-view"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { Suspense, useState } from "react"
 
@@ -27,17 +31,37 @@ type StoreSummary = {
 export function CatalogItemsPage({
   store,
   initialSettings,
+  initialViewSettings,
 }: {
   store: StoreSummary
   initialSettings: TableSettings
+  initialViewSettings: DirectoryViewSettings
 }) {
   const [notice, setNotice] = useState<string | null>(null)
+  const { view, setView, persistenceError, retryPersistence } =
+    useDirectoryView({
+      pageId: "catalog",
+      queryKey: "catalogView",
+      initialSettings: initialViewSettings,
+    })
 
   return (
     <CatalogAppearance>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <CatalogHeader storeName={store.name} />
+          <CatalogHeader
+            storeName={store.name}
+            view={view}
+            onViewChange={setView}
+          />
+          {persistenceError ? (
+            <Alert appearance="dashboard" role="alert">
+              <AlertDescription>{persistenceError}</AlertDescription>
+              <Button variant="outline" size="sm" onClick={retryPersistence}>
+                Retry saving view
+              </Button>
+            </Alert>
+          ) : null}
           {notice ? (
             <p className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
               {notice}
@@ -45,11 +69,18 @@ export function CatalogItemsPage({
           ) : null}
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
-              fallback={<CatalogTableSkeleton settings={initialSettings} />}
+              fallback={
+                view === "table" ? (
+                  <CatalogTableSkeleton settings={initialSettings} />
+                ) : (
+                  <DirectoryCollectionSkeleton label="catalog items" />
+                )
+              }
             >
               <CatalogDataTable
                 initialSettings={initialSettings}
                 storeId={store.id}
+                view={view}
               />
             </Suspense>
           </ErrorBoundary>

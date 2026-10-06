@@ -1,31 +1,40 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import type { WorkJob } from "@/components/service-work/service-utils"
-import { HorizontalPagination, VirtualRow } from "@/components/tables/core"
+import {
+  DirectoryToolbar,
+  SelectionBar,
+  VirtualRow,
+} from "@/components/tables/core"
 import type { serviceWorkSortFields } from "@/hooks/sort-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ServiceWorkBatchMessage, ServiceWorkBottomBar } from "./bottom-bar"
+import { ServiceWorkCollection } from "./collection"
 import { ServiceWorkEmptyState } from "./empty-states"
 import {
   ServiceWorkTableHeader,
   ServiceWorkTableSettings,
 } from "./table-header"
 import type { useServiceWorkBatch } from "./use-batch-actions"
-const FIXED = ["order"]
+const FIXED = ["select", "order"]
 const STICKY = [
-  { id: "select", width: 44 },
+  { id: "select", width: 50 },
   { id: "order", width: 280 },
   { id: "actions", side: "right" as const, width: 80 },
 ]
 export function ServiceWorkTableView({
   table,
+  view,
+  timeZone,
+  openJob,
   filtered,
   sort,
   batch,
@@ -41,6 +50,9 @@ export function ServiceWorkTableView({
   retryPersistence,
 }: {
   table: ReactTable<WorkJob>
+  view: DirectoryView
+  timeZone: string
+  openJob: (jobId: string) => void
   filtered: boolean
   sort?: {
     field: (typeof serviceWorkSortFields)[number]
@@ -82,17 +94,18 @@ export function ServiceWorkTableView({
   const selectedCount = table.getSelectedRowModel().rows.length
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} jobs loaded ·{" "}
-          {sort
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded jobs"
+        summary={`${rows.length} jobs loaded · ${
+          sort
             ? `${sort.field === "priority" ? "priority" : "created date"} ${sort.direction === "asc" ? "ascending" : "descending"}`
-            : "urgent first, then oldest"}
-        </p>
-        <div className="flex items-center gap-2">
-          <ServiceWorkTableSettings table={table} />
-        </div>
-      </div>
+            : "urgent first, then oldest"
+        }`}
+      >
+        {view === "table" ? <ServiceWorkTableSettings table={table} /> : null}
+      </DirectoryToolbar>
       {isFetchNextPageError || isRefetchError ? (
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{errorMessage}</p>
@@ -123,7 +136,14 @@ export function ServiceWorkTableView({
       {canManage && selectedCount > 0 ? (
         <ServiceWorkBatchMessage batch={batch} />
       ) : null}
-      {rows.length ? (
+      {rows.length && view !== "table" ? (
+        <ServiceWorkCollection
+          view={view}
+          rows={rows}
+          timeZone={timeZone}
+          openJob={openJob}
+        />
+      ) : rows.length ? (
         <section
           ref={scroll.setContainerRef}
           aria-label="Service work records"
@@ -191,7 +211,9 @@ export function ServiceWorkTableView({
           deselect={() => table.resetRowSelection()}
           batch={batch}
         />
-      ) : null}
+      ) : (
+        <SelectionBar table={table} />
+      )}
     </div>
   )
 }

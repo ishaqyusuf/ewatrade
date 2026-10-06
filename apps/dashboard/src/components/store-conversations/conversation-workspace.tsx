@@ -10,14 +10,17 @@ import {
 } from "@/components/tables/store-conversations/empty-states"
 import { StoreConversationTableSkeleton } from "@/components/tables/store-conversations/skeleton"
 import { StoreConversationTableHeader } from "@/components/tables/store-conversations/table-header"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { useDirectoryView } from "@/hooks/use-directory-view"
 import {
   getStoreConversationQueueInput,
   hasStoreConversationFilters,
   useStoreConversationParams,
 } from "@/hooks/use-store-conversation-params"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { Button } from "@ewatrade/ui"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 
 export function ConversationWorkspace({
@@ -25,12 +28,20 @@ export function ConversationWorkspace({
   stores,
   timeZone,
   initialSettings,
+  initialViewSettings,
 }: {
   activeStoreId: string
   stores: Array<{ id: string; name: string }>
   timeZone: string
   initialSettings?: Partial<TableSettings>
+  initialViewSettings: DirectoryViewSettings
 }) {
+  const { view, setView, persistenceError, retryPersistence } =
+    useDirectoryView({
+      pageId: "store-conversations",
+      queryKey: "conversationView",
+      initialSettings: initialViewSettings,
+    })
   const trpc = useTRPC()
   const params = useStoreConversationParams()
   const selectedStore =
@@ -66,7 +77,16 @@ export function ConversationWorkspace({
           title="Conversations"
           description="Claim customer requests, respond, and hand work to another active attendant. Customer content stays out of this queue."
         >
-          <PageToolbar>
+          <PageToolbar
+            actions={
+              <ViewSwitcher
+                label="Conversation view"
+                value={view}
+                options={directoryViewOptions}
+                onValueChange={setView}
+              />
+            }
+          >
             <StoreConversationTableHeader
               input={input}
               params={params}
@@ -74,8 +94,19 @@ export function ConversationWorkspace({
             />
           </PageToolbar>
         </PageHeader>
+        {persistenceError ? (
+          <Alert appearance="dashboard" role="alert">
+            <AlertDescription>{persistenceError}</AlertDescription>
+            <Button variant="outline" size="sm" onClick={retryPersistence}>
+              Retry saving view
+            </Button>
+          </Alert>
+        ) : null}
         {queue.isLoading ? (
-          <StoreConversationTableSkeleton initialSettings={initialSettings} />
+          <StoreConversationTableSkeleton
+            initialSettings={initialSettings}
+            view={view}
+          />
         ) : null}
         {queue.isError && queue.error.data?.code === "FORBIDDEN" ? (
           <StoreConversationAccessState />
@@ -100,6 +131,12 @@ export function ConversationWorkspace({
         {!queue.isError && queue.data?.items.length ? (
           <StoreConversationDataTable
             items={queue.data.items}
+            view={view}
+            selectionScope={JSON.stringify({
+              ...input,
+              cursor: undefined,
+              sort: undefined,
+            })}
             onOpen={(conversationId) =>
               void params.setSelection(conversationId)
             }

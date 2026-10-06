@@ -1,11 +1,9 @@
-import { DomainHeader } from "@/components/domains/domain-header"
-import { DomainDataTable } from "@/components/tables/domains/data-table"
-import { DomainTableSkeleton } from "@/components/tables/domains/skeleton"
+import { DomainsDirectory } from "@/components/domains/domains-directory"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
+import { getInitialDirectoryView } from "@/utils/directory-views"
 import { redirect } from "next/navigation"
-import { Suspense } from "react"
 
 export default async function DomainsSettingsPage() {
   const session = await getServerSession()
@@ -25,14 +23,18 @@ export default async function DomainsSettingsPage() {
     prefetch(trpc.domains.list.queryOptions({})),
     prefetch(trpc.domains.registrantProfile.queryOptions()),
   ])
+  const initialViewSettings = await getInitialDirectoryView("domains", {
+    userId: session.user.id,
+    tenantId: ctx.tenant.id,
+  })
 
   return (
     <HydrateClient>
       <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <DomainHeader storeName={store.name} />
-        <Suspense fallback={<DomainTableSkeleton />}>
-          <DomainDataTable />
-        </Suspense>
+        <DomainsDirectory
+          storeName={store.name}
+          initialViewSettings={initialViewSettings}
+        />
       </div>
     </HydrateClient>
   )

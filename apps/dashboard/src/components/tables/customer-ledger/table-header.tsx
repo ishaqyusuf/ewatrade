@@ -3,6 +3,8 @@
 import type { LedgerEntry } from "@/components/customer-ledger/types"
 import {
   HorizontalPagination,
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -28,7 +30,7 @@ import {
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 
-const STICKY_COLUMN_IDS = new Set(["date", "actions"])
+const STICKY_COLUMN_IDS = new Set([SELECT_COLUMN_ID, "date", "actions"])
 
 export function CustomerLedgerTableHeader({
   table,
@@ -96,6 +98,11 @@ export function CustomerLedgerTableHeader({
                 )
                 const content = isAction ? (
                   <span>Actions</span>
+                ) : id === SELECT_COLUMN_ID ? (
+                  <SelectAllCheckbox
+                    table={table}
+                    label="Select all loaded statement entries"
+                  />
                 ) : (
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <span className="truncate">

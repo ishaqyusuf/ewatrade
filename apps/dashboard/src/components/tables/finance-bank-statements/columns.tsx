@@ -4,16 +4,31 @@ import type {
   FinanceBankStatementRow,
   FinanceBook,
 } from "@/components/finance/types"
-import type { TableColumnMeta } from "@/components/tables/core"
+import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { ColumnDef } from "@tanstack/react-table"
+
+export function getStatementAccountName(
+  book: Pick<FinanceBook, "accounts"> | null,
+  statement: FinanceBankStatementRow,
+) {
+  return (
+    book?.accounts.find((account) => account.id === statement.accountId)
+      ?.name ?? "Bank account"
+  )
+}
+
+export function formatStatementRange(statement: FinanceBankStatementRow) {
+  return `${new Date(statement.startsAt).toISOString().slice(0, 10)} – ${new Date(statement.endsAt).toISOString().slice(0, 10)}`
+}
 
 export function financeBankStatementColumns(
   book: Pick<FinanceBook, "accounts" | "currencyCode"> | null,
   openStatement: (id: string) => void,
 ): ColumnDef<FinanceBankStatementRow>[] {
   return [
+    selectColumn((statement) => statement.reference),
     {
       accessorKey: "reference",
       header: "Statement",
@@ -25,7 +40,8 @@ export function financeBankStatementColumns(
         headerLabel: "Statement",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text", width: "w-40" },
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
@@ -44,9 +60,7 @@ export function financeBankStatementColumns(
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
         <span className="truncate">
-          {book?.accounts.find(
-            (account) => account.id === row.original.accountId,
-          )?.name ?? "Bank account"}
+          {getStatementAccountName(book, row.original)}
         </span>
       ),
     },
@@ -62,8 +76,7 @@ export function financeBankStatementColumns(
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {new Date(row.original.startsAt).toISOString().slice(0, 10)} –{" "}
-          {new Date(row.original.endsAt).toISOString().slice(0, 10)}
+          {formatStatementRange(row.original)}
         </span>
       ),
     },

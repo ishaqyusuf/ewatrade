@@ -6,8 +6,11 @@ import { MetricCard } from "@/components/reports/metric-card"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { CustomerDataTable } from "@/components/tables/customers/data-table"
 import { useCustomerDirectoryParams } from "@/hooks/use-customer-directory-params"
+import { useDirectoryView } from "@/hooks/use-directory-view"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
+import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useEffect, useMemo, useRef, useState } from "react"
 
@@ -24,13 +27,21 @@ export function CustomersPage({
   initialCustomers,
   initialQuery,
   initialSettings,
+  initialViewSettings,
   store,
 }: {
   initialCustomers: DashboardCustomerRow[]
   initialQuery: string
   initialSettings?: Partial<TableSettings>
+  initialViewSettings: DirectoryViewSettings
   store: CustomersResponse["store"]
 }) {
+  const { view, setView, persistenceError, retryPersistence } =
+    useDirectoryView({
+      pageId: "customers",
+      queryKey: "customerView",
+      initialSettings: initialViewSettings,
+    })
   const { customerQuery, setCustomerQuery } = useCustomerDirectoryParams()
   const [customers, setCustomers] = useState(initialCustomers)
   const [isLoading, setIsLoading] = useState(false)
@@ -42,6 +53,7 @@ export function CustomersPage({
     if (lastFilter.current === search) return
     lastFilter.current = search
     setError(null)
+    setIsLoading(true)
     const controller = new AbortController()
     const timeout = setTimeout(async () => {
       setIsLoading(true)
@@ -119,7 +131,17 @@ export function CustomersPage({
           query={customerQuery}
           storeName={store.name}
           onSearch={onSearch}
+          view={view}
+          onViewChange={setView}
         />
+        {persistenceError ? (
+          <Alert appearance="dashboard" role="alert">
+            <AlertDescription>{persistenceError}</AlertDescription>
+            <Button variant="outline" size="sm" onClick={retryPersistence}>
+              Retry saving view
+            </Button>
+          </Alert>
+        ) : null}
 
         {error ? (
           <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -129,9 +151,11 @@ export function CustomersPage({
 
         <CustomerDataTable
           rows={customers}
+          view={view}
           currencyCode={store.currencyCode}
           isLoading={isLoading}
           filtered={Boolean(customerQuery.trim())}
+          selectionScope={customerQuery.trim()}
           initialSettings={initialSettings}
         />
       </div>

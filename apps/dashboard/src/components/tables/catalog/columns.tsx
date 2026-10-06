@@ -2,6 +2,7 @@
 
 import { CatalogIllustrationPreview } from "@/components/catalog-item/catalog-illustration-preview"
 import { CatalogPhotoPreview } from "@/components/catalog-item/catalog-photo-preview"
+import { selectColumn } from "@/components/tables/core"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
@@ -15,13 +16,31 @@ import { CatalogItemActions } from "./item-actions"
 export type CatalogRow =
   RouterOutputs["catalog"]["listItemsPage"]["items"][number]
 
-function primaryOffering(item: CatalogRow) {
+export function getCatalogPrice(item: CatalogRow) {
+  const offering = primaryOffering(item)
+  return offering
+    ? formatPrice(
+        offering.fixedPriceMinor,
+        offering.currencyCode,
+        offering.pricingPolicy,
+      )
+    : "—"
+}
+
+export function getCatalogStock(item: CatalogRow) {
+  const balance = item.product?.stockBalances[0]
+  return balance
+    ? `${balance.onHandQuantity} ${balance.inventoryUnitName}`
+    : "—"
+}
+
+export function primaryOffering(item: CatalogRow) {
   const variant =
     item.variants.find((candidate) => candidate.isDefault) ?? item.variants[0]
   return variant?.offerings[0] ?? null
 }
 
-function itemDetail(item: CatalogRow) {
+export function itemDetail(item: CatalogRow) {
   if (item.variants.length !== 1) {
     return `${item.variants.length} variants`
   }
@@ -36,7 +55,7 @@ function itemDetail(item: CatalogRow) {
   })
 }
 
-function formatPrice(
+export function formatPrice(
   value: number | null,
   currencyCode: string,
   pricingPolicy: string,
@@ -50,12 +69,65 @@ function formatPrice(
   }).format(value / 100)
 }
 
+export function CatalogItemThumbnail({
+  item,
+  storeId,
+}: {
+  item: CatalogRow
+  storeId: string
+}) {
+  return (
+    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+      {item.photos.find((photo) => photo.storeId === storeId) ? (
+        <CatalogPhotoPreview
+          compact
+          assetId={
+            item.photos.find((photo) => photo.storeId === storeId)?.assetId ??
+            ""
+          }
+          storeId={storeId}
+          label={item.name}
+        />
+      ) : item.illustrations.find((entry) => entry.storeId === storeId) ? (
+        <CatalogIllustrationPreview
+          compact
+          illustrationId={
+            item.illustrations.find((entry) => entry.storeId === storeId)
+              ?.illustrationId ?? ""
+          }
+        />
+      ) : (
+        <HugeiconsIcon
+          icon={item.kind === "service" ? ToolsIcon : Package01Icon}
+          className="size-4 text-muted-foreground"
+        />
+      )}
+    </div>
+  )
+}
+
+export function CatalogKindBadge({ item }: { item: CatalogRow }) {
+  return (
+    <Badge
+      className={cn(
+        "rounded-full",
+        item.kind === "service"
+          ? "bg-accent text-accent-foreground"
+          : "bg-secondary text-secondary-foreground",
+      )}
+    >
+      {item.kind === "service" ? "Service" : "Product"}
+    </Badge>
+  )
+}
+
 export function createCatalogColumns(
   openUnits: (productId: string) => void,
   storeId = "",
   openDetail: (itemId: string) => void = () => {},
 ): ColumnDef<CatalogRow>[] {
   return [
+    selectColumn((item) => item.name),
     {
       id: "item",
       accessorKey: "name",
@@ -69,42 +141,13 @@ export function createCatalogColumns(
         sticky: true,
         reorderable: false,
         sortField: "name",
-        className: "z-20 bg-background md:sticky",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "avatar-text", width: "w-32" },
       },
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-            {row.original.photos.find((photo) => photo.storeId === storeId) ? (
-              <CatalogPhotoPreview
-                compact
-                assetId={
-                  row.original.photos.find((photo) => photo.storeId === storeId)
-                    ?.assetId ?? ""
-                }
-                storeId={storeId}
-                label={row.original.name}
-              />
-            ) : row.original.illustrations.find(
-                (entry) => entry.storeId === storeId,
-              ) ? (
-              <CatalogIllustrationPreview
-                compact
-                illustrationId={
-                  row.original.illustrations.find(
-                    (entry) => entry.storeId === storeId,
-                  )?.illustrationId ?? ""
-                }
-              />
-            ) : (
-              <HugeiconsIcon
-                icon={
-                  row.original.kind === "service" ? ToolsIcon : Package01Icon
-                }
-                className="size-4 text-muted-foreground"
-              />
-            )}
-          </div>
+          <CatalogItemThumbnail item={row.original} storeId={storeId} />
           <div className="min-w-0">
             <Button
               type="button"
@@ -135,18 +178,7 @@ export function createCatalogColumns(
         sortField: "kind",
         skeleton: { type: "badge", width: "w-20" },
       },
-      cell: ({ row }) => (
-        <Badge
-          className={cn(
-            "rounded-full",
-            row.original.kind === "service"
-              ? "bg-accent text-accent-foreground"
-              : "bg-secondary text-secondary-foreground",
-          )}
-        >
-          {row.original.kind === "service" ? "Service" : "Product"}
-        </Badge>
-      ),
+      cell: ({ row }) => <CatalogKindBadge item={row.original} />,
     },
     {
       id: "price",
@@ -158,16 +190,7 @@ export function createCatalogColumns(
         headerLabel: "Price",
         skeleton: { type: "text", width: "w-24" },
       },
-      cell: ({ row }) => {
-        const offering = primaryOffering(row.original)
-        return offering
-          ? formatPrice(
-              offering.fixedPriceMinor,
-              offering.currencyCode,
-              offering.pricingPolicy,
-            )
-          : "—"
-      },
+      cell: ({ row }) => getCatalogPrice(row.original),
     },
     {
       id: "stock",
@@ -179,12 +202,7 @@ export function createCatalogColumns(
         headerLabel: "Stock",
         skeleton: { type: "text", width: "w-20" },
       },
-      cell: ({ row }) => {
-        const balance = row.original.product?.stockBalances[0]
-        return balance
-          ? `${balance.onHandQuantity} ${balance.inventoryUnitName}`
-          : "—"
-      },
+      cell: ({ row }) => getCatalogStock(row.original),
     },
     {
       id: "status",

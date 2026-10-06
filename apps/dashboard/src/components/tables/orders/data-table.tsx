@@ -1,34 +1,36 @@
 "use client"
 
+import { useLoadedRowSelection } from "@/components/tables/core"
 import { orderSortFields } from "@/hooks/sort-params"
 import { getOrderListPageInput } from "@/hooks/use-order-filter-params"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import type { RowSelectionState } from "@tanstack/react-table"
 import { AnimatePresence } from "framer-motion"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { OrdersBottomBar } from "./bottom-bar"
-import { orderColumns } from "./columns"
+import { type OrderRow, orderColumns } from "./columns"
 import { OrdersEmptyState } from "./empty-states"
 import { OrdersTableView } from "./table-view"
 
 const FIXED_COLUMN_IDS = ["select", "orderNumber", "actions"]
+const getOrderId = (order: OrderRow) => order.id
 
 export function OrdersDataTable({
   storeId,
   initialSettings,
+  view,
 }: {
   storeId: string
   initialSettings?: Partial<TableSettings>
+  view: DirectoryView
 }) {
   const trpc = useTRPC()
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const { filter, hasFilters } = useOrderParams()
   const { sort, toggleSort } = useSortParams({ fields: orderSortFields })
   const query = useSuspenseInfiniteQuery(
@@ -44,6 +46,11 @@ export function OrdersDataTable({
     () => query.data.pages.flatMap((page) => page.items),
     [query.data.pages],
   )
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows,
+    getRowId: getOrderId,
+    scope: JSON.stringify([storeId, getOrderListPageInput(filter)]),
+  })
   const columns = useMemo(() => orderColumns(), [])
   const columnIds = useMemo(
     () =>
@@ -64,9 +71,8 @@ export function OrdersDataTable({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
+    getRowId: getOrderId,
     enableColumnResizing: true,
-    enableRowSelection: (row) => isReceiptOrderEligible(row.original.status),
     onRowSelectionChange: setRowSelection,
     columnResizeMode: "onChange",
     state: {
@@ -84,6 +90,7 @@ export function OrdersDataTable({
     <>
       <OrdersTableView
         table={table}
+        view={view}
         sort={sort}
         toggleSort={toggleSort}
         filtered={hasFilters}

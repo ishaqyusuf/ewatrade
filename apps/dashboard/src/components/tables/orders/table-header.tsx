@@ -1,6 +1,11 @@
 "use client"
 
-import { type TableColumnMeta, getHeaderLabel } from "@/components/tables/core"
+import {
+  SELECT_COLUMN_ID,
+  SelectAllCheckbox,
+  type TableColumnMeta,
+  getHeaderLabel,
+} from "@/components/tables/core"
 import { DraggableHeader } from "@/components/tables/draggable-header"
 import { ResizeHandle } from "@/components/tables/resize-handle"
 import { orderSortFields } from "@/hooks/sort-params"
@@ -10,7 +15,6 @@ import {
 } from "@dnd-kit/sortable"
 import {
   Button,
-  Checkbox,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -24,7 +28,7 @@ import type { Table } from "@tanstack/react-table"
 import type { CSSProperties, ReactNode } from "react"
 import type { OrderRow } from "./columns"
 
-const STICKY_COLUMN_IDS = new Set(["select", "orderNumber"])
+const STICKY_COLUMN_IDS = new Set([SELECT_COLUMN_ID, "orderNumber"])
 
 type OrderSort = {
   field: (typeof orderSortFields)[number]
@@ -93,19 +97,10 @@ export function OrdersTableHeader({
                   "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
                 )
                 const sortControl =
-                  id === "select" ? (
-                    <Checkbox
-                      aria-label="Select all loaded eligible Orders"
-                      checked={table.getIsAllRowsSelected()}
-                      indeterminate={table.getIsSomeRowsSelected()}
-                      disabled={
-                        !table
-                          .getRowModel()
-                          .rows.some((row) => row.getCanSelect())
-                      }
-                      onCheckedChange={(value) =>
-                        table.toggleAllRowsSelected(value)
-                      }
+                  id === SELECT_COLUMN_ID ? (
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded orders"
                     />
                   ) : field ? (
                     <Button

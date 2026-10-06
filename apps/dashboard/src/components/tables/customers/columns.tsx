@@ -1,4 +1,4 @@
-import type { TableColumnMeta } from "@/components/tables/core"
+import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -8,6 +8,7 @@ export function customerColumns(
 ): ColumnDef<DashboardCustomerRow>[] {
   const sortable = (sortField: string): TableColumnMeta => ({ sortField })
   return [
+    selectColumn((customer) => customer.name),
     {
       id: "name",
       accessorKey: "name",
@@ -21,16 +22,15 @@ export function customerColumns(
         headerLabel: "Customer",
         sticky: true,
         reorderable: false,
-        className: "z-20 bg-background group-hover:bg-muted/40",
+        className:
+          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
         skeleton: { type: "avatar-text" },
       },
       cell: ({ row }) => (
         <div className="min-w-0">
           <p className="truncate font-medium">{row.original.name}</p>
           <p className="truncate text-xs text-muted-foreground">
-            {row.original.phone ??
-              row.original.email ??
-              row.original.identityType}
+            {getCustomerContact(row.original)}
           </p>
         </div>
       ),
@@ -94,11 +94,15 @@ export function customerColumns(
       },
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {formatDate(row.original.lastSeenAt)}
+          {formatCustomerDate(row.original.lastSeenAt)}
         </span>
       ),
     },
   ]
+}
+
+export function getCustomerContact(customer: DashboardCustomerRow) {
+  return customer.phone ?? customer.email ?? customer.identityType
 }
 
 export function compareCustomerTotals(left: string, right: string) {
@@ -107,7 +111,7 @@ export function compareCustomerTotals(left: string, right: string) {
   return leftMinor < rightMinor ? -1 : leftMinor > rightMinor ? 1 : 0
 }
 
-function formatDate(value: string) {
+export function formatCustomerDate(value: string) {
   const date = new Date(value)
   return Number.isNaN(date.getTime())
     ? value

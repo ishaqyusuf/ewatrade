@@ -1,31 +1,41 @@
 "use client"
 
 import type { FinanceBillRow, FinanceBook } from "@/components/finance/types"
-import { BottomBar, VirtualRow } from "@/components/tables/core"
+import {
+  BottomBar,
+  DirectoryCollection,
+  DirectoryRecord,
+  DirectoryToolbar,
+  VirtualRow,
+} from "@/components/tables/core"
 import type { expenseSortFields } from "@/hooks/sort-params"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Table, TableBody } from "@ewatrade/ui"
+import { Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { AnimatePresence } from "framer-motion"
 import { ExpenseBottomBar } from "./bottom-bar"
+import { expenseStatusLabels, formatExpenseDate } from "./columns"
 import { ExpenseEmptyState } from "./empty-states"
 import { ExpenseTableSkeleton } from "./skeleton"
 import { ExpenseTableHeader, ExpenseTableSettings } from "./table-header"
 
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
-  { id: "select", width: 44 },
+  { id: "select", width: 50 },
   { id: "description", width: 260 },
   { id: "actions", side: "right" as const, width: 80 },
 ]
-const FIXED_COLUMN_IDS = ["description"]
+const FIXED_COLUMN_IDS = ["select", "description"]
 const NON_CLICKABLE_COLUMNS = new Set(["select", "actions"])
 type ExpenseSort = {
   field: (typeof expenseSortFields)[number]
@@ -36,6 +46,7 @@ type FinanceBillsPage = RouterOutputs["finance"]["bills"]
 export function ExpenseTableView({
   book,
   table,
+  view,
   sort,
   summary,
   filtered,
@@ -53,6 +64,7 @@ export function ExpenseTableView({
 }: {
   book: FinanceBook
   table: ReactTable<FinanceBillRow>
+  view: DirectoryView
   sort?: ExpenseSort
   summary?: FinanceBillsPage
   filtered: boolean
@@ -95,6 +107,7 @@ export function ExpenseTableView({
     isError: isFetchNextPageError,
     fetchNextPage,
   })
+  const { setParams } = useFinanceParams()
   const selectedRows = table
     .getSelectedRowModel()
     .rows.map((row) => row.original)
@@ -102,6 +115,7 @@ export function ExpenseTableView({
   if (isPending)
     return (
       <ExpenseTableSkeleton
+        view={view}
         settings={{
           columns: table.getState().columnVisibility,
           sizing: table.getState().columnSizing,
@@ -126,6 +140,7 @@ export function ExpenseTableView({
   if (!summary)
     return (
       <ExpenseTableSkeleton
+        view={view}
         settings={{
           columns: table.getState().columnVisibility,
           sizing: table.getState().columnSizing,
@@ -170,14 +185,14 @@ export function ExpenseTableView({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {summary.count} expenses · {sortCaption(sort)}
-        </p>
-        <div className="flex items-center gap-2">
-          <ExpenseTableSettings table={table} />
-        </div>
-      </div>
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded expenses"
+        summary={`${summary.count} expenses · ${sortCaption(sort)}`}
+      >
+        {view === "table" ? <ExpenseTableSettings table={table} /> : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -194,6 +209,58 @@ export function ExpenseTableView({
 
       {!rows.length ? (
         <ExpenseEmptyState filtered={filtered} />
+      ) : view !== "table" ? (
+        <DirectoryCollection view={view} label="Expense">
+          {rows.map((row) => {
+            const bill = row.original
+            const open = () =>
+              void setParams({ financeSheet: "bill", billId: bill.id })
+            return (
+              <DirectoryRecord
+                key={row.id}
+                row={row}
+                view={view}
+                selectLabel={`Select ${bill.description}`}
+                title={bill.description}
+                onOpen={open}
+                description={`${bill.payeeName} · ${formatExpenseDate(
+                  bill.incurredAt,
+                  book.timezone,
+                )}`}
+                badges={
+                  <Badge variant="outline">
+                    {expenseStatusLabels[bill.status]}
+                  </Badge>
+                }
+                highlight={{
+                  label: "Outstanding",
+                  value: formatFinanceMoney(bill.outstandingMinor, currency),
+                }}
+                details={[
+                  {
+                    label: "Total",
+                    value: formatFinanceMoney(bill.totalMinor, currency),
+                  },
+                  {
+                    label: "Paid",
+                    value: formatFinanceMoney(bill.paidMinor, currency),
+                  },
+                ]}
+                actions={
+                  <Button
+                    aria-label={`View expense ${bill.description}`}
+                    className="rounded-none"
+                    size="sm"
+                    variant="ghost"
+                    onClick={open}
+                  >
+                    View
+                  </Button>
+                }
+              />
+            )
+          })}
+        </DirectoryCollection>
       ) : (
         <section
           ref={tableScroll.setContainerRef}

@@ -1,11 +1,21 @@
 "use client"
-import { TableSkeleton } from "@/components/tables/core"
+import {
+  DirectoryCollectionSkeleton,
+  TableSkeleton,
+  selectColumn,
+} from "@/components/tables/core"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { transferColumns } from "./columns"
-const columns = transferColumns(() => {})
+import { type StockTransfer, transferColumns } from "./columns"
+const columns = [
+  selectColumn<StockTransfer>(() => ""),
+  ...transferColumns(() => {}),
+]
 export function TransfersSkeleton({
   settings,
-}: { settings?: Partial<TableSettings> }) {
+  view = "table",
+}: { settings?: Partial<TableSettings>; view?: DirectoryView }) {
+  if (view !== "table") return <DirectoryCollectionSkeleton label="records" />
   return (
     <TableSkeleton
       columns={columns}
@@ -14,7 +24,7 @@ export function TransfersSkeleton({
       columnVisibility={settings?.columns}
       columnSizing={settings?.sizing}
       columnOrder={settings?.order}
-      stickyColumnIds={["identity", "actions"]}
+      stickyColumnIds={["select", "identity", "actions"]}
     />
   )
 }

@@ -1,16 +1,28 @@
 "use client"
 
-import type { FinanceBankStatementRow } from "@/components/finance/types"
-import { VirtualRow } from "@/components/tables/core"
+import type {
+  FinanceBankStatementRow,
+  FinanceBook,
+} from "@/components/finance/types"
+import {
+  DirectoryCollection,
+  DirectoryRecord,
+  DirectoryToolbar,
+  SelectionBar,
+  VirtualRow,
+} from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Alert, AlertDescription, Button, Table, TableBody } from "@ewatrade/ui"
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { formatStatementRange, getStatementAccountName } from "./columns"
 import { FinanceBankStatementEmptyState } from "./empty-states"
 import { FinanceBankStatementTableSkeleton } from "./skeleton"
 import {
@@ -20,14 +32,17 @@ import {
 
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
+  { id: "select", width: 50 },
   { id: "reference", width: 240 },
   { id: "actions", side: "right" as const, width: 96 },
 ]
-const FIXED_COLUMN_IDS = ["reference"]
-const NON_CLICKABLE_COLUMNS = new Set(["actions"])
+const FIXED_COLUMN_IDS = ["select", "reference"]
+const NON_CLICKABLE_COLUMNS = new Set(["select", "actions"])
 
 export function FinanceBankStatementTableView({
   table,
+  book,
+  view,
   filtered,
   isPending,
   hasData,
@@ -43,6 +58,8 @@ export function FinanceBankStatementTableView({
   retryPersistence,
 }: {
   table: ReactTable<FinanceBankStatementRow>
+  book: FinanceBook
+  view: DirectoryView
   filtered: boolean
   isPending: boolean
   hasData: boolean
@@ -86,6 +103,7 @@ export function FinanceBankStatementTableView({
   if (isPending || (!hasData && !isInitialError)) {
     return (
       <FinanceBankStatementTableSkeleton
+        view={view}
         settings={{
           columns: table.getState().columnVisibility,
           sizing: table.getState().columnSizing,
@@ -144,12 +162,16 @@ export function FinanceBankStatementTableView({
         </Alert>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} statement{rows.length === 1 ? "" : "s"} loaded
-        </p>
-        <FinanceBankStatementTableSettings table={table} />
-      </div>
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded bank statements"
+        summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} loaded`}
+      >
+        {view === "table" ? (
+          <FinanceBankStatementTableSettings table={table} />
+        ) : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <Alert
@@ -171,6 +193,54 @@ export function FinanceBankStatementTableView({
 
       {!rows.length ? (
         <FinanceBankStatementEmptyState filtered={filtered} />
+      ) : view !== "table" ? (
+        <DirectoryCollection view={view} label="Bank statement">
+          {rows.map((row) => {
+            const statement = row.original
+            const open = () =>
+              void setParams({
+                financeSheet: "bank-statement",
+                statementId: statement.id,
+              })
+            return (
+              <DirectoryRecord
+                key={row.id}
+                row={row}
+                view={view}
+                selectLabel={`Select ${statement.reference}`}
+                title={statement.reference}
+                onOpen={open}
+                description={`${getStatementAccountName(book, statement)} · ${formatStatementRange(statement)}`}
+                highlight={{
+                  label: "Closing balance",
+                  value: formatFinanceMoney(
+                    statement.closingBalanceMinor,
+                    statement.currencyCode,
+                  ),
+                }}
+                details={[
+                  {
+                    label: "Transactions",
+                    value: (
+                      <span className="tabular-nums">{statement.rowCount}</span>
+                    ),
+                  },
+                ]}
+                actions={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Review ${statement.reference}`}
+                    onClick={open}
+                  >
+                    Review
+                  </Button>
+                }
+              />
+            )
+          })}
+        </DirectoryCollection>
       ) : (
         <section
           ref={tableScroll.setContainerRef}
@@ -220,6 +290,7 @@ export function FinanceBankStatementTableView({
                       columnSizing={table.getState().columnSizing}
                       columnOrder={table.getState().columnOrder}
                       columnVisibility={table.getState().columnVisibility}
+                      isSelected={row.getIsSelected()}
                     />
                   )
                 })}
@@ -242,6 +313,7 @@ export function FinanceBankStatementTableView({
           {isFetchingNextPage ? "Loading…" : "Load more statements"}
         </Button>
       ) : null}
+      <SelectionBar table={table} />
     </div>
   )
 }

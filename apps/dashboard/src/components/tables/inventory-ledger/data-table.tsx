@@ -1,10 +1,20 @@
 "use client"
-import { VirtualRow } from "@/components/tables/core"
+import {
+  DirectoryCollection,
+  DirectoryRecord,
+  type DirectoryRecordDetail,
+  DirectoryToolbar,
+  SelectionBar,
+  VirtualRow,
+  selectColumn,
+  useLoadedRowSelection,
+} from "@/components/tables/core"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
 import { useTableSettings } from "@/hooks/use-table-settings"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import {
   type TableId,
   type TableSettings,
@@ -20,21 +30,36 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { useCallback, useMemo } from "react"
+import { type ReactNode, useCallback, useMemo } from "react"
+import { LedgerRowActions } from "./row-actions"
 import { LedgerTableHeader, LedgerTableSettings } from "./table-header"
 
 const stickyColumns = [
+  { id: "select", width: 50 },
   { id: "identity", width: 240 },
   { id: "actions", width: 90, side: "right" as const },
 ]
-const fixedColumnIds = ["identity", "actions"]
+const fixedColumnIds = ["select", "identity", "actions"]
+const getLedgerId = (row: { id: string }) => row.id
+
+export type LedgerRecordDescription = {
+  title: ReactNode
+  description?: ReactNode
+  badges?: ReactNode
+  details: DirectoryRecordDetail[]
+}
+
 export function InventoryLedgerTable<T extends { id: string }>({
   rows,
-  columns,
+  columns: domainColumns,
   tableId,
   initialSettings,
   sortFields,
   label,
+  view,
+  selectionScope,
+  getRecordLabel,
+  describeRecord,
   onOpen,
   empty,
 }: {
@@ -44,9 +69,22 @@ export function InventoryLedgerTable<T extends { id: string }>({
   initialSettings: Partial<TableSettings>
   sortFields: readonly string[]
   label: string
+  view: DirectoryView
+  selectionScope: string
+  getRecordLabel: (row: T) => string
+  describeRecord: (row: T) => LedgerRecordDescription
   onOpen: (row: T) => void
   empty: React.ReactNode
 }) {
+  const columns = useMemo(
+    () => [selectColumn(getRecordLabel), ...domainColumns],
+    [getRecordLabel, domainColumns],
+  )
+  const [rowSelection, setRowSelection] = useLoadedRowSelection({
+    rows,
+    getRowId: getLedgerId,
+    scope: selectionScope,
+  })
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const settings = useTableSettings({
     tableId,
@@ -58,7 +96,8 @@ export function InventoryLedgerTable<T extends { id: string }>({
   const table = useReactTable({
     data: rows,
     columns,
-    getRowId: (row) => row.id,
+    getRowId: getLedgerId,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableColumnResizing: true,
@@ -68,6 +107,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
       columnOrder: settings.columnOrder,
       columnSizing: settings.columnSizing,
       columnVisibility: settings.columnVisibility,
+      rowSelection,
     },
     onColumnOrderChange: settings.setColumnOrder,
     onColumnSizingChange: settings.setColumnSizing,
@@ -86,12 +126,14 @@ export function InventoryLedgerTable<T extends { id: string }>({
   const openRow = useCallback((row: Row<T>) => onOpen(row.original), [onOpen])
   return (
     <div className="grid gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} records in this view
-        </p>
-        <LedgerTableSettings table={table} />
-      </div>
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel={`Select all loaded ${label.toLowerCase()}`}
+        summary={`${rows.length} records in this view`}
+      >
+        {view === "table" ? <LedgerTableSettings table={table} /> : null}
+      </DirectoryToolbar>
       {settings.persistenceError ? (
         <div role="alert" className="flex items-center gap-3">
           <p>{settings.persistenceError}</p>
@@ -102,6 +144,25 @@ export function InventoryLedgerTable<T extends { id: string }>({
       ) : null}
       {!rows.length ? (
         empty
+      ) : view !== "table" ? (
+        <DirectoryCollection view={view} label={label}>
+          {visible.map((row) => (
+            <DirectoryRecord
+              key={row.id}
+              row={row}
+              view={view}
+              selectLabel={`Select ${getRecordLabel(row.original)}`}
+              onOpen={() => onOpen(row.original)}
+              actions={
+                <LedgerRowActions
+                  label={getRecordLabel(row.original)}
+                  onOpen={() => onOpen(row.original)}
+                />
+              }
+              {...describeRecord(row.original)}
+            />
+          ))}
+        </DirectoryCollection>
       ) : (
         <section
           aria-label={label}
@@ -121,6 +182,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
               <LedgerTableHeader
                 table={table}
                 sortFields={sortFields}
+                selectAllLabel={`Select all loaded ${label.toLowerCase()}`}
                 sortableColumnIds={dnd.sortableColumnIds}
                 getStickyStyle={sticky.getStickyStyle}
                 getStickyClassName={sticky.getStickyClassName}
@@ -145,6 +207,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
                       columnSizing={table.getState().columnSizing}
                       columnOrder={table.getState().columnOrder}
                       columnVisibility={table.getState().columnVisibility}
+                      isSelected={row.getIsSelected()}
                     />
                   ) : null
                 })}
@@ -153,6 +216,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
           </DndContext>
         </section>
       )}
+      <SelectionBar table={table} />
     </div>
   )
 }

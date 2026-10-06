@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test"
 import {
   financeBankCorrectionSourceSchema,
+  financeBankMatchHistorySchema,
   financeBankMatchSchema,
   financeBankStatementImportSchema,
+  financeBankStatementsSchema,
   financeBankUnmatchSchema,
 } from "../../schemas/finance-bank-statements"
 import { createCallerFactory } from "../init"
@@ -47,6 +49,40 @@ const released = {
   reason: "Correct prior review",
   matchId: "original-match",
 }
+
+test("bank list inputs accept infinite-query page direction and stay strict", () => {
+  const list = { bookId: "book", limit: 30 }
+  const history = { bookId: "book", accountId: "bank", limit: 20 }
+  // tRPC infinite queries send `direction` with every page, including SSR prefetch.
+  for (const direction of ["forward", "backward"] as const) {
+    expect(
+      financeBankStatementsSchema.safeParse({ ...list, direction }).success,
+    ).toBe(true)
+    expect(
+      financeBankMatchHistorySchema.safeParse({ ...history, direction })
+        .success,
+    ).toBe(true)
+  }
+  expect(
+    financeBankStatementsSchema.safeParse({
+      ...list,
+      cursor: "statement-1",
+      direction: "forward",
+    }).success,
+  ).toBe(true)
+  expect(
+    financeBankStatementsSchema.safeParse({ ...list, direction: "sideways" })
+      .success,
+  ).toBe(false)
+  expect(
+    financeBankMatchHistorySchema.safeParse({ ...history, direction: "up" })
+      .success,
+  ).toBe(false)
+  expect(
+    financeBankStatementsSchema.safeParse({ ...list, tenantId: "other" })
+      .success,
+  ).toBe(false)
+})
 
 test("bank source lookup accepts only exact Book, bank account and journal entry identities", () => {
   const input = { bookId: "book", accountId: "bank", entryId: "journal" }

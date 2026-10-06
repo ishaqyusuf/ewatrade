@@ -1,29 +1,39 @@
 "use client"
 
-import { VirtualRow } from "@/components/tables/core"
-import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
+import {
+  DirectoryToolbar,
+  SelectionBar,
+  VirtualRow,
+} from "@/components/tables/core"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
+import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
 import type { Table as ReactTable, Row } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useCallback } from "react"
+import { CatalogCollection } from "./collection"
 import type { CatalogRow } from "./columns"
 import { CatalogEmptyState } from "./empty-states"
 import { CatalogTableHeader, CatalogTableSettings } from "./table-header"
 
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
+  { id: "select", width: 50 },
   { id: "item", width: 320 },
   { id: "actions", side: "right" as const, width: 80 },
 ]
-const FIXED_COLUMN_IDS = ["item"]
+const FIXED_COLUMN_IDS = ["select", "item"]
 
 export function CatalogTableView({
   table,
+  view,
+  storeId,
+  openUnits,
+  openDetail,
   hasFilters,
   hasNextPage,
   isFetchingNextPage,
@@ -36,6 +46,10 @@ export function CatalogTableView({
   fetchNextPage,
 }: {
   table: ReactTable<CatalogRow>
+  view: DirectoryView
+  storeId: string
+  openUnits: (productId: string) => void
+  openDetail: (itemId: string) => Promise<unknown>
   hasFilters: boolean
   hasNextPage: boolean
   isFetchingNextPage: boolean
@@ -47,12 +61,11 @@ export function CatalogTableView({
   refetch: () => Promise<unknown>
   fetchNextPage: () => Promise<unknown>
 }) {
-  const { open } = useCatalogDetailParams()
   const openRow = useCallback(
     (row: Row<CatalogRow>) => {
-      void open(row.original.id)
+      void openDetail(row.original.id)
     },
-    [open],
+    [openDetail],
   )
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
     fixedColumnIds: FIXED_COLUMN_IDS,
@@ -80,14 +93,14 @@ export function CatalogTableView({
   })
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {rows.length} items loaded
-        </p>
-        <div className="flex items-center gap-2">
-          <CatalogTableSettings table={table} />
-        </div>
-      </div>
+      <DirectoryToolbar
+        table={table}
+        view={view}
+        selectAllLabel="Select all loaded catalog items"
+        summary={`${rows.length} items loaded`}
+      >
+        <CatalogTableSettings table={table} showColumns={view === "table"} />
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -130,6 +143,14 @@ export function CatalogTableView({
 
       {!rows.length ? (
         <CatalogEmptyState filtered={hasFilters} />
+      ) : view !== "table" ? (
+        <CatalogCollection
+          view={view}
+          rows={rows}
+          storeId={storeId}
+          openUnits={openUnits}
+          openDetail={(itemId) => void openDetail(itemId)}
+        />
       ) : (
         <section
           ref={tableScroll.setContainerRef}
@@ -173,6 +194,7 @@ export function CatalogTableView({
                       columnSizing={table.getState().columnSizing}
                       columnOrder={table.getState().columnOrder}
                       columnVisibility={table.getState().columnVisibility}
+                      isSelected={row.getIsSelected()}
                     />
                   )
                 })}
@@ -194,6 +216,7 @@ export function CatalogTableView({
           {isFetchingNextPage ? "Loading…" : "Load more items"}
         </Button>
       ) : null}
+      <SelectionBar table={table} />
     </div>
   )
 }
