@@ -180,7 +180,7 @@ const config: ExpoConfig = {
     checkAutomatically: "NEVER",
   },
   runtimeVersion: {
-    policy: "appVersion",
+    policy: "fingerprint",
   },
   ios: {
     usesAppleSignIn: true,
@@ -352,7 +352,7 @@ const config: ExpoConfig = {
       checkAutomatically: "NEVER",
     },
     runtimeVersion: {
-      policy: "appVersion",
+      policy: "fingerprint",
     },
     router: {},
   },

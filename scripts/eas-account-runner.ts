@@ -89,8 +89,8 @@ if (
 
 const target = resolveTarget(operation, actionArgs)
 const buildPlatform = resolveBuildPlatform(operation, actionArgs)
-// Keep internal Preview OTA usable while release assurance is being rolled out.
-// Supplying a revision opts back into the reviewed release path.
+// Production updates (and any update given --expected-commit) publish only clean
+// committed HEAD. Preview without a commit stays a quick working-tree OTA.
 const reviewedUpdate =
   operation === "update" &&
   (target === "prod" ||
@@ -112,7 +112,7 @@ if (operation === "update") {
   }
   if (!reviewedUpdate)
     console.log(
-      "Quick Preview OTA: publishing working-tree code without release-assurance checks.",
+      "Quick Preview OTA: publishing working-tree code (pass --expected-commit to pin a clean commit).",
     )
 }
 const expectedNativeBuildCommit =
@@ -553,66 +553,26 @@ function assertHostedBuildArguments(args: string[]) {
 }
 
 async function assertNativeBuildReady(): Promise<void> {
-  const revision = expectedNativeBuildCommit ?? ""
-  await assertExactCommittedMobileSource(revision)
-  const { assertMobileBuildReady } = await import(
-    "./release-mobile-build-preflight"
-  )
-  const environment = target === "prod" ? "production" : "preview"
-  const decision = await assertMobileBuildReady({
-    repository: REPO_DIR,
-    environment,
-    revision,
-    platforms: [buildPlatform as BuildPlatform],
-  })
-  if (
-    decision.revision !== revision ||
-    decision.environment !== environment ||
-    decision.platforms.length !== 1 ||
-    decision.platforms[0] !== buildPlatform
-  )
-    throw new Error(
-      "Native build decision does not match the reviewed source/environment/platform.",
-    )
+  // Native compatibility is handled by the fingerprint runtime policy; hosted
+  // builds only need to come from the exact clean commit being released.
+  await assertExactCommittedMobileSource(expectedNativeBuildCommit ?? "")
 }
 
 function reportNativeBuildPreflightFailure(error: unknown): never {
   console.error(
-    `EAS build stopped: reviewed native runtime/version proof unavailable${error instanceof Error ? `: ${error.message}` : "."}`,
+    `EAS build stopped: source check failed${error instanceof Error ? `: ${error.message}` : "."}`,
   )
   process.exit(1)
 }
 
 async function assertUpdatePublishReady(): Promise<void> {
-  const revision = expectedUpdateCommit ?? ""
-  await assertExactCommittedMobileSource(revision)
-  const { assertMobilePublishReady } = await import(
-    "./release-mobile-preflight"
-  )
-  const platforms: BuildPlatform[] =
-    buildPlatform === "all" ? ["android", "ios"] : [buildPlatform]
-  const environment = target === "prod" ? "production" : "preview"
-  const decision = await assertMobilePublishReady({
-    repository: REPO_DIR,
-    environment,
-    revision,
-    platforms,
-  })
-  if (
-    decision.revision !== revision ||
-    decision.environment !== environment ||
-    decision.platforms.length !== platforms.length ||
-    platforms.some((platform) => !decision.platforms.includes(platform))
-  ) {
-    throw new Error(
-      "Compatibility decision does not match the requested revision, environment, and platform set.",
-    )
-  }
+  // The fingerprint runtime policy keeps OTA updates off incompatible builds.
+  await assertExactCommittedMobileSource(expectedUpdateCommit ?? "")
 }
 
 function reportUpdatePreflightFailure(error: unknown): never {
   console.error(
-    `EAS update stopped: trusted compatibility decision unavailable or incompatible${error instanceof Error ? `: ${error.message}` : "."}`,
+    `EAS update stopped: source check failed${error instanceof Error ? `: ${error.message}` : "."}`,
   )
   process.exit(1)
 }
@@ -649,10 +609,6 @@ async function assertExactCommittedMobileSource(
       "apps/mobile",
       "packages",
       "scripts/eas-account-runner.ts",
-      "scripts/release-mobile-preflight.ts",
-      "scripts/release-*.ts",
-      ".release",
-      "release.manifest.json",
       "package.json",
       "bun.lock",
       "bun.lockb",

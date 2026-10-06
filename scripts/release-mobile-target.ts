@@ -1,4 +1,12 @@
-import type { ExpoMobileConfig } from "../.release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/expo"
+type ExpoChannelConfig = { profile: string; channel: string; branch: string }
+type ExpoMobileConfig = {
+  targetId: string
+  projectId: string
+  appPath: string
+  platforms: ("android" | "ios")[]
+  preview: ExpoChannelConfig
+  production: ExpoChannelConfig
+}
 
 /** Shared data-only identity; importing native policy must not load the verifier graph. */
 export const MOBILE_PROJECT = {
