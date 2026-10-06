@@ -5,6 +5,22 @@ import { renderReceiptImages } from "./images"
 import { renderOrderReceipts } from "./pdf"
 import { receiptFixture } from "./test-fixture"
 
+test("image rendering needs no worker URL, which server bundles cannot resolve", async () => {
+  const { GlobalWorkerOptions } = await import(
+    "pdfjs-dist/legacy/build/pdf.mjs"
+  )
+  const workerSrc = GlobalWorkerOptions.workerSrc
+  GlobalWorkerOptions.workerSrc = "file:///unresolvable/pdf.worker.mjs"
+  try {
+    const pages = await renderReceiptImages(
+      await renderOrderReceipts([receiptFixture()]),
+    )
+    expect(pages).toHaveLength(1)
+  } finally {
+    GlobalWorkerOptions.workerSrc = workerSrc
+  }
+}, 30000)
+
 test("mobile images rasterize every PDF page and preserve exact PNG bytes in export", async () => {
   const pdf = await renderOrderReceipts([
     receiptFixture(),
