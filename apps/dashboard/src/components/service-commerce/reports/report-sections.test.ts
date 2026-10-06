@@ -5,6 +5,8 @@ import {
   buildReportSections,
   formatReportDuration,
   lifecycleFunnel,
+  metricTone,
+  sectionTone,
 } from "./report-sections"
 
 function report(
@@ -268,5 +270,63 @@ describe("Service Commerce report sections", () => {
     expect(formatReportDuration(42.4)).toBe("42s")
     expect(formatReportDuration(312)).toBe("5m 12s")
     expect(formatReportDuration(3_900)).toBe("1h 5m")
+  })
+
+  test("marks failures red and blocks amber only above zero; Unknown data stays neutral", () => {
+    const base = report()
+    const sections = buildReportSections(base)
+    const tone = (key: string, label: string) => {
+      const metric = findMetric(sections, key, label)
+      return metric ? metricTone(metric) : undefined
+    }
+    expect(tone("conversations", "Policy blocks")).toBe("block")
+    expect(tone("conversations", "Overdue")).toBeNull()
+    expect(tone("conversations", "Outcome unknown")).toBeNull()
+    expect(tone("catalog", "Resolution unknown")).toBeNull()
+    expect(
+      sectionTone(
+        sections.find((s) => s.key === "conversations") ?? { groups: [] },
+      ),
+    ).toBe("block")
+    expect(
+      sectionTone(
+        sections.find((s) => s.key === "lifecycle") ?? { groups: [] },
+      ),
+    ).toBeNull()
+
+    const failing = buildReportSections(
+      report({
+        media: {
+          ...base.media,
+          attachmentsQuarantined: 1,
+          attachmentsRejected: 2,
+        },
+        observability: [
+          { count: 1, kind: "readiness", outcome: "blocked" },
+          { count: 0, kind: "routing", outcome: "failed" },
+          { count: 5, kind: "provider_attempt", outcome: "available" },
+        ],
+        storeConversations: {
+          ...base.storeConversations,
+          providerReliability: {
+            ...base.storeConversations.providerReliability,
+            failed: 3,
+          },
+        },
+      }),
+    )
+    const section = (key: string) =>
+      failing.find((s) => s.key === key) ?? { groups: [] }
+    expect(sectionTone(section("conversations"))).toBe("failure")
+    expect(sectionTone(section("media"))).toBe("failure")
+    expect(sectionTone(section("reliability"))).toBe("block")
+    expect(
+      metricTone(
+        findMetric(failing, "reliability", "Provider Attempt · Available") ?? {
+          label: "",
+          value: 0,
+        },
+      ),
+    ).toBeNull()
   })
 })

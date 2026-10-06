@@ -47,11 +47,14 @@ import { type ReactNode, useMemo } from "react"
 import {
   type ReportMetric,
   type ReportMetricGroup,
+  type ReportMetricTone,
   type ReportSectionContent,
   buildReportSections,
   formatReportDuration,
   humanizeReportValue,
   lifecycleFunnel,
+  metricTone,
+  sectionTone,
   usageAttributionLabel,
 } from "./report-sections"
 
@@ -113,15 +116,41 @@ function MetricValue({ metric }: { metric: ReportMetric }) {
       : metric.format === "duration"
         ? formatReportDuration(metric.value)
         : countFormat.format(metric.value)
+  const tone = metricTone(metric)
   return (
     <dd
       className={cn(
         "whitespace-nowrap text-right tabular-nums",
         metric.value === 0 ? "text-muted-foreground" : "font-semibold",
+        tone === "failure" && "text-destructive",
+        tone === "block" && "text-amber-700 dark:text-amber-400",
       )}
     >
       {text}
     </dd>
+  )
+}
+
+const TONE_LABELS: Record<ReportMetricTone, string> = {
+  block: "has blocks",
+  failure: "has failures",
+}
+
+/** Square marker on a tab whose section has a failure or block above zero. */
+function ToneDot({ tone }: { tone: ReportMetricTone | null }) {
+  if (!tone) return null
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "size-1.5 shrink-0",
+          tone === "failure" ? "bg-destructive" : "bg-amber-500",
+        )}
+        title={`This section ${TONE_LABELS[tone]}`}
+      />
+      <span className="sr-only">, {TONE_LABELS[tone]}</span>
+    </>
   )
 }
 
@@ -639,6 +668,7 @@ function ReportContent({
             {sections.map((content) => (
               <TabsTrigger key={content.key} value={content.key}>
                 {content.tab}
+                <ToneDot tone={sectionTone(content)} />
               </TabsTrigger>
             ))}
             {showStores ? (

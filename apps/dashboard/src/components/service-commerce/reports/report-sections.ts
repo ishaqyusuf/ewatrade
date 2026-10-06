@@ -14,7 +14,15 @@ export type ReportMetric = {
   unknownReason?: string
   /** Total that `value` is a share of; drawn as a proportion bar. */
   shareOf?: number
+  /**
+   * Owner-approved emphasis (6 October 2026) when the value is above zero:
+   * failures and rejections are red, blocks and quarantines amber. Unknown
+   * data stays neutral.
+   */
+  tone?: ReportMetricTone
 }
+
+export type ReportMetricTone = "failure" | "block"
 
 export type ReportMetricGroup = { title: string; metrics: ReportMetric[] }
 
@@ -65,6 +73,32 @@ export const COST_LABELS: Record<
   payment_provider_fee: "Payment-provider fees",
   revenue: "Business revenue",
   tax: "Tax",
+}
+
+const OBSERVED_OUTCOME_TONES: Partial<
+  Record<
+    ServiceCommerceReportOutput["observability"][number]["outcome"],
+    ReportMetricTone
+  >
+> = {
+  blocked: "block",
+  failed: "failure",
+}
+
+/** The tone a metric shows: only toned metrics above zero are emphasized. */
+export function metricTone(metric: ReportMetric): ReportMetricTone | null {
+  return metric.tone && metric.value !== null && metric.value > 0
+    ? metric.tone
+    : null
+}
+
+/** A section shows failure when any failure count is above zero, else block. */
+export function sectionTone(
+  section: Pick<ReportSectionContent, "groups">,
+): ReportMetricTone | null {
+  const tones = section.groups.flatMap((group) => group.metrics.map(metricTone))
+  if (tones.includes("failure")) return "failure"
+  return tones.includes("block") ? "block" : null
 }
 
 export function humanizeReportValue(value: string) {
@@ -211,9 +245,11 @@ export function buildReportSections(
             metric("Claims", conversations.team.claimed),
             metric("Unclaimed", conversations.team.unclaimedCurrent, {
               current: true,
+              tone: "block",
             }),
             metric("Overdue", conversations.team.overdueCurrent, {
               current: true,
+              tone: "failure",
             }),
             metric("Escalations opened", conversations.team.escalationsOpened),
             metric(
@@ -234,14 +270,17 @@ export function buildReportSections(
             metric(
               "Coverage blocks",
               conversations.availability.coverageBlockObservations,
+              { tone: "block" },
             ),
             metric(
               "Policy blocks",
               conversations.availability.policyBlockObservations,
+              { tone: "block" },
             ),
             metric(
               "Provider blocks",
               conversations.availability.providerBlockObservations,
+              { tone: "block" },
             ),
             metric(
               "Scheduled closures",
@@ -281,7 +320,9 @@ export function buildReportSections(
           title: "Provider delivery",
           metrics: [
             metric("Attempts", conversations.providerReliability.attempts),
-            metric("Failures", conversations.providerReliability.failed),
+            metric("Failures", conversations.providerReliability.failed, {
+              tone: "failure",
+            }),
             metric(
               "Outcome unknown",
               conversations.providerReliability.outcomeUnknown,
@@ -380,13 +421,16 @@ export function buildReportSections(
           title: "Provider and jobs",
           metrics: [
             metric("Provider attempts", reliability.providerAttempts),
-            metric("Provider failures", reliability.providerFailures),
+            metric("Provider failures", reliability.providerFailures, {
+              tone: "failure",
+            }),
             metric("Provider retries", reliability.providerRetries),
             metric("Job recoveries", reliability.jobRecoveries),
             metric("Job recovery attempts", reliability.jobRecoveryAttempts),
             metric(
               "Stale capability rejections",
               reliability.staleCapabilityRejections,
+              { tone: "block" },
             ),
           ],
         },
@@ -398,6 +442,7 @@ export function buildReportSections(
                   metric(
                     `${humanizeReportValue(entry.kind)} · ${humanizeReportValue(entry.outcome)}`,
                     entry.count,
+                    { tone: OBSERVED_OUTCOME_TONES[entry.outcome] },
                   ),
                 ),
               },
@@ -417,9 +462,11 @@ export function buildReportSections(
           metrics: [
             metric("Active", media.attachmentsActive),
             metric("Safe", media.attachmentsSafe),
-            metric("Quarantined", media.attachmentsQuarantined),
-            metric("Rejected", media.attachmentsRejected),
-            metric("Retryable", media.attachmentsRetryable),
+            metric("Quarantined", media.attachmentsQuarantined, {
+              tone: "block",
+            }),
+            metric("Rejected", media.attachmentsRejected, { tone: "failure" }),
+            metric("Retryable", media.attachmentsRetryable, { tone: "block" }),
           ],
         },
         {
