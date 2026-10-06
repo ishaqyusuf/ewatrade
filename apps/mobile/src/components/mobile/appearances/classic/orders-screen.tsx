@@ -56,7 +56,6 @@ export function ClassicOrdersMasthead({
     <View className="px-4" onLayout={onLayout}>
       <CommercePageHeader
         title="Orders"
-        subtitle="Review payment and fulfilment across every order."
         action={
           <Pressable
             accessibilityLabel="Open customers"

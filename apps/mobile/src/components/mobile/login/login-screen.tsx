@@ -8,7 +8,6 @@ import {
   AuthMethodButton,
 } from "@/components/mobile/auth-header"
 import { FormField } from "@/components/mobile/form-field"
-import { QaAccountChooser } from "@/components/mobile/qa-account-chooser"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -18,37 +17,16 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
-import { shouldShowInternalDesignSystemEntry } from "@/lib/app-variant"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
 
-function DevDesignSystemShortcut() {
-  if (!shouldShowInternalDesignSystemEntry()) return null
-
-  return (
-    <View className="items-end">
-      <Pressable
-        accessibilityLabel="Open design system"
-        accessibilityRole="button"
-        className="size-11 items-center justify-center rounded-full bg-muted/70 active:bg-accent"
-        haptic
-        href="/design-system"
-        transition
-      >
-        <Icon className="size-base text-primary" name="SlidersHorizontal" />
-      </Pressable>
-    </View>
-  )
-}
-
 export function LoginScreen() {
   const design = useMobileDesign("login")
   const Presentation =
     design === "market-day" ? MarketDayLoginScreen : ClassicLoginScreen
-  const showInternalActions = shouldShowInternalDesignSystemEntry()
   const router = useRouter()
   const params = useLocalSearchParams<{ email?: string; returnTo?: string }>()
   const trpc = useTRPC()
@@ -116,11 +94,15 @@ export function LoginScreen() {
               businessId: session.profile.businessId ?? undefined,
               businessName: session.profile.businessName ?? undefined,
               businessSlug: session.tenant?.slug ?? undefined,
+              storeId: session.tenant?.storeId ?? undefined,
+              storeName: session.tenant?.storeName ?? undefined,
               currencyCode: session.profile.currencyCode,
               email: session.profile.email,
               id: session.profile.id,
               name: session.profile.name,
               role: session.profile.role,
+              staffAccessMode: session.profile.staffAccessMode,
+              catalogEditor: session.profile.catalogEditor,
               status: session.profile.status,
             },
             token: session.token,
@@ -152,14 +134,6 @@ export function LoginScreen() {
 
   return (
     <Presentation
-      actions={
-        showInternalActions ? (
-          <>
-            <QaAccountChooser />
-            <DevDesignSystemShortcut />
-          </>
-        ) : undefined
-      }
       footer={
         <AuthFooterAction
           eyebrow="New to ẸwáTrade?"

@@ -132,7 +132,7 @@ describe("catalog write transactions", () => {
         },
         catalogItem: {
           findUnique: async ({ where }: { where: unknown }) => {
-            expect(where).toEqual({ id: "catalog" })
+            expect(where).toEqual({ id: "catalog", tenantId: "tenant" })
             trace.push("retained-item")
             throw sentinel
           },

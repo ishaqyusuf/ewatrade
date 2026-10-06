@@ -1,9 +1,6 @@
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import {
-  BUSINESS_SWITCH_COPY,
-  getBusinessSwitchRowPresentation,
-} from "../../business-switch-presentation"
+import { getBusinessSwitchRowPresentation } from "../../business-switch-presentation"
 import type {
   WorkspaceHeaderProps,
   WorkspaceRowProps,
@@ -14,9 +11,6 @@ import { StatusBadge } from "../../status-badge"
 export function ClassicWorkspaceHeader({ count }: WorkspaceHeaderProps) {
   return (
     <View className="gap-4 pb-5">
-      <Text className="text-sm leading-5 text-muted-foreground">
-        {BUSINESS_SWITCH_COPY.description}
-      </Text>
       <Text className="text-base font-bold text-foreground">
         Your businesses · {count}
       </Text>

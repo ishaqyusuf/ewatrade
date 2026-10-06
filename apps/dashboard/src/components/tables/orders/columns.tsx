@@ -1,6 +1,8 @@
+import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Badge } from "@ewatrade/ui"
+import { Badge, Checkbox } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
+import { OrderActionsMenu } from "./action-menu"
 
 export type OrderRow = RouterOutputs["orders"]["listPage"]["items"][number]
 
@@ -13,6 +15,28 @@ function money(value: number, currency: string) {
 
 export function orderColumns(): ColumnDef<OrderRow>[] {
   return [
+    {
+      id: "select",
+      size: 50,
+      minSize: 50,
+      maxSize: 50,
+      enableHiding: false,
+      enableResizing: false,
+      meta: {
+        headerLabel: "Select",
+        sticky: true,
+        reorderable: false,
+        skeleton: { type: "checkbox" as const },
+      },
+      cell: ({ row }) => (
+        <Checkbox
+          aria-label={`Select ${row.original.orderNumber}`}
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          onCheckedChange={(value) => row.toggleSelected(value)}
+        />
+      ),
+    },
     {
       accessorKey: "orderNumber",
       header: "Order",
@@ -50,14 +74,14 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
         skeleton: { type: "text" as const, width: "w-48" },
       },
       cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {row.original.lines
-            .map(
-              (line) =>
-                `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-            )
-            .join(", ")}
-        </span>
+        <div className="space-y-1">
+          {formatOrderItemGroups(row.original.lines).map((group) => (
+            <div key={group.name}>
+              <p>{group.name}</p>
+              <p className="text-xs text-muted-foreground">{group.details}</p>
+            </div>
+          ))}
+        </div>
       ),
     },
     {
@@ -90,6 +114,20 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
           {row.original.status.toLowerCase()}
         </Badge>
       ),
+    },
+    {
+      id: "actions",
+      size: 70,
+      minSize: 70,
+      maxSize: 70,
+      enableHiding: false,
+      enableResizing: false,
+      meta: {
+        headerLabel: "Actions",
+        reorderable: false,
+        skeleton: { type: "text" as const, width: "w-4" },
+      },
+      cell: ({ row }) => <OrderActionsMenu order={row.original} />,
     },
   ]
 }

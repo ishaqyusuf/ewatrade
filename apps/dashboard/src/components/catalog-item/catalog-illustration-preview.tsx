@@ -25,8 +25,11 @@ export function CatalogIllustrationPreview({
           ? "size-full [&>svg]:size-full"
           : "mx-auto aspect-square w-full max-w-60 [&>svg]:size-full"
       }
+      // Explicit SVG sizing opts artwork out of Button's default icon sizing.
       // biome-ignore lint/security/noDangerouslySetInnerHtml: Only bundled allowlisted SVG and fixed semantic paint roles, never merchant markup.
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{
+        __html: svg.replace("<svg ", '<svg class="size-full" '),
+      }}
     />
   )
 }

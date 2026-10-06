@@ -61,3 +61,22 @@ test("an unconfigured QA namespace never checks the ordinary name", async () => 
   expect(response.status).toBe(503)
   expect(findTenant).not.toHaveBeenCalled()
 })
+
+test("Preview refuses deferred slug checks before looking up business data", async () => {
+  const previous = process.env.APP_ENV
+  process.env.APP_ENV = "preview"
+  try {
+    for (const handler of [GET, POST]) {
+      const response = await handler(
+        new NextRequest(
+          "https://ewatrade-dashboard.localhost/api/auth/check-slug?slug=hello",
+        ),
+      )
+      expect(response.status).toBe(503)
+      expect(findTenant).not.toHaveBeenCalled()
+    }
+  } finally {
+    if (previous === undefined) Reflect.deleteProperty(process.env, "APP_ENV")
+    else process.env.APP_ENV = previous
+  }
+})

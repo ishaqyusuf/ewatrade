@@ -1,121 +1,215 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
-import { ControlField, Input } from "@ewatrade/ui"
 
+import { FormFeedback } from "@/components/forms/form-feedback"
 import { useTRPC } from "@/trpc/client"
+import {
+  Button,
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@ewatrade/ui"
+import { Add01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useDeferredValue, useState } from "react"
+import {
+  type OrderCustomerSelection,
+  orderCustomerContacts,
+} from "./order-customer-search"
 
-export type OrderCustomerSelection = {
-  id: string
-  name: string
-  phone: string | null
-  email: string | null
+export type { OrderCustomerSelection } from "./order-customer-search"
+
+type Choice = {
+  key: string
+  label: string
+  customer?: OrderCustomerSelection
+  createSearch?: string
 }
 
 export function OrderCustomerPicker({
   selected,
+  initialSearch = "",
+  customerDirectory,
+  storeId,
+  disabled,
   onSelect,
+  onCreate,
 }: {
   selected: OrderCustomerSelection | null
+  initialSearch?: string
+  customerDirectory: boolean
+  storeId: string
+  disabled?: boolean
   onSelect: (customer: OrderCustomerSelection | null) => void
+  onCreate: (search: string) => void
 }) {
   const trpc = useTRPC()
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(initialSearch)
   const query = useDeferredValue(search.trim())
-  const customers = useInfiniteQuery(
+  const enabled = !selected && Boolean(query)
+  const directory = useInfiniteQuery(
     trpc.customers.listPage.infiniteQueryOptions(
       { limit: 20, query: query || undefined },
       {
-        enabled: !selected,
+        enabled: enabled && customerDirectory,
         getNextPageParam: (page) => page.nextCursor ?? undefined,
+        retry: false,
       },
     ),
   )
+  const history = useInfiniteQuery(
+    trpc.orders.listPage.infiniteQueryOptions(
+      { limit: 20, query: query || undefined, queryMode: "customer", storeId },
+      {
+        enabled: enabled && !customerDirectory,
+        getNextPageParam: (page) => page.nextCursor ?? undefined,
+        retry: false,
+      },
+    ),
+  )
+  const active = customerDirectory ? directory : history
+  const settled =
+    query === search.trim() && active.isSuccess && !active.isFetching
+  const customers: OrderCustomerSelection[] = customerDirectory
+    ? (directory.data?.pages.flatMap((page) => page.items) ?? [])
+    : orderCustomerContacts(
+        history.data?.pages.flatMap((page) => page.items) ?? [],
+      )
+  const choices: Choice[] = settled
+    ? customers.map((customer) => ({
+        key:
+          customer.id ??
+          JSON.stringify([customer.name, customer.phone, customer.email]),
+        label: [customer.name, customer.phone, customer.email]
+          .filter(Boolean)
+          .join(" · "),
+        customer,
+      }))
+    : []
+  if (enabled && settled && !choices.length && !active.hasNextPage)
+    choices.push({
+      key: "create",
+      label: `Create customer “${query}”`,
+      createSearch: query,
+    })
+
   if (selected)
     return (
       <div className="flex items-center justify-between gap-3 border border-border p-3">
-        <div>
-          <p className="text-sm font-medium">{selected.name}</p>
-          <p className="text-xs text-muted-foreground">
-            Saved customer ·{" "}
-            {[selected.phone, selected.email].filter(Boolean).join(" · ") ||
-              selected.id}
+        <div className="min-w-0">
+          <p className="text-sm font-medium">
+            {selected.name || selected.phone}
+          </p>
+          <p className="break-all text-xs text-muted-foreground">
+            {[selected.phone, selected.email].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <button
+        <Button
           type="button"
-          className="text-sm text-primary"
-          onClick={() => onSelect(null)}
+          variant="ghost"
+          disabled={disabled}
+          onClick={() => {
+            setSearch("")
+            onSelect(null)
+          }}
         >
           Change customer
-        </button>
+        </Button>
       </div>
     )
-  const rows =
-    query === search.trim()
-      ? (customers.data?.pages.flatMap((page) => page.items) ?? [])
-      : []
+
   return (
     <div className="grid gap-2">
-      <ControlField label={<>Find a saved customer</>}>
-        <Input
-          value={search}
-          maxLength={160}
-          placeholder="Search by name, phone or email"
-          onChange={(event) => setSearch(event.target.value)}
-        />
-      </ControlField>
-      <p className="text-xs text-muted-foreground">
-        Select a saved customer to link this order, or enter contact details
-        below.
-      </p>
-      {customers.isError ? (
+      <div className="flex items-center gap-2">
+        <Combobox<Choice>
+          items={choices}
+          value={null}
+          filter={null}
+          itemToStringLabel={(choice) => choice.label}
+          inputValue={search}
+          onInputValueChange={setSearch}
+          autoHighlight
+          disabled={disabled}
+          onValueChange={(choice) => {
+            if (choice?.customer) onSelect(choice.customer)
+            else if (choice?.createSearch) onCreate(choice.createSearch)
+          }}
+        >
+          <ComboboxInput
+            disabled={disabled}
+            aria-label="Search customers"
+            placeholder="Customer name or phone number"
+            maxLength={160}
+            className="w-full"
+          />
+          <ComboboxContent>
+            <ComboboxEmpty>
+              {!query
+                ? "Type a name or phone number."
+                : active.isError
+                  ? "Could not load customers. Try again."
+                  : !settled
+                    ? "Searching customers…"
+                    : "No matching customers."}
+            </ComboboxEmpty>
+            <ComboboxList>
+              {(choice: Choice) => (
+                <ComboboxItem key={choice.key} value={choice}>
+                  {choice.customer ? (
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span>
+                        {choice.customer.name || choice.customer.phone}
+                      </span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {[choice.customer.phone, choice.customer.email]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </span>
+                  ) : (
+                    choice.label
+                  )}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Create customer"
+          title="Create customer"
+          disabled={disabled}
+          onClick={() => onCreate(search)}
+        >
+          <HugeiconsIcon icon={Add01Icon} className="size-4" />
+        </Button>
+      </div>
+      {active.isError ? (
         <FormFeedback appearance="dashboard">
           Could not load customers.{" "}
-          <button type="button" onClick={() => void customers.refetch()}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void active.refetch()}
+          >
             Retry
-          </button>
+          </Button>
         </FormFeedback>
       ) : null}
-      {customers.isPending || query !== search.trim() ? (
-        <output className="text-sm text-muted-foreground">
-          Loading customers…
-        </output>
-      ) : null}
-      <div className="max-h-48 overflow-y-auto border border-border">
-        {rows.map((customer) => (
-          <button
-            key={customer.id}
-            type="button"
-            onClick={() => onSelect(customer)}
-            className="block w-full border-b border-border px-3 py-2 text-left text-sm last:border-0 hover:bg-muted focus-visible:bg-muted"
-          >
-            <span className="block font-medium">{customer.name}</span>
-            <span className="block text-xs text-muted-foreground">
-              {[customer.phone, customer.email].filter(Boolean).join(" · ") ||
-                `Customer ${customer.id}`}
-            </span>
-          </button>
-        ))}
-      </div>
-      {!customers.isPending &&
-      !customers.isError &&
-      !rows.length &&
-      query === search.trim() ? (
-        <p className="text-sm text-muted-foreground">
-          No saved customers found.
-        </p>
-      ) : null}
-      {customers.hasNextPage ? (
-        <button
+      {enabled && settled && active.hasNextPage ? (
+        <Button
           type="button"
-          className="text-sm text-primary"
-          disabled={customers.isFetchingNextPage}
-          onClick={() => void customers.fetchNextPage()}
+          variant="ghost"
+          disabled={active.isFetchingNextPage}
+          onClick={() => void active.fetchNextPage()}
         >
-          {customers.isFetchingNextPage ? "Loading…" : "Load more customers"}
-        </button>
+          Load more customers
+        </Button>
       ) : null}
     </div>
   )

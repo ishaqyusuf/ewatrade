@@ -1,6 +1,46 @@
 import { expect, test } from "bun:test"
+import { renderAccountPrivacyOutcomeTemplate } from "@ewatrade/email"
 import { createCallerFactory } from "../init"
 import { accountPrivacyRouter } from "./account-privacy"
+
+test("maximum escaped outcome content reaches the disabled notice gate without database access", async () => {
+  const previous = process.env.ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED
+  process.env.ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED = "false"
+  try {
+    const content = { subject: '"'.repeat(180), text: '"'.repeat(16_000) }
+    const template = renderAccountPrivacyOutcomeTemplate(content)
+    expect(template.html.length).toBeGreaterThan(32_000)
+    expect(template.html.length).toBeLessThanOrEqual(128_000)
+    const caller = createCallerFactory(accountPrivacyRouter)({
+      db: {
+        $transaction: () => {
+          throw new Error("Database must not be touched")
+        },
+      },
+      session: {
+        session: { id: "session-1", token: "ordinary-session" },
+        user: { id: "operator-1", isPlatformAdmin: true },
+      },
+    } as never)
+    await expect(
+      caller.sendOutcomeNotice({
+        requestId: "request-1",
+        ...content,
+        html: template.html,
+      }),
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: "DISABLED",
+    })
+  } finally {
+    if (previous === undefined)
+      Reflect.deleteProperty(
+        process.env,
+        "ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED",
+      )
+    else process.env.ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED = previous
+  }
+})
 
 test("public external intake availability requires configuration and a trusted client source", async () => {
   const keys = [

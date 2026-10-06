@@ -7,7 +7,8 @@ import { z } from "zod/v4"
 const ACTIVE_STORE_COOKIE = "ewatrade.active_store_id"
 
 const activeStoreSchema = z.object({
-  storeId: z.string().min(1),
+  storeId: z.string().min(1).optional(),
+  scope: z.literal("all").optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -33,6 +34,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  if (parsed.data.scope === "all") {
+    if (ctx.staffAccess?.mode === "SCOPED" && !["OWNER", "ADMIN"].includes(ctx.staffAccess.businessRole)) return NextResponse.json({error: "Select an assigned Store."}, {status: 403})
+    const response = NextResponse.json({ success: true })
+    response.cookies.set("ewatrade.inventory_scope", "all", {
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 365,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    })
+    return response
+  }
+
   const store = ctx.stores.find((item) => item.id === parsed.data.storeId)
 
   if (!store) {
@@ -47,6 +61,12 @@ export async function POST(request: NextRequest) {
     store,
   })
 
+  response.cookies.set("ewatrade.inventory_scope", "store", {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  })
   response.cookies.set(ACTIVE_STORE_COOKIE, store.id, {
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 365,

@@ -4,6 +4,8 @@ export function databaseProfileForEnv(env: NodeJS.ProcessEnv): DatabaseProfile
 
 export function directDatabaseUrlForPrismaCli(databaseUrl: string): string
 
+export function databaseTargetsEqual(left: string, right: string): boolean
+
 export function applyDatabaseProfile<TEnv extends NodeJS.ProcessEnv>(
   env: TEnv,
   productionDatabaseUrl?: string,

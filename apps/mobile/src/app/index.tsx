@@ -12,12 +12,14 @@ import {
   getLastMobileShell,
 } from "@/lib/customer-shell-preference"
 import { resolveMobileEntryDestination } from "@/lib/mobile-entry-routing"
+import { readPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { Redirect } from "expo-router"
 import { useEffect, useState } from "react"
 
 export default function StartRoute() {
+  const [pendingSetup, setPendingSetup] = useState<boolean | null>(null)
   const [lastShell, setLastShell] = useState<MobileShell | null>(null)
   const auth = useAuthContext()
   const trpc = useTRPC()
@@ -29,6 +31,9 @@ export default function StartRoute() {
   )
 
   useEffect(() => {
+    void readPendingOnboarding()
+      .then((value) => setPendingSetup(Boolean(value)))
+      .catch(() => setPendingSetup(false))
     void getLastMobileShell()
       .then(setLastShell)
       .catch(() => setLastShell("business"))
@@ -47,6 +52,9 @@ export default function StartRoute() {
 
     auth.updateAccessProfile(accessProfile.data)
   }, [accessProfile.data, auth])
+
+  if (pendingSetup === null) return <StartupSplash />
+  if (pendingSetup) return <Redirect href="/continue-onboarding" />
 
   if (!lastShell || (auth.isAuthenticated && accessProfile.isPending)) {
     return <StartupSplash />

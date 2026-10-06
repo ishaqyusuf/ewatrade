@@ -16,9 +16,9 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 
 import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
-import { FloatingThemeToggle } from "@/components/mobile"
 import { AccountAgeStartupGate } from "@/components/mobile/account-age-startup-gate"
 import { AppLockGate } from "@/components/mobile/app-lock-gate"
+import { FloatingQaButton } from "@/components/mobile/floating-qa-button"
 import { QaAuthorizationSheet } from "@/components/mobile/qa-authorization-sheet"
 import { StartupSplashGate } from "@/components/mobile/startup-splash-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
@@ -26,8 +26,11 @@ import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
 import { QaAcceleratorProvider } from "@/hooks/use-qa-accelerator"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
-import { shouldShowFloatingThemeToggle } from "@/lib/app-variant"
-import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
+import {
+  canEditMobileCatalog,
+  isInvitedStaffProfile,
+  isSalesRepRole,
+} from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
@@ -105,6 +108,7 @@ const InitialLayout = () => {
   const isInvitedStaff = isInvitedStaffProfile(profile)
   const isSalesRep = isSalesRepRole(profile?.role)
   const canAccessAdmin = canAccessAdminTabs(profile?.role)
+  const canEditCatalog = canEditMobileCatalog(profile)
   const canManageTenant =
     profile?.role?.trim().toUpperCase() === "OWNER" ||
     profile?.role?.trim().toUpperCase() === "ADMIN"
@@ -129,14 +133,13 @@ const InitialLayout = () => {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(customer)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="continue-onboarding"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="sign-up" options={{ headerShown: false }} />
         <Stack.Screen name="verify-email" options={{ headerShown: false }} />
-        <Stack.Screen name="design-system" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="design-system-pattern"
-          options={{ headerShown: false }}
-        />
         <Stack.Screen
           name="staff-onboarding"
           options={{ headerShown: false }}
@@ -145,10 +148,7 @@ const InitialLayout = () => {
           guard={isAuthenticated && !isInvitedStaff && canAccessAdmin}
         >
           <Stack.Screen name="(admin-tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="catalog-item/[catalogItemId]"
-            options={{ headerShown: false }}
-          />
+
           <Stack.Screen
             name="business-switch-modal"
             options={{ headerShown: false, presentation: "modal" }}
@@ -157,14 +157,7 @@ const InitialLayout = () => {
             name="new-business-onboarding-modal"
             options={{ headerShown: false, presentation: "modal" }}
           />
-          <Stack.Screen
-            name="catalog-items-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="first-product-setup-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+
           <Stack.Screen
             name="reports-modal"
             options={{ headerShown: false, presentation: "modal" }}
@@ -194,6 +187,30 @@ const InitialLayout = () => {
           />
         </Stack.Protected>
         <Stack.Protected
+          guard={
+            isAuthenticated &&
+            !isInvitedStaff &&
+            (canAccessAdmin || canEditCatalog)
+          }
+        >
+          <Stack.Screen
+            name="catalog-item/[catalogItemId]"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="catalog-items-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+        </Stack.Protected>
+        <Stack.Protected
+          guard={isAuthenticated && !isInvitedStaff && canEditCatalog}
+        >
+          <Stack.Screen
+            name="first-product-setup-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+        </Stack.Protected>
+        <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
         >
           <Stack.Screen
@@ -214,6 +231,26 @@ const InitialLayout = () => {
           />
           <Stack.Screen
             name="finance-accounts-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-bank-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-bank-import-modal"
+            options={{
+              headerShown: false,
+              presentation: "modal",
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="finance-bank/[statementId]"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
+          <Stack.Screen
+            name="finance-bank-source/[entryId]"
             options={{ headerShown: false, presentation: "modal" }}
           />
           <Stack.Screen
@@ -260,6 +297,10 @@ const InitialLayout = () => {
             name="order-reminder-settings-modal"
             options={{ headerShown: false, presentation: "modal" }}
           />
+          <Stack.Screen
+            name="receipt-settings-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && isSalesRep}
@@ -270,6 +311,10 @@ const InitialLayout = () => {
           />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
+          <Stack.Screen
+            name="order-receipts-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
           <Stack.Screen
             name="app-lock-modal"
             options={{ headerShown: false, presentation: "modal" }}
@@ -334,10 +379,16 @@ function OfflinePolicyReconciler() {
   const setOfflineAccess = useOperationalModeStore(
     (state) => state.setOfflineAccess,
   )
+  const scopedStaff =
+    profile?.staffAccessMode === "SCOPED" &&
+    !["OWNER", "ADMIN"].includes(profile?.role ?? "")
   const settings = useQuery(
     trpc.offline.settings.queryOptions(undefined, {
       enabled:
-        !customerShell && isAuthenticated && Boolean(profile?.businessId),
+        !scopedStaff &&
+        !customerShell &&
+        isAuthenticated &&
+        Boolean(profile?.businessId),
       refetchInterval: 30_000,
       refetchIntervalInBackground: false,
       retry: false,
@@ -416,12 +467,28 @@ function OfflinePolicyReconciler() {
 
   useEffect(() => {
     if (customerShell) return
-    if (!profile?.businessId || !settings.data) return
+    if (!profile?.businessId) return
+    if (scopedStaff) {
+      setOfflineAccess(profile.businessId, false)
+      return
+    }
+    if (!settings.data) return
     setOfflineAccess(profile.businessId, settings.data.enabled)
-  }, [customerShell, profile?.businessId, setOfflineAccess, settings.data])
+  }, [
+    customerShell,
+    profile?.businessId,
+    scopedStaff,
+    setOfflineAccess,
+    settings.data,
+  ])
 
   useEffect(() => {
-    if (customerShell || isOfflineMode || !reconciliationSignature) {
+    if (
+      scopedStaff ||
+      customerShell ||
+      isOfflineMode ||
+      !reconciliationSignature
+    ) {
       lastAttemptSignature.current = ""
       return
     }
@@ -451,6 +518,7 @@ function OfflinePolicyReconciler() {
     customerShell,
     isOfflineMode,
     reconciliationSignature,
+    scopedStaff,
     register.mutate,
     replay.mutate,
     settings.data?.enabled,
@@ -489,9 +557,7 @@ function RootLayoutNav() {
                                 <InitialLayout />
                                 <AppLockGate />
                                 <AppAutoUpdateModal />
-                                {shouldShowFloatingThemeToggle() ? (
-                                  <FloatingThemeToggle />
-                                ) : null}
+                                <FloatingQaButton />
                               </>
                             ) : (
                               <StartupSplashGate

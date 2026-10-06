@@ -2,6 +2,10 @@ import { type Session, auth, parseCookieHeader } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
+import {
+  tracePhase,
+  traceSynchronousPhase,
+} from "@ewatrade/db/performance-tracing"
 import type { TenantContext } from "@ewatrade/db/queries"
 import {
   getActiveTenantForUser,
@@ -21,6 +25,8 @@ import { qaLiveEffectForProcedure } from "../utils/qa-provider-operation"
 import { isQaDerivedSessionAllowed } from "../utils/qa-session-access"
 import { getRequestTrace } from "../utils/request-trace"
 import { safeCompare } from "../utils/safe-compare"
+import { scopeStaffRequest } from "../utils/staff-request-access"
+import { withStaffWriteTransaction } from "../utils/staff-write-transaction"
 
 type AuthenticatedSession = Session
 
@@ -124,69 +130,79 @@ async function getSessionFromBearer(
 export const createTRPCContext = async (
   _: unknown,
   c: Context,
-): Promise<TRPCContext> => {
-  const { requestId, cfRay } = getRequestTrace(c.req)
-  const bearerToken = getBearerToken(
-    c.req.header("authorization") ?? c.req.header("x-app-authorization"),
-  )
-  const cookieSession = await auth.api.getSession({
-    headers: c.req.raw.headers,
-  })
-  const candidateSession =
-    cookieSession ?? (await getSessionFromBearer(bearerToken))
-  const qaSessionValidation = candidateSession
-    ? candidateSession.session.token.startsWith("qas_")
-      ? await validateQaDerivedSession(prisma, candidateSession.session.id)
-      : { active: true, scope: null }
-    : { active: false, scope: null }
-  const legalSessionAllowed = candidateSession
-    ? !(await isLegalSignupSessionBlocked(prisma, candidateSession.user.id))
-    : false
-  const session =
-    qaSessionValidation.active && legalSessionAllowed ? candidateSession : null
-  const internalKey = c.req.header("x-internal-key")
-  const expectedInternalKey = process.env.INTERNAL_API_KEY
-  const requestCookies = parseCookieHeader(c.req.header("cookie"))
-  const tenantSlug =
-    c.req.header("x-tenant-slug") ??
-    requestCookies.get("ewatrade.active_tenant_slug") ??
-    null
+): Promise<TRPCContext> =>
+  tracePhase("context", async () => {
+    const { requestId, cfRay } = getRequestTrace(c.req)
+    const bearerToken = getBearerToken(
+      c.req.header("authorization") ?? c.req.header("x-app-authorization"),
+    )
+    const cookieSession = await tracePhase("auth", () =>
+      auth.api.getSession({
+        headers: c.req.raw.headers,
+      }),
+    )
+    const candidateSession =
+      cookieSession ??
+      (await tracePhase("auth", () => getSessionFromBearer(bearerToken)))
+    const qaSessionValidation = candidateSession
+      ? candidateSession.session.token.startsWith("qas_")
+        ? await validateQaDerivedSession(prisma, candidateSession.session.id)
+        : { active: true, scope: null }
+      : { active: false, scope: null }
+    const legalSessionAllowed = candidateSession
+      ? !(await isLegalSignupSessionBlocked(prisma, candidateSession.user.id))
+      : false
+    const session =
+      qaSessionValidation.active && legalSessionAllowed
+        ? candidateSession
+        : null
+    const internalKey = c.req.header("x-internal-key")
+    const expectedInternalKey = process.env.INTERNAL_API_KEY
+    const requestCookies = parseCookieHeader(c.req.header("cookie"))
+    const tenantSlug =
+      c.req.header("x-tenant-slug") ??
+      requestCookies.get("ewatrade.active_tenant_slug") ??
+      null
 
-  return {
-    requestHeaders: c.req.raw.headers,
-    db: prisma,
-    session,
-    tenantSlug,
-    tenantContext: null,
-    tenantId: null,
-    requestId,
-    cfRay,
-    isInternalRequest: safeCompare(internalKey, expectedInternalKey),
-    forcePrimary: c.req.header("x-force-primary") === "true",
-    customerConversationCredential:
-      c.req.header("x-store-conversation-credential") ?? null,
-    customerConversationInstallation:
-      c.req.header("x-store-conversation-installation") ?? null,
-    origin: c.req.header("origin") ?? null,
-    clientIp: getTrustedQaNetworkSource({
-      env: process.env,
-      getHeader: (name) => c.req.header(name),
-    }),
-    privacyClientIp: getTrustedPrivacyNetworkSource({
-      env: process.env,
-      getHeader: (name) => c.req.header(name),
-    }),
-    userAgent: c.req.header("user-agent") ?? null,
-    activeStoreId:
-      c.req.header("x-store-id") ??
-      requestCookies.get("ewatrade.active_store_id") ??
-      null,
-    qaSessionScope: qaSessionValidation.scope,
-  }
-}
+    return {
+      requestHeaders: c.req.raw.headers,
+      db: prisma,
+      session,
+      tenantSlug,
+      tenantContext: null,
+      tenantId: null,
+      requestId,
+      cfRay,
+      isInternalRequest: safeCompare(internalKey, expectedInternalKey),
+      forcePrimary: c.req.header("x-force-primary") === "true",
+      customerConversationCredential:
+        c.req.header("x-store-conversation-credential") ?? null,
+      customerConversationInstallation:
+        c.req.header("x-store-conversation-installation") ?? null,
+      origin: c.req.header("origin") ?? null,
+      clientIp: getTrustedQaNetworkSource({
+        env: process.env,
+        getHeader: (name) => c.req.header(name),
+      }),
+      privacyClientIp: getTrustedPrivacyNetworkSource({
+        env: process.env,
+        getHeader: (name) => c.req.header(name),
+      }),
+      userAgent: c.req.header("user-agent") ?? null,
+      activeStoreId:
+        c.req.header("x-store-id") ??
+        requestCookies.get("ewatrade.active_store_id") ??
+        null,
+      qaSessionScope: qaSessionValidation.scope,
+    }
+  })
 
 const t = initTRPC.context<TRPCContext>().create({
-  transformer: superjson,
+  transformer: {
+    serialize: (value) =>
+      traceSynchronousPhase("serialization", () => superjson.serialize(value)),
+    deserialize: (value) => superjson.deserialize(value),
+  },
   errorFormatter({ shape, error, ctx }) {
     const appError = {
       ...toPublicError(error),
@@ -278,7 +294,10 @@ async function requireEligibleAccountAge(
 }
 
 /** Shared by protected tRPC and authenticated byte transports. */
-export async function resolveProtectedTenantContext(ctx: TRPCContext) {
+export async function resolveProtectedTenantContext(
+  ctx: TRPCContext,
+  recoverStoreSelection = false,
+) {
   const { session } = ctx
 
   if (!session) {
@@ -294,7 +313,9 @@ export async function resolveProtectedTenantContext(ctx: TRPCContext) {
   const tenantContext =
     ctx.tenantContext ??
     (await getActiveTenantForUser(ctx.db, {
-      storeId: ctx.qaSessionScope?.storeId ?? ctx.activeStoreId,
+      storeId:
+        ctx.qaSessionScope?.storeId ??
+        (recoverStoreSelection ? null : ctx.activeStoreId),
       userId: session.user.id,
       tenantSlug: ctx.tenantSlug,
     }))
@@ -329,7 +350,43 @@ export async function resolveProtectedTenantContext(ctx: TRPCContext) {
 }
 
 const withTenantPermissionMiddleware = t.middleware(async (opts) => {
-  return opts.next({ ctx: await resolveProtectedTenantContext(opts.ctx) })
+  // Directory/context reads repair a revoked Store preference. Operational
+  // requests keep the explicit Store and fail instead of switching silently.
+  const recover =
+    opts.type === "query" &&
+    ["tenant.current", "tenant.stores", "tenant.storeContext"].includes(
+      opts.path,
+    )
+  return opts.next({
+    ctx: await resolveProtectedTenantContext(opts.ctx, recover),
+  })
+})
+
+const enforceStaffWriteTransaction = t.middleware(async (opts) => {
+  if (
+    opts.type !== "mutation" ||
+    opts.ctx.tenantContext?.staffAccess?.mode !== "SCOPED" ||
+    ["OWNER", "ADMIN"].includes(opts.ctx.tenantContext.staffAccess.businessRole)
+  )
+    return opts.next()
+  return withStaffWriteTransaction(opts.ctx, async (ctx) => {
+    if (!ctx.tenantContext)
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Staff context unavailable.",
+      })
+    const result = await opts.next({
+      ctx: { db: ctx.db, tenantContext: ctx.tenantContext },
+    })
+    if (!result.ok) throw result.error
+    return result
+  })
+})
+
+const enforceStaffStoreAccess = t.middleware(async (opts) => {
+  const raw = await opts.getRawInput()
+  const scoped = await scopeStaffRequest(opts.ctx, opts.path, opts.type, raw)
+  return opts.next({ getRawInput: async () => scoped })
 })
 
 const enforceQaProviderBoundary = t.middleware(async (opts) => {
@@ -417,6 +474,8 @@ export const platformAdminProcedure = authenticatedProcedure.use(
 export const protectedProcedure = publicProcedure
   .use(requireAuthMiddleware)
   .use(withTenantPermissionMiddleware)
+  .use(enforceStaffWriteTransaction)
+  .use(enforceStaffStoreAccess)
   .use(enforceQaProviderBoundary)
 
 export const internalProcedure = publicProcedure.use(requireInternalMiddleware)
@@ -476,4 +535,6 @@ export const protectedOrInternalProcedure = publicProcedure
       },
     })
   })
+  .use(enforceStaffWriteTransaction)
+  .use(enforceStaffStoreAccess)
   .use(enforceQaProviderBoundary)

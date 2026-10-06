@@ -1,8 +1,14 @@
 "use client"
 
+import { InventoryFilters } from "@/components/inventory/inventory-filters"
+import { InventorySummary } from "@/components/inventory/inventory-summary"
+import { InventoryStoresSheet } from "@/components/sheets/inventory-stores-sheet"
+import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
+import { groupInventoryStores } from "@/lib/inventory-store-totals"
+import { filterInventory, summarizeInventory } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
 import { useSuspenseQuery } from "@tanstack/react-query"
@@ -11,9 +17,12 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { useMemo } from "react"
-import { inventoryColumns, inventorySortFields } from "./columns"
-import { InventoryOperations } from "./operations"
+import { useCallback, useDeferredValue, useMemo } from "react"
+import {
+  type InventoryBalance,
+  createInventoryColumns,
+  inventorySortFields,
+} from "./columns"
 import { InventoryTableView } from "./table-view"
 
 const SORT_COLUMN_IDS = {
@@ -29,11 +38,27 @@ export function InventoryDataTable({
   storeId,
   initialSettings,
 }: {
-  storeId: string
+  storeId?: string
   initialSettings?: Partial<TableSettings>
 }) {
+  const { storesDetail, setParams } = useInventoryParams()
+  const setStoreDetail = useCallback(
+    (row: InventoryBalance) => {
+      void setParams({ inventoryStores: row.balanceSourceId })
+    },
+    [setParams],
+  )
   const trpc = useTRPC()
-  const { query } = useInventoryParams()
+  const { open } = useCatalogDetailParams()
+  const columns = useMemo(
+    () =>
+      createInventoryColumns((id) => {
+        void open(id)
+      }, setStoreDetail),
+    [open, setStoreDetail],
+  )
+  const { query, stockFilter } = useInventoryParams()
+  const deferredQuery = useDeferredValue(query)
   const { sorting: urlSorting } = useSortParams({ fields: inventorySortFields })
   const sorting = useMemo(
     () => urlSorting.map(({ id, desc }) => ({ id: SORT_COLUMN_IDS[id], desc })),
@@ -45,17 +70,19 @@ export function InventoryDataTable({
       { retry: false },
     ),
   )
-  const rows = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    if (!normalized) return balances.rows
-    return balances.rows.filter((row) =>
-      [row.productName, row.variantName, row.inventoryUnitName, row.custodyType]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized),
-    )
-  }, [balances.rows, query])
-  const columnIds = useMemo(() => getColumnIds(inventoryColumns), [])
+  const scopedRows = useMemo(
+    () => (storeId ? balances.rows : groupInventoryStores(balances.rows)),
+    [balances.rows, storeId],
+  )
+  const summary = useMemo(
+    () => summarizeInventory(balances.rows),
+    [balances.rows],
+  )
+  const rows = useMemo(
+    () => filterInventory(scopedRows, deferredQuery, stockFilter),
+    [scopedRows, deferredQuery, stockFilter],
+  )
+  const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
     tableId: "inventory",
     initialSettings,
@@ -64,7 +91,7 @@ export function InventoryDataTable({
   })
   const table = useReactTable({
     data: rows,
-    columns: inventoryColumns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.balanceSourceId,
@@ -83,13 +110,26 @@ export function InventoryDataTable({
 
   return (
     <div className="grid gap-6">
+      <InventorySummary summary={summary} />
+      {!storeId ? (
+        <p className="text-sm text-muted-foreground">
+          Combined by product, variant and unit. Open Stores for individual
+          balances. Stock in transit is separate and unavailable to sell.
+        </p>
+      ) : null}
+      <InventoryStoresSheet
+        record={
+          scopedRows.find((row) => row.balanceSourceId === storesDetail) ?? null
+        }
+        onClose={() => void setParams({ inventoryStores: null })}
+      />
+      <InventoryFilters />
       <InventoryTableView
         table={table}
-        filtered={Boolean(query.trim())}
+        filtered={Boolean(query.trim()) || stockFilter !== "all"}
         persistenceError={tableSettings.persistenceError}
         retryPersistence={tableSettings.retryPersistence}
       />
-      <InventoryOperations storeId={storeId} />
     </div>
   )
 }

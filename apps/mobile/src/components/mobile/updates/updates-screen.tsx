@@ -1,3 +1,9 @@
+import {
+  checkNativeBuild,
+  installedBuild,
+  useAppUpdate,
+  withAppUpdateLock,
+} from "@/lib/app-update-client"
 import { ClassicUpdatesScreen } from "@/components/mobile/appearances/classic/updates-screen"
 import { MarketDayUpdatesScreen } from "@/components/mobile/appearances/market-day/updates-screen"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
@@ -20,6 +26,7 @@ function getErrorMessage(error: unknown) {
 }
 export default function UpdatesScreen() {
   const router = useRouter()
+  const nativeUpdate = useAppUpdate()
   const Presentation =
     useMobileDesign("updates") === "market-day"
       ? MarketDayUpdatesScreen
@@ -46,7 +53,7 @@ export default function UpdatesScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const status = useMemo(() => {
-    if (!Updates.isEnabled) return "Updates disabled"
+    if (!Updates.isEnabled && !installedBuild()) return "Updates disabled"
     if (isRestarting || action === "restarting") return "Restarting"
     if (isDownloading || action === "downloading") return "Downloading"
     if (isChecking || action === "checking") return "Checking"
@@ -78,81 +85,110 @@ export default function UpdatesScreen() {
   ])
 
   const canCheck =
-    Updates.isEnabled &&
+    (Updates.isEnabled || Boolean(installedBuild())) &&
+    !nativeUpdate.busy &&
     action === null &&
     !isChecking &&
     !isDownloading &&
     !isRestarting
-  const canDownload = canCheck && isUpdateAvailable && !isUpdatePending
-  const canRestart = canCheck && isUpdatePending
+  const canDownload =
+    canCheck && !nativeUpdate.visible && isUpdateAvailable && !isUpdatePending
+  const canRestart = canCheck && !nativeUpdate.visible && isUpdatePending
 
-  const checkForUpdate = useCallback(async () => {
-    if (!canCheck || busyRef.current) return
-    busyRef.current = true
-    setAction("checking")
-    setErrorMessage(null)
-    setMessage("Checking the EAS Update channel for this build.")
+  const checkForUpdate = useCallback(
+    async () =>
+      withAppUpdateLock(async () => {
+        if (!canCheck || busyRef.current) return
+        busyRef.current = true
+        setAction("checking")
+        setErrorMessage(null)
+        setMessage("Checking for a newer app build and compatible updates.")
 
-    try {
-      const result = await Updates.checkForUpdateAsync()
-      if (result.isAvailable) {
-        setMessage("A new update is available. Download it when you are ready.")
-      } else if (result.isRollBackToEmbedded) {
-        setMessage("A rollback to the embedded build is available.")
-      } else {
-        setMessage(
-          `No update is available for this runtime. Reason: ${result.reason}.`,
-        )
-      }
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error))
-      setMessage(
-        "The update check could not be completed. Reconnect and try again.",
-      )
-    } finally {
-      busyRef.current = false
-      setAction(null)
-    }
-  }, [canCheck])
-  const downloadUpdate = useCallback(async () => {
-    if (!canDownload || busyRef.current) return
-    busyRef.current = true
-    setAction("downloading")
-    setErrorMessage(null)
-    setMessage("Downloading the available update.")
+        try {
+          if (await checkNativeBuild(true)) {
+            setMessage("A newer app build is available.")
+            return
+          }
+          if (!Updates.isEnabled) {
+            setMessage("No newer app build is available.")
+            return
+          }
+          const result = await Updates.checkForUpdateAsync()
+          if (result.isAvailable) {
+            setMessage(
+              "A new update is available. Download it when you are ready.",
+            )
+          } else if (result.isRollBackToEmbedded) {
+            setMessage("A rollback to the embedded build is available.")
+          } else {
+            setMessage(
+              `No update is available for this runtime. Reason: ${result.reason}.`,
+            )
+          }
+        } catch (error) {
+          setErrorMessage(getErrorMessage(error))
+          setMessage(
+            "The update check could not be completed. Reconnect and try again.",
+          )
+        } finally {
+          busyRef.current = false
+          setAction(null)
+        }
+      }),
+    [canCheck],
+  )
+  const downloadUpdate = useCallback(
+    async () =>
+      withAppUpdateLock(async () => {
+        if (!canDownload || busyRef.current) return
+        busyRef.current = true
+        setAction("downloading")
+        setErrorMessage(null)
+        setMessage("Downloading the available update.")
 
-    try {
-      const result = await Updates.fetchUpdateAsync()
-      if (result.isNew || result.isRollBackToEmbedded) {
-        setMessage("Update downloaded. Restart the app to apply it.")
-      } else {
-        setMessage("There was no newer update to download.")
-      }
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error))
-      setMessage("The update could not be downloaded.")
-    } finally {
-      busyRef.current = false
-      setAction(null)
-    }
-  }, [canDownload])
-  const restartIntoUpdate = useCallback(async () => {
-    if (!canRestart || busyRef.current) return
-    busyRef.current = true
-    setAction("restarting")
-    setErrorMessage(null)
-    setMessage("Restarting into the downloaded update.")
+        try {
+          if (await checkNativeBuild(true)) return
+          const result = await Updates.fetchUpdateAsync()
+          if (result.isNew || result.isRollBackToEmbedded) {
+            setMessage("Update downloaded. Restart the app to apply it.")
+          } else {
+            setMessage("There was no newer update to download.")
+          }
+        } catch (error) {
+          setErrorMessage(getErrorMessage(error))
+          setMessage("The update could not be downloaded.")
+        } finally {
+          busyRef.current = false
+          setAction(null)
+        }
+      }),
+    [canDownload],
+  )
+  const restartIntoUpdate = useCallback(
+    async () =>
+      withAppUpdateLock(async () => {
+        if (!canRestart || busyRef.current) return
+        busyRef.current = true
+        setAction("restarting")
+        setErrorMessage(null)
+        setMessage("Restarting into the downloaded update.")
 
-    try {
-      await Sentry.flush()
-      await Updates.reloadAsync()
-    } catch (error) {
-      busyRef.current = false
-      setAction(null)
-      setErrorMessage(getErrorMessage(error))
-      setMessage("The app could not restart into the update.")
-    }
-  }, [canRestart])
+        try {
+          if (await checkNativeBuild(true)) return
+          await Sentry.flush()
+          await Updates.reloadAsync()
+        } catch (error) {
+          busyRef.current = false
+          setAction(null)
+          setErrorMessage(getErrorMessage(error))
+          setMessage("The app could not restart into the update.")
+        } finally {
+          busyRef.current = false
+          setAction(null)
+        }
+      }),
+    [canRestart],
+  )
   const checking = isChecking || action === "checking"
   const downloading = isDownloading || action === "downloading"
   const restarting = isRestarting || action === "restarting"
@@ -160,13 +196,13 @@ export default function UpdatesScreen() {
     <Presentation
       status={status}
       message={
-        Updates.isEnabled
+        Updates.isEnabled || Boolean(installedBuild())
           ? message
           : "Updates are unavailable in this build. Use an installed preview or release build."
       }
       errorMessage={errorMessage}
       latestError={(checkError ?? downloadError)?.message ?? null}
-      enabled={Updates.isEnabled}
+      enabled={Updates.isEnabled || Boolean(installedBuild())}
       pending={isUpdatePending}
       checking={checking}
       downloading={downloading}

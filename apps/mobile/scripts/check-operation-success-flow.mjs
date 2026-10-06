@@ -41,8 +41,8 @@ const checks = [
     file: "components/mobile/operation-success-screen.tsx",
     markers: [
       "Order created",
-      "Product created",
-      "Service created",
+      "Product added",
+      "Service added",
       "Order queued",
       "SuccessDetailRow",
       'accessibilityLabel="Go to home"',

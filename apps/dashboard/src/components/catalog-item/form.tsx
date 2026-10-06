@@ -41,6 +41,7 @@ import { CatalogOptionsEditor } from "./catalog-options-editor"
 import { CatalogSellingUnitsEditor } from "./catalog-selling-units-editor"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { StoreSelector } from "@/components/stores/store-selector"
 
 import { ConfirmDraftModal } from "@/components/modals/confirm-draft-modal"
 import { createCatalogFixture } from "@/components/qa/fixture-recipes"
@@ -144,8 +145,9 @@ export function CatalogItemForm({
   currencyCode,
   footerHost,
   onCreated,
-  storeId,
+  storeId: initialStoreId,
 }: CatalogItemFormProps) {
+  const [storeId, setStockStoreId] = useState(initialStoreId)
   const router = useRouter()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -606,6 +608,7 @@ export function CatalogItemForm({
       const invalidPriceCombination = activeCombinations.find((combination) => {
         const draft = variantDraft(combination.key)
         if (form.kind === "service" && draft.quoteRequired) return false
+        if (form.kind === "product" && draft.orderTotal) return false
         const override = draft.price.trim()
         return override ? parsePrice(override) === null : false
       })
@@ -670,7 +673,10 @@ export function CatalogItemForm({
       const invalidVariantUnitPrice =
         form.kind === "product"
           ? activeCombinations
-              .filter((combination) => variantDraft(combination.key).enabled)
+              .filter((combination) => {
+                const draft = variantDraft(combination.key)
+                return draft.enabled && !draft.orderTotal
+              })
               .flatMap((combination) =>
                 additionalUnits.map((unit) => ({
                   combination,
@@ -774,24 +780,32 @@ export function CatalogItemForm({
                     barcode:
                       (showAdvanced ? draft.barcode : barcode).trim() ||
                       undefined,
-                    fixedPriceMinor: variantPriceMinor,
+                    fixedPriceMinor: draft.orderTotal
+                      ? undefined
+                      : variantPriceMinor,
                     inventoryUnitKey: "canonical",
-                    pricingPolicy: "fixed" as const,
+                    pricingPolicy: draft.orderTotal
+                      ? ("order_total" as const)
+                      : ("fixed" as const),
                     sku: (showAdvanced ? draft.sku : sku).trim() || undefined,
                   },
                   ...additionalUnits.map((unit, unitIndex) => ({
                     ...commonOffering,
                     barcode: undefined,
-                    fixedPriceMinor: draft.unitPrices[unit.id]?.trim()
-                      ? (parsePrice(draft.unitPrices[unit.id] ?? "") ??
-                        variantPriceMinor)
-                      : unit.price.trim()
-                        ? (parsePrice(unit.price) ?? variantPriceMinor)
-                        : undefined,
+                    fixedPriceMinor: draft.orderTotal
+                      ? undefined
+                      : draft.unitPrices[unit.id]?.trim()
+                        ? (parsePrice(draft.unitPrices[unit.id] ?? "") ??
+                          variantPriceMinor)
+                        : unit.price.trim()
+                          ? (parsePrice(unit.price) ?? variantPriceMinor)
+                          : undefined,
                     inventoryUnitKey: unitKey(unitIndex),
                     key: `offering-${variantIndex + 1}-${unitIndex + 2}`,
                     name: `${variant.name} · ${unit.name.trim()}`,
-                    pricingPolicy: "fixed" as const,
+                    pricingPolicy: draft.orderTotal
+                      ? ("order_total" as const)
+                      : ("fixed" as const),
                     sku: undefined,
                   })),
                 ],
@@ -1336,6 +1350,34 @@ export function CatalogItemForm({
                   description="Enter stock you actually have, counted in the main unit. Blank means no opening stock is declared."
                   onBack={editor.back}
                 >
+                  <Field htmlFor="catalog-stock-store" label="Store">
+                    <StoreSelector
+                      value={
+                        stores.find((store) => store.id === storeId) ?? null
+                      }
+                      disabled={
+                        suggestionsDisabled ||
+                        Boolean(createAdvancedMutation.variables) ||
+                        Boolean(createMutation.variables)
+                      }
+                      onChange={(store) => {
+                        setStockStoreId(store.id)
+                        setVariantDrafts((current) =>
+                          Object.fromEntries(
+                            Object.entries(current).map(([key, draft]) => [
+                              key,
+                              {
+                                ...draft,
+                                storeIds: Array.from(
+                                  new Set([...draft.storeIds, store.id]),
+                                ),
+                              },
+                            ]),
+                          ),
+                        )
+                      }}
+                    />
+                  </Field>
                   <Field
                     htmlFor="catalog-opening-stock"
                     label={`Opening stock in ${form.unitName || "main units"} (optional)`}
@@ -1582,6 +1624,39 @@ export function CatalogItemForm({
                 </section>
               ) : null}
             </CatalogDetailEditor>
+            {form.kind === "product" && editor.active === "options" ? (
+              <div className="grid gap-2">
+                <p className="text-sm font-medium">Stock store</p>
+                <StoreSelector
+                  label="Stock store"
+                  value={stores.find((store) => store.id === storeId) ?? null}
+                  disabled={
+                    suggestionsDisabled ||
+                    Boolean(createAdvancedMutation.variables)
+                  }
+                  onChange={(store) => {
+                    setStockStoreId(store.id)
+                    setVariantDrafts((current) =>
+                      Object.fromEntries(
+                        Object.entries(current).map(([key, draft]) => [
+                          key,
+                          {
+                            ...draft,
+                            storeIds: Array.from(
+                              new Set([...draft.storeIds, store.id]),
+                            ),
+                          },
+                        ]),
+                      ),
+                    )
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Opening quantities below belong to this store. Add stock at
+                  other stores from Inventory after saving.
+                </p>
+              </div>
+            ) : null}
             <CatalogOptionsEditor
               active={editor.active}
               additionalUnits={additionalUnits}

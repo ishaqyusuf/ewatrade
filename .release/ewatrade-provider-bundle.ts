@@ -1,42 +1,49 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { lstatSync, readFileSync } from "node:fs"
 import { relative, resolve } from "node:path"
+import type { ExpoNativeEnvironmentReceipt } from "../scripts/release-expo-environment"
+import type { NativeBuildConfiguration } from "../scripts/release-mobile-build-policy"
+import { assertNativeBuildEvidence } from "../scripts/release-mobile-build-preflight"
+import type { NativeEnvironmentState } from "../scripts/release-mobile-environment"
+import { assertMobileEnvironmentReceipt } from "../scripts/release-mobile-preflight"
+import { MOBILE_TARGET } from "../scripts/release-mobile-target"
+export { MOBILE_PROJECT, MOBILE_TARGET } from "../scripts/release-mobile-target"
+import { toolkitExpoFingerprint } from "../scripts/release-mobile-fingerprint"
+import { EWATRADE_TRIGGER_TARGETS } from "../scripts/release-trigger-target"
 import type {
   ConsumerProviderBindings,
   ConsumerReleaseContext,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/consumer"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/consumer"
 import type {
   ProviderReleaseMetadata,
   ReleaseFingerprint,
   ReleaseReceipt,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/evidence"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/evidence"
 import {
   type ExpoBuildRecord,
   type ExpoChannelRecord,
-  type ExpoMobileConfig,
   type ExpoPlatform,
   type ExpoUpdateRecord,
   decideExpoRelease,
   generateExpoCurrentState,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/expo"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/expo"
 import {
   type JobsDeploymentRecord,
   type JobsPreviewWaiverRecord,
   type JobsTargetConfig,
   verifyJobsDeployments,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/jobs"
-import type { ProviderLiveStateMetadata } from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/live-state"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/jobs"
+import type { ProviderLiveStateMetadata } from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/live-state"
 import type {
   ReleaseManifest,
   ReleasePlan,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/plan"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/plan"
 import {
   type VercelDeploymentMetadata,
   type VercelDomainAssignment,
-  type VercelPromotionGate,
   type VercelWebTarget,
   verifyVercelWebDeployments,
-} from "./toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d/src/release/vercel"
+} from "./toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7/src/release/vercel"
 
 const MAX_EVIDENCE_BYTES = 1024 * 1024
 const MAX_EVIDENCE_AGE_MS = 5 * 60 * 1000
@@ -45,6 +52,12 @@ type SignedEnvelope = {
   version: 1
   payload: string
   signature: string
+}
+
+/** Provider version fields are kept outside the immutable toolkit record. */
+export type EwaTradeExpoBuildRecord = ExpoBuildRecord & {
+  appVersion?: string | null
+  appBuildVersion?: string | null
 }
 
 export type EwaTradeProviderBundle = {
@@ -57,19 +70,26 @@ export type EwaTradeProviderBundle = {
   evidence: ProviderReleaseMetadata[]
   liveState: ProviderLiveStateMetadata[]
   fingerprints: Record<string, ReleaseFingerprint | undefined>
+  /** Committed release-input hashes computed by the trusted collector. */
+  sourceFingerprints?: Record<string, string>
+  /** Required by the protected verifier; older envelopes fail closed there. */
+  toolkitRevision?: string
+  policyFingerprint?: string
   vercel: {
     deploymentIds: Record<string, string | null | undefined>
     deployments: VercelDeploymentMetadata[]
     domains: Array<{ domain: string; assignment: VercelDomainAssignment }>
-    promotionGates: Array<{ projectId: string; gate: VercelPromotionGate }>
   }
   expo: {
+    nativeEnvironment?: NativeEnvironmentState
+    nativeEnvironmentParity?: ExpoNativeEnvironmentReceipt
+    nativeConfiguration?: NativeBuildConfiguration
     fingerprints: Record<ExpoPlatform, string | null>
     runtimeVersions: Record<ExpoPlatform, string | null>
     baselineBuildIds: Partial<Record<ExpoPlatform, string | null>>
     newBuildIds: Partial<Record<ExpoPlatform, string | null>>
     updateGroupIds: Partial<Record<ExpoPlatform, string | null>>
-    builds: ExpoBuildRecord[]
+    builds: EwaTradeExpoBuildRecord[]
     updates: ExpoUpdateRecord[]
     channels: ExpoChannelRecord[]
   }
@@ -84,53 +104,51 @@ export type EwaTradeProviderBundle = {
 
 export const WEB_TARGETS: VercelWebTarget[] = [
   {
+    targetId: "dashboard-web",
+    projectId: "prj_KPSnNRftlTWRgW67OsnH2vUHzLYO",
+    teamId: "team_BV5rgKHJH4fMyFL1YfscZIZK",
+    productionDomain: "dashboard.ewatrade.com",
+  },
+  {
     targetId: "api-web",
     projectId: "prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh",
     teamId: "team_BV5rgKHJH4fMyFL1YfscZIZK",
     productionDomain: "api.ewatrade.com",
-    dbGateCheckName: "release-assurance-production",
   },
   {
     targetId: "marketing-web",
     projectId: "prj_SchYrvtj15KQRzTxQcZwdIvNwYCJ",
     teamId: "team_BV5rgKHJH4fMyFL1YfscZIZK",
     productionDomain: "www.ewatrade.com",
-    dbGateCheckName: "release-assurance-production",
   },
 ]
-
-export const MOBILE_TARGET: ExpoMobileConfig = {
-  targetId: "mobile",
-  projectId: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
-  appPath: "apps/mobile",
-  platforms: ["android", "ios"],
-  preview: { profile: "preview", channel: "preview", branch: "preview" },
-  production: {
-    profile: "production",
-    channel: "production",
-    branch: "production",
-  },
-}
 
 export const JOBS_TARGET: JobsTargetConfig = {
   targetId: "jobs",
   provider: "trigger",
-  projectRef: "ewatrade-jobs",
+  projectRef: EWATRADE_TRIGGER_TARGETS.production.projectRef,
   preview: {
-    capability: "unsupported",
-    reason:
-      "Trigger Preview branch ownership and protected provider lookup are not yet verified for Ewa Trade.",
+    capability: "isolated",
+    projectRef: EWATRADE_TRIGGER_TARGETS.preview.projectRef,
+    providerEnvironment: EWATRADE_TRIGGER_TARGETS.preview.providerEnvironment,
+    branch: null,
   },
   production: {
     capability: "isolated",
-    providerEnvironment: "prod",
+    projectRef: EWATRADE_TRIGGER_TARGETS.production.projectRef,
+    providerEnvironment:
+      EWATRADE_TRIGGER_TARGETS.production.providerEnvironment,
     branch: null,
   },
 }
 
 function evidenceText(context: ConsumerReleaseContext) {
   const inline = process.env.EWATRADE_RELEASE_EVIDENCE_ENVELOPE?.trim()
-  if (inline) return inline
+  if (inline) {
+    if (Buffer.byteLength(inline) > MAX_EVIDENCE_BYTES)
+      throw new Error("Signed provider evidence is too large.")
+    return inline
+  }
   const configured =
     process.env.EWATRADE_RELEASE_EVIDENCE_FILE?.trim() ||
     `.release/runtime/${context.environment}.json`
@@ -252,7 +270,7 @@ export function createEwaTradeProviderBindings(
       _releaseContext: ConsumerReleaseContext,
       manifest: ReleaseManifest,
       plan: ReleasePlan,
-      evidence,
+      _evidence,
     ) => {
       const web = await verifyVercelWebDeployments({
         manifest,
@@ -264,23 +282,18 @@ export function createEwaTradeProviderBindings(
         lookupDomain: async (domain) =>
           bundle.vercel.domains.find((item) => item.domain === domain)
             ?.assignment ?? null,
-        lookupPromotionGate: async (projectId) =>
-          bundle.vercel.promotionGates.find(
-            (item) => item.projectId === projectId,
-          )?.gate ?? null,
-        databaseEvidence: evidence,
-        currentSchemaFingerprints: {
-          database:
-            bundle.fingerprints.database?.kind === "schema"
-              ? bundle.fingerprints.database.value
-              : undefined,
-        },
+        // The application release scope has no database prerequisite. This
+        // callback remains for pinned toolkit compatibility and is never used
+        // by the owned web targets.
+        lookupPromotionGate: async () => null,
       })
       const mobileAction = plan.actions.some(
         (item) => item.targetId === "mobile",
       )
       const mobile = []
       if (mobileAction) {
+        assertMobileEnvironmentReceipt(context, bundle)
+        assertNativeBuildEvidence(context, bundle, manifest)
         const current = await generateExpoCurrentState(
           MOBILE_TARGET,
           plan.environment,
@@ -293,7 +306,10 @@ export function createEwaTradeProviderBindings(
               | ExpoPlatform
               | undefined
             return {
-              hash: platform ? bundle.expo.fingerprints[platform] : null,
+              hash:
+                platform && bundle.expo.fingerprints[platform]
+                  ? toolkitExpoFingerprint(bundle.expo.fingerprints[platform])
+                  : null,
             }
           },
           async (platform) => bundle.expo.runtimeVersions[platform],
@@ -307,8 +323,15 @@ export function createEwaTradeProviderBindings(
             baselineBuildIds: bundle.expo.baselineBuildIds,
             newBuildIds: bundle.expo.newBuildIds,
             updateGroupIds: bundle.expo.updateGroupIds,
-            lookupBuild: async (id) =>
-              bundle.expo.builds.find((item) => item.id === id) ?? null,
+            lookupBuild: async (id) => {
+              const build = bundle.expo.builds.find((item) => item.id === id)
+              return build
+                ? {
+                    ...build,
+                    fingerprint: toolkitExpoFingerprint(build.fingerprint),
+                  }
+                : null
+            },
             lookupUpdate: async (id) =>
               bundle.expo.updates.find((item) => item.groupId === id) ?? null,
             lookupChannel: async (channel) =>
@@ -321,6 +344,7 @@ export function createEwaTradeProviderBindings(
         manifest,
         plan,
         configs: [JOBS_TARGET],
+        verifyUnchanged: true,
         deploymentIds: bundle.jobs.deploymentIds,
         currentConfigurationFingerprints: bundle.jobs.configurationFingerprints,
         lookupDeployment: async (id) =>

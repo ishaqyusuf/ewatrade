@@ -30,6 +30,7 @@ type WorkflowModalScreenProps = {
     | "/dashboard"
     | "/finance-modal"
     | "/finance-accounts-modal"
+    | "/finance-bank-modal"
     | "/finance-reports-modal"
     | "/finance-counts-modal"
     | "/sales-rep-home"

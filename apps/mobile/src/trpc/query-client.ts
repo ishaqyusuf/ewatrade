@@ -51,7 +51,20 @@ export function makeQueryClient() {
       },
     }),
     queryCache: new QueryCache({
-      onError: (error) => captureMobileError(error, "mobile.query"),
+      onError: (error, query) => {
+        captureMobileError(error, "mobile.query")
+        const data =
+          error && typeof error === "object" && "data" in error
+            ? error.data
+            : null
+        if (
+          data &&
+          typeof data === "object" &&
+          "code" in data &&
+          ["FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"].includes(String(data.code))
+        )
+          query.setState({ data: undefined, status: "error" })
+      },
     }),
   })
 }

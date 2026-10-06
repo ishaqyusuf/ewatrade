@@ -18,6 +18,12 @@ import {
 } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
+import { inventoryOperationRecovery } from "@/lib/inventory-operation-recovery"
+import {
+  inventoryQuantityTotal,
+  inventoryQuantityUnits,
+} from "@/lib/inventory-quantity"
+import { initialInventorySource } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 
@@ -33,7 +39,10 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { useRef, useState } from "react"
+import { InventoryQuantityInput } from "./inventory-quantity-input"
+import { InventoryReceiptSource } from "./inventory-receipt-source"
 import { StockCategoriesInput } from "./stock-categories-input"
+import { StoreSelector } from "@/components/stores/store-selector"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
@@ -41,14 +50,17 @@ const field =
   "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 
 export function InventoryOperationForm({
-  store,
+  store: initialStore,
 }: {
   store: StoreSummary
 }) {
+  const [store, setStore] = useState(initialStore)
+  const [preparingStock, setPreparingStock] = useState(false)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const { operation, setParams } = useInventoryParams()
-  const { data: balances } = useSuspenseQuery(
+  const { operation, productId, balanceId, preset, setParams } =
+    useInventoryParams()
+  const { data: balances, isFetching: refreshingBalances } = useSuspenseQuery(
     trpc.inventory.balanceReport.queryOptions(
       { includeCompatibleTotals: true, storeId: store.id },
       { retry: false },
@@ -57,12 +69,19 @@ export function InventoryOperationForm({
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
   const assigneesQuery = useQuery(trpc.services.assignees.queryOptions())
   const rows = balances.rows
-  const [sourceId, setSourceId] = useState("")
+  const [sourceId, setSourceId] = useState(() =>
+    initialInventorySource(
+      productId ? rows.filter((row) => row.productId === productId) : rows,
+      balanceId,
+      productId,
+    ),
+  )
+  const [enteredUnitId, setEnteredUnitId] = useState("")
   const [targetId, setTargetId] = useState("")
   const [quantity, setQuantity] = useState("")
   const [targetQuantity, setTargetQuantity] = useState("")
   const [direction, setDirection] = useState<"increase" | "decrease">(
-    "increase",
+    operation === "adjustment" && preset === "loss" ? "decrease" : "increase",
   )
   const [reason, setReason] = useState("")
   const [categories, setCategories] = useState<StockCategoryDraft[]>([])
@@ -80,6 +99,7 @@ export function InventoryOperationForm({
   const qaSnapshot = useRef<{
     categories: StockCategoryDraft[]
     categoryInput: string
+    enteredUnitId: string
     quantity: string
     reason: string
     sourceId: string
@@ -89,10 +109,38 @@ export function InventoryOperationForm({
     targetStoreId: string
   } | null>(null)
   const selected = rows.find((row) => row.balanceSourceId === sourceId)
+  const canConvertQuantity = usesCategories || operation === "count"
+  const configurations = useQuery(
+    trpc.catalog.listUnitConfigurations.queryOptions(
+      { productId: selected?.productId ?? "" },
+      { enabled: Boolean(selected) && canConvertQuantity, retry: false },
+    ),
+  )
+  const quantityUnits = inventoryQuantityUnits(
+    selected,
+    configurations.data?.find(
+      (configuration) => configuration.status === "current",
+    ),
+    canConvertQuantity,
+  )
+  const enteredUnit =
+    quantityUnits.find((unit) => unit.id === enteredUnitId) ?? quantityUnits[0]
+  function changeSource(id: string) {
+    setSourceId(id)
+    setEnteredUnitId("")
+    setTargetId("")
+    setTargetQuantity("")
+  }
   const target = rows.find((row) => row.balanceSourceId === targetId)
 
   const complete = async () => {
     await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: trpc.catalog.listItems.queryKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.catalog.listItemsPage.queryKey(),
+      }),
       queryClient.invalidateQueries({
         queryKey: trpc.inventory.balanceReport.queryKey(),
       }),
@@ -111,16 +159,13 @@ export function InventoryOperationForm({
   const fail = (failure: { message: string }) => setError(failure.message)
   const operationMutation = useMutation(
     trpc.inventory.postBalanceOperation.mutationOptions({
-      onError: (failure) => {
-        // Validation/permission failures never reached a stock commit; allow repair.
-        // Unknown outcomes keep the original identity and payload for safe retry.
-        if (
-          ["BAD_REQUEST", "FORBIDDEN", "NOT_FOUND"].includes(
-            failure.data?.code ?? "",
-          )
-        ) {
-          retainedOperation.current = null
+      onError: async (failure) => {
+        const recovery = inventoryOperationRecovery(failure.data)
+        if (recovery === "refresh") {
+          await refreshRejectedStock()
+          return
         }
+        if (recovery === "edit") retainedOperation.current = null
         fail(failure)
       },
       onSuccess: complete,
@@ -163,8 +208,37 @@ export function InventoryOperationForm({
     }),
   )
 
+  async function refreshRejectedStock() {
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries(
+          { queryKey: trpc.inventory.balanceReport.queryKey() },
+          { throwOnError: true },
+        ),
+        queryClient.invalidateQueries(
+          { queryKey: trpc.catalog.listUnitConfigurations.queryKey() },
+          { throwOnError: true },
+        ),
+      ])
+      retainedOperation.current = null
+      setError(
+        "This stock operation was not saved. Latest stock loaded; review your quantity and unit, then save again.",
+      )
+    } catch {
+      setError(
+        "Could not refresh stock. Your entries are preserved. Choose Refresh stock to try again.",
+      )
+    }
+  }
+
   function submit() {
     if (retainedOperation.current) {
+      if (
+        inventoryOperationRecovery(operationMutation.error?.data) === "refresh"
+      ) {
+        void refreshRejectedStock()
+        return
+      }
       operationMutation.mutate(retainedOperation.current)
       return
     }
@@ -178,6 +252,23 @@ export function InventoryOperationForm({
         usesCategories
           ? "Choose a balance, enter a quantity, and add categories."
           : "Choose a balance, enter a quantity, and add a reason.",
+      )
+      return
+    }
+    if (!enteredUnit) {
+      setError("Choose a quantity unit.")
+      return
+    }
+    try {
+      inventoryQuantityTotal(
+        quantity,
+        enteredUnit,
+        selected,
+        operation === "count",
+      )
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : "Enter a valid quantity.",
       )
       return
     }
@@ -248,7 +339,7 @@ export function InventoryOperationForm({
             balanceSourceId: selected.balanceSourceId,
             entries: [
               {
-                enteredInventoryUnitId: selected.inventoryUnitId,
+                enteredInventoryUnitId: enteredUnit.id,
                 enteredQuantity: quantity.trim(),
               },
             ],
@@ -273,7 +364,7 @@ export function InventoryOperationForm({
       balanceSourceId: selected.balanceSourceId,
       clientOperationId: crypto.randomUUID(),
       direction: operation === "receipt" ? "increase" : direction,
-      enteredInventoryUnitId: selected.inventoryUnitId,
+      enteredInventoryUnitId: enteredUnit.id,
       enteredQuantity: quantity.trim(),
       expectedBalanceRevision: selected.revision,
       expectedConfigurationVersionId: selected.configurationVersionId,
@@ -292,6 +383,8 @@ export function InventoryOperationForm({
   }
 
   const pending =
+    preparingStock ||
+    refreshingBalances ||
     operationMutation.isPending ||
     transformMutation.isPending ||
     countMutation.isPending ||
@@ -364,6 +457,7 @@ export function InventoryOperationForm({
             qaSnapshot.current = {
               categories: [...categories],
               categoryInput,
+              enteredUnitId,
               quantity,
               reason,
               sourceId,
@@ -373,7 +467,7 @@ export function InventoryOperationForm({
               targetStoreId,
             }
             const fixture = createInventoryFixture(context)
-            setSourceId(firstSource.balanceSourceId)
+            changeSource(firstSource.balanceSourceId)
             setQuantity(conversion?.sourceQuantity ?? fixture.quantity)
             setReason(fixture.reason)
             setCategories([{ name: fixture.reason }])
@@ -392,6 +486,7 @@ export function InventoryOperationForm({
             setCategories(snapshot.categories)
             setCategoryInput(snapshot.categoryInput)
             setSourceId(snapshot.sourceId)
+            setEnteredUnitId(snapshot.enteredUnitId)
             setTargetCustodyReferenceId(snapshot.targetCustodyReferenceId)
             setTargetId(snapshot.targetId)
             setTargetQuantity(snapshot.targetQuantity)
@@ -399,22 +494,31 @@ export function InventoryOperationForm({
             qaSnapshot.current = null
           }}
         />
-        <ControlField label={<>Balance source</>}>
-          <SelectControl
-            value={sourceId}
-            onValueChange={(value) => setSourceId(value)}
-            options={[
-              { value: "", label: <>Choose balance</> },
-              ...(rows.map((row) => ({
-                value: row.balanceSourceId,
-                label: (
-                  <>
-                    {row.productName} · {row.variantName} ·{" "}
-                    {row.inventoryUnitName} ({row.onHandQuantity})
-                  </>
-                ),
-              })) ?? []),
-            ]}
+        <ControlField label={operation === "transfer" ? "From store" : "Store"}>
+          <StoreSelector
+            value={store}
+            label={operation === "transfer" ? "From store" : "Store"}
+            disabled={pending || Boolean(retainedOperation.current)}
+            onChange={(next) => {
+              setStore(next)
+              changeSource("")
+              setTargetStoreId("")
+              setTargetCustodyReferenceId("")
+              setError(null)
+              qaSnapshot.current = null
+            }}
+          />
+        </ControlField>
+        <ControlField label={<>Stock to update</>}>
+          <InventoryReceiptSource
+            storeId={store.id}
+            productId={null}
+            rows={rows}
+            sourceId={sourceId}
+            onSourceChange={changeSource}
+            onPreparingChange={setPreparingStock}
+            disabled={pending || Boolean(retainedOperation.current)}
+            allowFirstReceipt={operation === "receipt"}
           />
         </ControlField>
         {operation === "adjustment" ? (
@@ -461,31 +565,37 @@ export function InventoryOperationForm({
           </>
         ) : null}
         {operation === "transfer" ? (
-          <ControlField label={<>Target Store</>}>
-            <SelectControl
-              value={targetStoreId}
-              onValueChange={(value) => setTargetStoreId(value)}
-              options={[
-                { value: "", label: <>Choose Store</> },
-                ...(storesQuery.data
-                  ?.filter((candidate) => candidate.id !== store.id)
-                  .map((candidate) => ({
-                    value: candidate.id,
-                    label: candidate.name,
-                  })) ?? []),
-              ]}
+          <ControlField label="To store">
+            <StoreSelector
+              label="To store"
+              value={
+                storesQuery.data?.find(
+                  (candidate) => candidate.id === targetStoreId,
+                ) ?? null
+              }
+              excludeId={store.id}
+              disabled={pending}
+              onChange={(next) => setTargetStoreId(next.id)}
             />
           </ControlField>
         ) : null}
-        <ControlField
+        <InventoryQuantityInput
           label={operation === "count" ? "Observed quantity" : "Quantity"}
-        >
-          <Input
-            inputMode="decimal"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
-          />
-        </ControlField>
+          quantity={quantity}
+          onQuantityChange={setQuantity}
+          unit={enteredUnit}
+          units={quantityUnits}
+          onUnitChange={setEnteredUnitId}
+          balance={selected}
+          allowZero={operation === "count"}
+          disabled={pending || Boolean(retainedOperation.current)}
+        />
+        {configurations.isError && canConvertQuantity ? (
+          <p className="text-xs text-muted-foreground">
+            Other units could not load. You can use the base unit or reopen this
+            form to try again.
+          </p>
+        ) : null}
         {operation === "transformation" ? (
           <>
             <ControlField label={<>Target packaged balance</>}>
@@ -498,7 +608,11 @@ export function InventoryOperationForm({
                     .filter(
                       (row) =>
                         row.balanceSourceId !== sourceId &&
-                        row.kind === "PACKAGED_STOCK",
+                        row.kind === "PACKAGED_STOCK" &&
+                        row.productId === selected?.productId &&
+                        row.variantId === selected?.variantId &&
+                        row.configurationVersionId ===
+                          selected?.configurationVersionId,
                     )
                     .map((row) => ({
                       value: row.balanceSourceId,
@@ -548,7 +662,10 @@ export function InventoryOperationForm({
           {pending
             ? "Posting…"
             : retainedOperation.current
-              ? "Retry same operation"
+              ? inventoryOperationRecovery(operationMutation.error?.data) ===
+                "refresh"
+                ? "Refresh stock"
+                : "Retry same operation"
               : "Review and confirm"}
         </SubmitButton>
       </FormActions>

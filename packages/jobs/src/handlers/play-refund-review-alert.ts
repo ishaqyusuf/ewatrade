@@ -4,6 +4,7 @@ import { getPlayRefundReviewQueue } from "@ewatrade/db/queries"
 import {
   type EmailMessage,
   isValidEmailSender,
+  renderPlayRefundReviewAlertTemplate,
   resendEmailTransport,
 } from "@ewatrade/email"
 
@@ -59,15 +60,11 @@ export async function runPlayRefundReviewAlert(
 
   const earliestDue = queue.cases[0]?.responseDueAt?.toISOString() ?? "unknown"
   const subject = `[EwaTrade] ${queue.total} unresolved Play refund review ${queue.total === 1 ? "case" : "cases"}`
-  const text = [
-    `Unresolved cases: ${queue.total}`,
-    `Overdue cases: ${queue.overdue}`,
-    `Earliest response deadline (UTC): ${earliestDue}`,
-    "Inspect the platform-admin refund-review queue and follow the reviewed operator procedure.",
-    "A CLAIMED or UNCERTAIN response must be reconciled with Google manually; do not submit it again.",
-    "This email contains no purchase token, order ID or customer information.",
-  ].join("\n")
-  const html = `<p>${text.replaceAll("\n", "<br>")}</p>`
+  const { html, text } = renderPlayRefundReviewAlertTemplate({
+    total: queue.total,
+    overdue: queue.overdue,
+    earliestDue,
+  })
   const hour = now.toISOString().slice(0, 13)
   const results = await Promise.allSettled(
     recipients.map((to) => {

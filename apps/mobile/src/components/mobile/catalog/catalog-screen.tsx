@@ -25,6 +25,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import {
@@ -33,6 +34,7 @@ import {
   shouldShowListSearch,
 } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
@@ -75,6 +77,7 @@ export function CatalogItemsContent({
     : ClassicCatalogFirstItemGate
   const Row = isMarketDay ? MarketDayCatalogRow : ClassicCatalogRow
   const Filter = isMarketDay ? MarketDayCatalogFilter : ClassicCatalogFilter
+  const canEdit = canEditMobileCatalog(useAuthContext().profile)
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { height } = useWindowDimensions()
@@ -137,13 +140,14 @@ export function CatalogItemsContent({
       ? Math.max(insets.bottom + 116, 152)
       : 24
   const openAdd = () => {
+    if (!canEdit) return
     if (isOffline) return
     Keyboard.dismiss()
     if (isMarketDay) addSheet.present()
     else onAddItem()
   }
   const chooseAdd = (kind: "product" | "service") => {
-    if (isOffline || pendingAdd.current) return
+    if (!canEdit || isOffline || pendingAdd.current) return
     pendingAdd.current = kind
     addSheet.dismiss()
   }
@@ -184,7 +188,7 @@ export function CatalogItemsContent({
           <View className="gap-5 pb-4">
             <Masthead
               firstItem={showFirstItemGate}
-              disabled={isOffline}
+              disabled={isOffline || !canEdit}
               onAdd={openAdd}
               onLayout={(event) =>
                 setMastheadHeight(event.nativeEvent.layout.height)
@@ -253,12 +257,12 @@ export function CatalogItemsContent({
         ListEmptyComponent={
           showFirstItemGate ? (
             <FirstItemGate
-              disabled={isOffline}
+              disabled={isOffline || !canEdit}
               onAddProduct={() => {
-                if (!isOffline) onAddProduct()
+                if (!isOffline && canEdit) onAddProduct()
               }}
               onAddService={() => {
-                if (!isOffline) onAddService()
+                if (!isOffline && canEdit) onAddService()
               }}
             />
           ) : !itemsQuery.isError ? (
@@ -347,17 +351,20 @@ export function CatalogItemsContent({
           value={query}
           variant={isMarketDay ? "market-day" : "default"}
         >
-          {isMarketDay ? (
-            <MarketDayCatalogAddButton disabled={isOffline} onPress={openAdd} />
+          {isMarketDay && canEdit ? (
+            <MarketDayCatalogAddButton
+              disabled={isOffline || !canEdit}
+              onPress={openAdd}
+            />
           ) : null}
         </BottomSearchFooter>
       ) : null}
-      {!isMarketDay && !showFirstItemGate ? (
+      {canEdit && !isMarketDay && !showFirstItemGate ? (
         <ListCreateFab
           accessibilityLabel="Add catalog item"
           bottomOffset={showBottomSearch ? footerHeight : 0}
           dockHidden={dockHidden}
-          disabled={isOffline}
+          disabled={isOffline || !canEdit}
           onPress={openAdd}
           sitsAboveDock={presentation === "tab"}
           testID="catalog-add-fab"
@@ -378,7 +385,7 @@ export function CatalogItemsContent({
                 Choose the kind of thing your Store sells.
               </Text>
               <MarketDayCatalogChoices
-                disabled={isOffline}
+                disabled={isOffline || !canEdit}
                 onAddProduct={() => chooseAdd("product")}
                 onAddService={() => chooseAdd("service")}
               />

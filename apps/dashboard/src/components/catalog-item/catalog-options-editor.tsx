@@ -16,7 +16,6 @@ import {
 } from "@ewatrade/ui"
 import type { buildCatalogVariantCombinations } from "@ewatrade/utils"
 import {
-  appendCatalogOptionValue,
   canAddCatalogOptionValue,
   findCatalogOptionSuggestion,
   getCatalogOptionSuggestions,
@@ -31,6 +30,8 @@ import type {
   AdvancedVariantDraft,
 } from "./catalog-form-types"
 import { CatalogGuidanceSuggestions } from "./catalog-guidance-suggestions"
+import { updateCatalogOptionValues } from "./catalog-option-values"
+import { CatalogOptionValuesCombobox } from "./catalog-option-values-combobox"
 
 function Field({
   children,
@@ -171,7 +172,6 @@ export function CatalogOptionsEditor({
                 formGuidance,
                 group.name,
                 {
-                  selectedValues: group.values.split(","),
                   limit: 12,
                 },
               )
@@ -217,53 +217,37 @@ export function CatalogOptionsEditor({
                     htmlFor={`catalog-option-values-${group.id}`}
                     label="Values"
                   >
-                    <TextInput
+                    <CatalogOptionValuesCombobox
                       id={`catalog-option-values-${group.id}`}
                       placeholder={
                         optionSuggestion?.valuePlaceholder ??
-                        "Enter values, separated by commas"
+                        "Select or add values"
                       }
                       value={group.values}
-                      onChange={(event) =>
+                      suggestions={valueSuggestions}
+                      disabled={suggestionsDisabled}
+                      canAdd={canAddCatalogOptionValue(
+                        normalizedOptionGroups.map((option) => ({
+                          values: option.values.map((value) => value.label),
+                        })),
+                        groupIndex,
+                      )}
+                      onChange={(values) =>
                         setOptionGroups((current) =>
-                          current.map((candidate) =>
+                          current.map((candidate, index) =>
                             candidate.id === group.id
                               ? {
                                   ...candidate,
-                                  values: event.target.value,
-                                }
-                              : candidate,
-                          ),
-                        )
-                      }
-                    />
-                    <CatalogGuidanceSuggestions
-                      label={`${group.name || "Option"} value suggestions`}
-                      values={valueSuggestions}
-                      disabled={
-                        suggestionsDisabled ||
-                        !canAddCatalogOptionValue(
-                          normalizedOptionGroups.map((option) => ({
-                            values: option.values.map((value) => value.label),
-                          })),
-                          groupIndex,
-                        )
-                      }
-                      onSelect={(value) => {
-                        setOptionGroups((current) =>
-                          current.map((candidate) =>
-                            candidate.id === group.id
-                              ? {
-                                  ...candidate,
-                                  values: appendCatalogOptionValue(
-                                    candidate.values,
-                                    value,
+                                  values: updateCatalogOptionValues(
+                                    current,
+                                    index,
+                                    values,
                                   ),
                                 }
                               : candidate,
                           ),
                         )
-                      }}
+                      }
                     />
                   </Field>
                   {optionGroups.length > 1 ? (
@@ -315,11 +299,13 @@ export function CatalogOptionsEditor({
                       summary={
                         !draft.enabled
                           ? "Disabled"
-                          : draft.quoteRequired && form.kind === "service"
-                            ? "Quote each job"
-                            : draft.price
-                              ? `${currencyCode} ${draft.price}`
-                              : "Price not set"
+                          : draft.orderTotal && form.kind === "product"
+                            ? "Enter price during order"
+                            : draft.quoteRequired && form.kind === "service"
+                              ? "Quote each job"
+                              : draft.price
+                                ? `${currencyCode} ${draft.price}`
+                                : "Price not set"
                       }
                       onClick={() => onOpen(`choice:${combination.key}`)}
                     />
@@ -381,7 +367,31 @@ export function CatalogOptionsEditor({
                       </ToggleGroupItem>
                     </ToggleGroup>
                   ) : null}
-                  <div hidden={form.kind === "service" && draft.quoteRequired}>
+                  {form.kind === "product" ? (
+                    <CheckboxField label="Enter price during order">
+                      <Checkbox
+                        checked={draft.orderTotal ?? false}
+                        onCheckedChange={(checked) =>
+                          updateVariantDraft(combination.key, {
+                            orderTotal: checked,
+                          })
+                        }
+                      />
+                    </CheckboxField>
+                  ) : null}
+                  {form.kind === "product" && draft.orderTotal ? (
+                    <p className="text-sm text-muted-foreground">
+                      The attendant enters the total for all selected items.
+                      This choice requires no saved price; its selling units use
+                      this mode.
+                    </p>
+                  ) : null}
+                  <div
+                    hidden={
+                      (form.kind === "service" && draft.quoteRequired) ||
+                      (form.kind === "product" && draft.orderTotal)
+                    }
+                  >
                     <Field
                       htmlFor={`catalog-variant-price-${combination.key}`}
                       label={form.kind === "product" ? "Price" : "Fixed price"}

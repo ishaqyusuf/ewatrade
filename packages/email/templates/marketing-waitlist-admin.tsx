@@ -16,7 +16,7 @@ export function MarketingWaitlistAdminEmail({
       eyebrow="Growth desk / Waitlist"
       intro={intro}
       preview={`Waitlist signup from ${input.fullName}`}
-      title="One more business is watching."
+      title="A new business joined the waitlist."
       note="No immediate action is required. Keep outreach useful, specific, and easy to opt out of."
     >
       <EmailStatus label="New lead" />
@@ -46,7 +46,7 @@ export function renderMarketingWaitlistAdminTemplate(
       ],
       intro,
       note: "No immediate action is required. Keep outreach useful, specific, and easy to opt out of.",
-      title: "One more business is watching.",
+      title: "A new business joined the waitlist.",
     }),
   }
 }

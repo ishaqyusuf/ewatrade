@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { getFinanceClosingCashEvidenceInTransaction } from "./closing-cash-evidence"
 import { resolveFinanceFiscalHistoryPeriod } from "./fiscal-history"
 import {
   FINANCE_FISCAL_MAX_ACCOUNTS,
@@ -219,6 +220,16 @@ export async function getFinanceYearEndPreview(
           "CONFLICT",
           "The complete year-end transfer exceeds the atomic batch limit.",
         )
+      const cashEvidence = await getFinanceClosingCashEvidenceInTransaction(
+        tx,
+        {
+          bookId: book.id,
+          through: period.fiscalEnd,
+          snapshotSequence: book.lastSequence,
+          accounts: rows,
+          now: new Date(),
+        },
+      )
       const journals = [...composition.journals]
       return {
         bookId: book.id,
@@ -238,6 +249,7 @@ export async function getFinanceYearEndPreview(
         ),
         trialBalance: report.trialBalance,
         balanceSheet: report.balanceSheet,
+        cashEvidence,
         sourceCoverage: "POSTED_FINANCE_ENTRIES" as const,
         completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
         coverageGaps: [...SOURCE_GAPS],

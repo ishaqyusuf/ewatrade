@@ -86,3 +86,58 @@ model RetailOpsStaffLifecycleEvent {
   @@index([actorUserId, happenedAt])
   @@index([type, happenedAt])
 }
+
+
+enum StaffAccessMode {
+  LEGACY
+  SCOPED
+}
+
+enum StoreStaffRole {
+  CASHIER
+  OPERATOR
+  MANAGER
+}
+
+enum StaffStoreAssignmentStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+model StaffStoreAssignment {
+  id String @id @default(cuid())
+  tenantId String
+  membershipId String
+  storeId String
+  role StoreStaffRole
+  status StaffStoreAssignmentStatus @default(ACTIVE)
+  revision Int @default(1)
+  updatedByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  store Store @relation(fields: [storeId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([membershipId, storeId])
+  @@index([tenantId, storeId, status])
+}
+
+// Append-only authority snapshots; updates/revocations retain the prior grants.
+model StaffAccessAuditEvent {
+  id String @id @default(cuid())
+  tenantId String
+  membershipId String
+  actorUserId String
+  operation String
+  revision Int
+  before Json?
+  after Json
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([membershipId, revision])
+  @@index([tenantId, createdAt])
+}

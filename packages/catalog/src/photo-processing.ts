@@ -50,13 +50,13 @@ export interface ProcessedCatalogPhoto {
 
 let active = 0
 
-function decodeHeic(bytes: Uint8Array, signal: AbortSignal) {
+function decodeHeic(bytes: Uint8Array, signal: AbortSignal, workerUrl?: URL) {
   return new Promise<{ bytes: Uint8Array; width: number; height: number }>(
     (resolve, reject) => {
       if (signal.aborted)
         return reject(new CatalogPhotoProcessingError("INVALID_PHOTO"))
       const worker = new Worker(
-        new URL("./photo-heic-worker.mjs", import.meta.url),
+        workerUrl ?? new URL("./photo-heic-worker.mjs", import.meta.url),
         process.versions.bun
           ? {}
           : {
@@ -144,6 +144,7 @@ export async function processCatalogPhoto(input: {
   bytes: Uint8Array
   contentType: CatalogPhotoSourceType
   signal?: AbortSignal
+  heicWorkerUrl?: URL
 }): Promise<{
   display: ProcessedCatalogPhoto
   thumbnail: ProcessedCatalogPhoto
@@ -180,7 +181,7 @@ export async function processCatalogPhoto(input: {
       ) {
         throw new CatalogPhotoProcessingError("INVALID_PHOTO")
       }
-      const decoded = await decodeHeic(bytes, signal)
+      const decoded = await decodeHeic(bytes, signal, input.heicWorkerUrl)
       source = sharp(decoded.bytes, {
         raw: { width: decoded.width, height: decoded.height, channels: 4 },
       })

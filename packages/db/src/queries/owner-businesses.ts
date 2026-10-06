@@ -27,6 +27,7 @@ export type CreateOwnerBusinessInput = {
   businessName: string
   city?: string | null
   countryCode?: string | null
+  region?: string | null
   currencyCode: OperatingCurrencyCode
   operatingModel?: BusinessOperatingModel | null
   orderChannels?: string[] | null
@@ -152,9 +153,10 @@ async function createOwnerBusinessWithSource(
     addressLine1: input.addressLine1,
     city: input.city,
     countryCode: input.countryCode,
+    region: input.region,
     createdByUserId: input.userId,
     currencyCode: tenant.currencyCode,
-    name: input.businessName,
+    name: "Main store",
     onboarding: {
       businessProfileKey: input.businessProfileKey,
       businessProfileVersion: input.businessProfileVersion,

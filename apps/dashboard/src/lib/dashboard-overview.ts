@@ -16,10 +16,14 @@ export type GettingStartedAction = {
 export function getGettingStartedActions(
   role: string | null | undefined,
   availability: WorkspaceFeatureAvailability,
+  scope?: { staffAccessMode?: string; catalogEditor?: boolean },
 ): GettingStartedAction[] {
   const normalizedRole = normalizeRole(role)
   const canManageCatalog = normalizedRole
-    ? canManageSalesOperations(normalizedRole)
+    ? scope?.staffAccessMode === "SCOPED" &&
+      !["OWNER", "ADMIN"].includes(normalizedRole)
+      ? scope.catalogEditor === true
+      : canManageSalesOperations(normalizedRole)
     : false
   const canCreateOrders = normalizedRole ? canOperatePos(normalizedRole) : false
   const actions: GettingStartedAction[] = []
@@ -52,7 +56,13 @@ export function getGettingStartedActions(
     })
   }
 
-  if (canManageCatalog && !availability.hasStaff) {
+  if (
+    canManageCatalog &&
+    !availability.hasStaff &&
+    (scope?.staffAccessMode !== "SCOPED" ||
+      normalizedRole === "OWNER" ||
+      normalizedRole === "ADMIN")
+  ) {
     actions.push({
       description: "Invite a team member into this business.",
       href: "/staff?staffSheet=invite",

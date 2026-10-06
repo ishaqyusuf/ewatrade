@@ -199,7 +199,7 @@
       "product": {
         "kind": "product",
         "name": {
-          "placeholder": "e.g. Fresh eggs",
+          "placeholder": "e.g. Fresh eggs, Live broiler, Fresh tomatoes",
           "examples": [
             "Fresh eggs",
             "Live broiler",

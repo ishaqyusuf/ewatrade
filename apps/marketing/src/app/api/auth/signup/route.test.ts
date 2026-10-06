@@ -24,11 +24,16 @@ mock.module("@ewatrade/email", () => ({
 const signUp = mock(async (_input: unknown) => ({
   user: { id: "synthetic-owner" },
 }))
+const signIn = mock(
+  async (): Promise<{ user: { id: string } } | null> => ({
+    user: { id: "synthetic-owner" },
+  }),
+)
 mock.module("@ewatrade/auth", () => ({
   auth: {
     api: {
       signUpEmail: signUp,
-      signInEmail: async () => ({ user: { id: "synthetic-owner" } }),
+      signInEmail: signIn,
     },
   },
 }))
@@ -97,6 +102,7 @@ const { POST } = await import("./route")
 
 beforeEach(() => {
   mock.clearAllMocks()
+  signIn.mockImplementation(async () => ({ user: { id: "synthetic-owner" } }))
   findTenant.mockReset()
   findTenant.mockImplementation(async () => null)
   Reflect.set(process.env, "NODE_ENV", "production")
@@ -388,4 +394,23 @@ test("verified approval cannot be transferred to another business", async () => 
   expect(response.status).toBe(403)
   expect((await response.json()).message).toContain("business name")
   expect(signUp).not.toHaveBeenCalled()
+})
+
+test("failed automatic sign-in sends the welcome email and success screen to dashboard login", async () => {
+  signIn.mockImplementation(async () => null)
+  const response = await POST(request("owner@example.com"))
+  expect(response.status).toBe(200)
+  expect((await response.json()).dashboardUrl).toBe(
+    "https://ewatrade.com/dashboard/login",
+  )
+  expect(JSON.stringify(dispatch.mock.lastCall)).toContain(
+    "https://ewatrade.com/dashboard/login",
+  )
+})
+test("Preview blocks dashboard signup before account or workspace creation", async () => {
+  process.env.APP_ENV = "preview"
+  const response = await POST(request("owner@example.com"))
+  expect(response.status).toBe(503)
+  expect(signUp).not.toHaveBeenCalled()
+  expect(createTenant).not.toHaveBeenCalled()
 })

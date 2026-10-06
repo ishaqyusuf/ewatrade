@@ -10,7 +10,8 @@
     "./photo-upload": "./src/photo-upload.ts",
     "./photo-processing": "./src/photo-processing.ts",
     "./photo-derivatives": "./src/photo-derivatives.ts",
-    "./photo-review": "./src/photo-review.ts"
+    "./photo-review": "./src/photo-review.ts",
+    "./photo-review-openai": "./src/photo-review-openai.ts"
   },
   "scripts": {
     "lint": "biome check .",

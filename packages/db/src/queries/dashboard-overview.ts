@@ -63,6 +63,7 @@ export function getDashboardRecentOrders(
   return db.commercialOrder.findMany({
     orderBy: { createdAt: "desc" },
     select: {
+      id: true,
       createdAt: true,
       currencyCode: true,
       customerName: true,

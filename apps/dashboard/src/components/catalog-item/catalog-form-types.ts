@@ -7,6 +7,7 @@ export type AdvancedVariantDraft = {
   price: string
   quantity: string
   quoteRequired: boolean
+  orderTotal?: boolean
   sku: string
   storeIds: string[]
   unitPrices: Record<string, string>

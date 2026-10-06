@@ -26,6 +26,7 @@ enum FinanceAccountPurpose {
 }
 
 model FinanceBook {
+  bankAccountStates FinanceBankAccountState[]
   fiscalCalendar FinanceFiscalCalendar?
   fiscalYears FinanceFiscalYear[]
   fiscalCloseEvents FinanceFiscalCloseEvent[]
@@ -63,6 +64,7 @@ model FinanceBook {
 }
 
 model FinanceAccount {
+  bankAccountStates FinanceBankAccountState[]
   fiscalCalendars FinanceFiscalCalendar[]
   fiscalCloseEvents FinanceFiscalCloseEvent[]
   purchaseRecognitionDebits   FinancePurchaseRecognitionEvent[] @relation("PurchaseRecognitionDebit")
@@ -121,6 +123,8 @@ model FinanceJournalEntry {
 }
 
 model FinanceJournalLine {
+  activeBankMatchId String?
+  activeBankMatch FinanceBankMatchEvent? @relation("ActiveBankJournalLines", fields: [bookId, accountId, activeBankMatchId], references: [bookId, accountId, id], onDelete: Restrict)
   id          String              @id @default(cuid())
   bookId      String
   entryId     String
@@ -132,6 +136,7 @@ model FinanceJournalLine {
   account     FinanceAccount      @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict)
 
   @@index([bookId, accountId, entryId])
+  @@index([activeBankMatchId])
 }
 
 model FinanceCommand {

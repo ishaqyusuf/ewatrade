@@ -1,5 +1,6 @@
 "use client"
 import {
+  Button,
   ControlField,
   FieldGroup,
   FormActions,
@@ -7,15 +8,23 @@ import {
   SubmitButton,
 } from "@ewatrade/ui"
 
+import { customerDraftFromSearch } from "./order-customer-search"
+import {
+  type OrderDraftLine,
+  availableOrderOfferings,
+  buildOrderLines,
+  makeOrderDraftLine,
+} from "./order-draft"
+import { OrderItemPicker } from "./order-item-picker"
+import { OrderItemRow } from "./order-item-row"
+
 import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { createOrderFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useTRPC } from "@/trpc/client"
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 
-import { getSaleOfferingDisabledReasons } from "@ewatrade/utils"
 import {
   useMutation,
   useQueryClient,
@@ -28,68 +37,12 @@ import {
   type OrderCustomerSelection,
 } from "./order-customer-picker"
 
-type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
-function money(value: number, currency: string) {
-  return new Intl.NumberFormat("en-NG", {
-    currency,
-    style: "currency",
-  }).format(value / 100)
-}
-
-function availableOfferings(items: CatalogItem[], storeId: string) {
-  return items.flatMap((item) =>
-    item.variants.flatMap((variant) =>
-      variant.offerings.flatMap((offering) => {
-        if (
-          offering.status !== "active" ||
-          offering.pricingPolicy !== "fixed" ||
-          !offering.stores.some(
-            (row) => row.storeId === storeId && row.isAvailable,
-          )
-        ) {
-          return []
-        }
-        const inventoryUnit =
-          item.product?.currentUnitConfiguration?.units.find(
-            (unit) => unit.id === offering.productUnit?.inventoryUnitId,
-          )
-        const balance = item.product?.stockBalances.find(
-          (row) =>
-            row.storeId === storeId &&
-            row.variantId === variant.id &&
-            (inventoryUnit?.stockBehavior === "packaged_stock"
-              ? row.kind === "packaged_stock" &&
-                row.inventoryUnitId === offering.productUnit?.inventoryUnitId
-              : row.kind === "shared_pool"),
-        )
-        const disabledReasons = getSaleOfferingDisabledReasons({
-          fixedPriceMinor: offering.fixedPriceMinor,
-          kind: offering.kind === "product_unit" ? "product_unit" : "service",
-          onHandQuantity: balance?.onHandQuantity,
-          reservedQuantity: balance?.reservedQuantity,
-        })
-        return [
-          {
-            balanceRevision: balance?.revision,
-            configurationVersionId: item.product?.currentUnitConfiguration?.id,
-            displayName:
-              item.variants.length > 1
-                ? `${item.name} · ${variant.name} · ${offering.name}`
-                : `${item.name} · ${offering.name}`,
-            disabledReason: disabledReasons.join(" · ") || undefined,
-            fixedPriceMinor: offering.fixedPriceMinor,
-            id: offering.id,
-            kind: offering.kind,
-          },
-        ]
-      }),
-    ),
-  )
-}
-
-export function OrderForm({ store }: { store: StoreSummary }) {
+export function OrderForm({
+  store,
+  customerDirectory = true,
+}: { store: StoreSummary; customerDirectory?: boolean }) {
   const router = useRouter()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -97,25 +50,30 @@ export function OrderForm({ store }: { store: StoreSummary }) {
   const { data: items } = useSuspenseQuery(
     trpc.catalog.listItems.queryOptions({}, { retry: false }),
   )
-  const [quantities, setQuantities] = useState<Record<string, string>>({})
+  const [drafts, setDrafts] = useState<OrderDraftLine[]>([])
   const [customerName, setCustomerName] = useState("")
   const [selectedCustomer, setSelectedCustomer] =
     useState<OrderCustomerSelection | null>(null)
   const [customerPhone, setCustomerPhone] = useState("")
   const [customerEmail, setCustomerEmail] = useState("")
   const [showCustomer, setShowCustomer] = useState(false)
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
+  const [customerSearch, setCustomerSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const quickFillSnapshot = useRef<{
     selectedCustomer: OrderCustomerSelection | null
     customerEmail: string
     customerName: string
     customerPhone: string
-    quantities: Record<string, string>
+    drafts: OrderDraftLine[]
     showCustomer: boolean
+    creatingCustomer: boolean
+    customerSearch: string
   } | null>(null)
+  const submission = useRef<{ payload: string; id: string } | null>(null)
   const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const offerings = useMemo(
-    () => availableOfferings(items, store.id),
+    () => availableOrderOfferings(items, store.id),
     [items, store.id],
   )
   const createMutation = useMutation(
@@ -124,15 +82,31 @@ export function OrderForm({ store }: { store: StoreSummary }) {
       onSuccess: async () => {
         await Promise.all([
           queryClient.invalidateQueries({
+            refetchType: "none",
             queryKey: trpc.orders.list.queryKey(),
           }),
           queryClient.invalidateQueries({
-            queryKey: trpc.orders.listPage.queryKey(),
+            refetchType: "none",
+            queryKey: trpc.orders.listPage.pathKey(),
           }),
           queryClient.invalidateQueries({
+            refetchType: "none",
+            queryKey: trpc.customers.listPage.pathKey(),
+          }),
+          queryClient.invalidateQueries({
+            refetchType: "none",
+            queryKey: trpc.catalog.pathKey(),
+          }),
+          queryClient.invalidateQueries({
+            refetchType: "none",
+            queryKey: trpc.inventory.pathKey(),
+          }),
+          queryClient.invalidateQueries({
+            refetchType: "none",
             queryKey: trpc.orders.reportSummary.queryKey(),
           }),
           queryClient.invalidateQueries({
+            refetchType: "none",
             queryKey: trpc.tenant.featureAvailability.queryKey(),
           }),
         ])
@@ -143,55 +117,38 @@ export function OrderForm({ store }: { store: StoreSummary }) {
   )
 
   function submit() {
-    const lines = offerings.flatMap((offering) => {
-      const quantity = quantities[offering.id]?.trim()
-      if (
-        !quantity ||
-        offering.disabledReason ||
-        offering.fixedPriceMinor === null
-      )
-        return []
-      return [
-        {
-          expectedBalanceRevision:
-            offering.kind === "product_unit"
-              ? offering.balanceRevision
-              : undefined,
-          expectedConfigurationVersionId:
-            offering.kind === "product_unit"
-              ? offering.configurationVersionId
-              : undefined,
-          expectedFixedPriceMinor: offering.fixedPriceMinor,
-          offeringId: offering.id,
-          quantity,
-        },
-      ]
-    })
-    if (lines.length === 0) {
-      setError("Choose at least one item and enter a quantity.")
+    setError(null)
+    if (creatingCustomer && !customerName.trim()) {
+      setError("Enter a name for the new customer.")
       return
     }
-    if (
-      lines.some(
-        (line) =>
-          line.expectedConfigurationVersionId === undefined &&
-          offerings.find((offering) => offering.id === line.offeringId)
-            ?.kind === "product_unit",
+    let lines: ReturnType<typeof buildOrderLines>
+    try {
+      lines = buildOrderLines(drafts, offerings)
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Check the selected items.",
       )
-    ) {
-      setError("A selected Product is missing its current unit configuration.")
       return
     }
-    createMutation.mutate({
-      clientOrderId: crypto.randomUUID(),
+    const payload = {
       customerId: selectedCustomer?.id,
+      customerMode: creatingCustomer
+        ? ("create" as const)
+        : ("contact_only" as const),
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
       customerEmail: customerEmail.trim() || undefined,
       lines,
-      schemaVersion: 1,
+      schemaVersion: 1 as const,
       storeId: store.id,
-    })
+    }
+    const digest = JSON.stringify(payload)
+    if (submission.current?.payload !== digest)
+      submission.current = { payload: digest, id: crypto.randomUUID() }
+    createMutation.mutate({ ...payload, clientOrderId: submission.current.id })
   }
 
   return (
@@ -204,7 +161,7 @@ export function OrderForm({ store }: { store: StoreSummary }) {
         formId="dashboard.order.create"
         isDirty={
           Boolean(customerEmail || customerName || customerPhone) ||
-          Object.keys(quantities).length > 0
+          drafts.length > 0
         }
         onFill={(context, sequence) => {
           const offering = offerings.find(
@@ -221,16 +178,22 @@ export function OrderForm({ store }: { store: StoreSummary }) {
             customerEmail,
             customerName,
             customerPhone,
-            quantities,
+            drafts,
             showCustomer,
+            creatingCustomer,
+            customerSearch,
           }
           const fixture = createOrderFixture(context, sequence)
           setSelectedCustomer(null)
-          setQuantities({ [offering.id]: "1" })
+          const item = items.find((row) => row.id === offering.catalogItemId)
+          if (!item) return
+          setDrafts([makeOrderDraftLine(item, offering)])
           setCustomerEmail(fixture.customerEmail)
           setCustomerName(fixture.customerName)
           setCustomerPhone(fixture.customerPhone)
           setShowCustomer(true)
+          setCreatingCustomer(true)
+          setCustomerSearch("")
           setCanUndoQuickFill(true)
           setError(null)
         }}
@@ -240,50 +203,65 @@ export function OrderForm({ store }: { store: StoreSummary }) {
           setCustomerEmail(quickFillSnapshot.current.customerEmail)
           setCustomerName(quickFillSnapshot.current.customerName)
           setCustomerPhone(quickFillSnapshot.current.customerPhone)
-          setQuantities(quickFillSnapshot.current.quantities)
+          setDrafts(quickFillSnapshot.current.drafts)
           setShowCustomer(quickFillSnapshot.current.showCustomer)
+          setCreatingCustomer(quickFillSnapshot.current.creatingCustomer)
+          setCustomerSearch(quickFillSnapshot.current.customerSearch)
           quickFillSnapshot.current = null
           setCanUndoQuickFill(false)
         }}
       />
-      <div className="grid gap-2">
-        {offerings.map((offering) => (
-          <ControlField
-            className="grid grid-cols-[minmax(0,1fr)_90px] items-center gap-3 border-b border-border py-3 [&>[data-slot=field-label]]:flex-col [&>[data-slot=field-label]]:items-start"
-            key={offering.id}
-            label={
-              <>
-                <span className="block text-sm font-medium">
-                  {offering.displayName}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {offering.fixedPriceMinor === null
-                    ? "Price not set"
-                    : money(offering.fixedPriceMinor, store.currencyCode)}
-                </span>
-                {offering.disabledReason ? (
-                  <span className="block text-xs font-medium text-destructive">
-                    {offering.disabledReason}
-                  </span>
-                ) : null}
-              </>
-            }
-          >
-            <Input
-              aria-label={`${offering.displayName} quantity`}
-              disabled={Boolean(offering.disabledReason)}
-              inputMode="decimal"
-              placeholder="Qty"
-              value={quantities[offering.id] ?? ""}
-              onChange={(event) =>
-                setQuantities((current) => ({
-                  ...current,
-                  [offering.id]: event.target.value,
-                }))
+      <OrderItemPicker
+        items={items}
+        offerings={offerings}
+        disabled={createMutation.isPending || drafts.length >= 100}
+        onSelect={(item) => {
+          const choices = offerings.filter(
+            (row) => row.catalogItemId === item.id,
+          )
+          const offering = choices.find((row) => !row.disabledReason)
+          if (!offering) return
+          setDrafts((current) => [
+            ...current,
+            makeOrderDraftLine(item, offering),
+          ])
+          setError(null)
+        }}
+      />
+      {!drafts.length ? (
+        <p className="text-sm text-muted-foreground">
+          Search the catalog to add your first item.
+        </p>
+      ) : null}
+      <div className="grid gap-3">
+        {drafts.map((line, index) => {
+          const item = items.find((row) => row.id === line.catalogItemId)
+          return item ? (
+            <OrderItemRow
+              key={line.id}
+              item={item}
+              line={line}
+              index={index}
+              offerings={offerings}
+              currencyCode={store.currencyCode}
+              disabled={createMutation.isPending}
+              onChange={(next) =>
+                setDrafts((current) =>
+                  current.map((row) => (row.id === line.id ? next : row)),
+                )
+              }
+              onRemove={() =>
+                setDrafts((current) =>
+                  current.filter((row) => row.id !== line.id),
+                )
               }
             />
-          </ControlField>
-        ))}
+          ) : (
+            <FormFeedback key={line.id} appearance="dashboard">
+              An item is no longer available. Close and reopen this order.
+            </FormFeedback>
+          )
+        })}
       </div>
       <button
         type="button"
@@ -293,38 +271,73 @@ export function OrderForm({ store }: { store: StoreSummary }) {
         {showCustomer ? "Hide customer details" : "Add customer details"}
       </button>
       {showCustomer ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="sm:col-span-3">
+        <div className="grid gap-3">
+          {creatingCustomer ? (
+            <div className="grid gap-3 border border-border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold">New customer</h3>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={createMutation.isPending}
+                  onClick={() => {
+                    setCreatingCustomer(false)
+                    setCustomerName("")
+                    setCustomerPhone("")
+                    setCustomerEmail("")
+                  }}
+                >
+                  Search customers
+                </Button>
+              </div>
+              <ControlField label={<>Customer name</>}>
+                <Input
+                  maxLength={160}
+                  required
+                  autoFocus
+                  disabled={createMutation.isPending}
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                />
+              </ControlField>
+              <ControlField label={<>Phone number</>}>
+                <Input
+                  type="tel"
+                  autoComplete="tel"
+                  maxLength={40}
+                  disabled={createMutation.isPending}
+                  value={customerPhone}
+                  onChange={(event) => setCustomerPhone(event.target.value)}
+                />
+              </ControlField>
+            </div>
+          ) : (
             <OrderCustomerPicker
               selected={selectedCustomer}
+              initialSearch={customerSearch}
+              customerDirectory={customerDirectory}
+              storeId={store.id}
+              disabled={createMutation.isPending}
+              onCreate={(search) => {
+                const draft = customerDraftFromSearch(search)
+                setSelectedCustomer(null)
+                setCustomerSearch(search)
+                setCustomerName(draft.name)
+                setCustomerPhone(draft.phone)
+                setCustomerEmail("")
+                setCreatingCustomer(true)
+                setError(null)
+              }}
               onSelect={(customer) => {
+                setCustomerSearch("")
                 setSelectedCustomer(customer)
                 setCustomerName(customer?.name ?? "")
                 setCustomerEmail(customer?.email ?? "")
                 setCustomerPhone(customer?.phone ?? "")
+                setError(null)
               }}
             />
-          </div>
-          <ControlField label={<>Customer name</>}>
-            <Input
-              value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-            />
-          </ControlField>
-          <ControlField label={<>Email</>}>
-            <Input
-              onChange={(event) => setCustomerEmail(event.target.value)}
-              type="email"
-              value={customerEmail}
-            />
-          </ControlField>
-          <ControlField label={<>Phone</>}>
-            <Input
-              inputMode="tel"
-              value={customerPhone}
-              onChange={(event) => setCustomerPhone(event.target.value)}
-            />
-          </ControlField>
+          )}
         </div>
       ) : null}
       <FormActions>

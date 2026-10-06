@@ -62,6 +62,19 @@ export function ClassicAutoUpdateScreen(model: AutoUpdatePresentationProps) {
               ))}
             </View>
           )}
+          {model.primaryLabel ? (
+            <ActionButton
+              disabled={model.primaryDisabled}
+              onPress={model.onPrimary}
+            >
+              {model.primaryLabel}
+            </ActionButton>
+          ) : null}
+          {model.secondaryLabel ? (
+            <ActionButton variant="outline" onPress={model.onSecondary}>
+              {model.secondaryLabel}
+            </ActionButton>
+          ) : null}
         </ScrollView>
       </View>
     </VariableContextProvider>

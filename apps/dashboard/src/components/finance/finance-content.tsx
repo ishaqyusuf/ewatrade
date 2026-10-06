@@ -1,6 +1,9 @@
 "use client"
 import type { FinanceSheetMode } from "@/hooks/use-finance-params"
 import { FinanceAccountForm } from "./account-form"
+import { FinanceBankImportForm } from "./bank-import-form"
+import { FinanceBankSourceDetail } from "./bank-source-detail"
+import { FinanceBankStatementDetail } from "./bank-statement-detail"
 import { FinanceBillDetail } from "./bill-detail"
 import { FinanceBillPaymentForm } from "./bill-payment-form"
 import { FinanceCashCountDetail } from "./cash-count-detail"
@@ -17,6 +20,9 @@ import type { FinanceBook } from "./types"
 export function FinanceContent({
   mode,
   book,
+  statementId,
+  bankSourceEntryId,
+  bankSourceAccountId,
   billId,
   countId,
   moneyEntryId,
@@ -25,6 +31,9 @@ export function FinanceContent({
 }: {
   mode: FinanceSheetMode
   book: FinanceBook | null
+  statementId: string | null
+  bankSourceEntryId: string | null
+  bankSourceAccountId: string | null
   billId: string | null
   countId: string | null
   moneyEntryId: string | null
@@ -37,6 +46,20 @@ export function FinanceContent({
     ) : (
       <p>Set up finance before recording activity.</p>
     )
+  if (mode === "bank-import") return <FinanceBankImportForm book={book} />
+  if (mode === "bank-statement" && statementId)
+    return <FinanceBankStatementDetail book={book} statementId={statementId} />
+  if (mode === "bank-source" && bankSourceEntryId && bankSourceAccountId)
+    return (
+      <FinanceBankSourceDetail
+        book={book}
+        entryId={bankSourceEntryId}
+        accountId={bankSourceAccountId}
+        statementId={statementId}
+      />
+    )
+  if (mode === "bank-source")
+    return <p>Choose an original posted bank transaction.</p>
   if (mode === "period") return <FinancePeriodForm book={book} />
   if (mode === "supplier") return <FinanceSupplierForm book={book} />
   if (mode === "supplier-statement" && supplierId)

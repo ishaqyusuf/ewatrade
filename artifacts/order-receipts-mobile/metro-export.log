@@ -1,0 +1,76 @@
+Using src/app as the root directory for Expo Router.
+Experimental Expo Autolinking module resolver is enabled.
+React Compiler enabled
+Starting Metro Bundler
+Android node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+| (node:71236) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:71237) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:71239) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:71242) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:71238) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:71241) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:71240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+Android node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (2474/4465)
+| (node:71237) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/M1PRO/Documents/code/ewatrade/apps/mobile/tailwind.config.ts?id=1791065719326 is not specified and it doesn't parse as CommonJS.
+| Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+| To eliminate this warning, add "type": "module" to /Users/M1PRO/Documents/code/ewatrade/apps/mobile/package.json.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+Android node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (10142/10142)
+Android Bundled 19393ms node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/entry.js (10142 modules)
+Android node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (10142/10142)
+
+› Assets (48):
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.ttf (130 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.ttf (66.2 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.ttf (13.5 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf (55.6 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.ttf (166 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.ttf (134 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf (33.7 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.ttf (203 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.ttf (209 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.ttf (68 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.ttf (424 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.ttf (314 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.ttf (57 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf (390 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf (1.31 MB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf (357 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.ttf (69.4 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.ttf (54.1 kB)
+../../node_modules/.bun/@expo+vector-icons@15.1.1+a4789d74d5416020/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.ttf (25.8 kB)
+../../node_modules/.bun/@react-navigation+elements@2.9.30+35fe44fc548a9d71/node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.png (653 B)
+../../node_modules/.bun/@react-navigation+elements@2.9.30+35fe44fc548a9d71/node_modules/@react-navigation/elements/lib/module/assets/back-icon.png (4 variations | 152 B)
+../../node_modules/.bun/@react-navigation+elements@2.9.30+35fe44fc548a9d71/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.png (4 variations | 425 B)
+../../node_modules/.bun/@react-navigation+elements@2.9.30+35fe44fc548a9d71/node_modules/@react-navigation/elements/lib/module/assets/close-icon.png (4 variations | 235 B)
+../../node_modules/.bun/@react-navigation+elements@2.9.30+35fe44fc548a9d71/node_modules/@react-navigation/elements/lib/module/assets/search-icon.png (4 variations | 599 B)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/arrow_down.png (9.46 kB)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/error.png (469 B)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/file.png (138 B)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/forward.png (188 B)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/pkg.png (364 B)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/sitemap.png (465 B)
+../../node_modules/.bun/expo-router@6.0.24+d2fed5aa85fc66f9/node_modules/expo-router/assets/unmatched.png (4.75 kB)
+assets/brand/precision-rise-logo-reverse.png (24.6 kB)
+assets/brand/precision-rise-logo.png (34.2 kB)
+assets/brand/precision-rise-wordmark-reverse.png (18.7 kB)
+assets/brand/precision-rise-wordmark.png (26 kB)
+assets/fonts/SpaceMono-Regular.ttf (93.3 kB)
+
+› android bundles (1):
+_expo/static/js/android/entry-4b84c9befa33c02c5e5e26477658b872.hbc (21.4 MB)
+
+› web bundles (1):
+_expo/static/css/global-d41d8cd98f00b204e9800998ecf8427e.css (0 B)
+
+› Files (1):
+metadata.json (3.74 kB)
+
+Exported: /Users/M1PRO/Documents/code/ewatrade/artifacts/order-receipts-mobile/android-export

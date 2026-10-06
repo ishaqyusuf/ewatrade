@@ -17,7 +17,10 @@ import { OrdersEmptyState } from "./empty-states"
 import { OrdersTableHeader, OrdersTableSettings } from "./table-header"
 
 const ROW_HEIGHT = 57
-const STICKY_COLUMNS = [{ id: "orderNumber", width: 200 }]
+const STICKY_COLUMNS = [
+  { id: "select", width: 50 },
+  { id: "orderNumber", width: 200 },
+]
 
 type OrderSort = {
   field: (typeof orderSortFields)[number]
@@ -56,7 +59,7 @@ export function OrdersTableView({
   retryPersistence: () => void
 }) {
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
-    fixedColumnIds: ["orderNumber"],
+    fixedColumnIds: ["select", "orderNumber", "actions"],
   })
   const { getStickyStyle, getStickyClassName, isVisible } = useStickyColumns({
     table,
@@ -253,6 +256,7 @@ function DndTable({
                 columnSizing={table.getState().columnSizing}
                 columnOrder={table.getState().columnOrder}
                 columnVisibility={table.getState().columnVisibility}
+                isSelected={row.getIsSelected()}
               />
             )
           })}

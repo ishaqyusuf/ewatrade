@@ -1075,7 +1075,7 @@ export async function finalizeInventoryCloseout(
 
 export async function listStockTransfers(
   db: PrismaClient,
-  input: { limit?: number; storeId?: string; tenantId: string },
+  input: { limit?: number; storeId?: string; tenantId: string; allowedStoreIds?: string[] },
 ) {
   const transfers = await db.stockTransfer.findMany({
     include: {
@@ -1093,6 +1093,7 @@ export async function listStockTransfers(
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(input.limit ?? 100, 1), 200),
     where: {
+      ...(input.allowedStoreIds ? {sourceStoreId: {in: input.allowedStoreIds}, targetStoreId: {in: input.allowedStoreIds}} : {}),
       OR: input.storeId
         ? [{ sourceStoreId: input.storeId }, { targetStoreId: input.storeId }]
         : undefined,

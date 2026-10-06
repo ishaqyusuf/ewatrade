@@ -1,3 +1,4 @@
+import { getDashboardSignupUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 import {
   ArrowRight01Icon,
   DeliveryTruck01Icon,
@@ -122,7 +123,7 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
               </a>
               {signupEnabled ? (
                 <a
-                  href="/signup"
+                  href={getDashboardSignupUrl()}
                   className="font-medium text-primary transition-colors duration-200 hover:text-primary/80"
                 >
                   Sign up
@@ -143,14 +144,20 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  render={<a href="#waitlist" />}
+                  render={
+                    // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                    <a href="#waitlist" />
+                  }
                 >
                   Join waitlist
                 </Button>
                 <Button
                   size="sm"
                   className="rounded-full px-4"
-                  render={<a href="#early-access" />}
+                  render={
+                    // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                    <a href="#early-access" />
+                  }
                 >
                   Request access
                 </Button>
@@ -161,14 +168,20 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  render={<a href="#how-it-works" />}
+                  render={
+                    // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                    <a href="#how-it-works" />
+                  }
                 >
                   How it works
                 </Button>
                 <Button
                   size="sm"
                   className="rounded-full px-4"
-                  render={<a href="/signup" />}
+                  render={
+                    // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                    <a href={getDashboardSignupUrl()} />
+                  }
                 >
                   Get started
                 </Button>
@@ -230,7 +243,10 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                     <Button
                       size="lg"
                       className="gap-2 rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                      render={<a href="/signup" />}
+                      render={
+                        // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                        <a href={getDashboardSignupUrl()} />
+                      }
                     >
                       Create your workspace
                       <HugeiconsIcon
@@ -243,7 +259,10 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                       size="lg"
                       variant="outline"
                       className="rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                      render={<a href="#platform" />}
+                      render={
+                        // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                        <a href="#platform" />
+                      }
                     >
                       See the platform
                     </Button>
@@ -253,7 +272,10 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                     <Button
                       size="lg"
                       className="gap-2 rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                      render={<a href="#early-access" />}
+                      render={
+                        // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                        <a href="#early-access" />
+                      }
                     >
                       Request early access
                       <HugeiconsIcon
@@ -266,7 +288,10 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                       size="lg"
                       variant="outline"
                       className="rounded-full px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                      render={<a href="#waitlist" />}
+                      render={
+                        // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                        <a href="#waitlist" />
+                      }
                     >
                       Join the waitlist
                     </Button>
@@ -600,7 +625,10 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                 <Button
                   size="lg"
                   className="gap-2 rounded-full px-8 py-4 text-base transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                  render={<a href="/signup" />}
+                  render={
+                    // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                    <a href={getDashboardSignupUrl()} />
+                  }
                 >
                   Create your workspace
                   <HugeiconsIcon
@@ -613,7 +641,10 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
                   size="lg"
                   variant="outline"
                   className="rounded-full px-8 py-4 text-base"
-                  render={<a href="#platform" />}
+                  render={
+                    // biome-ignore lint/a11y/useAnchorContent: Button supplies the rendered anchor text.
+                    <a href="#platform" />
+                  }
                 >
                   Explore the platform
                 </Button>
@@ -659,7 +690,7 @@ export function LegacyV1Landing({ signupEnabled }: MarketingExperienceProps) {
               </a>
               {signupEnabled ? (
                 <a
-                  href="/signup"
+                  href={getDashboardSignupUrl()}
                   className="font-medium text-primary transition-colors duration-200 hover:text-primary/80"
                 >
                   Create workspace

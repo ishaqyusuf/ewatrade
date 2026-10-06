@@ -3,6 +3,7 @@ import { qaLiveEffectForProcedure } from "./qa-provider-operation"
 
 describe("qaLiveEffectForProcedure", () => {
   test.each([
+    ["catalog.categories.suggest", "ai_analysis"],
     ["storeSubscriptions.verifyPurchase", "subscription"],
     ["domains.checkAvailability", "domain_registration"],
     ["domains.connectExternal", "domain_hosting"],

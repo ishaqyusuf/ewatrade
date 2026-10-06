@@ -117,20 +117,6 @@ const checks = [
     ],
   },
   {
-    file: "src/app/design-system/app-lock.tsx",
-    markers: [
-      "AppLockPreviewRoute",
-      "AppLockQuietSealScreen",
-      "shouldShowInternalDesignSystemEntry",
-      'variant="quiet-seal"',
-      'useState("")',
-    ],
-  },
-  {
-    file: "src/components/mobile/design-system/design-system-screen.tsx",
-    markers: ['router.push("/design-system/app-lock")'],
-  },
-  {
     file: "src/app/_layout.tsx",
     markers: ["AppLockProvider", "AppLockGate", "app-lock-modal"],
   },

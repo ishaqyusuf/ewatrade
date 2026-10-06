@@ -1,6 +1,7 @@
 "use client"
 import { useFinanceForm } from "@/components/finance/form-context"
 import {
+  FinanceCommandNotSentError,
   FinanceCommandRecoveryError,
   type FinanceCommandRecoveryMetadata,
   type PendingFinanceCommand,
@@ -362,9 +363,11 @@ export function useFinanceCommand(
               return
             }
             const errorCode =
-              writeError instanceof Error && "data" in writeError
-                ? (writeError as { data?: { code?: string } }).data?.code
-                : undefined
+              writeError instanceof FinanceCommandNotSentError
+                ? "BAD_REQUEST"
+                : writeError instanceof Error && "data" in writeError
+                  ? (writeError as { data?: { code?: string } }).data?.code
+                  : undefined
             if (
               canDiscardFinanceRejection({
                 retryOfUncertainAttempt,

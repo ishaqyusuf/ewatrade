@@ -1,6 +1,7 @@
+"use client"
+
 import { CatalogIllustrationPreview } from "@/components/catalog-item/catalog-illustration-preview"
 import { CatalogPhotoPreview } from "@/components/catalog-item/catalog-photo-preview"
-import { CatalogSavedPhotos } from "@/components/catalog-item/catalog-saved-photos"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
@@ -9,6 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { catalogItemDetail } from "./catalog-display"
+import { CatalogItemActions } from "./item-actions"
 
 export type CatalogRow =
   RouterOutputs["catalog"]["listItemsPage"]["items"][number]
@@ -39,6 +41,7 @@ function formatPrice(
   currencyCode: string,
   pricingPolicy: string,
 ) {
+  if (pricingPolicy === "order_total") return "Enter price during order"
   if (value === null)
     return pricingPolicy === "quote_required" ? "Quote" : "Price not set"
   return new Intl.NumberFormat("en-NG", {
@@ -50,6 +53,7 @@ function formatPrice(
 export function createCatalogColumns(
   openUnits: (productId: string) => void,
   storeId = "",
+  openDetail: (itemId: string) => void = () => {},
 ): ColumnDef<CatalogRow>[] {
   return [
     {
@@ -102,7 +106,16 @@ export function createCatalogColumns(
             )}
           </div>
           <div className="min-w-0">
-            <p className="truncate font-medium">{row.original.name}</p>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              data-catalog-open={row.original.id}
+              className="block h-auto max-w-full truncate p-0 text-left"
+              onClick={() => openDetail(row.original.id)}
+            >
+              {row.original.name}
+            </Button>
             <p className="truncate text-xs text-muted-foreground">
               {itemDetail(row.original)}
             </p>
@@ -193,9 +206,9 @@ export function createCatalogColumns(
     },
     {
       id: "actions",
-      size: 170,
-      minSize: 170,
-      maxSize: 170,
+      size: 80,
+      minSize: 80,
+      maxSize: 80,
       enableHiding: false,
       enableResizing: false,
       meta: {
@@ -205,26 +218,13 @@ export function createCatalogColumns(
         className: "z-20 border-l bg-background md:sticky",
         skeleton: { type: "icon" },
       },
-      cell: ({ row }) => {
-        const productId = row.original.product?.id
-        return (
-          <div className="flex items-center">
-            <CatalogSavedPhotos item={row.original} storeId={storeId} />
-            {productId ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="rounded-none"
-                data-row-interactive="true"
-                onClick={() => openUnits(productId)}
-              >
-                Configure units
-              </Button>
-            ) : null}
-          </div>
-        )
-      },
+      cell: ({ row }) => (
+        <CatalogItemActions
+          item={row.original}
+          storeId={storeId}
+          openUnits={openUnits}
+        />
+      ),
     },
   ]
 }

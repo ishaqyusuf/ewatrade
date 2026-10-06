@@ -122,6 +122,17 @@ test("alerts contain only aggregate facts and stable hourly idempotency keys", a
   expect(JSON.stringify(messages)).not.toContain("internal-case-id")
   expect(JSON.stringify(messages)).not.toContain("internal-tenant-id")
   expect(messages[0]?.text).toContain("Earliest response deadline")
+  expect(messages[0]?.html).toContain('data-email-system="warm-desk"')
+  expect(messages[0]?.text).toBe(
+    [
+      "Unresolved cases: 1",
+      "Overdue cases: 0",
+      "Earliest response deadline (UTC): 2026-09-26T14:00:00.000Z",
+      "Inspect the platform-admin refund-review queue and follow the reviewed operator procedure.",
+      "A CLAIMED or UNCERTAIN response must be reconciled with Google manually; do not submit it again.",
+      "This email contains no purchase token, order ID or customer information.",
+    ].join("\n"),
+  )
 })
 
 test("a failed recipient keeps the scheduled alert visibly failed", async () => {

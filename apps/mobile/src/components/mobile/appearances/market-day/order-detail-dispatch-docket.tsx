@@ -2,24 +2,6 @@ import {
   ActionButton,
   MarketDayActionButton,
 } from "@/components/mobile/action-button"
-import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
-import { formatOrderDetailMoney } from "@/lib/order-detail-dispatch-docket"
-import type { ReactNode } from "react"
-import { Text as NativeText, View } from "react-native"
-import { VariableContextProvider } from "nativewind"
-import { cn } from "@/lib/utils"
-import type {
-  OrderDetailContentProps,
-  OrderDetailPrimaryActionProps,
-} from "@/components/mobile/order-detail/order-detail-presentation"
-import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   type CommercialOrder,
   type CommercialOrderLine,
@@ -34,6 +16,24 @@ import {
   canFulfillCommercialOrderLine,
   getCommercialOrderOverviewSummary,
 } from "@/components/mobile/commerce/commercial-order-overview-model"
+import type {
+  OrderDetailContentProps,
+  OrderDetailPrimaryActionProps,
+} from "@/components/mobile/order-detail/order-detail-presentation"
+import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
+import { formatOrderDetailMoney } from "@/lib/order-detail-dispatch-docket"
+import { cn } from "@/lib/utils"
+import { VariableContextProvider } from "nativewind"
+import type { ReactNode } from "react"
+import { Text as NativeText, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function OrderDetailDispatchDocket({
   activity,
@@ -582,8 +582,13 @@ function DocketLine({
   const canFulfill = canFulfillCommercialOrderLine(line)
   const lineDetail = [
     commerceLineOption(line),
-    `${formatCommerceQuantity(line.quantity)} × ${formatOrderDetailMoney(line.unitPriceMinor, order.currencyCode)}`,
-  ].join(" · ")
+    line.unitPriceMinor === null
+      ? `${formatCommerceQuantity(line.quantity)} · Price entered during order`
+      : `${formatCommerceQuantity(line.quantity)} × ${formatOrderDetailMoney(line.unitPriceMinor, order.currencyCode)}`,
+    line.note,
+  ]
+    .filter(Boolean)
+    .join(" · ")
   return (
     <View className={cn(styles.line, "border-b-market-line")}>
       <View

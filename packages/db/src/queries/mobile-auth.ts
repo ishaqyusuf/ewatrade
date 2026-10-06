@@ -17,6 +17,11 @@ import {
   buildMobileOtpIdentifier,
 } from "./mobile-otp-identifier"
 import {
+  OnboardingContinuationError,
+  consumeApprovedOnboarding,
+  readApprovedOnboarding,
+} from "./onboarding-continuation"
+import {
   type OwnerBusinessSummary,
   createOwnerSignupBusiness,
 } from "./owner-businesses"
@@ -32,7 +37,10 @@ export class MobileAccountNotFoundError extends Error {
   }
 }
 
-export type MobileAuthTenantSummary = OwnerBusinessSummary
+export type MobileAuthTenantSummary = OwnerBusinessSummary & {
+  staffAccessMode?: "LEGACY" | "SCOPED"
+  catalogEditor?: boolean
+}
 
 export type MobileAccessProfile = {
   hasBusinessAccess: boolean
@@ -50,6 +58,8 @@ export type MobileAuthSessionResult = {
     id: string
     name: string
     role: string
+    staffAccessMode?: "LEGACY" | "SCOPED"
+    catalogEditor?: boolean
     status: string
   }
   tenant: MobileAuthTenantSummary | null
@@ -63,6 +73,7 @@ export type MobileOwnerOtpResult = {
 }
 
 export type MobileGoogleIdentityInput = {
+  accessToken?: string
   ageBand?: AccountAgeBand
   acceptedTerms?: true
   acknowledgedPrivacyNotice?: true
@@ -84,6 +95,35 @@ export type MobileGoogleIdentityInput = {
   phone?: string | null
   providerAccountId: string
   teamSize?: string | null
+}
+
+async function requireMobileApprovedSignup(
+  db: DbClient,
+  input: {
+    mode: MobileAuthMode
+    accessToken?: string
+    email: string
+    businessName?: string | null
+  },
+) {
+  if (input.mode !== "sign_up") return
+  const required =
+    !["local", "dev", "development"].includes(process.env.APP_ENV ?? "") ||
+    process.env.DEV_PROFILE === "prod" ||
+    process.env.NODE_ENV === "production"
+  if (!input.accessToken) {
+    if (required) throw new OnboardingContinuationError("APPROVAL_REQUIRED")
+    return
+  }
+  const { data } = await readApprovedOnboarding(db, input.accessToken)
+  if (
+    data.email.toLowerCase() !== input.email.trim().toLowerCase() ||
+    data.companyName?.trim().toLowerCase() !==
+      input.businessName?.trim().toLowerCase()
+  )
+    throw new OnboardingContinuationError("IDENTITY")
+  if (!data.emailVerifiedAt) throw new OnboardingContinuationError("UNVERIFIED")
+  return data
 }
 
 const OTP_TTL_MINUTES = 10
@@ -197,11 +237,19 @@ async function getFirstActiveTenantForUser(
     where: {
       ...membershipAccess,
       userId: input.userId,
+      tenant: { isActive: true },
     },
     orderBy: [{ status: "asc" }, { createdAt: "asc" }],
     select: {
       role: true,
       status: true,
+      staffAccessMode: true,
+      catalogEditor: true,
+      retailOpsStaffProfile: { select: { defaultStoreId: true } },
+      staffStoreAssignments: {
+        where: { status: "ACTIVE", store: { status: "ACTIVE" } },
+        select: { storeId: true, role: true },
+      },
       tenant: {
         select: {
           id: true,
@@ -225,9 +273,20 @@ async function getFirstActiveTenantForUser(
 
   if (!membership) return null
 
+  const stores = membership.tenant.stores.filter(
+    (store) =>
+      membership.staffAccessMode !== "SCOPED" ||
+      ["OWNER", "ADMIN"].includes(membership.role) ||
+      membership.staffStoreAssignments.some((row) => row.storeId === store.id),
+  )
   const activeStore =
-    membership.tenant.stores.find((store) => store.status === "ACTIVE") ??
-    membership.tenant.stores[0] ??
+    stores.find(
+      (store) =>
+        store.id === membership.retailOpsStaffProfile?.defaultStoreId &&
+        store.status === "ACTIVE",
+    ) ??
+    stores.find((store) => store.status === "ACTIVE") ??
+    stores[0] ??
     null
 
   return {
@@ -236,7 +295,17 @@ async function getFirstActiveTenantForUser(
       normalizeOperatingCurrencyCode(membership.tenant.currencyCode),
     id: membership.tenant.id,
     name: membership.tenant.name,
-    role: membership.role,
+    role:
+      membership.staffAccessMode === "SCOPED" &&
+      !["OWNER", "ADMIN"].includes(membership.role)
+        ? (membership.staffStoreAssignments.find(
+            (row) => row.storeId === activeStore?.id,
+          )?.role ?? membership.role)
+        : membership.role,
+    staffAccessMode: membership.staffAccessMode,
+    catalogEditor:
+      membership.catalogEditor &&
+      membership.staffStoreAssignments.some((row) => row.role === "MANAGER"),
     slug: membership.tenant.slug,
     status: membership.status,
     storeId: activeStore?.id ?? null,
@@ -260,7 +329,12 @@ export async function getMobileAccessProfile(
   ])
 
   return {
-    hasBusinessAccess: Boolean(tenant),
+    hasBusinessAccess: Boolean(
+      tenant &&
+        (tenant.staffAccessMode !== "SCOPED" ||
+          ["OWNER", "ADMIN"].includes(tenant.role) ||
+          tenant.storeId),
+    ),
     hasCustomerHistory: Boolean(linkedConversation),
   }
 }
@@ -273,6 +347,8 @@ async function ensureOwnerTenant(
     businessProfileVersion?: 1 | null
     businessName: string
     city?: string | null
+    countryCode?: string | null
+    region?: string | null
     currencyCode: OperatingCurrencyCode
     operatingModel?: BusinessOperatingModel | null
     orderChannels?: string[] | null
@@ -345,6 +421,8 @@ export async function createMobileSessionForVerifiedUser(
       id: user.id,
       name: user.name,
       role: tenant?.role ?? "NONE",
+      staffAccessMode: tenant?.staffAccessMode,
+      catalogEditor: tenant?.catalogEditor,
       status: tenant?.status ?? "NONE",
     },
     tenant,
@@ -391,6 +469,7 @@ export async function consumeMobilePasswordAttempt(
 export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
+    accessToken?: string
     ageBand?: AccountAgeBand
     acceptedTerms?: true
     acknowledgedPrivacyNotice?: true
@@ -416,6 +495,7 @@ export async function createMobileOwnerOtp(
     input.mode === "sign_up"
       ? resolveLegalSignupChoice(input, currentEffectiveLegalPublication())
       : null
+  await requireMobileApprovedSignup(db, input)
   const email = normalizeEmail(input.email)
   const code = createOtpCode()
   const now = new Date()
@@ -431,6 +511,7 @@ export async function createMobileOwnerOtp(
       expiresAt,
       identifier,
       value: JSON.stringify({
+        accessToken: input.accessToken,
         ageBand,
         addressLine1: cleanText(input.addressLine1),
         businessProfileKey: cleanText(input.businessProfileKey),
@@ -465,6 +546,7 @@ export async function createMobileOwnerOtp(
 export async function verifyMobileOwnerOtp(
   db: DbClient,
   input: {
+    accessToken?: string
     ageBand?: AccountAgeBand
     addressLine1?: string | null
     businessProfileKey?: string | null
@@ -498,6 +580,7 @@ export async function verifyMobileOwnerOtp(
   }
 
   let payload: {
+    accessToken?: string
     ageBand?: AccountAgeBand | null
     addressLine1?: string | null
     businessProfileKey?: string | null
@@ -526,6 +609,12 @@ export async function verifyMobileOwnerOtp(
     throw new Error("The verification code is incorrect.")
   }
 
+  if (input.accessToken !== payload.accessToken)
+    throw new OnboardingContinuationError("CONFLICT")
+  const approvedOnboarding = await requireMobileApprovedSignup(db, {
+    ...input,
+    businessName: payload.businessName,
+  })
   const signupAgeBand = requireMobileSignupAgeBand(input.mode, payload.ageBand)
   if (signupAgeBand && input.ageBand !== signupAgeBand)
     throw new Error("The age choice changed. Restart account creation.")
@@ -660,6 +749,8 @@ export async function verifyMobileOwnerOtp(
           businessProfileVersion,
           businessName,
           city,
+          countryCode: approvedOnboarding?.draft?.countryCode,
+          region: approvedOnboarding?.draft?.region,
           currencyCode,
           operatingModel,
           orderChannels,
@@ -684,6 +775,16 @@ export async function verifyMobileOwnerOtp(
     ? await getMobileAccessProfile(db, { userId: user.id })
     : { hasBusinessAccess: false, hasCustomerHistory: false }
 
+  if (input.mode === "sign_up" && input.accessToken) {
+    if (!tenant)
+      throw new Error("Your account is not eligible for workspace setup.")
+    await consumeApprovedOnboarding(db, {
+      token: input.accessToken,
+      email,
+      businessName: tenant.name,
+    })
+  }
+
   const session = await createMobileSession(db, {
     tenant,
     userId: user.id,
@@ -700,6 +801,8 @@ export async function verifyMobileOwnerOtp(
       id: user.id,
       name: user.name || displayName,
       role: tenant?.role ?? "NONE",
+      staffAccessMode: tenant?.staffAccessMode,
+      catalogEditor: tenant?.catalogEditor,
       status: tenant?.status ?? "NONE",
     },
     tenant,
@@ -723,6 +826,7 @@ export async function verifyMobileSocialIdentity(
     input.mode === "sign_up"
       ? resolveLegalSignupChoice(input, currentEffectiveLegalPublication())
       : null
+  const approvedOnboarding = await requireMobileApprovedSignup(db, input)
   const email = normalizeEmail(input.email)
   const providerId = input.provider
   const providerAccountId = input.providerAccountId.trim()
@@ -849,6 +953,8 @@ export async function verifyMobileSocialIdentity(
           businessProfileVersion: input.businessProfileVersion,
           businessName,
           city: input.city,
+          countryCode: approvedOnboarding?.draft?.countryCode,
+          region: approvedOnboarding?.draft?.region,
           currencyCode: normalizeOperatingCurrencyCode(input.currencyCode),
           operatingModel: input.operatingModel,
           orderChannels: input.orderChannels,
@@ -873,6 +979,16 @@ export async function verifyMobileSocialIdentity(
     ? await getMobileAccessProfile(db, { userId: user.id })
     : { hasBusinessAccess: false, hasCustomerHistory: false }
 
+  if (input.mode === "sign_up" && input.accessToken) {
+    if (!tenant)
+      throw new Error("Your account is not eligible for workspace setup.")
+    await consumeApprovedOnboarding(db, {
+      token: input.accessToken,
+      email,
+      businessName: tenant.name,
+    })
+  }
+
   const session = await createMobileSession(db, {
     tenant,
     userId: user.id,
@@ -889,6 +1005,8 @@ export async function verifyMobileSocialIdentity(
       id: user.id,
       name: user.name || displayName,
       role: tenant?.role ?? "NONE",
+      staffAccessMode: tenant?.staffAccessMode,
+      catalogEditor: tenant?.catalogEditor,
       status: tenant?.status ?? "NONE",
     },
     tenant,

@@ -1,13 +1,13 @@
 import { createVercelCatalogPhotoDerivativeStorage } from "@ewatrade/catalog/photo-derivatives"
-import {
-  claimCatalogPhotoDerivativeCleanup,
-  finishCatalogPhotoDerivativeCleanup,
-} from "@ewatrade/db/catalog-photo-derivatives"
 import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage"
 import {
   claimDeletedTenantCatalogPhoto,
   finishDeletedTenantCatalogPhoto,
 } from "@ewatrade/db/catalog-photo-deletion"
+import {
+  claimCatalogPhotoDerivativeCleanup,
+  finishCatalogPhotoDerivativeCleanup,
+} from "@ewatrade/db/catalog-photo-derivatives"
 import {
   claimCatalogPhotoCleanup,
   finishCatalogPhotoCleanup,
@@ -15,10 +15,11 @@ import {
 } from "@ewatrade/db/catalog-photo-lifecycle"
 import { prisma } from "@ewatrade/db/client"
 import { schedules } from "@trigger.dev/sdk/v3"
+import { automaticJobCron } from "../schedule-policy"
 
 export const catalogPhotoCleanup = schedules.task({
   id: "catalog.photo.cleanup",
-  cron: "*/5 * * * *",
+  cron: automaticJobCron("*/5 * * * *"),
   maxDuration: 600,
   queue: { concurrencyLimit: 1 },
   run: async () => {

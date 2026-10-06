@@ -99,10 +99,7 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
   const large = useLargeTextLayout()
   const inputClassName = market ? "bg-market-field text-market-ink" : undefined
   return (
-    <Section
-      title="Identity and location"
-      description="This information belongs only to the new business."
-    >
+    <Section title="Identity and location">
       <FormField
         variant={market ? "filled" : "auth"}
         label="Business name"

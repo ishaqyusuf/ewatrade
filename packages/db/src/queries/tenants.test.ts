@@ -24,8 +24,7 @@ describe("tenant context", () => {
                 metadata: {
                   retailOps: {
                     onboarding: {
-                      businessProfileKey:
-                        "animal-feed-agricultural-supplies",
+                      businessProfileKey: "animal-feed-agricultural-supplies",
                     },
                   },
                 },
@@ -56,4 +55,56 @@ describe("tenant context", () => {
       id: "store_123",
     })
   })
+})
+
+test("scoped context selects independent Store role and never exposes an unassigned Store", async () => {
+  const membership = {
+    id: "member",
+    role: "MANAGER",
+    tenantId: "tenant",
+    staffAccessMode: "SCOPED",
+    catalogEditor: true,
+    staffStoreAssignments: [
+      { storeId: "farm", role: "MANAGER", status: "ACTIVE" },
+      { storeId: "shop", role: "CASHIER", status: "ACTIVE" },
+    ],
+    retailOpsStaffProfile: { defaultStoreId: "shop" },
+    tenant: {
+      id: "tenant",
+      name: "QA",
+      slug: "qa",
+      type: "MERCHANT",
+      enabledModes: ["MERCHANT"],
+      timezone: "Africa/Lagos",
+      currencyCode: "NGN",
+      stores: ["farm", "shop", "private"].map((id) => ({
+        id,
+        slug: id,
+        name: id,
+        status: "ACTIVE",
+        currencyCode: "NGN",
+        metadata: {},
+      })),
+    },
+  }
+  const db = {
+    membership: { findFirst: async () => membership },
+  } as unknown as DbClient
+  const initial = await getActiveTenantForUser(db, { userId: "staff" })
+  expect(initial?.stores.map((store) => store.id)).toEqual(["farm", "shop"])
+  expect(initial?.activeStore?.id).toBe("shop")
+  expect(initial?.membership.role).toBe("CASHIER")
+  expect(initial?.membership.catalogEditor).toBe(true)
+  expect(
+    (await getActiveTenantForUser(db, { userId: "staff", storeId: "farm" }))
+      ?.membership.role,
+  ).toBe("MANAGER")
+  expect(
+    await getActiveTenantForUser(db, { userId: "staff", storeId: "private" }),
+  ).toBeNull()
+  membership.staffStoreAssignments = []
+  const revoked = await getActiveTenantForUser(db, { userId: "staff" })
+  expect(revoked?.stores).toEqual([])
+  expect(revoked?.activeStore).toBeNull()
+  expect(revoked?.membership.catalogEditor).toBe(false)
 })

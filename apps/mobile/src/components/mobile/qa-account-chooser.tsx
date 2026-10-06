@@ -4,15 +4,26 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FormField } from "./form-field"
 import { StatusBanner } from "./status-banner"
 
 export function QaAccountChooser() {
   const qa = useQaAccelerator()
+  const { token } = useAuthContext()
   const modal = useModal()
   const [search, setSearch] = useState("")
+  const lastToken = useRef(token)
+
+  useEffect(() => {
+    if (lastToken.current === token) return
+    lastToken.current = token
+    modal.dismiss()
+    setSearch("")
+  }, [token, modal.dismiss])
+
   const filteredProfiles = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return qa.profiles

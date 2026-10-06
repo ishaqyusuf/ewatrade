@@ -10,7 +10,10 @@ type SentryLikeBreadcrumb = {
 
 function redactTransfer(value: unknown) {
   if (typeof value !== "string") return value
-  return value.replace(/([#&?]transfer=)[A-Za-z0-9_-]{1,512}/g, "$1[Filtered]")
+  return value.replace(
+    /([#&?](?:transfer|access_token|accessToken|token)=)[A-Za-z0-9_%.-]{1,512}/g,
+    "$1[Filtered]",
+  )
 }
 
 export function redactCustomerCapabilitiesFromCrashEvent<

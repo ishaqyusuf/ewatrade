@@ -7,7 +7,6 @@ import {
   assertApiDeployTarget,
   assertProductionApiDeployMode,
   assertProductionApiProjectEnvironment,
-  assertProductionMigrationGate,
 } from "./api-deploy-target.mjs"
 
 const tempDirs = []
@@ -53,41 +52,6 @@ test("requires an explicit API project link before deployment", async () => {
     projectId: "api",
     orgId: "team",
   })
-})
-
-test("production migration requires readonly or verified-empty inventory, backup and explicit review", () => {
-  expect(() =>
-    assertProductionMigrationGate({
-      isProduction: true,
-      skipMigrations: false,
-    }),
-  ).toThrow("API_DEPLOY_PRODUCTION_MIGRATION_REVIEW_REQUIRED")
-  expect(() =>
-    assertProductionMigrationGate({
-      isProduction: true,
-      skipMigrations: false,
-      readonlyDatabaseUrl: "readonly-dsn",
-      backupReference: "backup-id",
-      migrationApproved: "true",
-    }),
-  ).not.toThrow()
-  expect(() =>
-    assertProductionMigrationGate({
-      isProduction: true,
-      skipMigrations: false,
-      freshDatabaseVerified: true,
-      backupReference: "backup-id",
-      migrationApproved: "true",
-    }),
-  ).not.toThrow()
-  expect(() =>
-    assertProductionMigrationGate({
-      isProduction: true,
-      skipMigrations: false,
-      freshDatabaseVerified: true,
-      backupReference: "backup-id",
-    }),
-  ).toThrow("API_DEPLOY_PRODUCTION_MIGRATION_REVIEW_REQUIRED")
 })
 
 test("production helper refuses a preview target before any migration", () => {

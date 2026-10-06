@@ -2,7 +2,10 @@ import {
   deliverEarlyAccessEmails,
   earlyAccessApprovedEmail,
 } from "@/lib/early-access-email"
-import { parseEarlyAccessOnboardingFormData } from "@/lib/early-access-onboarding"
+import {
+  buildEarlyAccessSignupUrl,
+  parseEarlyAccessOnboardingFormData,
+} from "@/lib/early-access-onboarding"
 import { shouldPreviewEarlyAccess } from "@/lib/early-access-preview"
 import {
   earlyAccessFailure,
@@ -32,9 +35,13 @@ export async function GET(request: NextRequest) {
     )
     const data = parseEarlyAccessOnboardingFormData(session.formData)
     if (!data) throw new Error("Approved session is invalid")
+    const accessUrl = buildEarlyAccessSignupUrl({
+      requestUrl: request.nextUrl.origin,
+      token: session.token,
+    })
     const input = {
       ...lead,
-      accessUrl: data.accessUrl,
+      accessUrl,
       accessExpiresAt: session.expiresAt.toISOString(),
     }
     await deliverEarlyAccessEmails(
@@ -47,7 +54,7 @@ export async function GET(request: NextRequest) {
         title: "QA early access approved",
         message:
           "The approved setup email was sent to your tester inbox. Continue here or preview the email.",
-        actionUrl: data.accessUrl,
+        actionUrl: accessUrl,
         emailHtml: renderMarketingEarlyAccessConfirmationTemplate(input).html,
       })
     return earlyAccessHtml({

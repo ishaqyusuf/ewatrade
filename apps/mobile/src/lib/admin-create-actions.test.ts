@@ -72,3 +72,22 @@ describe("admin create actions", () => {
     expect(actions[5]?.statusLabel).toBeUndefined()
   })
 })
+
+test("scoped quick create follows Store role and separate catalog grant", () => {
+  const labels = (role: string, catalogEditor = false) =>
+    buildAdminCreateActions(EMPTY_AVAILABILITY, false, {
+      role,
+      staffAccessMode: "SCOPED",
+      catalogEditor,
+    }).map((action) => action.label)
+  expect(labels("CASHIER")).toEqual(["Order"])
+  expect(labels("OPERATOR")).toEqual(["Order", "Stock Entry"])
+  expect(labels("MANAGER")).toEqual(["Order", "Stock Entry"])
+  expect(labels("MANAGER", true)).toEqual([
+    "Product",
+    "Service",
+    "Order",
+    "Stock Entry",
+  ])
+  expect(labels("OWNER")).toContain("Staff")
+})

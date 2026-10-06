@@ -140,6 +140,12 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             Cash counts and investigation
           </ActionButton>
           <Text className="text-base font-bold">Your accounts</Text>
+          <ActionButton
+            variant="outline"
+            onPress={() => router.push("/finance-bank-modal" as Href)}
+          >
+            Bank statements and original evidence
+          </ActionButton>
         </View>
       }
       ListEmptyComponent={

@@ -1,0 +1,84 @@
+enum FinanceBankMatchKind {
+  MATCH
+  UNMATCH
+}
+
+model FinanceBankAccountState {
+  bookId String
+  accountId String
+  revision BigInt @default(0)
+  book FinanceBook @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  account FinanceAccount @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict)
+  statements FinanceBankStatement[]
+  matchEvents FinanceBankMatchEvent[]
+
+  @@id([bookId, accountId])
+}
+
+model FinanceBankStatement {
+  id String @id @default(cuid())
+  bookId String
+  accountId String
+  currencyCode String
+  reference String
+  startsAt DateTime
+  endsAt DateTime
+  openingBalanceMinor BigInt
+  closingBalanceMinor BigInt
+  rowCount Int
+  contentHash String
+  importedRevision BigInt
+  actorUserId String
+  createdAt DateTime @default(now())
+  state FinanceBankAccountState @relation(fields: [bookId, accountId], references: [bookId, accountId], onDelete: Restrict)
+  lines FinanceBankStatementLine[]
+
+  @@unique([bookId, accountId, id])
+  @@unique([bookId, accountId, reference])
+  @@index([bookId, accountId, startsAt, endsAt])
+}
+
+model FinanceBankStatementLine {
+  id String @id @default(cuid())
+  bookId String
+  accountId String
+  statementId String
+  position Int
+  externalId String
+  occurredAt DateTime
+  amountMinor BigInt
+  description String
+  activeMatchId String?
+  statement FinanceBankStatement @relation(fields: [bookId, accountId, statementId], references: [bookId, accountId, id], onDelete: Restrict)
+  activeMatch FinanceBankMatchEvent? @relation("ActiveBankRows", fields: [bookId, accountId, activeMatchId], references: [bookId, accountId, id], onDelete: Restrict)
+
+  @@unique([statementId, position])
+  @@unique([bookId, accountId, externalId])
+  @@index([bookId, accountId, occurredAt])
+  @@index([activeMatchId])
+}
+
+model FinanceBankMatchEvent {
+  id String @id @default(cuid())
+  bookId String
+  accountId String
+  kind FinanceBankMatchKind
+  revision BigInt
+  snapshotSequence BigInt
+  bankRows Json
+  journalLines Json
+  amountMinor String
+  reason String
+  actorUserId String
+  createdAt DateTime @default(now())
+  reversalOfId String? @unique
+  state FinanceBankAccountState @relation(fields: [bookId, accountId], references: [bookId, accountId], onDelete: Restrict)
+  reversalOf FinanceBankMatchEvent? @relation("BankMatchReversal", fields: [bookId, accountId, reversalOfId], references: [bookId, accountId, id], onDelete: Restrict)
+  reversal FinanceBankMatchEvent? @relation("BankMatchReversal")
+  activeBankRows FinanceBankStatementLine[] @relation("ActiveBankRows")
+  activeJournalLines FinanceJournalLine[] @relation("ActiveBankJournalLines")
+
+  @@unique([bookId, accountId, id])
+  @@unique([bookId, accountId, revision])
+  @@unique([bookId, accountId, reversalOfId])
+}

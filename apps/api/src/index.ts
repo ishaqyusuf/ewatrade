@@ -1,8 +1,11 @@
 import "./instrument"
+import { appUpdateDependencies } from "./app-update/context"
+import { registerAppUpdateRoutes } from "./app-update/routes"
 
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
+import { withPerformanceTrace } from "@ewatrade/db/performance-tracing"
 import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { trpcServer } from "@hono/trpc-server"
@@ -45,6 +48,17 @@ const allowedOrigins =
     .filter(Boolean) ?? []
 
 const app = new OpenAPIHono()
+
+app.use("*", async (c, next) => {
+  if (process.env.PERFORMANCE_TRACE !== "true") return next()
+  return withPerformanceTrace("request", next, (trace) => {
+    c.header("X-Performance-Trace-Id", trace.id)
+    console.info(
+      "[performance]",
+      JSON.stringify({ ...trace, status: c.res.status }),
+    )
+  })
+})
 
 app.use(secureHeaders({ crossOriginResourcePolicy: "cross-origin" }))
 
@@ -159,6 +173,7 @@ const healthHandler = async (c: Context) => {
 app.get("/health", healthHandler)
 app.get("/api/health", healthHandler)
 
+registerAppUpdateRoutes(app, appUpdateDependencies)
 registerBillingProviderEventRoutes(app)
 registerAccountPrivacyResendWebhook(app)
 registerStoreNotificationRoutes(app)

@@ -128,6 +128,19 @@ test("notice alerts contain aggregate counts and stable hourly keys", async () =
   expect(messages[1]?.idempotencyKey).toBe(messages[3]?.idempotencyKey)
   expect(messages[0]?.idempotencyKey).not.toBe(messages[1]?.idempotencyKey)
   expect(messages[0]?.text).toContain("Failures after a completed request: 1")
+  expect(messages[0]?.html).toContain('data-email-system="warm-desk"')
+  expect(messages[0]?.text).toBe(
+    [
+      "Failed notices: 1",
+      "Failures after a completed request: 1",
+      "Uncertain sends: 1",
+      "Sends in progress over 10 minutes: 1",
+      "Accepted sends without delivery over 1 hour: 1",
+      "Inspect the platform-admin account-deletion review queue and provider event history.",
+      "Do not resend an uncertain attempt without reconciling the original provider outcome.",
+      "This alert contains no person, request, message or recipient identifier.",
+    ].join("\n"),
+  )
   expect(JSON.stringify(messages)).not.toContain("request-id")
   expect(JSON.stringify(messages)).not.toContain("recipient@example.test")
 })

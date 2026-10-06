@@ -1,31 +1,32 @@
-import { Icon, type IconKeys } from "@/components/ui/icon";
-import { Pressable } from "@/components/ui/pressable";
-import { Text } from "@/components/ui/text";
-import { useColors } from "@/hooks/use-color";
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout";
-import { useMarketDayPalette } from "@/lib/market-day-theme";
-import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout";
-import { cn } from "@/lib/utils";
-import type { LinkProps } from "expo-router";
-import type { ComponentProps, ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
-import { ActionButton, MarketDayActionButton } from "./action-button";
+import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { useColorScheme, useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
+import { cn } from "@/lib/utils"
+import type { LinkProps } from "expo-router"
+import type { ComponentProps, ReactNode } from "react"
+import { StyleSheet, View } from "react-native"
+import Svg, { Path } from "react-native-svg"
+import { ActionButton, MarketDayActionButton } from "./action-button"
+import { BrandMark, BrandWordmark } from "./brand"
 
 type AuthHeaderProps = {
-  align?: "center" | "start";
-  badge?: string;
-  icon?: IconKeys;
-  subtitle: string;
-  title: string;
-};
+  align?: "center" | "start"
+  badge?: string
+  icon?: IconKeys
+  subtitle: string
+  title: string
+}
 
 const GOOGLE_LOGO_COLORS = {
   blue: "rgb(66, 133, 244)",
   green: "rgb(52, 168, 83)",
   red: "rgb(234, 67, 53)",
   yellow: "rgb(251, 188, 5)",
-} as const;
+} as const
 
 export function AuthHeader({
   align = "start",
@@ -34,8 +35,8 @@ export function AuthHeader({
   subtitle,
   title,
 }: AuthHeaderProps) {
-  const isCentered = align === "center";
-  const colors = useColors();
+  const isCentered = align === "center"
+  const colors = useColors()
 
   return (
     <View className={cn("gap-6", isCentered && "items-center")}>
@@ -91,16 +92,16 @@ export function AuthHeader({
         </Text>
       </View>
     </View>
-  );
+  )
 }
 
 type AuthBrandHeaderProps = {
-  actions?: ReactNode;
-  kicker?: string;
-  subtitle: string;
-  title: string;
-  variant?: "default" | "market-day";
-};
+  actions?: ReactNode
+  kicker?: string
+  subtitle: string
+  title: string
+  variant?: "default" | "market-day"
+}
 
 export function AuthBrandHeader({
   actions,
@@ -109,9 +110,10 @@ export function AuthBrandHeader({
   title,
   variant = "default",
 }: AuthBrandHeaderProps) {
-  const colors = useColors();
-  const largeTextLayout = useLargeTextLayout();
-  const marketDay = useMarketDayPalette();
+  const colors = useColors()
+  const { colorScheme } = useColorScheme()
+  const largeTextLayout = useLargeTextLayout()
+  const marketDay = useMarketDayPalette()
 
   if (variant === "market-day") {
     return (
@@ -152,19 +154,9 @@ export function AuthBrandHeader({
                   { backgroundColor: marketDay.marigold },
                 ]}
               >
-                <Icon
-                  color={marketDay.onMarigold}
-                  name="Building2"
-                  size={22}
-                  strokeWidth={2.2}
-                />
+                <BrandMark color={marketDay.onMarigold} size={28} />
               </View>
-              <Text
-                maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
-                style={[marketDayStyles.logoType, { color: marketDay.onPalm }]}
-              >
-                ẸwáTrade
-              </Text>
+              <BrandWordmark reverse width={145} />
             </View>
             {actions ? (
               <View
@@ -228,7 +220,7 @@ export function AuthBrandHeader({
           </Text>
         </View>
       </View>
-    );
+    )
   }
 
   return (
@@ -251,14 +243,9 @@ export function AuthBrandHeader({
             width: 54,
           }}
         >
-          <Icon className="size-lg text-primary-foreground" name="Wallet" />
+          <BrandMark color={colors.primaryForeground} size={32} />
         </View>
-        <Text
-          className="text-[28px] font-bold leading-8 text-primary"
-          maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
-        >
-          ẸwáTrade
-        </Text>
+        <BrandWordmark reverse={colorScheme === "dark"} width={145} />
       </View>
       <View className={cn("gap-2", !largeTextLayout && "items-center")}>
         <Text
@@ -279,7 +266,7 @@ export function AuthBrandHeader({
         </Text>
       </View>
     </View>
-  );
+  )
 }
 
 const marketDayStyles = StyleSheet.create({
@@ -334,12 +321,6 @@ const marketDayStyles = StyleSheet.create({
     transform: [{ rotate: "-3deg" }],
     width: 44,
   },
-  logoType: {
-    fontSize: 23,
-    fontWeight: "900",
-    letterSpacing: -0.4,
-    lineHeight: 29,
-  },
   marketSun: {
     borderRadius: 999,
     height: 104,
@@ -372,18 +353,18 @@ const marketDayStyles = StyleSheet.create({
     letterSpacing: -1,
     lineHeight: 39,
   },
-});
+})
 
 type AuthMethodButtonProps = {
-  brandIcon?: "google";
-  disabled?: boolean;
-  icon?: IconKeys;
-  label: string;
-  loadingLabel?: string;
-  onPress: () => void;
-  pending?: boolean;
-  tone?: "primary" | "subtle";
-};
+  brandIcon?: "google"
+  disabled?: boolean
+  icon?: IconKeys
+  label: string
+  loadingLabel?: string
+  onPress: () => void
+  pending?: boolean
+  tone?: "primary" | "subtle"
+}
 
 export function AuthMethodButton({
   brandIcon,
@@ -395,8 +376,8 @@ export function AuthMethodButton({
   pending,
   tone = "subtle",
 }: AuthMethodButtonProps) {
-  const colors = useColors();
-  const isPrimary = tone === "primary";
+  const colors = useColors()
+  const isPrimary = tone === "primary"
 
   return (
     <Pressable
@@ -449,7 +430,7 @@ export function AuthMethodButton({
         </Text>
       </View>
     </Pressable>
-  );
+  )
 }
 
 function GoogleLogo() {
@@ -472,15 +453,15 @@ function GoogleLogo() {
         fill={GOOGLE_LOGO_COLORS.red}
       />
     </Svg>
-  );
+  )
 }
 
 type AuthDividerProps = {
-  label: string;
-};
+  label: string
+}
 
 export function AuthDivider({ label }: AuthDividerProps) {
-  const colors = useColors();
+  const colors = useColors()
 
   return (
     <View className="flex-row items-center gap-3">
@@ -490,15 +471,15 @@ export function AuthDivider({ label }: AuthDividerProps) {
       </Text>
       <View style={{ backgroundColor: colors.border, height: 1, flex: 1 }} />
     </View>
-  );
+  )
 }
 
 type AuthFooterActionProps = {
-  eyebrow: string;
-  href: LinkProps["href"];
-  icon?: IconKeys;
-  label: string;
-};
+  eyebrow: string
+  href: LinkProps["href"]
+  icon?: IconKeys
+  label: string
+}
 
 export function AuthFooterAction({
   eyebrow,
@@ -516,16 +497,16 @@ export function AuthFooterAction({
         {eyebrow} <Text className="font-bold text-primary">{label}</Text>
       </Text>
     </Pressable>
-  );
+  )
 }
 
 type AuthActionButtonProps = Omit<
   ComponentProps<typeof ActionButton>,
   "children"
 > & {
-  appearance?: "default" | "market-day";
-  children: ReactNode;
-};
+  appearance?: "default" | "market-day"
+  children: ReactNode
+}
 
 export function AuthActionButton({
   appearance = "default",
@@ -537,8 +518,8 @@ export function AuthActionButton({
       <MarketDayActionButton {...props} tone="paprika">
         {children}
       </MarketDayActionButton>
-    );
+    )
   }
 
-  return <ActionButton {...props}>{children}</ActionButton>;
+  return <ActionButton {...props}>{children}</ActionButton>
 }

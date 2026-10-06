@@ -1,3 +1,5 @@
+import { STAFF_STORE_ACCESS_ROLLOUT_READY } from "@ewatrade/db/staff-store-access"
+
 import {
   type EwaTradeRole,
   canManageSalesOperations,
@@ -241,6 +243,12 @@ export const retailOpsStaffRouter = createTRPCRouter({
   inviteStaff: protectedProcedure
     .input(retailOpsInviteStaffSchema)
     .mutation(async ({ ctx, input }) => {
+      if (!STAFF_STORE_ACCESS_ROLLOUT_READY)
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Staff Store access rollout is not ready. Invitations are temporarily unavailable.",
+        })
       assertCanManageRetailOpsStaff(ctx.tenantContext.membership.role)
 
       const store = resolveStore(

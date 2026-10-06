@@ -1,13 +1,28 @@
-import { useRouter } from "expo-router"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useEffect, useRef, useState } from "react"
+import {
+  useAdminTabs,
+  useResetAdminDock,
+} from "@/components/mobile/admin-tabs/admin-tabs-context"
 import { buildAppThemeOptions } from "@/components/mobile/app-theme-presentation"
 import { commitAppThemeSelection } from "@/components/mobile/app-theme-selection"
+import {
+  ClassicMoreFrame,
+  ClassicMoreHeader,
+  ClassicMoreRow,
+  ClassicMoreSection,
+  ClassicMoreWorkspace,
+} from "@/components/mobile/appearances/classic/more-screen"
+import {
+  MarketDayMoreFrame,
+  MarketDayMoreHeader,
+  MarketDayMoreRow,
+  MarketDayMoreSection,
+  MarketDayMoreWorkspace,
+} from "@/components/mobile/appearances/market-day/more-screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { useModal } from "@/components/ui/modal"
-import { View } from "@/components/ui/view"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
@@ -22,26 +37,11 @@ import { type ThemeOverride, setThemeOverride } from "@/lib/theme-preference"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  useAdminTabs,
-  useResetAdminDock,
-} from "@/components/mobile/admin-tabs/admin-tabs-context"
-import {
-  ClassicMoreFrame,
-  ClassicMoreHeader,
-  ClassicMoreWorkspace,
-  ClassicMoreRow,
-  ClassicMoreSection,
-} from "@/components/mobile/appearances/classic/more-screen"
-import {
-  MarketDayMoreFrame,
-  MarketDayMoreHeader,
-  MarketDayMoreWorkspace,
-  MarketDayMoreRow,
-  MarketDayMoreSection,
-} from "@/components/mobile/appearances/market-day/more-screen"
-import { MoreThemeSheet, MoreSignOutSheet } from "./more-sheets"
+import { useRouter } from "expo-router"
+import { useEffect, useRef, useState } from "react"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MoreApprovalCard } from "./more-approval-card"
+import { MoreSignOutSheet, MoreThemeSheet } from "./more-sheets"
 export function MoreScreen() {
   const insets = useSafeAreaInsets()
   const appearance = useMobileDesign("more")
@@ -77,9 +77,14 @@ export function MoreScreen() {
     normalizedRole === "ADMIN" || normalizedRole === "MANAGER"
       ? normalizedRole
       : "OWNER"
-  const sections = buildAdminMoreSections({ availability, role })
+  const sections = buildAdminMoreSections({
+    availability,
+    role,
+    staffAccessMode: auth.profile?.staffAccessMode,
+  })
   const offlineSettings = useQuery(
     trpc.offline.settings.queryOptions(undefined, {
+      enabled: auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER",
       retry: false,
       staleTime: 30_000,
     }),
@@ -87,7 +92,7 @@ export function MoreScreen() {
   const offlineRecords = useQuery(
     trpc.offline.conflicts.queryOptions(
       {},
-      { enabled: !isOffline, retry: false, staleTime: 30_000 },
+      { enabled: !isOffline && (auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER"), retry: false, staleTime: 30_000 },
     ),
   )
   const reviewingOrder = useRef(false)
@@ -231,8 +236,14 @@ export function MoreScreen() {
             ) : null}
           </Section>
         ))}
-        <Pressable accessibilityRole="button" className="min-h-12 justify-center px-5" onPress={() => router.push("/account-privacy")}>
-          <Text className="font-semibold text-primary">Account, privacy and deletion</Text>
+        <Pressable
+          accessibilityRole="button"
+          className="min-h-12 justify-center px-5"
+          onPress={() => router.push("/account-privacy")}
+        >
+          <Text className="font-semibold text-primary">
+            Account, privacy and deletion
+          </Text>
         </Pressable>
       </Frame>
 

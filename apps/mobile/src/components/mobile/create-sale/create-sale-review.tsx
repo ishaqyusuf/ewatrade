@@ -71,7 +71,6 @@ export function CreateSaleReview({
         <View className={tone("gap-5 px-4 pb-[var(--sale-actions-bottom)]")}>
           <SaleStageHeader
             current={3}
-            description="Check the details, record payment, then confirm the sale."
             onBack={() => {
               setError(null)
               setStep("customer")

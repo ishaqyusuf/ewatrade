@@ -25,6 +25,12 @@ function createInvitedUser() {
 
 function createInvitedMembership(input?: { status?: string }) {
   return {
+    staffAccessMode: "SCOPED",
+    staffAccessRevision: 1,
+    catalogEditor: false,
+    staffStoreAssignments: [
+      { storeId: "store_123", role: "CASHIER", status: "ACTIVE" },
+    ],
     acceptedAt: null,
     id: "membership_staff",
     invitedAt: new Date("2026-07-12T08:00:00.000Z"),
@@ -52,7 +58,16 @@ function createMockStaffInviteDb() {
   let capturedAcceptanceToken: string | null = null
 
   const tx = {
+    $queryRaw: async () => [{ id: "owner", role: "OWNER", status: "ACTIVE" }],
+    staffStoreAssignment: {
+      updateMany: async () => ({ count: 0 }),
+      upsert: async () => ({}),
+    },
+    staffAccessAuditEvent: { create: async () => ({}) },
     membership: {
+      findUniqueOrThrow: async () => membership,
+      findFirst: async () => membership,
+      updateMany: async () => ({ count: 1 }),
       count: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "membership.count", where })
 
@@ -102,6 +117,7 @@ function createMockStaffInviteDb() {
       },
     },
     retailOpsStaffProfile: {
+      updateMany: async () => ({ count: 1 }),
       upsert: async ({ create, update, where }: Record<string, unknown>) => {
         calls.push({
           data: {
@@ -256,11 +272,17 @@ function createMockStaffTokenDb(input?: {
 
 function createMockStaffOnboardingDb(
   ageBand = "ADULT",
-  invitation?: { status?: string; expiresAt?: Date; role?: string },
+  invitation?: {
+    status?: string
+    expiresAt?: Date
+    role?: string
+    revoked?: boolean
+  },
 ) {
   const calls: StaffCall[] = []
   const invitedMembership = createInvitedMembership()
   invitedMembership.user.ageBand = ageBand
+  if (invitation?.revoked) invitedMembership.staffStoreAssignments = []
   const updatedUser = {
     ...invitedMembership.user,
     displayName: "Market Attendant",
@@ -274,16 +296,20 @@ function createMockStaffOnboardingDb(
   }
 
   const tx = {
+    $queryRaw: async () => [],
     membership: {
       findMany: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "membership.findMany", where })
 
         return [invitedMembership]
       },
-      findUniqueOrThrow: async ({ where }: { where: unknown }) => {
+      findUniqueOrThrow: async ({
+        where,
+        select,
+      }: { where: unknown; select?: { staffAccessMode?: boolean } }) => {
         calls.push({ kind: "membership.findUniqueOrThrow", where })
 
-        return updatedMembership
+        return select?.staffAccessMode ? invitedMembership : updatedMembership
       },
       update: async ({ data, where }: { data: unknown; where: unknown }) => {
         calls.push({ data, kind: "membership.update", where })
@@ -677,4 +703,16 @@ describe("retail ops staff queries", () => {
       expect(db.calls.some((call) => call.kind === "user.update")).toBe(false)
     },
   )
+})
+
+test("acceptance refuses a pending invitation after all Store assignments are revoked", async () => {
+  const db = createMockStaffOnboardingDb("ADULT", { revoked: true })
+  await expect(
+    completeRetailOpsStaffOnboarding(db.client, {
+      displayName: "Staff",
+      tenantSlug: "rice-store",
+      userId: "user_staff",
+    }),
+  ).rejects.toMatchObject({ code: "STAFF_INVITE_INVALID" })
+  expect(db.calls.some((call) => call.kind === "membership.update")).toBe(false)
 })

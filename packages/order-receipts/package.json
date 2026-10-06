@@ -1,0 +1,30 @@
+{
+  "name": "@ewatrade/order-receipts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/types.ts",
+    "./pdf": "./src/pdf.tsx",
+    "./images": "./src/images.ts",
+    "./files": "./src/files.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check ."
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "0.1.100",
+    "@react-pdf/renderer": "4.3.2",
+    "fflate": "0.8.3",
+    "pdfjs-dist": "5.4.296",
+    "react": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@types/react": "^19.1.13",
+    "typescript": "catalog:"
+  }
+}

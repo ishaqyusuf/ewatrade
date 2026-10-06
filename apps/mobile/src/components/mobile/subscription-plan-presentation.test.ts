@@ -8,9 +8,8 @@ import {
 } from "./subscription-plan-presentation"
 
 describe("subscription plan presentation", () => {
-  test("uses one concise Plan and billing title and purpose", () => {
+  test("uses one concise Plan and billing title", () => {
     expect(SUBSCRIPTION_SCREEN_COPY).toEqual({
-      description: "See your limits and compare plans for this business.",
       title: "Plan & billing",
     })
   })

@@ -10,7 +10,6 @@ import { ClassicDashboardSectionHeader } from "./dashboard-screen"
 import {
   CounterFacts,
   CounterHeading,
-  CounterPathStep,
   CounterRow,
   CounterTask,
 } from "./home-counter-parts"
@@ -100,14 +99,11 @@ export function ClassicHomeJourney(props: HomeJourneyPresentationProps) {
               {props.syncLabel}
             </Text>
           </Pressable>
-          <CounterHeading
-            title="Your store, at a glance."
-            message={
-              ready
-                ? "Create an order or catch up on recent activity."
-                : "Get your catalog ready to take another order."
-            }
-          />
+          {!ready ? (
+            <Text className="text-sm text-muted-foreground">
+              Get your catalog ready to take another order.
+            </Text>
+          ) : null}
           <ActionButton
             icon="Plus"
             disabled={!ready && props.isOffline}
@@ -144,22 +140,6 @@ export function ClassicHomeJourney(props: HomeJourneyPresentationProps) {
               {ready ? "1" : "0"} of 2 essentials complete
             </Text>
           </View>
-          <CounterHeading
-            title={
-              ready
-                ? "Ready for your first order."
-                : unfinished
-                  ? "Let’s finish your catalog."
-                  : "Let’s get your business ready."
-            }
-            message={
-              ready
-                ? "You have something to sell. Let’s record your first customer order."
-                : unfinished
-                  ? "Your items are here. Make one available for customers to buy."
-                  : "Start small. Add one Product or Service your customers can buy."
-            }
-          />
           <CounterTask
             title={
               ready
@@ -169,55 +149,15 @@ export function ClassicHomeJourney(props: HomeJourneyPresentationProps) {
                   : "Add your first item"
             }
             message={
-              ready
-                ? "Choose the item and record what your customer is buying."
-                : unfinished
-                  ? "Check its price, active status and store availability."
-                  : "Choose a Product or Service, give it a name and set a price."
+              unfinished
+                ? "Check its price, active status and store availability."
+                : undefined
             }
             label={ready ? "Create an order" : catalogLabel}
             icon={ready ? "ReceiptText" : "Warehouse"}
             disabled={!ready && props.isOffline}
             onPress={ready ? props.onCreateOrder : catalogAction}
           />
-          <View>
-            <CounterPathStep
-              step="1"
-              title="Add a Product or Service"
-              complete={ready}
-              current={!ready}
-              message={
-                ready
-                  ? "Your catalog is ready."
-                  : unfinished
-                    ? "Finish making an item sellable."
-                    : "Choose one thing your customers can buy."
-              }
-            />
-            <CounterPathStep
-              step="2"
-              title="Take your first order"
-              current={ready}
-              message={
-                ready
-                  ? "Ready whenever your customer is."
-                  : "After your catalog is ready."
-              }
-            />
-            {props.canManageTeam ? (
-              <CounterPathStep
-                title="Bring your team along"
-                complete={journey.team === "active"}
-                message={
-                  journey.team === "active"
-                    ? "Team already set up."
-                    : journey.team === "pending"
-                      ? "Invitation pending."
-                      : "Optional · whenever you need a hand."
-                }
-              />
-            ) : null}
-          </View>
         </>
       )}
       <HomeTeam {...props} />
@@ -245,11 +185,6 @@ export function ClassicHomeJourney(props: HomeJourneyPresentationProps) {
                   : journey.team === "none"
                     ? "Invite your team"
                     : "Open team directory"
-            }
-            detail={
-              journey.team === "none"
-                ? "Optional · whenever you’re ready"
-                : undefined
             }
             onPress={props.onTeam}
           />
@@ -287,18 +222,11 @@ function HomeTeam(props: HomeJourneyPresentationProps) {
       ) : null}
       {journey.showTeamPrompt ? (
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-          <Text className="text-xs font-bold tracking-wider text-muted-foreground">
-            WHEN YOU NEED A HAND
-          </Text>
           <Text
             accessibilityRole="header"
             className="text-lg font-bold text-foreground"
           >
-            Share the work with your team.
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            You can invite someone now or keep running your business on your
-            own.
+            Invite your team · Optional
           </Text>
           <ActionButton variant="secondary" onPress={props.onTeam}>
             Invite someone

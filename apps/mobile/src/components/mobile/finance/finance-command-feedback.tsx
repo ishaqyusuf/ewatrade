@@ -6,6 +6,7 @@ import type { useMobileFinanceCommand } from "./use-mobile-finance-command"
 
 export type MobileFinanceCommand = ReturnType<typeof useMobileFinanceCommand>
 const labels: Record<string, string> = {
+  importBankStatement: "bank statement import",
   recordExpense: "expense",
   payBill: "expense payment",
   reverseBillPayment: "payment correction",

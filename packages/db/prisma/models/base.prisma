@@ -1,4 +1,6 @@
 model Tenant {
+  staffStoreAssignments StaffStoreAssignment[]
+  staffAccessAuditEvents StaffAccessAuditEvent[]
   financeExpenseReceiptAssets                       FinanceExpenseReceiptAsset[]
   financeBooks                                      FinanceBook[]
   storeBillingAccount                               StoreBillingAccount?
@@ -449,6 +451,11 @@ model Verification {
 }
 
 model Membership {
+  staffAccessMode StaffAccessMode @default(LEGACY)
+  catalogEditor Boolean @default(false)
+  staffAccessRevision Int @default(1)
+  staffStoreAssignments StaffStoreAssignment[]
+  staffAccessAuditEvents StaffAccessAuditEvent[]
   id                                        String                                     @id @default(cuid())
   tenantId                                  String
   userId                                    String
@@ -481,6 +488,7 @@ model Membership {
   storeConversationModerationAuditEvents    StoreConversationModerationAuditEvent[]    @relation("StoreConversationModerationAuditMembership")
   storeConversationSensitiveReadAuditEvents StoreConversationSensitiveReadAuditEvent[] @relation("StoreConversationSensitiveReadAuditMembership")
 
+  @@unique([id, tenantId])
   @@unique([tenantId, userId])
   @@index([tenantId, role])
   @@index([userId, status])

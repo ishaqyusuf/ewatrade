@@ -4,15 +4,15 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { useTRPC } from "@/trpc/client"
 import {
+  catalogCategoryEmoji,
+  catalogCategoryLabelEmoji,
+} from "@ewatrade/utils/catalog-category-emojis"
+import {
   CATALOG_CATEGORY_PRESETS,
   type CatalogCategoryPreset,
   getCatalogCategoryPresets,
 } from "@ewatrade/utils/catalog-category-presets"
 import { useQuery } from "@tanstack/react-query"
-import {
-  catalogCategoryEmoji,
-  catalogCategoryLabelEmoji,
-} from "@ewatrade/utils/catalog-category-emojis"
 import { useState } from "react"
 import { View } from "react-native"
 import { CatalogDetailRow } from "./catalog-setup-details"

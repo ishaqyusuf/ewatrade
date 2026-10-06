@@ -1,3 +1,29 @@
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectRoot,
+  SelectTrigger,
+  SelectValue,
+  useComboboxAnchor,
+} from "@ewatrade/ui"
+import { useId } from "react"
+
 import { setupNeedOptions } from "@/lib/lead-capture"
 
 export type EarlyAccessContextDraft = {
@@ -39,15 +65,15 @@ const needLabels: Record<(typeof setupNeedOptions)[number], string> = {
 export function EarlyAccessContextFields({
   draft,
   onChange,
-  inputClassName,
 }: {
   draft: EarlyAccessContextDraft
   onChange: (draft: EarlyAccessContextDraft) => void
-  inputClassName: string
 }) {
+  const id = useId()
+  const setupAnchor = useComboboxAnchor()
   return (
     <>
-      <div className="lead-capture-row grid gap-4 md:grid-cols-2">
+      <FieldGroup className="lead-capture-row grid md:grid-cols-2">
         {(
           [
             ["businessSize", "Current business size", sizeChoices],
@@ -59,57 +85,88 @@ export function EarlyAccessContextFields({
             ],
           ] as const
         ).map(([field, label, choices]) => (
-          <label
-            key={field}
-            className="lead-capture-field space-y-2 text-sm text-foreground"
-          >
-            <span>{label}</span>
-            <select
+          <Field key={field}>
+            <FieldLabel htmlFor={`${id}-${field}`}>{label}</FieldLabel>
+            <SelectRoot
               required
               name={field}
-              value={draft[field]}
-              className={inputClassName}
-              onChange={(event) =>
-                onChange({ ...draft, [field]: event.target.value })
+              value={draft[field] || null}
+              items={choices.map(([value, label]) => ({ value, label }))}
+              onValueChange={(value) =>
+                onChange({ ...draft, [field]: value ?? "" })
               }
             >
-              <option value="">Select an option</option>
-              {choices.map(([value, text]) => (
-                <option key={value} value={value}>
-                  {text}
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger id={`${id}-${field}`} appearance="form">
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                <SelectGroup>
+                  {choices.map(([value, text]) => (
+                    <SelectItem key={value} value={value}>
+                      {text}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </SelectRoot>
+          </Field>
         ))}
-      </div>
-      <fieldset className="lead-capture-field space-y-2 text-sm text-foreground">
-        <legend>What should setup cover?</legend>
-        <p className="text-xs text-muted-foreground">
-          Select at least one area.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {setupNeedOptions.map((value) => (
-            <label key={value} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="setupNeeds"
-                value={value}
-                checked={draft.setupNeeds.includes(value)}
-                onChange={(event) =>
-                  onChange({
-                    ...draft,
-                    setupNeeds: event.target.checked
-                      ? [...draft.setupNeeds, value]
-                      : draft.setupNeeds.filter((need) => need !== value),
-                  })
-                }
-              />
-              <span>{needLabels[value]}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      </FieldGroup>
+      <Field>
+        <FieldLabel htmlFor={`${id}-setupNeeds`}>
+          What should setup cover?
+        </FieldLabel>
+        <Combobox
+          multiple
+          autoHighlight
+          required
+          name="setupNeeds"
+          value={draft.setupNeeds}
+          items={setupNeedOptions}
+          itemToStringLabel={(value) => {
+            const option = setupNeedOptions.find((option) => option === value)
+            return option ? needLabels[option] : value
+          }}
+          onValueChange={(setupNeeds) => onChange({ ...draft, setupNeeds })}
+        >
+          <ComboboxChips ref={setupAnchor} appearance="form">
+            <ComboboxValue>
+              {(values: (typeof setupNeedOptions)[number][]) =>
+                values.map((value) => (
+                  <ComboboxChip
+                    key={value}
+                    removeLabel={`Remove ${needLabels[value]}`}
+                  >
+                    {needLabels[value]}
+                  </ComboboxChip>
+                ))
+              }
+            </ComboboxValue>
+            <ComboboxChipsInput
+              id={`${id}-setupNeeds`}
+              placeholder="Select setup areas"
+              aria-describedby={`${id}-setupNeeds-hint`}
+            />
+          </ComboboxChips>
+          <ComboboxContent anchor={setupAnchor}>
+            <ComboboxEmpty>No setup areas found.</ComboboxEmpty>
+            <ComboboxList>
+              <ComboboxGroup>
+                <ComboboxCollection>
+                  {(value: (typeof setupNeedOptions)[number]) => (
+                    <ComboboxItem key={value} value={value}>
+                      {needLabels[value]}
+                    </ComboboxItem>
+                  )}
+                </ComboboxCollection>
+              </ComboboxGroup>
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+        <FieldDescription id={`${id}-setupNeeds-hint`}>
+          Select at least one area. You can choose more than one.
+        </FieldDescription>
+      </Field>
     </>
   )
 }

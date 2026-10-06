@@ -103,9 +103,11 @@ import {
 } from "../../schemas/finance-suppliers"
 import { financeProcedure } from "../finance-procedure"
 import { createTRPCRouter } from "../init"
+import { financeBankStatementsRouter } from "./finance-bank-statements"
 import { financeExpenseReceiptsRouter } from "./finance-expense-receipts"
 
 export const financeRouter = createTRPCRouter({
+  bankStatements: financeBankStatementsRouter,
   yearEndPreview: financeProcedure
     .input(financeBookSchema)
     .query(({ ctx, input }) =>

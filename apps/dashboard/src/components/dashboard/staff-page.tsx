@@ -5,6 +5,7 @@ import { StaffDirectoryHeader } from "@/components/dashboard/staff-directory-hea
 import { StaffInviteModal } from "@/components/modals/staff-invite-modal"
 import { MetricCard } from "@/components/reports/metric-card"
 import { ScrollableContent } from "@/components/scrollable-content"
+import { ManageStaffAccessModal } from "@/components/staff/manage-staff-access-modal"
 import { StaffDataTable } from "@/components/tables/staff/data-table"
 import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
 import { useStaffParams } from "@/hooks/use-staff-params"
@@ -221,7 +222,7 @@ export function StaffPage({
               ["Active", summary.active],
               ["Invited", summary.invited],
               ["Suspended", summary.suspended],
-              ["Attendants", summary.attendants],
+              ["Cashiers", summary.attendants],
             ].map(([label, value]) => (
               <MetricCard key={label} label={String(label)} value={value} />
             ))}
@@ -287,6 +288,13 @@ export function StaffPage({
           />
         </section>
 
+        <ManageStaffAccessModal
+          onSaved={async () => {
+            setNotice("Staff Store access updated.")
+            router.refresh()
+            await refreshStaff()
+          }}
+        />
         <StaffInviteModal storeId={store.id} onInvited={onInvited} />
       </div>
     </ScrollableContent>

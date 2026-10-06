@@ -68,10 +68,10 @@ export async function GET(request: NextRequest) {
   const tenantId = ctx.tenant.id
   const storeScope = { storeId: store.id, tenantId }
   const canSearchProducts =
-    canManageProductCatalog(role) || canOperateInventory(role)
+    canManageProductCatalog(role) || canOperateInventory(role, ctx.membership.staffAccessMode)
   const canSearchCustomers = canUseSalesOperations(role)
   const canSearchSales = canSearchCustomers
-  const canSearchStaff = canManageStaff(role)
+  const canSearchStaff = canManageStaff(role, ctx.membership.staffAccessMode)
   const [products, customers, staff, sales] = await Promise.all([
     canSearchProducts
       ? prisma.catalogItem.findMany({

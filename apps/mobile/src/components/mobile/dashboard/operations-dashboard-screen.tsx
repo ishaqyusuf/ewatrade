@@ -32,6 +32,7 @@ import {
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { MobileStoresSwitcher } from "@/components/mobile/stores-switcher"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
@@ -40,7 +41,13 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { hasStoredCustomerShellAccess } from "@/lib/customer-conversation-store"
 import { setLastMobileShell } from "@/lib/customer-shell-preference"
-import { isSalesRepRole } from "@/lib/mobile-roles"
+import {
+  canEditMobileCatalog,
+  canManageMobileStaff,
+  canManageMobileStock,
+  isSalesRepRole,
+  normalizeMobileRole,
+} from "@/lib/mobile-roles"
 import { getSalesRepShiftLedgerPresentation } from "@/lib/sales-rep-shift-ledger"
 import {
   getMobileDashboardFeatureVisibility,
@@ -88,12 +95,16 @@ export function OperationsDashboardSurface({
     profile?.businessId,
   )
   const provisional = getOfflineProvisionalProjection(commands)
+  const scopedStaff =
+    profile?.staffAccessMode === "SCOPED" &&
+    !["OWNER", "ADMIN"].includes(normalizeMobileRole(profile?.role))
+  const canEditCatalog = canEditMobileCatalog(profile)
   const isAttendant = isSalesRepRole(profile?.role)
   const appearance = useMobileDesign(
     isAttendant ? "sales-rep-home" : "business-home",
   )
   const isMarketDay = appearance === "market-day"
-  const isClassicOwner = !isMarketDay && !isAttendant
+  const isClassicOwner = !isMarketDay && !isAttendant && !scopedStaff
   const Screen = isMarketDay ? MarketDayDashboardScreen : ClassicDashboardScreen
   const OwnerHero = isMarketDay
     ? BusinessHomeMarketLedgerHero
@@ -141,7 +152,7 @@ export function OperationsDashboardSurface({
   const service = useQuery(
     trpc.services.queue.queryOptions(
       { limit: 8 },
-      { enabled: !isOffline, retry: false },
+      { enabled: !isOffline && !scopedStaff, retry: false },
     ),
   )
   const orderRows = orders.data ?? []
@@ -181,11 +192,13 @@ export function OperationsDashboardSurface({
     !isOffline &&
     featureAvailabilityQuery.isError &&
     !hasResolvedFeatureAvailability
-  const showStoreSetup = shouldShowMobileStoreSetup({
-    availabilityResolved: hasResolvedFeatureAvailability,
-    isAttendant,
-    showGettingStarted: featureVisibility.showGettingStarted,
-  })
+  const showStoreSetup =
+    !scopedStaff &&
+    shouldShowMobileStoreSetup({
+      availabilityResolved: hasResolvedFeatureAvailability,
+      isAttendant,
+      showGettingStarted: featureVisibility.showGettingStarted,
+    })
   const isOfflineAvailabilityUnknown =
     isOffline && !hasResolvedFeatureAvailability
   const ownerHome = useHomeJourney({
@@ -237,14 +250,14 @@ export function OperationsDashboardSurface({
           ? "unavailable"
           : "available",
   })
-  const navItems = [
+  const allNavItems = [
     {
       icon: "home" as const,
       isActive: true,
       label: "Home",
       onPress: () => undefined,
     },
-    ...(navigation.navItemLabels.includes("Catalog")
+    ...(navigation.navItemLabels.includes("Catalog") || canEditCatalog
       ? [
           {
             icon: "Warehouse" as const,
@@ -270,11 +283,17 @@ export function OperationsDashboardSurface({
         ]
       : []),
   ]
+  const navItems = scopedStaff
+    ? allNavItems.filter(
+        (item) =>
+          item.label === "Home" || (item.label === "Catalog" && canEditCatalog),
+      )
+    : allNavItems
   const openCreateRoute = (href: string) => {
     createModal.dismiss()
     router.push(href as never)
   }
-  const createActions: CreateAction[] = [
+  const allCreateActions: CreateAction[] = [
     {
       detail: "Add a stock-tracked item to your catalog.",
       disabled: isOffline,
@@ -318,6 +337,14 @@ export function OperationsDashboardSurface({
       onPress: () => openCreateRoute("/staff-invite-modal"),
     },
   ]
+  const createActions = allCreateActions.filter((action) => {
+    if (["Product", "Service"].includes(action.label)) return canEditCatalog
+    if (action.label === "Staff") return canManageMobileStaff(profile)
+    if (action.label === "Customer") return !scopedStaff
+    if (action.label === "Stock Entry")
+      return canManageMobileStock(profile?.role, profile?.staffAccessMode)
+    return true
+  })
   const operationalAction: HomeAction =
     packagedBalanceCount >= 2
       ? {
@@ -347,7 +374,7 @@ export function OperationsDashboardSurface({
               onPress: () => router.push("/sync-status-modal" as never),
               tone: "neutral",
             }
-  const homeActions: HomeAction[] = [
+  const allHomeActions: HomeAction[] = [
     {
       disabled: isOffline,
       icon: "FolderPlus",
@@ -382,6 +409,13 @@ export function OperationsDashboardSurface({
     operationalAction,
   ]
 
+  const homeActions = allHomeActions.filter(
+    (action) =>
+      !scopedStaff ||
+      (action.label === "Add a product" || action.label === "Add a service"
+        ? canEditCatalog
+        : action !== operationalAction || hasProduct),
+  )
   return (
     <Screen
       businessName={profile?.businessName ?? "Business"}
@@ -407,7 +441,7 @@ export function OperationsDashboardSurface({
               router.push("/sync-status-modal" as never)
             }
             onSearchPress={
-              isOffline
+              isOffline || scopedStaff
                 ? undefined
                 : () => router.push("/global-search" as never)
             }
@@ -429,7 +463,7 @@ export function OperationsDashboardSurface({
                 : undefined
             }
             onSearchPress={
-              isOffline
+              isOffline || scopedStaff
                 ? undefined
                 : () => router.push("/global-search" as never)
             }
@@ -531,7 +565,7 @@ export function OperationsDashboardSurface({
           {...salesRepPresentation}
           onCloseoutPress={() => router.push("/closeout-modal" as never)}
           onCustomerBookPress={
-            featureAvailability.hasCustomers
+            featureAvailability.hasCustomers && !scopedStaff
               ? () => router.push("/customer-book-modal" as never)
               : undefined
           }
@@ -634,6 +668,21 @@ export function OperationsDashboardSurface({
             </Text>
           </View>
           <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+        </Pressable>
+      ) : null}
+
+      {isAttendant &&
+      canManageMobileStock(profile?.role, profile?.staffAccessMode) ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push("/stock-intake-modal" as never)}
+          className="mx-4 flex-row items-center gap-3 border border-border p-4"
+        >
+          <Icon name="Warehouse" className="size-sm text-muted-foreground" />
+          <Text className="flex-1 text-base font-medium text-foreground">
+            Receive or adjust stock
+          </Text>
+          <Icon name="ChevronRight" className="size-sm text-muted-foreground" />
         </Pressable>
       ) : null}
 

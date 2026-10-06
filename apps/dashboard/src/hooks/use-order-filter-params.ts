@@ -14,7 +14,7 @@ export const ORDER_STATUSES = [
 
 export const orderFilterParams = {
   orderQuery: parseAsString,
-  orderStatus: parseAsStringEnum(ORDER_STATUSES),
+  orderStatus: parseAsStringEnum([...ORDER_STATUSES]),
 }
 
 export type OrderFilters = {

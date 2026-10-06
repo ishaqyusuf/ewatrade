@@ -132,7 +132,7 @@ export function UnitConversionContent(props: ConversionProps) {
                   onLayout={(event) => {
                     sourceTop.current = event.nativeEvent.layout.y
                   }}
-                  description="Choose the packaged balance to reduce. Shared-pool balances are not transformation endpoints."
+                  description="Choose the packaged stock to convert."
                 >
                   {model.loading ? (
                     <Text className={muted}>

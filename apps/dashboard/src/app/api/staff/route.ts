@@ -7,8 +7,11 @@ import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
 import {
   RetailOpsStaffError,
   RetailOpsSubscriptionError,
+  STAFF_STORE_ACCESS_ROLLOUT_READY,
+  StaffStoreAccessError,
   inviteRetailOpsStaff,
   updateRetailOpsStaffStatus,
+  updateRetailOpsStaffStoreAccess,
 } from "@ewatrade/db/queries"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
 import {
@@ -35,6 +38,16 @@ const staffStatusFilterSchema = z.enum([
 ])
 
 const inviteStaffSchema = z.object({
+  assignments: z
+    .array(
+      z.object({
+        storeId: z.string().trim().min(1),
+        role: z.enum(["cashier", "operator", "manager"]),
+      }),
+    )
+    .min(1)
+    .max(100),
+  catalogEditor: z.boolean().default(false),
   email: z.email().trim().toLowerCase(),
   externalId: z.string().trim().min(1).max(120).optional(),
   name: z.string().trim().min(1).max(120).optional(),
@@ -50,9 +63,21 @@ const updateStaffStatusSchema = z.object({
   storeId: z.string().trim().min(1).optional(),
 })
 
+const updateAccessSchema = z.object({
+  operation: z.literal("access"),
+  staffUserId: z.string().trim().min(1),
+  expectedRevision: z.number().int().positive(),
+  confirmLegacyCutover: z.boolean().default(false),
+  assignments: z.array(inviteStaffSchema.shape.assignments.element).max(100),
+  catalogEditor: z.boolean().default(false),
+  defaultStoreId: z.string().trim().min(1).nullable(),
+  storeId: z.string().trim().min(1).optional(),
+})
+
 const staffOperationSchema = z.discriminatedUnion("operation", [
   inviteStaffSchema,
   updateStaffStatusSchema,
+  updateAccessSchema,
 ])
 
 function getStaffErrorStatus(error: RetailOpsStaffError) {
@@ -125,7 +150,7 @@ async function getStaffContext(requestedStoreId?: string) {
     }
   }
 
-  if (!canManageStaff(ctx.membership.role)) {
+  if (!canManageStaff(ctx.membership.role, ctx.membership.staffAccessMode)) {
     return {
       error: NextResponse.json(
         { error: "You do not have permission to manage staff." },
@@ -174,8 +199,33 @@ export async function GET(request: NextRequest) {
     tenantId: ctx.tenant.id,
   })
 
+  const staffUserId = url.searchParams.get("staffUserId")
+  const access =
+    staffUserId && ["OWNER", "ADMIN"].includes(ctx.membership.role)
+      ? await prisma.membership.findUnique({
+          where: {
+            tenantId_userId: { tenantId: ctx.tenant.id, userId: staffUserId },
+          },
+          select: {
+            role: true,
+            status: true,
+            staffAccessMode: true,
+            catalogEditor: true,
+            staffAccessRevision: true,
+            staffStoreAssignments: {
+              where: { status: "ACTIVE" },
+              select: { storeId: true, role: true },
+            },
+            retailOpsStaffProfile: { select: { defaultStoreId: true } },
+          },
+        })
+      : null
   return NextResponse.json({
     staff,
+    access,
+    storeAccessReady: STAFF_STORE_ACCESS_ROLLOUT_READY,
+
+    stores: ctx.stores.filter((item) => item.status === "ACTIVE"),
     store,
   })
 }
@@ -199,7 +249,26 @@ export async function POST(request: NextRequest) {
 
   try {
     if (parsed.data.operation === "invite") {
+      if (!STAFF_STORE_ACCESS_ROLLOUT_READY) {
+        return NextResponse.json(
+          { error: "Store staff assignments are not available yet." },
+          { status: 503 },
+        )
+      }
       const invitedStaff = await inviteRetailOpsStaff(prisma, {
+        storeAccess: {
+          assignments: parsed.data.assignments.map((row) => ({
+            storeId: row.storeId,
+            role:
+              row.role === "cashier"
+                ? "CASHIER"
+                : row.role === "operator"
+                  ? "OPERATOR"
+                  : "MANAGER",
+          })),
+          catalogEditor: parsed.data.catalogEditor,
+          defaultStoreId: parsed.data.assignments[0]?.storeId ?? store.id,
+        },
         actorUserId: session.user.id,
         email: parsed.data.email,
         externalId:
@@ -233,6 +302,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (parsed.data.operation === "access") {
+      if (!STAFF_STORE_ACCESS_ROLLOUT_READY)
+        return NextResponse.json(
+          { error: "Store staff assignments are not available yet." },
+          { status: 503 },
+        )
+      const result = await updateRetailOpsStaffStoreAccess(prisma, {
+        tenantId: ctx.tenant.id,
+        actorUserId: session.user.id,
+        staffUserId: parsed.data.staffUserId,
+        expectedRevision: parsed.data.expectedRevision,
+        confirmLegacyCutover: parsed.data.confirmLegacyCutover,
+        defaultStoreId: parsed.data.defaultStoreId,
+        catalogEditor: parsed.data.catalogEditor,
+        assignments: parsed.data.assignments.map((row) => ({
+          storeId: row.storeId,
+          role:
+            row.role === "cashier"
+              ? "CASHIER"
+              : row.role === "operator"
+                ? "OPERATOR"
+                : "MANAGER",
+        })),
+      })
+      return NextResponse.json(
+        { result },
+        { headers: { "Cache-Control": "no-store" } },
+      )
+    }
+
     const result = await updateRetailOpsStaffStatus(prisma, {
       actorUserId: session.user.id,
       staffUserId: parsed.data.staffUserId,
@@ -242,6 +341,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ result })
   } catch (error) {
+    if (error instanceof StaffStoreAccessError) {
+      return NextResponse.json(
+        { error: error.message },
+        {
+          status:
+            error.code === "FORBIDDEN"
+              ? 403
+              : error.code === "CONFLICT"
+                ? 409
+                : 400,
+        },
+      )
+    }
     if (error instanceof RetailOpsStaffError) {
       return NextResponse.json(
         { error: error.message },

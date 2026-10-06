@@ -50,9 +50,8 @@ describe("business switch presentation", () => {
     })
   })
 
-  test("uses one concise workspace title and purpose", () => {
+  test("uses one concise workspace title", () => {
     expect(BUSINESS_SWITCH_COPY).toEqual({
-      description: "Choose where you want to manage orders, stock, and staff.",
       title: "Workspaces",
     })
   })

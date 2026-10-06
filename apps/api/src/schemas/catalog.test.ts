@@ -45,6 +45,32 @@ function productInput() {
 }
 
 describe("catalog Product variant input", () => {
+  test("requires explicit manual mode without a saved or dummy fixed price", () => {
+    const input = productInput()
+    const variant = input.variants[0]
+    const offering = variant?.offerings[0]
+    if (!variant || !offering) throw new Error("Missing Product fixture")
+    const manual = {
+      ...offering,
+      fixedPriceMinor: undefined,
+      pricingPolicy: "order_total",
+    }
+    expect(
+      catalogCreateProductSchema.parse({
+        ...input,
+        variants: [{ ...variant, offerings: [manual] }],
+      }).variants[0]?.offerings[0]?.pricingPolicy,
+    ).toBe("order_total")
+    for (const fixedPriceMinor of [0, 100])
+      expect(
+        catalogCreateProductSchema.safeParse({
+          ...input,
+          variants: [
+            { ...variant, offerings: [{ ...manual, fixedPriceMinor }] },
+          ],
+        }).success,
+      ).toBe(false)
+  })
   test("accepts cursor pagination and a catalog search query", () => {
     const result = catalogListItemsPageSchema.parse({
       cursor: "catalog-cursor-1",

@@ -35,7 +35,10 @@ export function createWorkspaceSwitchActions(
 ) {
   async function requestSwitch(
     url: string,
-    body: { storeId: string } | { path: string; tenantId: string },
+    body:
+      | { storeId: string }
+      | { scope: "all" }
+      | { path: string; tenantId: string },
     fallback: string,
     onNavigate?: () => void,
   ): Promise<SwitchResult> {
@@ -59,7 +62,12 @@ export function createWorkspaceSwitchActions(
           : null
       clearCache()
       onNavigate?.()
-      assign(result?.dashboardUrl || pathname)
+      assign(
+        result?.dashboardUrl ||
+          ("scope" in body && !pathname.startsWith("/inventory")
+            ? "/inventory"
+            : pathname),
+      )
       return { status: "success" }
     } catch (switchError) {
       return {
@@ -70,8 +78,21 @@ export function createWorkspaceSwitchActions(
   }
 
   return {
+    switchAllStores(onNavigate?: () => void) {
+      return requestSwitch(
+        "/api/stores/active",
+        { scope: "all" },
+        "Could not show all stores.",
+        onNavigate,
+      )
+    },
     switchStore(storeId: string, onNavigate?: () => void) {
-      if (!storeId || storeId === ctx.activeStore?.id) {
+      if (
+        !storeId ||
+        (storeId === ctx.activeStore?.id &&
+          ctx.inventoryScope !== "all" &&
+          !ctx.storeSelectionNeedsRepair)
+      ) {
         return Promise.resolve<SwitchResult>({ status: "unchanged" })
       }
 
@@ -121,6 +142,9 @@ export function useWorkspaceSwitch(ctx: TenantContext) {
   return {
     error,
     isSwitching,
+    switchAllStores(onNavigate?: () => void) {
+      return runSwitch(() => actions.switchAllStores(onNavigate))
+    },
     switchStore(storeId: string, onNavigate?: () => void) {
       return runSwitch(() => actions.switchStore(storeId, onNavigate))
     },

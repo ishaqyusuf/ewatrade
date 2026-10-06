@@ -15,7 +15,7 @@ import {
   SubmitButton,
 } from "@ewatrade/ui"
 import type { FormEvent } from "react"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 type InviteForm = {
   email: string
@@ -32,11 +32,42 @@ const emptyInviteForm: InviteForm = {
 export function StaffInviteContent({
   onClose,
   onInvited,
+  storeId,
 }: {
+  storeId: string
   onClose: () => Promise<unknown>
   onInvited: (qaInviteUrl: string | null) => Promise<void>
 }) {
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm)
+  const [stores, setStores] = useState<Array<{ id: string; name: string }>>([])
+  const [assignments, setAssignments] = useState([
+    { key: 0, storeId, role: "cashier" as StaffInviteRole },
+  ])
+  const [storeAccessReady, setStoreAccessReady] = useState(false)
+  const nextRowKey = useRef(1)
+  const [catalogEditor, setCatalogEditor] = useState(false)
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetch("/api/staff", { signal: controller.signal })
+      .then(async (response) => {
+        const result = await response.json()
+        if (!response.ok)
+          throw new Error(result.error ?? "Store access could not be loaded.")
+        setStores(result.stores)
+        setStoreAccessReady(result.storeAccessReady === true)
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted)
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : "Store access could not be loaded.",
+          )
+      })
+    return () => controller.abort()
+  }, [])
+  const hasManager = assignments.some((row) => row.role === "manager")
+  const incomplete = assignments.some((row) => !row.storeId)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const quickFillSnapshot = useRef<InviteForm | null>(null)
@@ -52,12 +83,24 @@ export function StaffInviteContent({
   async function submitInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+    if (!storeAccessReady) {
+      setError("Store staff assignments are not available yet.")
+      return
+    }
 
     if (!inviteForm.email.trim()) {
       setError("Enter a staff email.")
       return
     }
 
+    if (
+      incomplete ||
+      !stores.length ||
+      new Set(assignments.map((row) => row.storeId)).size !== assignments.length
+    ) {
+      setError("Choose a different Store and a role in every row.")
+      return
+    }
     setIsSaving(true)
 
     try {
@@ -66,7 +109,13 @@ export function StaffInviteContent({
           email: inviteForm.email.trim(),
           name: inviteForm.name.trim() || undefined,
           operation: "invite",
-          role: inviteForm.role,
+          role: assignments[0]?.role,
+          storeId: assignments[0]?.storeId,
+          assignments: assignments.map(({ storeId, role }) => ({
+            storeId,
+            role,
+          })),
+          catalogEditor: hasManager && catalogEditor,
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -150,30 +199,145 @@ export function StaffInviteContent({
           />
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="staff-invite-role">Role</FieldLabel>
-          <SelectControl<StaffInviteRole>
-            id="staff-invite-role"
-            disabled={isSaving}
-            value={inviteForm.role}
-            onValueChange={(role) =>
-              setInviteForm((current) => ({
-                ...current,
-                role,
-              }))
-            }
-            options={[
-              { value: "cashier", label: "Cashier" },
-              { value: "operator", label: "Operator" },
-              { value: "manager", label: "Manager" },
-            ]}
-          />
-        </Field>
+        <div className="grid gap-3" aria-label="Store access">
+          {assignments.map((row, index) => (
+            <div
+              key={row.key}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2"
+            >
+              <Field>
+                <FieldLabel htmlFor={`staff-store-${row.key}`}>
+                  Store
+                </FieldLabel>
+                <SelectControl<string>
+                  id={`staff-store-${row.key}`}
+                  disabled={isSaving || !stores.length}
+                  value={row.storeId}
+                  placeholder="Select Store"
+                  onValueChange={(selected) =>
+                    setAssignments((current) =>
+                      current.map((item) =>
+                        item.key === row.key
+                          ? { ...item, storeId: selected }
+                          : item,
+                      ),
+                    )
+                  }
+                  options={stores
+                    .filter(
+                      (store) =>
+                        store.id === row.storeId ||
+                        !assignments.some((item) => item.storeId === store.id),
+                    )
+                    .map((store) => ({ value: store.id, label: store.name }))}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={`staff-role-${row.key}`}>Role</FieldLabel>
+                <SelectControl<StaffInviteRole>
+                  id={`staff-role-${row.key}`}
+                  disabled={isSaving}
+                  value={row.role}
+                  onValueChange={(role) =>
+                    setAssignments((current) =>
+                      current.map((item) =>
+                        item.key === row.key ? { ...item, role } : item,
+                      ),
+                    )
+                  }
+                  options={[
+                    {
+                      value: "cashier",
+                      label: "Cashier",
+                      description:
+                        "Create orders, take payments and issue receipts. No stock adjustments or catalog editing.",
+                    },
+                    {
+                      value: "operator",
+                      label: "Operator",
+                      description:
+                        "Create orders, use checkout and adjust stock in this Store. No catalog editing or staff administration.",
+                    },
+                    {
+                      value: "manager",
+                      label: "Manager",
+                      description:
+                        "Manage this Store’s orders, stock, reconciliation and reports. Catalog editing requires a separate business grant.",
+                    },
+                  ]}
+                />
+              </Field>
+              {assignments.length > 1 ? (
+                <Button
+                  className="mt-6"
+                  type="button"
+                  variant="ghost"
+                  disabled={isSaving}
+                  aria-label={`Remove Store row ${index + 1}`}
+                  onClick={() =>
+                    setAssignments((current) =>
+                      current.filter((item) => item.key !== row.key),
+                    )
+                  }
+                >
+                  ×
+                </Button>
+              ) : (
+                <span />
+              )}
+            </div>
+          ))}
+          {stores.length > 1 ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                isSaving || incomplete || assignments.length >= stores.length
+              }
+              onClick={() =>
+                setAssignments((current) => [
+                  ...current,
+                  { key: nextRowKey.current++, storeId: "", role: "cashier" },
+                ])
+              }
+            >
+              Add store
+            </Button>
+          ) : null}
+          {hasManager ? (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={catalogEditor}
+                disabled={isSaving}
+                onChange={(event) => setCatalogEditor(event.target.checked)}
+              />
+              <span>
+                Allow business-wide catalog editing. Product and price changes
+                affect all Stores.
+              </span>
+            </label>
+          ) : null}
+          <p className="text-xs text-muted-foreground">
+            Owner/Admin administers the business and all Stores. Staff
+            invitations assign Cashier, Operator or Manager access to the
+            selected Stores. The first row sets the starting Store.
+          </p>
+          <p className="text-sm">
+            Invite with {assignments.length} Store assignment
+            {assignments.length === 1 ? "" : "s"}
+            {hasManager && catalogEditor
+              ? " and business-wide catalog editing"
+              : ""}
+            .
+          </p>
+        </div>
       </FieldGroup>
 
       <FormFeedback appearance="dashboard" variant="default">
-        Invited staff verify their email, create a password and complete setup.
-        QA invitation links appear here after sending.
+        {storeAccessReady
+          ? "Invited staff verify their email, create a password and complete setup. QA invitation links appear here after sending."
+          : "Invitations will be available after Store access setup is complete."}
       </FormFeedback>
 
       <FormActions>
@@ -187,7 +351,12 @@ export function StaffInviteContent({
         >
           Cancel
         </Button>
-        <SubmitButton isSubmitting={isSaving}>Send invite</SubmitButton>
+        <SubmitButton
+          disabled={!storeAccessReady || !stores.length || incomplete}
+          isSubmitting={isSaving}
+        >
+          Send invite
+        </SubmitButton>
       </FormActions>
     </form>
   )

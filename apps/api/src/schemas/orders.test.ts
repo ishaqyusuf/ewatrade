@@ -12,6 +12,53 @@ import {
   commercialOrderReportSummarySchema,
 } from "./orders"
 
+test("order-time totals and notes reject forged prices/authority and invalid money", () => {
+  const base = {
+    clientOrderId: "manual-order-001",
+    schemaVersion: 1,
+    customerMode: "create",
+    customerName: "QA Bird",
+    lines: [
+      {
+        offeringId: "grown",
+        quantity: "3",
+        enteredTotalMinor: 10001,
+        note: " Live birds ",
+      },
+    ],
+  }
+  expect(commercialOrderCreateSchema.parse(base).lines[0]).toMatchObject({
+    enteredTotalMinor: 10001,
+    note: "Live birds",
+  })
+  for (const amount of [
+    0,
+    -1,
+    1.01,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    100000001,
+  ])
+    expect(
+      commercialOrderCreateSchema.safeParse({
+        ...base,
+        lines: [{ ...base.lines[0], enteredTotalMinor: amount }],
+      }).success,
+    ).toBe(false)
+  for (const fields of [
+    { unitPriceMinor: 1 },
+    { trustedUnitPriceMinor: 1 },
+    { tenantId: "forged" },
+    { note: "x".repeat(2001) },
+  ])
+    expect(
+      commercialOrderCreateSchema.safeParse({
+        ...base,
+        lines: [{ ...base.lines[0], ...fields }],
+      }).success,
+    ).toBe(false)
+})
+
 describe("commercial Order list schema", () => {
   test("accepts cursor pagination and server-side list filters", () => {
     const result = commercialOrderListPageSchema.parse({

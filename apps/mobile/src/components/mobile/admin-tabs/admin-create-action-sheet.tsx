@@ -3,6 +3,7 @@ import { Modal, type useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
@@ -28,7 +29,8 @@ export function AdminCreateActionSheet({
 }: AdminCreateActionSheetProps) {
   const router = useRouter()
   const largeTextLayout = useLargeTextLayout()
-  const actions = buildAdminCreateActions(availability, isOffline)
+  const auth = useAuthContext()
+  const actions = buildAdminCreateActions(availability, isOffline, auth.profile)
 
   function openRoute(route: string) {
     modal.dismiss()

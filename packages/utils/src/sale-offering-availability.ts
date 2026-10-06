@@ -2,6 +2,7 @@ import { compareExactDecimals } from "./exact-decimal"
 
 type SaleOfferingAvailabilityInput = {
   fixedPriceMinor: number | null
+  pricingPolicy?: "fixed" | "order_total" | "quote_required"
   kind: "product_unit" | "service"
   onHandQuantity?: string
   reservedQuantity?: string
@@ -9,13 +10,15 @@ type SaleOfferingAvailabilityInput = {
 
 export function getSaleOfferingDisabledReasons({
   fixedPriceMinor,
+  pricingPolicy = "fixed",
   kind,
   onHandQuantity,
   reservedQuantity,
 }: SaleOfferingAvailabilityInput) {
   const reasons: string[] = []
 
-  if (fixedPriceMinor === null) reasons.push("Price not set")
+  if (fixedPriceMinor === null && pricingPolicy !== "order_total")
+    reasons.push("Price not set")
 
   if (
     kind === "product_unit" &&

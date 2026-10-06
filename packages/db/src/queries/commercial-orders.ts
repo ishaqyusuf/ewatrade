@@ -33,6 +33,7 @@ import {
   commitCatalogStockReservationInTransaction,
   reserveCatalogOfferingStockInTransaction,
 } from "./catalog-inventory"
+import { resolveCommercialLinePrice } from "./commercial-line-pricing"
 import {
   isCommercialOrderFulfillmentAllowed,
   readCommercialOrderLinesComplete,
@@ -62,6 +63,7 @@ export type CreateCommercialOrderInput = {
   actorUserId: string
   clientOrderId: string
   customerId?: string
+  customerMode?: "contact_only" | "create"
   customerEmail?: string
   customerName?: string
   customerPhone?: string
@@ -77,6 +79,8 @@ export type CreateCommercialOrderInput = {
     reference?: string
   }
   lines: Array<{
+    enteredTotalMinor?: number
+    note?: string
     approvedQuotePriceMinor?: number
     expectedBalanceRevision?: number
     expectedConfigurationVersionId?: string
@@ -170,19 +174,6 @@ function assertMoney(value: number, label: string) {
   }
 }
 
-function exactLineTotal(unitPriceMinor: number, quantity: string) {
-  const total = multiplyExactDecimals(String(unitPriceMinor), quantity)
-  if (!/^\d+$/.test(total)) {
-    throw new CatalogError(
-      "INVALID_ORDER",
-      "Line total must resolve to a whole minor currency unit.",
-    )
-  }
-  const value = Number(total)
-  assertMoney(value, "Line total")
-  return value
-}
-
 function serializeOrder(order: OrderGraph) {
   const amountPaidMinor = effectiveCommercialAmountPaid({
     amountPaidMinor: order.amountPaidMinor,
@@ -267,9 +258,11 @@ function serializeOrder(order: OrderGraph) {
             offeringName: line.snapshot.offeringName,
             optionSelections: line.snapshot.optionSelections,
             pricingPolicy:
-              line.snapshot.pricingPolicy === OfferingPricingPolicy.FIXED
-                ? ("fixed" as const)
-                : ("quote_required" as const),
+              line.snapshot.pricingPolicy === OfferingPricingPolicy.ORDER_TOTAL
+                ? ("order_total" as const)
+                : line.snapshot.pricingPolicy === OfferingPricingPolicy.FIXED
+                  ? ("fixed" as const)
+                  : ("quote_required" as const),
             stockBehavior: line.snapshot.stockBehavior,
             serviceWorkPolicy: line.snapshot.serviceWorkPolicy,
             serviceAuthorizationPolicy:
@@ -279,6 +272,7 @@ function serializeOrder(order: OrderGraph) {
           }
         : null,
       taxMinor: line.taxMinor,
+      note: line.snapshot?.note ?? null,
       totalMinor: line.totalMinor,
       unitPriceMinor: line.unitPriceMinor,
     })),
@@ -549,19 +543,39 @@ export async function createCommercialOrderInTransaction(
     )
   }
 
+  let customerId = input.customerId
+  if (input.customerMode === "create") {
+    if (input.customerId || !input.customerName?.trim())
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "New customer creation needs a name and cannot also select a Customer ID.",
+      )
+    const customer = await ensureOrderCustomerInTransaction(tx, {
+      email: input.customerEmail,
+      name: input.customerName,
+      phone: input.customerPhone,
+      tenantId: input.tenantId,
+    })
+    if (!customer)
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "The new customer could not be captured.",
+      )
+    customerId = customer.id
+  }
   await lockCommerceFinancialContext(tx, {
     tenantId: input.tenantId,
     currencyCode: store.currencyCode,
-    customerId: input.customerId,
+    customerId,
   })
 
   // Contact snapshots and directory name matching do not establish financial
-  // ownership. Only an explicitly selected, same-Tenant Customer does.
-  if (input.customerId !== undefined) {
+  // ownership. Only explicit selection or intentional new-customer creation does.
+  if (customerId !== undefined) {
     if (
-      !input.customerId.trim() ||
+      !customerId.trim() ||
       !(await tx.customer.findFirst({
-        where: { id: input.customerId, tenantId: input.tenantId },
+        where: { id: customerId, tenantId: input.tenantId },
         select: { id: true },
       }))
     ) {
@@ -605,7 +619,7 @@ export async function createCommercialOrderInTransaction(
     }
     quantity: string
     totalMinor: number
-    unitPriceMinor: number
+    unitPriceMinor: number | null
   }> = []
 
   for (const lineInput of input.lines) {
@@ -674,39 +688,33 @@ export async function createCommercialOrderInTransaction(
       )
     }
 
-    let unitPriceMinor: number
-    if (lineInput.trustedUnitPriceMinor !== undefined) {
-      assertMoney(lineInput.trustedUnitPriceMinor, "Trusted snapshot price")
-      unitPriceMinor = lineInput.trustedUnitPriceMinor
-    } else if (offering.pricingPolicy === OfferingPricingPolicy.FIXED) {
-      if (offering.fixedPriceMinor === null) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "Fixed-price Offering has no current price.",
-        )
-      }
+    let price: ReturnType<typeof resolveCommercialLinePrice>
+    try {
+      price = resolveCommercialLinePrice({
+        ...lineInput,
+        kind:
+          offering.kind === SellableOfferingKind.PRODUCT_UNIT
+            ? "product_unit"
+            : "service",
+        policy:
+          offering.pricingPolicy === OfferingPricingPolicy.ORDER_TOTAL
+            ? "order_total"
+            : offering.pricingPolicy === OfferingPricingPolicy.FIXED
+              ? "fixed"
+              : "quote_required",
+        fixedPriceMinor: offering.fixedPriceMinor,
+      })
       if (
-        lineInput.expectedFixedPriceMinor !== undefined &&
-        lineInput.expectedFixedPriceMinor !== offering.fixedPriceMinor
-      ) {
-        throw new CatalogError(
-          "OFFERING_UNAVAILABLE",
-          "The Offering price changed before Order confirmation.",
-        )
-      }
-      unitPriceMinor = offering.fixedPriceMinor
-    } else {
-      if (
-        offering.kind !== SellableOfferingKind.SERVICE ||
-        lineInput.approvedQuotePriceMinor === undefined
-      ) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "Quote-required Service Offering needs an approved price.",
-        )
-      }
-      assertMoney(lineInput.approvedQuotePriceMinor, "Approved quote")
-      unitPriceMinor = lineInput.approvedQuotePriceMinor
+        lineInput.note !== undefined &&
+        (typeof lineInput.note !== "string" ||
+          lineInput.note.trim().length > 2_000)
+      )
+        throw new Error("Item note must contain at most 2,000 characters.")
+    } catch (error) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        error instanceof Error ? error.message : "Invalid item price.",
+      )
     }
 
     const quantity = parseExactDecimal(lineInput.quantity, {
@@ -720,8 +728,8 @@ export async function createCommercialOrderInTransaction(
       input: lineInput,
       offering,
       quantity,
-      totalMinor: exactLineTotal(unitPriceMinor, quantity),
-      unitPriceMinor,
+      totalMinor: price.totalMinor,
+      unitPriceMinor: price.unitPriceMinor,
     })
   }
 
@@ -762,7 +770,7 @@ export async function createCommercialOrderInTransaction(
       clientOrderId: input.clientOrderId,
       createdByUserId: input.actorUserId,
       currencyCode: store.currencyCode,
-      customerId: input.customerId,
+      customerId,
       customerEmail: input.customerEmail?.trim() || null,
       customerName: input.customerName?.trim() || null,
       customerPhone: input.customerPhone?.trim() || null,
@@ -857,6 +865,7 @@ export async function createCommercialOrderInTransaction(
         ),
         orderLineId: line.id,
         pricingPolicy: resolved.offering.pricingPolicy,
+        note: resolved.input.note?.trim() || null,
         quantity: resolved.quantity,
         stockBehavior: productUnit?.stockBehavior,
         serviceWorkPolicy: resolved.offering.serviceOffering?.workPolicy,
@@ -942,7 +951,7 @@ export async function createCommercialOrderInTransaction(
     }
   }
 
-  if (!input.customerId) {
+  if (!customerId) {
     await ensureOrderCustomerInTransaction(tx, {
       email: input.customerEmail,
       name: input.customerName,

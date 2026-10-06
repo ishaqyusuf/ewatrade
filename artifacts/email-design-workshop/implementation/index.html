@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Warm Desk · Implemented shared emails</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f5ee;color:#183c2b;font:14px/1.5 Arial,Helvetica,sans-serif}main{max-width:1440px;margin:auto;padding:28px}h1{font-size:28px;letter-spacing:-.5px;margin:0 0 10px}p{margin:0 0 18px;color:#5b685e}a{color:inherit}header{display:flex;justify-content:space-between;gap:24px;align-items:baseline}label{font-size:12px;font-weight:700}select,button{font:inherit;padding:11px 14px;border:1px solid #b6c4ad;border-radius:6px;background:#fffefa;color:#183c2b;min-height:44px}button{cursor:pointer}button[aria-pressed=true]{background:#1d5d3e;color:white}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #bd773a;outline-offset:3px}.controls{display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin:24px 0}.field{display:flex;gap:8px;flex-direction:column;min-width:250px;flex:1}.columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}.panel{min-width:0}h2{font-size:16px;margin:0 0 12px}.stage{display:flex;justify-content:center;min-width:0}iframe{width:640px;max-width:100%;height:1400px;border:1px solid #dce2d7;border-radius:6px;background:#f0f1eb}.mobile iframe{width:375px}footer{margin-top:24px;font-size:12px;color:#5b685e}.outcome{padding:14px;border-left:3px solid #c8d89d;background:#fffefa;margin-top:18px}.outcome[hidden]{display:none}@media(max-width:800px){main{padding:20px 12px}.columns{grid-template-columns:1fr}.field{min-width:100%}header{display:block}h1{font-size:25px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <main>
+    <header><div><h1>Warm Desk, in the actual templates.</h1><p>18 email states, rendered from the implemented React Email components.</p></div><a href="../">Back to the five-direction workshop ↗</a></header>
+    <div class="controls"><div class="field"><label for="template">EMAIL STATE</label><select id="template"></select></div><button type="button" id="desktop" aria-pressed="true">Desktop · 640px</button><button type="button" id="mobile" aria-pressed="false">Mobile · 375px</button></div>
+    <div class="columns"><section class="panel"><h2>Implemented · Warm Desk</h2><div class="stage" id="current-stage"><iframe id="current" title="Implemented Warm Desk email" sandbox="allow-same-origin"></iframe></div></section><section class="panel"><h2>Before · Field Ledger</h2><div class="stage" id="before-stage"><iframe id="before" title="Previous Field Ledger email" sandbox="allow-same-origin"></iframe></div></section></div>
+    <p class="outcome" role="status" id="outcome" hidden></p>
+    <footer>Fictional fixtures only. Links are intercepted in this comparison; nothing is sent or approved. Browser inspection is separate from Gmail/Outlook delivery acceptance.</footer>
+  </main>
+  <script type="module">
+    const states = await fetch('current/manifest.json').then(r=>r.json())
+    const select = document.getElementById('template')
+    const current = document.getElementById('current')
+    const before = document.getElementById('before')
+    for(const state of states){const option=document.createElement('option');option.value=state.id;option.textContent=state.name;select.append(option)}
+    select.value='04-waitlist-admin'
+    function load(){document.querySelectorAll('.panel h2')[1].textContent=Number(select.value.slice(0,2))>14?'Before · standalone HTML':'Before · Field Ledger';current.src='current/'+select.value+'.html';before.src=(Number(select.value.slice(0,2))>14?'previous-standalone/':'before/')+select.value+'.html';document.getElementById('outcome').hidden=true}
+    for(const frame of [current,before])frame.addEventListener('load',()=>{const d=frame.contentDocument;if(!d?.body)return;frame.style.height=Math.ceil(d.body.scrollHeight+parseFloat(d.defaultView.getComputedStyle(d.body).marginTop)+parseFloat(d.defaultView.getComputedStyle(d.body).marginBottom))+2+'px';d.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;e.preventDefault();const outcome=document.getElementById('outcome');outcome.hidden=false;outcome.textContent='Preview only: '+a.textContent.trim()+'. No request was made.'})})
+    select.addEventListener('change',load)
+    function resize(mobile){for(const id of ['current-stage','before-stage'])document.getElementById(id).classList.toggle('mobile',mobile);document.getElementById('desktop').setAttribute('aria-pressed',String(!mobile));document.getElementById('mobile').setAttribute('aria-pressed',String(mobile));load()}
+    document.getElementById('desktop').addEventListener('click',()=>resize(false));document.getElementById('mobile').addEventListener('click',()=>resize(true));load()
+  </script>
+</body>
+</html>

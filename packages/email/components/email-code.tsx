@@ -7,23 +7,24 @@ export function EmailCode({ children }: { children: ReactNode }) {
   return (
     <Section
       style={{
-        backgroundColor: emailPalette.ink,
-        borderRadius: 0,
-        margin: "10px 0 6px",
-        padding: "22px 18px",
+        backgroundColor: emailPalette.quiet,
+        border: `1px solid ${emailPalette.border}`,
+        borderRadius: "6px",
+        margin: "4px 0 24px",
+        padding: "24px 8px",
         textAlign: "center",
       }}
     >
       <Text
         style={{
-          color: emailPalette.lime,
+          color: emailPalette.ink,
           fontFamily: emailFonts.mono,
-          fontSize: "32px",
-          fontWeight: 800,
-          letterSpacing: "0.24em",
-          lineHeight: "40px",
+          fontSize: "34px",
+          fontWeight: 700,
+          letterSpacing: "5px",
+          lineHeight: "42px",
           margin: 0,
-          paddingLeft: "0.24em",
+          paddingLeft: "5px",
         }}
       >
         {children}

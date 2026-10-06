@@ -1,7 +1,7 @@
 import { useModal } from "@/components/ui/modal"
 import { useAuthContext } from "@/hooks/use-auth"
 import { createInventoryConversionFixture } from "@/internal-tooling/fixture-recipes"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
+import { canManageMobileStock } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -9,21 +9,24 @@ import * as Crypto from "expo-crypto"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
-  compatibleConversionTarget,
-  conversionCommand,
-  EMPTY_CONVERSION,
-  projectConversion,
   type ConversionDraft,
   type ConversionInput,
   type ConversionProps,
   type ConversionReview,
+  EMPTY_CONVERSION,
+  compatibleConversionTarget,
+  conversionCommand,
+  projectConversion,
 } from "./unit-conversion-model"
 
 export function useUnitConversion({ onComplete }: ConversionProps) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
-  const canManage = canManageMobileOperations(profile?.role)
+  const canManage = canManageMobileStock(
+    profile?.role,
+    profile?.staffAccessMode,
+  )
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
   const [draft, setDraft] = useState<ConversionDraft>(EMPTY_CONVERSION)
   const draftRef = useRef(draft)

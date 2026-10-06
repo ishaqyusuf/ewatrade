@@ -2,7 +2,6 @@ import { getMobileRoleLabel, normalizeMobileRole } from "@/lib/mobile-roles"
 import type { RetailOpsBusiness } from "@/store/businessStore"
 
 export const BUSINESS_SWITCH_COPY = {
-  description: "Choose where you want to manage orders, stock, and staff.",
   title: "Workspaces",
 } as const
 

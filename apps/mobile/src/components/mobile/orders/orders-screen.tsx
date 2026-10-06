@@ -1,3 +1,4 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import {
   useAdminDockScroll,
   useAdminTabs,
@@ -18,7 +19,9 @@ import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { toggleReceiptSelection } from "@/components/mobile/receipts/receipt-selection"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -29,6 +32,7 @@ import {
   shouldShowListSearch,
 } from "@/lib/list-pagination"
 import { useTRPC } from "@/trpc/client"
+import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import {
@@ -114,6 +118,20 @@ export function OrdersScreen() {
   const [filter, setFilter] = useState<OrderFilter>("all")
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [query, setQuery] = useState("")
+  const [selectingReceipts, setSelectingReceipts] = useState(false)
+  const [receiptIds, setReceiptIds] = useState<string[]>([])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: These values define the selection scope.
+  useEffect(() => {
+    setReceiptIds([])
+    setSelectingReceipts(false)
+  }, [
+    auth.profile?.businessId,
+    auth.profile?.storeId,
+    dateFilter,
+    filter,
+    query,
+    isOffline,
+  ])
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const deferredQuery = useDeferredValue(query)
   useEffect(() => {
@@ -144,6 +162,18 @@ export function OrdersScreen() {
     [orders.data?.pages],
   )
   const visibleOrders = loadedOrders
+  useEffect(() => {
+    const eligible = new Set(
+      loadedOrders
+        .filter((order) => isReceiptOrderEligible(order.status))
+        .map((order) => order.id),
+    )
+    setReceiptIds((current) =>
+      current.every((id) => eligible.has(id))
+        ? current
+        : current.filter((id) => eligible.has(id)),
+    )
+  }, [loadedOrders])
   const visibleProvisionalOrders = useMemo(() => {
     if (filter === "completed" || filter === "cancelled") return []
     const normalizedQuery = isOffline ? "" : query.trim().toLowerCase()
@@ -203,6 +233,18 @@ export function OrdersScreen() {
           !showFirstOrderGate &&
           !orders.isError ? (
             <Section>
+              {loadedOrders.length > 0 ? (
+                <ActionButton
+                  variant="outline"
+                  disabled={isOffline}
+                  onPress={() => {
+                    setSelectingReceipts((value) => !value)
+                    setReceiptIds([])
+                  }}
+                >
+                  {selectingReceipts ? "Cancel selection" : "Select receipts"}
+                </ActionButton>
+              ) : null}
               <EmptyState
                 actionLabel={
                   (orders.isPending && !isOffline) || isOffline
@@ -353,9 +395,47 @@ export function OrdersScreen() {
         }
         renderItem={({ index, item }) => (
           <Section>
+            {selectingReceipts ? (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityLabel={`Select ${item.orderNumber}`}
+                accessibilityState={{
+                  checked: receiptIds.includes(item.id),
+                  disabled:
+                    !isReceiptOrderEligible(item.status) ||
+                    (!receiptIds.includes(item.id) && receiptIds.length >= 20),
+                }}
+                disabled={
+                  !isReceiptOrderEligible(item.status) ||
+                  (!receiptIds.includes(item.id) && receiptIds.length >= 20)
+                }
+                className="min-h-12 justify-center border-b border-border py-3"
+                onPress={() =>
+                  setReceiptIds((current) =>
+                    toggleReceiptSelection(current, item.id),
+                  )
+                }
+              >
+                <Text className="font-semibold text-primary">
+                  {receiptIds.includes(item.id)
+                    ? "✓ Selected"
+                    : isReceiptOrderEligible(item.status)
+                      ? "Select receipt"
+                      : "Receipt unavailable"}{" "}
+                  · {item.orderNumber}
+                </Text>
+              </Pressable>
+            ) : null}
             <Row
               index={index}
-              onPress={() => router.push(commercialOrderHref(item.id))}
+              onPress={() => {
+                if (selectingReceipts) {
+                  if (isReceiptOrderEligible(item.status))
+                    setReceiptIds((current) =>
+                      toggleReceiptSelection(current, item.id),
+                    )
+                } else router.push(commercialOrderHref(item.id))
+              }}
               order={item}
             />
           </Section>
@@ -363,7 +443,32 @@ export function OrdersScreen() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
-      {isDockHidden && !showFirstOrderGate ? (
+      {selectingReceipts ? (
+        <View
+          className="gap-2 border-t border-border bg-background px-4 pt-3"
+          style={{
+            paddingBottom: isDockHidden
+              ? Math.max(insets.bottom, 16)
+              : Math.max(insets.bottom + 90, 106),
+          }}
+        >
+          <Text accessibilityLiveRegion="polite">
+            {receiptIds.length} selected · maximum 20
+          </Text>
+          <ActionButton
+            disabled={!receiptIds.length || isOffline}
+            onPress={() =>
+              router.push({
+                pathname: "/order-receipts-modal",
+                params: { orderIds: receiptIds.join(",") },
+              })
+            }
+          >
+            Generate receipts
+          </ActionButton>
+        </View>
+      ) : null}
+      {isDockHidden && !showFirstOrderGate && !selectingReceipts ? (
         <ListCreateFab
           accessibilityLabel="Add order"
           dockHidden

@@ -1,6 +1,7 @@
 "use client"
 
 import { SignOut } from "@/components/dashboard/sign-out"
+import { ThemeSwitch } from "@/components/dashboard/theme-switch"
 import type { SessionUser } from "@/lib/session"
 import { getUserInitials } from "@/lib/user-display"
 import {
@@ -108,6 +109,11 @@ export function UserMenu({
             </DropdownMenuGroup>
           </>
         ) : null}
+        <DropdownMenuSeparator className="my-1" />
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <span className="text-xs">Theme</span>
+          <ThemeSwitch />
+        </div>
         <DropdownMenuSeparator className="my-1" />
         <SignOut />
       </DropdownMenuContent>

@@ -25,6 +25,7 @@ type Operation =
   | "env-analytics-sync"
 type Target = "dev" | "preview" | "prod"
 type BuildPlatform = "android" | "ios"
+type UpdatePlatform = BuildPlatform | "all"
 type Action =
   | "build:dev"
   | "build:preview"
@@ -88,6 +89,38 @@ if (
 
 const target = resolveTarget(operation, actionArgs)
 const buildPlatform = resolveBuildPlatform(operation, actionArgs)
+// Keep internal Preview OTA usable while release assurance is being rolled out.
+// Supplying a revision opts back into the reviewed release path.
+const reviewedUpdate =
+  operation === "update" &&
+  (target === "prod" ||
+    actionArgs.includes("--release-checks") ||
+    actionArgs.some(
+      (arg) =>
+        arg === "--expected-commit" || arg.startsWith("--expected-commit="),
+    ))
+const expectedUpdateCommit = reviewedUpdate
+  ? assertExpectedUpdateCommit(actionArgs)
+  : undefined
+if (operation === "update") {
+  for (const arg of getForwardedArgs(actionArgs)) {
+    if (/^--(channel|branch|environment|runtime-version)(=|$)/.test(arg)) {
+      throw new Error(
+        "EAS update target and runtime overrides are disabled; use --preview or --prod.",
+      )
+    }
+  }
+  if (!reviewedUpdate)
+    console.log(
+      "Quick Preview OTA: publishing working-tree code without release-assurance checks.",
+    )
+}
+const expectedNativeBuildCommit =
+  operation === "build" && target !== "dev"
+    ? assertExpectedUpdateCommit(actionArgs, "hosted build")
+    : undefined
+if (expectedNativeBuildCommit)
+  assertHostedBuildArguments(getForwardedArgs(actionArgs))
 const exactBuildId =
   operation === "submit" || operation === "view" || operation === "download"
     ? assertExactSubmissionBuildId(actionArgs)
@@ -130,7 +163,10 @@ if (
   if (operation === "submit") {
     checks.push(["store billing", "scripts/check-store-billing-readiness.mjs"])
   }
-  if (buildPlatform === "ios") {
+  if (
+    buildPlatform === "ios" ||
+    (operation === "update" && buildPlatform === "all")
+  ) {
     checks.push(["iOS login", "scripts/check-ios-login-readiness.mjs"])
     checks.push([
       "iOS organization app identity",
@@ -150,6 +186,22 @@ if (
   }
 }
 
+if (reviewedUpdate) {
+  try {
+    await assertUpdatePublishReady()
+  } catch (error) {
+    reportUpdatePreflightFailure(error)
+  }
+}
+
+if (expectedNativeBuildCommit) {
+  try {
+    await assertNativeBuildReady()
+  } catch (error) {
+    reportNativeBuildPreflightFailure(error)
+  }
+}
+
 if (operation === "env-sync") {
   const code = await runCommand(
     ["bun", "apps/mobile/scripts/check-production-api-live.mjs"],
@@ -165,6 +217,13 @@ if (operation === "env-sync") {
 
 const account = resolveAccount(action, env, actionArgs)
 const forwardedArgs = getForwardedArgs(actionArgs)
+const publishPreviewBuild =
+  operation === "build" && target === "preview" && buildPlatform === "android"
+const previewPublisher = publishPreviewBuild
+  ? await import("./release-app-update")
+  : null
+if (previewPublisher)
+  await previewPublisher.assertPreviewPublisherReady(REPO_DIR, forwardedArgs)
 
 const isolatedHome = await mkdtemp(path.join(tmpdir(), "ewatrade-eas-"))
 let exitCode = 1
@@ -218,43 +277,94 @@ try {
         buildId: exactBuildId ?? "",
         expectedCommit: expectedSubmissionCommit ?? "",
         expectedVersion: expectedSubmissionVersion ?? "",
-        platform: buildPlatform,
+        platform: buildPlatform as BuildPlatform,
         env,
       })))
-  exitCode = !submissionBuildReady
-    ? 1
-    : operation === "env-check"
-      ? 0
-      : operation === "env-sync"
-        ? await syncProductionApiOrigin(env)
-        : operation === "env-chat-sync"
-          ? await syncProductionChatOrigin(env)
-          : operation === "env-legal-sync"
-            ? await syncProductionLegalOrigin(env)
-            : operation === "env-analytics-sync"
-              ? await syncProductionAnalyticsFlag(env)
-              : operation === "download"
-                ? await downloadBuild(
-                    ["eas", "build:view", exactBuildId ?? "", "--json"],
-                    exactBuildId ?? "",
-                    actionArgs,
-                    { cwd: APP_DIR, env },
-                  )
-                : operation === "view"
-                  ? await viewBuild(
+  let mobilePublishReady = true
+  if (reviewedUpdate && attachmentReady) {
+    try {
+      await assertUpdatePublishReady()
+    } catch (error) {
+      reportUpdatePreflightFailure(error)
+      mobilePublishReady = false
+    }
+  }
+  if (expectedNativeBuildCommit && attachmentReady) {
+    try {
+      await assertNativeBuildReady()
+    } catch (error) {
+      reportNativeBuildPreflightFailure(error)
+    }
+  }
+  exitCode =
+    !submissionBuildReady || !mobilePublishReady
+      ? 1
+      : operation === "env-check"
+        ? 0
+        : operation === "env-sync"
+          ? await syncProductionApiOrigin(env)
+          : operation === "env-chat-sync"
+            ? await syncProductionChatOrigin(env)
+            : operation === "env-legal-sync"
+              ? await syncProductionLegalOrigin(env)
+              : operation === "env-analytics-sync"
+                ? await syncProductionAnalyticsFlag(env)
+                : operation === "download"
+                  ? await downloadBuild(
                       ["eas", "build:view", exactBuildId ?? "", "--json"],
-                      {
-                        cwd: APP_DIR,
-                        env,
-                      },
+                      exactBuildId ?? "",
+                      actionArgs,
+                      { cwd: APP_DIR, env },
                     )
-                  : await runCommand(
-                      [
-                        ...getActionCommand(operation, target, buildPlatform),
-                        ...forwardedArgs,
-                      ],
-                      { cwd: APP_DIR, env, stdio: "inherit" },
-                    )
+                  : operation === "view"
+                    ? await viewBuild(
+                        ["eas", "build:view", exactBuildId ?? "", "--json"],
+                        {
+                          cwd: APP_DIR,
+                          env,
+                        },
+                      )
+                    : publishPreviewBuild
+                      ? await previewPublisher!.runPreviewBuildAndPublish({
+                          command: [
+                            ...getActionCommand(
+                              operation,
+                              target,
+                              buildPlatform,
+                              expectedUpdateCommit,
+                            ),
+                            ...forwardedArgs,
+                          ],
+                          root: REPO_DIR,
+                          expectedCommit: expectedNativeBuildCommit!,
+                          runJson: async (cmd) => {
+                            const proc = Bun.spawn({
+                              cmd,
+                              cwd: APP_DIR,
+                              env,
+                              stdin: "inherit",
+                              stdout: "pipe",
+                              stderr: "inherit",
+                            })
+                            const [output, code] = await Promise.all([
+                              new Response(proc.stdout).text(),
+                              proc.exited,
+                            ])
+                            return { output, code }
+                          },
+                        })
+                      : await runCommand(
+                          [
+                            ...getActionCommand(
+                              operation,
+                              target,
+                              buildPlatform,
+                              expectedUpdateCommit,
+                            ),
+                            ...forwardedArgs,
+                          ],
+                          { cwd: APP_DIR, env, stdio: "inherit" },
+                        )
 } finally {
   await rm(isolatedHome, { recursive: true, force: true })
 }
@@ -374,21 +484,191 @@ function resolveTarget(operation: Operation, args: string[]): Target {
 function resolveBuildPlatform(
   operation: Operation,
   args: string[],
-): BuildPlatform {
+): UpdatePlatform {
   let selected: string | undefined
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
     if (arg !== "--platform" && !arg.startsWith("--platform=")) continue
-    if (operation === "update" || selected !== undefined) {
-      throw new Error("Choose one platform only for EAS build or submit.")
+    if (selected !== undefined) {
+      throw new Error(
+        "Choose one platform only for EAS build, submit, or update.",
+      )
     }
     selected =
       arg === "--platform" ? args[++index] : arg.slice("--platform=".length)
   }
-  if (selected !== undefined && selected !== "android" && selected !== "ios") {
-    throw new Error("EAS platform must be android or ios.")
+  if (
+    selected !== undefined &&
+    selected !== "android" &&
+    selected !== "ios" &&
+    !(operation === "update" && selected === "all")
+  ) {
+    throw new Error(
+      "EAS platform must be android or ios; update also accepts all.",
+    )
   }
-  return (selected ?? "android") as BuildPlatform
+  return (selected ?? "android") as UpdatePlatform
+}
+
+function assertExpectedUpdateCommit(args: string[], label = "update"): string {
+  const values = args.flatMap((arg, index) => {
+    if (arg === "--expected-commit") return [args[index + 1] ?? ""]
+    if (arg.startsWith("--expected-commit="))
+      return [arg.slice("--expected-commit=".length)]
+    return []
+  })
+  if (values.length !== 1 || !/^[0-9a-f]{40}$/i.test(values[0] ?? "")) {
+    throw new Error(
+      `EAS ${label} requires exactly one full --expected-commit SHA for the reviewed source.`,
+    )
+  }
+  return values[0]?.toLowerCase() ?? ""
+}
+
+function assertHostedBuildArguments(args: string[]) {
+  const switches = new Set([
+    "--non-interactive",
+    "--json",
+    "--wait",
+    "--no-wait",
+    "--clear-cache",
+  ])
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index]
+    if (switches.has(arg)) continue
+    if (arg.startsWith("--message=") && arg.length > "--message=".length)
+      continue
+    if (
+      arg === "--message" &&
+      args[index + 1] &&
+      !args[index + 1].startsWith("-")
+    ) {
+      index++
+      continue
+    }
+    throw new Error(
+      "Hosted builds accept only reviewed platform/profile selection and non-interactive, JSON, wait, cache, or message options.",
+    )
+  }
+}
+
+async function assertNativeBuildReady(): Promise<void> {
+  const revision = expectedNativeBuildCommit ?? ""
+  await assertExactCommittedMobileSource(revision)
+  const { assertMobileBuildReady } = await import(
+    "./release-mobile-build-preflight"
+  )
+  const environment = target === "prod" ? "production" : "preview"
+  const decision = await assertMobileBuildReady({
+    repository: REPO_DIR,
+    environment,
+    revision,
+    platforms: [buildPlatform as BuildPlatform],
+  })
+  if (
+    decision.revision !== revision ||
+    decision.environment !== environment ||
+    decision.platforms.length !== 1 ||
+    decision.platforms[0] !== buildPlatform
+  )
+    throw new Error(
+      "Native build decision does not match the reviewed source/environment/platform.",
+    )
+}
+
+function reportNativeBuildPreflightFailure(error: unknown): never {
+  console.error(
+    `EAS build stopped: reviewed native runtime/version proof unavailable${error instanceof Error ? `: ${error.message}` : "."}`,
+  )
+  process.exit(1)
+}
+
+async function assertUpdatePublishReady(): Promise<void> {
+  const revision = expectedUpdateCommit ?? ""
+  await assertExactCommittedMobileSource(revision)
+  const { assertMobilePublishReady } = await import(
+    "./release-mobile-preflight"
+  )
+  const platforms: BuildPlatform[] =
+    buildPlatform === "all" ? ["android", "ios"] : [buildPlatform]
+  const environment = target === "prod" ? "production" : "preview"
+  const decision = await assertMobilePublishReady({
+    repository: REPO_DIR,
+    environment,
+    revision,
+    platforms,
+  })
+  if (
+    decision.revision !== revision ||
+    decision.environment !== environment ||
+    decision.platforms.length !== platforms.length ||
+    platforms.some((platform) => !decision.platforms.includes(platform))
+  ) {
+    throw new Error(
+      "Compatibility decision does not match the requested revision, environment, and platform set.",
+    )
+  }
+}
+
+function reportUpdatePreflightFailure(error: unknown): never {
+  console.error(
+    `EAS update stopped: trusted compatibility decision unavailable or incompatible${error instanceof Error ? `: ${error.message}` : "."}`,
+  )
+  process.exit(1)
+}
+
+async function captureCommand(
+  command: string[],
+  cwd: string,
+): Promise<{ code: number; stdout: string }> {
+  const proc = Bun.spawn({ cmd: command, cwd, stdout: "pipe", stderr: "pipe" })
+  const [stdout, , code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ])
+  return { code, stdout }
+}
+
+async function assertExactCommittedMobileSource(
+  revision: string,
+): Promise<void> {
+  const head = await captureCommand(["git", "rev-parse", "HEAD"], REPO_DIR)
+  if (head.code !== 0 || head.stdout.trim().toLowerCase() !== revision) {
+    throw new Error(
+      "Expected commit must exactly match the current repository HEAD.",
+    )
+  }
+  const status = await captureCommand(
+    [
+      "git",
+      "status",
+      "--porcelain",
+      "--untracked-files=all",
+      "--",
+      "apps/mobile",
+      "packages",
+      "scripts/eas-account-runner.ts",
+      "scripts/release-mobile-preflight.ts",
+      "scripts/release-*.ts",
+      ".release",
+      "release.manifest.json",
+      "package.json",
+      "bun.lock",
+      "bun.lockb",
+      "bunfig.toml",
+      "turbo.json",
+      "tsconfig.json",
+      ".easignore",
+      "patches",
+    ],
+    REPO_DIR,
+  )
+  if (status.code !== 0 || status.stdout.trim()) {
+    throw new Error(
+      "Mobile release source inputs must be clean and committed before release.",
+    )
+  }
 }
 
 function assertExactSubmissionBuildId(args: string[]): string {
@@ -455,7 +735,8 @@ function assertExpectedSubmissionCommit(args: string[]): string {
 function getActionCommand(
   operation: Operation,
   target: Target,
-  platform: BuildPlatform,
+  platform: UpdatePlatform,
+  revision?: string,
 ): string[] {
   if (operation === "build") {
     return [
@@ -479,7 +760,23 @@ function getActionCommand(
     ]
   }
 
-  return ["node", "./scripts/eas-update.mjs", `--${target}`]
+  if (operation === "update") {
+    const environment = target === "prod" ? "production" : "preview"
+    return [
+      "eas",
+      "update",
+      "--platform",
+      platform,
+      "--channel",
+      environment,
+      "--environment",
+      environment,
+      "--message",
+      revision ? `OTA update ${revision.slice(0, 12)}` : "Preview OTA update",
+    ]
+  }
+
+  throw new Error(`Unsupported EAS action: ${operation}`)
 }
 
 function getAccountSelector(
@@ -507,6 +804,8 @@ function getForwardedArgs(args: string[]): string[] {
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
+
+    if (arg === "--release-checks") continue
 
     if (arg === "--account" || arg === "-a") {
       index += 1
@@ -575,11 +874,13 @@ function toEnvKey(value: string): string {
 function getUsage(): string {
   return [
     "Usage:",
-    "  bun run eas:build <--dev|--preview|--prod> [--platform android|ios] [--account <name>]",
+    "  bun run eas:build <--preview|--prod> --expected-commit <full-sha> [--platform android|ios] [--account <name>]",
+    "  bun run eas:build --dev [--platform android|ios] [--account <name>]",
     "  bun run eas:submit [--prod] [--platform android|ios] --id <build-id> --expected-version <version> --expected-commit <full-sha> [--account <name>]",
     "  bun run eas:view <--dev|--preview|--prod> --id <build-id> [--account <name>]",
     "  bun run eas:download <--dev|--preview|--prod> --id <build-id> --output <path> [--account <name>]",
-    "  bun run eas:update <--preview|--prod> [--account <name>]",
+    "  bun run eas:update --preview [--platform android|ios|all] [--account <name>]",
+    "  bun run eas:update <--preview --release-checks|--prod> --expected-commit <full-sha> [--platform android|ios|all] [--account <name>]",
     "  bun run eas:env:sync --prod [--account <name>]",
     "  bun run eas:env:chat-sync --prod [--account <name>]",
     "  bun run eas:env:legal-sync --prod [--account <name>]",

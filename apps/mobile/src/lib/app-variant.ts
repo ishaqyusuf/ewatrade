@@ -23,10 +23,6 @@ export function isDevelopmentAppVariant() {
   return DEVELOPMENT_APP_VARIANTS.has(getAppVariant())
 }
 
-export function shouldShowFloatingThemeToggle() {
-  return INTERNAL_TOOL_VARIANTS.has(getAppVariant())
-}
-
-export function shouldShowInternalDesignSystemEntry() {
+export function isInternalAppVariant() {
   return INTERNAL_TOOL_VARIANTS.has(getAppVariant())
 }

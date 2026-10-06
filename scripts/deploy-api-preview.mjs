@@ -1,47 +1,46 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process"
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs"
-import { tmpdir } from "node:os"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { inspectApiPreviewReadiness } from "./check-api-preview-readiness.mjs"
 import { readEnvironmentFile } from "./environment-profile.mjs"
+import { prepareCommittedApiArtifact } from "./release-api-build.mjs"
+import {
+  parseApiDeployArguments,
+  resolveApiSourceRevision,
+} from "./release-api-source-stage.mjs"
+import {
+  EWATRADE_VERCEL_API_TARGET,
+  RELEASE_VERCEL_CLI,
+  assertOwnedVercelDeployment,
+  parseVercelDeploymentOutput,
+} from "./release-vercel-deployment-output.mjs"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const api = path.join(root, "apps/api")
-const projectId = "prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh"
+const { projectId, teamId } = EWATRADE_VERCEL_API_TARGET
 const scope = "ishaqyusufs-projects"
 const alias = "ewatrade-api-preview-ishaqyusufs-projects.vercel.app"
-const prepareOnly = process.argv.includes("--prepare-only")
-const verifyOnly = process.argv.includes("--verify-only")
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
   console.log(
-    "Usage: bun run api:preview:deploy [--prepare-only|--verify-only]",
+    "Usage: bun run api:preview:deploy [--prepare-only|--verify-only] [--revision FULL_HEAD_SHA] [--source-repository ABSOLUTE_CLEAN_WORKTREE]",
   )
   console.log(
-    "Builds from main, checks isolation, and deploys only to the protected API Preview.",
+    "Builds clean committed HEAD with Bun 1.3.9 in a private macOS sandbox, then deploys only to the protected API Preview.",
   )
   process.exit(0)
 }
-if (
-  process.argv.some(
-    (arg) =>
-      arg.startsWith("-") && !["--prepare-only", "--verify-only"].includes(arg),
-  )
-) {
-  throw new Error("Unsupported option. This command cannot select Production.")
-}
-if (prepareOnly && verifyOnly) {
-  throw new Error("Choose preparation or live verification, not both.")
-}
+const {
+  prepareOnly,
+  verifyOnly,
+  revision: requestedRevision,
+  sourceRepository = root,
+} = parseApiDeployArguments(process.argv.slice(2), "preview")
+const revision = verifyOnly
+  ? undefined
+  : resolveApiSourceRevision(sourceRepository, requestedRevision)
 
 function run(command, args, cwd = root) {
   const result = spawnSync(command, args, {
@@ -60,16 +59,21 @@ function run(command, args, cwd = root) {
   return result.stdout
 }
 
+function runVercel(args, cwd = api) {
+  return run("bunx", [RELEASE_VERCEL_CLI, ...args], cwd)
+}
+
 function vercelJson(command, args, cwd = api) {
-  const output = run("vercel", [command, ...args], cwd)
-  const start = output.indexOf("{")
-  if (start < 0) throw new Error(`Vercel ${command} returned no JSON.`)
-  return JSON.parse(output.slice(start))
+  const output = runVercel([command, ...args], cwd)
+  try {
+    return JSON.parse(output)
+  } catch {
+    throw new Error("VERCEL_DEPLOYMENT_INVALID_RECORD")
+  }
 }
 
 function protectedGet(route, deployment, curlArgs = []) {
-  return run(
-    "vercel",
+  return runVercel(
     [
       "curl",
       route,
@@ -84,7 +88,7 @@ function protectedGet(route, deployment, curlArgs = []) {
   )
 }
 
-function verifyDeployment(url) {
+function verifyDeployment(url, expectedId) {
   const inspected = vercelJson("inspect", [
     url,
     "--format=json",
@@ -95,7 +99,8 @@ function verifyDeployment(url) {
     inspected.name !== "ewatrade-api" ||
     inspected.target !== "preview" ||
     inspected.readyState !== "READY" ||
-    !inspected.id?.startsWith("dpl_")
+    !inspected.id?.startsWith("dpl_") ||
+    (expectedId !== undefined && inspected.id !== expectedId)
   ) {
     throw new Error(
       "Deployment is not a Ready ewatrade-api Preview; alias was not moved.",
@@ -186,47 +191,6 @@ function verifyDeployment(url) {
   return inspected.id
 }
 
-function deploymentUrl(payload) {
-  const candidates = new Set()
-  const ids = new Set()
-  function visit(value) {
-    if (typeof value === "string") {
-      const candidate = value.startsWith("https://")
-        ? value
-        : `https://${value}`
-      if (/^dpl_[A-Za-z0-9]+$/.test(value)) ids.add(value)
-      if (
-        /^https:\/\/ewatrade-(?!api-preview-)[a-z0-9-]+-ishaqyusufs-projects\.vercel\.app$/.test(
-          candidate,
-        )
-      ) {
-        candidates.add(candidate)
-      }
-    } else if (Array.isArray(value)) {
-      value.forEach(visit)
-    } else if (value && typeof value === "object") {
-      Object.values(value).forEach(visit)
-    }
-  }
-  visit(payload)
-  if (ids.size === 1) {
-    candidates.clear()
-    const inspected = vercelJson("inspect", [
-      [...ids][0],
-      "--format=json",
-      "--scope",
-      scope,
-    ])
-    visit(inspected.url)
-  }
-  if (candidates.size !== 1) {
-    throw new Error(
-      "Vercel did not return one exact Preview deployment URL; alias was not moved.",
-    )
-  }
-  return [...candidates][0]
-}
-
 function assertNoSecrets(bundle) {
   for (const profile of [".env.preview", ".env.local", ".env.production"]) {
     const values = readEnvironmentFile(path.join(root, profile))
@@ -263,50 +227,16 @@ if (verifyOnly) {
   process.exit(0)
 }
 
-console.log("Checking API TypeScript on main...")
-run("bun", ["run", "--cwd", "apps/api", "typecheck"])
-console.log("Building isolated Preview artifact...")
-
-const stage = mkdtempSync(path.join(tmpdir(), "ewatrade-api-preview-"))
+console.log(`Building committed Preview artifact ${revision}...`)
+const artifact = await prepareCommittedApiArtifact({
+  repository: sourceRepository,
+  revision,
+})
+const { stage } = artifact
 try {
-  for (const directory of ["apps/api", "packages", "scripts", "patches"]) {
-    mkdirSync(path.join(stage, directory), { recursive: true })
-    run(
-      "rsync",
-      [
-        "-a",
-        "--exclude=node_modules",
-        "--exclude=.vercel",
-        "--exclude=.env*",
-        "--exclude=.git",
-        `${directory}/`,
-        `${path.join(stage, directory)}/`,
-      ],
-      root,
-    )
-  }
-  for (const file of ["package.json", "bun.lock", "tsconfig.json"]) {
-    copyFileSync(path.join(root, file), path.join(stage, file))
-  }
-  const stageApi = path.join(stage, "apps/api")
-  const configPath = path.join(stageApi, "tsconfig.json")
-  const config = JSON.parse(readFileSync(configPath, "utf8"))
-  config.compilerOptions = { ...config.compilerOptions, noCheck: true }
-  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
-
-  const outputPath = path.join(stageApi, "src/bundle.js")
-  run("bun", [
-    "build",
-    "--target=bun",
-    "--packages=bundle",
-    "--env=disable",
-    `--outfile=${outputPath}`,
-    "apps/api/src/index.ts",
-  ])
-  assertNoSecrets(readFileSync(outputPath, "utf8"))
-  writeFileSync(
-    path.join(stageApi, "src/index.ts"),
-    'import { Hono } from "hono"\nimport bundledApp from "./bundle.js"\nconst app = new Hono()\napp.all("*", (context) => bundledApp.fetch(context.req.raw))\nexport default app\n',
+  resolveApiSourceRevision(sourceRepository, revision)
+  assertNoSecrets(
+    readFileSync(path.join(stage, "apps/api/src/bundle.js"), "utf8"),
   )
   if (prepareOnly) {
     console.log(
@@ -315,43 +245,67 @@ try {
     process.exitCode = 0
   } else {
     mkdirSync(path.join(stage, ".vercel"), { recursive: true })
-    copyFileSync(
-      path.join(api, ".vercel/project.json"),
+    writeFileSync(
       path.join(stage, ".vercel/project.json"),
+      `${JSON.stringify({
+        orgId: teamId,
+        projectId,
+        projectName: "ewatrade-api",
+      })}\n`,
+      { mode: 0o600, flag: "wx" },
     )
     console.log("Pulling Preview-only Vercel settings...")
-    run("vercel", [
-      "pull",
-      "--yes",
-      "--environment=preview",
-      "--cwd",
-      stage,
-      "--scope",
-      scope,
-    ])
-    console.log("Deploying to the exact Preview API project...")
-    const deployment = vercelJson(
-      "deploy",
+    runVercel(
       [
+        "pull",
+        "--yes",
+        "--environment=preview",
+        "--cwd",
         stage,
-        "--project",
-        projectId,
-        "--target=preview",
         "--scope",
         scope,
-        "--yes",
-        "--format=json",
       ],
       root,
     )
-    const url = deploymentUrl(deployment)
-    const id = verifyDeployment(url)
-    run("vercel", ["alias", "set", url, alias, "--scope", scope], api)
+    console.log("Deploying to the exact Preview API project...")
+    const cliDeployment = parseVercelDeploymentOutput(
+      runVercel(
+        [
+          "deploy",
+          stage,
+          "--project",
+          projectId,
+          "--target=preview",
+          "--scope",
+          scope,
+          "--yes",
+          "--format=json",
+        ],
+        root,
+      ),
+    )
+    const rawDeployment = vercelJson("api", [
+      `/v13/deployments/${cliDeployment.id}?teamId=${teamId}`,
+      "--method",
+      "GET",
+      "--raw",
+      "--scope",
+      scope,
+    ])
+    const deployment = assertOwnedVercelDeployment(rawDeployment, {
+      ...cliDeployment,
+      projectId,
+      teamId,
+      environment: "preview",
+    })
+    const { url } = deployment
+    const id = verifyDeployment(url, deployment.id)
+    runVercel(["alias", "set", url, alias, "--scope", scope], api)
     console.log(
       `Preview deployment ${id} passed protected smoke and now serves https://${alias}`,
     )
   }
 } finally {
   // `vercel pull` writes Preview secrets into this directory. Always remove it.
-  rmSync(stage, { recursive: true, force: true })
+  artifact.cleanup()
 }

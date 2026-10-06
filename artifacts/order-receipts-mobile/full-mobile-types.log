@@ -1,0 +1,40 @@
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(784,16): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(785,23): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(786,24): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(787,23): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(788,20): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(971,165): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(1490,16): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(1491,23): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(1492,24): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(1493,23): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(1494,20): error TS2339: Property 'result' does not exist on type '{ result: JsonValue; createdAt: Date; status: "COMMITTED"; } | { status: "NOT_FOUND"; }'.
+  Property 'result' does not exist on type '{ status: "NOT_FOUND"; }'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(2017,18): error TS18047: 'line.categories' is possibly 'null'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(2017,34): error TS2339: Property 'map' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.
+  Property 'map' does not exist on type 'string'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(2289,65): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx(2290,62): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+apps/mobile/src/components/mobile/order-detail/order-detail-screen.tsx(371,15): error TS2322: Type '"/order-receipts-modal"' is not assignable to type '"/" | RelativePathString | ExternalPathString | "/account-privacy" | "/app-lock-modal" | "/business-switch-modal" | "/catalog-items-modal" | ... 60 more ... | "/finance-report-account/[accountId]"'.
+apps/mobile/src/components/mobile/orders/orders-screen.tsx(462,17): error TS2322: Type '"/order-receipts-modal"' is not assignable to type '"/" | RelativePathString | ExternalPathString | "/account-privacy" | "/app-lock-modal" | "/business-switch-modal" | "/catalog-items-modal" | ... 60 more ... | "/finance-report-account/[accountId]"'.

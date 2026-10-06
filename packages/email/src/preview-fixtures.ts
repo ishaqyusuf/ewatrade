@@ -5,7 +5,8 @@ import type { WorkspaceWelcomeEmailInput } from "../templates/workspace-welcome"
 
 export const earlyAccessLead = {
   accessExpiresAt: "6 September 2026, 18:00 WAT",
-  accessUrl: "https://ewatrade.com/signup?access_token=preview-early-access",
+  accessUrl:
+    "https://dashboard.ewatrade.com/signup?access_token=preview-early-access",
   companyName: "Amina Home & Trade",
   email: "amina@example.com",
   fullName: "Amina Bello",
@@ -51,3 +52,21 @@ export const workspaceWelcome = {
   posHostname: "amina-home-pos.ewatrade.com",
   storefrontHostname: "amina-home.ewatrade.com",
 } satisfies WorkspaceWelcomeEmailInput
+
+export const accountDeletionVerification = { code: "482913" }
+export const accountPrivacyOutcome = {
+  subject: "Account deletion request update",
+  text: "Preview content only.\n\nThe operator supplies the reviewed outcome wording here. This sample does not certify deletion, retention decisions or delivery.",
+}
+export const accountPrivacyNoticeAlert = {
+  failed: 1,
+  failedAfterCompletion: 1,
+  uncertain: 2,
+  staleSending: 1,
+  deliveryUnconfirmed: 3,
+}
+export const playRefundReviewAlert = {
+  total: 4,
+  overdue: 1,
+  earliestDue: "2026-10-03T10:30:00.000Z",
+}

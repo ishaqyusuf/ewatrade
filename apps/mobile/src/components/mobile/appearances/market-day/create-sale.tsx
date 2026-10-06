@@ -23,7 +23,6 @@ import { formatMinorMoney } from "@ewatrade/utils"
 
 export function MarketDaySaleStageHeader({
   current,
-  description,
   onBack,
   title,
 }: SaleStageHeaderProps) {
@@ -50,9 +49,6 @@ export function MarketDaySaleStageHeader({
           </Pressable>
         ) : null}
       </View>
-      <Text className="text-sm [-rn-line-height:20] text-market-on-palm-muted">
-        {description}
-      </Text>
     </View>
   )
 }
@@ -167,7 +163,6 @@ export function MarketDaySelectedOrderLine({
 }
 
 export function MarketDayCustomerActionRow({
-  description,
   icon,
   onPress,
   title,
@@ -185,7 +180,6 @@ export function MarketDayCustomerActionRow({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-market-ink">{title}</Text>
-        <Text className="text-xs text-market-muted-ink">{description}</Text>
       </View>
       <Icon className="size-sm text-market-muted-ink" name="ChevronRight" />
     </Pressable>

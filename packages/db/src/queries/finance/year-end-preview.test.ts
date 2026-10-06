@@ -52,6 +52,7 @@ function fixture() {
   let options: unknown
   const tx = {
     $queryRaw: async () => [],
+    financeReconciliation: { findMany: async () => [] },
     membership: {
       findFirst: async () =>
         state.authorized ? { tenant: { isActive: true } } : null,
@@ -134,6 +135,7 @@ test("first-year exact preview uses the original stub and snapshot without grant
   expect(result.balanceSheet.unclosedEarningsMinor).toBe("700")
   expect(result.balanceSheet.differenceMinor).toBe("0")
   expect(result.closedThrough).toEqual(f.book.closedThrough)
+  expect(result.cashEvidence.status).toBe("REVIEW_REQUIRED")
   expect(result.canClose).toBe(false)
   expect(result.operationallyReconciled).toBe(false)
   expect(result.completeness).toBe("INCOMPLETE_SOURCE_COVERAGE")

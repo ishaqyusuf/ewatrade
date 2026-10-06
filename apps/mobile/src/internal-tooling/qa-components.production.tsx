@@ -8,6 +8,10 @@ export function QaAccountChooser() {
   return null
 }
 
+export function FloatingQaButton() {
+  return null
+}
+
 export function QaQuickFillButton(_props: {
   canUndo?: boolean
   children?: ReactNode

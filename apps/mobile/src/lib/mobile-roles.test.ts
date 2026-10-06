@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test"
 
-import { canManageMobileOperations, isSalesRepRole } from "./mobile-roles"
+import {
+  canEditMobileCatalog,
+  canManageMobileOperations,
+  canManageMobileStaff,
+  canManageMobileStock,
+  isSalesRepRole,
+} from "./mobile-roles"
 
 describe("mobile role capabilities", () => {
   test("limits management actions to owner, admin, and manager roles", () => {
@@ -16,4 +22,35 @@ describe("mobile role capabilities", () => {
     expect(isSalesRepRole("OPERATOR")).toBe(true)
     expect(isSalesRepRole("MANAGER")).toBe(false)
   })
+})
+
+test("stock access requires explicit scoped Operator cutover", () => {
+  expect(canManageMobileStock("OPERATOR", "SCOPED")).toBe(true)
+  expect(canManageMobileStock("OPERATOR", "LEGACY")).toBe(false)
+  expect(canManageMobileStock("OPERATOR")).toBe(false)
+  expect(canManageMobileStock("CASHIER", "SCOPED")).toBe(false)
+  expect(canManageMobileOperations("OPERATOR")).toBe(false)
+})
+
+test("scoped Manager catalog and staff controls require business authority", () => {
+  expect(
+    canEditMobileCatalog({
+      role: "MANAGER",
+      staffAccessMode: "SCOPED",
+      catalogEditor: false,
+    }),
+  ).toBe(false)
+  expect(
+    canEditMobileCatalog({
+      role: "MANAGER",
+      staffAccessMode: "SCOPED",
+      catalogEditor: true,
+    }),
+  ).toBe(true)
+  expect(
+    canManageMobileStaff({ role: "MANAGER", staffAccessMode: "SCOPED" }),
+  ).toBe(false)
+  expect(
+    canManageMobileStaff({ role: "OWNER", staffAccessMode: "SCOPED" }),
+  ).toBe(true)
 })

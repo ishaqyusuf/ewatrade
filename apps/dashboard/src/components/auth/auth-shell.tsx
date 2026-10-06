@@ -1,5 +1,4 @@
-import { Store04Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
+import { BrandMark } from "@ewatrade/ui"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
@@ -29,14 +28,29 @@ export function AuthShell({
         <Link
           href={brandHref}
           aria-label="EwaTrade home"
-          className="inline-flex size-6 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <HugeiconsIcon icon={Store04Icon} className="size-6" />
+          <span>
+            <img
+              src="/brand/ewatrade-logo-precision-rise-v1.svg"
+              alt="ẸwáTrade"
+              width={164}
+              height={36}
+              className="block h-9 w-auto dark:hidden"
+            />
+            <img
+              src="/brand/ewatrade-logo-precision-rise-v1-reverse.svg"
+              alt="ẸwáTrade"
+              width={164}
+              height={36}
+              className="hidden h-9 w-auto dark:block"
+            />
+          </span>
         </Link>
       </nav>
       <aside className="m-2 hidden w-1/2 items-center justify-center bg-muted p-12 lg:flex">
         <div className="flex max-w-md flex-col gap-6">
-          <HugeiconsIcon icon={Store04Icon} className="size-12" />
+          <BrandMark className="size-12" />
           <h2 className="font-serif text-4xl leading-tight">{asideTitle}</h2>
           <p className="text-base leading-relaxed text-muted-foreground">
             {asideDescription}

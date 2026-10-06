@@ -159,18 +159,6 @@ const contracts = [
     file: "src/app/_layout.tsx",
     markers: ['name="(admin-tabs)"', "canAccessAdminTabs"],
   },
-  {
-    file: "assets/images/design-system/reference-admin-more.png",
-    markers: [],
-  },
-  {
-    file: "src/components/mobile/design-system/designs/design-01/design-01.data.ts",
-    markers: [
-      "DESIGN_01_ADMIN_MORE_REFERENCE",
-      "reference-admin-more.png",
-      "DESIGN_01_ROUTES.moreImage",
-    ],
-  },
 ]
 
 const failures = []

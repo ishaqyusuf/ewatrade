@@ -1,0 +1,162 @@
+{
+  "mode": "mobile",
+  "runs": 12,
+  "checks": [
+    {
+      "theme": "light",
+      "direction": 1,
+      "scope": "single",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "light",
+      "direction": 1,
+      "scope": "group",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "light",
+      "direction": 2,
+      "scope": "single",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "light",
+      "direction": 2,
+      "scope": "group",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "light",
+      "direction": 3,
+      "scope": "single",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "light",
+      "direction": 3,
+      "scope": "group",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "dark",
+      "direction": 1,
+      "scope": "single",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "dark",
+      "direction": 1,
+      "scope": "group",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "dark",
+      "direction": 2,
+      "scope": "single",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "dark",
+      "direction": 2,
+      "scope": "group",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "dark",
+      "direction": 3,
+      "scope": "single",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    },
+    {
+      "theme": "dark",
+      "direction": 3,
+      "scope": "group",
+      "overflow": false,
+      "preview": true,
+      "options": true,
+      "prepare": true,
+      "retention": true,
+      "escapeFocus": true,
+      "reset": true
+    }
+  ],
+  "edgeCases": [
+    "unpaid",
+    "part-paid",
+    "offline",
+    "safe text",
+    "canceled exclusion",
+    "partial retry",
+    "isolated directions"
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "scope": "Fictional local workshop; browser viewport, not production/native acceptance"
+}

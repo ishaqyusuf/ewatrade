@@ -73,7 +73,7 @@ const requiredMarkers = [
     ],
   },
   {
-    file: "components/mobile/floating-theme-toggle.tsx",
+    file: "components/mobile/floating-qa-button.tsx",
     markers: [
       'pathname === "/"',
       'pathname === "/onboarding"',

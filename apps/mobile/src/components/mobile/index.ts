@@ -28,11 +28,6 @@ export { CloseoutContent } from "./closeout-sheet"
 export { CurrencySelector } from "./currency-selector"
 export { CreateSaleContent } from "./create-sale-sheet"
 export { CustomerBookContent } from "./customer-book-sheet"
-export { DesignSystemScreen } from "./design-system"
-export {
-  DesignSystemPatternScreen,
-  DesignSystemPlaygroundScreen,
-} from "./design-system-playground"
 export {
   DashboardActionRow,
   DashboardHomeHeader,
@@ -52,7 +47,6 @@ export {
 } from "./dashboard-kit"
 export { EmptyState } from "./empty-state"
 export { FeatureFlag } from "./feature-flag"
-export { FloatingThemeToggle } from "./floating-theme-toggle"
 export { FormField } from "./form-field"
 export { GlobalSearchScreen } from "./global-search-screen"
 export { ListCreateFab } from "./list-create-fab"

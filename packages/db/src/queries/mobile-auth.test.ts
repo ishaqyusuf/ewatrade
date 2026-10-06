@@ -646,7 +646,7 @@ describe("mobile auth queries", () => {
             }),
           },
         },
-        name: "Second Business",
+        name: "Main store",
         tenantId: "tenant_2",
       }),
     ])

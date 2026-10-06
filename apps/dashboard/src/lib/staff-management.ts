@@ -1,4 +1,4 @@
-import { canManageSalesOperations, normalizeRole } from "@ewatrade/auth/roles"
+import { canManageSalesOperations, canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 
 export type StaffRoleFilter =
   | "admin"
@@ -37,10 +37,10 @@ export type StaffFilters = {
   status?: StaffStatusFilter
 }
 
-export function canManageStaff(role: string | null | undefined) {
+export function canManageStaff(role: string | null | undefined, mode?: string) {
   const normalizedRole = normalizeRole(role)
 
-  return normalizedRole ? canManageSalesOperations(normalizedRole) : false
+  return normalizedRole ? (mode === "SCOPED" ? canManageTenant(normalizedRole) : canManageSalesOperations(normalizedRole)) : false
 }
 
 export function getStaffDisplayName(staff: StaffMemberRow) {

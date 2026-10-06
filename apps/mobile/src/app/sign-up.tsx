@@ -1,5 +1,5 @@
-import { AccountAgeEntry } from "@/components/mobile/sign-up/account-age-entry"
+import { EarlyAccessRequestScreen } from "@/components/mobile/onboarding/early-access-request-screen"
 
 export default function SignUpRoute() {
-  return <AccountAgeEntry />
+  return <EarlyAccessRequestScreen />
 }

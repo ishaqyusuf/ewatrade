@@ -1,5 +1,3 @@
-import { resolveBusinessHomeMarketLedgerQaPath } from "@/lib/business-home-market-ledger-qa"
-import { resolveBusinessLargeTextQaPath } from "@/lib/business-large-text-qa"
 import {
   initializeCustomerConversationStore,
   setPendingCustomerTransfer,
@@ -8,11 +6,14 @@ import {
   resolveCustomerConversationQaPath,
   resolveCustomerDeepLink,
 } from "@/lib/customer-deep-link"
-import { resolveHomeGuidedJourneyQaPath } from "@/lib/home-guided-journey-qa"
+import { resolveOnboardingContinuationLink } from "@/lib/onboarding-continuation-link"
+import {
+  onboardingLinkConfiguration,
+  savePendingOnboarding,
+} from "@/lib/onboarding-continuation-store"
 import { resolveOnboardingMarketDayQaPath } from "@/lib/onboarding-market-day-qa"
-import { resolveOrderDetailCurrentQaPath } from "@/lib/order-detail-current-qa"
-import { resolveOrdersDispatchLedgerQaPath } from "@/lib/orders-dispatch-ledger-qa"
-import { resolveSalesRepShiftLedgerQaPath } from "@/lib/sales-rep-shift-ledger-qa"
+
+let continuationAttempt = 0
 
 export async function redirectSystemPath({
   path,
@@ -20,40 +21,24 @@ export async function redirectSystemPath({
   initial: boolean
   path: string
 }) {
-  const homeGuidedJourneyQaPath = resolveHomeGuidedJourneyQaPath(path, __DEV__)
-  if (homeGuidedJourneyQaPath) return homeGuidedJourneyQaPath
-  const businessHomeMarketLedgerQaPath = resolveBusinessHomeMarketLedgerQaPath(
-    path,
-    __DEV__,
-  )
-  if (businessHomeMarketLedgerQaPath) return businessHomeMarketLedgerQaPath
-
-  const salesRepShiftLedgerQaPath = resolveSalesRepShiftLedgerQaPath(
-    path,
-    __DEV__,
-  )
-  if (salesRepShiftLedgerQaPath) return salesRepShiftLedgerQaPath
-
-  const businessLargeTextQaPath = resolveBusinessLargeTextQaPath(path, __DEV__)
-  if (businessLargeTextQaPath) return businessLargeTextQaPath
-
+  try {
+    const continuation = resolveOnboardingContinuationLink(
+      path,
+      onboardingLinkConfiguration(),
+    )
+    if (continuation) {
+      await savePendingOnboarding(continuation)
+      return `/continue-onboarding?attempt=${Date.now()}-${++continuationAttempt}`
+    }
+  } catch {
+    // Never drop into a different signup session when secure persistence fails.
+    return "/continue-onboarding?error=storage"
+  }
   const onboardingMarketDayQaPath = resolveOnboardingMarketDayQaPath(
     path,
     __DEV__,
   )
   if (onboardingMarketDayQaPath) return onboardingMarketDayQaPath
-
-  const orderDetailCurrentQaPath = resolveOrderDetailCurrentQaPath(
-    path,
-    __DEV__,
-  )
-  if (orderDetailCurrentQaPath) return orderDetailCurrentQaPath
-
-  const ordersDispatchLedgerQaPath = resolveOrdersDispatchLedgerQaPath(
-    path,
-    __DEV__,
-  )
-  if (ordersDispatchLedgerQaPath) return ordersDispatchLedgerQaPath
 
   const qaPath = resolveCustomerConversationQaPath(path, __DEV__)
   if (qaPath) return qaPath

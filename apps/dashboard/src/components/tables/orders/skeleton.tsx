@@ -14,7 +14,8 @@ export function OrdersTableSkeleton({
       columns={orderColumns()}
       rowCount={8}
       rowHeight={57}
-      stickyColumnIds={["orderNumber"]}
+      stickyColumnIds={["select", "orderNumber"]}
+      actionsColumnId="actions"
       columnVisibility={initialSettings?.columns}
       columnSizing={initialSettings?.sizing}
       columnOrder={initialSettings?.order}

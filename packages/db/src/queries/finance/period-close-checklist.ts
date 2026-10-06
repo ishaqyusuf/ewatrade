@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { getFinanceClosingCashEvidenceInTransaction } from "./closing-cash-evidence"
 import { getFinanceReportsInTransaction } from "./reports"
 import { FinanceError } from "./rules"
 
@@ -13,7 +14,6 @@ type CloseCheck = {
 }
 
 const REVIEW_ACCOUNT_LIMIT = 200
-const REVIEW_COUNT_LIMIT = 200
 
 /** Date locking and complete operational reconciliation are distinct decisions. */
 export async function getFinancePeriodCloseChecklist(
@@ -60,7 +60,7 @@ export async function getFinancePeriodCloseChecklist(
           "CONFLICT",
           "This book exceeds the bounded closing review. No complete checklist is certified.",
         )
-      const [report, existing, counts] = await Promise.all([
+      const [report, existing] = await Promise.all([
         getFinanceReportsInTransaction(tx, {
           ...input,
           from,
@@ -69,24 +69,6 @@ export async function getFinancePeriodCloseChecklist(
         tx.financePeriod.findUnique({
           where: { bookId_startsAt: { bookId: book.id, startsAt: from } },
           select: { id: true, endsAt: true, reopenedAt: true },
-        }),
-        tx.financeReconciliation.findMany({
-          where: {
-            bookId: book.id,
-            asOf: input.through,
-            snapshotSequence: { lte: book.lastSequence },
-            account: { purpose: "CASH" },
-          },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          take: REVIEW_COUNT_LIMIT + 1,
-          select: {
-            id: true,
-            bookId: true,
-            accountId: true,
-            asOf: true,
-            snapshotSequence: true,
-            observedBalanceMinor: true,
-          },
         }),
       ])
       if (
@@ -101,42 +83,19 @@ export async function getFinancePeriodCloseChecklist(
       const accounts = report.trialBalance.accounts
       const accountIds = new Set(accounts.map((row) => row.accountId))
       const cashAccounts = accounts.filter((row) => row.purpose === "CASH")
-      const cashAccountIds = new Set(cashAccounts.map((row) => row.accountId))
       if (accountIds.size !== accounts.length)
         throw new FinanceError("CONFLICT", "Closing accounts are repeated.")
-      const countCoverageComplete = counts.length <= REVIEW_COUNT_LIMIT
-      const latestCount = new Map<string, (typeof counts)[number]>()
-      for (const count of counts) {
-        if (
-          count.bookId !== book.id ||
-          !cashAccountIds.has(count.accountId) ||
-          count.asOf.getTime() !== input.through.getTime() ||
-          count.snapshotSequence < 0n ||
-          count.snapshotSequence > book.lastSequence ||
-          count.observedBalanceMinor < 0n
-        )
-          throw new FinanceError("CONFLICT", "Cash review source changed.")
-        if (!latestCount.has(count.accountId))
-          latestCount.set(count.accountId, count)
-      }
-      const cash = cashAccounts.map((account) => {
-        const count = countCoverageComplete
-          ? latestCount.get(account.accountId)
-          : undefined
-        return {
-          accountId: account.accountId,
-          name: account.name,
-          closingBalanceMinor: account.closingBalanceMinor,
-          countId: count?.id ?? null,
-          observedBalanceMinor: count?.observedBalanceMinor.toString() ?? null,
-          status: !count
-            ? ("REVIEW_REQUIRED" as const)
-            : count.observedBalanceMinor.toString() ===
-                account.closingBalanceMinor
-              ? ("PASS" as const)
-              : ("BLOCKED" as const),
-        }
-      })
+      const cashEvidence = await getFinanceClosingCashEvidenceInTransaction(
+        tx,
+        {
+          bookId: book.id,
+          through: input.through,
+          snapshotSequence: book.lastSequence,
+          accounts,
+          now: new Date(),
+        },
+      )
+      const cash = cashEvidence.cash
       const dateEligible =
         !existing ||
         (Boolean(existing.reopenedAt) &&
@@ -169,15 +128,12 @@ export async function getFinancePeriodCloseChecklist(
         {
           id: "CASH_RECONCILIATION",
           label: "Match cash counts at the cutoff",
-          status: cash.some((row) => row.status === "BLOCKED")
-            ? "BLOCKED"
-            : !countCoverageComplete ||
-                cash.some((row) => row.status !== "PASS")
-              ? "REVIEW_REQUIRED"
-              : "PASS",
-          explanation: countCoverageComplete
-            ? "The latest stored physical count at this exact cutoff is compared with each posted cash balance. Missing or different counts need review."
-            : "More than 200 cutoff counts exist. This bounded response cannot certify complete cash-count coverage.",
+          status: cashEvidence.status,
+          explanation:
+            cashEvidence.countCoverageComplete &&
+            cashEvidence.commandCoverageComplete
+              ? "Each latest cutoff count is verified against its original command and ledger basis, then compared with the current posted cash balance. Missing or different counts need review."
+              : "The bounded source review cannot certify complete cash-count or command coverage.",
           accountIds: cashAccounts.map((row) => row.accountId),
         },
         ...(
@@ -246,8 +202,9 @@ export async function getFinancePeriodCloseChecklist(
         operationallyReconciled: false as const,
         checks,
         cash,
-        cashCountCoverageComplete: countCoverageComplete,
-        cashCountReviewLimit: REVIEW_COUNT_LIMIT,
+        cashCountCoverageComplete: cashEvidence.countCoverageComplete,
+        cashCommandCoverageComplete: cashEvidence.commandCoverageComplete,
+        cashCountReviewLimit: cashEvidence.reviewLimit,
         trialBalance: report.trialBalance,
         balanceSheet: report.balanceSheet,
       }

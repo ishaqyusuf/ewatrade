@@ -29,7 +29,7 @@ import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 import { type InventoryBalance, inventorySortFields } from "./columns"
 
-const FIXED_COLUMNS = new Set(["product"])
+const FIXED_COLUMNS = new Set(["product", "actions"])
 
 export function InventoryTableHeader({
   table,
@@ -87,7 +87,11 @@ export function InventoryTableHeader({
               }
               const className = getStickyClassName(
                 id,
-                "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                cn(
+                  "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                  ["onHand", "reserved", "available"].includes(id) &&
+                    "justify-end",
+                ),
               )
               const sortButton = field ? (
                 <Button

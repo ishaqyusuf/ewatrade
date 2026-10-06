@@ -110,39 +110,6 @@ const requiredMarkers = [
     ],
   },
   {
-    file: "components/mobile/sales-rep-shift-ledger-qa-screen.tsx",
-    markers: [
-      "SalesRepShiftLedgerQaScreen",
-      "getSalesRepShiftLedgerPresentation",
-      "statusBarFollowsHero",
-      'role="attendant"',
-    ],
-  },
-  {
-    file: "lib/sales-rep-shift-ledger-qa.ts",
-    markers: [
-      "SALES_REP_SHIFT_LEDGER_QA_STATES",
-      '"disabled"',
-      '"empty"',
-      '"error"',
-      '"loading"',
-      '"offline"',
-      '"operational-populated"',
-      '"pending-sync"',
-      "resolveSalesRepShiftLedgerQaPath",
-      'url.hostname !== "sales-rep-home-shift-ledger"',
-    ],
-  },
-  {
-    file: "app/design-system/sales-rep-home-shift-ledger.tsx",
-    markers: [
-      "__DEV__",
-      "SalesRepShiftLedgerQaScreen",
-      "SalesRepShiftLedgerQaState",
-      '<Redirect href="/design-system" />',
-    ],
-  },
-  {
     file: "components/mobile/dashboard-kit.tsx",
     markers: [
       "DashboardHomeHeader",
@@ -179,36 +146,6 @@ const requiredMarkers = [
       "getBusinessHomeLedgerStepSemantics",
       "disabled={disabled}",
       "min-h-[44px]",
-    ],
-  },
-  {
-    file: "components/mobile/business-home-market-ledger-qa-screen.tsx",
-    markers: ["BusinessHomeMarketLedgerQaScreen", "statusBarFollowsHero"],
-  },
-  {
-    file: "lib/business-home-market-ledger-qa.ts",
-    markers: [
-      "BUSINESS_HOME_MARKET_LEDGER_QA_STATES",
-      '"catalog-ready"',
-      '"attendant"',
-      '"loading"',
-      '"offline"',
-      '"operational-empty"',
-      '"operational-populated"',
-      '"pending-sync"',
-      '"setup"',
-      "resolveBusinessHomeMarketLedgerQaPath",
-      'url.protocol !== "ewatrade-dev:"',
-      'url.hostname !== "business-home-market-ledger"',
-    ],
-  },
-  {
-    file: "app/design-system/business-home-market-ledger.tsx",
-    markers: [
-      "__DEV__",
-      "BusinessHomeMarketLedgerQaScreen",
-      "BusinessHomeMarketLedgerQaState",
-      '<Redirect href="/design-system" />',
     ],
   },
   {
@@ -278,14 +215,6 @@ const forbiddenMarkers = [
   {
     file: "components/mobile/app-shell.tsx",
     markers: ["hideOnScroll={false}"],
-  },
-  {
-    file: "components/mobile/business-home-market-ledger-qa-screen.tsx",
-    markers: ["useTRPC", "fetch(", "apiClient"],
-  },
-  {
-    file: "components/mobile/sales-rep-shift-ledger-qa-screen.tsx",
-    markers: ["useTRPC", "fetch(", "apiClient"],
   },
 ]
 

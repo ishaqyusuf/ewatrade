@@ -2,6 +2,7 @@
 
 import { staffSortFields } from "@/components/tables/staff/sort"
 import { useSortParams } from "@/hooks/use-sort-params"
+import { useStaffParams } from "@/hooks/use-staff-params"
 import type { StaffMemberRow } from "@/lib/staff-management"
 import {
   canUpdateStaffStatus,
@@ -58,6 +59,7 @@ export function StaffDataTable({
   updatingId: string | null
   onUpdateStatus: (staff: StaffMemberRow) => void
 }) {
+  const { setAccessUserId } = useStaffParams()
   const { sort, sorting, toggleSort } = useSortParams({
     fields: staffSortFields,
   })
@@ -125,25 +127,37 @@ export function StaffDataTable({
           const nextStatus = getNextStaffStatus(member)
           const isUpdating = updatingId === member.user.id
           return (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="gap-2 rounded-none"
-              disabled={!canUpdateStaffStatus(member) || isUpdating}
-              onClick={() => onUpdateStatus(member)}
-            >
-              {isUpdating
-                ? "Saving"
-                : nextStatus === "active"
-                  ? "Reactivate"
-                  : "Suspend"}
-            </Button>
+            <div className="flex gap-1">
+              {canUpdateStaffStatus(member) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void setAccessUserId(member.user.id)}
+                >
+                  Manage access
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-2 rounded-none"
+                disabled={!canUpdateStaffStatus(member) || isUpdating}
+                onClick={() => onUpdateStatus(member)}
+              >
+                {isUpdating
+                  ? "Saving"
+                  : nextStatus === "active"
+                    ? "Reactivate"
+                    : "Suspend"}
+              </Button>
+            </div>
           )
         },
       },
     ],
-    [onUpdateStatus, updatingId],
+    [onUpdateStatus, updatingId, setAccessUserId],
   )
   const table = useReactTable({
     data: rows,

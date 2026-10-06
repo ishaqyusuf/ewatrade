@@ -74,6 +74,20 @@ export function MarketDayAutoUpdateScreen(model: AutoUpdatePresentationProps) {
               ))}
             </View>
           )}
+          {model.primaryLabel ? (
+            <MarketDayActionButton
+              tone="palm"
+              disabled={model.primaryDisabled}
+              onPress={model.onPrimary}
+            >
+              {model.primaryLabel}
+            </MarketDayActionButton>
+          ) : null}
+          {model.secondaryLabel ? (
+            <MarketDayActionButton tone="palm" onPress={model.onSecondary}>
+              {model.secondaryLabel}
+            </MarketDayActionButton>
+          ) : null}
         </ScrollView>
       </View>
     </VariableContextProvider>

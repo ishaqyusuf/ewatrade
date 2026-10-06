@@ -4,6 +4,7 @@ import { OtpInput } from "@/components/mobile/otp-input"
 import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
+import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import {
@@ -40,6 +41,7 @@ export function VerifyEmailScreen() {
     (state) => state.completeOnboarding,
   )
   const params = useLocalSearchParams<{
+    accessToken?: string
     acceptedTerms?: string
     acknowledgedPrivacyNotice?: string
     addressLine1?: string
@@ -60,6 +62,7 @@ export function VerifyEmailScreen() {
     returnTo?: string
     teamSize?: string
   }>()
+  const accessToken = firstParam(params.accessToken)
   const email = firstParam(params.email)?.trim() ?? ""
   const returnTo = firstParam(params.returnTo)
   const mode = firstParam(params.mode) === "login" ? "login" : "sign-up"
@@ -129,6 +132,8 @@ export function VerifyEmailScreen() {
         setMessage(error.message || "We could not verify that code.")
       },
       onSuccess(session) {
+        if (accessToken)
+          void clearPendingOnboarding(accessToken).catch(() => undefined)
         completeOnboarding(true)
         auth.applyAuthenticatedSession(
           {
@@ -138,11 +143,15 @@ export function VerifyEmailScreen() {
               businessId: session.profile.businessId ?? undefined,
               businessName: session.profile.businessName ?? undefined,
               businessSlug: session.tenant?.slug ?? undefined,
+              storeId: session.tenant?.storeId ?? undefined,
+              storeName: session.tenant?.storeName ?? undefined,
               currencyCode: session.profile.currencyCode,
               email: session.profile.email,
               id: session.profile.id,
               name: session.profile.name,
               role: session.profile.role ?? undefined,
+              staffAccessMode: session.profile.staffAccessMode,
+              catalogEditor: session.profile.catalogEditor,
               status: session.profile.status ?? undefined,
             },
             token: session.token,
@@ -160,6 +169,7 @@ export function VerifyEmailScreen() {
     setStatus("verifying")
 
     verifyOtpMutation.mutate({
+      accessToken,
       addressLine1,
       ageBand,
       businessProfileKey,
@@ -178,6 +188,7 @@ export function VerifyEmailScreen() {
       teamSize,
     })
   }, [
+    accessToken,
     apiMode,
     addressLine1,
     ageBand,
@@ -251,6 +262,7 @@ export function VerifyEmailScreen() {
     if (requestOtpMutation.isPending || isVerifying) return
 
     requestOtpMutation.mutate({
+      accessToken,
       ageBand,
       ...(legalVersion &&
       firstParam(params.acceptedTerms) === "true" &&
@@ -277,6 +289,7 @@ export function VerifyEmailScreen() {
       teamSize,
     })
   }, [
+    accessToken,
     apiMode,
     ageBand,
     addressLine1,

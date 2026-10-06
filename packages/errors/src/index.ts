@@ -13,6 +13,13 @@ export type ErrorCode =
   | "MODULE_DISABLED"
   | "NETWORK_UNAVAILABLE"
   | "NOT_FOUND"
+  | "ONBOARDING_APPROVAL_REQUIRED"
+  | "ONBOARDING_INVALID"
+  | "ONBOARDING_EXPIRED"
+  | "ONBOARDING_USED"
+  | "ONBOARDING_IDENTITY"
+  | "ONBOARDING_UNVERIFIED"
+  | "ONBOARDING_CONFLICT"
   | "OFFLINE_COMMAND_CONFLICT"
   | "OFFLINE_REVIEW_REQUIRED"
   | "PAYMENT_PROVIDER_FAILED"
@@ -22,6 +29,7 @@ export type ErrorCode =
   | "REGISTRAR_PROVIDER_FAILED"
   | "ROLE_RESTRICTED"
   | "STORAGE_PROVIDER_FAILED"
+  | "STORE_LIMIT_REACHED"
   | "STOCK_CONFLICT"
   | "UNEXPECTED"
   | "VALIDATION_FAILED"
@@ -36,6 +44,56 @@ type ErrorDescriptor = {
 }
 
 const descriptors: Record<ErrorCode, ErrorDescriptor> = {
+  ONBOARDING_APPROVAL_REQUIRED: {
+    message: "Open your approved setup email to continue signup.",
+    reportable: false,
+    retryable: false,
+    status: 403,
+  },
+  ONBOARDING_INVALID: {
+    message: "This setup link is invalid. Request a new setup link.",
+    reportable: false,
+    retryable: false,
+    status: 404,
+  },
+  ONBOARDING_EXPIRED: {
+    message: "This setup link has expired. Request a new setup link.",
+    reportable: false,
+    retryable: false,
+    status: 410,
+  },
+  ONBOARDING_USED: {
+    message: "This setup is already complete. Sign in to your account.",
+    reportable: false,
+    retryable: false,
+    status: 410,
+  },
+  ONBOARDING_IDENTITY: {
+    message: "Use the approved email and business name for this setup.",
+    reportable: false,
+    retryable: false,
+    status: 403,
+  },
+  ONBOARDING_UNVERIFIED: {
+    message: "Verify the approved email before completing setup.",
+    reportable: false,
+    retryable: false,
+    status: 412,
+  },
+  ONBOARDING_CONFLICT: {
+    message: "Setup changed while you were continuing. Open the link again.",
+    reportable: false,
+    retryable: false,
+    status: 409,
+  },
+
+  STORE_LIMIT_REACHED: {
+    message:
+      "You’ve reached your plan’s store limit. Upgrade your plan in Settings → Subscription to add more stores.",
+    reportable: false,
+    retryable: false,
+    status: 403,
+  },
   CATALOG_TERMS_REQUIRED: {
     message:
       "Catalog publication requires effective EwaTrade Terms and your acceptance of them.",
@@ -298,6 +356,7 @@ function classifyCode(error: unknown): ErrorCode {
   const errorRecord = record(error)
   const code = codeOf(error)
   const externalProviderCode = providerCode(error)
+  if (code === "STORE_LIMIT_REACHED") return "STORE_LIMIT_REACHED"
   if (code === "CATALOG_TERMS_REQUIRED") return "CATALOG_TERMS_REQUIRED"
   if (externalProviderCode) return externalProviderCode
   if (errorRecord?.name === "ZodError" || Array.isArray(errorRecord?.issues))

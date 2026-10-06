@@ -1,0 +1,28 @@
+bun test v1.3.0 (b0a6feca)
+
+packages/order-receipts/src/types.test.ts:
+(pass) Order receipt facts and defaults > rejects invalid or unsupported saved configuration [6.74ms]
+(pass) Order receipt facts and defaults > keeps unpaid, part paid, paid, zero and refund states honest [0.07ms]
+(pass) Order receipt facts and defaults > keeps monetary source units and file names safe [10.30ms]
+
+packages/order-receipts/src/pdf.test.ts:
+(pass) Receipt PDF renderer > embeds an actual font and produces bounded single, group and long PDFs [909.54ms]
+(pass) Receipt PDF renderer > refuses unsupported glyphs instead of silently corrupting text [0.31ms]
+
+packages/db/src/queries/order-receipts.test.ts:
+(pass) scoped receipt projection > captures complete source in a consistent transaction, retains refunds and exact quantities [0.62ms]
+(pass) scoped receipt projection > does not infer payment from a historical paid status [0.07ms]
+(pass) scoped receipt projection > inherits business settings and honors a Store override [0.11ms]
+(pass) scoped receipt projection > rejects missing or foreign selections without returning a partial group [0.12ms]
+(pass) scoped receipt projection > rejects canceled, duplicate and over-budget exports [0.13ms]
+(pass) saved receipt settings > defaults and missing Store authorization [0.19ms]
+(pass) saved receipt settings > saves only its JSONB key with parameterized Tenant/Store scope and removes the override [0.37ms]
+
+apps/api/src/trpc/routers/order-receipts.test.ts:
+(pass) receipt settings writes are restricted to Owners and Admins [1.87ms]
+(pass) exports reject foreign Store, duplicate IDs and client supplied Tenant/settings before source reads [0.68ms]
+
+ 14 pass
+ 0 fail
+ 50 expect() calls
+Ran 14 tests across 4 files. [2.96s]

@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "frozenAt": "2026-10-06",
+  "status": "engineering-baseline-not-customer-sla",
+  "serverBoundary": "request-entry-through-serialized-response-including-auth-context-pool-wait",
+  "warmRuns": 3,
+  "warmupSeconds": 60,
+  "percentiles": [50, 95, 99],
+  "coldSamples": 20,
+  "unexpectedErrorRateMaximum": 0.005,
+  "integrityFailuresMaximum": 0,
+  "workload": [
+    { "journey": "catalog-first-page", "weight": 20, "serverP95Ms": 500 },
+    { "journey": "orders-first-page", "weight": 15, "serverP95Ms": 500 },
+    { "journey": "inventory-first-page", "weight": 15, "serverP95Ms": 500 },
+    { "journey": "scoped-search", "weight": 10, "serverP95Ms": 500 },
+    { "journey": "dashboard-critical-data", "weight": 15, "serverP95Ms": 500 },
+    { "journey": "create-order", "weight": 15, "serverP95Ms": 1200 },
+    { "journey": "stock-command", "weight": 10, "serverP95Ms": 1200 }
+  ],
+  "arrivalRateStages": [
+    {
+      "name": "baseline",
+      "requestsPerSecond": 10,
+      "maxActiveClients": 20,
+      "seconds": 600,
+      "mustMeetBudgets": true
+    },
+    {
+      "name": "spike",
+      "requestsPerSecond": 25,
+      "maxActiveClients": 50,
+      "seconds": 300,
+      "mustMeetBudgets": true
+    },
+    {
+      "name": "stress",
+      "requestsPerSecond": 50,
+      "maxActiveClients": 100,
+      "seconds": 300,
+      "mustMeetBudgets": false
+    }
+  ],
+  "closedLoop": {
+    "activeClients": [20, 50, 100],
+    "thinkTimeMs": 1000,
+    "separateFromArrivalRateRuns": true
+  },
+  "soak": { "requestsPerSecond": 10, "seconds": 3600 },
+  "networkProfiles": [
+    {
+      "name": "baseline",
+      "addedRttMs": 50,
+      "downloadMbps": 20,
+      "uploadMbps": 5
+    },
+    {
+      "name": "constrained",
+      "addedRttMs": 150,
+      "downloadMbps": 5,
+      "uploadMbps": 1
+    }
+  ],
+  "deviceProfiles": [
+    {
+      "name": "desktop",
+      "reference": "MacBook Pro M1 Pro, Chrome stable",
+      "viewport": [1440, 900]
+    },
+    {
+      "name": "android",
+      "reference": "physical Android 13+ device with 4 GB RAM",
+      "viewport": [360, 800]
+    },
+    {
+      "name": "ios",
+      "reference": "physical iPhone 12 or equivalent",
+      "viewport": [390, 844]
+    }
+  ],
+  "journeyBudgets": {
+    "dashboardUsableP95Ms": 2000,
+    "mobileCachedCatalogP95Ms": 300,
+    "mobileFreshPageP95Ms": 2000,
+    "databaseWakeRequestP95Ms": 2000,
+    "exportAcknowledgementP95Ms": 1000,
+    "export100kRowsCompletionP95Ms": 60000,
+    "publicLcpP75Ms": 2500,
+    "publicInpP75Ms": 200,
+    "publicClsP75": 0.1
+  },
+  "fixtureTiers": [
+    {
+      "name": "onboarding",
+      "tenants": 1,
+      "storesPerTenant": 1,
+      "catalogItemsPerTenant": 20,
+      "ordersPerTenant": 100,
+      "movementsPerTenant": 1000
+    },
+    {
+      "name": "ordinary",
+      "tenants": 10,
+      "storesPerTenant": 3,
+      "catalogItemsPerTenant": 1000,
+      "ordersPerTenant": 10000,
+      "movementsPerTenant": 100000
+    },
+    {
+      "name": "large-merchant",
+      "tenants": 1,
+      "storesPerTenant": 10,
+      "catalogItemsPerTenant": 10000,
+      "ordersPerTenant": 100000,
+      "movementsPerTenant": 1000000
+    }
+  ],
+  "acceptanceRules": [
+    "Measure each journey separately; do not hide a slow route in aggregate percentiles.",
+    "Record offered, started, completed, rejected, failed and timed-out work; client-cap drops count as unmet load.",
+    "Baseline and spike must meet budgets. Stress establishes saturation and must preserve correctness and recovery.",
+    "Use actual scope-authorized Owner/Operator fixtures; expected denials are separate from throughput traffic.",
+    "Keep external payment/message provider latency separate and verify their complete journeys independently.",
+    "Run same-Store/same-Book contention separately from a mixed-merchant workload.",
+    "Record source/schema/fixture revisions, compute, pooling, sampling, actual device/OS/browser and measured network.",
+    "Device classes are minimum reference profiles; pin exact hardware before each run and retain comparability.",
+    "Cold database and cold function runs are distinct; verify suspension/restart before crediting cold samples.",
+    "Public pre-launch lab evidence does not claim real-user Web Vitals acceptance.",
+    "A changed target, load mix or fixture size requires a contract version change and disclosure."
+  ]
+}

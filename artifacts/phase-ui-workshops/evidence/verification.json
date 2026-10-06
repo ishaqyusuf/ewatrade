@@ -1,0 +1,4571 @@
+{
+  "date": "2026-10-03T07:26:05.162Z",
+  "scope": "Local workshop previews; not native/provider/production acceptance",
+  "studies": 38,
+  "directions": 114,
+  "viewportThemeRuns": 456,
+  "edgeChecks": 17,
+  "pageErrors": [],
+  "results": [
+    {
+      "mode": "desktop-light",
+      "study": "media-library",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-library",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-library",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-upload",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-upload",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-upload",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-usage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-usage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "media-usage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-samples",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-samples",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-samples",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-entry",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-entry",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-entry",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-mapping",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-mapping",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-mapping",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-customers",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-customers",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-customers",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-products",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-products",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-products",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-services",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-services",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-services",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-history",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-history",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-history",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-workbook",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-workbook",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-workbook",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "import-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "job-recovery",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "job-recovery",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "job-recovery",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-branding",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-branding",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-branding",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-batch",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-batch",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "document-batch",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-settings",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-settings",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-settings",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-publish",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-publish",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-publish",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-contact",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-contact",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-contact",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-browse",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-browse",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-browse",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "billing-plans",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "billing-plans",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "billing-plans",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "billing-manage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "billing-manage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "billing-manage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-wallet",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-wallet",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-wallet",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-quote",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-quote",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-quote",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "ai-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "ai-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "ai-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "ai-logo",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "ai-logo",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "ai-logo",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-image-consent",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-image-consent",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "public-image-consent",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "moderation",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "moderation",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "moderation",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "finance-documents",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "finance-documents",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "finance-documents",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "consolidated-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "consolidated-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "consolidated-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "gap-review",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "gap-review",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "gap-review",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "metadata-promotion",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "metadata-promotion",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "metadata-promotion",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "support-operations",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "support-operations",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "support-operations",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-limits",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-limits",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "coin-limits",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "paid-image-license",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "paid-image-license",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "paid-image-license",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "native-billing-status",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "native-billing-status",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-light",
+      "study": "native-billing-status",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-library",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-library",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-library",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-upload",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-upload",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-upload",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-usage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-usage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "media-usage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-samples",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-samples",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-samples",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-entry",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-entry",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-entry",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-mapping",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-mapping",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-mapping",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-customers",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-customers",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-customers",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-products",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-products",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-products",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-services",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-services",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-services",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-history",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-history",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-history",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-workbook",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-workbook",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-workbook",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "import-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "job-recovery",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "job-recovery",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "job-recovery",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-branding",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-branding",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-branding",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-batch",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-batch",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "document-batch",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-settings",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-settings",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-settings",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-publish",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-publish",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-publish",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-contact",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-contact",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-contact",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-browse",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-browse",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-browse",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "billing-plans",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "billing-plans",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "billing-plans",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "billing-manage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "billing-manage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "billing-manage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-wallet",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-wallet",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-wallet",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-quote",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-quote",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-quote",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "ai-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "ai-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "ai-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "ai-logo",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "ai-logo",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "ai-logo",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-image-consent",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-image-consent",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "public-image-consent",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "moderation",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "moderation",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "moderation",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "finance-documents",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "finance-documents",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "finance-documents",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "consolidated-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "consolidated-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "consolidated-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "gap-review",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "gap-review",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "gap-review",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "metadata-promotion",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "metadata-promotion",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "metadata-promotion",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "support-operations",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "support-operations",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "support-operations",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-limits",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-limits",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "coin-limits",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "paid-image-license",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "paid-image-license",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "paid-image-license",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "native-billing-status",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "native-billing-status",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "desktop-dark",
+      "study": "native-billing-status",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-library",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-library",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-library",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-upload",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-upload",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-upload",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-usage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-usage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "media-usage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-samples",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-samples",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-samples",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-entry",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-entry",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-entry",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-mapping",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-mapping",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-mapping",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-customers",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-customers",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-customers",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-products",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-products",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-products",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-services",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-services",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-services",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-history",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-history",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-history",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-workbook",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-workbook",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-workbook",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "import-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "job-recovery",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "job-recovery",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "job-recovery",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-branding",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-branding",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-branding",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-batch",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-batch",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "document-batch",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-settings",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-settings",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-settings",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-publish",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-publish",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-publish",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-contact",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-contact",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-contact",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-browse",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-browse",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-browse",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "billing-plans",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "billing-plans",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "billing-plans",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "billing-manage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "billing-manage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "billing-manage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-wallet",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-wallet",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-wallet",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-quote",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-quote",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-quote",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "ai-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "ai-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "ai-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "ai-logo",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "ai-logo",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "ai-logo",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-image-consent",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-image-consent",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "public-image-consent",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "moderation",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "moderation",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "moderation",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "finance-documents",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "finance-documents",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "finance-documents",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "consolidated-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "consolidated-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "consolidated-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "gap-review",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "gap-review",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "gap-review",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "metadata-promotion",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "metadata-promotion",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "metadata-promotion",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "support-operations",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "support-operations",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "support-operations",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-limits",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-limits",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "coin-limits",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "paid-image-license",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "paid-image-license",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "paid-image-license",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "native-billing-status",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "native-billing-status",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-light",
+      "study": "native-billing-status",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-library",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-library",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-library",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-upload",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-upload",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-upload",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-usage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-usage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "media-usage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-samples",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-samples",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-samples",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-entry",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-entry",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-entry",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-mapping",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-mapping",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-mapping",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-customers",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-customers",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-customers",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-products",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-products",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-products",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-services",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-services",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-services",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-history",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-history",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-history",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-workbook",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-workbook",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-workbook",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "import-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "job-recovery",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "job-recovery",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "job-recovery",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-branding",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-branding",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-branding",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-batch",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-batch",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "document-batch",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-settings",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-settings",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-settings",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-publish",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-publish",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-publish",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-contact",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-contact",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-contact",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-browse",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-browse",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-browse",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "billing-plans",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "billing-plans",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "billing-plans",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "billing-manage",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "billing-manage",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "billing-manage",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-wallet",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-wallet",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-wallet",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-quote",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-quote",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-quote",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "ai-product",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "ai-product",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "ai-product",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "ai-logo",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "ai-logo",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "ai-logo",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-images",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-images",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-images",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-image-consent",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-image-consent",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "public-image-consent",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "moderation",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "moderation",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "moderation",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "finance-documents",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "finance-documents",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "finance-documents",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "consolidated-invoice",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "consolidated-invoice",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "consolidated-invoice",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "gap-review",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "gap-review",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "gap-review",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "metadata-promotion",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "metadata-promotion",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "metadata-promotion",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "support-operations",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "support-operations",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "support-operations",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-limits",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-limits",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "coin-limits",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "paid-image-license",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "paid-image-license",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "paid-image-license",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "native-billing-status",
+      "direction": 1,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "native-billing-status",
+      "direction": 2,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    },
+    {
+      "mode": "mobile-dark",
+      "study": "native-billing-status",
+      "direction": 3,
+      "render": true,
+      "selection": true,
+      "confirmation": true,
+      "reset": true,
+      "overflow": false
+    }
+  ]
+}

@@ -38,9 +38,9 @@ const contracts = [
       "offline policy toggles must expose semantic state and a visible 48-by-28 track",
   },
   {
-    file: "apps/mobile/src/components/mobile/floating-theme-toggle.tsx",
-    markers: ['pathname.startsWith("/sync-status-modal")'],
-    reason: "the development theme control must not overlap live sync actions",
+    file: "apps/mobile/src/components/mobile/floating-qa-button.tsx",
+    markers: ['pathname.endsWith("-modal")'],
+    reason: "the development QA control must not overlap live sync actions",
   },
   {
     file: "apps/mobile/src/components/mobile/admin-tabs/admin-more-screen.tsx",

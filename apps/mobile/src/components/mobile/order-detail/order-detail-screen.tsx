@@ -4,17 +4,12 @@ import {
   ClassicOrderDetailPrimaryAction,
   CommercialOrderOverviewHeader,
 } from "@/components/mobile/appearances/classic/order-detail-content"
-import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
-import { EmptyState } from "@/components/mobile/empty-state"
-import {
-  OrderFulfilmentConfirmationSheet,
-  type OrderPaymentMethod,
-  OrderPaymentSheet,
-} from "./order-action-sheets"
 import {
   OrderDetailDispatchDocket,
   OrderDetailDispatchDocketPrimaryAction,
 } from "@/components/mobile/appearances/market-day/order-detail-dispatch-docket"
+import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
+import { EmptyState } from "@/components/mobile/empty-state"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
@@ -24,6 +19,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
+import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import {
   formatMinorMoney,
   majorToMinor,
@@ -35,10 +31,15 @@ import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
+import {
+  OrderFulfilmentConfirmationSheet,
+  type OrderPaymentMethod,
+  OrderPaymentSheet,
+} from "./order-action-sheets"
 
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { ClassicOrderDetailScreen } from "@/components/mobile/appearances/classic/order-detail-screen"
 import { MarketDayOrderDetailScreen } from "@/components/mobile/appearances/market-day/order-detail-screen"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const appearance = useMobileDesign("order-detail")
@@ -67,6 +68,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const [paymentReference, setPaymentReference] = useState("")
   const [mastheadHeight, setMastheadHeight] = useState(116)
   const [mastheadVisible, setMastheadVisible] = useState(true)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Appearance changes invalidate measured masthead geometry.
   useEffect(() => {
     setMastheadVisible(true)
     setMastheadHeight(116)
@@ -361,6 +363,19 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           onOpenCustomer={openCustomer}
           order={order}
         />
+        <ActionButton
+          icon="ReceiptText"
+          variant="outline"
+          disabled={isOffline || !isReceiptOrderEligible(order.status)}
+          onPress={() =>
+            router.push({
+              pathname: "/order-receipts-modal",
+              params: { orderIds: order.id },
+            })
+          }
+        >
+          Generate receipt
+        </ActionButton>
       </Screen>
 
       {hasBalanceDue ? (

@@ -32,7 +32,9 @@
     "./account-privacy-intake": "./src/account-privacy-intake.ts",
     "./catalog-category-presets": "./src/catalog-category-presets.ts",
     "./catalog-illustrations": "./src/catalog-illustrations.ts",
-    "./catalog-illustration-artwork": "./src/catalog-illustration-artwork.ts"
+    "./catalog-illustration-artwork": "./src/catalog-illustration-artwork.ts",
+    "./finance-bank-statement": "./src/finance-bank-statement.ts",
+    "./app-update": "./src/app-update.ts"
   },
   "sideEffects": false,
   "scripts": {

@@ -2,6 +2,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useState } from "react"
+import type { ApprovedNativeOnboarding } from "../onboarding/onboarding-continuation-screen"
 import { SignUpScreen } from "./sign-up-screen"
 
 type EligibleAgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
@@ -13,13 +14,16 @@ const choices: Array<{ label: string; value: EligibleAgeBand | "UNDER_13" }> = [
   { label: "18 or older", value: "ADULT" },
 ]
 
-export function AccountAgeEntry() {
+export function AccountAgeEntry({
+  continuation,
+}: { continuation?: ApprovedNativeOnboarding } = {}) {
   const [selected, setSelected] = useState<EligibleAgeBand | "UNDER_13" | null>(
     null,
   )
   const [ageBand, setAgeBand] = useState<EligibleAgeBand | null>(null)
 
-  if (ageBand) return <SignUpScreen ageBand={ageBand} />
+  if (ageBand)
+    return <SignUpScreen ageBand={ageBand} continuation={continuation} />
 
   return (
     <View className="flex-1 justify-center bg-background p-5">

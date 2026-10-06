@@ -24,7 +24,7 @@ export default async function StaffRoutePage({
     redirect("/login?error=no_tenant")
   }
 
-  if (!canManageStaff(ctx.membership.role)) {
+  if (!canManageStaff(ctx.membership.role, ctx.membership.staffAccessMode)) {
     redirect("/")
   }
 

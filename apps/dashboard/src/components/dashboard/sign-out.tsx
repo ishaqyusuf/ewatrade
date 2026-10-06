@@ -31,9 +31,7 @@ export function SignOut() {
         throw new Error(body?.error || "Could not sign out. Please try again.")
       }
       clearDashboardDataCache()
-      router.push(
-        `${process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"}/login`,
-      )
+      router.push("/login")
     } catch (signOutError) {
       setError(
         signOutError instanceof Error

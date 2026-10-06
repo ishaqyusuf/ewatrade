@@ -1,5 +1,6 @@
 import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { GettingStarted } from "@/components/dashboard/getting-started"
+import { OverviewActions } from "@/components/dashboard/overview-actions"
 import {
   OverviewMetrics,
   OverviewMetricsSkeleton,
@@ -7,7 +8,12 @@ import {
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { PageHeader } from "@/components/page-header"
+import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
+import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
+import { OrderDetailsSheet } from "@/components/sheets/order-details-sheet"
 import { getGettingStartedActions } from "@/lib/dashboard-overview"
+import { canOperateInventory } from "@/lib/inventory-operations"
+import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
@@ -22,24 +28,41 @@ export default async function DashboardHomePage() {
   const ctx = session ? await getActiveTenant(session.user.id) : null
   const store = ctx?.activeStore
   const tenant = ctx?.tenant
+  const canCreateOrder = canUseSalesOperations(ctx?.membership.role)
+  const canUpdateStock = canOperateInventory(
+    ctx?.membership.role,
+    ctx?.membership.staffAccessMode,
+  )
+  const customerDirectory =
+    ctx?.membership.staffAccessMode !== "SCOPED" ||
+    ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "")
   const availability =
     store && tenant
       ? await getDashboardFeatureAvailability(store.id, tenant.id)
       : null
   const actions =
     availability && !availability.hasOrders
-      ? getGettingStartedActions(ctx?.membership.role, availability)
+      ? getGettingStartedActions(
+          ctx?.membership.role,
+          availability,
+          ctx?.membership,
+        )
       : []
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-      <PageHeader
-        title="Overview"
-        description={
-          store && tenant
-            ? `${tenant.name} · ${store.name}`
-            : "Your business at a glance"
-        }
-      />
+      <div className="flex min-w-0 items-center justify-between gap-4">
+        <PageHeader
+          title="Overview"
+          description={
+            store && tenant
+              ? `${tenant.name} · ${store.name}`
+              : "Your business at a glance"
+          }
+        />
+        {store ? (
+          <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
+        ) : null}
+      </div>
       {actions.length > 0 && store ? (
         <GettingStarted
           actions={actions}
@@ -78,6 +101,17 @@ export default async function DashboardHomePage() {
           </ErrorBoundary>
         </section>
       ) : null}
+      {store && canCreateOrder ? (
+        <OrderCreateSheet
+          key={`order:${store.id}`}
+          store={store}
+          customerDirectory={customerDirectory}
+        />
+      ) : null}
+      {store && canUpdateStock ? (
+        <InventoryOperationSheet key={`stock:${store.id}`} store={store} />
+      ) : null}
+      {store && canCreateOrder ? <OrderDetailsSheet key={`details:${store.id}`} storeId={store.id} /> : null}
     </div>
   )
 }

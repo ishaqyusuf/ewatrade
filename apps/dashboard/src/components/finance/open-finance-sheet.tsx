@@ -30,6 +30,7 @@ export function OpenFinanceSheet({
       onClick={() =>
         setParams({
           financeSheet: mode,
+          statementId: null,
           billId: billId ?? null,
           supplierId: null,
           countId: null,

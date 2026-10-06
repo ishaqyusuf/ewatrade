@@ -1,6 +1,8 @@
 import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 
 import { PrismaClient } from "../generated/prisma/client"
+import { instrumentDatabasePool } from "./performance-tracing"
 
 declare global {
   // eslint-disable-next-line no-var
@@ -18,9 +20,15 @@ if (!databaseUrl) {
 export const prisma =
   globalThis.__ewatradePrisma__ ??
   new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: databaseUrl,
-    }),
+    adapter:
+      process.env.PERFORMANCE_TRACE === "true"
+        ? new PrismaPg(
+            instrumentDatabasePool(
+              new pg.Pool({ connectionString: databaseUrl }),
+            ),
+            { disposeExternalPool: true },
+          )
+        : new PrismaPg({ connectionString: databaseUrl }),
     transactionOptions: {
       maxWait: 10_000,
       timeout: 30_000,

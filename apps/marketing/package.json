@@ -34,7 +34,8 @@
     "react-hook-form": "^7.72.1",
     "server-only": "^0.0.1",
     "superjson": "^2.2.6",
-    "@ewatrade/events": "workspace:*"
+    "@ewatrade/events": "workspace:*",
+    "@ewatrade/onboarding": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

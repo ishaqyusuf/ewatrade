@@ -26,6 +26,20 @@ const reviewedCommit = "c".repeat(40)
 for (const [expectedExitCode, platform, operation, mismatch] of [
   [0, "android", "build"],
   [23, "android", "build"],
+  [0, "android", "build", "dev"],
+  [1, "android", "build", "missing_expected_commit"],
+  [1, "android", "build", "short_expected_commit"],
+  [1, "android", "build", "duplicate_expected_commit"],
+  [1, "android", "build", "profile_override"],
+  [1, "android", "build", "local_override"],
+  [1, "android", "build", "auto_submit"],
+  [1, "android", "build", "native_policy"],
+  [1, "android", "build", "native_policy_second"],
+  [1, "android", "build", "native_decision"],
+  [1, "android", "build", "revision"],
+  [1, "android", "build", "dirty"],
+  [1, "android", "build", "dirty_after_login"],
+  [1, "ios", "build", "native_policy"],
   [1, "android", "build", "attachment"],
   [0, "android", "build", "preview"],
   [1, "android", "build", "preview_attachment"],
@@ -46,6 +60,22 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [0, "android", "env-analytics-sync"],
   [0, "android", "env-check"],
   [1, "android", "env-check", "attachment"],
+  [0, "android", "update", "preview_quick"],
+  [0, "ios", "update", "preview_quick"],
+  [0, "all", "update", "preview_quick"],
+  [1, "android", "update", "preview_quick_attachment"],
+  [1, "android", "update", "preview_release_missing"],
+  [0, "android", "update", "preview_reviewed"],
+  [1, "android", "update", "preview_quick_override"],
+  [0, "android", "update"],
+  [0, "ios", "update"],
+  [0, "all", "update"],
+  [1, "android", "update", "compatibility"],
+  [1, "android", "update", "revision"],
+  [1, "android", "update", "dirty"],
+  [1, "android", "update", "missing_expected_commit"],
+  [1, "android", "update", "dirty_after_login"],
+  [1, "android", "update", "compatibility_second"],
 ] as const) {
   test(`handles ${platform} ${operation} with expected exit ${expectedExitCode}${mismatch ? ` (${mismatch})` : ""} and isolates EAS authentication`, async () => {
     const root = await mkdtemp(path.join(tmpdir(), "ewatrade-eas-test-"))
@@ -55,11 +85,18 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     const sharedHome = path.join(root, "shared-home")
     const capturePath = path.join(root, "capture.json")
     const preflightCapturePath = path.join(root, "preflight.txt")
-    const preview = mismatch === "preview" || mismatch === "preview_attachment"
+    const authCapturePath = path.join(root, "auth.txt")
+    const development = mismatch === "dev"
+    const preview = mismatch?.startsWith("preview") ?? false
+    const quickPreview = mismatch?.startsWith("preview_quick") ?? false
     await mkdir(path.join(root, "scripts"), { recursive: true })
     await mkdir(path.join(root, "apps", "mobile", "scripts"), {
       recursive: true,
     })
+    await writeFile(
+      path.join(root, "apps", "mobile", "app.config.ts"),
+      'export const UPDATE_VERSION = "2026.09.22"\n',
+    )
     await mkdir(path.join(cli, "bin"), { recursive: true })
     await mkdir(path.join(cli, "build", "user"), { recursive: true })
     await mkdir(fakeBin, { recursive: true })
@@ -67,6 +104,10 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     await writeFile(
       path.join(root, ".env"),
       "EAS_EMAIL=test@example.test\nEAS_PASSWORD=fixture-password\n",
+    )
+    await writeFile(
+      path.join(root, ".env.dev"),
+      "EXPO_PUBLIC_API_URL=https://api-dev.example.test\n",
     )
     await writeFile(
       path.join(root, ".env.local"),
@@ -102,6 +143,18 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         path.join(import.meta.dir, "eas-preview-mobile-target.ts"),
       ),
     )
+    await writeFile(
+      path.join(root, "scripts", "release-app-update.ts"),
+      `import { writeFileSync } from "node:fs"; export async function assertPreviewPublisherReady() {} export async function runPreviewBuildAndPublish(input) { const result = await input.runJson(input.command); if (result.code === 0) writeFileSync(${JSON.stringify(path.join(root, "preview-publication.txt"))}, input.expectedCommit); return result.code; }\n`,
+    )
+    await writeFile(
+      path.join(root, "scripts", "release-mobile-preflight.ts"),
+      `import { appendFileSync } from "node:fs"; let calls = 0; export async function assertMobilePublishReady(input) { calls += 1; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "compatibility\\n"); if (process.env.EAS_TEST_COMPAT_FAIL === "1" || (process.env.EAS_TEST_COMPAT_FAIL_SECOND === "1" && calls === 2)) throw new Error("signed compatibility bundle unavailable"); return { revision: process.env.EAS_TEST_GIT_REVISION_MISMATCH === "1" ? "${"c".repeat(40)}" : input.revision, environment: input.environment, platforms: input.platforms }; }\n`,
+    )
+    await writeFile(
+      path.join(root, "scripts", "release-mobile-build-preflight.ts"),
+      `import { appendFileSync } from "node:fs"; let calls = 0; export async function assertMobileBuildReady(input) { calls += 1; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "native-build\\n"); if (process.env.EAS_TEST_NATIVE_FAIL === "1" || (process.env.EAS_TEST_NATIVE_FAIL_SECOND === "1" && calls === 2)) throw new Error("native version proof refused"); return { revision: input.revision, environment: input.environment, platforms: process.env.EAS_TEST_NATIVE_DECISION_MISMATCH === "1" ? ["all"] : input.platforms }; }\n`,
+    )
     for (const [label, relativePath] of [
       ["teen", "scripts/check-teen-release-readiness.mjs"],
       ["api", "apps/mobile/scripts/check-production-api-live.mjs"],
@@ -113,7 +166,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     ]) {
       await writeFile(
         path.join(root, relativePath),
-        `import { appendFileSync } from "node:fs"; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "${label}\\n"); if (process.env.EAS_TEST_PREFLIGHT_FAIL === "${label}") process.exit(7);\n`,
+        `import { appendFileSync, writeFileSync } from "node:fs"; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "${label}\\n"); if ("${label}" === "attachment" && process.env.EAS_TEST_DIRTY_AFTER_ATTACHMENT === "1") writeFileSync("${path.join(root, "apps", "mobile", "app.config.ts")}", "changed after initial preflight\\n"); if (process.env.EAS_TEST_PREFLIGHT_FAIL === "${label}") process.exit(7);\n`,
       )
     }
     await writeFile(
@@ -122,7 +175,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     )
     await writeFile(
       path.join(cli, "build", "user", "fetchSessionSecretAndUser.js"),
-      'exports.fetchSessionSecretAndUserAsync = async () => ({ sessionSecret: "fixture-secret", id: "fixture-id", username: "fixture-user" });\n',
+      'exports.fetchSessionSecretAndUserAsync = async () => { require("node:fs").writeFileSync(process.env.EAS_TEST_AUTH_CAPTURE, "login\\n"); return { sessionSecret: "fixture-secret", id: "fixture-id", username: "fixture-user" }; };\n',
     )
     const easBin = path.join(cli, "bin", "run")
     await writeFile(
@@ -131,6 +184,12 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     )
     await chmod(easBin, 0o755)
     await symlink(easBin, path.join(fakeBin, "eas"))
+    const gitBin = path.join(fakeBin, "git")
+    await writeFile(
+      gitBin,
+      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const args = process.argv.slice(2); if (args[0] === "rev-parse") process.stdout.write(process.env.EAS_TEST_GIT_REVISION_MISMATCH === "1" ? "${"d".repeat(40)}\\n" : "${"c".repeat(40)}\\n"); else if (args[0] === "status" && (process.env.EAS_TEST_GIT_DIRTY === "1" || fs.readFileSync("${path.join(root, "apps", "mobile", "app.config.ts")}", "utf8").includes("changed after initial preflight"))) process.stdout.write(" M apps/mobile/app.config.ts\\n");\n`,
+    )
+    await chmod(gitBin, 0o755)
 
     const proc = Bun.spawn({
       cmd: [
@@ -138,8 +197,35 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         "--env-file=/dev/null",
         path.join(root, "scripts", "eas-account-runner.ts"),
         operation,
-        preview ? "--preview" : "--prod",
-        ...(platform === "ios" ? ["--platform=ios"] : []),
+        development ? "--dev" : preview ? "--preview" : "--prod",
+        ...(platform !== "android" ? [`--platform=${platform}`] : []),
+        ...((operation === "update" ||
+          (operation === "build" && !development)) &&
+        mismatch !== "missing_expected_commit" &&
+        !quickPreview &&
+        mismatch !== "preview_release_missing"
+          ? [
+              "--expected-commit",
+              mismatch === "short_expected_commit"
+                ? reviewedCommit.slice(0, 12)
+                : reviewedCommit,
+            ]
+          : []),
+        ...(mismatch === "preview_release_missing" ||
+        mismatch === "preview_reviewed"
+          ? ["--release-checks"]
+          : []),
+        ...(mismatch === "preview_quick_override"
+          ? ["--channel=production"]
+          : []),
+        ...(mismatch === "duplicate_expected_commit"
+          ? ["--expected-commit", reviewedCommit]
+          : []),
+        ...(mismatch === "profile_override"
+          ? ["--profile", "development"]
+          : []),
+        ...(mismatch === "local_override" ? ["--local"] : []),
+        ...(mismatch === "auto_submit" ? ["--auto-submit"] : []),
         ...(operation === "submit" || operation === "view"
           ? ["--id", exactBuildId]
           : []),
@@ -154,17 +240,38 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         HOME: sharedHome,
         PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
         EAS_TEST_CAPTURE: capturePath,
+        EAS_TEST_AUTH_CAPTURE: authCapturePath,
+        EAS_TEST_NATIVE_FAIL: mismatch === "native_policy" ? "1" : undefined,
+        EAS_TEST_NATIVE_FAIL_SECOND:
+          mismatch === "native_policy_second" ? "1" : undefined,
+        EAS_TEST_NATIVE_DECISION_MISMATCH:
+          mismatch === "native_decision" ? "1" : undefined,
         EAS_TEST_PREFLIGHT_CAPTURE: preflightCapturePath,
         EAS_TEST_PREFLIGHT_FAIL:
-          mismatch === "attachment" || mismatch === "preview_attachment"
+          mismatch === "attachment" ||
+          mismatch === "preview_attachment" ||
+          mismatch === "preview_quick_attachment"
             ? "attachment"
             : mismatch === "teen"
               ? "teen"
               : mismatch === "ios_identity"
                 ? "ios-identity"
-                : expectedExitCode === 1 && platform === "ios"
+                : expectedExitCode === 1 &&
+                    platform === "ios" &&
+                    mismatch === undefined
                   ? "legal"
                   : undefined,
+        EAS_TEST_COMPAT_FAIL:
+          mismatch === "compatibility" || quickPreview ? "1" : undefined,
+        EAS_TEST_COMPAT_FAIL_SECOND:
+          mismatch === "compatibility_second" ? "1" : undefined,
+        EAS_TEST_DIRTY_AFTER_ATTACHMENT:
+          mismatch === "dirty_after_login" ? "1" : undefined,
+        EAS_TEST_GIT_REVISION_MISMATCH:
+          mismatch === "revision" ? "1" : undefined,
+        EAS_TEST_GIT_DIRTY:
+          mismatch === "dirty" || quickPreview ? "1" : undefined,
+        EAS_TEST_GIT_REVISION: reviewedCommit,
         EAS_TEST_BUILD_PLATFORM: platform.toUpperCase(),
         EAS_TEST_BUILD_VERSION: mismatch === "version" ? "20" : "21",
         EAS_TEST_BUILD_COMMIT:
@@ -184,31 +291,107 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     const exitCode = await proc.exited
     const stderr = await stderrPromise
     expect(exitCode, stderr).toBe(expectedExitCode)
+    if (operation === "build" && mismatch === "preview") {
+      expect(
+        await readFile(path.join(root, "preview-publication.txt"), "utf8"),
+      ).toBe(reviewedCommit)
+    }
+
+    if (expectedExitCode === 1 && operation === "build") {
+      const noPreflight = [
+        "missing_expected_commit",
+        "short_expected_commit",
+        "duplicate_expected_commit",
+        "profile_override",
+        "local_override",
+        "auto_submit",
+      ].includes(mismatch ?? "")
+      if (noPreflight) {
+        await expect(readFile(preflightCapturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      } else {
+        const ordinary = preview
+          ? ""
+          : platform === "ios"
+            ? "teen\napi\nlegal\nios-login\nios-identity\n"
+            : "teen\napi\nlegal\n"
+        const events =
+          mismatch === "ios_identity"
+            ? ordinary
+            : mismatch === "revision" || mismatch === "dirty"
+              ? ordinary
+              : mismatch === "native_policy" || mismatch === "native_decision"
+                ? `${ordinary}native-build\n`
+                : mismatch === "native_policy_second"
+                  ? `${ordinary}native-build\nattachment\nnative-build\n`
+                  : `${ordinary}native-build\nattachment\n`
+        expect(await readFile(preflightCapturePath, "utf8")).toBe(events)
+      }
+      await expect(readFile(capturePath)).rejects.toMatchObject({
+        code: "ENOENT",
+      })
+      if (
+        [
+          "attachment",
+          "preview_attachment",
+          "dirty_after_login",
+          "native_policy_second",
+        ].includes(mismatch ?? "")
+      )
+        expect(await readFile(authCapturePath, "utf8")).toBe("login\n")
+      else
+        await expect(readFile(authCapturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      return
+    }
 
     if (expectedExitCode === 1) {
+      if (
+        operation === "update" &&
+        [
+          "missing_expected_commit",
+          "preview_release_missing",
+          "preview_quick_override",
+        ].includes(mismatch ?? "")
+      ) {
+        await expect(readFile(preflightCapturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+        await expect(readFile(capturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+        return
+      }
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
         operation === "env-check"
           ? "attachment\n"
           : preview
             ? "attachment\n"
-            : mismatch === "teen"
-              ? "teen\n"
+            : operation === "update"
+              ? mismatch === "dirty_after_login"
+                ? "teen\napi\nlegal\ncompatibility\nattachment\n"
+                : mismatch === "compatibility_second"
+                  ? "teen\napi\nlegal\ncompatibility\nattachment\ncompatibility\n"
+                  : mismatch === "teen"
+                    ? "teen\n"
+                    : mismatch === "attachment"
+                      ? "teen\napi\nlegal\ncompatibility\nattachment\n"
+                      : mismatch === "compatibility"
+                        ? "teen\napi\nlegal\ncompatibility\n"
+                        : "teen\napi\nlegal\n"
               : mismatch === "attachment"
-                ? operation === "submit"
-                  ? "teen\napi\nlegal\nbilling\nattachment\n"
-                  : "teen\napi\nlegal\nattachment\n"
-                : mismatch === "ios_identity"
-                  ? "teen\napi\nlegal\nios-login\nios-identity\n"
-                  : platform === "ios"
-                    ? "teen\napi\nlegal\n"
-                    : "teen\napi\nlegal\nbilling\nattachment\n",
+                ? "teen\napi\nlegal\nbilling\nattachment\n"
+                : platform === "ios"
+                  ? "teen\napi\nlegal\n"
+                  : "teen\napi\nlegal\nbilling\nattachment\n",
       )
-      if (
-        platform === "ios" ||
-        mismatch === "attachment" ||
-        mismatch === "preview_attachment" ||
-        mismatch === "teen"
-      ) {
+      if (operation === "update") {
+        await expect(readFile(capturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      } else if (platform === "ios" || mismatch === "attachment") {
         await expect(readFile(capturePath)).rejects.toMatchObject({
           code: "ENOENT",
         })
@@ -241,10 +424,16 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     expect(capture.home).not.toBe(sharedHome)
     expect(capture.username).toBe("fixture-user")
     expect(capture.apiUrl).toBe(
-      preview ? "https://api-preview.example.test" : "https://api.example.test",
+      development
+        ? "https://api-dev.example.test"
+        : preview
+          ? "https://api-preview.example.test"
+          : "https://api.example.test",
     )
     expect(capture.localOnly).toBeUndefined()
-    expect(capture.profile).toBe(preview ? "preview" : "production")
+    expect(capture.profile).toBe(
+      development ? "dev" : preview ? "preview" : "production",
+    )
     expect(capture.args).toEqual(
       operation === "view"
         ? ["build:view", exactBuildId, "--json"]
@@ -259,15 +448,34 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
               "--scope",
               "project",
             ]
-          : [
-              operation,
-              "--platform",
-              platform,
-              "--profile",
-              preview ? "preview" : "production",
-              ...(operation === "submit" ? ["--id", exactBuildId] : []),
-              "--non-interactive",
-            ],
+          : operation === "update"
+            ? [
+                "update",
+                "--platform",
+                platform,
+                "--channel",
+                preview ? "preview" : "production",
+                "--environment",
+                preview ? "preview" : "production",
+                "--message",
+                quickPreview
+                  ? "Preview OTA update"
+                  : `OTA update ${reviewedCommit.slice(0, 12)}`,
+                "--non-interactive",
+              ]
+            : [
+                operation,
+                "--platform",
+                platform,
+                "--profile",
+                development
+                  ? "development"
+                  : preview
+                    ? "preview"
+                    : "production",
+                ...(operation === "submit" ? ["--id", exactBuildId] : []),
+                "--non-interactive",
+              ],
     )
     if (operation === "submit") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
@@ -277,13 +485,27 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
       )
     }
     if (operation === "build") {
+      if (development)
+        await expect(readFile(preflightCapturePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        })
+      else
+        expect(await readFile(preflightCapturePath, "utf8")).toBe(
+          `${preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}native-build\nattachment\nnative-build\n`,
+        )
+    }
+    if (operation === "update") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
-        preview
+        quickPreview
           ? "attachment\n"
-          : platform === "ios"
-            ? "teen\napi\nlegal\nios-login\nios-identity\nattachment\n"
-            : "teen\napi\nlegal\nattachment\n",
+          : `${preview ? "" : platform === "ios" || platform === "all" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}compatibility\nattachment\ncompatibility\n`,
       )
+      expect(
+        await readFile(
+          path.join(root, "apps", "mobile", "app.config.ts"),
+          "utf8",
+        ),
+      ).toBe(`export const UPDATE_VERSION = "2026.09.22"\n`)
     }
     if (operation === "env-sync") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe("api\n")

@@ -23,6 +23,7 @@ export type AdminMoreItemId =
   | "payments-received"
   | "finance"
   | "order-reminders"
+  | "receipt-settings"
   | "team"
   | "customers"
   | "service-work"
@@ -123,9 +124,11 @@ export function getAdminDockLabels(catalogLabel: AdminCatalogTabLabel) {
 export function buildAdminMoreSections({
   availability,
   role,
+  staffAccessMode,
 }: {
   availability: MobileWorkspaceFeatureAvailability
   role: AdminManagementRole
+  staffAccessMode?: "LEGACY" | "SCOPED"
 }): AdminMoreSection[] {
   const storeItems: AdminMoreItem[] = [
     {
@@ -173,6 +176,13 @@ export function buildAdminMoreSections({
     })
   }
 
+  if (staffAccessMode === "SCOPED" && role === "MANAGER") {
+    const allowed = new Set(["inventory", "payments-received"])
+    for (let index = storeItems.length - 1; index >= 0; index--) {
+      const item = storeItems[index]
+      if (item && !allowed.has(item.id)) storeItems.splice(index, 1)
+    }
+  }
   const storefrontItems: AdminMoreItem[] = []
   if (role === "OWNER" || role === "ADMIN") {
     storeItems.push({
@@ -189,6 +199,15 @@ export function buildAdminMoreSections({
       icon: "Bell",
       id: "order-reminders",
       label: "Order reminders",
+    })
+    storeItems.push({
+      action: {
+        href: "/receipt-settings-modal" as LinkProps["href"],
+        kind: "route",
+      },
+      icon: "ReceiptText",
+      id: "receipt-settings",
+      label: "Receipt settings",
     })
     storefrontItems.push({
       action: {
@@ -268,5 +287,7 @@ export function buildAdminMoreSections({
     },
   )
 
-  return sections
+  return staffAccessMode === "SCOPED" && role === "MANAGER"
+    ? sections.filter((section) => section.id !== "offline")
+    : sections
 }

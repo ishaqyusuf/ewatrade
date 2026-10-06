@@ -5,6 +5,7 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import { StockOperationType } from "@ewatrade/db/enums"
+import type { TenantContext } from "@ewatrade/db/queries"
 import { FinanceError } from "@ewatrade/db/queries"
 import {
   CatalogError,
@@ -68,8 +69,9 @@ function inventoryRole(role: string): EwaTradeRole {
   return normalized
 }
 
-function assertCanManageInventory(role: string) {
-  const normalized = inventoryRole(role)
+function assertCanManageInventory(tenant: TenantContext) {
+  if (tenant.staffAccess?.mode === "SCOPED") return // Central procedure guard checks the requested Store and action.
+  const normalized = inventoryRole(tenant.membership.role)
   if (!canManageSalesOperations(normalized)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -154,7 +156,7 @@ export const inventoryRouter = createTRPCRouter({
   categorySuggestions: protectedProcedure
     .input(inventoryCategorySuggestionsSchema)
     .query(({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return listStockOperationCategoryNames(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -164,9 +166,13 @@ export const inventoryRouter = createTRPCRouter({
   transfers: protectedProcedure
     .input(inventoryListTransfersSchema)
     .query(({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return listStockTransfers(ctx.db, {
         ...input,
+        allowedStoreIds:
+          ctx.tenantContext.staffAccess?.mode === "SCOPED"
+            ? ctx.tenantContext.stores.map((store) => store.id)
+            : undefined,
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),
@@ -174,7 +180,7 @@ export const inventoryRouter = createTRPCRouter({
   auditExport: protectedProcedure
     .input(inventoryAuditExportSchema)
     .query(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return exportInventoryAuditRows(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -184,7 +190,7 @@ export const inventoryRouter = createTRPCRouter({
   balanceReport: protectedProcedure
     .input(inventoryBalanceReportSchema)
     .query(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return listInventoryBalanceReport(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -194,7 +200,7 @@ export const inventoryRouter = createTRPCRouter({
   operationAudit: protectedProcedure
     .input(inventoryOperationAuditSchema)
     .query(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return getStockOperationAudit(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -204,7 +210,7 @@ export const inventoryRouter = createTRPCRouter({
   operationHistory: protectedProcedure
     .input(inventoryOperationHistorySchema)
     .query(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return listInventoryOperationHistory(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -219,7 +225,7 @@ export const inventoryRouter = createTRPCRouter({
   reconciliationReport: protectedProcedure
     .input(inventoryReconciliationReportSchema)
     .query(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       return getInventoryReconciliationSummary(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -245,7 +251,7 @@ export const inventoryRouter = createTRPCRouter({
   correctOperation: protectedProcedure
     .input(inventoryCorrectOperationSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       try {
         return await correctStockOperation(ctx.db, {
           ...input,
@@ -262,7 +268,7 @@ export const inventoryRouter = createTRPCRouter({
   createCloseout: protectedProcedure
     .input(inventoryCreateCloseoutSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -285,7 +291,7 @@ export const inventoryRouter = createTRPCRouter({
   createStockCount: protectedProcedure
     .input(inventoryCreateStockCountSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -311,7 +317,7 @@ export const inventoryRouter = createTRPCRouter({
   dispatchTransfer: protectedProcedure
     .input(inventoryDispatchTransferSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       try {
         return await createAndDispatchStockTransfer(ctx.db, {
           ...input,
@@ -328,7 +334,7 @@ export const inventoryRouter = createTRPCRouter({
   finalizeCloseout: protectedProcedure
     .input(inventoryFinalizeCloseoutSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       try {
         return await finalizeInventoryCloseout(ctx.db, {
           ...input,
@@ -345,7 +351,7 @@ export const inventoryRouter = createTRPCRouter({
   finalizeStockCount: protectedProcedure
     .input(inventoryFinalizeStockCountSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       try {
         return await finalizeStockCount(ctx.db, {
           ...input,
@@ -384,7 +390,7 @@ export const inventoryRouter = createTRPCRouter({
   moveCustody: protectedProcedure
     .input(inventoryMoveCustodySchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       try {
         return await moveInventoryCustody(ctx.db, {
           ...input,
@@ -401,7 +407,7 @@ export const inventoryRouter = createTRPCRouter({
   postBalanceOperation: protectedProcedure
     .input(inventorySingleBalanceOperationSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -462,7 +468,7 @@ export const inventoryRouter = createTRPCRouter({
   transformPackagedStock: protectedProcedure
     .input(inventoryTransformationSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -485,7 +491,7 @@ export const inventoryRouter = createTRPCRouter({
   transitionTransfer: protectedProcedure
     .input(inventoryTransitionTransferSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageInventory(ctx.tenantContext.membership.role)
+      assertCanManageInventory(ctx.tenantContext)
       try {
         return await receiveOrCancelStockTransfer(ctx.db, {
           ...input,

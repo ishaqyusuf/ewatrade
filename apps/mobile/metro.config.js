@@ -1,12 +1,9 @@
 const { withNativewind } = require("nativewind/metro")
-const { resolve, sep } = require("node:path")
+const { sep } = require("node:path")
 const { getSentryExpoConfig } = require("@sentry/react-native/metro")
 const {
-  createProductionDesignReferenceAliases,
   createProductionQaAliases,
   isInternalQaBuild,
-  resolveDesignReferenceAlias,
-  resolveProductionInternalDesignAssetAlias,
 } = require("./qa-build-aliases.cjs")
 
 /** @type {import('expo/metro-config').MetroConfig} */
@@ -16,15 +13,8 @@ const config = getSentryExpoConfig(__dirname)
 const nativewindConfig = withNativewind(config, {
   input: "./src/styles/global.css",
 })
-const designRoot = resolve(__dirname, "../../.design")
 const internalQaBuild = isInternalQaBuild()
 const productionQaAliases = createProductionQaAliases(__dirname)
-const productionDesignReferenceAliases =
-  createProductionDesignReferenceAliases(__dirname)
-
-nativewindConfig.watchFolders = Array.from(
-  new Set([...(nativewindConfig.watchFolders ?? []), designRoot]),
-)
 const nativewindResolveRequest = nativewindConfig.resolver.resolveRequest
 const singletonPackages = [
   "@expo/vector-icons",
@@ -72,25 +62,6 @@ nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
   const singletonPackage = getSingletonPackage(moduleName)
   const shouldUseAppSingleton =
     singletonPackage && isNodeModulesOrigin(originModulePath)
-
-  const designReferenceAlias = resolveDesignReferenceAlias(
-    moduleName,
-    designRoot,
-    productionDesignReferenceAliases,
-    internalQaBuild,
-  )
-  if (designReferenceAlias) {
-    return { type: "sourceFile", filePath: designReferenceAlias }
-  }
-
-  const internalDesignAssetAlias = resolveProductionInternalDesignAssetAlias(
-    moduleName,
-    __dirname,
-    internalQaBuild,
-  )
-  if (internalDesignAssetAlias) {
-    return { type: "sourceFile", filePath: internalDesignAssetAlias }
-  }
 
   if (!internalQaBuild) {
     const productionAlias = productionQaAliases.get(moduleName)

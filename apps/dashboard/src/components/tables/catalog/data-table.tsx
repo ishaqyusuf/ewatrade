@@ -1,6 +1,7 @@
 "use client"
 
 import { catalogSortFields } from "@/hooks/sort-params"
+import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { getCatalogListPageInput } from "@/hooks/use-catalog-filter-params"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useSortParams } from "@/hooks/use-sort-params"
@@ -23,6 +24,7 @@ export function CatalogDataTable({
   initialSettings?: Partial<TableSettings>
 }) {
   const trpc = useTRPC()
+  const { open } = useCatalogDetailParams()
   const { filter, hasFilters, setParams } = useCatalogItemParams()
   const { sort } = useSortParams({ fields: catalogSortFields })
   const query = useSuspenseInfiniteQuery(
@@ -46,8 +48,9 @@ export function CatalogDataTable({
       createCatalogColumns(
         (productId) => setParams({ productUnits: productId }),
         storeId,
+        open,
       ),
-    [setParams, storeId],
+    [setParams, storeId, open],
   )
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({

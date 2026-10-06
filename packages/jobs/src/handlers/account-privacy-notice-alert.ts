@@ -4,6 +4,7 @@ import { getAccountPrivacyNoticeAlertSummary } from "@ewatrade/db/queries"
 import {
   type EmailMessage,
   isValidEmailSender,
+  renderAccountPrivacyNoticeAlertTemplate,
   resendEmailTransport,
 } from "@ewatrade/email"
 
@@ -60,17 +61,7 @@ export async function runAccountPrivacyNoticeAlert(
     return { status: "empty" as const, unresolved: 0, sent: 0 }
 
   const subject = `[EwaTrade] ${summary.total} unresolved account-deletion notice ${summary.total === 1 ? "attempt" : "attempts"}`
-  const text = [
-    `Failed notices: ${summary.failed}`,
-    `Failures after a completed request: ${summary.failedAfterCompletion}`,
-    `Uncertain sends: ${summary.uncertain}`,
-    `Sends in progress over 10 minutes: ${summary.staleSending}`,
-    `Accepted sends without delivery over 1 hour: ${summary.deliveryUnconfirmed}`,
-    "Inspect the platform-admin account-deletion review queue and provider event history.",
-    "Do not resend an uncertain attempt without reconciling the original provider outcome.",
-    "This alert contains no person, request, message or recipient identifier.",
-  ].join("\n")
-  const html = `<p>${text.replaceAll("\n", "<br>")}</p>`
+  const { html, text } = renderAccountPrivacyNoticeAlertTemplate(summary)
   const hour = now.toISOString().slice(0, 13)
   const results = await Promise.allSettled(
     recipients.map((to) => {

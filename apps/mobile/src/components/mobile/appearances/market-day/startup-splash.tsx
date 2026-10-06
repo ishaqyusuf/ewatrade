@@ -1,12 +1,15 @@
 import { Text } from "@/components/ui/text"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
 import { View, useWindowDimensions } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { BrandMark, BrandWordmark } from "../../brand"
 
 const REFERENCE_WIDTH = 390
 
 export function MarketDayStartupSplash() {
+  const palette = useMarketDayPalette()
   const insets = useSafeAreaInsets()
   const { height, width } = useWindowDimensions()
   const pulseSize = Math.max(width + 20, 360)
@@ -49,14 +52,11 @@ export function MarketDayStartupSplash() {
         <View className="absolute inset-x-0 top-[var(--splash-lockup-top)] z-[4] scale-[var(--splash-scale)] items-center">
           <View className="absolute top-3.5 h-[132px] w-[126px] translate-x-3 -rotate-2 rounded-t-[34px] rounded-bl-[28px] rounded-br-[42px] bg-market-pulse-shadow" />
           <View className="h-[132px] w-[126px] -rotate-2 items-center justify-center rounded-t-[34px] rounded-bl-[28px] rounded-br-[42px] bg-market-marigold">
-            <MarketDoorMark />
+            <BrandMark color={palette.onMarigold} size={82} />
           </View>
-          <Text
-            maxFontSizeMultiplier={1.15}
-            className="mt-[22px] text-[57px] font-black [-rn-line-height:64] tracking-[-3px] text-market-on-palm"
-          >
-            ẸwáTrade
-          </Text>
+          <View className="mt-[22px]">
+            <BrandWordmark reverse width={258} />
+          </View>
           <Text
             maxFontSizeMultiplier={1.25}
             className="mt-[22px] text-[11px] font-black uppercase [-rn-line-height:16] tracking-[2.4px] text-market-canopy-accent"
@@ -81,14 +81,5 @@ export function MarketDayStartupSplash() {
         </View>
       </View>
     </VariableContextProvider>
-  )
-}
-
-function MarketDoorMark() {
-  return (
-    <View className="relative h-[68px] w-[60px] rounded-[9px] border-[6px] border-market-on-marigold">
-      <View className="absolute -bottom-1.5 left-[13px] right-[13px] top-3 rounded-[5px] border-4 border-b-0 border-market-on-marigold" />
-      <View className="absolute right-2 top-[35px] size-[7px] rounded-full bg-market-on-marigold" />
-    </View>
   )
 }

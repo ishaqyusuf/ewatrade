@@ -3,6 +3,23 @@ import { describe, expect, test } from "bun:test"
 import { redactCustomerCapabilitiesFromCrashEvent } from "./customer-crash-redaction"
 
 describe("customer capability crash redaction", () => {
+  test("filters setup and email-verification tokens from navigation breadcrumbs", () => {
+    const secret = `ea_${"a".repeat(43)}`
+    const verification = `ear_${"v".repeat(43)}`
+    const event = redactCustomerCapabilitiesFromCrashEvent({
+      breadcrumbs: [
+        {
+          message: `Opening /signup?access_token=${secret}`,
+          data: { to: `/api/early-access/verify?token=${verification}` },
+        },
+      ],
+      request: {
+        url: `https://dashboard.ewatrade.com/signup?access_token=${secret}`,
+      },
+    })
+    expect(JSON.stringify(event)).not.toContain(secret)
+    expect(JSON.stringify(event)).not.toContain(verification)
+  })
   test("removes transfer capabilities from request and navigation evidence", () => {
     const secret = "transfer-secret-123456789012345678901234"
     const event = redactCustomerCapabilitiesFromCrashEvent({

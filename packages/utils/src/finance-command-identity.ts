@@ -9,6 +9,15 @@ export type FinanceCommandRecoveryMetadata = {
   accountId?: string
   countId?: string
   entryId?: string
+  expectedBankRevision?: string
+  bankReview?: {
+    statementId: string
+    action: "MATCH" | "UNMATCH"
+    bankRowIds?: string[]
+    journalLineIds?: string[]
+    matchId?: string
+    matchRevision?: string
+  }
   expectedSnapshotSequence?: string
   action?: "CLOSE" | "REOPEN"
   periodId?: string
@@ -55,6 +64,14 @@ export class FinanceCommandRecoveryError extends Error {
   constructor(message: string) {
     super(message)
     this.name = "FinanceCommandRecoveryError"
+  }
+}
+
+/** Only use when the current attempt provably never entered a mutation call. */
+export class FinanceCommandNotSentError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "FinanceCommandNotSentError"
   }
 }
 
@@ -176,7 +193,12 @@ export function validatePendingFinanceCommand(
     metadata !== undefined &&
     (!isFinanceCommandRecoveryMetadata(metadata) ||
       (metadata.purchaseReceipt !== undefined &&
-        record.operation !== "recognizePurchase"))
+        record.operation !== "recognizePurchase") ||
+      (metadata.bankReview !== undefined &&
+        record.operation !==
+          (metadata.bankReview.action === "MATCH"
+            ? "matchBankStatement"
+            : "unmatchBankStatement")))
   ) {
     throw new FinanceCommandRecoveryError(
       "A saved finance submission has invalid retry metadata. Do not start another submission in this book.",
@@ -196,6 +218,8 @@ export function isFinanceCommandRecoveryMetadata(
     "countId",
     "entryId",
     "expectedSnapshotSequence",
+    "expectedBankRevision",
+    "bankReview",
     "action",
     "periodId",
     "through",
@@ -213,6 +237,13 @@ export function isFinanceCommandRecoveryMetadata(
     metadata.expectedSnapshotSequence !== undefined &&
     (typeof metadata.expectedSnapshotSequence !== "string" ||
       !/^\d+$/.test(metadata.expectedSnapshotSequence))
+  )
+    return false
+  if (
+    metadata.expectedBankRevision !== undefined &&
+    (typeof metadata.expectedBankRevision !== "string" ||
+      !/^(0|[1-9]\d{0,18})$/.test(metadata.expectedBankRevision) ||
+      BigInt(metadata.expectedBankRevision) > 9223372036854775807n)
   )
     return false
   if (
@@ -273,5 +304,53 @@ export function isFinanceCommandRecoveryMetadata(
       ids.add(entry.lineId)
     }
   }
+  if (metadata.bankReview !== undefined) {
+    const parsed = parseBankReviewMetadata(metadata.bankReview)
+    if (
+      !parsed ||
+      !metadata.accountId ||
+      !metadata.expectedBankRevision ||
+      typeof metadata.expectedSnapshotSequence !== "string" ||
+      !/^(0|[1-9]\d{0,18})$/.test(metadata.expectedSnapshotSequence) ||
+      BigInt(metadata.expectedSnapshotSequence) > 9223372036854775807n
+    )
+      return false
+  }
   return true
+}
+
+function parseBankReviewMetadata(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  const data = value as Record<string, unknown>
+  const id = (item: unknown) =>
+    typeof item === "string" &&
+    item.length > 0 &&
+    item.length <= 128 &&
+    item.trim() === item
+  const ids = (items: unknown) =>
+    Array.isArray(items) &&
+    items.length >= 1 &&
+    items.length <= 50 &&
+    items.every(id) &&
+    new Set(items).size === items.length
+  if (!id(data.statementId)) return false
+  if (data.action === "MATCH")
+    return (
+      Object.keys(data).every((key) =>
+        ["statementId", "action", "bankRowIds", "journalLineIds"].includes(key),
+      ) &&
+      ids(data.bankRowIds) &&
+      ids(data.journalLineIds)
+    )
+  if (data.action === "UNMATCH")
+    return (
+      Object.keys(data).every((key) =>
+        ["statementId", "action", "matchId", "matchRevision"].includes(key),
+      ) &&
+      id(data.matchId) &&
+      typeof data.matchRevision === "string" &&
+      /^(0|[1-9]\d{0,18})$/.test(data.matchRevision) &&
+      BigInt(data.matchRevision) <= 9223372036854775807n
+    )
+  return false
 }

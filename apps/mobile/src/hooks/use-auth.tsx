@@ -63,7 +63,11 @@ export const useCreateAuthContext = () => {
   ) => {
     if (
       session?.token !== nextSession.token ||
-      session.profile.businessId !== nextSession.profile.businessId
+      session.profile.businessId !== nextSession.profile.businessId ||
+      session.profile.storeId !== nextSession.profile.storeId ||
+      session.profile.role !== nextSession.profile.role ||
+      session.profile.staffAccessMode !== nextSession.profile.staffAccessMode ||
+      session.profile.catalogEditor !== nextSession.profile.catalogEditor
     ) {
       clearMobileDataCache()
     }

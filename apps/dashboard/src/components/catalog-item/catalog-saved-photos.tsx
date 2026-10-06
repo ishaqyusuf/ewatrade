@@ -19,42 +19,38 @@ type Item = RouterOutputs["catalog"]["getItem"]
 export function CatalogSavedPhotos({
   item,
   storeId,
-}: { item: Item; storeId: string }) {
-  const [open, setOpen] = useState(false)
+  open,
+  onOpenChange,
+}: {
+  item: Item
+  storeId: string
+  open: boolean
+  onOpenChange(open: boolean): void
+}) {
   const scope = `${item.id}:${storeId}`
   const [busyScope, setBusyScope] = useState<string | null>(null)
   const busy = busyScope === scope
   return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        data-row-interactive="true"
-        onClick={() => setOpen(true)}
-      >
-        Images
-      </Button>
-      <Sheet
-        open={open}
-        onOpenChange={(next) => {
-          if (!busy) setOpen(next)
-        }}
-      >
-        {open ? (
-          <SavedPhotoEditor
-            key={scope}
-            item={item}
-            storeId={storeId}
-            close={() => setOpen(false)}
-            onBusy={(value) =>
-              setBusyScope((current) =>
-                value ? scope : current === scope ? null : current,
-              )
-            }
-          />
-        ) : null}
-      </Sheet>
-    </>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!busy) onOpenChange(next)
+      }}
+    >
+      {open ? (
+        <SavedPhotoEditor
+          key={scope}
+          item={item}
+          storeId={storeId}
+          close={() => onOpenChange(false)}
+          onBusy={(value) =>
+            setBusyScope((current) =>
+              value ? scope : current === scope ? null : current,
+            )
+          }
+        />
+      ) : null}
+    </Sheet>
   )
 }
 

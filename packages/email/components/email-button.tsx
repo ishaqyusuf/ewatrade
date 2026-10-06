@@ -9,19 +9,18 @@ export type EmailButtonProps = {
 
 export function EmailButton({ href, label }: EmailButtonProps) {
   return (
-    <Section style={{ margin: "24px 0 4px" }}>
+    <Section style={{ margin: "6px 0 25px" }}>
       <Button
         href={href}
         style={{
           backgroundColor: emailPalette.action,
-          border: `1px solid ${emailPalette.ink}`,
-          borderRadius: 0,
-          color: emailPalette.ink,
+          borderRadius: "6px",
+          color: "#ffffff",
           display: "inline-block",
-          fontSize: "13px",
-          fontWeight: 900,
-          lineHeight: "20px",
-          padding: "13px 17px",
+          fontSize: "14px",
+          fontWeight: 700,
+          lineHeight: "22px",
+          padding: "14px 20px",
           textDecoration: "none",
         }}
       >

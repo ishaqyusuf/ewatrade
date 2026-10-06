@@ -1,5 +1,6 @@
 import { prisma } from "@ewatrade/db"
 import { getDashboardRecentOrders } from "@ewatrade/db/queries"
+import Link from "next/link"
 
 function money(value: number, currencyCode: string) {
   return new Intl.NumberFormat("en-NG", {
@@ -20,7 +21,12 @@ export async function OverviewRecentOrders({ storeId }: { storeId: string }) {
               className="grid gap-2 border-b border-border px-4 py-4 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center"
             >
               <div className="min-w-0">
-                <p className="font-medium">{order.orderNumber}</p>
+                <Link
+                  className="font-medium hover:underline"
+                  href={`/?orderSheet=details&orderId=${encodeURIComponent(order.id)}`}
+                >
+                  {order.orderNumber}
+                </Link>
                 <p className="truncate text-xs text-muted-foreground">
                   {order.customerName || "Walk-in customer"} ·{" "}
                   {order.createdAt.toLocaleString("en-NG", {

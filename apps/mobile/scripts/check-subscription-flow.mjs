@@ -24,9 +24,9 @@ const FILES = {
     "src/components/mobile/subscription-plan-sheet.tsx",
   ),
   subscriptionStore: join(MOBILE_DIR, "src/store/subscriptionStore.ts"),
-  themeToggle: join(
+  floatingQa: join(
     MOBILE_DIR,
-    "src/components/mobile/floating-theme-toggle.tsx",
+    "src/components/mobile/floating-qa-button.tsx",
   ),
 }
 
@@ -164,10 +164,10 @@ const CONTRACTS = [
       "the full-screen route must own the single Plan and billing title and close action",
   },
   {
-    file: FILES.themeToggle,
-    markers: ['pathname.startsWith("/subscription-modal")'],
+    file: FILES.floatingQa,
+    markers: ['pathname.endsWith("-modal")'],
     reason:
-      "the development theme control must not overlap subscription usage or checkout actions",
+      "the development QA control must not overlap subscription usage or checkout actions",
   },
   {
     file: FILES.secondaryOperations,

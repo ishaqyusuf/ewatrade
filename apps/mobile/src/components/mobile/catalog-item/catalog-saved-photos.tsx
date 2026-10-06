@@ -4,29 +4,29 @@ import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/base-url"
 import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
+import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { Image } from "expo-image"
 import { useEffect, useRef, useState } from "react"
 import { View } from "react-native"
-import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
 import {
   CatalogIllustrationLibrary,
   CatalogIllustrationPreview,
   catalogIllustrationCategoryKey,
 } from "../catalog-setup/catalog-illustration-library"
-import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
+import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
 import type { CatalogItem } from "./catalog-item-presentation"
 
 export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
   const trpc = useTRPC()
   const { profile } = useAuthContext()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
-  const canManage = canManageMobileOperations(profile?.role)
+  const canManage = canEditMobileCatalog(profile)
   const availability = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, {
       enabled: !offline,
@@ -143,7 +143,7 @@ function SavedPhotoEditor({
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
   const stores = useQuery(
     trpc.tenant.stores.queryOptions(undefined, {
-      enabled: !offline && canManageMobileOperations(profile?.role),
+      enabled: !offline && canEditMobileCatalog(profile),
       retry: false,
     }),
   )
@@ -174,7 +174,7 @@ function SavedPhotoEditor({
   const busy = useRef(false)
   const mounted = useRef(true)
   const scope = `${profile?.id}:${profile?.businessId}:${storeId}`
-  const canManage = canManageMobileOperations(profile?.role)
+  const canManage = canEditMobileCatalog(profile)
   const current = useRef({ scope, offline, canManage })
   current.current = { scope, offline, canManage }
   useEffect(() => {

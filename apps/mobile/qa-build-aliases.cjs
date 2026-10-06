@@ -1,22 +1,9 @@
-const { existsSync } = require("node:fs")
 const { resolve } = require("node:path")
 
 const QA_COMPONENT_IMPORTS = [
+  "@/components/mobile/floating-qa-button",
   "@/components/mobile/qa-account-chooser",
   "@/components/mobile/qa-authorization-sheet",
-]
-
-const DESIGN_REFERENCE_IMPORTS = [
-  "reference-commerce-home-customer-orders.png",
-  "reference-products-create-media.png",
-  "reference-customer-orders-insights.png",
-  "reference-customers-profile-orders.png",
-  "reference-customer-wishlist-reviews-loyalty.png",
-]
-const PRODUCTION_DESIGN_PLACEHOLDER = "assets/icons/splash-logo.png"
-const INTERNAL_DESIGN_ASSET_PREFIXES = [
-  "@assets/images/design-system/",
-  "@assets/images/e-shop/",
 ]
 
 function isInternalQaBuild(env = process.env) {
@@ -42,52 +29,4 @@ function createProductionQaAliases(appRoot) {
   ])
 }
 
-function createProductionDesignReferenceAliases(appRoot) {
-  const bundledReference = resolve(appRoot, PRODUCTION_DESIGN_PLACEHOLDER)
-  return new Map(
-    DESIGN_REFERENCE_IMPORTS.map((fileName) => [
-      `@design/${fileName}`,
-      bundledReference,
-    ]),
-  )
-}
-
-function resolveProductionInternalDesignAssetAlias(
-  moduleName,
-  appRoot,
-  internalQaBuild,
-) {
-  if (
-    internalQaBuild ||
-    !INTERNAL_DESIGN_ASSET_PREFIXES.some((prefix) =>
-      moduleName.startsWith(prefix),
-    )
-  )
-    return null
-  return resolve(appRoot, PRODUCTION_DESIGN_PLACEHOLDER)
-}
-
-function resolveDesignReferenceAlias(
-  moduleName,
-  designRoot,
-  aliases,
-  internalQaBuild,
-) {
-  const bundledReference = aliases.get(moduleName)
-  if (!bundledReference) return null
-  const sourceReference = resolve(
-    designRoot,
-    moduleName.slice("@design/".length),
-  )
-  return !internalQaBuild || !existsSync(sourceReference)
-    ? bundledReference
-    : null
-}
-
-module.exports = {
-  createProductionDesignReferenceAliases,
-  createProductionQaAliases,
-  isInternalQaBuild,
-  resolveDesignReferenceAlias,
-  resolveProductionInternalDesignAssetAlias,
-}
+module.exports = { createProductionQaAliases, isInternalQaBuild }

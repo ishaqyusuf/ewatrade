@@ -12,11 +12,9 @@ Release defaults and per-screen rollout live in
 that same file when selecting native splash assets. Changing native assets
 requires a new binary; preview preferences affect only the React presentation.
 
-Internal builds expose Design System > Switch design appearance. Select a
-whole-app preference, then override individual screens if needed. Inherit on a
-screen uses the whole-app choice; Inherit for the whole app uses release policy.
-Reset clears both. Writes complete before publishing a new preference; failed
-saves retain the active choice. Preferences hydrate before the app opens.
+The internal Design System preview screens have been removed. Release defaults
+and per-screen rollout remain in the configuration above. Existing stored preview
+preferences continue to hydrate before the app opens.
 Production ignores stored preview choices and follows release configuration.
 
 Light/Dark/System remains independent of Classic/Market Day.

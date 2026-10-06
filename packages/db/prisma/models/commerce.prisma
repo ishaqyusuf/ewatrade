@@ -1,4 +1,5 @@
 model Store {
+  staffStoreAssignments StaffStoreAssignment[]
   catalogItemIllustrations                          CatalogItemIllustration[]
   catalogPhotoAssets                                CatalogPhotoAsset[]
   financeBills                                      FinanceBill[]
@@ -171,6 +172,7 @@ model Store {
   managedDomains                                    ManagedDomain[]
   domainConnections                                 DomainConnection[]
 
+  @@unique([id, tenantId])
   @@unique([tenantId, id])
   @@unique([tenantId, slug])
   @@index([tenantId, status])

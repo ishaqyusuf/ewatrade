@@ -1,14 +1,16 @@
 "use client"
 
 import { VirtualRow } from "@/components/tables/core"
+import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
 import { useTableDnd } from "@/hooks/use-table-dnd"
 import { useTableScroll } from "@/hooks/use-table-scroll"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Button, Table, TableBody } from "@ewatrade/ui"
-import type { Table as ReactTable } from "@tanstack/react-table"
+import type { Table as ReactTable, Row } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { useCallback } from "react"
 import type { CatalogRow } from "./columns"
 import { CatalogEmptyState } from "./empty-states"
 import { CatalogTableHeader, CatalogTableSettings } from "./table-header"
@@ -16,7 +18,7 @@ import { CatalogTableHeader, CatalogTableSettings } from "./table-header"
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
   { id: "item", width: 320 },
-  { id: "actions", side: "right" as const, width: 170 },
+  { id: "actions", side: "right" as const, width: 80 },
 ]
 const FIXED_COLUMN_IDS = ["item"]
 
@@ -45,6 +47,13 @@ export function CatalogTableView({
   refetch: () => Promise<unknown>
   fetchNextPage: () => Promise<unknown>
 }) {
+  const { open } = useCatalogDetailParams()
+  const openRow = useCallback(
+    (row: Row<CatalogRow>) => {
+      void open(row.original.id)
+    },
+    [open],
+  )
   const { sensors, handleDragEnd, sortableColumnIds } = useTableDnd(table, {
     fixedColumnIds: FIXED_COLUMN_IDS,
   })
@@ -158,6 +167,7 @@ export function CatalogTableView({
                       row={row}
                       virtualStart={virtualRow.start}
                       rowHeight={ROW_HEIGHT}
+                      onRowOpen={openRow}
                       getStickyStyle={getStickyStyle}
                       getStickyClassName={getStickyClassName}
                       columnSizing={table.getState().columnSizing}

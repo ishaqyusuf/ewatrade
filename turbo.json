@@ -89,6 +89,7 @@
   },
   "globalPassThroughEnv": ["*_PORT", "PORTLESS_*", "EWATRADE_ENV_MODE"],
   "globalEnv": [
+    "PERFORMANCE_TRACE",
     "APP_ENV",
     "NEXT_PUBLIC_APP_ENV",
     "COMPOSE_FILE",

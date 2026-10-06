@@ -5,22 +5,36 @@ import { createEmailText } from "./shared"
 
 function getContent(input: MarketingLeadEmailInput) {
   const approved = Boolean(input.accessUrl)
+  const firstName = input.fullName.trim().split(/\s+/)[0]
 
   return {
     approved,
+    details: [
+      { label: "Email", value: input.email },
+      {
+        label: approved ? "Company" : "Business name",
+        value: input.companyName,
+      },
+      ...(approved
+        ? [
+            { label: "Role", value: input.roleTitle },
+            { label: "Link expires", value: input.accessExpiresAt },
+          ]
+        : []),
+    ],
     cta:
       input.accessUrl && approved
         ? { href: input.accessUrl, label: "Create your workspace" }
         : undefined,
     intro: approved
       ? `Hi ${input.fullName}. Your early access request has been approved. Your private setup link is ready.`
-      : `Hi ${input.fullName}. We received your early access request. We will be in touch when the next onboarding window opens.`,
+      : `Hi ${firstName}. Thanks for requesting early access to EwaTrade. We’ve received your details${input.companyName ? ` for ${input.companyName}` : ""}.`,
     note: approved
       ? "This link works once and expires automatically. If it expires before setup is complete, request access again with the same email."
-      : "EwaTrade brings storefront, orders, stock, customer communication, and daily operations into one working system.",
+      : "Our team will review your request. If approved, we’ll email you a private link to create your workspace. You don’t need to submit another request.",
     title: approved
       ? "Your workspace starts here."
-      : "You are on the early list.",
+      : "Your early access request is in.",
   }
 }
 
@@ -45,17 +59,10 @@ export function MarketingEarlyAccessConfirmationEmail({
       title={content.title}
     >
       <EmailStatus
-        label={content.approved ? "Access approved" : "Request received"}
+        label={content.approved ? "Access approved" : "Awaiting review"}
         tone={content.approved ? "live" : "neutral"}
       />
-      <EmailDetails
-        details={[
-          { label: "Email", value: input.email },
-          { label: "Company", value: input.companyName },
-          { label: "Role", value: input.roleTitle },
-          { label: "Link expires", value: input.accessExpiresAt },
-        ]}
-      />
+      <EmailDetails details={content.details} />
     </BrandEmail>
   )
 }
@@ -72,10 +79,10 @@ export function renderMarketingEarlyAccessConfirmationTemplate(
     text: createEmailText({
       cta: content.cta,
       details: [
-        { label: "Email", value: input.email },
-        { label: "Company", value: input.companyName },
-        { label: "Role", value: input.roleTitle },
-        { label: "Link expires", value: input.accessExpiresAt },
+        ...content.details,
+        ...(!content.approved
+          ? [{ label: "Status", value: "Awaiting review" }]
+          : []),
       ],
       intro: content.intro,
       note: content.note,

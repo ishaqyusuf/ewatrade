@@ -7,7 +7,10 @@ import {
   prepareAccountPrivacyNotice,
   recordAccountPrivacyNoticeSendReceipt,
 } from "@ewatrade/db/queries"
-import { resendEmailTransport } from "@ewatrade/email"
+import {
+  renderAccountPrivacyOutcomeTemplate,
+  resendEmailTransport,
+} from "@ewatrade/email"
 
 export async function sendAccountPrivacyOutcomeNotice(
   db: PrismaClient,
@@ -34,12 +37,17 @@ export async function sendAccountPrivacyOutcomeNotice(
     !replyTo
   )
     throw new AccountPrivacyNoticePreparationError("DISABLED")
+  const content = renderAccountPrivacyOutcomeTemplate(input)
+  // The operator must review/approve the exact Warm Desk output. Never send
+  // arbitrary HTML or hash the old body while sending a different wrapper.
+  if (input.html !== content.html)
+    throw new AccountPrivacyNoticePreparationError("POLICY_NOT_APPROVED")
   const contentDigest = accountPrivacyNoticeContentDigest({
     from,
     replyTo,
     subject: input.subject,
-    text: input.text,
-    html: input.html,
+    text: content.text,
+    html: content.html,
   })
   const prepared = await prepareAccountPrivacyNotice(db, {
     requestId: input.requestId,
@@ -58,8 +66,8 @@ export async function sendAccountPrivacyOutcomeNotice(
         replyTo,
         to: claim.recipient,
         subject: input.subject,
-        text: input.text,
-        html: input.html,
+        text: content.text,
+        html: content.html,
         idempotencyKey: claim.idempotencyKey,
         tags: [
           { name: "category", value: "account_privacy_outcome_notice" },

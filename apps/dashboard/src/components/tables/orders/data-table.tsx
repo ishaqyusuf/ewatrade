@@ -7,14 +7,18 @@ import { useSortParams } from "@/hooks/use-sort-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
 import type { TableSettings } from "@/utils/table-settings"
+import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { useMemo } from "react"
+import type { RowSelectionState } from "@tanstack/react-table"
+import { AnimatePresence } from "framer-motion"
+import { useMemo, useState } from "react"
+import { OrdersBottomBar } from "./bottom-bar"
 import { orderColumns } from "./columns"
 import { OrdersEmptyState } from "./empty-states"
 import { OrdersTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["orderNumber"]
+const FIXED_COLUMN_IDS = ["select", "orderNumber", "actions"]
 
 export function OrdersDataTable({
   storeId,
@@ -24,6 +28,7 @@ export function OrdersDataTable({
   initialSettings?: Partial<TableSettings>
 }) {
   const trpc = useTRPC()
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const { filter, hasFilters } = useOrderParams()
   const { sort, toggleSort } = useSortParams({ fields: orderSortFields })
   const query = useSuspenseInfiniteQuery(
@@ -61,8 +66,11 @@ export function OrdersDataTable({
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     enableColumnResizing: true,
+    enableRowSelection: (row) => isReceiptOrderEligible(row.original.status),
+    onRowSelectionChange: setRowSelection,
     columnResizeMode: "onChange",
     state: {
+      rowSelection,
       columnVisibility: tableSettings.columnVisibility,
       columnSizing: tableSettings.columnSizing,
       columnOrder: tableSettings.columnOrder,
@@ -73,21 +81,28 @@ export function OrdersDataTable({
   })
 
   return (
-    <OrdersTableView
-      table={table}
-      sort={sort}
-      toggleSort={toggleSort}
-      filtered={hasFilters}
-      errorMessage={query.error?.message ?? ""}
-      isInitialError={query.isError && !query.data}
-      isFetchNextPageError={query.isFetchNextPageError}
-      isRefetchError={query.isRefetchError}
-      isFetchingNextPage={query.isFetchingNextPage}
-      hasNextPage={query.hasNextPage}
-      fetchNextPage={() => query.fetchNextPage()}
-      refetch={() => query.refetch()}
-      persistenceError={tableSettings.persistenceError}
-      retryPersistence={tableSettings.retryPersistence}
-    />
+    <>
+      <OrdersTableView
+        table={table}
+        sort={sort}
+        toggleSort={toggleSort}
+        filtered={hasFilters}
+        errorMessage={query.error?.message ?? ""}
+        isInitialError={query.isError && !query.data}
+        isFetchNextPageError={query.isFetchNextPageError}
+        isRefetchError={query.isRefetchError}
+        isFetchingNextPage={query.isFetchingNextPage}
+        hasNextPage={query.hasNextPage}
+        fetchNextPage={() => query.fetchNextPage()}
+        refetch={() => query.refetch()}
+        persistenceError={tableSettings.persistenceError}
+        retryPersistence={tableSettings.retryPersistence}
+      />
+      <AnimatePresence>
+        {table.getSelectedRowModel().rows.length > 0 && (
+          <OrdersBottomBar table={table} />
+        )}
+      </AnimatePresence>
+    </>
   )
 }

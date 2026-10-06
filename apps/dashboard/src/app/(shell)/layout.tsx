@@ -25,6 +25,8 @@ export default async function ShellLayout({
   const ctx = await getActiveTenant(session.user.id)
 
   // No store yet: first-time setup.
+  if (ctx && ctx.stores.length === 0 && ctx.staffAccess?.mode === "SCOPED")
+    redirect("/access-unavailable")
   if (ctx && ctx.stores.length === 0) {
     redirect("/setup")
   }
@@ -40,6 +42,8 @@ export default async function ShellLayout({
     redirect("/setup")
   }
   const navigationContext = {
+    staffAccessMode: ctx.membership.staffAccessMode,
+    catalogEditor: ctx.membership.catalogEditor,
     isPlatformAdmin: session.user.isPlatformAdmin,
     operatingModel: store.businessOnboarding?.operatingModel,
     businessProfileKey: store.businessOnboarding?.businessProfileKey,
@@ -59,6 +63,9 @@ export default async function ShellLayout({
     canAccessDashboardPath(path, ctx.membership.role, navigationContext),
   )
   const membershipRole = normalizeRole(ctx.membership.role)
+  const scopedStaff =
+    ctx.membership.staffAccessMode === "SCOPED" &&
+    !["OWNER", "ADMIN"].includes(ctx.membership.role)
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -72,10 +79,12 @@ export default async function ShellLayout({
         />
         <GlobalSheetsProvider
           access={{
+            scopedStaff,
             finance: ["OWNER", "ADMIN"].includes(
               ctx.membership.role.toUpperCase(),
             ),
-            prescriptions: canUseSalesOperations(ctx.membership.role),
+            prescriptions:
+              !scopedStaff && canUseSalesOperations(ctx.membership.role),
             managePrescriptionSetup: Boolean(
               membershipRole && canManageTenant(membershipRole),
             ),

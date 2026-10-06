@@ -33,6 +33,9 @@ type FinanceSheetContentProps = {
 }
 
 const commandLabels: Record<string, string> = {
+  importBankStatement: "bank statement import",
+  matchBankStatement: "bank statement match",
+  unmatchBankStatement: "bank statement release",
   recordExpense: "expense",
   payBill: "expense payment",
   reverseBillPayment: "payment reversal",
@@ -46,6 +49,8 @@ const commandLabels: Record<string, string> = {
   createSupplier: "supplier creation",
   recordSupplierOpening: "supplier opening",
   recordSupplierAdvance: "supplier advance",
+  reverseSupplierEntry: "supplier entry reversal",
+  reversePurchasePayment: "purchase payment reversal",
 }
 
 export function FinanceSheetContent({
@@ -54,8 +59,16 @@ export function FinanceSheetContent({
   closeLockedRef,
   onClose,
 }: FinanceSheetContentProps) {
-  const { financeSheet, billId, countId, moneyEntryId, supplierId } =
-    useFinanceParams()
+  const {
+    financeSheet,
+    statementId,
+    bankSourceEntryId,
+    bankSourceAccountId,
+    billId,
+    countId,
+    moneyEntryId,
+    supplierId,
+  } = useFinanceParams()
   const {
     actorUserId,
     locked,
@@ -297,6 +310,11 @@ export function FinanceSheetContent({
           : undefined
       }
       closeDisabled={locked}
+      popupClassName={
+        financeSheet === "bank-statement" || financeSheet === "bank-import"
+          ? "sm:w-[min(900px,100vw)] sm:max-w-[900px]"
+          : undefined
+      }
     >
       {closeError ? (
         <FormFeedback appearance="dashboard">{closeError}</FormFeedback>
@@ -323,9 +341,12 @@ export function FinanceSheetContent({
             </div>
           ) : null}
           <FinanceContent
-            key={`${book.data?.id ?? "new"}:${financeSheet}:${billId}:${countId}:${moneyEntryId}:${supplierId}`}
+            key={`${book.data?.id ?? "new"}:${financeSheet}:${statementId}:${bankSourceAccountId}:${bankSourceEntryId}:${billId}:${countId}:${moneyEntryId}:${supplierId}`}
             mode={financeSheet}
             book={book.data}
+            statementId={statementId}
+            bankSourceEntryId={bankSourceEntryId}
+            bankSourceAccountId={bankSourceAccountId}
             billId={billId}
             countId={countId}
             moneyEntryId={moneyEntryId}

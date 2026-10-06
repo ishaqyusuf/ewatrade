@@ -13,6 +13,8 @@ export type MobileProfile = {
   currencyCode?: string
   storeId?: string
   storeName?: string
+  staffAccessMode?: "LEGACY" | "SCOPED"
+  catalogEditor?: boolean
   role?: string
   status?: string
 }

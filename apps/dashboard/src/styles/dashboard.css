@@ -21,7 +21,7 @@
   --border: hsl(45 5% 85%);
   --input: hsl(240 5.9% 90%);
   --ring: hsl(240 5.9% 10%);
-  --radius: 0.5rem;
+  --radius: 0rem;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--accent);
@@ -67,48 +67,19 @@
   display: none;
 }
 
-/* Scoped Catalog tokens; other dashboard workspaces keep their current theme. */
+/* Catalog keeps its accent while surfaces inherit the dashboard theme. */
 .ewatrade-dashboard .catalog-theme {
   color: var(--foreground);
   color-scheme: light;
   --primary: #17684f;
   --primary-foreground: #ffffff;
   --ring: var(--primary);
-  --background: #ffffff;
-  --foreground: #202420;
-  --card: #f7f8f7;
-  --card-foreground: var(--foreground);
-  --popover: var(--card);
-  --popover-foreground: var(--foreground);
-  --secondary: var(--muted);
-  --secondary-foreground: var(--foreground);
-  --muted: #f1f3f1;
-  --muted-foreground: #596159;
-  --accent: #e7f1eb;
-  --accent-foreground: #17684f;
-  --border: #d9dfda;
-  --input: var(--border);
 }
 
-.ewatrade-dashboard.dark .catalog-theme,
-.ewatrade-dashboard .catalog-theme.catalog-theme-dark {
+.ewatrade-dashboard.dark .catalog-theme {
   color-scheme: dark;
   --primary: #8cd5b5;
   --primary-foreground: #10271d;
-  --background: #202420;
-  --foreground: #f3f5f3;
-  --card: #282e29;
-  --card-foreground: var(--foreground);
-  --popover: var(--card);
-  --popover-foreground: var(--foreground);
-  --secondary: var(--muted);
-  --secondary-foreground: var(--foreground);
-  --muted: #303831;
-  --muted-foreground: #bac4bb;
-  --accent: #26372d;
-  --accent-foreground: #8cd5b5;
-  --border: #485349;
-  --input: var(--border);
 }
 
 .catalog-theme [data-slot="sheet-content"] > div,

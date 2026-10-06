@@ -1,12 +1,13 @@
 "use client"
 
 import { useQueryStates } from "nuqs"
-import { parseAsStringEnum } from "nuqs/server"
+import { parseAsString, parseAsStringEnum } from "nuqs/server"
 import { type OrderFilters, orderFilterParams } from "./use-order-filter-params"
 
 export function useOrderParams() {
   const [params, setParams] = useQueryStates({
-    orderSheet: parseAsStringEnum(["create"] as const),
+    orderSheet: parseAsStringEnum(["create", "details"] as const),
+    orderId: parseAsString,
     ...orderFilterParams,
   })
   const filter: OrderFilters = {
@@ -29,5 +30,6 @@ export function useOrderParams() {
       ),
     setParams,
     sheet: params.orderSheet,
+    orderId: params.orderId,
   }
 }

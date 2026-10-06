@@ -1,7 +1,7 @@
 import { useModal } from "@/components/ui/modal"
 import { useAuthContext } from "@/hooks/use-auth"
 import { createInventoryFixture } from "@/internal-tooling/fixture-recipes"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
+import { canManageMobileStock } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { collectStockCategoryDraft } from "@ewatrade/utils/inventory-categories"
@@ -24,7 +24,10 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
-  const canManage = canManageMobileOperations(profile?.role)
+  const canManage = canManageMobileStock(
+    profile?.role,
+    profile?.staffAccessMode,
+  )
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
   const [draft, setDraft] = useState<StockDraft>(INITIAL_STOCK_DRAFT)
   const draftRef = useRef(draft)

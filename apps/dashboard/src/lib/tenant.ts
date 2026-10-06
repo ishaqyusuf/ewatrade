@@ -1,4 +1,10 @@
+import {
+  type StaffAccess,
+  canStaffAccessStore,
+  canStaffPerform,
+} from "@ewatrade/auth/store-access"
 import { prisma } from "@ewatrade/db"
+import { readStaffStoreAccess } from "@ewatrade/db/staff-store-access"
 import {
   type BusinessOnboardingFacts,
   readBusinessOnboardingFactsFromStoreMetadata,
@@ -28,6 +34,8 @@ export type TenantContext = {
     id: string
     role: string
     tenantId: string
+    staffAccessMode?: "LEGACY" | "SCOPED"
+    catalogEditor?: boolean
   }
   tenant: {
     id: string
@@ -38,8 +46,11 @@ export type TenantContext = {
     currencyCode: string
     timezone: string
   }
+  staffAccess?: StaffAccess
   tenants: TenantOption[]
   stores: TenantStore[]
+  storeSelectionNeedsRepair?: boolean
+  inventoryScope?: "all" | "store"
   activeStore: TenantStore | null
 }
 
@@ -125,26 +136,56 @@ export const getActiveTenant = cache(
       role: item.role,
       slug: item.tenant.slug,
     }))
-    const stores = membership.tenant.stores.map((store) => ({
-      businessOnboarding: readBusinessOnboardingFactsFromStoreMetadata(
-        store.metadata,
-      ),
-      currencyCode: store.currencyCode,
-      id: store.id,
-      name: store.name,
-      slug: store.slug,
-      status: store.status,
-    }))
+    const fresh = await readStaffStoreAccess(
+      prisma,
+      membership.id,
+      membership.tenantId,
+    )
+    if (!fresh) return null
+    const staffAccess: StaffAccess = {
+      businessRole: fresh.role,
+      status: fresh.status,
+      mode: fresh.staffAccessMode,
+      catalogEditor: fresh.catalogEditor,
+      assignments: fresh.staffStoreAssignments,
+    }
+    const scoped =
+      staffAccess.mode === "SCOPED" &&
+      !["OWNER", "ADMIN"].includes(staffAccess.businessRole)
+    const stores = membership.tenant.stores
+      .filter((store) => canStaffAccessStore(staffAccess, store.id))
+      .map((store) => ({
+        businessOnboarding: readBusinessOnboardingFactsFromStoreMetadata(
+          store.metadata,
+        ),
+        currencyCode: store.currencyCode,
+        id: store.id,
+        name: store.name,
+        slug: store.slug,
+        status: store.status,
+      }))
     const activeStore =
       stores.find((s) => s.id === activeStoreId) ??
+      stores.find(
+        (s) =>
+          s.id === fresh.retailOpsStaffProfile?.defaultStoreId &&
+          s.status === "ACTIVE",
+      ) ??
       stores.find((s) => s.status === "ACTIVE") ??
       stores[0] ??
       null
 
     return {
+      staffAccess,
       membership: {
         id: membership.id,
-        role: membership.role,
+        role: scoped
+          ? (staffAccess.assignments.find(
+              (row) => row.storeId === activeStore?.id,
+            )?.role ?? fresh.role)
+          : fresh.role,
+        staffAccessMode: fresh.staffAccessMode,
+        catalogEditor: canStaffPerform(staffAccess, "catalog"),
         tenantId: membership.tenantId,
       },
       tenant: {
@@ -159,6 +200,13 @@ export const getActiveTenant = cache(
       tenants,
       stores,
       activeStore,
+      storeSelectionNeedsRepair: Boolean(
+        scoped && activeStoreId && activeStoreId !== activeStore?.id,
+      ),
+      inventoryScope:
+        !scoped && cookieStore.get("ewatrade.inventory_scope")?.value === "all"
+          ? "all"
+          : "store",
     }
   },
 )

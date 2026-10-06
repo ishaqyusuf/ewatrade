@@ -119,7 +119,23 @@ export function commandForProfile(
   }
 }
 
+export function assertSupportedDevRuntime(version: string) {
+  const parts = version.split(".").map(Number)
+  const [major = 0, minor = 0, patch = 0] = parts
+  if (
+    !parts.slice(0, 3).every(Number.isFinite) ||
+    major < 1 ||
+    (major === 1 && minor < 3) ||
+    (major === 1 && minor === 3 && patch < 9)
+  ) {
+    throw new Error(
+      `Local development requires Bun 1.3.9 or newer (found ${version}). Bun 1.3.0 can stall receipt PDF streams; use the packageManager version in package.json.`,
+    )
+  }
+}
+
 async function main() {
+  assertSupportedDevRuntime(Bun.version)
   const options = parseArgs(Bun.argv.slice(2))
   const child = Bun.spawn(
     commandForProfile(

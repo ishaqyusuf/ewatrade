@@ -16,45 +16,49 @@ export function EmailDetails({ details }: { details: EmailDetail[] }) {
   return (
     <Section
       style={{
-        backgroundColor: emailPalette.quiet,
-        border: `1px solid ${emailPalette.border}`,
-        borderRadius: 0,
+        borderTop: `1px solid ${emailPalette.border}`,
+        margin: "2px 0 22px",
+        tableLayout: "fixed",
       }}
     >
       {visible.map((detail, index) => (
-        <Row
-          key={`${detail.label}-${index}`}
-          style={{
-            borderBottom:
-              index === visible.length - 1
-                ? undefined
-                : `1px solid ${emailPalette.border}`,
-          }}
-        >
-          <Column style={{ padding: "12px 13px", width: "34%" }}>
+        <Row key={`${detail.label}-${index}`} style={{ tableLayout: "fixed" }}>
+          <Column
+            style={{
+              borderBottom: `1px solid ${emailPalette.border}`,
+              padding: "13px 0",
+              verticalAlign: "top",
+              width: "35%",
+            }}
+          >
             <Text
               style={{
                 color: emailPalette.muted,
-                fontSize: "9px",
-                fontWeight: 900,
-                letterSpacing: "0.12em",
-                lineHeight: "16px",
+                fontSize: "12px",
+                lineHeight: "19px",
                 margin: 0,
-                textTransform: "uppercase",
               }}
             >
               {detail.label}
             </Text>
           </Column>
-          <Column style={{ padding: "12px 13px" }}>
+          <Column
+            style={{
+              borderBottom: `1px solid ${emailPalette.border}`,
+              padding: "13px 0 13px 15px",
+              verticalAlign: "top",
+              width: "65%",
+            }}
+          >
             <Text
               style={{
                 color: emailPalette.ink,
-                fontSize: "12px",
-                fontWeight: 700,
+                fontSize: "13px",
+                fontWeight: 600,
                 lineHeight: "19px",
                 margin: 0,
                 overflowWrap: "anywhere",
+                wordBreak: "break-word",
               }}
             >
               {detail.value}

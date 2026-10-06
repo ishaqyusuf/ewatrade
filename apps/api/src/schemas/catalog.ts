@@ -116,10 +116,22 @@ const catalogProductOfferingSchema = catalogFixedOfferingSchema
   .extend({
     barcode: z.string().trim().min(1).max(120).optional(),
     fixedPriceMinor: catalogPriceMinorSchema.optional(),
+    pricingPolicy: z.enum(["fixed", "order_total"]),
     inventoryUnitKey: catalogKeySchema,
     sku: z.string().trim().min(1).max(120).optional(),
   })
   .strict()
+  .superRefine((offering, ctx) => {
+    if (
+      offering.pricingPolicy === "order_total" &&
+      offering.fixedPriceMinor !== undefined
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["fixedPriceMinor"],
+        message: "Enter price during order cannot have a saved fixed price.",
+      })
+  })
 
 function catalogVariantSchema<T extends z.ZodType>(offeringSchema: T) {
   return z

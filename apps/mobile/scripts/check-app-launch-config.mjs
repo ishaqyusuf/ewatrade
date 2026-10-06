@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 
 const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
@@ -20,10 +20,6 @@ const REQUIRED_MARKERS = [
   'androidPackage: "com.ewatrade.app"',
   'androidPackage: "com.ewatrade.dev"',
   'androidPackage: "com.ewatrade.preview"',
-  'app: "./assets/icons/preview-loading-icon.png"',
-  'adaptive: "./assets/icons/preview-adaptive-icon.png"',
-  'iosDark: "./assets/icons/preview-ios-dark.png"',
-  'iosLight: "./assets/icons/preview-ios-light.png"',
   '"expo-splash-screen"',
   "variantConfig.icons.splashLight",
   "variantConfig.icons.splashDark",
@@ -32,38 +28,30 @@ const REQUIRED_MARKERS = [
   "imageWidth: 170",
   'resizeMode: "contain"',
   'userInterfaceStyle: "automatic"',
+  'iconBackgroundColor: "#FFF8E9"',
+  'iconBackgroundColor: "#1769B0"',
+  'iconBackgroundColor: "#25123B"',
 ]
-const REQUIRED_PNGS = [
-  { alpha: true, file: "adaptive-icon.png", height: 1024, width: 1024 },
-  { alpha: true, file: "dev-adaptive-icon.png", height: 1024, width: 1024 },
-  { file: "dev-ios-dark.png", height: 1024, width: 1024 },
-  { file: "dev-ios-light.png", height: 1024, width: 1024 },
-  { file: "dev-loading-icon.png", height: 1024, width: 1024 },
-  { alpha: true, file: "dev-splash-logo-dark.png", height: 640, width: 640 },
-  { alpha: true, file: "dev-splash-logo.png", height: 640, width: 640 },
-  { file: "ios-dark.png", height: 1024, width: 1024 },
-  { file: "ios-light.png", height: 1024, width: 1024 },
-  { file: "loading-icon.png", height: 1024, width: 1024 },
-  { file: "market-day-splash-lockup.png", height: 1280, width: 2560 },
-  { file: "market-pulse-splash-mark.png", height: 1024, width: 1024 },
-  { alpha: true, file: "preview-adaptive-icon.png", height: 1024, width: 1024 },
-  { file: "preview-ios-dark.png", height: 1024, width: 1024 },
-  { file: "preview-ios-light.png", height: 1024, width: 1024 },
-  { file: "preview-loading-icon.png", height: 1024, width: 1024 },
-  {
-    alpha: true,
-    file: "preview-splash-logo-dark.png",
-    height: 640,
-    width: 640,
-  },
-  { alpha: true, file: "preview-splash-logo.png", height: 640, width: 640 },
-  { alpha: true, file: "splash-logo-dark.png", height: 640, width: 640 },
-  { alpha: true, file: "splash-logo.png", height: 640, width: 640 },
-]
-const DISTINCT_ICON_GROUPS = [
-  ["loading-icon.png", "preview-loading-icon.png", "dev-loading-icon.png"],
-  ["adaptive-icon.png", "preview-adaptive-icon.png", "dev-adaptive-icon.png"],
-]
+const ICON_PREFIXES = ["", "dev-", "preview-"]
+const REQUIRED_PNGS = ICON_PREFIXES.flatMap((prefix) =>
+  [
+    { alpha: true, kind: "adaptive-icon", size: 1024 },
+    { alpha: false, kind: "ios-dark", size: 1024 },
+    { alpha: false, kind: "ios-light", size: 1024 },
+    { alpha: false, kind: "loading-icon", size: 1024 },
+    { alpha: true, kind: "splash-logo-dark", size: 640 },
+    { alpha: true, kind: "splash-logo", size: 640 },
+  ].map(({ kind, size, alpha }) => ({
+    alpha,
+    file: `${prefix}precision-rise-${kind}.png`,
+    height: size,
+    width: size,
+  })),
+)
+const DISTINCT_ICON_GROUPS = ["loading-icon", "ios-light", "ios-dark"].map(
+  (kind) =>
+    ICON_PREFIXES.map((prefix) => `${prefix}precision-rise-${kind}.png`),
+)
 
 function readPngMetadata(filePath) {
   const bytes = readFileSync(filePath)
@@ -85,6 +73,24 @@ const missingMarkers = REQUIRED_MARKERS.filter(
   (marker) => !configSource.includes(marker),
 )
 const imageFailures = []
+// Retained Market Day/Market Pulse illustrations are separate from launcher assets.
+const expectedFiles = new Set([
+  ...REQUIRED_PNGS.map(({ file }) => file),
+  "market-day-splash-lockup.png",
+  "market-day-splash-lockup.svg",
+  "market-pulse-splash-mark.png",
+  "market-pulse-splash-mark.svg",
+])
+for (const file of readdirSync(ICON_DIR)) {
+  if (!expectedFiles.has(file)) {
+    imageFailures.push(`Unexpected legacy or unconfigured icon: ${file}`)
+  }
+}
+for (const { file } of REQUIRED_PNGS) {
+  if (!configSource.includes(`./assets/icons/${file}`)) {
+    imageFailures.push(`app.config.ts does not reference ${file}`)
+  }
+}
 
 for (const png of REQUIRED_PNGS) {
   const filePath = join(ICON_DIR, png.file)
@@ -102,9 +108,9 @@ for (const png of REQUIRED_PNGS) {
     )
   }
 
-  if (png.alpha === true && !metadata.hasAlpha) {
+  if (metadata.hasAlpha !== png.alpha) {
     imageFailures.push(
-      `${relative(REPO_ROOT, filePath)} must preserve transparency for adaptive or splash composition.`,
+      `${relative(REPO_ROOT, filePath)} has incorrect alpha: adaptive/splash assets must be transparent; launcher/iOS assets must be opaque.`,
     )
   }
 }

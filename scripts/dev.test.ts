@@ -1,8 +1,15 @@
 // @ts-expect-error Bun test types are not included by the root TypeScript config.
 import { describe, expect, test } from "bun:test"
-import { commandForProfile, parseArgs } from "./dev"
+import { assertSupportedDevRuntime, commandForProfile, parseArgs } from "./dev"
 
 describe("dev script profile router", () => {
+  test("refuses the receipt-stalling runtime before starting dev services", () => {
+    expect(() => assertSupportedDevRuntime("1.3.0")).toThrow("Bun 1.3.9")
+    expect(() => assertSupportedDevRuntime("1.3.8")).toThrow("Bun 1.3.9")
+    expect(() => assertSupportedDevRuntime("1.3.9")).not.toThrow()
+    expect(() => assertSupportedDevRuntime("1.3.10")).not.toThrow()
+    expect(() => assertSupportedDevRuntime("1.4.0")).not.toThrow()
+  })
   test("defaults to local", () => {
     expect(parseArgs([])).toEqual({ profile: "local" })
     expect(commandForProfile("local")).toEqual([

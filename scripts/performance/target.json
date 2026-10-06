@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "profile": "dev",
+  "purpose": "disposable-performance-fixtures-only",
+  "neonProjectId": "shy-dream-70109968",
+  "neonBranchId": "br-cold-mouse-aw5xalk3",
+  "endpoint": "ep-cold-brook-awbtmdt7",
+  "database": "neondb",
+  "postgresMajor": 17,
+  "expiresAt": "2026-10-13T08:40:19Z",
+  "fixtureVersion": "ewatrade-performance-v1",
+  "fixturePrefix": "perf-v1-"
+}

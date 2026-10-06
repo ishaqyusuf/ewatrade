@@ -20,6 +20,10 @@ model CatalogPhotoAsset {
   reviewDisplayDigest String?
   reviewedAt          DateTime?
   approvedAt          DateTime?
+  reviewAvailableAt   DateTime               @default(now())
+  reviewAttempts      Int                    @default(0)
+  reviewLeaseToken    String?
+  reviewLeaseUntil    DateTime?
   expiresAt           DateTime
   catalogItemId       String?
   sortOrder           Int?
@@ -35,6 +39,7 @@ model CatalogPhotoAsset {
   @@unique([catalogItemId, sortOrder])
   @@index([tenantId, storeId, actorUserId, expiresAt])
   @@index([tenantId, catalogItemId, state])
+  @@index([state, reviewAvailableAt, reviewLeaseUntil])
 }
 
 // Approval is a server-only verdict bound to the immutable source/display bytes.

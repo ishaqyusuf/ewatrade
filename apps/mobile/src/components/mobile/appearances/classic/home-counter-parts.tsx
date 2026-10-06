@@ -6,11 +6,22 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { MOBILE_ACCOUNT_AVATAR_TOKENS } from "@/lib/design-foundation"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
+import { Text as NativeText } from "react-native"
 
 export function ClassicCounterHeader(props: DashboardHeroProps) {
   const largeText = useLargeTextLayout()
+  const initial =
+    Array.from(
+      (Array.from(props.greetingName.trim())[0] ?? "?").toUpperCase(),
+    )[0] ?? "?"
+  const avatarColor =
+    MOBILE_ACCOUNT_AVATAR_TOKENS.backgrounds[
+      Math.abs((initial.codePointAt(0) ?? 65) - 65) %
+        MOBILE_ACCOUNT_AVATAR_TOKENS.backgrounds.length
+    ]
   const tools = (
     <View className="flex-row gap-2">
       <Pressable
@@ -55,16 +66,28 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
           accessibilityLabel={`${props.greetingName} account and business settings`}
           accessibilityRole="button"
           disabled={!props.onProfilePress}
-          className="size-12 shrink-0 items-center justify-center rounded-full bg-accent"
+          style={{
+            alignItems: "center",
+            backgroundColor: avatarColor,
+            borderRadius: 24,
+            flexShrink: 0,
+            height: 48,
+            justifyContent: "center",
+            width: 48,
+          }}
           haptic={!!props.onProfilePress}
           onPress={props.onProfilePress}
         >
-          <Text
-            className="font-bold text-primary"
+          <NativeText
+            style={{
+              color: MOBILE_ACCOUNT_AVATAR_TOKENS.foreground,
+              fontSize: 16,
+              fontWeight: "700",
+            }}
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
           >
-            {Array.from(props.greetingName)[0]?.toUpperCase()}
-          </Text>
+            {initial}
+          </NativeText>
         </Pressable>
         <View className="min-w-0 flex-1">
           <Text className="text-lg font-bold text-foreground">
@@ -119,7 +142,7 @@ export function CounterTask({
   onPress,
 }: {
   title: string
-  message: string
+  message?: string
   label: string
   icon: IconKeys
   disabled?: boolean
@@ -137,7 +160,9 @@ export function CounterTask({
         >
           {title}
         </Text>
-        <Text className="text-sm text-muted-foreground">{message}</Text>
+        {message ? (
+          <Text className="text-sm text-muted-foreground">{message}</Text>
+        ) : null}
       </View>
       <ActionButton
         accessibilityLabel={label}
@@ -147,58 +172,6 @@ export function CounterTask({
       >
         {label}
       </ActionButton>
-    </View>
-  )
-}
-
-export function CounterPathStep({
-  title,
-  message,
-  step,
-  complete,
-  current,
-}: {
-  title: string
-  message: string
-  step?: string
-  complete?: boolean
-  current?: boolean
-}) {
-  const largeText = useLargeTextLayout()
-  return (
-    <View className="flex-row items-start gap-3 border-b border-border py-4">
-      <View
-        className={cn(
-          "shrink-0 items-center justify-center rounded-full border border-border",
-          largeText ? "size-10" : "size-7",
-          complete
-            ? "border-accent bg-accent"
-            : current && "border-primary bg-primary",
-        )}
-      >
-        {complete || !step ? (
-          <Icon
-            className={cn(
-              "size-xs",
-              current ? "text-primary-foreground" : "text-primary",
-            )}
-            name={complete ? "Check" : "Users"}
-          />
-        ) : (
-          <Text
-            className={cn(
-              "text-xs font-bold",
-              current ? "text-primary-foreground" : "text-muted-foreground",
-            )}
-          >
-            {step}
-          </Text>
-        )}
-      </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-semibold text-foreground">{title}</Text>
-        <Text className="text-xs text-muted-foreground">{message}</Text>
-      </View>
     </View>
   )
 }

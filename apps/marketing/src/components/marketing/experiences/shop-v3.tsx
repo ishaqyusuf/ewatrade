@@ -1,6 +1,9 @@
 "use client"
 
+import { getDashboardSignupUrl } from "@ewatrade/onboarding/lib/signup-navigation"
+
 import { LeadCaptureForm } from "@/components/lead-capture-form"
+import { LeadCaptureQuickFillProvider } from "@/components/qa/lead-capture-quick-fill"
 import { getDashboardLoginUrl } from "@/lib/auth-navigation"
 import { useEffect, useRef, useState } from "react"
 import type { MarketingExperienceProps } from "../marketing-experience-contract"
@@ -82,10 +85,10 @@ function Brand() {
   return (
     <img
       className="shop-brand"
-      src="/brand/ewatrade-logo-yoruba-v1.png"
+      src="/brand/ewatrade-logo-precision-rise-v1.svg"
       alt="ẸwáTrade"
-      width="2172"
-      height="724"
+      width="548"
+      height="120"
     />
   )
 }
@@ -218,7 +221,7 @@ function Header({ signupEnabled }: MarketingExperienceProps) {
         <a href="/contact">Contact</a>
         <a
           className="shop-mobile-cta"
-          href={signupEnabled ? "/signup" : "#early-access"}
+          href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
         >
           {signupEnabled ? "Create your workspace" : "Request early access"}{" "}
           <Arrow />
@@ -230,7 +233,7 @@ function Header({ signupEnabled }: MarketingExperienceProps) {
         </a>
         <a
           className="shop-header-cta"
-          href={signupEnabled ? "/signup" : "#early-access"}
+          href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
         >
           {signupEnabled ? "Create your workspace" : "Get early access"}{" "}
           <Arrow />
@@ -299,7 +302,7 @@ function Hero({ signupEnabled }: MarketingExperienceProps) {
           <div className="shop-hero-actions">
             <a
               className="shop-button"
-              href={signupEnabled ? "/signup" : "#early-access"}
+              href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
             >
               {signupEnabled ? "Create your workspace" : "Request early access"}{" "}
               <Arrow />
@@ -747,7 +750,7 @@ function Closing({ signupEnabled }: MarketingExperienceProps) {
       <p>A connected place for the work behind every order.</p>
       <a
         className="shop-button"
-        href={signupEnabled ? "/signup" : "#early-access"}
+        href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
       >
         {signupEnabled ? "Create your workspace" : "Request early access"}{" "}
         <Arrow />
@@ -799,22 +802,24 @@ export function ShopV3Landing({ signupEnabled }: MarketingExperienceProps) {
             </p>
           </div>
           <div className="shop-access-grid">
-            <LeadCaptureForm
-              appearance="shop"
-              type="early-access"
-              title="Request early access"
-              description="Share your merchant, operations or service use case."
-              submitLabel="Request early access"
-            />
-            <div id="waitlist">
+            <LeadCaptureQuickFillProvider>
               <LeadCaptureForm
                 appearance="shop"
-                type="waitlist"
-                title="Join the waitlist"
-                description="Get an update when EwaTrade opens wider access."
-                submitLabel="Join the waitlist"
+                type="early-access"
+                title="Request early access"
+                description="Share your merchant, operations or service use case."
+                submitLabel="Request early access"
               />
-            </div>
+              <div id="waitlist">
+                <LeadCaptureForm
+                  appearance="shop"
+                  type="waitlist"
+                  title="Join the waitlist"
+                  description="Get an update when EwaTrade opens wider access."
+                  submitLabel="Join the waitlist"
+                />
+              </div>
+            </LeadCaptureQuickFillProvider>
           </div>
         </section>
         <Closing signupEnabled={signupEnabled} />

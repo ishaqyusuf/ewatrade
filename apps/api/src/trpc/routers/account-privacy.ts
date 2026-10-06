@@ -32,6 +32,7 @@ import {
 import {
   createEmailMessage,
   dispatchEmailMessages,
+  renderAccountDeletionVerificationTemplate,
   shouldRouteEmailToTestRecipients,
 } from "@ewatrade/email"
 import { isAccountPrivacyEmailIntakeConfigured } from "@ewatrade/utils/account-privacy-intake"
@@ -284,7 +285,8 @@ export const accountPrivacyRouter = createTRPCRouter({
           requestId: z.string().min(1),
           subject: z.string().trim().min(1).max(180),
           text: z.string().trim().min(1).max(16_000),
-          html: z.string().trim().min(1).max(32_000),
+          // Canonical shell plus up to 16k escaped text characters.
+          html: z.string().trim().min(1).max(128_000),
         })
         .strict(),
     )
@@ -350,8 +352,9 @@ export const accountPrivacyRouter = createTRPCRouter({
           from: process.env.EMAIL_FROM ?? "",
           to: challenge.email,
           subject: "Your EwaTrade account deletion request code",
-          text: `Your EwaTrade account deletion request code is ${challenge.code}. It expires in 10 minutes. If you did not request this, ignore this email. Never share the code.`,
-          html: `<p>Your EwaTrade account deletion request code is <strong>${challenge.code}</strong>.</p><p>It expires in 10 minutes. If you did not request this, ignore this email. Never share the code.</p>`,
+          ...renderAccountDeletionVerificationTemplate({
+            code: challenge.code,
+          }),
         })
         try {
           const delivery = await dispatchEmailMessages([message])

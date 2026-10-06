@@ -13,6 +13,10 @@ import {
 } from "../../generated/prisma/enums"
 import { assertQaTenantIdentity } from "./qa-maintenance"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
+import {
+  type StaffStoreAccessInput,
+  setStaffStoreAccess,
+} from "./staff-store-access"
 import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
 
 export type RetailOpsStaffInviteRole = "cashier" | "operator" | "manager"
@@ -30,6 +34,7 @@ export type RetailOpsStaffListStatusFilter =
   | "suspended"
 
 export type InviteRetailOpsStaffInput = {
+  storeAccess?: StaffStoreAccessInput
   actorUserId: string
   email: string
   externalId?: string
@@ -1204,6 +1209,34 @@ export async function inviteRetailOpsStaff(
       tenantId: input.tenantId,
     })
 
+    {
+      const current = await tx.membership.findUniqueOrThrow({
+        where: { id: membership.id },
+        select: { staffAccessRevision: true },
+      })
+      await setStaffStoreAccess(tx, {
+        ...(input.storeAccess ?? {
+          assignments: [
+            {
+              storeId: input.storeId,
+              role:
+                input.role === "manager"
+                  ? "MANAGER"
+                  : input.role === "operator"
+                    ? "OPERATOR"
+                    : "CASHIER",
+            },
+          ],
+          catalogEditor: false,
+          defaultStoreId: input.storeId,
+        }),
+        actorUserId: input.actorUserId,
+        tenantId: input.tenantId,
+        membershipId: membership.id,
+        expectedRevision: current.staffAccessRevision,
+      })
+    }
+
     const invitedStaff = {
       invite: {
         acceptanceToken,
@@ -1581,6 +1614,31 @@ export async function completeRetailOpsStaffOnboarding(
         "Choose an eligible age range before accepting staff access.",
       )
     }
+
+    await tx.$queryRaw`SELECT "id" FROM "Membership" WHERE "id" = ${membership.id} FOR UPDATE`
+    const approved = await tx.membership.findUniqueOrThrow({
+      where: { id: membership.id },
+      select: {
+        status: true,
+        staffAccessMode: true,
+        staffStoreAssignments: {
+          where: {
+            status: "ACTIVE",
+            store: { status: "ACTIVE", tenantId: membership.tenant.id },
+          },
+          select: { storeId: true },
+        },
+      },
+    })
+    if (
+      approved.status !== membership.status ||
+      (approved.staffAccessMode === "SCOPED" &&
+        !approved.staffStoreAssignments.length)
+    )
+      throw new RetailOpsStaffError(
+        "STAFF_INVITE_INVALID",
+        "Your Store access changed or was removed. Contact the business administrator.",
+      )
 
     const nextDisplayName = displayName ?? name ?? membership.user.displayName
     const nextName = name ?? displayName ?? membership.user.name

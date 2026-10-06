@@ -54,7 +54,9 @@ describe("business-aware Catalog guidance", () => {
 
   test("farm form separates bird choices, egg sizes and apparel sizes", () => {
     const guidance = resolve(farm)
-    expect(guidance.name.placeholder).toBe("e.g. Fresh eggs")
+    expect(guidance.name.placeholder).toBe(
+      "e.g. Fresh eggs, Live broiler, Fresh tomatoes",
+    )
     expect(guidance.stockUnit?.suggestions).toContain("Bird")
     expect(getCatalogOptionValueSuggestions(guidance, "Bird type")).toEqual([
       "Broiler",
@@ -117,7 +119,9 @@ describe("business-aware Catalog guidance", () => {
       "XL",
     ])
     expect(clothing.name.placeholder).toBe("e.g. Clothing Item")
-    expect(resolve(farm).name.placeholder).toBe("e.g. Fresh eggs")
+    expect(resolve(farm).name.placeholder).toBe(
+      "e.g. Fresh eggs, Live broiler, Fresh tomatoes",
+    )
   })
 
   test("missing or retired profile and mismatched helpers fall back safely", () => {

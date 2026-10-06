@@ -9,7 +9,7 @@
       "final-100-light-established-unready-middle",
       "final-100-light-established-unready-bottom"
     ],
-    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   },
   {
     "state": "team-unknown",
@@ -21,7 +21,7 @@
       "final-100-light-team-unknown-middle",
       "final-100-light-team-unknown-bottom"
     ],
-    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   },
   {
     "state": "team-existing",
@@ -33,7 +33,7 @@
       "final-100-light-team-existing-middle",
       "final-100-light-team-existing-bottom"
     ],
-    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   },
   {
     "state": "team-restricted",
@@ -45,6 +45,6 @@
       "final-100-light-team-restricted-middle",
       "final-100-light-team-restricted-bottom"
     ],
-    "visualAcceptance": "Reviewed state-specific guidance and lower controls; correct Light theme"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   }
 ]

@@ -9,10 +9,11 @@ import {
   OfflineReviewDecision,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import { createCommercialOrderInTransaction } from "./commercial-orders"
 import {
-  createCommercialOrder,
-  createCommercialOrderInTransaction,
-} from "./commercial-orders"
+  OfflineStaffAccessError,
+  assertOfflineStaffActor,
+} from "./offline-staff-access"
 import type { DbClient } from "./types"
 
 type CommercialOrderPayload = {
@@ -112,6 +113,8 @@ function commandType(_payload: OfflineCommandPayload) {
 }
 
 function conflictCode(error: CatalogError) {
+  if (error instanceof OfflineStaffAccessError)
+    return OfflineConflictCode.PERMISSION_CHANGED
   if (error.code === "STALE_CONFIGURATION") {
     return OfflineConflictCode.STALE_CONFIGURATION
   }
@@ -194,12 +197,15 @@ async function executeCommand(
     tenantId: input.tenantId,
   }
   const payload = input.payload
-  return createCommercialOrder(db, {
-    ...common,
-    ...payload,
-    clientOrderId: input.clientCommandId,
-    schemaVersion: 1,
-    storeId: input.storeId,
+  return db.$transaction(async (tx) => {
+    await assertOfflineStaffActor(tx, common)
+    return createCommercialOrderInTransaction(tx, {
+      ...common,
+      ...payload,
+      clientOrderId: input.clientCommandId,
+      schemaVersion: 1,
+      storeId: input.storeId,
+    })
   })
 }
 
@@ -580,6 +586,10 @@ export async function reviewOfflineConflict(
         }
         const { actorUserId, ...payload } = storedPayload
         try {
+          await assertOfflineStaffActor(tx, {
+            actorUserId,
+            tenantId: command.tenantId,
+          })
           const result = await createCommercialOrderInTransaction(tx, {
             actorUserId,
             ...payload,

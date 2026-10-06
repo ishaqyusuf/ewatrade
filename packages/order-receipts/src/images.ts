@@ -1,0 +1,64 @@
+import { createCanvas } from "@napi-rs/canvas"
+import {
+  GlobalWorkerOptions,
+  getDocument,
+} from "pdfjs-dist/legacy/build/pdf.mjs"
+import { ReceiptRenderError } from "./types"
+
+// Resolve the installed worker, including when the caller is a server bundle.
+GlobalWorkerOptions.workerSrc = import.meta.resolve(
+  "pdfjs-dist/legacy/build/pdf.worker.mjs",
+)
+
+export async function renderReceiptImages(pdf: Uint8Array) {
+  const task = getDocument({
+    data: Uint8Array.from(pdf),
+    isEvalSupported: false,
+    useSystemFonts: false,
+  })
+  try {
+    const document = await task.promise
+    if (document.numPages > 100)
+      throw new ReceiptRenderError(
+        "Too many pages. Select fewer Orders for mobile export.",
+      )
+    const pages: Array<{ base64: string; width: number; height: number }> = []
+    let bytes = 0
+    for (let index = 1; index <= document.numPages; index++) {
+      const page = await document.getPage(index)
+      const viewport = page.getViewport({ scale: 2 })
+      const canvas = createCanvas(
+        Math.ceil(viewport.width),
+        Math.ceil(viewport.height),
+      )
+      try {
+        await page.render({
+          canvas: null,
+          canvasContext: canvas.getContext(
+            "2d",
+          ) as unknown as CanvasRenderingContext2D,
+          viewport,
+          background: "white",
+        }).promise
+        const png = await canvas.encode("png")
+        bytes += png.length
+        if (bytes > 12 * 1024 * 1024)
+          throw new ReceiptRenderError(
+            "Receipt images are too large. Select fewer Orders.",
+          )
+        pages.push({
+          base64: png.toString("base64"),
+          width: canvas.width,
+          height: canvas.height,
+        })
+      } finally {
+        page.cleanup()
+        canvas.width = 1
+        canvas.height = 1
+      }
+    }
+    return pages
+  } finally {
+    await task.destroy()
+  }
+}

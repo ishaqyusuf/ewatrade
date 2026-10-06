@@ -44,18 +44,22 @@ import {
   type OperatingCurrencyCode,
   findBusinessProfile,
   listBusinessProfiles,
+  normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import type { ApprovedNativeOnboarding } from "../onboarding/onboarding-continuation-screen"
 import { SignUpChoice } from "./sign-up-choice"
 import type { SignUpStep } from "./sign-up-presentation"
 import { SignupLegalChoices } from "./signup-legal-choices"
 
 export function SignUpScreen({
   ageBand,
+  continuation,
 }: {
   ageBand: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
+  continuation?: ApprovedNativeOnboarding
 }) {
   const largeTextLayout = useLargeTextLayout()
   const appearance = useMobileDesign("sign-up")
@@ -67,23 +71,48 @@ export function SignUpScreen({
       : ClassicSignUpCategories
   const router = useRouter()
   const trpc = useTRPC()
-  const [name, setName] = useState("")
-  const [businessName, setBusinessName] = useState("")
-  const [businessProfileKey, setBusinessProfileKey] = useState("")
+  const [name, setName] = useState(continuation?.fullName ?? "")
+  const [businessName, setBusinessName] = useState(
+    continuation?.businessName ?? "",
+  )
+  const [businessProfileKey, setBusinessProfileKey] = useState(
+    continuation?.draft.businessProfileKey ?? "",
+  )
   const [profileQuery, setProfileQuery] = useState("")
-  const [addressLine1, setAddressLine1] = useState("")
-  const [city, setCity] = useState("")
-  const [phone, setPhone] = useState("")
-  const [email, setEmail] = useState("")
-  const [currencyCode, setCurrencyCode] = useState<OperatingCurrencyCode>("NGN")
-  const [operatingModel, setOperatingModel] =
-    useState<BusinessOperatingModel>("products")
-  const [orderChannels, setOrderChannels] = useState<BusinessOrderChannel[]>([
-    "walk_in",
-  ])
-  const [otherBusinessDescription, setOtherBusinessDescription] = useState("")
-  const [teamSize, setTeamSize] = useState<BusinessTeamSize>("solo")
-  const [step, setStep] = useState<SignUpStep>("businessType")
+  const [addressLine1, setAddressLine1] = useState(
+    continuation?.draft.addressLine1 ?? "",
+  )
+  const [city, setCity] = useState(continuation?.draft.city ?? "")
+  const [phone, setPhone] = useState(
+    continuation?.draft.phone ?? continuation?.phone ?? "",
+  )
+  const [email, setEmail] = useState(continuation?.email ?? "")
+  const [currencyCode, setCurrencyCode] = useState<OperatingCurrencyCode>(
+    normalizeOperatingCurrencyCode(continuation?.draft.currencyCode),
+  )
+  const [operatingModel, setOperatingModel] = useState<BusinessOperatingModel>(
+    BUSINESS_OPERATING_MODELS.find(
+      (value) => value.key === continuation?.draft.operatingModel,
+    )?.key ?? "products",
+  )
+  const [orderChannels, setOrderChannels] = useState<BusinessOrderChannel[]>(
+    continuation?.draft.orderChannels?.length
+      ? BUSINESS_ORDER_CHANNELS.filter((value) =>
+          continuation.draft.orderChannels?.includes(value.key),
+        ).map((value) => value.key)
+      : ["walk_in"],
+  )
+  const [otherBusinessDescription, setOtherBusinessDescription] = useState(
+    continuation?.draft.otherBusinessDescription ?? "",
+  )
+  const [teamSize, setTeamSize] = useState<BusinessTeamSize>(
+    BUSINESS_TEAM_SIZES.find(
+      (value) => value.key === continuation?.draft.teamSize,
+    )?.key ?? "solo",
+  )
+  const [step, setStep] = useState<SignUpStep>(
+    continuation?.draft.step ?? "businessType",
+  )
   const [error, setError] = useState<string | null>(null)
   const [legalChoices, setLegalChoices] = useState({
     version: "",
@@ -168,7 +197,42 @@ export function SignUpScreen({
     hasBusinessContact &&
     hasBusinessProfile &&
     legalReady
+  const saveDraft = useMutation(
+    trpc.auth.saveMobileOnboardingDraft.mutationOptions({
+      gcTime: 0,
+      scope: { id: "onboarding-draft" },
+      onError(error) {
+        setError(error.message)
+      },
+    }),
+  )
+  const draftSnapshot = JSON.stringify({
+    step,
+    phone,
+    addressLine1,
+    city,
+    businessProfileKey,
+    currencyCode,
+    operatingModel,
+    orderChannels,
+    otherBusinessDescription,
+    teamSize,
+  })
+  useEffect(() => {
+    if (!continuation) return
+    const timer = setTimeout(
+      () =>
+        saveDraft.mutate({
+          token: continuation.accessToken,
+          draft: JSON.parse(draftSnapshot),
+        }),
+      800,
+    )
+    return () => clearTimeout(timer)
+  }, [continuation, draftSnapshot, saveDraft.mutate])
+
   const googleAuth = useMobileGoogleAuth({
+    accessToken: continuation?.accessToken,
     ageBand,
     ...legalSignupInput,
     addressLine1: addressLine1.trim(),
@@ -187,6 +251,7 @@ export function SignUpScreen({
     onError: setError,
   })
   const appleAuth = useMobileAppleAuth({
+    accessToken: continuation?.accessToken,
     ageBand,
     ...legalSignupInput,
     addressLine1: addressLine1.trim(),
@@ -217,6 +282,7 @@ export function SignUpScreen({
         router.push({
           pathname: "/verify-email",
           params: {
+            ...(continuation ? { accessToken: continuation.accessToken } : {}),
             addressLine1: addressLine1.trim(),
             ageBand,
             businessProfileKey,
@@ -253,6 +319,7 @@ export function SignUpScreen({
     if (!canContinueWithEmail) return
 
     requestOtpMutation.mutate({
+      accessToken: continuation?.accessToken,
       ageBand,
       ...legalSignupInput,
       addressLine1: addressLine1.trim(),
@@ -566,6 +633,7 @@ export function SignUpScreen({
             leadingIcon="Building2"
             onChangeText={setBusinessName}
             placeholder="Enter your business name"
+            editable={!continuation}
             value={businessName}
             variant="auth"
           />
@@ -617,6 +685,7 @@ export function SignUpScreen({
             onChangeText={setEmail}
             placeholder="Enter your email address"
             textContentType="emailAddress"
+            editable={!continuation}
             value={email}
             variant="auth"
           />

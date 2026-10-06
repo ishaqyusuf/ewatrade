@@ -1,3 +1,22 @@
+import { CatalogError } from "./catalog-errors"
+export { CatalogError } from "./catalog-errors"
+import {
+  type CatalogItemGraph,
+  type CatalogItemKindValue,
+  type CatalogItemStatusValue,
+  type InventoryUnitStockBehaviorValue,
+  type OfferingPricingPolicyValue,
+  catalogItemGraph,
+  catalogItemGraphForStores,
+  serializeCatalogItem,
+} from "./catalog-read"
+export { getCatalogItem } from "./catalog-read"
+export type {
+  CatalogItemKindValue,
+  CatalogItemStatusValue,
+  OfferingPricingPolicyValue,
+  InventoryUnitStockBehaviorValue,
+} from "./catalog-read"
 import { createHash } from "node:crypto"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 
@@ -41,14 +60,6 @@ import {
 import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { StoreConversationError } from "./store-conversations-core"
-
-export type CatalogItemKindValue = "product" | "service"
-export type CatalogItemStatusValue = "active" | "archived" | "draft"
-export type OfferingPricingPolicyValue = "fixed" | "quote_required"
-export type InventoryUnitStockBehaviorValue =
-  | "alternate_transaction"
-  | "canonical_shared"
-  | "packaged_stock"
 
 const DEFAULT_CATALOG_TRANSACTION_SCALE = 2
 const CATALOG_WRITE_TRANSACTION_OPTIONS = {
@@ -199,6 +210,7 @@ export type CreateSimpleCatalogItemInput =
     }
 
 export type ListCatalogItemsInput = {
+  storeIds?: string[]
   kind?: CatalogItemKindValue
   status?: CatalogItemStatusValue
   tenantId: string
@@ -218,108 +230,6 @@ export type GetCatalogItemInput = {
   itemId: string
   tenantId: string
 }
-
-type CatalogErrorCode =
-  | "CATALOG_TERMS_REQUIRED"
-  | "CATALOG_ITEM_NOT_FOUND"
-  | "CATALOG_OFFERING_NOT_FOUND"
-  | "CATALOG_VARIANT_NOT_FOUND"
-  | "DUPLICATE_CATALOG_KEY"
-  | "IDEMPOTENCY_MISMATCH"
-  | "INSUFFICIENT_STOCK"
-  | "INVALID_CATALOG_ITEM"
-  | "INVALID_OFFERING"
-  | "INVALID_ORDER"
-  | "INVALID_STOCK_OPERATION"
-  | "INVALID_UNIT_CONFIGURATION"
-  | "OFFERING_UNAVAILABLE"
-  | "ORDER_NOT_FOUND"
-  | "RESERVATION_NOT_FOUND"
-  | "REVISION_CONFLICT"
-  | "STALE_CONFIGURATION"
-  | "STOCK_COUNT_NOT_FOUND"
-  | "STORE_NOT_FOUND"
-  | "SERVICE_INTAKE_NOT_FOUND"
-  | "SERVICE_JOB_NOT_FOUND"
-  | "SERVICE_WORK_NOT_AUTHORIZED"
-  | "INVALID_SERVICE_TRANSITION"
-  | "SERVICE_ALLOCATION_CONFLICT"
-  | "SERVICE_EVIDENCE_UNAVAILABLE"
-  | "INVALID_ASSIGNEE"
-  | "QUOTE_CONFLICT"
-  | "PUBLIC_TOKEN_INVALID"
-
-export class CatalogError extends Error {
-  readonly code: CatalogErrorCode
-
-  constructor(code: CatalogErrorCode, message: string) {
-    super(message)
-    this.name = "CatalogError"
-    this.code = code
-  }
-}
-
-const catalogItemGraph = {
-  optionGroups: {
-    include: {
-      values: {
-        orderBy: { sortOrder: "asc" },
-      },
-    },
-    orderBy: { sortOrder: "asc" },
-  },
-  product: {
-    include: {
-      currentUnitConfiguration: {
-        include: {
-          units: {
-            orderBy: { sortOrder: "asc" },
-          },
-        },
-      },
-      stockBalanceSources: {
-        include: {
-          inventoryUnit: true,
-          variant: true,
-        },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  },
-  service: true,
-  illustrations: {
-    select: { storeId: true, illustrationId: true },
-    orderBy: { storeId: "asc" },
-  },
-  photoAssets: {
-    where: { state: { in: ["PENDING_REVIEW", "APPROVED"] } },
-    select: { id: true, storeId: true, state: true, sortOrder: true },
-    orderBy: { sortOrder: "asc" },
-  },
-  variants: {
-    include: {
-      offerings: {
-        include: {
-          productUnitOffering: {
-            include: {
-              inventoryUnit: true,
-            },
-          },
-          serviceOffering: true,
-          storeAvailability: true,
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-      selections: {
-        include: {
-          group: true,
-          value: true,
-        },
-      },
-    },
-    orderBy: { sortOrder: "asc" },
-  },
-} satisfies Prisma.CatalogItemInclude
 
 type CatalogTermsPublication = NonNullable<
   ReturnType<typeof currentEffectiveLegalPublication>
@@ -440,16 +350,8 @@ export async function assertExistingCatalogOfferingPublicationSafety(
   })
 }
 
-type CatalogItemGraph = Prisma.CatalogItemGetPayload<{
-  include: typeof catalogItemGraph
-}>
-
 function catalogKind(kind: CatalogItemKindValue) {
   return kind === "product" ? CatalogItemKind.PRODUCT : CatalogItemKind.SERVICE
-}
-
-function catalogKindValue(kind: CatalogItemKind): CatalogItemKindValue {
-  return kind === CatalogItemKind.PRODUCT ? "product" : "service"
 }
 
 function catalogStatus(status: CatalogItemStatusValue) {
@@ -458,24 +360,11 @@ function catalogStatus(status: CatalogItemStatusValue) {
   return CatalogRecordStatus.DRAFT
 }
 
-function catalogStatusValue(
-  status: CatalogRecordStatus,
-): CatalogItemStatusValue {
-  if (status === CatalogRecordStatus.ACTIVE) return "active"
-  if (status === CatalogRecordStatus.ARCHIVED) return "archived"
-  return "draft"
-}
-
 function pricingPolicy(policy: OfferingPricingPolicyValue) {
+  if (policy === "order_total") return OfferingPricingPolicy.ORDER_TOTAL
   return policy === "fixed"
     ? OfferingPricingPolicy.FIXED
     : OfferingPricingPolicy.QUOTE_REQUIRED
-}
-
-function pricingPolicyValue(
-  policy: OfferingPricingPolicy,
-): OfferingPricingPolicyValue {
-  return policy === OfferingPricingPolicy.FIXED ? "fixed" : "quote_required"
 }
 
 function stockBehavior(behavior: InventoryUnitStockBehaviorValue) {
@@ -486,18 +375,6 @@ function stockBehavior(behavior: InventoryUnitStockBehaviorValue) {
     return InventoryUnitStockBehavior.ALTERNATE_TRANSACTION
   }
   return InventoryUnitStockBehavior.PACKAGED_STOCK
-}
-
-function stockBehaviorValue(
-  behavior: InventoryUnitStockBehavior,
-): InventoryUnitStockBehaviorValue {
-  if (behavior === InventoryUnitStockBehavior.CANONICAL_SHARED) {
-    return "canonical_shared"
-  }
-  if (behavior === InventoryUnitStockBehavior.ALTERNATE_TRANSACTION) {
-    return "alternate_transaction"
-  }
-  return "packaged_stock"
 }
 
 function slugifyCatalogItem(value: string) {
@@ -564,6 +441,14 @@ function assertOfferingPricing(
   offering: CatalogOfferingInput,
   kind: CatalogItemKindValue,
 ) {
+  if (offering.pricingPolicy === "order_total") {
+    if (kind !== "product" || offering.fixedPriceMinor !== undefined)
+      throw new CatalogError(
+        "INVALID_OFFERING",
+        "Order-time-total pricing requires a Product Offering without a fixed price.",
+      )
+    return
+  }
   if (kind === "product" && offering.pricingPolicy !== "fixed") {
     throw new CatalogError(
       "INVALID_OFFERING",
@@ -861,129 +746,6 @@ async function createUniqueCatalogSlug(
     "DUPLICATE_CATALOG_KEY",
     "Could not create a unique Catalog Item slug.",
   )
-}
-
-function serializeCatalogItem(item: CatalogItemGraph) {
-  return {
-    category: item.category,
-    categoryId: item.categoryId,
-    subcategoryId: item.subcategoryId,
-    illustrations: item.illustrations ?? [],
-    photos: (item.photoAssets ?? []).map((photo) => ({
-      assetId: photo.id,
-      storeId: photo.storeId,
-      state: photo.state,
-      sortOrder: photo.sortOrder,
-    })),
-    description: item.description,
-    id: item.id,
-    imageLinks: item.imageLinks,
-    imageUrl: item.imageUrl,
-    kind: catalogKindValue(item.kind),
-    name: item.name,
-    optionGroups: item.optionGroups.map((group) => ({
-      id: group.id,
-      key: group.key,
-      name: group.name,
-      values: group.values.map((value) => ({
-        id: value.id,
-        key: value.key,
-        label: value.label,
-      })),
-    })),
-    product: item.product
-      ? {
-          id: item.product.id,
-          currentUnitConfiguration: item.product.currentUnitConfiguration
-            ? {
-                canonicalBalanceScale:
-                  item.product.currentUnitConfiguration.canonicalBalanceScale,
-                id: item.product.currentUnitConfiguration.id,
-                units: item.product.currentUnitConfiguration.units.map(
-                  (unit) => ({
-                    factor: unit.factor.toString(),
-                    id: unit.id,
-                    key: unit.key,
-                    name: unit.name,
-                    stockBehavior: stockBehaviorValue(unit.stockBehavior),
-                    symbol: unit.symbol,
-                    transactionScale: unit.transactionScale,
-                  }),
-                ),
-                version: item.product.currentUnitConfiguration.version,
-              }
-            : null,
-          stockBalances: item.product.stockBalanceSources.map((balance) => ({
-            id: balance.id,
-            inventoryUnitId: balance.inventoryUnitId,
-            inventoryUnitName: balance.inventoryUnit.name,
-            kind:
-              balance.kind === StockBalanceKind.SHARED_POOL
-                ? "shared_pool"
-                : "packaged_stock",
-            onHandQuantity: balance.onHandQuantity.toString(),
-            reservedQuantity: balance.reservedQuantity.toString(),
-            revision: balance.revision,
-            storeId: balance.storeId,
-            variantId: balance.variantId,
-            variantName: balance.variant.name,
-          })),
-        }
-      : null,
-    service: item.service ? { id: item.service.id } : null,
-    slug: item.slug,
-    status: catalogStatusValue(item.status),
-    variants: item.variants.map((variant) => ({
-      description: variant.description,
-      id: variant.id,
-      imageUrl: variant.imageUrl,
-      isDefault: variant.isDefault,
-      key: variant.key,
-      name: variant.name,
-      offerings: variant.offerings.map((offering) => ({
-        currencyCode: offering.currencyCode,
-        fixedPriceMinor: offering.fixedPriceMinor,
-        id: offering.id,
-        key: offering.key,
-        kind:
-          offering.kind === SellableOfferingKind.PRODUCT_UNIT
-            ? "product_unit"
-            : "service",
-        name: offering.name,
-        pricingPolicy: pricingPolicyValue(offering.pricingPolicy),
-        productUnit: offering.productUnitOffering
-          ? {
-              barcode: offering.productUnitOffering.barcode,
-              inventoryUnitId: offering.productUnitOffering.inventoryUnit.id,
-              sku: offering.productUnitOffering.sku,
-            }
-          : null,
-        service: offering.serviceOffering
-          ? { id: offering.serviceOffering.id }
-          : null,
-        serviceWorkPolicy: offering.serviceOffering
-          ? {
-              authorizationPolicy: offering.serviceOffering.authorizationPolicy,
-              guidance: offering.serviceOffering.guidance,
-              quantityScale: offering.serviceOffering.quantityScale,
-              workPolicy: offering.serviceOffering.workPolicy,
-            }
-          : null,
-        status: catalogStatusValue(offering.status),
-        stores: offering.storeAvailability.map((availability) => ({
-          isAvailable: availability.isAvailable,
-          storeId: availability.storeId,
-        })),
-      })),
-      selections: variant.selections.map((selection) => ({
-        groupId: selection.groupId,
-        groupKey: selection.group.key,
-        valueId: selection.valueId,
-        valueKey: selection.value.key,
-      })),
-      status: catalogStatusValue(variant.status),
-    })),
-  }
 }
 
 export async function createCatalogItem(
@@ -1628,24 +1390,12 @@ export async function createSimpleCatalogItem(
   })
 }
 
-export async function getCatalogItem(
-  db: PrismaClient,
-  input: GetCatalogItemInput,
-) {
-  const item = await db.catalogItem.findFirst({
-    include: catalogItemGraph,
-    where: { id: input.itemId, tenantId: input.tenantId },
-  })
-
-  return item ? serializeCatalogItem(item) : null
-}
-
 export async function listCatalogItems(
   db: PrismaClient,
   input: ListCatalogItemsInput,
 ) {
   const items = await db.catalogItem.findMany({
-    include: catalogItemGraph,
+    include: catalogItemGraphForStores(input.storeIds),
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
     where: {
       kind: input.kind ? catalogKind(input.kind) : undefined,
@@ -1790,7 +1540,7 @@ export async function listCatalogItemsPage(
     : []
   const [records, totalCount] = await Promise.all([
     db.catalogItem.findMany({
-      include: catalogItemGraph,
+      include: catalogItemGraphForStores(input.storeIds),
       orderBy,
       take: limit + 1,
       where: cursor

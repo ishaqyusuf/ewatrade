@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { businessFill } from "./qa-fill-definitions"
+import { createLeadDraft } from "./qa-lead-fill"
 import {
   getCountryCallingCode,
   getNationalSignupPhone,
@@ -103,7 +104,7 @@ test("both the business form and server signup payload normalize phone numbers",
   ).toBe(false)
 })
 
-test("QA quick fill retains its reserved international number and passes the country rule", () => {
+test("QA business fill selects Nigeria with national digits and one matching prefix", () => {
   const fixture = businessFill(
     {
       currencyCode: "NGN",
@@ -117,6 +118,26 @@ test("QA quick fill retains its reserved international number and passes the cou
     },
     1,
   )
-  expect(fixture.countryCode).toBe("OTHER")
-  expect(businessSchema.parse(fixture)).toMatchObject({ phone: fixture.phone })
+  expect(fixture.countryCode).toBe("NG")
+  expect(fixture.phone).toMatch(/^8000000\d{3}$/)
+  const parsed = businessSchema.parse({
+    businessName: "Existing QA business",
+    ...fixture,
+  })
+  expect(parsed.phone).toBe(`+234${fixture.phone}`)
+  expect(resolveSignupPhone(parsed.phone, "NG")).toBe(parsed.phone)
+  expect(getNationalSignupPhone(parsed.phone, "NG")).toBe(fixture.phone)
+})
+
+test("QA request fill uses the same country and prefix convention as business setup", () => {
+  const fixture = createLeadDraft({
+    domain: "ishaq.qa.test",
+    testerIdentity: "phone-test",
+  })
+  expect(fixture.countryCode).toBe("NG")
+  expect(getCountryCallingCode(fixture.countryCode)).toBe("+234")
+  expect(fixture.phone).toMatch(/^8000000\d{3}$/)
+  expect(resolveSignupPhone(fixture.phone, fixture.countryCode)).toBe(
+    `+234${fixture.phone}`,
+  )
 })

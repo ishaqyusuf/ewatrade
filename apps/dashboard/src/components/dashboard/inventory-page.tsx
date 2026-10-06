@@ -1,3 +1,5 @@
+import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
+import { CatalogUnitConfigurationSheet } from "@/components/catalog-item/catalog-unit-configuration-sheet"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { InventoryHeader } from "@/components/inventory/inventory-header"
 import { ScrollableContent } from "@/components/scrollable-content"
@@ -12,21 +14,23 @@ type StoreSummary = { currencyCode: string; id: string; name: string }
 export function InventoryPage({
   store,
   initialSettings,
+  allStores = false,
 }: {
   store: StoreSummary
+  allStores?: boolean
   initialSettings: TableSettings
 }) {
   return (
     <>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <InventoryHeader storeName={store.name} />
+          <InventoryHeader storeName={allStores ? "All stores" : store.name} />
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={<InventoryTableSkeleton settings={initialSettings} />}
             >
               <InventoryDataTable
-                storeId={store.id}
+                storeId={allStores ? undefined : store.id}
                 initialSettings={initialSettings}
               />
             </Suspense>
@@ -34,6 +38,8 @@ export function InventoryPage({
         </div>
       </ScrollableContent>
       <InventoryOperationSheet store={store} />
+      <CatalogItemDetailModal store={store} />
+      <CatalogUnitConfigurationSheet />
     </>
   )
 }

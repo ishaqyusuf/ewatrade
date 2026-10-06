@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./catalog-photo-review": "./src/catalog-photo-review.ts"
   },
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
-    "deploy": "node ../../scripts/with-workspace-env.mjs APP_ENV=production REQUIRE_PROD_DATABASE_URL=1 bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
+    "deploy": "node ../../scripts/with-workspace-env.mjs APP_ENV=production DEV_PROFILE=production REQUIRE_PROD_DATABASE_URL=1 bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
+    "deploy:preview": "node ../../scripts/with-workspace-env.mjs APP_ENV=preview DEV_PROFILE=preview bun ../../scripts/with-trigger-profile.mjs -- trigger deploy",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
@@ -26,7 +28,9 @@
     "@ewatrade/utils": "workspace:*",
     "@trigger.dev/build": "4.5.16",
     "@sentry/node": "^10.72.0",
-    "@trigger.dev/sdk": "4.5.16"
+    "@trigger.dev/sdk": "4.5.16",
+    "sharp": "0.35.5",
+    "libheif-js": "1.23.2"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

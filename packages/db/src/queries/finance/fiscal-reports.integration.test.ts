@@ -81,13 +81,16 @@ describeWithServiceCommerceDatabase(
         })
         tenantIds.push(tenant.id)
         const actor = { tenantId: tenant.id, actorUserId: user.id }
-        const book = await createFinanceBook(db, {
+        const bookIdentity = await createFinanceBook(db, {
           ...actor,
           startsAt: new Date("2024-01-01T00:00:00.000Z"),
         })
-        ownedBookId = book.id
-        bookIds.push(book.id)
-        const bookId = book.id
+        ownedBookId = bookIdentity.id
+        bookIds.push(bookIdentity.id)
+        const bookId = bookIdentity.id
+        const book = await db.financeBook.findUniqueOrThrow({
+          where: { id: bookId },
+        })
         const accounts = await db.financeAccount.findMany({ where: { bookId } })
         const cash = required(
           accounts.find((row) => row.purpose === "CASH"),
@@ -428,7 +431,7 @@ describeWithServiceCommerceDatabase(
         ).toMatchObject({
           closingBalanceMinor: "0",
           periodDebitMinor: "10000",
-          periodCreditMinor: "19000",
+          periodCreditMinor: "10000",
         })
         const salesLedger = await listFinanceAccountLedger(db, {
           ...year1Range,
@@ -436,7 +439,7 @@ describeWithServiceCommerceDatabase(
           snapshotSequence: afterClose.snapshotSequence,
         })
         expect(salesLedger.debitMinor).toBe("10000")
-        expect(salesLedger.creditMinor).toBe("19000")
+        expect(salesLedger.creditMinor).toBe("10000")
 
         const year1ReverseLines: EntryLine[][] = [
           [

@@ -1,4 +1,4 @@
-import { SignupFlow } from "@/components/signup/signup-flow"
+import { getDashboardSignupUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 import { redirect } from "next/navigation"
 
 export default async function SignupPage({
@@ -7,6 +7,5 @@ export default async function SignupPage({
   searchParams: Promise<{ access_token?: string }>
 }) {
   const { access_token } = await searchParams
-  if (!access_token?.trim()) redirect("/#early-access")
-  return <SignupFlow />
+  redirect(getDashboardSignupUrl(access_token?.trim()))
 }

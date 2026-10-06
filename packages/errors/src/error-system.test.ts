@@ -8,6 +8,32 @@ import {
 } from "."
 
 describe("EwaTrade error contract", () => {
+  test("onboarding recovery uses fixed public text through transport wrappers", () => {
+    for (const code of [
+      "ONBOARDING_APPROVAL_REQUIRED",
+      "ONBOARDING_INVALID",
+      "ONBOARDING_EXPIRED",
+      "ONBOARDING_USED",
+      "ONBOARDING_IDENTITY",
+      "ONBOARDING_UNVERIFIED",
+      "ONBOARDING_CONFLICT",
+    ] as const) {
+      const cause = new AppError({
+        code,
+        internalMessage: "private token ea_secret and recipient",
+        cause: new Error("private provider credential"),
+      })
+      const response = toPublicErrorEnvelope(
+        new Error("transport wrapper", { cause }),
+      )
+      expect(response.error.code).toBe(code)
+      expect(response.error.message).toBe(cause.publicMessage)
+      expect(JSON.stringify(response)).not.toContain("private")
+      expect(JSON.stringify(response)).not.toContain("ea_secret")
+      expect(classifyError(cause).reportable).toBe(false)
+    }
+  })
+
   test("explains the Catalog Terms gate through a wrapped error without leaking details", () => {
     const cause = Object.assign(new Error("private account detail"), {
       code: "CATALOG_TERMS_REQUIRED",
@@ -96,4 +122,18 @@ describe("EwaTrade error contract", () => {
     expect(response.error.message).not.toContain("token")
     expect(response.requestId).toBe("req_public_01")
   })
+})
+
+test("store allowance failures retain actionable copy through the API wrapper", () => {
+  const response = toPublicErrorEnvelope(
+    new Error("wrapper", {
+      cause: new AppError({ code: "STORE_LIMIT_REACHED" }),
+    }),
+  )
+  expect(response.error.code).toBe("STORE_LIMIT_REACHED")
+  expect(response.error.message).toContain("store limit")
+  expect(response.error.message).toContain("Upgrade your plan")
+  expect(response.error.message).toContain("to add more stores")
+  expect(response.error.message).not.toContain("permission")
+  expect(response.error.retryable).toBe(false)
 })

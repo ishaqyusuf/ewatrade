@@ -1,4 +1,5 @@
 import { useAuthContext } from "@/hooks/use-auth"
+import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import type {
@@ -29,6 +30,7 @@ let nativeGoogleConfigured = false
 type MobileGoogleAuthMode = "login" | "sign_up"
 
 type UseMobileGoogleAuthInput = {
+  accessToken?: string
   ageBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
   acceptedTerms?: true
   acknowledgedPrivacyNotice?: true
@@ -109,6 +111,7 @@ function configureNativeGoogleSignIn(
 }
 
 export function useMobileGoogleAuth({
+  accessToken,
   ageBand,
   acceptedTerms,
   acknowledgedPrivacyNotice,
@@ -151,6 +154,8 @@ export function useMobileGoogleAuth({
         )
       },
       onSuccess(session) {
+        if (accessToken)
+          void clearPendingOnboarding(accessToken).catch(() => undefined)
         completeOnboarding(true)
         auth.applyAuthenticatedSession(
           {
@@ -160,11 +165,15 @@ export function useMobileGoogleAuth({
               businessId: session.profile.businessId ?? undefined,
               businessName: session.profile.businessName ?? undefined,
               businessSlug: session.tenant?.slug ?? undefined,
+              storeId: session.tenant?.storeId ?? undefined,
+              storeName: session.tenant?.storeName ?? undefined,
               currencyCode: session.profile.currencyCode,
               email: session.profile.email,
               id: session.profile.id,
               name: session.profile.name,
               role: session.profile.role ?? undefined,
+              staffAccessMode: session.profile.staffAccessMode,
+              catalogEditor: session.profile.catalogEditor,
               status: session.profile.status ?? undefined,
             },
             token: session.token,
@@ -180,6 +189,7 @@ export function useMobileGoogleAuth({
       lastSubmittedIdToken.current = idToken
 
       verifyGoogleMutation.mutate({
+        accessToken,
         ageBand,
         acceptedTerms,
         acknowledgedPrivacyNotice,
@@ -201,6 +211,7 @@ export function useMobileGoogleAuth({
       })
     },
     [
+      accessToken,
       ageBand,
       acceptedTerms,
       acknowledgedPrivacyNotice,

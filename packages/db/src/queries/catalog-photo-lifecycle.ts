@@ -173,6 +173,8 @@ export async function recordCatalogPhotoVerdict(
     provider: string
     policyVersion: string
     verdict: "APPROVED" | "REJECTED"
+    leaseToken?: string
+    storageStoreId?: string
   },
 ) {
   if (
@@ -184,7 +186,7 @@ export async function recordCatalogPhotoVerdict(
     throw new CatalogPhotoError("INVALID_PHOTO", "Invalid photo review.")
   const snapshot = { ...input }
   return db.$transaction(async (tx) => {
-    await authorizeCatalogPhotoScope(tx, snapshot)
+    const tenant = await authorizeCatalogPhotoScope(tx, snapshot)
     const [asset] = await tx.$queryRaw<
       Array<{
         id: string
@@ -194,6 +196,10 @@ export async function recordCatalogPhotoVerdict(
         uploadedAt: Date | null
         catalogItemId: string | null
         expiresAt: Date
+        bytesDeletedAt: Date | null
+        storageStoreId: string | null
+        reviewLeaseToken: string | null
+        reviewLeaseUntil: Date | null
       }>
     >(Prisma.sql`
       SELECT * FROM "CatalogPhotoAsset" WHERE "id"=${snapshot.assetId} AND "tenantId"=${snapshot.tenantId}
@@ -201,6 +207,8 @@ export async function recordCatalogPhotoVerdict(
     `)
     if (
       !asset ||
+      tenant.dataClassification !== "LIVE" ||
+      asset.bytesDeletedAt !== null ||
       asset.contentDigest !== snapshot.sourceDigest ||
       !asset.storagePath ||
       !asset.uploadedAt ||
@@ -210,6 +218,20 @@ export async function recordCatalogPhotoVerdict(
       throw new CatalogPhotoError(
         "PHOTO_NOT_READY",
         "Photo is no longer ready for review.",
+      )
+    if (
+      snapshot.leaseToken
+        ? asset.reviewLeaseToken !== snapshot.leaseToken ||
+          !asset.reviewLeaseUntil ||
+          asset.reviewLeaseUntil <= new Date() ||
+          !snapshot.storageStoreId ||
+          asset.storageStoreId !== snapshot.storageStoreId ||
+          snapshot.storageStoreId !== process.env.BLOB_STORE_ID?.trim()
+        : asset.reviewLeaseToken !== null
+    )
+      throw new CatalogPhotoError(
+        "PHOTO_NOT_READY",
+        "Photo review lease is no longer valid.",
       )
     const now = new Date()
     await tx.catalogPhotoAsset.update({
@@ -221,6 +243,8 @@ export async function recordCatalogPhotoVerdict(
         reviewDisplayDigest: snapshot.displayDigest,
         reviewedAt: now,
         approvedAt: snapshot.verdict === "APPROVED" ? now : null,
+        reviewLeaseToken: null,
+        reviewLeaseUntil: null,
       },
     })
     return { assetId: asset.id, state: snapshot.verdict }

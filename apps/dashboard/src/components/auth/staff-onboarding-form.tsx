@@ -105,6 +105,8 @@ export function StaffOnboardingForm({
       brandHref={marketingUrl}
     >
       <form
+        id="staff-onboarding"
+        autoComplete="on"
         className="min-w-0"
         onSubmit={(event) => {
           event.preventDefault()
@@ -112,6 +114,20 @@ export function StaffOnboardingForm({
         }}
       >
         <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="staff-email">Email address</FieldLabel>
+            <Input
+              id="staff-email"
+              name="username"
+              type="email"
+              autoComplete="username"
+              value={invite.email}
+              readOnly
+            />
+            <p className="text-xs text-muted-foreground">
+              This invitation is for this email address.
+            </p>
+          </Field>
           {qaInvitation ? (
             <p className="text-sm text-muted-foreground">
               QA invitation verified. Complete setup here without checking
@@ -169,6 +185,7 @@ export function StaffOnboardingForm({
                 </FieldLabel>
                 <Input
                   id="staff-password"
+                  name="password"
                   type="password"
                   autoComplete="new-password"
                   minLength={8}
@@ -188,6 +205,7 @@ export function StaffOnboardingForm({
                 </FieldLabel>
                 <Input
                   id="staff-confirm-password"
+                  name="confirmPassword"
                   type="password"
                   autoComplete="new-password"
                   minLength={8}

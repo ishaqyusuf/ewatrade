@@ -1,11 +1,16 @@
 "use client"
+import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 
-import { CatalogAppearance } from "@/components/catalog-item/catalog-appearance"
+import {
+  CatalogAppearance,
+  useCatalogThemeClass,
+} from "@/components/catalog-item/catalog-appearance"
 import { CatalogHeader } from "@/components/catalog-item/catalog-header"
 import { CatalogItemSheet } from "@/components/catalog-item/catalog-item-sheet"
 import { CatalogUnitConfigurationSheet } from "@/components/catalog-item/catalog-unit-configuration-sheet"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
+import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { CatalogDataTable } from "@/components/tables/catalog/data-table"
 import { CatalogTableSkeleton } from "@/components/tables/catalog/skeleton"
 import type { TableSettings } from "@/utils/table-settings"
@@ -50,6 +55,8 @@ export function CatalogItemsPage({
           </ErrorBoundary>
         </div>
       </ScrollableContent>
+      <CatalogItemDetailModal store={store} />
+      <CatalogInventorySheet store={store} />
       <CatalogUnitConfigurationSheet />
       <CatalogItemSheet
         businessProfileKey={store.businessProfileKey}
@@ -59,4 +66,9 @@ export function CatalogItemsPage({
       />
     </CatalogAppearance>
   )
+}
+
+function CatalogInventorySheet({ store }: { store: StoreSummary }) {
+  const themeClass = useCatalogThemeClass()
+  return <InventoryOperationSheet store={store} popupClassName={themeClass} />
 }

@@ -7,6 +7,7 @@ export * from "./catalog-inventory"
 export * from "./inventory-operations"
 export * from "./inventory-custody-transfers"
 export * from "./commercial-orders"
+export * from "./order-receipts"
 export * from "./commercial-service-fulfillment"
 export * from "./commercial-service-authorization"
 export * from "./commerce-quotes"
@@ -88,3 +89,19 @@ export * from "./play-refund-review-response"
 export * from "./play-refund-review-submission-gate"
 
 export { listStockOperationCategoryNames } from "./inventory-categories"
+
+export { importFinanceBankStatement } from "./finance/bank-statement-import"
+export { resolveFinanceBankCorrectionSource } from "./finance/bank-correction-source"
+export {
+  matchFinanceBankStatement,
+  unmatchFinanceBankStatement,
+} from "./finance/bank-statement-matching"
+export {
+  getFinanceBankStatement,
+  listFinanceBankStatements,
+  listFinanceBankMatchHistory,
+} from "./finance/bank-statement-reads"
+
+export * from "./catalog-detail"
+
+export * from "./staff-store-access"

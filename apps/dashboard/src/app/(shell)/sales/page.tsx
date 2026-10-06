@@ -80,7 +80,14 @@ export default async function SalesRoutePage({
       <Suspense
         fallback={<OrdersTableSkeleton initialSettings={initialSettings} />}
       >
-        <SalesPage store={store} initialSettings={initialSettings} />
+        <SalesPage
+          store={store}
+          initialSettings={initialSettings}
+          customerDirectory={
+            ctx.membership.staffAccessMode !== "SCOPED" ||
+            ["OWNER", "ADMIN"].includes(ctx.membership.role)
+          }
+        />
       </Suspense>
     </HydrateClient>
   )

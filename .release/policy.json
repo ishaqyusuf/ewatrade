@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "project": "ewatrade",
+  "scope": ["api-web", "dashboard-web", "marketing-web", "mobile", "jobs"],
+  "excludedSurfaces": ["storefront", "pos", "desktop"],
+  "database": {
+    "managedBy": "local-infra-kit",
+    "releaseGate": "excluded",
+    "development": "db-push",
+    "preview": "db-push",
+    "production": "db-push",
+    "execution": "local-then-selected-environment",
+    "confirmation": "existing-interactive-prompts",
+    "automaticDataLossAcceptance": false
+  },
+  "previewWeb": "exact-project-ready-deployment-url",
+  "jobs": {
+    "preview": {
+      "projectRef": "proj_hymzhteicvpixaksoyqk",
+      "providerEnvironment": "prod",
+      "isolation": "separate-project"
+    },
+    "production": {
+      "projectRef": "proj_pdnthdiwdevukelgmvzc",
+      "providerEnvironment": "prod"
+    },
+    "sameProjectProductionWorkerForPreview": "forbidden"
+  },
+  "verification": {
+    "revision": "full-git-sha",
+    "maximumEvidenceAgeSeconds": 300,
+    "candidateCodeExecution": false,
+    "unchangedTarget": "fresh-live-state-and-identical-committed-inputs",
+    "preRelease": "local-infra-database-push-then-application-plan",
+    "postRelease": "exact-artifact-and-active-alias-channel-worker-state"
+  }
+}

@@ -1,3 +1,4 @@
+import { checkNativeBuild, withAppUpdateLock } from "@/lib/app-update-client"
 import * as Sentry from "@sentry/react-native"
 import Constants from "expo-constants"
 import * as Updates from "expo-updates"
@@ -63,62 +64,81 @@ export function useLaunchAutoUpdate() {
       if (!cancelled) setPhase(nextPhase)
     }
 
-    const runUpdateCheck = async (force = false) => {
-      if (__DEV__ || !Updates.isEnabled || isCheckingRef.current) return
+    const runUpdateCheck = async (force = false) =>
+      withAppUpdateLock(async () => {
+        if (__DEV__ || isCheckingRef.current) return
 
-      const now = Date.now()
-      if (!force && now - lastCheckAtRef.current < foregroundCheckCooldownMs) {
-        return
-      }
+        const now = Date.now()
+        if (
+          !force &&
+          now - lastCheckAtRef.current < foregroundCheckCooldownMs
+        ) {
+          return
+        }
 
-      isCheckingRef.current = true
-      lastCheckAtRef.current = now
-      setPhaseIfMounted("checking")
+        isCheckingRef.current = true
+        lastCheckAtRef.current = now
+        setPhaseIfMounted("checking")
 
-      let checkResult: Updates.UpdateCheckResult
-      try {
-        checkResult = await Updates.checkForUpdateAsync()
-      } catch (error) {
-        console.warn("[updates] launch check failed", error)
-        setPhaseIfMounted("idle")
-        isCheckingRef.current = false
-        return
-      }
-
-      if (!checkResult.isAvailable && !checkResult.isRollBackToEmbedded) {
-        setPhaseIfMounted("idle")
-        isCheckingRef.current = false
-        return
-      }
-
-      setErrorMessage(null)
-      setPhaseIfMounted("downloading")
-
-      try {
-        const fetchResult = await Updates.fetchUpdateAsync()
-
-        if (!fetchResult.isNew && !fetchResult.isRollBackToEmbedded) {
+        try {
+          if (await checkNativeBuild()) {
+            setPhaseIfMounted("idle")
+            isCheckingRef.current = false
+            return
+          }
+        } catch {
+          /* A registry outage must not block compatible OTA updates. */
+        }
+        if (!Updates.isEnabled) {
           setPhaseIfMounted("idle")
           isCheckingRef.current = false
           return
         }
 
-        setPhaseIfMounted("updating")
-        await delay(STEP_DELAY_MS)
-        setPhaseIfMounted("restarting")
-        await delay(STEP_DELAY_MS)
-        await Sentry.flush()
-        await Updates.reloadAsync()
-      } catch (error) {
-        console.warn("[updates] launch update failed", error)
-        if (!cancelled) {
-          setErrorMessage(getErrorMessage(error))
-          setPhase("failed")
+        let checkResult: Updates.UpdateCheckResult
+        try {
+          checkResult = await Updates.checkForUpdateAsync()
+        } catch (error) {
+          console.warn("[updates] launch check failed", error)
+          setPhaseIfMounted("idle")
+          isCheckingRef.current = false
+          return
         }
-      } finally {
-        isCheckingRef.current = false
-      }
-    }
+
+        if (!checkResult.isAvailable && !checkResult.isRollBackToEmbedded) {
+          setPhaseIfMounted("idle")
+          isCheckingRef.current = false
+          return
+        }
+
+        setErrorMessage(null)
+        setPhaseIfMounted("downloading")
+
+        try {
+          const fetchResult = await Updates.fetchUpdateAsync()
+
+          if (!fetchResult.isNew && !fetchResult.isRollBackToEmbedded) {
+            setPhaseIfMounted("idle")
+            isCheckingRef.current = false
+            return
+          }
+
+          setPhaseIfMounted("updating")
+          await delay(STEP_DELAY_MS)
+          setPhaseIfMounted("restarting")
+          await delay(STEP_DELAY_MS)
+          await Sentry.flush()
+          await Updates.reloadAsync()
+        } catch (error) {
+          console.warn("[updates] launch update failed", error)
+          if (!cancelled) {
+            setErrorMessage(getErrorMessage(error))
+            setPhase("failed")
+          }
+        } finally {
+          isCheckingRef.current = false
+        }
+      })
 
     void runUpdateCheck(true)
 

@@ -13,7 +13,7 @@ export function InventoryEmptyState({ filtered }: { filtered: boolean }) {
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {filtered
-          ? "Clear or change your search."
+          ? "Clear or change your search and stock filters."
           : "Create a Product to establish its canonical balance."}
       </p>
     </div>

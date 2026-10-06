@@ -1,8 +1,10 @@
 import { canManageSalesOperations, normalizeRole } from "@ewatrade/auth/roles"
+import { type StaffAccess, canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
 type CatalogPhotoRequestContext = {
   session: { user: { id: string } } | null
   tenantContext: {
+    staffAccess?: StaffAccess
     tenant: { id: string }
     membership: { role: string }
     activeStore?: { id: string } | null
@@ -17,7 +19,14 @@ export function catalogPhotoActorScope(
 ) {
   const tenant = ctx.tenantContext
   const role = tenant && normalizeRole(tenant.membership.role)
-  if (!tenant || !ctx.session || !role || !canManageSalesOperations(role)) {
+  if (
+    !tenant ||
+    !ctx.session ||
+    !role ||
+    !(tenant.staffAccess?.mode === "SCOPED"
+      ? canStaffPerform(tenant.staffAccess, "catalog")
+      : canManageSalesOperations(role))
+  ) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Catalog management permission required.",

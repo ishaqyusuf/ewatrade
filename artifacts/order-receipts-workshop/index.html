@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EwaTrade · Order receipt workshop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="workshop">
+    <header class="workshop-head">
+      <div><p class="eyebrow">EwaTrade / Order documents</p><h1>A receipt, ready to send.</h1><p class="intro">Three directions. Separate dashboard and mobile flows. Try a single Order or a group, then download the sample PDF or image.</p></div>
+      <span class="sample-label">Interactive workshop · sample data</span>
+    </header>
+    <section class="directions" aria-label="Design directions">
+      <button class="direction" data-direction="1"><span class="direction-top"><span>01</span><span class="tag">Fastest</span></span><div class="mini mini-one"><i></i><i></i><i class="paper-mini"></i></div><strong>Quick receipt</strong><span>Stay in the Order. A focused export sheet.</span></button>
+      <button class="direction" data-direction="2"><span class="direction-top"><span>02</span><span class="tag">Recommended</span></span><div class="mini mini-two"><i class="paper-mini"></i><i></i><i></i></div><strong>Preview & export</strong><span>Room to read. A document workspace on desktop; a dedicated preview on mobile.</span></button>
+      <button class="direction" data-direction="3"><span class="direction-top"><span>03</span><span class="tag">Compact</span></span><div class="mini mini-three"><i class="paper-mini"></i><i></i><i></i></div><strong>Receipt tray</strong><span>Review the files together. An export dialog and a mobile share tray.</span></button>
+    </section>
+    <div class="workshop-controls">
+      <div class="segmented" aria-label="Preview surface"><button data-surface="dashboard">Dashboard</button><button data-surface="mobile">Mobile</button></div>
+      <div class="segmented" aria-label="Order selection"><button data-scope="single">Single Order</button><button data-scope="group">Group of Orders</button></div>
+      <label class="select-control">Scenario <select id="scenario"><option value="normal">Normal</option><option value="partial">Part paid</option><option value="unpaid">Unpaid</option><option value="offline">Offline</option><option value="long">Many items</option><option value="failure">One export fails</option></select></label>
+      <label class="select-control">Theme <select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <button id="reset" class="quiet">Reset this flow</button>
+    </div>
+    <div class="stage-caption"><span id="direction-caption"></span><span id="flow-caption">Orders → Receipt → Preview → Download</span></div>
+    <section id="stage" aria-label="Interactive product preview"></section>
+    <div class="workshop-foot"><p><strong>Try it:</strong> open Receipt, switch PDF/Image, edit the thank-you note, step through group previews, prepare files and download. Back/Escape preserves your options. Reset clears this flow.</p><p>Sample downloads contain fictional data. No payment, Order, message or database is changed. Mobile is a browser design reference; native file sharing and production generation follow after a direction is selected.</p></div>
+    <section class="flow-notes" aria-label="Flow design notes"><div><p class="eyebrow">Dashboard</p><h2>Selection leads the flow.</h2><p>Receipt from the Order detail or row action. Group export from selected rows. A visible count, one document per Order, and recoverable individual failures.</p></div><div><p class="eyebrow">Mobile</p><h2>Preview, then save or share.</h2><p>Receipt from Order detail. Select mode for a group. Large targets, a retained preview and a bottom action within thumb reach. No desktop table squeezed into a phone.</p></div><div><p class="eyebrow">The document</p><h2>Actual Order facts.</h2><p>Order reference, items, total, received payment and balance. Paid, part-paid and unpaid labels tell the truth. Export creates no new invoice identity or debt.</p></div></section>
+  </main>
+  <script src="exports.js"></script>
+  <script src="workshop.js"></script>
+</body>
+</html>

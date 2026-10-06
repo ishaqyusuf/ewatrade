@@ -1,16 +1,26 @@
 "use client"
+
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useTRPC } from "@/trpc/client"
 import {
-  Button,
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  ComboboxValue,
   Field,
   FieldDescription,
   FieldLabel,
-  Input,
+  useComboboxAnchor,
 } from "@ewatrade/ui"
-
-import { useTRPC } from "@/trpc/client"
-
 import {
+  MAX_STOCK_CATEGORIES,
   type StockCategoryDraft,
   collectStockCategoryDraft,
   normalizeStockCategoryName,
@@ -33,6 +43,7 @@ export function StockCategoriesInput({
 }) {
   const trpc = useTRPC()
   const id = useId()
+  const anchor = useComboboxAnchor()
   const [error, setError] = useState<string | null>(null)
   const suggestions = useQuery(
     trpc.inventory.categorySuggestions.queryOptions(
@@ -40,12 +51,44 @@ export function StockCategoriesInput({
       { enabled: !disabled },
     ),
   )
-  function add(category?: StockCategoryDraft) {
+  const categories = new Map<string, StockCategoryDraft>()
+  for (const category of suggestions.data ?? []) {
+    categories.set(normalizeStockCategoryName(category.name).normalizedName, {
+      categoryNameId: category.id,
+      name: category.name,
+    })
+  }
+  for (const category of value) {
+    categories.set(
+      normalizeStockCategoryName(category.name).normalizedName,
+      category,
+    )
+  }
+  let custom: string | null = null
+  try {
+    if (input.trim() && !input.includes(",")) {
+      const normalized = normalizeStockCategoryName(input)
+      if (!categories.has(normalized.normalizedName)) {
+        custom = normalized.name
+        categories.set(normalized.normalizedName, { name: custom })
+      }
+    }
+  } catch {
+    // Selecting a name presents validation errors without interrupting typing.
+  }
+  const items = [...categories.values()].map((category) => category.name)
+  const selected = value.map((category) => category.name)
+  const atLimit = value.length >= MAX_STOCK_CATEGORIES
+
+  function add() {
+    if (disabled) return
     try {
       onChange(
-        collectStockCategoryDraft(
-          category ? [...value, category] : value,
-          category ? "" : input,
+        collectStockCategoryDraft(value, input).map(
+          (category) =>
+            categories.get(
+              normalizeStockCategoryName(category.name).normalizedName,
+            ) ?? category,
         ),
       )
       onInputChange("")
@@ -55,6 +98,7 @@ export function StockCategoriesInput({
     }
   }
   function change(text: string) {
+    if (disabled) return
     if (!text.includes(",")) {
       onInputChange(text)
       setError(null)
@@ -70,81 +114,116 @@ export function StockCategoriesInput({
       setError(failure instanceof Error ? failure.message : "Invalid category.")
     }
   }
-  const available =
-    suggestions.data?.filter(
-      (category) =>
-        !value.some(
-          (selected) =>
-            normalizeStockCategoryName(selected.name).normalizedName ===
-            normalizeStockCategoryName(category.name).normalizedName,
-        ),
-    ) ?? []
+
   return (
     <Field className="gap-2">
       <FieldLabel htmlFor={id}>Categories</FieldLabel>
-      <div className="flex flex-wrap gap-2">
-        {value.map((category, index) => (
-          <button
-            type="button"
-            key={category.name}
-            disabled={disabled}
-            aria-label={`Remove ${category.name}`}
-            onClick={() =>
-              onChange(value.filter((_, position) => position !== index))
-            }
-            className="rounded-full border border-border bg-muted px-3 py-1 text-sm"
-          >
-            {category.name} <span aria-hidden>×</span>
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <Input
-          id={id}
-          value={input}
+      <div className="flex items-start gap-2">
+        <Combobox
+          multiple
+          autoHighlight
           disabled={disabled}
-          maxLength={810}
-          onChange={(event) => change(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault()
-              add()
+          items={items}
+          value={selected}
+          inputValue={input}
+          onInputValueChange={change}
+          onValueChange={(names) => {
+            if (disabled) return
+            try {
+              const next = names.map(
+                (name) =>
+                  categories.get(
+                    normalizeStockCategoryName(name).normalizedName,
+                  ) ?? { name },
+              )
+              onChange(next.length ? collectStockCategoryDraft(next) : [])
+              onInputChange("")
+              setError(null)
+            } catch (failure) {
+              setError(
+                failure instanceof Error
+                  ? failure.message
+                  : "Invalid category.",
+              )
             }
           }}
-          aria-describedby={`${id}-help`}
-          placeholder="Egg collection, Row 1, Morning collection"
-        />
-        <Button
-          appearance="form"
-          type="button"
-          variant="outline"
-          disabled={disabled || !input.trim()}
-          onClick={() => add()}
         >
-          Add
-        </Button>
+          <ComboboxChips
+            ref={anchor}
+            appearance="form"
+            className="min-h-10 flex-1"
+          >
+            <ComboboxValue>
+              {(names: string[]) =>
+                names.map((name) => (
+                  <ComboboxChip key={name} removeLabel={`Remove ${name}`}>
+                    {name}
+                  </ComboboxChip>
+                ))
+              }
+            </ComboboxValue>
+            <ComboboxChipsInput
+              id={id}
+              className="min-w-40"
+              maxLength={810}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  input.trim() &&
+                  !event.currentTarget.getAttribute("aria-activedescendant")
+                ) {
+                  event.preventDefault()
+                  add()
+                }
+              }}
+              aria-describedby={`${id}-help`}
+              aria-invalid={Boolean(error)}
+              placeholder={
+                value.length
+                  ? "Add another category"
+                  : "Select or type a category"
+              }
+            />
+            <ComboboxTrigger
+              aria-label="Show saved categories"
+              disabled={disabled}
+            />
+          </ComboboxChips>
+          <ComboboxContent anchor={anchor}>
+            {!input.trim() && Boolean(suggestions.data?.length) ? (
+              <p className="px-3 pt-3 pb-1 text-xs text-muted-foreground">
+                Start typing to add a new category.
+              </p>
+            ) : null}
+            {suggestions.isPending || input.trim() ? (
+              <ComboboxEmpty>
+                {suggestions.isPending
+                  ? "Loading categories…"
+                  : "Type a valid category name to add it."}
+              </ComboboxEmpty>
+            ) : null}
+            <ComboboxList>
+              <ComboboxCollection>
+                {(name: string) => (
+                  <ComboboxItem
+                    key={name}
+                    value={name}
+                    disabled={atLimit && !selected.includes(name)}
+                  >
+                    {name === custom ? `Add “${name}”` : name}
+                  </ComboboxItem>
+                )}
+              </ComboboxCollection>
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       </div>
       <FieldDescription id={`${id}-help`}>
-        Choose a saved category or type a new one. Use commas or Enter to add up
-        to 10.
+        {atLimit
+          ? "10 categories selected. Remove one to add another."
+          : "Select multiple categories, or type a new name and press Enter. Commas also add names."}{" "}
+        Categories from saved activities become available next time.
       </FieldDescription>
-      {available.length ? (
-        <div className="flex flex-wrap gap-2" aria-label="Saved categories">
-          {available.map((category) => (
-            <button
-              type="button"
-              disabled={disabled}
-              key={category.id}
-              className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted"
-              onClick={() =>
-                add({ categoryNameId: category.id, name: category.name })
-              }
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
       {suggestions.isError ? (
         <p className="text-xs text-muted-foreground">
           Saved categories could not load. You can still enter a name.

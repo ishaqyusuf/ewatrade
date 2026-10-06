@@ -1,0 +1,9 @@
+{
+  "font_scale": "1.0",
+  "animator_duration_scale": "null",
+  "window_animation_scale": "1.0",
+  "transition_animation_scale": "1.0",
+  "enabled_accessibility_services": "null",
+  "accessibility_enabled": "0",
+  "talkBackNotifications": "false, flags=[ USER_SENSITIVE_WHEN_GRANTED]"
+}

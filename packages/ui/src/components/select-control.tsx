@@ -13,6 +13,7 @@ import {
 export type SelectOption<Value extends string | number = string> = {
   value: Value
   label: ReactNode
+  description?: ReactNode
   disabled?: boolean
 }
 
@@ -81,7 +82,16 @@ export function SelectControl<Value extends string | number = string>({
               value={option.value}
               disabled={option.disabled}
             >
-              {option.label}
+              {option.description ? (
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span>{option.label}</span>
+                  <span className="text-xs font-normal text-foreground/80">
+                    {option.description}
+                  </span>
+                </span>
+              ) : (
+                option.label
+              )}
             </SelectItem>
           ))}
         </SelectGroup>

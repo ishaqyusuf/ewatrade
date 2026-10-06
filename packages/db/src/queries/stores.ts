@@ -1,10 +1,10 @@
 import {
   BUSINESS_PROFILE_SCHEMA_VERSION,
-  isOperatingCurrencyCode,
   isBusinessProfileKey,
+  isOperatingCurrencyCode,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
-import { Prisma } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
@@ -289,4 +289,33 @@ export async function createTenantStore(
   }
 
   throw new Error("Unable to generate a unique store slug.")
+}
+
+/** Inline location creation is serialized per business so retries reuse a name. */
+export async function findOrCreateInventoryStore(
+  db: PrismaClient,
+  input: CreateTenantStoreInput,
+) {
+  const name = input.name.trim().replace(/\s+/g, " ")
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`inventory-stores:${input.tenantId}`}, 0))`
+    const stores = await tx.store.findMany({
+      where: { tenantId: input.tenantId, status: { not: "ARCHIVED" } },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        currencyCode: true,
+        status: true,
+      },
+      orderBy: { createdAt: "asc" },
+    })
+    const existing = stores.find(
+      (store) =>
+        store.name.trim().replace(/\s+/g, " ").toLocaleLowerCase() ===
+        name.toLocaleLowerCase(),
+    )
+    if (existing) return existing
+    return createTenantStore(tx, { ...input, name })
+  })
 }

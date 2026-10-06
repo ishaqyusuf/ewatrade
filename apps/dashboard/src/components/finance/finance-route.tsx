@@ -1,4 +1,5 @@
 import { PageLoading } from "@/components/dashboard/page-loading"
+import { loadFinanceBankFilterParams } from "@/hooks/finance-bank-filter-params"
 import { loadFinanceExpenseFilterParams } from "@/hooks/finance-expense-filter-params"
 import { loadFinanceSupplierFilterParams } from "@/hooks/finance-supplier-filter-params"
 import {
@@ -19,7 +20,7 @@ export async function FinanceRoute({
   view,
   searchParams,
 }: {
-  view: "overview" | "spending" | "accounts" | "reports" | "suppliers"
+  view: "overview" | "spending" | "accounts" | "reports" | "suppliers" | "bank"
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const session = await getServerSession()
@@ -32,9 +33,16 @@ export async function FinanceRoute({
     redirect("/")
   const queryClient = getQueryClient()
   const initialTableSettings =
-    view === "overview" || view === "spending" || view === "suppliers"
+    view === "overview" ||
+    view === "spending" ||
+    view === "suppliers" ||
+    view === "bank"
       ? await getInitialTableSettings(
-          view === "suppliers" ? "finance-suppliers" : "expenses",
+          view === "bank"
+            ? "finance-bank-statements"
+            : view === "suppliers"
+              ? "finance-suppliers"
+              : "expenses",
           {
             userId: session.user.id,
             tenantId: tenant.tenant.id,
@@ -42,6 +50,22 @@ export async function FinanceRoute({
         )
       : undefined
   const book = await queryClient.fetchQuery(trpc.finance.book.queryOptions())
+  if (book && view === "bank") {
+    const filter = await loadFinanceBankFilterParams((await searchParams) ?? {})
+    void queryClient.prefetchInfiniteQuery(
+      trpc.finance.bankStatements.list.infiniteQueryOptions(
+        {
+          bookId: book.id,
+          accountId: filter.bankAccountId || undefined,
+          limit: 30,
+        },
+        {
+          getNextPageParam: (page) => page.nextCursor ?? undefined,
+          retry: false,
+        },
+      ),
+    )
+  }
   if (book && view === "suppliers") {
     const filter = await loadFinanceSupplierFilterParams(
       (await searchParams) ?? {},

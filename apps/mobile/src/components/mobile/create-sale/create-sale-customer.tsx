@@ -73,7 +73,6 @@ export function CreateSaleCustomerStep({
           <View className={tone("px-2")}>
             <SaleStageHeader
               current={2}
-              description="Select a recent customer, add a new contact, or continue as a guest."
               onBack={() => {
                 setError(null)
                 setStep("items")
@@ -102,16 +101,14 @@ export function CreateSaleCustomerStep({
               />
             ) : null}
             <CustomerActionRow
-              description="Add name and optional contact details"
               icon="UserPlus"
               onPress={presentCustomerSheet}
               title="Create customer"
             />
             <CustomerActionRow
-              description="Register this sale as a walk-in order"
               icon="UserX"
               onPress={() => selectCustomer(null)}
-              title="Skip · Continue as guest"
+              title="Continue as guest"
             />
             <Text
               className={tone(

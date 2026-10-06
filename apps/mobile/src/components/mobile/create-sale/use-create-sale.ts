@@ -156,7 +156,11 @@ export function useCreateSale({
     step: SaleStep
   } | null>(null)
   const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
-  const businessId = useAuthContext().profile?.businessId
+  const profile = useAuthContext().profile
+  const businessId = profile?.businessId
+  const scopedStaff =
+    profile?.staffAccessMode === "SCOPED" &&
+    !["OWNER", "ADMIN"].includes(profile?.role?.toUpperCase() ?? "")
   const isOffline =
     offlineMode && isOfflineAccessAllowed(offlineAccessByBusinessId, businessId)
 
@@ -207,7 +211,7 @@ export function useCreateSale({
         query: isOffline ? undefined : deferredCustomerSearch || undefined,
       },
       {
-        enabled: !isOffline,
+        enabled: !isOffline && !scopedStaff,
         getNextPageParam: (lastPage) => lastPage.nextCursor,
         retry: false,
       },
@@ -221,7 +225,7 @@ export function useCreateSale({
   )
   const directoryCustomerCount = useQuery(
     trpc.customers.count.queryOptions(undefined, {
-      enabled: !isOffline,
+      enabled: !isOffline && !scopedStaff,
       retry: false,
     }),
   )
@@ -350,7 +354,7 @@ export function useCreateSale({
   const customersLoading =
     !isOffline &&
     (recentOrders.isPending ||
-      customerDirectory.isPending ||
+      (!scopedStaff && customerDirectory.isPending) ||
       customerSearch !== deferredCustomerSearch)
   const choicesLoading =
     !isOffline &&
@@ -370,7 +374,7 @@ export function useCreateSale({
   function retryCustomers() {
     if (isOffline) return
     void recentOrders.refetch()
-    void customerDirectory.refetch()
+    if (!scopedStaff) void customerDirectory.refetch()
   }
 
   function addPickerChoice(offering: OfferingRow) {
@@ -573,7 +577,9 @@ export function useCreateSale({
     setIsSavingCustomer(true)
     setCustomerDraftError(null)
     try {
-      if (isOffline) {
+      if (isOffline || scopedStaff) {
+        // Scoped staff capture the order contact snapshot without reading or
+        // creating a business-wide Customer directory identity.
         selectCustomer({
           email: email || undefined,
           id: `offline:${name.toLowerCase()}:${phone || email}`,
@@ -893,8 +899,8 @@ export function useCreateSale({
       fetchNextPage: () => recentOrders.fetchNextPage(),
     },
     customerDirectory: {
-      isPending: customerDirectory.isPending,
-      isError: customerDirectory.isError,
+      isPending: !scopedStaff && customerDirectory.isPending,
+      isError: !scopedStaff && customerDirectory.isError,
       error: {
         message:
           customerDirectory.error?.message ?? "Saved customers unavailable",

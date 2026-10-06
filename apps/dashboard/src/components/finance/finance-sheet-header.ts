@@ -1,5 +1,8 @@
 import type { FinanceSheetMode } from "@/hooks/use-finance-params"
 export const financeSheetTitles: Record<FinanceSheetMode, string> = {
+  "bank-import": "Import bank statement",
+  "bank-statement": "Review bank statement",
+  "bank-source": "Review original transaction",
   period: "Close or reopen a period",
   setup: "Set up finance",
   expense: "Record expense",

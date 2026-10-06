@@ -1,5 +1,12 @@
 import { auth } from "@ewatrade/auth"
 import {
+  OnboardingContinuationError,
+  onboardingDraftSchema,
+  readApprovedOnboarding,
+  saveApprovedOnboardingDraft,
+  verifyApprovedOnboardingEmail,
+} from "@ewatrade/db/onboarding-continuation"
+import {
   consumeMobileAppleChallenge,
   createMobileAppleChallenge,
   getMobileAppleChallenge,
@@ -22,6 +29,7 @@ import {
   dispatchEmailMessages,
   renderMobileOwnerOtpTemplate,
 } from "@ewatrade/email"
+import { AppError } from "@ewatrade/errors"
 import {
   BUSINESS_OPERATING_MODEL_KEYS,
   BUSINESS_ORDER_CHANNEL_KEYS,
@@ -51,6 +59,20 @@ import {
 } from "../init"
 
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email())
+const onboardingTokenSchema = z.string().regex(/^ea_[A-Za-z0-9_-]{43}$/)
+
+function onboardingFailure(error: unknown): never {
+  if (error instanceof OnboardingContinuationError)
+    throw new TRPCError({
+      code: error.code === "CONFLICT" ? "CONFLICT" : "PRECONDITION_FAILED",
+      cause: new AppError({ code: `ONBOARDING_${error.code}`, cause: error }),
+      message: error.message,
+    })
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Setup is temporarily unavailable. Try again.",
+  })
+}
 export const mobilePasswordSignInSchema = z
   .object({
     email: emailSchema,
@@ -132,6 +154,7 @@ function requireMobileSignupProfile(
 }
 
 const mobileOwnerAuthShape = {
+  accessToken: onboardingTokenSchema.optional(),
   ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]).optional(),
   addressLine1: z.string().trim().min(3).max(200).optional(),
   businessProfileKey: businessProfileKeySchema.optional(),
@@ -204,6 +227,7 @@ export const verifyMobileOwnerOtpSchema = z
 
 export const verifyMobileGoogleSchema = z
   .object({
+    accessToken: onboardingTokenSchema.optional(),
     ageBand: z.enum(["AGE_13_TO_15", "AGE_16_TO_17", "ADULT"]).optional(),
     ...mobileSignupLegalShape,
     addressLine1: z.string().trim().min(3).max(200).optional(),
@@ -286,6 +310,55 @@ export function shouldDispatchMobileOwnerOtpEmail(
 }
 
 export const authRouter = createTRPCRouter({
+  verifyMobileOnboardingEmail: publicProcedure
+    .input(
+      z.object({ token: z.string().regex(/^ear_[A-Za-z0-9_-]{43}$/) }).strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await ctx.db.$transaction(
+          (tx) => verifyApprovedOnboardingEmail(tx, input.token),
+          { maxWait: 10_000, timeout: 30_000 },
+        )
+      } catch (error) {
+        onboardingFailure(error)
+      }
+    }),
+  getMobileOnboarding: publicProcedure
+    .input(z.object({ token: onboardingTokenSchema }).strict())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { session, data } = await readApprovedOnboarding(
+          ctx.db,
+          input.token,
+        )
+        return {
+          expiresAt: session.expiresAt,
+          emailVerified: Boolean(data.emailVerifiedAt),
+          email: data.email,
+          fullName: data.fullName,
+          businessName: data.companyName ?? "",
+          phone: data.phone ?? "",
+          draft: data.draft ?? {},
+        }
+      } catch (error) {
+        onboardingFailure(error)
+      }
+    }),
+  saveMobileOnboardingDraft: publicProcedure
+    .input(
+      z
+        .object({ token: onboardingTokenSchema, draft: onboardingDraftSchema })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await saveApprovedOnboardingDraft(ctx.db, input)
+        return { saved: true }
+      } catch (error) {
+        onboardingFailure(error)
+      }
+    }),
   legalPublication: publicProcedure.query(() => {
     const publication = currentEffectiveLegalPublication()
     return publication
@@ -411,6 +484,8 @@ export const authRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof OnboardingContinuationError)
+          onboardingFailure(error)
         if (error instanceof MobileAccountNotFoundError)
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
@@ -465,6 +540,8 @@ export const authRouter = createTRPCRouter({
         try {
           return await createMobileOwnerOtp(ctx.db, input)
         } catch (error) {
+          if (error instanceof OnboardingContinuationError)
+            onboardingFailure(error)
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
@@ -520,6 +597,8 @@ export const authRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof OnboardingContinuationError)
+          onboardingFailure(error)
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
@@ -540,6 +619,7 @@ export const authRouter = createTRPCRouter({
         return await ctx.db.$transaction(
           (tx) =>
             verifyMobileGoogleIdentity(tx, {
+              accessToken: input.accessToken,
               ageBand: input.ageBand,
               addressLine1: input.addressLine1,
               businessProfileKey: input.businessProfileKey,
@@ -565,6 +645,8 @@ export const authRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof OnboardingContinuationError)
+          onboardingFailure(error)
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:

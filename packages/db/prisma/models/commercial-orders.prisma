@@ -146,7 +146,7 @@ model CommercialOrderLine {
   offeringId           String
   kind                 SellableOfferingKind
   quantity             Decimal                         @db.Decimal(38, 6)
-  unitPriceMinor       Int
+  unitPriceMinor       Int?
   discountMinor        Int                             @default(0)
   taxMinor             Int                             @default(0)
   totalMinor           Int
@@ -180,7 +180,8 @@ model OfferingSnapshot {
   offeringKind               SellableOfferingKind
   pricingPolicy              OfferingPricingPolicy
   currencyCode               String
-  unitPriceMinor             Int
+  unitPriceMinor             Int?
+  note                       String?
   quantity                   Decimal                     @db.Decimal(38, 6)
   discountMinor              Int                         @default(0)
   taxMinor                   Int                         @default(0)

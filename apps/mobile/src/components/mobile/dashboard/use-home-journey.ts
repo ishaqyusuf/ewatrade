@@ -1,5 +1,5 @@
 import { useAuthContext } from "@/hooks/use-auth"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
+import { canManageMobileStaff } from "@/lib/mobile-roles"
 import type { MobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
@@ -25,7 +25,7 @@ export function useHomeJourney(input: {
   const trpc = useTRPC()
   const canManage =
     input.enabled &&
-    canManageMobileOperations(profile?.role) &&
+    canManageMobileStaff(profile) &&
     (profile?.status?.toUpperCase() ?? "ACTIVE") === "ACTIVE"
   const storeId =
     profile?.storeId ??

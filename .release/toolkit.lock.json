@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "toolkitRevision": "fef51031b8964dcd8043ee5d6a7558e482e7055d",
-  "snapshotPath": ".release/toolkit/fef51031b8964dcd8043ee5d6a7558e482e7055d",
+  "toolkitRevision": "bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
+  "snapshotPath": ".release/toolkit/bf26b05e442e122a9e9ef14cb6a8eff5a9d565d7",
   "files": {
     "action/action.yml": "abc6212d3eb467c787bc6594632eab568d55c585d3b6a24e09d8b6c8604a1bd1",
     "bin/release-ci.ts": "f2437e7d0d9f4684204ba9f1ddd3b8d99abc82541c84dd051f754538336d9fcb",
@@ -20,7 +20,7 @@
     "src/release/gate.ts": "6dd9acee5b2cb3f8d4b5ce517ddd68fee02f77be0c28a01212dffd76c3069738",
     "src/release/git-changes.ts": "9d69b45fa9cb24854718929a76f09505951c96cf8cc1e2753b4d05083d48ac94",
     "src/release/graph.ts": "e3b673039d90e28f9d13beb702e8fb67f0027808301e03e7a6785e589466e39d",
-    "src/release/jobs.ts": "65f0beb480f57086957a6aad0e322debf661f353e5d56fd313ab1368ed4f822f",
+    "src/release/jobs.ts": "113b1f4fbe86e08213b3c5a1b4847450ff115a56c9478ce1539db0053cfa438e",
     "src/release/live-state.ts": "207eed5becd70b69d330c9118581d59fb4624c87c849f32d4ae666e64969d756",
     "src/release/manifest.ts": "ffb8b35b1661323304d7a1245aa248865111c451b6f16a5e55d649509bf17e29",
     "src/release/plan.ts": "1af2365a3a493b6c4708103d56c5b6ce5672bde8312ee3cd2822abe942d601ff",

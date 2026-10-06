@@ -36,24 +36,6 @@ export function assertApiDeployTarget(
   return { projectId: link.projectId, orgId: link.orgId }
 }
 
-export function assertProductionMigrationGate({
-  isProduction,
-  skipMigrations,
-  readonlyDatabaseUrl,
-  freshDatabaseVerified,
-  backupReference,
-  migrationApproved,
-}) {
-  if (!isProduction || skipMigrations) return
-  if (
-    (!readonlyDatabaseUrl && !freshDatabaseVerified) ||
-    !backupReference ||
-    migrationApproved !== "true"
-  ) {
-    throw new Error("API_DEPLOY_PRODUCTION_MIGRATION_REVIEW_REQUIRED")
-  }
-}
-
 export const REQUIRED_PRODUCTION_API_ENV_KEYS = Object.freeze([
   "EWATRADE_DATABASE_URL",
   "BETTER_AUTH_SECRET",

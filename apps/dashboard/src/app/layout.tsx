@@ -30,6 +30,24 @@ export const metadata: Metadata = {
   title: "ewatrade Dashboard",
   description:
     "Tenant dashboard for operations, catalog, orders, and logistics management.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      {
+        url: "/brand/ewatrade-mark-precision-rise-v1.svg",
+        type: "image/svg+xml",
+        sizes: "any",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/brand/ewatrade-mark-precision-rise-v1-reverse.svg",
+        type: "image/svg+xml",
+        sizes: "any",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    apple: "/brand/ewatrade-mark-precision-rise-v1.png",
+  },
 }
 
 export default function RootLayout({
@@ -42,6 +60,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn(
         "ewatrade-dashboard",
         hedvigSans.variable,

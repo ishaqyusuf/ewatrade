@@ -21,22 +21,35 @@ import {
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { usePathname } from "next/navigation"
 
 type Props = {
   ctx: TenantContext
+  selection?: "workspace" | "business" | "store"
   isExpanded?: boolean
   onNavigate?: () => void
 }
 
 export function WorkspaceDropdown({
   ctx,
+  selection = "workspace",
   isExpanded = false,
   onNavigate,
 }: Props) {
-  const { error, isSwitching, switchStore, switchTenant } =
+  const { error, isSwitching, switchStore, switchTenant, switchAllStores } =
     useWorkspaceSwitch(ctx)
-  const storeName = ctx.activeStore?.name ?? ctx.tenant.slug
-  const hasChoices = ctx.tenants.length > 1 || ctx.stores.length > 1
+  const pathname = usePathname()
+  const allStores =
+    ctx.inventoryScope === "all" && pathname.startsWith("/inventory")
+  const storeName = allStores
+    ? "All stores"
+    : (ctx.activeStore?.name ?? ctx.tenant.slug)
+  const showBusinesses = selection !== "store" && ctx.tenants.length > 1
+  const showStores =
+    selection !== "business" &&
+    (ctx.stores.length > 1 ||
+      Boolean(ctx.storeSelectionNeedsRepair && ctx.stores.length))
+  const hasChoices = showBusinesses || showStores
 
   return (
     <div className="min-w-0">
@@ -47,7 +60,11 @@ export function WorkspaceDropdown({
               type="button"
               variant="ghost"
               disabled={!hasChoices || isSwitching}
-              aria-label={`Business ${ctx.tenant.name}, store ${storeName}`}
+              aria-label={
+                selection === "store"
+                  ? `Store: ${storeName}`
+                  : `Business ${ctx.tenant.name}, store ${storeName}`
+              }
               title={`${ctx.tenant.name} · ${storeName}`}
               className={
                 isExpanded
@@ -64,16 +81,21 @@ export function WorkspaceDropdown({
           }
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-none border border-border bg-muted text-foreground">
-            <HugeiconsIcon icon={Building02Icon} className="size-4" />
+            <HugeiconsIcon
+              icon={selection === "store" ? Store04Icon : Building02Icon}
+              className="size-4"
+            />
           </span>
           {isExpanded ? (
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">
-                {ctx.tenant.name}
+                {selection === "store" ? storeName : ctx.tenant.name}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {isSwitching ? "Switching…" : storeName}
-              </span>
+              {selection !== "store" || isSwitching ? (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {isSwitching ? "Switching…" : storeName}
+                </span>
+              ) : null}
             </span>
           ) : null}
           {isExpanded && hasChoices ? (
@@ -90,7 +112,7 @@ export function WorkspaceDropdown({
           sideOffset={8}
           className="w-64"
         >
-          {ctx.tenants.length > 1 ? (
+          {showBusinesses ? (
             <DropdownMenuGroup>
               <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Businesses
@@ -115,15 +137,32 @@ export function WorkspaceDropdown({
             </DropdownMenuGroup>
           ) : null}
 
-          {ctx.tenants.length > 1 && ctx.stores.length > 1 ? (
+          {showBusinesses && showStores ? (
             <DropdownMenuSeparator className="my-1" />
           ) : null}
 
-          {ctx.stores.length > 1 ? (
+          {showStores ? (
             <DropdownMenuGroup>
               <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Stores
+                {ctx.storeSelectionNeedsRepair
+                  ? "Select a Store to refresh access"
+                  : "Stores"}
               </DropdownMenuLabel>
+              {ctx.membership.staffAccessMode !== "SCOPED" ||
+              ["OWNER", "ADMIN"].includes(ctx.membership.role) ? (
+                <DropdownMenuItem
+                  disabled={isSwitching}
+                  onClick={() => void switchAllStores(onNavigate)}
+                >
+                  All stores{" "}
+                  {allStores ? (
+                    <HugeiconsIcon
+                      icon={Tick02Icon}
+                      className="ml-auto size-4"
+                    />
+                  ) : null}
+                </DropdownMenuItem>
+              ) : null}
               {ctx.stores.map((store) => (
                 <DropdownMenuItem
                   key={store.id}
@@ -136,7 +175,7 @@ export function WorkspaceDropdown({
                     className="size-4 text-muted-foreground"
                   />
                   <span className="min-w-0 flex-1 truncate">{store.name}</span>
-                  {store.id === ctx.activeStore?.id ? (
+                  {!allStores && store.id === ctx.activeStore?.id ? (
                     <HugeiconsIcon icon={Tick02Icon} className="size-4" />
                   ) : null}
                 </DropdownMenuItem>

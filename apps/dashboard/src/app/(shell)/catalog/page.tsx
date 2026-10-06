@@ -13,6 +13,7 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
+import { canStaffPerform } from "@ewatrade/auth/store-access"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
@@ -38,7 +39,11 @@ export default async function CatalogRoutePage({
     redirect("/login?error=no_tenant")
   }
 
-  if (!canManageProductCatalog(ctx.membership.role)) {
+  if (
+    !(ctx.staffAccess?.mode === "SCOPED"
+      ? canStaffPerform(ctx.staffAccess, "catalog")
+      : canManageProductCatalog(ctx.membership.role))
+  ) {
     redirect("/")
   }
 
@@ -66,6 +71,16 @@ export default async function CatalogRoutePage({
         },
       ),
     ),
+    ...(typeof params.catalogDetail === "string" && params.catalogDetail
+      ? [
+          prefetch(
+            trpc.catalog.detail.overview.queryOptions({
+              itemId: params.catalogDetail,
+              storeId: store.id,
+            }),
+          ),
+        ]
+      : []),
     ...(typeof params.productUnits === "string" && params.productUnits
       ? [prefetch(trpc.catalog.listItems.queryOptions({}))]
       : []),

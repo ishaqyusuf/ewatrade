@@ -1,5 +1,6 @@
 import {
   type FinanceCashCommandSource,
+  FinanceCommandNotSentError,
   FinanceCommandRecoveryError,
   type FinanceCommandRecoveryMetadata,
   type FinanceCommandScope,
@@ -269,6 +270,10 @@ export function createFinanceCommandRunner(
       try {
         await write(current.command.clientCommandId)
       } catch (failure) {
+        if (failure instanceof FinanceCommandNotSentError && !uncertainRetry) {
+          await clear(current)
+          throw failure
+        }
         // Recovered retries remain uncertain even after a later rejection.
         const status = await runtime
           .status(current.command.clientCommandId)

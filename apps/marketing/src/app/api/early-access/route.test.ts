@@ -3,7 +3,9 @@ import { NextRequest } from "next/server"
 
 const realEmail = await import("@ewatrade/email")
 const dispatch = mock(
-  async (messages: import("@ewatrade/email").EmailMessage[]) =>
+  async (
+    messages: import("@ewatrade/email").EmailMessage[],
+  ): Promise<import("@ewatrade/email").EmailDispatchResult[]> =>
     messages.map((message) => ({
       message,
       status: "sent" as const,
@@ -96,6 +98,7 @@ const keys = [
   "VERCEL_ENV",
   "EMAIL_QA_DOMAIN_ROUTES",
   "NEXT_PUBLIC_MARKETING_URL",
+  "NEXT_PUBLIC_DASHBOARD_URL",
   "MARKETING_INBOX_EMAILS",
   "EMAIL_REPLY_TO",
 ] as const
@@ -109,6 +112,7 @@ beforeEach(() => {
   process.env.APP_ENV = "production"
   process.env.VERCEL_ENV = "production"
   process.env.NEXT_PUBLIC_MARKETING_URL = "https://www.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://ewatrade.com/dashboard"
   process.env.MARKETING_INBOX_EMAILS = "review@example.com"
   process.env.EMAIL_QA_DOMAIN_ROUTES = '{"ishaq.qa.test":"tester@example.com"}'
   dispatch.mockImplementation(async (messages) =>
@@ -167,17 +171,38 @@ async function approvePending() {
   return approve(request(`/api/early-access/approve?token=${pending().token}`))
 }
 
-test("ordinary request sends only review email and cannot be used for signup", async () => {
+test("ordinary request sends reviewer and applicant emails without granting signup", async () => {
   const response = await submit()
   const body = await response.json()
   expect(response.status).toBe(200)
   expect(body.message).toContain("after approval")
   expect(body.qaPreview).toBeUndefined()
   expect(sessions.size).toBe(1)
-  expect(dispatch.mock.lastCall?.[0].map((message) => message.to)).toEqual([
+  expect(dispatch.mock.calls[0]?.[0].map((message) => message.to)).toEqual([
     "review@example.com",
   ])
-  expect(dispatch.mock.lastCall?.[0][0]?.text).toContain("Approve early access")
+  expect(dispatch.mock.calls[0]?.[0][0]?.text).toContain("Approve early access")
+  expect(dispatch).toHaveBeenCalledTimes(2)
+  const confirmation = dispatch.mock.lastCall?.[0][0]
+  expect(confirmation?.to).toBe(input.email)
+  expect(confirmation?.subject).toBe(
+    "We received your EwaTrade early access request",
+  )
+  expect(confirmation?.text).toContain("Hi QA.")
+  expect(confirmation?.text).toContain(input.companyName)
+  expect(confirmation?.html).toContain("Awaiting review")
+  expect(confirmation?.text).toContain("If approved")
+  for (const content of [confirmation?.html, confirmation?.text]) {
+    expect(content).not.toContain(pending().token)
+    expect(content).not.toContain("Approve early access")
+    expect(content).not.toContain("Create your workspace")
+    expect(content).not.toContain("Link expires")
+  }
+  expect(lead.metadata.requestDelivery).toMatchObject({ sent: 1, failed: 0 })
+  expect(lead.metadata.requestConfirmationDelivery).toMatchObject({
+    sent: 1,
+    failed: 0,
+  })
   expect(lead.metadata.intake).toMatchObject({
     setupNeeds: ["inventory", "sales"],
   })
@@ -260,12 +285,19 @@ test("production QA walks request, approval and verification inline and delivers
     (await verify(new NextRequest(verificationBody.qaPreview.accessUrl)))
       .status,
   ).toBe(303)
-  expect(dispatch).toHaveBeenCalledTimes(3)
+  expect(dispatch).toHaveBeenCalledTimes(4)
   expect(
     dispatch.mock.calls.flatMap(([messages]) =>
       messages.map((message) => message.to),
     ),
-  ).toEqual(["tester@example.com", "tester@example.com", "tester@example.com"])
+  ).toEqual([
+    "tester@example.com",
+    "tester@example.com",
+    "tester@example.com",
+    "tester@example.com",
+  ])
+  expect(dispatch.mock.calls[0]?.[0][0]?.text).toContain("Approve early access")
+  expect(dispatch.mock.calls[1]?.[0][0]?.html).toContain("Awaiting review")
 })
 test("invalid, expired and consumed approvals cannot grant setup", async () => {
   expect(
@@ -291,7 +323,7 @@ test("delivery failure is surfaced and approval delivery can retry the same setu
   dispatch.mockImplementation(async (messages) =>
     messages.map((message) => ({
       message,
-      status: "failed" as never,
+      status: "failed",
       provider: "fixture",
     })),
   )
@@ -312,6 +344,32 @@ test("unconfigured admin recipients do not falsely acknowledge an ordinary reque
   Reflect.deleteProperty(process.env, "EMAIL_REPLY_TO")
   expect((await submit()).status).toBe(503)
   expect(dispatch).not.toHaveBeenCalled()
+})
+test("review delivery failure does not send an applicant confirmation", async () => {
+  dispatch.mockImplementation(async (messages) =>
+    messages.map((message) => ({ message, status: "failed" })),
+  )
+  expect((await submit()).status).toBe(502)
+  expect(dispatch).toHaveBeenCalledTimes(1)
+  expect(lead.metadata.requestDelivery).toMatchObject({ sent: 0, failed: 1 })
+  expect(lead.metadata.requestConfirmationDelivery).toBeUndefined()
+})
+test("applicant delivery failure is surfaced separately from successful review delivery", async () => {
+  dispatch.mockImplementation(async (messages) =>
+    messages.map((message) => ({
+      message,
+      status: message.to === input.email ? "failed" : "sent",
+    })),
+  )
+  expect((await submit()).status).toBe(502)
+  expect(dispatch).toHaveBeenCalledTimes(2)
+  expect(lead.metadata.requestDelivery).toMatchObject({ sent: 1, failed: 0 })
+  expect(lead.metadata.requestConfirmationDelivery).toMatchObject({
+    sent: 0,
+    failed: 1,
+  })
+  expect(sessions.size).toBe(1)
+  expect(pending().completed).toBe(false)
 })
 test("Preview rejects request, approval, verification and verify before any writes", async () => {
   process.env.VERCEL_ENV = "preview"
@@ -378,4 +436,30 @@ test("incomplete business context is rejected before persistence", async () => {
     ).status,
   ).toBe(400)
   expect(writes).toBe(0)
+})
+
+test("old marketing invitations verify into dashboard and approval retries email dashboard links", async () => {
+  await submit()
+  await approvePending()
+  approved().formData.accessUrl = `https://www.ewatrade.com/signup?access_token=${approved().token}`
+  await approvePending()
+  expect(dispatch.mock.lastCall?.[0][0]?.text).toContain(
+    "https://ewatrade.com/dashboard/signup?access_token=",
+  )
+  await verification(
+    request("/api/early-access/verification", {
+      accessToken: approved().token,
+    }),
+  )
+  expect(dispatch.mock.lastCall?.[0][0]?.text).toContain(
+    "https://ewatrade.com/dashboard/api/early-access/verify?token=",
+  )
+  const confirmed = await verify(
+    request(
+      `/api/early-access/verify?token=${sessionOfKind("early_access_verification").token}`,
+    ),
+  )
+  expect(confirmed.headers.get("location")).toBe(
+    `https://ewatrade.com/dashboard/signup?access_token=${approved().token}`,
+  )
 })

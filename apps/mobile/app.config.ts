@@ -14,24 +14,34 @@ const { withGoogleSignInModularHeaders } =
 export const UPDATE_VERSION = "2026.09.22"
 
 const PROJECT = {
-  default: {
-    id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
-    slug: "ewatrade",
-    owner: "cipron-startups",
-  },
-  fallback: {
-    id: "5d765962-42a1-4a9e-a01c-122149c3cec4",
-    slug: "ewatrade-2",
-    owner: "startups-2",
-  },
+  id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b",
+  slug: "ewatrade",
+  owner: "cipron-startups",
 }
-const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT.default
-const appVariant =
-  process.env.APP_VARIANT ??
-  process.env.EXPO_PUBLIC_APP_VARIANT ??
-  (process.env.EAS_BUILD_PROFILE === "development" ? "development" : undefined)
-
-const normalizedAppVariant = (appVariant ?? "production").toLowerCase()
+const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT
+const { resolveAppVariant } = require("./app-variant.cjs") as {
+  resolveAppVariant: (env: NodeJS.ProcessEnv) => string
+}
+const normalizedAppVariant = resolveAppVariant({
+  APP_ENV: process.env.APP_ENV,
+  APP_VARIANT: process.env.APP_VARIANT,
+  EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
+  EAS_BUILD_PROFILE: process.env.EAS_BUILD_PROFILE,
+})
+const { getOnboardingLinkConfig } = require("./onboarding-link-config.cjs") as {
+  getOnboardingLinkConfig: (
+    variant: string,
+    configured?: string,
+  ) => {
+    dashboardUrl: string
+    host: string | null
+    paths: string[]
+  } | null
+}
+const onboardingLinks = getOnboardingLinkConfig(
+  normalizedAppVariant,
+  process.env.EXPO_PUBLIC_DASHBOARD_URL,
+)
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
 const isPreviewBuild = normalizedAppVariant === "preview"
@@ -70,12 +80,12 @@ const variantConfig = isDevelopmentBuild
       splashBackgroundColor: "#1769B0",
       splashDarkBackgroundColor: "#082B3B",
       icons: {
-        app: "./assets/icons/dev-loading-icon.png",
-        adaptive: "./assets/icons/dev-adaptive-icon.png",
-        iosDark: "./assets/icons/dev-ios-dark.png",
-        iosLight: "./assets/icons/dev-ios-light.png",
-        splashDark: "./assets/icons/dev-splash-logo-dark.png",
-        splashLight: "./assets/icons/dev-splash-logo.png",
+        app: "./assets/icons/dev-precision-rise-loading-icon.png",
+        adaptive: "./assets/icons/dev-precision-rise-adaptive-icon.png",
+        iosDark: "./assets/icons/dev-precision-rise-ios-dark.png",
+        iosLight: "./assets/icons/dev-precision-rise-ios-light.png",
+        splashDark: "./assets/icons/dev-precision-rise-splash-logo-dark.png",
+        splashLight: "./assets/icons/dev-precision-rise-splash-logo.png",
       },
     }
   : isPreviewBuild
@@ -88,12 +98,13 @@ const variantConfig = isDevelopmentBuild
         splashBackgroundColor: "#25123B",
         splashDarkBackgroundColor: "#170B25",
         icons: {
-          app: "./assets/icons/preview-loading-icon.png",
-          adaptive: "./assets/icons/preview-adaptive-icon.png",
-          iosDark: "./assets/icons/preview-ios-dark.png",
-          iosLight: "./assets/icons/preview-ios-light.png",
-          splashDark: "./assets/icons/preview-splash-logo-dark.png",
-          splashLight: "./assets/icons/preview-splash-logo.png",
+          app: "./assets/icons/preview-precision-rise-loading-icon.png",
+          adaptive: "./assets/icons/preview-precision-rise-adaptive-icon.png",
+          iosDark: "./assets/icons/preview-precision-rise-ios-dark.png",
+          iosLight: "./assets/icons/preview-precision-rise-ios-light.png",
+          splashDark:
+            "./assets/icons/preview-precision-rise-splash-logo-dark.png",
+          splashLight: "./assets/icons/preview-precision-rise-splash-logo.png",
         },
       }
     : {
@@ -105,23 +116,20 @@ const variantConfig = isDevelopmentBuild
         splashBackgroundColor: "#FFF8E9",
         splashDarkBackgroundColor: "#08372A",
         icons: {
-          app: "./assets/icons/loading-icon.png",
-          adaptive: "./assets/icons/adaptive-icon.png",
-          iosDark: "./assets/icons/ios-dark.png",
-          iosLight: "./assets/icons/ios-light.png",
-          splashDark: "./assets/icons/splash-logo-dark.png",
-          splashLight: "./assets/icons/splash-logo.png",
+          app: "./assets/icons/precision-rise-loading-icon.png",
+          adaptive: "./assets/icons/precision-rise-adaptive-icon.png",
+          iosDark: "./assets/icons/precision-rise-ios-dark.png",
+          iosLight: "./assets/icons/precision-rise-ios-light.png",
+          splashDark: "./assets/icons/precision-rise-splash-logo-dark.png",
+          splashLight: "./assets/icons/precision-rise-splash-logo.png",
         },
       }
 
 const nativeSplashImageLight =
   nativeSplashDesign === "market-day"
-    ? "./assets/icons/market-pulse-splash-mark.png"
+    ? variantConfig.icons.splashDark
     : variantConfig.icons.splashLight
-const nativeSplashImageDark =
-  nativeSplashDesign === "market-day"
-    ? "./assets/icons/market-pulse-splash-mark.png"
-    : variantConfig.icons.splashDark
+const nativeSplashImageDark = variantConfig.icons.splashDark
 const nativeSplashBackgroundColor =
   nativeSplashDesign === "market-day"
     ? "#17684F"
@@ -176,7 +184,12 @@ const config: ExpoConfig = {
   },
   ios: {
     usesAppleSignIn: true,
-    associatedDomains: [`applinks:${customerChatHost}`],
+    associatedDomains: [
+      ...new Set([
+        `applinks:${customerChatHost}`,
+        ...(onboardingLinks?.host ? [`applinks:${onboardingLinks.host}`] : []),
+      ]),
+    ],
     supportsTablet: true,
     bundleIdentifier: variantConfig.iosBundleIdentifier,
     infoPlist: {
@@ -208,6 +221,20 @@ const config: ExpoConfig = {
     predictiveBackGestureEnabled: false,
     package: variantConfig.androidPackage,
     intentFilters: [
+      ...(onboardingLinks?.host
+        ? [
+            {
+              action: "VIEW",
+              autoVerify: true,
+              category: ["BROWSABLE", "DEFAULT"],
+              data: onboardingLinks.paths.map((path) => ({
+                scheme: "https",
+                host: onboardingLinks.host ?? undefined,
+                path,
+              })),
+            },
+          ]
+        : []),
       {
         action: "VIEW",
         autoVerify: true,
@@ -224,9 +251,11 @@ const config: ExpoConfig = {
   },
   web: {
     output: "static",
-    favicon: "./assets/images/favicon.png",
+    favicon: "./assets/images/precision-rise-favicon.png",
   },
   plugins: [
+    "./plugins/with-variant-link-schemes.cjs",
+    "./plugins/with-app-update.cjs",
     "./plugins/with-foreground-audio-only.cjs",
     "./plugins/with-ios-pod-deployment-target.cjs",
     "expo-apple-authentication",
@@ -305,6 +334,7 @@ const config: ExpoConfig = {
     reactCompiler: true,
   },
   extra: {
+    onboardingDashboardUrl: onboardingLinks?.dashboardUrl,
     appVariant: normalizedAppVariant,
     autoUpdateOnForeground,
     autoUpdateForegroundCooldownMs: Number.isFinite(

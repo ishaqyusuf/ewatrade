@@ -3,10 +3,14 @@
 import { useQueryStates } from "nuqs"
 import { parseAsString, parseAsStringLiteral } from "nuqs/server"
 import { useCallback } from "react"
+import { financeBankFilterParams } from "./finance-bank-filter-params"
 import { financeExpenseFilterParams } from "./finance-expense-filter-params"
 import { financeSupplierFilterParams } from "./finance-supplier-filter-params"
 
 export const financeSheetModes = [
+  "bank-import",
+  "bank-statement",
+  "bank-source",
   "setup",
   "period",
   "expense",
@@ -28,6 +32,9 @@ export type FinanceSheetMode = (typeof financeSheetModes)[number]
 export function useFinanceParams() {
   const [params, setParams] = useQueryStates({
     financeSheet: parseAsStringLiteral(financeSheetModes),
+    statementId: parseAsString,
+    bankSourceEntryId: parseAsString,
+    bankSourceAccountId: parseAsString,
     billId: parseAsString,
     moneyEntryId: parseAsString,
     countId: parseAsString,
@@ -37,6 +44,7 @@ export function useFinanceParams() {
     reportFrom: parseAsString,
     reportThrough: parseAsString,
     reportSnapshot: parseAsString,
+    ...financeBankFilterParams,
     ...financeExpenseFilterParams,
     ...financeSupplierFilterParams,
   })
@@ -44,6 +52,9 @@ export function useFinanceParams() {
     () =>
       setParams({
         financeSheet: null,
+        statementId: null,
+        bankSourceEntryId: null,
+        bankSourceAccountId: null,
         billId: null,
         countId: null,
         moneyEntryId: null,

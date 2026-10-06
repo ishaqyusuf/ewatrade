@@ -49,8 +49,8 @@ const checks = [
     ],
   },
   {
-    file: "components/mobile/floating-theme-toggle.tsx",
-    markers: ['pathname.startsWith("/business-switch-modal")'],
+    file: "components/mobile/floating-qa-button.tsx",
+    markers: ['pathname.endsWith("-modal")'],
   },
   {
     file: "components/mobile/new-business-onboarding-screen.tsx",

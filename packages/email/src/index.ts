@@ -95,6 +95,10 @@ export * from "../templates/mobile-owner-otp"
 export * from "../templates/store-conversation-notification"
 export * from "../templates/store-notification-verification"
 export * from "../templates/workspace-welcome"
+export * from "../templates/account-deletion-verification"
+export * from "../templates/account-privacy-outcome"
+export * from "../templates/account-privacy-notice-alert"
+export * from "../templates/play-refund-review-alert"
 export * from "./qa-email-routing"
 
 export function createEmailMessage(message: EmailMessage) {

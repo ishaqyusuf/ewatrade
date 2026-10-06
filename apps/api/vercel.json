@@ -2,5 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "bunVersion": "1.x",
   "framework": "hono",
+  "buildCommand": "node ../../scripts/build-api-vercel.mjs",
   "rewrites": [{ "source": "/health", "destination": "/api/health" }]
 }

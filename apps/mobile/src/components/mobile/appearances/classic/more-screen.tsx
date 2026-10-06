@@ -83,9 +83,6 @@ export function ClassicMoreHeader({
         <Text className="text-[34px] font-extrabold tracking-tight text-foreground">
           More
         </Text>
-        <Text className="mt-1 text-sm text-muted-foreground">
-          Manage your store and account.
-        </Text>
       </View>
       <Pressable
         accessibilityLabel={

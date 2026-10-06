@@ -328,3 +328,73 @@ describe("tenant store queries", () => {
     })
   })
 })
+
+test("inline store creation reuses normalized names before checking limits", async () => {
+  const { findOrCreateInventoryStore } = await import("./stores")
+  const { client, calls } = createMockStoreDb({ storeCount: 3 })
+  const existing = {
+    id: "existing",
+    name: "  Main   STORE ",
+    slug: "main-store",
+    currencyCode: "NGN",
+    status: "ACTIVE",
+  }
+  let locked = false
+  const tx = {
+    ...client,
+    $executeRaw: async (parts: TemplateStringsArray, ...values: unknown[]) => {
+      expect(parts.join("?")).toContain("pg_advisory_xact_lock")
+      expect(values).toEqual(["inventory-stores:tenant_123"])
+      locked = true
+      return 1
+    },
+    store: {
+      ...client.store,
+      findMany: async ({ where }: { where: unknown }) => {
+        expect(locked).toBe(true)
+        expect(where).toEqual({
+          tenantId: "tenant_123",
+          status: { not: "ARCHIVED" },
+        })
+        return [existing]
+      },
+    },
+  }
+  const db = {
+    $transaction: async (run: (value: typeof tx) => unknown) => run(tx),
+  }
+  const result = await findOrCreateInventoryStore(
+    db as unknown as import("../../generated/prisma/client").PrismaClient,
+    { tenantId: "tenant_123", name: "main store", currencyCode: "NGN" },
+  )
+  expect(result).toEqual(existing)
+  expect(calls).toEqual([])
+})
+
+test("inline store creation inherits currency and never creates product or stock copies", async () => {
+  const { findOrCreateInventoryStore } = await import("./stores")
+  const { client, calls } = createMockStoreDb()
+  const tx = {
+    ...client,
+    $executeRaw: async () => 1,
+    store: { ...client.store, findMany: async () => [] },
+  }
+  const db = {
+    $transaction: async (run: (value: typeof tx) => unknown) => run(tx),
+  }
+  await findOrCreateInventoryStore(
+    db as unknown as import("../../generated/prisma/client").PrismaClient,
+    { tenantId: "tenant_123", name: "  Branch   two  ", currencyCode: "NGN" },
+  )
+  expect(getCall(calls, "store.create")?.data).toMatchObject({
+    tenantId: "tenant_123",
+    name: "Branch two",
+    currencyCode: "NGN",
+    status: "ACTIVE",
+  })
+  expect(
+    calls
+      .filter((call) => call.kind.endsWith(".create"))
+      .map((call) => call.kind),
+  ).toEqual(["store.create"])
+})

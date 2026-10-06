@@ -45,6 +45,7 @@ export function StaffInviteModal({
             ) : null}
             <StaffInviteContent
               key={storeId}
+              storeId={storeId}
               onClose={close}
               onInvited={onInvited}
             />

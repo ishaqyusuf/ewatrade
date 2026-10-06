@@ -5,7 +5,7 @@ import { createCatalogFixture } from "@/internal-tooling/fixture-recipes"
 import { getCatalogItemSaveReadiness } from "@/lib/catalog-item-save-readiness"
 import { resolveCatalogOptionUnitPriceMinor } from "@/lib/catalog-option-pricing"
 import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
+import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
@@ -29,6 +29,7 @@ import {
   getCatalogOptionValueSuggestions,
   resolveCatalogFormGuidance,
 } from "@ewatrade/utils/business-catalog-guidance"
+import type { CatalogCategorySuggestion } from "@ewatrade/utils/catalog-category-suggestions"
 import { EXACT_CANONICAL_MAX_SCALE } from "@ewatrade/utils/exact-decimal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
@@ -57,8 +58,6 @@ import {
   unitKey,
 } from "./catalog-setup-model"
 import type { CatalogVariantDraft } from "./catalog-variant-model"
-import type { CatalogCategorySuggestion } from "@ewatrade/utils/catalog-category-suggestions"
-import { useCategorySuggestions } from "./use-category-suggestions"
 import {
   removeSellingUnitPreservingFactors,
   requireSellingUnitFactor,
@@ -68,6 +67,7 @@ import {
   type CatalogImageDraft,
   useCatalogImageDraft,
 } from "./use-catalog-image-draft"
+import { useCategorySuggestions } from "./use-category-suggestions"
 
 type SetupConfirmation =
   | { kind: "replace"; helper: CatalogSetupHelper | null }
@@ -97,7 +97,7 @@ export function useCatalogSetup({
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
-  const canManage = canManageMobileOperations(profile?.role)
+  const canManage = canEditMobileCatalog(profile)
   const busy = useRef(false)
   const completed = useRef(false)
   const mounted = useRef(true)

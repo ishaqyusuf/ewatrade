@@ -7,6 +7,7 @@ import { MarketDayAutoUpdateScreen } from "@/components/mobile/appearances/marke
 import { normalizeDownloadProgress } from "@/components/mobile/updates/updates-presentation"
 import { useLaunchAutoUpdate } from "@/hooks/use-launch-auto-update"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
+import { AppBuildUpdate } from "./app-build-update"
 import { Modal } from "react-native"
 
 // This existing full-screen host is an app-lifecycle surface, not a compact
@@ -34,24 +35,27 @@ export function AppAutoUpdateModal() {
         ? "The update has downloaded. Preparing to restart."
         : "Restarting into the updated app."
   return (
-    <Modal
-      animationType="fade"
-      onRequestClose={failed ? dismissFailure : () => undefined}
-      presentationStyle="fullScreen"
-      visible={visible}
-    >
-      <Presentation
-        title={title}
-        message={message}
-        failed={failed}
-        downloading={phase === "downloading"}
-        progress={normalizeDownloadProgress(downloadProgress)}
-        onContinue={dismissFailure}
-        steps={AUTO_UPDATE_STEPS.map((label) => ({
-          label,
-          ...getAutoUpdateStepState(phase, label),
-        }))}
-      />
-    </Modal>
+    <>
+      <AppBuildUpdate />
+      <Modal
+        animationType="fade"
+        onRequestClose={failed ? dismissFailure : () => undefined}
+        presentationStyle="fullScreen"
+        visible={visible}
+      >
+        <Presentation
+          title={title}
+          message={message}
+          failed={failed}
+          downloading={phase === "downloading"}
+          progress={normalizeDownloadProgress(downloadProgress)}
+          onContinue={dismissFailure}
+          steps={AUTO_UPDATE_STEPS.map((label) => ({
+            label,
+            ...getAutoUpdateStepState(phase, label),
+          }))}
+        />
+      </Modal>
+    </>
   )
 }

@@ -19,7 +19,7 @@ export async function reviewCatalogPhoto<T>(input: {
   scope: CatalogPhotoScope
   photo: CatalogStoredPhoto
   provider: CatalogPhotoReviewProvider
-  read(): Promise<Uint8Array>
+  read(signal: AbortSignal): Promise<Uint8Array>
   commit(verdict: {
     sourceDigest: string
     displayDigest: string
@@ -28,6 +28,7 @@ export async function reviewCatalogPhoto<T>(input: {
     verdict: "APPROVED" | "REJECTED"
   }): Promise<T>
   signal?: AbortSignal
+  heicWorkerUrl?: URL
 }) {
   const scope = { ...input.scope }
   const photo = { ...input.photo }
@@ -49,7 +50,8 @@ export async function reviewCatalogPhoto<T>(input: {
   const signal = input.signal
     ? AbortSignal.any([input.signal, AbortSignal.timeout(30_000)])
     : AbortSignal.timeout(30_000)
-  const bytes = await input.read()
+  const bytes = await input.read(signal)
+  signal.throwIfAborted()
   if (
     bytes.byteLength !== photo.sizeBytes ||
     createHash("sha256").update(bytes).digest("hex") !== photo.contentDigest
@@ -59,6 +61,7 @@ export async function reviewCatalogPhoto<T>(input: {
     bytes,
     contentType: photo.contentType,
     signal,
+    heicWorkerUrl: input.heicWorkerUrl,
   })
   let abort = () => {}
   try {

@@ -30,6 +30,29 @@ function flatten(items: DashboardNavItem[]): DashboardNavItem[] {
 }
 
 describe("dashboard navigation policy", () => {
+  test("Store settings are available only to business administrators", () => {
+    for (const role of ["OWNER", "ADMIN"]) {
+      expect(canAccessDashboardPath("/settings/stores", role, context())).toBe(
+        true,
+      )
+      expect(
+        flatten(getDashboardNavigation(role, context())).some(
+          (item) => item.href === "/settings/stores",
+        ),
+      ).toBe(true)
+    }
+    for (const role of ["MANAGER", "OPERATOR", "CASHIER"]) {
+      expect(canAccessDashboardPath("/settings/stores", role, context())).toBe(
+        false,
+      )
+      expect(
+        flatten(getDashboardNavigation(role, context())).some(
+          (item) => item.href === "/settings/stores",
+        ),
+      ).toBe(false)
+    }
+  })
+
   test("keeps permitted primary pages available when a new business has no records", () => {
     const ownerItems = getDashboardNavigation("OWNER", context())
 
@@ -74,7 +97,7 @@ describe("dashboard navigation policy", () => {
       "/settings",
     ])
     expect(adminItems).toEqual(ownerItems)
-    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(23)
+    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(28)
   })
 
   test("nests every existing Finance, Reports, and Settings page", () => {
@@ -91,6 +114,7 @@ describe("dashboard navigation policy", () => {
       "/finance/spending",
       "/finance/accounts",
       "/finance/suppliers",
+      "/customer-ledger",
       "/finance/reports",
     ])
     expect(reports?.children?.map((item) => item.href)).toEqual([
@@ -100,6 +124,8 @@ describe("dashboard navigation policy", () => {
     ])
     expect(settings?.children?.map((item) => item.href)).toEqual([
       "/settings",
+      "/settings/stores",
+      "/settings/receipts",
       "/settings/domains",
       "/settings/channels",
       "/settings/service-commerce",
@@ -283,4 +309,35 @@ describe("dashboard navigation policy", () => {
     expect(getDashboardRoleLabel("OWNER")).toBe("Owner")
     expect(getDashboardRoleLabel(null)).toBe("Guest")
   })
+})
+
+test("Inventory exposes permitted Operations and Stock transfers children", () => {
+  const inventory = getDashboardNavigation("OWNER", context()).find(
+    (item) => item.href === "/inventory",
+  )
+  expect(inventory?.children?.map((item) => item.href)).toEqual([
+    "/inventory/operations",
+    "/inventory/transfers",
+  ])
+  expect(
+    canAccessDashboardPath("/inventory/operations", "OPERATOR", context()),
+  ).toBe(false)
+  expect(
+    canAccessDashboardPath("/inventory/transfers", "OWNER", context()),
+  ).toBe(true)
+})
+
+test("scoped roles expose orders and stock without catalog or staff administration", () => {
+  const scope = context({ staffAccessMode: "SCOPED", catalogEditor: false })
+  expect(canAccessDashboardPath("/inventory", "OPERATOR", scope)).toBe(true)
+  expect(canAccessDashboardPath("/inventory", "CASHIER", scope)).toBe(false)
+  expect(canAccessDashboardPath("/staff", "MANAGER", scope)).toBe(false)
+  expect(canAccessDashboardPath("/catalog", "MANAGER", scope)).toBe(false)
+  expect(
+    canAccessDashboardPath("/catalog", "MANAGER", {
+      ...scope,
+      catalogEditor: true,
+    }),
+  ).toBe(true)
+  expect(canAccessDashboardPath("/finance", "MANAGER", scope)).toBe(false)
 })

@@ -7,7 +7,7 @@ const required = [
   "src/components/mobile/domains/domain-management-content.tsx",
   "src/components/mobile/domains/domain-management-presentation.ts",
   "src/components/mobile/domains/domain-owner-form.tsx",
-  "src/components/mobile/floating-theme-toggle.tsx",
+  "src/components/mobile/floating-qa-button.tsx",
 ]
 
 for (const file of required) {
@@ -71,10 +71,10 @@ if (!domainContent.includes('className="min-h-11 self-start')) {
   )
 }
 
-const themeToggle = await readFile(path.join(root, required[4]), "utf8")
-if (!themeToggle.includes('pathname.startsWith("/domain-management-modal")')) {
+const floatingQa = await readFile(path.join(root, required[4]), "utf8")
+if (!floatingQa.includes('pathname.endsWith("-modal")')) {
   throw new Error(
-    "The floating development theme toggle must stay hidden on the domain route.",
+    "The floating development QA button must stay hidden on the domain route.",
   )
 }
 

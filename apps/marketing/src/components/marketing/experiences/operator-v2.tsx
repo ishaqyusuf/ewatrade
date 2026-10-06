@@ -1,3 +1,4 @@
+import { getDashboardSignupUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 import {
   Analytics01Icon,
   ArrowRight01Icon,
@@ -124,7 +125,7 @@ function Brand() {
 function PrimaryCta({ signupEnabled }: { signupEnabled: boolean }) {
   return (
     <a
-      href={signupEnabled ? "/signup" : "#early-access"}
+      href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
       className="group inline-flex min-h-12 items-center justify-center gap-3 bg-[#ff6f3d] px-5 text-sm font-semibold text-[#10251d] transition hover:bg-[#ff845d] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff6f3d]"
     >
       {signupEnabled ? "Create your workspace" : "Request early access"}
@@ -407,7 +408,7 @@ export function OperatorV2Landing({ signupEnabled }: MarketingExperienceProps) {
             </a>
           </div>
           <a
-            href={signupEnabled ? "/signup" : "#early-access"}
+            href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
             className="inline-flex min-h-10 items-center border border-[#10251d] px-4 text-xs font-semibold transition hover:bg-[#10251d] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff6f3d]"
           >
             {signupEnabled ? "Get started" : "Get early access"}

@@ -14,6 +14,7 @@ import {
   recordVerifiedCatalogPhotoUpload,
 } from "@ewatrade/db/catalog-photos"
 import { QaProviderPolicyError } from "@ewatrade/utils/qa-provider-policy"
+import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
@@ -50,6 +51,11 @@ export function registerCatalogPhotoUploadRoutes(app: OpenAPIHono) {
         complete: (photo) =>
           recordVerifiedCatalogPhotoUpload(ctx.db, scope, photo),
       })
+      // The verified receipt is already committed. A dispatch failure must not
+      // turn a successful upload into a failed client command; recovery scans it.
+      await enqueueCatalogPhotoReview(parsed.data.assetId).catch(
+        () => undefined,
+      )
       return context.json(result, 200)
     } catch (error) {
       if (context.req.raw.body && !context.req.raw.body.locked) {

@@ -1,5 +1,11 @@
 import type { IconKeys } from "@/components/ui/icon"
 import type { MobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
+import {
+  canEditMobileCatalog,
+  canManageMobileStaff,
+  canManageMobileStock,
+  normalizeMobileRole,
+} from "./mobile-roles"
 
 export type AdminCreateAction = {
   detail: string
@@ -14,8 +20,13 @@ export type AdminCreateAction = {
 export function buildAdminCreateActions(
   availability: MobileWorkspaceFeatureAvailability,
   isOffline: boolean,
+  profile?: {
+    role?: string
+    staffAccessMode?: "LEGACY" | "SCOPED"
+    catalogEditor?: boolean
+  } | null,
 ): AdminCreateAction[] {
-  return [
+  const actions: AdminCreateAction[] = [
     {
       detail: "A stock-tracked item you sell.",
       disabled: isOffline,
@@ -75,4 +86,17 @@ export function buildAdminCreateActions(
       statusLabel: availability.hasProductItems ? undefined : "Product",
     },
   ]
+  if (!profile) return actions
+  const scopedStaff =
+    profile.staffAccessMode === "SCOPED" &&
+    !["OWNER", "ADMIN"].includes(normalizeMobileRole(profile.role))
+  return actions.filter((action) => {
+    if (action.label === "Product" || action.label === "Service")
+      return canEditMobileCatalog(profile)
+    if (action.label === "Staff") return canManageMobileStaff(profile)
+    if (action.label === "Customer") return !scopedStaff
+    if (action.label === "Stock Entry")
+      return canManageMobileStock(profile.role, profile.staffAccessMode)
+    return true
+  })
 }

@@ -9,7 +9,7 @@
       "final-100-dark-established-unready-middle",
       "final-100-dark-established-unready-bottom"
     ],
-    "visualAcceptance": "pending review"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   },
   {
     "state": "team-unknown",
@@ -21,7 +21,7 @@
       "final-100-dark-team-unknown-middle",
       "final-100-dark-team-unknown-bottom"
     ],
-    "visualAcceptance": "pending review"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   },
   {
     "state": "team-existing",
@@ -33,7 +33,7 @@
       "final-100-dark-team-existing-middle",
       "final-100-dark-team-existing-bottom"
     ],
-    "visualAcceptance": "pending review"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   },
   {
     "state": "team-restricted",
@@ -45,6 +45,6 @@
       "final-100-dark-team-restricted-middle",
       "final-100-dark-team-restricted-bottom"
     ],
-    "visualAcceptance": "pending review"
+    "visualAcceptance": "reviewed: scene layout/theme; named capture may retain restored scroll offset; not motion/edge acceptance"
   }
 ]

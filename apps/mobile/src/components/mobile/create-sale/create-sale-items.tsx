@@ -56,14 +56,13 @@ export function CreateSaleItems({
     <View>
       <SaleStageHeader
         current={1}
-        description="Build the order one item at a time, then enter the quantity for each selection."
         title={itemKind === "service" ? "New service order" : "New order"}
       />
       {isOffline ? (
         <View className={tone("pb-4")}>
           <StatusBanner
             icon="Wind"
-            message="The order will be provisional until its Offering, price, configuration, and balance snapshots are accepted during sync."
+            message="Pending sync. Items, prices and stock must be checked before confirmation."
             title="Offline order"
             tone="warning"
           />

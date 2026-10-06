@@ -1,8 +1,5 @@
 import { useAuthContext } from "@/hooks/use-auth"
-import {
-  canManageMobileOperations,
-  normalizeMobileRole,
-} from "@/lib/mobile-roles"
+import { canManageMobileStaff, normalizeMobileRole } from "@/lib/mobile-roles"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -16,9 +13,9 @@ import {
   useState,
 } from "react"
 import {
-  mapStaffMember,
   STAFF_RESULT_LIMIT,
   STAFF_SEARCH_LIMIT,
+  mapStaffMember,
 } from "./staff-model"
 import { useStaffInvitation } from "./use-staff-invitation"
 
@@ -28,7 +25,7 @@ export function useStaffDirectory(onComplete?: () => void) {
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const role = normalizeMobileRole(profile?.role)
   const canManage =
-    canManageMobileOperations(role) &&
+    canManageMobileStaff(profile) &&
     (profile?.status?.toUpperCase() ?? "ACTIVE") === "ACTIVE"
   const canReadBilling = role === "OWNER" || role === "ADMIN"
   const identity =
@@ -71,7 +68,7 @@ export function useStaffDirectory(onComplete?: () => void) {
         active.id === profile?.id &&
         active.businessId === profile?.businessId &&
         (!active.storeId || active.storeId === storeId) &&
-        canManageMobileOperations(active.role) &&
+        canManageMobileStaff(active) &&
         (active.status?.toUpperCase() ?? "ACTIVE") === "ACTIVE",
     )
   }, [profile?.id, profile?.businessId, storeId])

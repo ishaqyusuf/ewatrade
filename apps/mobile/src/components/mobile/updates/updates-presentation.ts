@@ -9,6 +9,11 @@ export type AutoUpdatePresentationProps = {
   progress: number | null
   steps: UpdateStep[]
   onContinue: () => void
+  primaryLabel?: string
+  primaryDisabled?: boolean
+  onPrimary?: () => void
+  secondaryLabel?: string
+  onSecondary?: () => void
 }
 
 export type UpdatesPresentationProps = {

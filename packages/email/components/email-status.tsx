@@ -12,8 +12,14 @@ export function EmailStatus({
   tone?: EmailStatusTone
 }) {
   const colors = {
-    attention: { background: "#fff0e9", color: emailPalette.warning },
-    live: { background: "#ebffd0", color: emailPalette.success },
+    attention: {
+      background: emailPalette.warningBackground,
+      color: emailPalette.warning,
+    },
+    live: {
+      background: emailPalette.successBackground,
+      color: emailPalette.success,
+    },
     neutral: { background: emailPalette.quiet, color: emailPalette.muted },
   }[tone]
 
@@ -21,17 +27,14 @@ export function EmailStatus({
     <Text
       style={{
         backgroundColor: colors.background,
-        border: `1px solid ${emailPalette.borderStrong}`,
-        borderRadius: 0,
+        borderRadius: "4px",
         color: colors.color,
         display: "inline-block",
-        fontSize: "9px",
-        fontWeight: 900,
-        letterSpacing: "0.12em",
-        lineHeight: "16px",
-        margin: "0 0 18px",
-        padding: "5px 8px",
-        textTransform: "uppercase",
+        fontSize: "12px",
+        fontWeight: 700,
+        lineHeight: "20px",
+        margin: "0 0 22px",
+        padding: "4px 10px",
       }}
     >
       {label}

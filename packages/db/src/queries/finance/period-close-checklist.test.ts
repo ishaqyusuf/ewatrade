@@ -3,6 +3,7 @@ import { financePeriodCloseChecklistSchema } from "../../../../../apps/api/src/s
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { getFinancePeriodCloseChecklist as checklist } from "./period-close-checklist"
 import { getFinanceReports } from "./reports"
+import { financePayloadHash } from "./rules"
 
 const input = {
   tenantId: "tenant",
@@ -58,6 +59,10 @@ function fixture() {
     asOf: input.through,
     snapshotSequence: 7n,
     observedBalanceMinor: 100000n,
+    expectedBalanceMinor: 100000n,
+    actorUserId: "owner",
+    reference: "Closing count",
+    createdAt: new Date("2026-01-01T00:00:00Z"),
   }
   const state = {
     authorized: true,
@@ -71,7 +76,28 @@ function fixture() {
   }
   const calls = { options: null as unknown, reads: [] as unknown[] }
   const tx = {
-    $queryRaw: async () => [],
+    $queryRaw: async (query: { sql?: string }) =>
+      query.sql?.includes('"FinanceReconciliation"')
+        ? state.counts
+            .slice(0, 1)
+            .map((row) => ({ id: row.id, expectedMinor: "100000" }))
+        : [],
+    financeCommand: {
+      findMany: async () =>
+        state.counts.slice(0, 1).map((row) => ({
+          id: `command-${row.id}`,
+          bookId: "book",
+          kind: "CASH_COUNT",
+          actorUserId: row.actorUserId,
+          result: { id: row.id },
+          payloadHash: financePayloadHash({
+            accountId: row.accountId,
+            asOf: row.asOf,
+            observedBalanceMinor: row.observedBalanceMinor,
+            reference: row.reference,
+          }),
+        })),
+    },
     financeFiscalCloseEvent: { findMany: async () => [] },
     financeJournalEntry: { findMany: async () => [] },
     financeFiscalCalendar: { findUnique: async () => null },

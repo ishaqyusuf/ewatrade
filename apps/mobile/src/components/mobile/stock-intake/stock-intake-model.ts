@@ -28,7 +28,7 @@ export const STOCK_MODES = [
   {
     key: "count",
     label: "Count",
-    description: "Record an observed quantity, then finalize its variance.",
+    description: "Count stock, then confirm any difference.",
   },
   {
     key: "adjustment",

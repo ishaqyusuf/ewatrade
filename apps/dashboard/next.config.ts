@@ -1,6 +1,10 @@
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { shouldUploadSourceMaps } from "@ewatrade/observability"
+import {
+  onboardingRequestLogIgnore,
+  onboardingSignupResponseHeaders,
+} from "@ewatrade/onboarding/lib/onboarding-request-logging"
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
@@ -48,11 +52,36 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
 }
 
 const nextConfig: NextConfig = {
+  logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
+  async headers() {
+    return [{ source: "/signup", headers: onboardingSignupResponseHeaders }]
+  },
+  pageExtensions: isInternalQaBuild()
+    ? ["qa.ts", "tsx", "ts", "jsx", "js"]
+    : ["tsx", "ts", "jsx", "js"],
+  turbopack: {
+    resolveAlias: isInternalQaBuild()
+      ? {}
+      : {
+          "@ewatrade/onboarding/components/qa/qa-web-accelerator":
+            "../../packages/onboarding/src/components/qa/qa-web-accelerator.production.tsx",
+          "@ewatrade/onboarding/components/qa/qa-quick-fill-button":
+            "../../packages/onboarding/src/components/qa/qa-quick-fill-button.production.tsx",
+          "@ewatrade/onboarding/hooks/use-qa-form-fill":
+            "../../packages/onboarding/src/hooks/use-qa-form-fill.production.ts",
+          "@ewatrade/onboarding/lib/qa-fill-definitions":
+            "../../packages/onboarding/src/lib/qa-fill-definitions.production.ts",
+          "@/components/qa/qa-login-entry":
+            "./src/components/qa/qa-login-entry.production.tsx",
+        },
+  },
   reactStrictMode: true,
   // Vercel's basic build machine repeatedly exhausts memory in Next's
   // duplicate type-check worker. CI/package type checks remain authoritative.
   typescript: { ignoreBuildErrors: process.env.VERCEL === "1" },
   transpilePackages: [
+    "@ewatrade/order-receipts",
+    "@ewatrade/onboarding",
     "@ewatrade/events",
     "@ewatrade/catalog",
     "@ewatrade/api",
@@ -68,6 +97,38 @@ const nextConfig: NextConfig = {
   webpack(config, { webpack }) {
     if (!isInternalQaBuild()) {
       const replacements: Array<[RegExp, string]> = [
+        [
+          /@ewatrade\/onboarding\/components\/qa\/qa-web-accelerator$/,
+          resolve(
+            appRoot,
+            "../../packages/onboarding/src/components/qa/qa-web-accelerator.production.tsx",
+          ),
+        ],
+        [
+          /@ewatrade\/onboarding\/components\/qa\/qa-quick-fill-button$/,
+          resolve(
+            appRoot,
+            "../../packages/onboarding/src/components/qa/qa-quick-fill-button.production.tsx",
+          ),
+        ],
+        [
+          /@ewatrade\/onboarding\/hooks\/use-qa-form-fill$/,
+          resolve(
+            appRoot,
+            "../../packages/onboarding/src/hooks/use-qa-form-fill.production.ts",
+          ),
+        ],
+        [
+          /@ewatrade\/onboarding\/lib\/qa-fill-definitions$/,
+          resolve(
+            appRoot,
+            "../../packages/onboarding/src/lib/qa-fill-definitions.production.ts",
+          ),
+        ],
+        [
+          /[\\/]components[\\/]qa[\\/]qa-login-entry(?:\.[cm]?[jt]sx?)?$/,
+          resolve(appRoot, "src/components/qa/qa-login-entry.production.tsx"),
+        ],
         [
           /[\\/]components[\\/]qa[\\/]fixture-recipes(?:\.[cm]?[jt]sx?)?$/,
           resolve(appRoot, "src/components/qa/fixture-recipes.production.ts"),

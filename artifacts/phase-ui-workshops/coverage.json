@@ -1,0 +1,1180 @@
+{
+  "studies": 38,
+  "directions": 114,
+  "taskCount": 171,
+  "tasks": [
+    {
+      "id": "P00-01",
+      "text": "Approve the phased release boundaries, dashboard-first import UI, dashboard/mobile image/invoice/share coverage and representative pilot businesses. Native import UI and standalone screenshot/photo-to-record extraction remain explicit scope options.",
+      "studies": []
+    },
+    {
+      "id": "P00-02",
+      "text": "Review the latest pricing matrix, one-business ownership, branches, trial, founding-price lock, core feature access and Enterprise treatment. Distinguish adoption from this consolidation.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P00-03",
+      "text": "Set Product-sharing/public-store access per plan or free launch policy; resolve its relationship to existing Store-owned Publish Site entitlement. Do not silently add a paywall or remove an accepted entitlement.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P00-04",
+      "text": "Choose free public-image reuse or the older paid-license marketplace. Recommended MVP: permitted free reuse, coins for AI. Amend ADR-0005 only after that choice is accepted; record the larger conditional paid branch in Phase 14.",
+      "studies": [
+        "public-images"
+      ]
+    },
+    {
+      "id": "P00-05",
+      "text": "Confirm business-owned coins across Stores, separate wallets across businesses, actor/Store attribution, staff spend limits, no initial transfers/cash-out and proposed no purchased-coin expiry. Decide whether import AI is included, budgeted for a pilot or separately charged.",
+      "studies": [
+        "coin-wallet",
+        "coin-limits"
+      ]
+    },
+    {
+      "id": "P00-06",
+      "text": "Approve successful-deliverable AI charging, failure/rejection refunds, uncertain provider-result recovery, reference retention and fresh-variation pricing. Declining to apply a delivered image does not automatically refund generation.",
+      "studies": [
+        "coin-quote"
+      ]
+    },
+    {
+      "id": "P00-07",
+      "text": "Confirm one invoice per selected Order as default. Distinguish sales invoice, actual-payment receipt, internal spending voucher and an optional consolidated customer invoice.",
+      "studies": [
+        "consolidated-invoice"
+      ]
+    },
+    {
+      "id": "P00-08",
+      "text": "Set eligible invoice sources/states, historical import cutoffs, role rules, file/row/sheet/image limits and retention. The source import plan proposes 30-day raw-original retention, with unresolved data/media copied durably before expiry; approve or revise that value. Pin outstanding decisions to the phase that needs them rather than guessing values.",
+      "studies": []
+    },
+    {
+      "id": "P00-09",
+      "text": "Prove a minimal local apex routing spike for `/{businessSlug}` and `/{businessSlug}/{productSlug}`, assets, metadata and refresh; inventory reserved marketing/API/token paths and existing slug conflicts. Queue deployed Preview proof under its required environment authorization.",
+      "studies": []
+    },
+    {
+      "id": "P00-10",
+      "text": "Inspect relevant Midday analogues and prepare file-level UI responsibilities before web implementation. Approve template/preset/batch starting assumptions: three invoice templates, six photo presets, one output and up to 50 Orders per batch are proposals to validate.",
+      "studies": []
+    },
+    {
+      "id": "P01-01",
+      "text": "Define scoped actor/Tenant/Store authority, stable command identities, payload digests, revisions and retry results across all protected domains. Keep same-Tenant foreign keys explicit.",
+      "studies": []
+    },
+    {
+      "id": "P01-02",
+      "text": "Define import runs/datasets/staging/commit receipts, bounded `meta` envelopes, retained-data locators, media/job relationships and proposed document identities. Choose minimal models/modules after inspecting existing work.",
+      "studies": []
+    },
+    {
+      "id": "P01-03",
+      "text": "Assign extra data to Customer, shared Catalog Item, variant, Offering, Order or line correctly; overflow uses durable references, and unsupported sheets remain independent datasets. Original values/source coordinates are preserved before AI succeeds.",
+      "studies": []
+    },
+    {
+      "id": "P01-04",
+      "text": "Use server-only private storage for import files/chunks, scoped Catalog assets and branding. Reuse the provider boundary while defining distinct ownership, retention and publication policies; bytes/base64 never enter `meta`.",
+      "studies": []
+    },
+    {
+      "id": "P01-05",
+      "text": "Establish Trigger.dev conventions for bounded stages, identifier-only jobs, progress, cancellation, checkpoint recovery and reconciliation of uncertain external calls. Keep each domain's state machine and atomic receipt separate.",
+      "studies": [
+        "support-operations"
+      ]
+    },
+    {
+      "id": "P01-06",
+      "text": "Introduce the smallest server AI boundary following the inspected GND structured-output pattern: configured provider/model, validated schemas, timeout/abort, bounded retries/repair and safe classified errors. Recheck supported versions before installing dependencies.",
+      "studies": []
+    },
+    {
+      "id": "P01-07",
+      "text": "Define a versioned supported-import contract and template registry, mandatory/optional groups, relationships, compatibility adapters and processing modes. Templates derive from supported domain operations, not arbitrary Prisma columns.",
+      "studies": []
+    },
+    {
+      "id": "P01-08",
+      "text": "Keep domain writes repository-owned and quote pricing server-owned; protect all reads/retries/commits against stale membership and Store context. Maintainer gap-log access is separate from merchant permissions.",
+      "studies": []
+    },
+    {
+      "id": "P01-09",
+      "text": "Apply only approved additive Prisma changes using generated root development migrations, required `bun db:migrate --local` and `bun db:push --local`, plus client generation. Do not hand-author migrations or reset shared drift.",
+      "studies": []
+    },
+    {
+      "id": "P01-10",
+      "text": "Prove tenant isolation, atomic graphs/receipts, raw-value recovery, storage expiry protection for unresolved data and provider-unavailable behavior. Update actual API/database contracts and approved ADRs as implementation lands.",
+      "studies": []
+    },
+    {
+      "id": "P02-01",
+      "text": "Revalidate existing Catalog photo source/tests and provisioning status. Complete only missing provider setup/transport/verification and prove real upload → Item save → restart → refetch with owned fixtures.",
+      "studies": [
+        "media-upload"
+      ]
+    },
+    {
+      "id": "P02-02",
+      "text": "Decode actual bytes, validate type/size/dimensions/resources, strip location metadata, normalize supported HEIC/HEIF and derive readable thumbnails. Conversion is distinct from content screening.",
+      "studies": [
+        "media-upload"
+      ]
+    },
+    {
+      "id": "P02-03",
+      "text": "Support PNG/JPG/WebP logos and transparent backgrounds; require sanitization/controlled rasterization for SVG before accepting it. Keep PDF/exotic logo extraction a separately selected adapter.",
+      "studies": [
+        "media-upload"
+      ]
+    },
+    {
+      "id": "P02-04",
+      "text": "Integrate a trusted exact-byte review verdict and protected preview/delivery. Pending/rejected bytes stay private; clients cannot grant approval, see storage credentials or obtain arbitrary provider URLs.",
+      "studies": [
+        "media-upload"
+      ]
+    },
+    {
+      "id": "P02-05",
+      "text": "Define gallery promotion from an actor-private upload to a reusable business asset, explicit cross-Store permissions and many-Product associations. Do not broaden current attached/actor preview rights silently.",
+      "studies": [
+        "media-library"
+      ]
+    },
+    {
+      "id": "P02-06",
+      "text": "Add reviewed title/description/category/profile tags, origin/dimensions, ordering and lineage. Reuse current business-profile and approved category contracts; logos/private references are separate private media uses.",
+      "studies": [
+        "media-library"
+      ]
+    },
+    {
+      "id": "P02-07",
+      "text": "Build `My images` first in Gallery with search/filter/pagination, preview, choose, attach, replace/remove and gallery-only upload. Show a truthful Public images availability state until Phase 14.",
+      "studies": [
+        "media-library"
+      ]
+    },
+    {
+      "id": "P02-08",
+      "text": "Distinguish detachment from deletion, warn about other usages, preserve originals and implement safe orphan/expiry cleanup. Reconcile Tenant-deletion provider bytes; metadata cascade alone does not prove byte deletion.",
+      "studies": [
+        "media-usage"
+      ]
+    },
+    {
+      "id": "P02-09",
+      "text": "Complete dashboard and mobile upload/camera/library flows, permissions, progress/cancel/reconnect and retained draft state. Verify both existing native appearances where affected.",
+      "studies": [
+        "media-library",
+        "media-upload"
+      ]
+    },
+    {
+      "id": "P02-10",
+      "text": "Prove upload/save/reuse on a second authorized Product, unsafe-media refusal, foreign-scope denial, replacement/removal and cleanup with runtime/device evidence. Provider configuration failures must be actionable.",
+      "studies": [
+        "media-usage"
+      ]
+    },
+    {
+      "id": "P03-01",
+      "text": "Build bounded CSV, TSV/delimited TXT, plain TXT and single-sheet XLSX parsing. Handle encoding/BOM/delimiters, multiline cells, duplicate headers, dates, leading zeros and missing/empty/zero/false distinctly.",
+      "studies": [
+        "import-entry"
+      ]
+    },
+    {
+      "id": "P03-02",
+      "text": "Inventory all workbook sheets immediately, including hidden/unselected sheets, merged cells, totals and media. Preserve raw/formatted/cached formula values and coordinates; never execute formulas or fetch external links. PDF, Word, macro-enabled and encrypted workbook ingestion remain excluded unless separately added; XLS has its own Phase 10 proof gate.",
+      "studies": [
+        "import-entry"
+      ]
+    },
+    {
+      "id": "P03-03",
+      "text": "Generate selectable Customer/Product/Service/Order CSV/XLSX samples from versioned contracts, including required dependencies, optional groups, allowed values, instructions and blank/synthetic examples. Never export actual business data as sample rows.",
+      "studies": [
+        "import-samples"
+      ]
+    },
+    {
+      "id": "P03-04",
+      "text": "Put stable template versions/field IDs in Excel manifests or documented CSV columns; support exact unambiguous registry matching without markers. Separate CSV downloads represent multiple entities; one CSV has no workbook tabs.",
+      "studies": [
+        "import-samples"
+      ]
+    },
+    {
+      "id": "P03-05",
+      "text": "Recognize actual compatible structure, reordered columns, omitted optional fields and reviewed old-version adapters. Reject required-field omissions, forged/unknown versions and ambiguous layout; markers/filenames grant no bypass.",
+      "studies": [
+        "import-entry"
+      ]
+    },
+    {
+      "id": "P03-06",
+      "text": "Process compatible templates deterministically with zero AI calls, including background summaries. Retain extra custom columns; require an explicit AI-mapping choice for incompatible layouts rather than silently calling a provider.",
+      "studies": [
+        "import-entry"
+      ]
+    },
+    {
+      "id": "P03-07",
+      "text": "For non-template input, use bounded AI to propose mapping, classification/transformations and uncertain text extraction against allowlisted domain contracts. Apply approved reusable rules deterministically across rows.",
+      "studies": [
+        "import-entry"
+      ]
+    },
+    {
+      "id": "P03-08",
+      "text": "Stage all results and show original source, editable mapping, unknown-field disposition, duplicate decisions, required errors and create/update/skip/effect counts. Paginate large previews; confidence never replaces validation.",
+      "studies": [
+        "import-mapping"
+      ]
+    },
+    {
+      "id": "P03-09",
+      "text": "Build one URL-owned dashboard modal: Download sample / Upload → Detect or analyze → Review → Confirm → Progress/result, with feature-specific target and general mode prepared for Phase 10.",
+      "studies": [
+        "import-entry"
+      ]
+    },
+    {
+      "id": "P03-10",
+      "text": "Persist/reopen review and progress; bind confirmation to source/mapping/schema/permission revisions and effects. Support cancellation, bounded retry and explicit partial results without preview domain writes.",
+      "studies": [
+        "import-mapping",
+        "job-recovery"
+      ]
+    },
+    {
+      "id": "P03-11",
+      "text": "Verify malicious/prompt-injection input, decompression limits, truncated output, ambiguous dates, missing formula caches and stale confirmation. Reconcile every field/record to mapped, retained, failed or explicitly skipped outcomes.",
+      "studies": [
+        "import-mapping"
+      ]
+    },
+    {
+      "id": "P03-12",
+      "text": "Prove generate/populate/upload/recognize/validate/confirm/refetch with a fail-if-called AI stub, provider outage, extra fields, removed/forged markers, old versions and malformed data. Any priced AI analysis uses the approved policy or an explicit controlled pilot budget until Phase 12 is accepted.",
+      "studies": [
+        "import-mapping"
+      ]
+    },
+    {
+      "id": "P04-01",
+      "text": "Deliver Customer Import first, with feature sample choices, template and AI paths, preview/commit/result/refetch and explicit supported create/update/skip behavior.",
+      "studies": [
+        "import-customers"
+      ]
+    },
+    {
+      "id": "P04-02",
+      "text": "Resolve scoped source identities and normalized contacts; conflicting phone/email matches require review. Names alone never merge records. Implement supported update commands before advertising updates.",
+      "studies": [
+        "import-customers"
+      ]
+    },
+    {
+      "id": "P04-03",
+      "text": "Preserve contact extras/provenance atomically and leave historical Order customer snapshots unchanged. Retain invalid/conflicting rows for correction.",
+      "studies": [
+        "import-customers"
+      ]
+    },
+    {
+      "id": "P04-04",
+      "text": "Deliver Product imports for Items, variants, Offerings, units, prices/currency and selected Store. Review missing required configuration rather than fabricating it.",
+      "studies": [
+        "import-products"
+      ]
+    },
+    {
+      "id": "P04-05",
+      "text": "Keep imported Products unpublished/private drafts by default. Opening-stock effects require explicit supported Inventory commands/cutoffs and review; retain unsupported stock values inertly instead of applying them.",
+      "studies": [
+        "import-products"
+      ]
+    },
+    {
+      "id": "P04-06",
+      "text": "Deliver Services through the same Catalog engine, with their pricing/work policies. Catalog rows create no live jobs, appointments or Product inventory.",
+      "studies": [
+        "import-services"
+      ]
+    },
+    {
+      "id": "P04-07",
+      "text": "Persist extras on their correct Item/variant/Offering owners, enforce plan allowances using the adopted current authority, report every record and invalidate existing domain queries.",
+      "studies": [
+        "import-products",
+        "import-services"
+      ]
+    },
+    {
+      "id": "P04-08",
+      "text": "Prove atomic graph/meta/receipt commits, duplicate reuploads, interrupted retry and permission revocation for all adapters, including exact quantity/money/identity handling.",
+      "studies": [
+        "import-customers",
+        "import-products",
+        "import-services"
+      ]
+    },
+    {
+      "id": "P04-09",
+      "text": "Accept Customers, then Products, then Services separately with configurable CSV/XLSX round trips, references, unsupported values, compatible-template zero-AI evidence and dashboard recovery/accessibility.",
+      "studies": [
+        "import-customers",
+        "import-products",
+        "import-services"
+      ]
+    },
+    {
+      "id": "P05-01",
+      "text": "Define merchant document ownership separate from software `BillingInvoice`, allocate unique business invoice numbers separate from `ORD-*`, and retain source references plus idempotent issuance receipts.",
+      "studies": [
+        "document-invoice"
+      ]
+    },
+    {
+      "id": "P05-02",
+      "text": "Add business default branding/contact/address/payment instructions/terms and approved registration/tax fields, with only deliberate supported Store overrides. Upload/replace/remove logos through Phase 2 media.",
+      "studies": [
+        "document-branding"
+      ]
+    },
+    {
+      "id": "P05-03",
+      "text": "Build a browsable template bank with realistic sample thumbnails/previews: proposed Minimal, Classic and Compact. Save default/template/accent preferences without altering issued documents.",
+      "studies": [
+        "document-branding"
+      ]
+    },
+    {
+      "id": "P05-04",
+      "text": "Implement one server renderer/source contract for PDF and PNG. Templates cannot run merchant code or fetch arbitrary resources; fonts must render intended Unicode characters.",
+      "studies": [
+        "document-invoice"
+      ]
+    },
+    {
+      "id": "P05-05",
+      "text": "Snapshot seller/customer, line/unit/quantity, prices/currency/discounts/charges/taxes/totals, terms/due date and template/logo versions from eligible confirmed Order facts at issuance, using exact source arithmetic.",
+      "studies": [
+        "document-invoice"
+      ]
+    },
+    {
+      "id": "P05-06",
+      "text": "Define draft/issued/canceled/corrected and later payment-projection history. Retried issuance returns the original identity; re-download preserves issued amounts/branding and timestamped payment updates.",
+      "studies": [
+        "document-invoice"
+      ]
+    },
+    {
+      "id": "P05-07",
+      "text": "Add Order Generate invoice, preview and PDF/image download on dashboard, plus mobile save/share. Export does not collect payment, change stock, create new debt or post revenue. Automatic delivery is separate scope.",
+      "studies": [
+        "document-invoice"
+      ]
+    },
+    {
+      "id": "P05-08",
+      "text": "Handle no logo/customer, long names, many lines, unpaid/partial/paid states, zero-price lines and source cancellation. Multi-page PNG output is an ordered readable image set, never cropped silently.",
+      "studies": [
+        "document-branding"
+      ]
+    },
+    {
+      "id": "P05-09",
+      "text": "Prove concurrency/replay, source/tenant identity, exact totals, pagination, Unicode/Yoruba text, unclipped images and actual browser/mobile downloads. Review jurisdictional invoice requirements before claiming tax compliance.",
+      "studies": [
+        "document-invoice"
+      ]
+    },
+    {
+      "id": "P06-01",
+      "text": "Add dashboard/mobile multi-Order selection and bulk Generate invoices, distinguishing selected rows from all-filtered selection and bounding batches explicitly.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P06-02",
+      "text": "Preview count, source eligibility/exclusions and output format. Do not silently omit Orders, duplicate them or merge unrelated customers.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P06-03",
+      "text": "Issue one invoice per Order through Phase 5 receipts; offer individual files, PDF/image ZIP and optionally one PDF containing separate invoices. This is not a consolidated debt/invoice.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P06-04",
+      "text": "Run bounded durable generation with progress, pre-start cancellation and close/reopen recovery; retain a manifest mapping each Order/document/file/result.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P06-05",
+      "text": "Preserve successful outputs on partial failure and retry failed items without new invoice numbers or unnecessary re-render of finished documents.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P06-06",
+      "text": "Reauthorize downloads, expire temporary grants and clean archives while retaining issued documents and audit history.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P06-07",
+      "text": "Verify ten-Order export, mixed eligibility, boundaries/multi-page images, repeated selection, permission revocation, disconnect and selective retry on dashboard/mobile.",
+      "studies": [
+        "document-batch"
+      ]
+    },
+    {
+      "id": "P07-01",
+      "text": "Implement the proven apex dispatcher while preserving marketing/login/legal/API/assets and existing subdomain/token journeys. Resolve reserved slug conflicts non-destructively and freeze usable v1 business/Product slugs.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P07-02",
+      "text": "Bind one explicit public operating Store per business; do not pool prices, stock or WhatsApp contacts across branches. Explain and invalidate the public effect of switching it.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P07-03",
+      "text": "Add additive typed settings/listings with default-off browsing, separate Draft/Published consent, availability override, complete pause, revisions/audit and same-Tenant Store/Item FKs. Reuse existing entitlement ownership.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P07-04",
+      "text": "Implement authorized settings, publish/unpublish and availability commands with legal/safety/vertical/current-entitlement checks and exact retry identity. Internal ACTIVE/sales/imports/stock never publish automatically.",
+      "studies": [
+        "public-publish"
+      ]
+    },
+    {
+      "id": "P07-05",
+      "text": "Keep browsing-off distinct from publication: store/grid/Visit store disappear while published Product pages stay available. Complete pause or Draft revokes Product access across page/API/metadata/images.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P07-06",
+      "text": "Build bounded anonymous Product/store/list DTOs with one effective publication predicate and allowlisted fields. No costs, suppliers, staff, raw stock, private files or draft counts/facets leak.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P07-07",
+      "text": "Resolve exact eligible Store/Offering prices and variant availability efficiently. Show price/range/Ask for price and Confirm availability where necessary; Unavailable dominates, Available cannot invent stock or bypass policy.",
+      "studies": [
+        "public-publish"
+      ]
+    },
+    {
+      "id": "P07-08",
+      "text": "Reuse trusted text/media approval and approved derivatives; pending/private bytes remain inaccessible. Reconcile current Site/availability delivery gates with the new public-listing authority explicitly, without globally weakening the media boundary.",
+      "studies": [
+        "public-publish"
+      ]
+    },
+    {
+      "id": "P07-09",
+      "text": "Start with authoritative dynamic/no-store eligibility reads, versioned derivative caches and purge. Validate the proposed maximum 60-second derivative staleness window and immediate new uncached refusal; do not promise recall of downloaded/third-party copies.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P07-10",
+      "text": "Prove protected role/FK/revision/replay/default-privacy invariants and anonymous denial through HTML, API, OG, images and filters. Check apex routes/assets/forwarding in authorized Preview as well as locally.",
+      "studies": [
+        "public-settings"
+      ]
+    },
+    {
+      "id": "P08-01",
+      "text": "Build mobile-first Product detail with approved name/gallery/description, currency/prices, options and honest availability at `/{businessSlug}/{productSlug}`.",
+      "studies": [
+        "public-product"
+      ]
+    },
+    {
+      "id": "P08-02",
+      "text": "Build Ask on WhatsApp using server-resolved configured international contact and encoded Product/options/canonical-link draft. Never assume supportPhone is the correct recipient or use another branch's number.",
+      "studies": [
+        "public-product",
+        "public-contact"
+      ]
+    },
+    {
+      "id": "P08-03",
+      "text": "Provide contact validation/test-link setup and missing-contact readiness errors; app/browser fallback and copied message support. A click is not a sent message, Order, Customer, reservation or integrated conversation.",
+      "studies": [
+        "public-contact"
+      ]
+    },
+    {
+      "id": "P08-04",
+      "text": "Add Product-only Share to dashboard rows/details and mobile, with native/browser share, neutral cancellation and reliable Copy link fallback. Reader sharing never grants publish permission.",
+      "studies": [
+        "public-publish"
+      ]
+    },
+    {
+      "id": "P08-05",
+      "text": "Show Draft readiness and explicit authorized Publish and share; separate public publication/availability from internal status and explain browse-off versus complete pause. Preserve retained editors, URL state, opener focus and mutation recovery.",
+      "studies": [
+        "public-publish"
+      ]
+    },
+    {
+      "id": "P08-06",
+      "text": "Build `/{businessSlug}` and conditional Visit store with published-only cards, explicit browsing opt-in and privacy-safe empty/error states.",
+      "studies": [
+        "public-browse"
+      ]
+    },
+    {
+      "id": "P08-07",
+      "text": "Add URL-backed search, accepted category facets, availability, stable name/price sort and bounded pagination. Handle unset/ranged prices and preserve grid filters/scroll across detail/back.",
+      "studies": [
+        "public-browse"
+      ]
+    },
+    {
+      "id": "P08-08",
+      "text": "Generate safe canonical/OG metadata and eligible sitemaps/noindex rules. Browse-off Product URLs are public/guessable; noindex is not privacy and old external previews may persist.",
+      "studies": [
+        "public-product",
+        "public-browse"
+      ]
+    },
+    {
+      "id": "P08-09",
+      "text": "Verify create/publish/share/inquire/unavailable/Draft/re-publish and browsing on/off on merchant dashboard/mobile and anonymous Android/iOS browser/desktop, with Unicode encoding and no-WhatsApp/error cases. Sending a test message requires explicit human authorization.",
+      "studies": [
+        "public-product",
+        "public-contact",
+        "public-browse"
+      ]
+    },
+    {
+      "id": "P08-10",
+      "text": "Record bounded generic view/share/copy/CTA events without contact/message content. Verify real social previews and usability; do not count a WhatsApp click as a completed sale or message.",
+      "studies": [
+        "public-product"
+      ]
+    },
+    {
+      "id": "P09-01",
+      "text": "Approve historical versus newly actionable Orders: original dates/reference facts, internal numbering, cutoffs/report inclusion and affected stock/Finance/Service policy. Inventory accepted upstream source capabilities before exposing effects.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-02",
+      "text": "Group source rows into stable Orders, resolve scoped Customer/Offering dependencies and flag missing/ambiguous references; never fabricate matches or current inventory history.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-03",
+      "text": "Preserve immutable historical customer/line/Offering snapshots and source references while allocating internal Order identity using the existing numbering authority.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-04",
+      "text": "Recompute/compare exact amounts and reject discrepant totals, ambiguous currencies/taxes/discounts or invalid quantities for the affected Order.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-05",
+      "text": "Define explicit source-backed payment/refund/outstanding balance/fulfillment/Service treatment. A paid/completed label alone cannot establish provider success, work performance or stock provenance.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-06",
+      "text": "Prevent double counting against opening stock, opening customer debt, cash receipts and journals. Confirmation lists every effect; imported history sends no automatic reminder/message.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-07",
+      "text": "Implement an atomic Order/line/snapshot/meta/receipt adapter with only supported source-effect commands. Retain incomplete/evidence-unsupported Orders with actionable errors.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-08",
+      "text": "Generate Order CSV/XLSX samples with grouping/dependencies/dates/allowed financial fields, retaining all historical-policy gates even when templates bypass AI.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P09-09",
+      "text": "Prove mixed Product/Service, partially paid, historical and rejected fixtures; reconcile Orders, stock, Service work and balances with source facts and demonstrate retry without double effects.",
+      "studies": [
+        "import-history"
+      ]
+    },
+    {
+      "id": "P10-01",
+      "text": "Add the global Import entry using the same modal/engine, visible business scope and reviewed Store assignments. Classify every sheet as supported entity or retained unsupported data.",
+      "studies": [
+        "import-workbook"
+      ]
+    },
+    {
+      "id": "P10-02",
+      "text": "Plan deterministic dependencies: Customers/Catalog prerequisites before Orders, cross-sheet stable references, cycles/missing/duplicate identities and dependent failure behavior.",
+      "studies": [
+        "import-workbook"
+      ]
+    },
+    {
+      "id": "P10-03",
+      "text": "Review all mapping/relationship/Store/effect/retention decisions in one versioned plan. Generate selected related XLSX samples or separate CSV datasets, with compatible-template zero-AI execution.",
+      "studies": [
+        "import-workbook"
+      ]
+    },
+    {
+      "id": "P10-04",
+      "text": "Use bounded parse/normalize/validate/commit stages, private chunks and per-record receipts. Resume process/worker failure; cancellation preserves already committed results and blocks later units.",
+      "studies": [
+        "job-recovery"
+      ]
+    },
+    {
+      "id": "P10-05",
+      "text": "Provide completed/failed/skipped/retained results, blocked-dependent Orders and explicit corrected-plan retries. Never put the whole workbook into one transaction or AI prompt.",
+      "studies": [
+        "job-recovery"
+      ]
+    },
+    {
+      "id": "P10-06",
+      "text": "Implement fixture-proved legacy XLS parsing/normalization before advertising it. Explicitly retain/report unsupported legacy media and conversion requirements.",
+      "studies": [
+        "import-workbook"
+      ]
+    },
+    {
+      "id": "P10-07",
+      "text": "Extract bounded XLSX embedded bytes/drawing anchors and inventory unsupported in-cell/linked/spanning/background/chart cases. Retain durable manifests so media does not disappear when original files expire.",
+      "studies": [
+        "import-images"
+      ]
+    },
+    {
+      "id": "P10-08",
+      "text": "Preview image-to-record associations, resolve ambiguous anchors and allow multiple/shared photos or explicitly attached Product photos. Do not fetch arbitrary image URLs.",
+      "studies": [
+        "import-images"
+      ]
+    },
+    {
+      "id": "P10-09",
+      "text": "Commit photos through Phase 2 checks/assets/receipts and atomic Item association, respecting the current eight-photo limit unless deliberately revised. Retain/report overflow; photo storage alone needs no AI interpretation.",
+      "studies": [
+        "import-images"
+      ]
+    },
+    {
+      "id": "P10-10",
+      "text": "Prove mixed four-entity plus unknown-sheet workbooks, large tested limits/runtime/memory/AI cost, interruptions and multiple/shared/ambiguous images. Refetch saved photos and reconcile every source field/row/media item.",
+      "studies": [
+        "job-recovery"
+      ]
+    },
+    {
+      "id": "P11-01",
+      "text": "Revalidate price/fee/policy assumptions against primary sources and measured costs. Adopt a versioned regional matrix or record an explicit revision; tax wording and actual payable amounts need concrete launch validation.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P11-02",
+      "text": "Reconcile existing “business/store” counters with one subscription per business and the proposed branch/staff/active-Item/device definitions. Define trial, plan transitions and founding-price renewal lock; preserve existing records on downgrade.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P11-03",
+      "text": "Make core operations, ordinary invoices and record/history/export access consistent with the adopted promise. Define advanced reporting/scale/support differences, fair limits and distinct variable-cost charges; no hidden legacy history cap contradicts the new offer.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P11-04",
+      "text": "Implement server-authoritative versioned entitlements and quota enforcement in ordinary writes, imports, invites/device registration and Store creation, with accurate client usage and limit-resolution guidance.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P11-05",
+      "text": "Implement public-share/browse/Publish Site plan rules from Phase 0. Reconcile the accepted software state and effective public eligibility without introducing coin-gated publishing or accidental stock/POS changes.",
+      "studies": [
+        "billing-plans"
+      ]
+    },
+    {
+      "id": "P11-06",
+      "text": "Configure verified provider-neutral web checkout, subscription purchases/renewals/failures/cancellation/refunds and idempotent event/reconciliation. Client payment callbacks alone grant no access.",
+      "studies": [
+        "billing-manage"
+      ]
+    },
+    {
+      "id": "P11-07",
+      "text": "Show monthly/quarterly/annual payable prices, trial end, renewal and fees, separate software billing receipts/invoices, plan management and Enterprise contact. No automatic sales commission; variable charges are disclosed separately.",
+      "studies": [
+        "billing-manage"
+      ]
+    },
+    {
+      "id": "P11-08",
+      "text": "Test renewal/replay/late events, competing upgrades, downgrade above limits, trial expiry, offline bridge consistency and suspended-provider recovery with owned accounts. Define a record-preserving grace/read/export policy before implementation.",
+      "studies": [
+        "billing-manage"
+      ]
+    },
+    {
+      "id": "P11-09",
+      "text": "Keep first-release native paid checkout deferred. If later approved, restore native configuration deliberately and verify exact products, receipts/notifications/restore/refunds and signed Android/iOS artifacts under current regional rules.",
+      "studies": [
+        "billing-manage",
+        "native-billing-status"
+      ]
+    },
+    {
+      "id": "P11-10",
+      "text": "Run the proposed 90-day paid pilot, measuring conversion, retention, limit hits, support time, infra/provider/native fees and failure reasons. Repricing follows evidence and founding-price promises, with explicit renewal communications policy.",
+      "studies": [
+        "billing-manage"
+      ]
+    },
+    {
+      "id": "P12-01",
+      "text": "Implement the immutable business coin ledger: verified purchases, holds, settled debits, releases/refunds and audited adjustments; derive available/held balances with Store/actor attribution. Keep merchant cash and subscription accounting separate.",
+      "studies": [
+        "coin-wallet"
+      ]
+    },
+    {
+      "id": "P12-02",
+      "text": "Select coin pack/action prices after measured provider/storage/failure/refund/payment costs and target margin. Show balance/history, actual payable pack price/status and purchase receipts.",
+      "studies": [
+        "coin-wallet"
+      ]
+    },
+    {
+      "id": "P12-03",
+      "text": "Credit only server-verified payment transactions bound to the business wallet. Deduplicate callbacks/events/reconciliation and handle refunds/chargebacks after spending under an explicit operational policy.",
+      "studies": [
+        "coin-wallet"
+      ]
+    },
+    {
+      "id": "P12-04",
+      "text": "Quote each paid action by operation, input digest, model/quality/output count and expiry; show price, post-spend balance and insufficient funds before confirmation. Import/summary charges require their own agreed rules; template imports remain zero-AI.",
+      "studies": [
+        "coin-quote"
+      ]
+    },
+    {
+      "id": "P12-05",
+      "text": "Atomically reserve before enqueueing an idempotent job. Enforce staff permissions/caps and simultaneous-last-coins invariants; clients cannot choose free prices or another business wallet.",
+      "studies": [
+        "coin-quote",
+        "coin-limits"
+      ]
+    },
+    {
+      "id": "P12-06",
+      "text": "Keep external calls outside database transitions. Reconcile timeout/uncertain provider results before rerun or release; cancellation cannot free coins while the same call can still deliver and settle.",
+      "studies": [
+        "coin-quote"
+      ]
+    },
+    {
+      "id": "P12-07",
+      "text": "Save/verify/check deliverable assets before settling once. Link job/asset/receipt/ledger durably; release failed/rejected/undeliverable holds and retain audit history for operational refunds.",
+      "studies": [
+        "coin-quote"
+      ]
+    },
+    {
+      "id": "P12-08",
+      "text": "Add budgets/rate limits, stuck-hold inspection, provider cost/usage records and a global pause with private prompts/images excluded from diagnostics.",
+      "studies": [
+        "coin-wallet",
+        "coin-limits"
+      ]
+    },
+    {
+      "id": "P12-09",
+      "text": "Prove duplicate top-ups, concurrent spend, crash-after-provider-success, storage failure, rejected result, cancel/restart and chargeback recovery. Paid web acceptance and native acceptance are separate.",
+      "studies": [
+        "coin-quote"
+      ]
+    },
+    {
+      "id": "P12-10",
+      "text": "Enable native top-ups/consumption only after the separately approved product/policy/verifier/refund release; no assumption that web-bought coins or checkout links are permitted in every native market.",
+      "studies": [
+        "coin-wallet",
+        "native-billing-status"
+      ]
+    },
+    {
+      "id": "P13-01",
+      "text": "Add Refine with AI to eligible owned/licensed photos, with a prerequisite if no usable image exists. Check source/reference rights and allowed business/vertical eligibility.",
+      "studies": [
+        "ai-product"
+      ]
+    },
+    {
+      "id": "P13-02",
+      "text": "Deliver Preset samples, Upload a reference and Surprise me. Use reviewed category-relevant styles; record preset/reference/seed where supported, limits and retention.",
+      "studies": [
+        "ai-product"
+      ]
+    },
+    {
+      "id": "P13-03",
+      "text": "Preserve Product identity, packaging/labels, colors, quantities and salient features. Surprise me changes photography presentation; quality review rejects misleading substitutions.",
+      "studies": [
+        "ai-product"
+      ]
+    },
+    {
+      "id": "P13-04",
+      "text": "Show source/mode/quality/output count and exact Phase 12 quote, then resumable pending/result state across close/reopen or Store switching.",
+      "studies": [
+        "ai-product"
+      ]
+    },
+    {
+      "id": "P13-05",
+      "text": "Save checked outputs as private gallery assets with original/source/reference/preset/job lineage. Preserve the original and use the same media lifecycle as ordinary uploads.",
+      "studies": [
+        "ai-product"
+      ]
+    },
+    {
+      "id": "P13-06",
+      "text": "Offer before/after, Use image, Keep in gallery and a newly quoted variation. Explicitly replace only the selected Product attachment; delivered-but-unused work follows the approved charge policy.",
+      "studies": [
+        "ai-product"
+      ]
+    },
+    {
+      "id": "P13-07",
+      "text": "Refine logos with spelling/symbol-preservation and cleanup/clarity/transparent-output options. Preview against invoice templates, keep both versions privately and avoid promising vector output or rewritten-text accuracy.",
+      "studies": [
+        "ai-logo"
+      ]
+    },
+    {
+      "id": "P13-08",
+      "text": "Accept refined branding only for future documents; issued invoices remain unchanged. References/logos do not enter the public directory automatically and ordinary invoice generation consumes no coins.",
+      "studies": [
+        "ai-logo"
+      ]
+    },
+    {
+      "id": "P13-09",
+      "text": "Verify all modes, low balance, reference misuse, exact Product/Store attachment, logo text, failed review/recovery and both supported merchant surfaces; measure usable output and actual cost before approving prices for broader release.",
+      "studies": [
+        "ai-product",
+        "ai-logo"
+      ]
+    },
+    {
+      "id": "P14-01",
+      "text": "Add a distinct Make public action with approved-image/metadata preview, permitted reuse terms and rights confirmation. Product publication alone does not offer the underlying photo for reuse.",
+      "studies": [
+        "public-image-consent"
+      ]
+    },
+    {
+      "id": "P14-02",
+      "text": "Publish only approved image/title/description/category/use tags; never enrich from private notes, customers, prices, references, branding or Service/Prescription evidence.",
+      "studies": [
+        "public-image-consent"
+      ]
+    },
+    {
+      "id": "P14-03",
+      "text": "Add Public images second in Gallery with paginated title/description/category/Product-use search, profile-relevant defaults and broadenable filters. Reuse the existing business profiles rather than split Catalog schemas.",
+      "studies": [
+        "public-images"
+      ]
+    },
+    {
+      "id": "P14-04",
+      "text": "Let merchants review suggested use tags, maintain/de-index changes and prevent another business attachment from leaking its private description into search.",
+      "studies": [
+        "public-images"
+      ]
+    },
+    {
+      "id": "P14-05",
+      "text": "Copy or grant the accepted reuse license into the selecting business gallery before attachment, retaining source lineage. Discovery, reuse and Product attachment have separate rights checks.",
+      "studies": [
+        "public-images",
+        "paid-image-license"
+      ]
+    },
+    {
+      "id": "P14-06",
+      "text": "If free reuse is adopted, document permitted use/no seller payout. If paid reuse is retained instead, first implement price/license identity, purchase holds, settlements/payouts, refunds/reversals/disputes, seller permissions and audited reconciliation; do not mark that branch accepted without its evidence.",
+      "studies": [
+        "public-images",
+        "paid-image-license"
+      ]
+    },
+    {
+      "id": "P14-07",
+      "text": "Prevent unsupported republication of licensed/refined derivatives and circular ownership claims. Record any accepted amendment to older marketplace contracts.",
+      "studies": [
+        "public-image-consent",
+        "paid-image-license"
+      ]
+    },
+    {
+      "id": "P14-08",
+      "text": "Implement unpublish/report/block/moderator/dispute queues and cache/search invalidation. Define prior permitted-copy handling versus rights/policy takedown requiring intervention.",
+      "studies": [
+        "moderation",
+        "paid-image-license"
+      ]
+    },
+    {
+      "id": "P14-09",
+      "text": "Seed permissioned reviewed imagery and prove relevance, private-field isolation, reuse, unpublish/removal, direct download gating and takedown effects on referenced copies.",
+      "studies": [
+        "public-images",
+        "moderation"
+      ]
+    },
+    {
+      "id": "P15-01",
+      "text": "Inventory accepted expense/purchase/payment/refund and relevant Service/booking sources. Reuse Commercial Order output where it already covers the sale; preserve owning Finance roles and source/correction/cutoff facts.",
+      "studies": [
+        "finance-documents"
+      ]
+    },
+    {
+      "id": "P15-02",
+      "text": "Add truthful typed adapters for spending vouchers, supplier bills/purchases and actual-payment/refund receipts. Distinguish internal output from supplier-issued original invoices; store originals privately.",
+      "studies": [
+        "finance-documents"
+      ]
+    },
+    {
+      "id": "P15-03",
+      "text": "Reuse branding/templates/PDF/image/batch delivery with source-specific currency/date/balance/privacy and correction status. Add document actions to the owning detail/list views.",
+      "studies": [
+        "finance-documents"
+      ]
+    },
+    {
+      "id": "P15-04",
+      "text": "If selected, define consolidated customer invoices only across compatible business/seller/customer/currency and exact unpaid balances/Order references. A combined PDF of separate invoices remains Phase 6.",
+      "studies": [
+        "consolidated-invoice"
+      ]
+    },
+    {
+      "id": "P15-05",
+      "text": "Define per-Order/consolidated invoice coverage and corrections to prevent double billing. Document presentation creates no debt, revenue, stock movement or payment allocation.",
+      "studies": [
+        "consolidated-invoice"
+      ]
+    },
+    {
+      "id": "P15-06",
+      "text": "Verify amounts/source identity, original-receipt privacy, denied foreign reads, refunds/corrections and unchanged financial state on single/selected-record exports.",
+      "studies": [
+        "finance-documents"
+      ]
+    },
+    {
+      "id": "P16-01",
+      "text": "Populate canonical gap logs from retained fields/unsupported datasets, grouping signatures/counts while keeping every exact source locator and disposition.",
+      "studies": [
+        "gap-review"
+      ]
+    },
+    {
+      "id": "P16-02",
+      "text": "Add optional typed AI summaries identifying unsupported concepts/structures, existing feature fit, ambiguities and source-backed proposed work. Cite retained paths; prohibit SQL/runtime commands and fabricated facts.",
+      "studies": [
+        "gap-review"
+      ]
+    },
+    {
+      "id": "P16-03",
+      "text": "Keep compatible-template logs factual with zero automatic AI calls. Any later AI gap analysis is a separately explicit action subject to its approved cost/privacy policy.",
+      "studies": [
+        "gap-review"
+      ]
+    },
+    {
+      "id": "P16-04",
+      "text": "Build a minimal authorized internal review view with awaiting/accepted/deferred/resolved states and decision links. Mask/synthesize examples for developers/logs; raw business data requires separate scoped support access.",
+      "studies": [
+        "gap-review"
+      ]
+    },
+    {
+      "id": "P16-05",
+      "text": "Optionally prepare sanitized GitHub issue drafts and authenticated internal links. Configure destination only if selected; human review and explicit publish authorization are required, with deduplication/uncertain-result recovery. No issue is posted by this planning task.",
+      "studies": [
+        "gap-review"
+      ]
+    },
+    {
+      "id": "P16-06",
+      "text": "For each actually shipped feature, define a versioned deterministic promotion rule: eligible target/source digest/path, conversion/destination/validation/conflicts/effects. Adding a column alone triggers no guessed migration.",
+      "studies": [
+        "metadata-promotion"
+      ]
+    },
+    {
+      "id": "P16-07",
+      "text": "Dry-run promotable/ambiguous/invalid/conflicting counts and obtain review of the exact feature rule and rollout scope; keep merchant edits and current destination values authoritative.",
+      "studies": [
+        "metadata-promotion"
+      ]
+    },
+    {
+      "id": "P16-08",
+      "text": "Run approved feature-release promotion through bounded jobs with receipts/checkpoints, revision rechecks and atomic destination/provenance changes. Archive the original and mark promoted only on success.",
+      "studies": [
+        "metadata-promotion"
+      ]
+    },
+    {
+      "id": "P16-09",
+      "text": "Retain unresolved remainder under the adopted retention policy, update gap counts and prove interruption/retry/competing-edit/rule-upgrade behavior; corrections use the domain's own rules.",
+      "studies": [
+        "metadata-promotion"
+      ]
+    },
+    {
+      "id": "P17-01",
+      "text": "Assemble one evidence matrix across applicable phases, source revisions and release environments. Every task/phase requires its actual gate, not merely implementation or inherited mock results.",
+      "studies": []
+    },
+    {
+      "id": "P17-02",
+      "text": "Run the full format/entity/template corpus: CSV/TSV/TXT/XLSX/XLS, contacts with leading zeros/conflicts, Products/Services with extras, mixed partial/historical Orders, four-entity plus unknown sheets and media accounting.",
+      "studies": []
+    },
+    {
+      "id": "P17-03",
+      "text": "Prove configurable blank/example sample round trips, version/marker/column changes and provider-outage zero-AI behavior; promotion fixtures include empty/invalid/conflicting destinations.",
+      "studies": []
+    },
+    {
+      "id": "P17-04",
+      "text": "Verify tenant/Store/actor denial, revoked membership, stale confirmations, malicious/oversized input, exact-money/stock/work invariants and private/public byte isolation. Verify only supported effects with current Finance sources.",
+      "studies": []
+    },
+    {
+      "id": "P17-05",
+      "text": "Complete desktop/narrow browser and physical Android/iOS evidence for applicable merchant/customer surfaces, keyboard/screen reader, light/dark themes, large text, share/camera permissions and opener/scroll retention. Dashboard-only imports do not imply native import coverage.",
+      "studies": []
+    },
+    {
+      "id": "P17-06",
+      "text": "Exercise slow networks, close/reopen, process restart, uncertain commits/payments/provider results, download failures and refund/cancellation/retry. Reconcile all records/fields/media/documents/coins to accountable outcomes.",
+      "studies": []
+    },
+    {
+      "id": "P17-07",
+      "text": "Operate reference-based support lookup, stuck-job/hold inspection, audits/refunds/moderation, cleanup/retention and independent pause/rollback switches that preserve existing records, documents and assets.",
+      "studies": [
+        "support-operations"
+      ]
+    },
+    {
+      "id": "P17-08",
+      "text": "Measure import/export success/latency, usable AI output, provider cost versus revenue, refunds/stuck holds, storage growth, public reports and subscription conversion/retention/support load. Set thresholds from measured pilot baselines, not invented percentages.",
+      "studies": [
+        "support-operations"
+      ]
+    },
+    {
+      "id": "P17-09",
+      "text": "Update actual feature/API/endpoints/permissions/schema/relationships/migrations/ADR/task docs with implemented limits and observed acceptance; retain source proposal history and this master checklist's links.",
+      "studies": []
+    },
+    {
+      "id": "P17-10",
+      "text": "Review concrete acceptance packets with the owner, clean run-owned fixtures and pilot selected ordinary businesses under flags. Record each narrower slice explicitly; full scope stays open until all mandatory selected branches pass.",
+      "studies": []
+    },
+    {
+      "id": "P17-11",
+      "text": "Apply Preview/Production migrations, provider configuration, routing/jobs deployments and flags only under separately authorized targets and existing signed release assurance. Validate correct credentials/identities per environment; development evidence is not production proof.",
+      "studies": []
+    },
+    {
+      "id": "P17-12",
+      "text": "Verify post-release readiness and rollback using the existing operations process, record actual release/acceptance and monitor the approved paid pilot. Future scheduled monitoring needs its own explicit request and configured automation.",
+      "studies": []
+    }
+  ]
+}

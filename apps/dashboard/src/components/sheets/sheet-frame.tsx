@@ -55,7 +55,7 @@ export function SheetFrame({
         popupClassName,
       )}
     >
-      <SheetHeader className="shrink-0 flex-row items-start justify-between gap-4 px-6 pt-6 pb-6">
+      <SheetHeader className="shrink-0 flex-row items-start justify-between gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
         <div className="min-w-0 space-y-2">
           <SheetTitle className="text-xl font-medium">{title}</SheetTitle>
           {description ? (

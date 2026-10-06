@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     tenant,
   })
 
+  response.cookies.delete("ewatrade.inventory_scope")
   response.cookies.set(ACTIVE_TENANT_COOKIE, tenant.slug, {
     httpOnly: true,
     maxAge: 60 * 60 * 24 * 365,

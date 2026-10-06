@@ -46,7 +46,11 @@ export function DashboardSidebar({ navItems, user, ctx }: Props) {
       </div>
 
       <div className="shrink-0 border-b border-sidebar-border px-2 py-3">
-        <WorkspaceDropdown ctx={ctx} isExpanded={isExpanded} />
+        <WorkspaceDropdown
+          ctx={ctx}
+          isExpanded={isExpanded}
+          selection="business"
+        />
       </div>
 
       <MainMenu isExpanded={isExpanded} navItems={navItems} />

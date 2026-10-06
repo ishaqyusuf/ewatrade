@@ -1,5 +1,6 @@
 import {
   deliverEarlyAccessEmails,
+  earlyAccessRequestConfirmationEmail,
   earlyAccessRequestEmails,
 } from "@/lib/early-access-email"
 import {
@@ -96,6 +97,11 @@ export async function POST(request: NextRequest) {
       lead.id,
       earlyAccessRequestEmails(emailInput, qa ? lead.email : undefined),
       "request",
+    )
+    await deliverEarlyAccessEmails(
+      lead.id,
+      [earlyAccessRequestConfirmationEmail(lead)],
+      "requestConfirmation",
     )
     if (qa)
       return NextResponse.json(

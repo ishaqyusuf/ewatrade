@@ -180,10 +180,6 @@ export function SubscriptionPlanContent({
 
   const content = (
     <View className={contentClassName}>
-      <Text className="text-sm leading-5 text-muted-foreground">
-        {SUBSCRIPTION_SCREEN_COPY.description}
-      </Text>
-
       {shouldShowSourceNotice ? (
         <StatusBanner
           actionLabel={subscriptionQuery.isError ? "Try again" : undefined}

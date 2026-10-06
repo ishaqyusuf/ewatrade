@@ -42,11 +42,15 @@ export async function listInventoryBalanceReport(
     where: { storeId: input.storeId, tenantId: input.tenantId },
   })
   const rows = balances.map((balance) => ({
-    availableQuantity: subtractExactDecimals(
-      balance.onHandQuantity.toString(),
-      balance.reservedQuantity.toString(),
-    ),
+    availableQuantity:
+      balance.custodyType === "TRANSIT"
+        ? "0"
+        : subtractExactDecimals(
+            balance.onHandQuantity.toString(),
+            balance.reservedQuantity.toString(),
+          ),
     balanceSourceId: balance.id,
+    catalogItemId: balance.product.catalogItem.id,
     custodyReferenceId: balance.custodyReferenceId || null,
     custodyType: balance.custodyType,
     configurationVersionId: balance.inventoryUnit.configurationVersionId,
@@ -231,7 +235,11 @@ export async function listInventoryOperationHistory(
   },
 ) {
   const operations = await db.stockOperation.findMany({
-    include: { movements: true, categories: stockOperationCategoryGraph },
+    include: {
+      store: { select: { name: true } },
+      movements: true,
+      categories: stockOperationCategoryGraph,
+    },
     orderBy: [{ effectiveAt: "desc" }, { createdAt: "desc" }],
     take: Math.min(Math.max(input.limit ?? 50, 1), 200),
     where: {
@@ -251,6 +259,8 @@ export async function listInventoryOperationHistory(
     createdAt: operation.createdAt,
     effectiveAt: operation.effectiveAt,
     id: operation.id,
+    storeId: operation.storeId,
+    storeName: operation.store.name,
     movementCount: operation.movements.length,
     reason: operation.reason,
     source: operation.source,

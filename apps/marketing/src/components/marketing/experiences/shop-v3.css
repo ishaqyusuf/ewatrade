@@ -104,7 +104,7 @@
   gap: 24px;
   min-height: 54px;
   padding: 14px 21px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: var(--ink);
   color: #fff !important;
   font-size: 11px;
@@ -150,7 +150,7 @@
   min-height: 44px;
   padding: 8px 14px;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -227,7 +227,7 @@
   isolation: isolate;
   height: 615px;
   background: #f0dfc9;
-  border-radius: 140px 12px 12px 12px;
+  border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid #e1d2bd;
 }
@@ -320,7 +320,7 @@
   color: #536244;
   padding: 8px 11px;
   font-size: 8px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   transition: transform .75s, opacity .75s;
 }
 .shop-order-tag {
@@ -394,7 +394,7 @@
   padding: 6px 8px;
   min-height: 29px;
   border: 1px solid #c5b59b;
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: #fff8eb;
   font-size: 7px;
   white-space: nowrap;
@@ -555,7 +555,7 @@
   background: #fff;
   border: 1px solid #d8ddcf;
   box-shadow: 0 20px 60px #3845340c;
-  border-radius: 10px;
+  border-radius: var(--radius);
   overflow: hidden;
   color: #384432;
 }
@@ -599,7 +599,7 @@
 .shop-catalogue-art {
   height: 121px;
   background: #f0f1e8;
-  border-radius: 5px;
+  border-radius: var(--radius);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -1113,78 +1113,11 @@
 .shop-v3 .lead-capture--waitlist .lead-capture-row {
   grid-template-columns: minmax(0, 1fr);
 }
-.shop-v3 .lead-capture--shop .lead-capture-field {
-  display: grid;
-  align-content: start;
-  min-width: 0;
-  gap: 9px;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-}
-.shop-v3 .lead-capture--shop .lead-capture-field > * {
-  margin-block: 0;
-}
-.shop-v3 .lead-capture--shop input,
-.shop-v3 .lead-capture--shop textarea {
-  width: 100%;
-  min-width: 0;
-  min-height: 52px;
-  padding: 13px 15px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: #fffdf9;
-  color: var(--ink);
-  font: 400 16px / 1.5 ShopInter, Arial, sans-serif;
-  box-shadow: none;
-  transition: border-color .2s, box-shadow .2s;
-}
-.shop-v3 .lead-capture--shop input::placeholder,
-.shop-v3 .lead-capture--shop textarea::placeholder {
-  color: #757a70;
-}
-.shop-v3 .lead-capture--shop input:focus-visible,
-.shop-v3 .lead-capture--shop textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-color: var(--accent);
-}
-.shop-v3 .lead-capture--shop .lead-capture-field > span[id] {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
-}
 .shop-v3 .lead-capture--shop .lead-capture-footer {
   display: grid;
   justify-items: start;
   gap: 14px;
   margin-top: 4px;
-}
-.shop-v3 .lead-capture--shop .lead-capture-submit,
-.shop-v3 .lead-capture--shop .early-access-continue {
-  display: inline-flex;
-  justify-content: space-between;
-  gap: 24px;
-  min-height: 54px;
-  padding: 14px 22px;
-  border: 0;
-  border-radius: 5px;
-  background: var(--ink);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.5;
-  box-shadow: none;
-  transition: background .2s;
-}
-.shop-v3 .lead-capture--shop .lead-capture-submit:hover:not(:disabled),
-.shop-v3 .lead-capture--shop .early-access-continue:hover {
-  background: var(--accent);
-}
-.shop-v3 .lead-capture--shop .lead-capture-submit:disabled {
-  cursor: wait;
-  opacity: 0.65;
 }
 .shop-v3 .lead-capture--shop .lead-capture-feedback {
   max-width: 440px;
@@ -1201,7 +1134,7 @@
   padding: 24px 0 0;
   border: 0;
   border-top: 1px solid var(--line);
-  border-radius: 0;
+  border-radius: var(--radius);
   background: transparent;
 }
 .shop-v3 .early-access-preview h4 {
@@ -1251,7 +1184,7 @@
   overflow: hidden;
   padding: 65px 60px;
   background: #f0dfc9;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 .shop-closing .shop-eyebrow {
   margin-bottom: 23px;
@@ -1384,7 +1317,7 @@
     background: transparent;
     width: 40px;
     height: 40px;
-    border-radius: 3px;
+    border-radius: var(--radius);
     font-size: 20px;
   }
   .shop-hero {
@@ -1423,7 +1356,7 @@
   }
   .shop-stage {
     height: 565px;
-    border-radius: 85px 8px 8px 8px;
+    border-radius: var(--radius);
     margin-top: 34px;
   }
   .shop-stage-top {

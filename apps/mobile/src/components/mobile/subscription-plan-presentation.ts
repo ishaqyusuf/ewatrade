@@ -6,7 +6,6 @@ import {
 } from "@/lib/retail-ops-subscription"
 
 export const SUBSCRIPTION_SCREEN_COPY = {
-  description: "See your limits and compare plans for this business.",
   title: "Plan & billing",
 } as const
 

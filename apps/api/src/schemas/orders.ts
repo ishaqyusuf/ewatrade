@@ -42,6 +42,7 @@ export const commercialOrderCreateSchema = z
   .object({
     clientOrderId: z.string().trim().min(8).max(160),
     customerId: z.string().trim().min(1).max(128).optional(),
+    customerMode: z.enum(["contact_only", "create"]).optional(),
     customerEmail: z.string().trim().email().max(320).optional(),
     customerName: z.string().trim().min(1).max(160).optional(),
     customerPhone: z.string().trim().min(3).max(40).optional(),
@@ -60,6 +61,13 @@ export const commercialOrderCreateSchema = z
               .max(100_000_000)
               .optional(),
             expectedBalanceRevision: z.number().int().nonnegative().optional(),
+            enteredTotalMinor: z
+              .number()
+              .int()
+              .positive()
+              .max(100_000_000)
+              .optional(),
+            note: z.string().trim().max(2_000).optional(),
             expectedConfigurationVersionId: z.string().trim().min(1).optional(),
             expectedFixedPriceMinor: z
               .number()
@@ -199,6 +207,7 @@ export const commercialOrderReminderSettingsGetSchema = z
 
 export const commercialOrderPaymentsListPageSchema = z
   .object({
+    storeId: z.string().trim().min(1).optional(),
     cursor: z.string().trim().min(1).optional(),
     direction: z.enum(["forward", "backward"]).optional(),
     limit: z.number().int().min(1).max(50).default(20),

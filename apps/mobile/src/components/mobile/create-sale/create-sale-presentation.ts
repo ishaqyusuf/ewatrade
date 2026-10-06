@@ -13,7 +13,6 @@ export type SaleStepViewProps = {
 
 export type SaleStageHeaderProps = {
   current: number
-  description: string
   onBack?: () => void
   title: string
 }
@@ -27,7 +26,6 @@ export type SelectedOrderLineProps = {
   quantity?: string
 }
 export type CustomerActionRowProps = {
-  description: string
   icon: "UserPlus" | "UserX"
   onPress: () => void
   title: string

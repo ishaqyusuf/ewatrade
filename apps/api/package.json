@@ -15,6 +15,8 @@
     "./trpc/routers/_app": "./src/trpc/routers/_app.ts"
   },
   "dependencies": {
+    "@ai-sdk/deepseek": "2.0.26",
+    "@ai-sdk/openai": "3.0.48",
     "@apple/app-store-server-library": "^3.1.0",
     "@ewatrade/auth": "workspace:*",
     "@ewatrade/catalog": "workspace:*",
@@ -23,6 +25,7 @@
     "@ewatrade/domains": "workspace:*",
     "@ewatrade/email": "workspace:*",
     "@ewatrade/errors": "workspace:*",
+    "@ewatrade/events": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/observability": "workspace:*",
     "@ewatrade/payments": "workspace:*",
@@ -34,6 +37,7 @@
     "@hono/zod-openapi": "^1.4.0",
     "@sentry/bun": "^10.72.0",
     "@trpc/server": "^11.16.0",
+    "ai": "6.0.141",
     "google-auth-library": "^11.1.0",
     "hono": "4.13.9",
     "jose": "^6.1.0",
@@ -41,7 +45,7 @@
     "resend": "^6.30.0",
     "superjson": "^2.2.6",
     "zod": "catalog:",
-    "@ewatrade/events": "workspace:*"
+    "@ewatrade/order-receipts": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

@@ -1,0 +1,187 @@
+[
+  {
+    "id": "01-early-access-admin",
+    "name": "Early access · internal request",
+    "htmlHash": "b03d8aff476613fc9d1784999738235f2ac3dd69e6ab93212c632ef6aa6dce4d",
+    "textHash": "684dfe523f1bdf76445659ea0cc5dc989ca8b0ec6863d2facec5f4a805bbb621",
+    "links": [
+      "https://ewatrade.com/api/early-access/approve?token=preview-only",
+      "https://ewatrade.com"
+    ],
+    "text": "A new operator wants in.\n\nA merchant or operator requested early access from the EwaTrade marketing site. The full lead record is below for review.\nLead ID: lead_ewa_0829\nName: Amina Bello\nEmail: amina@example.com\nBusiness: Amina Home & Trade\nRole: Owner\nPhone: +234 803 555 0198\nMessage: We sell home essentials through our shop and WhatsApp. I need stock and orders to agree at the end of the day.\nApproval expires: 6 September 2026, 18:00 WAT\n\nApprove early access: https://ewatrade.com/api/early-access/approve?token=preview-only\n\nOpening the approval link sends the contact a private setup link. Approval links are private and expire after 30 days."
+  },
+  {
+    "id": "02-early-access-approved",
+    "name": "Early access · approved",
+    "htmlHash": "758fc26be95f708165d9e8ebff05d493e14147205230763270d632d65f3f6daa",
+    "textHash": "2a82ef491c6e77969286ba0576254a19039a4e150c50a43ad97325132cc62466",
+    "links": [
+      "https://ewatrade.com/signup?access_token=preview-early-access",
+      "https://ewatrade.com"
+    ],
+    "text": "Your workspace starts here.\n\nHi Amina Bello. Your early access request has been approved. Your private setup link is ready.\nEmail: amina@example.com\nCompany: Amina Home & Trade\nRole: Owner\nLink expires: 6 September 2026, 18:00 WAT\n\nCreate your workspace: https://ewatrade.com/signup?access_token=preview-early-access\n\nThis link works once and expires automatically. If it expires before setup is complete, request access again with the same email."
+  },
+  {
+    "id": "03-early-access-pending",
+    "name": "Early access · pending",
+    "htmlHash": "b06fbe7fb441682e4370360017eba74c0e820a0e9c738a552679c6bda577f6fa",
+    "textHash": "9ea25a6e5660f5c51c04572490236ce72445e9b0ba54db367050345c08f355bb",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "You are on the early list.\n\nHi Amina Bello. We received your early access request. We will be in touch when the next onboarding window opens.\nEmail: amina@example.com\nCompany: Amina Home & Trade\nRole: Owner\n\nEwaTrade brings storefront, orders, stock, customer communication, and daily operations into one working system."
+  },
+  {
+    "id": "04-waitlist-admin",
+    "name": "Waitlist · internal alert",
+    "htmlHash": "ea0e191151f39ba04c51b92c572d3ed13c193dc48e988b8f59d6a99fc52f3bbb",
+    "textHash": "f6d003ce78a166d93f5c7eb23193688b86ffc07cd31e33f4ec41dbaf379de182",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "A new business joined the waitlist.\n\nA visitor joined the EwaTrade waitlist. Keep this record for the next access wave and any relevant operator research.\nLead ID: demo-waitlist-1042\nName: Amina Bello\nEmail: amina@example.test\n\nNo immediate action is required. Keep outreach useful, specific, and easy to opt out of."
+  },
+  {
+    "id": "05-waitlist-confirmation",
+    "name": "Waitlist · customer confirmation",
+    "htmlHash": "14b74a29630cfbbbe7899e8841c15e3d8fb8b3def3bf96e20acc19f5def1e112",
+    "textHash": "195d531fbc9b3206241081ab6f245656bd95215c26790ff320a7525bcce119f2",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Your place is saved.\n\nHi Amina Bello. You are on the EwaTrade waitlist. We will let you know as access opens to more businesses.\nEmail: amina@example.test\n\nWe are building one working system for storefronts, orders, stock, fulfillment, and customer communication."
+  },
+  {
+    "id": "06-staff-invite",
+    "name": "Staff invitation",
+    "htmlHash": "346827f83312a5c899345ecc65cb09bd3e2a23880df64fe67cb9000caa9fd812",
+    "textHash": "97d18ea08768c86aaf916dcbaf6a11b5ca0529b4e6e229bf33bc016bc337e23d",
+    "links": [
+      "https://app.ewatrade.com/staff/invite/preview-token",
+      "https://ewatrade.com"
+    ],
+    "text": "There is a place for you on the team.\n\nAmina Bello invited you to join Amina Home & Trade as Attendant. Review the secure invitation before joining the workspace.\nBusiness: Amina Home & Trade\nInvited person: Zainab Musa\nEmail: zainab@example.com\nRole: Attendant\nInvited by: Amina Bello\n\nReview your invitation: https://app.ewatrade.com/staff/invite/preview-token\n\nIf you were not expecting this invitation, do not open the link. You can safely ignore this email."
+  },
+  {
+    "id": "07-order-tomorrow",
+    "name": "Delivery · tomorrow",
+    "htmlHash": "8233454a4c201217d78a1ed0732cec78458c849e353ca727e0d8d0f26874fb77",
+    "textHash": "64e4639d7efb70dd4eab69d6358d13fc4dfa9d87ee26f64ac293ac25a2c68bb8",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Tomorrow's delivery needs a look.\n\nOrder EWA-1048 is due tomorrow. Review what is reserved and prepare the remaining Product lines for fulfillment.\nBusiness: Amina Home & Trade\nStore: Lekki Store\nOrder: EWA-1048\nCustomer: Feyi Adeyemi\nDelivery due: 30 August 2026 · 2:00 PM WAT\n\nThis reminder does not fulfill the order or change stock. EwaTrade records fulfillment only after an authorized operator confirms it."
+  },
+  {
+    "id": "08-order-today",
+    "name": "Delivery · today",
+    "htmlHash": "25c09442a245c1099e7965411505182b88a5fdd6e50c55e9186173007db44727",
+    "textHash": "3ab8cd3c8f8701a1d3ed1154aca90f07bec2a2efc5723192bd365dc503fb6762",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Delivery is due today.\n\nOrder EWA-1048 is due today. Review the order, finish the remaining Product lines, and record fulfillment only when delivery is complete.\nBusiness: Amina Home & Trade\nStore: Lekki Store\nOrder: EWA-1048\nCustomer: Feyi Adeyemi\nDelivery due: 30 August 2026 · 2:00 PM WAT\n\nThis reminder does not fulfill the order or change stock. EwaTrade records fulfillment only after an authorized operator confirms it."
+  },
+  {
+    "id": "09-workspace-welcome",
+    "name": "Workspace welcome",
+    "htmlHash": "4b9994cc0e0b8d781840032259e262ee9afc3e7730aeff23adac49511a4835d2",
+    "textHash": "71e78b0d901b2825d1685a8487f6e6812974736e31b61dd5bdb8f513a4fdd05e",
+    "links": [
+      "https://app.ewatrade.com",
+      "https://ewatrade.com"
+    ],
+    "text": "Your business has a new operating desk.\n\nAmina Home & Trade is ready on EwaTrade, Amina. Your workspace, Storefront, and POS addresses have been reserved.\nStorefront: amina-home.ewatrade.com\nPOS: amina-home-pos.ewatrade.com\nDashboard: app.ewatrade.com\n\nOpen your dashboard: https://app.ewatrade.com\n\nStart with the dashboard. Add the items or services you sell, confirm your Store details, then share the Storefront when you are ready."
+  },
+  {
+    "id": "10-login-code",
+    "name": "Owner · sign-in code",
+    "htmlHash": "ac8ffce20efc2fc49b3e5be4dfc45674e6f5fc905cd92456c91303f0e458d400",
+    "textHash": "7978ab26bde98a3bdd3db402bba083514277ad94aefe07b25b724409fcd1bb15",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "One code. Ten minutes.\n\nUse the six-digit code below to sign in to your EwaTrade account.\nVerification code: 482913\n\nThe code expires at 4:20 PM WAT. EwaTrade will never ask you to send this code by chat, phone, or email."
+  },
+  {
+    "id": "11-signup-code",
+    "name": "Owner · signup code",
+    "htmlHash": "39540fe32d31ae06a214b6d82356d2f5c38df0e1693d5cbabd7437e90c1d825c",
+    "textHash": "d1b8fe7a05b29c2d356c96b002fade2bb4f4d1a41aa3307e6f37bbb7f5d98e56",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "One code. Ten minutes.\n\nUse the six-digit code below to verify your new EwaTrade account.\nVerification code: 716204\n\nThe code expires at 4:20 PM WAT. EwaTrade will never ask you to send this code by chat, phone, or email."
+  },
+  {
+    "id": "12-store-code",
+    "name": "Store · verification code",
+    "htmlHash": "b5081165827ace1338aa1d78a24d7e927d4704602d11b3ddb43fba7557995f29",
+    "textHash": "32f576d8411325b5371bb173a51bcef82efcaddd68a6687c251a1bc2950b86f1",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Confirm where replies should find you.\n\nUse this code to confirm that Store response notifications should come to this email address.\nVerification code: 357821\n\nThis code expires in 10 minutes. Confirming it does not link conversations or change your Store access."
+  },
+  {
+    "id": "13-store-reply",
+    "name": "Store · neutral activity",
+    "htmlHash": "539e704d51d65e2d4bdd84a929a51e46126927339aea60aa9386069db3c6015d",
+    "textHash": "2eabee81f0dd10b8035fc9e8ed1b1d738b88a41e486088556eb94ec2071bcfb6",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Your Store conversation moved.\n\nThere is new activity in your Store conversation. Open EwaTrade to read it.\n\nFor privacy, notification emails never include message content. Open EwaTrade from the same device or account you normally use to read the reply."
+  },
+  {
+    "id": "14-setup-verification",
+    "name": "Setup · email verification",
+    "htmlHash": "744c01d5fb36f2bbd5747675d15ac41b0e5bdaef034ec40a2b01ca9a1b63595c",
+    "textHash": "9f24144efe9860946f288ef0b7438a1d9b202016631dc35fb60447a3db13e5a7",
+    "links": [
+      "https://ewatrade.com/api/early-access/verify?token=preview-only",
+      "https://ewatrade.com"
+    ],
+    "text": "Verify your email.\n\nHi Amina Bello. Confirm your email address before creating your EwaTrade workspace.\nEmail: amina@example.test\nExpires: 3 October 2026, 10:30 UTC\n\nVerify email and continue: https://ewatrade.com/api/early-access/verify?token=preview-only\n\nThis link expires after 24 hours or when your approved setup link expires. If you did not request this, you can ignore this email."
+  },
+  {
+    "id": "15-account-deletion-verification",
+    "name": "Account deletion · request code",
+    "htmlHash": "fbe114d33f99727303b75a7bf8b6e55115bcf3219676423bf6f0a87894f4404e",
+    "textHash": "dab5204ef939daef2af6b99cee059f0966d36922ce6b8d878bd38df753e76805",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Your EwaTrade account deletion request code is 482913. It expires in 10 minutes. If you did not request this, ignore this email. Never share the code."
+  },
+  {
+    "id": "16-account-privacy-outcome",
+    "name": "Account deletion · operator outcome",
+    "htmlHash": "2cf1b7aa220ef99d267acf4e4a52e033f7bac202ddc36919d91388e3652b0c1c",
+    "textHash": "a94aa25ff42c976aa127eea18e02237dbfd8b0a8d84e5f43063a44c846479861",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Preview content only.\n\nThe operator supplies the reviewed outcome wording here. This sample does not certify deletion, retention decisions or delivery."
+  },
+  {
+    "id": "17-account-privacy-notice-alert",
+    "name": "Account deletion · delivery alert",
+    "htmlHash": "c6551db50039cc53b511916319bd64c4533cca43455ce53c7810a95569d859f2",
+    "textHash": "11bc6c441fec0ee1c75e870bf49adbc733525a6aa4b4f102a9429d29c5768f73",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Failed notices: 1\nFailures after a completed request: 1\nUncertain sends: 2\nSends in progress over 10 minutes: 1\nAccepted sends without delivery over 1 hour: 3\nInspect the platform-admin account-deletion review queue and provider event history.\nDo not resend an uncertain attempt without reconciling the original provider outcome.\nThis alert contains no person, request, message or recipient identifier."
+  },
+  {
+    "id": "18-play-refund-review-alert",
+    "name": "Google Play · refund review alert",
+    "htmlHash": "15e78c7b14a52cfafb4d8c6c0cc883a221bdd0d739358deb8e486222a29bcac7",
+    "textHash": "48d58e8eebe1d94e156ad37436605077db3a915e22a767ec87cea1c9d02768ac",
+    "links": [
+      "https://ewatrade.com"
+    ],
+    "text": "Unresolved cases: 4\nOverdue cases: 1\nEarliest response deadline (UTC): 2026-10-03T10:30:00.000Z\nInspect the platform-admin refund-review queue and follow the reviewed operator procedure.\nA CLAIMED or UNCERTAIN response must be reconciled with Google manually; do not submit it again.\nThis email contains no purchase token, order ID or customer information."
+  }
+]

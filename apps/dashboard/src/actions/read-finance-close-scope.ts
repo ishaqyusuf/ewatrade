@@ -3,7 +3,7 @@
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 
-/** Re-read the authenticated dashboard scope before a period lock review/write. */
+/** Re-read the authenticated dashboard scope before a manager finance review/write. */
 export async function readFinanceCloseScope() {
   const session = await getServerSession()
   if (!session) return null

@@ -3,7 +3,7 @@ export function defaultMarketingEarlyAccessAdminSubject() {
 }
 
 export function defaultMarketingEarlyAccessConfirmationSubject() {
-  return "We received your early access request"
+  return "We received your EwaTrade early access request"
 }
 
 export function defaultMarketingWaitlistAdminSubject() {

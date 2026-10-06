@@ -4,6 +4,7 @@ import {
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { CatalogPhotoError } from "@ewatrade/db/catalog-photos"
 import {
   CatalogError,
@@ -22,9 +23,11 @@ import {
   setCatalogOfferingStoreAvailability,
   updateProductUnitConfigurationDraft,
 } from "@ewatrade/db/queries"
+import type { TenantContext } from "@ewatrade/db/tenant-context"
 import { TRPCError } from "@trpc/server"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
 import { catalogCategoriesRouter } from "./catalog-categories"
+import { catalogDetailRouter } from "./catalog-detail"
 import { catalogPhotoTRPCError, catalogPhotosRouter } from "./catalog-photos"
 
 import {
@@ -65,8 +68,12 @@ function assertCanReadCatalog(role: string) {
   }
 }
 
-function assertCanManageCatalog(role: string) {
-  if (!canManageSalesOperations(catalogRole(role))) {
+function assertCanManageCatalog(tenant: TenantContext) {
+  if (
+    !(tenant.staffAccess?.mode === "SCOPED"
+      ? canStaffPerform(tenant.staffAccess, "catalog")
+      : canManageSalesOperations(catalogRole(tenant.membership.role)))
+  ) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "You do not have permission to manage the Catalog.",
@@ -144,12 +151,13 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  detail: catalogDetailRouter,
   photos: catalogPhotosRouter,
   categories: catalogCategoriesRouter,
   archiveOffering: protectedProcedure
     .input(catalogArchiveOfferingSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await archiveCatalogOffering(ctx.db, {
           ...input,
@@ -164,7 +172,7 @@ export const catalogRouter = createTRPCRouter({
   archiveVariant: protectedProcedure
     .input(catalogArchiveVariantSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await archiveCatalogVariant(ctx.db, {
           ...input,
@@ -179,7 +187,7 @@ export const catalogRouter = createTRPCRouter({
   createUnitConfigurationDraft: protectedProcedure
     .input(catalogProductUnitConfigurationsSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await createProductUnitConfigurationDraft(ctx.db, {
           ...input,
@@ -194,7 +202,7 @@ export const catalogRouter = createTRPCRouter({
   createUnitDefinition: protectedProcedure
     .input(catalogCreateUnitDefinitionSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await createCatalogUnitDefinition(ctx.db, {
           ...input,
@@ -209,7 +217,7 @@ export const catalogRouter = createTRPCRouter({
   createSimpleItem: protectedProcedure
     .input(catalogCreateSimpleItemSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -236,7 +244,7 @@ export const catalogRouter = createTRPCRouter({
   createItem: protectedProcedure
     .input(catalogCreateItemSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       const storeId = resolveStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
@@ -272,6 +280,10 @@ export const catalogRouter = createTRPCRouter({
       const item = await getCatalogItem(ctx.db, {
         itemId: input.itemId,
         tenantId: ctx.tenantContext.tenant.id,
+        storeIds:
+          ctx.tenantContext.staffAccess?.mode === "SCOPED"
+            ? ctx.tenantContext.stores.map((store) => store.id)
+            : undefined,
       })
 
       if (!item) {
@@ -292,6 +304,10 @@ export const catalogRouter = createTRPCRouter({
       return listCatalogItems(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
+        storeIds:
+          ctx.tenantContext.staffAccess?.mode === "SCOPED"
+            ? ctx.tenantContext.stores.map((store) => store.id)
+            : undefined,
       })
     }),
 
@@ -303,6 +319,10 @@ export const catalogRouter = createTRPCRouter({
       return listCatalogItemsPage(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
+        storeIds:
+          ctx.tenantContext.staffAccess?.mode === "SCOPED"
+            ? ctx.tenantContext.stores.map((store) => store.id)
+            : undefined,
       })
     }),
 
@@ -331,7 +351,7 @@ export const catalogRouter = createTRPCRouter({
   publishUnitConfiguration: protectedProcedure
     .input(catalogPublishUnitConfigurationSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await publishProductUnitConfiguration(ctx.db, {
           ...input,
@@ -347,7 +367,7 @@ export const catalogRouter = createTRPCRouter({
   setOfferingAvailability: protectedProcedure
     .input(catalogSetOfferingAvailabilitySchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await setCatalogOfferingStoreAvailability(ctx.db, {
           ...input,
@@ -363,7 +383,7 @@ export const catalogRouter = createTRPCRouter({
   updateUnitConfigurationDraft: protectedProcedure
     .input(catalogUpdateUnitConfigurationDraftSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext.membership.role)
+      assertCanManageCatalog(ctx.tenantContext)
       try {
         return await updateProductUnitConfigurationDraft(ctx.db, {
           ...input,

@@ -1,5 +1,19 @@
 import type { IconKeys } from "@/components/ui/icon"
 
+// Stable identity colors, independent of business status and theme.
+export const MOBILE_ACCOUNT_AVATAR_TOKENS = {
+  foreground: "#FFFFFF",
+  backgrounds: [
+    "#166451",
+    "#1D4ED8",
+    "#6D28D9",
+    "#9D174D",
+    "#9A3412",
+    "#0E7490",
+    "#4338CA",
+  ],
+} as const
+
 export const MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS = {
   activeForeground: "#FFFFFF",
   centerAccent: "#F2A51A",

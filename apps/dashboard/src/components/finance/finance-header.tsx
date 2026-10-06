@@ -9,21 +9,23 @@ export function FinanceHeader({
   view,
 }: {
   ready: boolean
-  view: "overview" | "spending" | "accounts" | "reports" | "suppliers"
+  view: "overview" | "spending" | "accounts" | "reports" | "suppliers" | "bank"
 }) {
   return (
     <PageHeader
       eyebrow="Business money"
       title={
-        view === "suppliers"
-          ? "Suppliers"
-          : view === "spending"
-            ? "Spending"
-            : view === "accounts"
-              ? "Money accounts"
-              : view === "reports"
-                ? "Reports"
-                : "Finance"
+        view === "bank"
+          ? "Bank statements"
+          : view === "suppliers"
+            ? "Suppliers"
+            : view === "spending"
+              ? "Spending"
+              : view === "accounts"
+                ? "Money accounts"
+                : view === "reports"
+                  ? "Reports"
+                  : "Finance"
       }
     >
       <PageToolbar
@@ -38,16 +40,20 @@ export function FinanceHeader({
               icon
               mode={
                 ready
-                  ? view === "suppliers"
-                    ? "supplier"
-                    : "expense"
+                  ? view === "bank"
+                    ? "bank-import"
+                    : view === "suppliers"
+                      ? "supplier"
+                      : "expense"
                   : "setup"
               }
             >
               {ready
-                ? view === "suppliers"
-                  ? "New supplier"
-                  : "Record expense"
+                ? view === "bank"
+                  ? "Import statement"
+                  : view === "suppliers"
+                    ? "New supplier"
+                    : "Record expense"
                 : "Set up finance"}
             </OpenFinanceSheet>
           </>
@@ -61,6 +67,7 @@ export function FinanceHeader({
           { path: "/finance", label: "Overview" },
           { path: "/finance/spending", label: "Spending" },
           { path: "/finance/accounts", label: "Accounts" },
+          { path: "/finance/bank", label: "Bank" },
           { path: "/finance/suppliers", label: "Suppliers" },
           { path: "/finance/reports", label: "Reports" },
         ]}

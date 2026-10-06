@@ -10,6 +10,22 @@ const BETTER_AUTH_SESSION_COOKIE_NAMES = [
   "better-auth.session_token",
   "__Secure-better-auth.session_token",
 ] as const
+const PUBLIC_BRAND_ASSET_PATHS = new Set([
+  "/favicon.png",
+  "/shop-v3/cal-sans.woff2",
+  "/shop-v3/inter-regular.ttf",
+  "/brand/ewatrade-logo-precision-rise-v1.svg",
+  "/brand/ewatrade-logo-precision-rise-v1-mono.svg",
+  "/brand/ewatrade-logo-precision-rise-v1-reverse.svg",
+  "/brand/ewatrade-logo-precision-rise-v1.png",
+  "/brand/ewatrade-wordmark-precision-rise-v1.svg",
+  "/brand/ewatrade-wordmark-precision-rise-v1-mono.svg",
+  "/brand/ewatrade-wordmark-precision-rise-v1-reverse.svg",
+  "/brand/ewatrade-mark-precision-rise-v1.svg",
+  "/brand/ewatrade-mark-precision-rise-v1-mono.svg",
+  "/brand/ewatrade-mark-precision-rise-v1-reverse.svg",
+  "/brand/ewatrade-mark-precision-rise-v1.png",
+])
 
 /**
  * Dashboard middleware.
@@ -28,9 +44,17 @@ export function middleware(request: NextRequest) {
   const result = resolveTenantDomain(hostname, {
     platformDomain: PLATFORM_DOMAIN,
   })
+  const isOwnPreviewHostname =
+    process.env.VERCEL_ENV === "preview" &&
+    Boolean(process.env.VERCEL_URL) &&
+    hostname.toLowerCase() === process.env.VERCEL_URL?.toLowerCase()
 
   // Non-dashboard hostnames redirect to marketing.
-  if (result.kind === "tenant" && result.surface !== "dashboard") {
+  if (
+    !isOwnPreviewHostname &&
+    result.kind === "tenant" &&
+    result.surface !== "dashboard"
+  ) {
     // Allow localhost through in dev
     if (!result.isLocalhost) {
       return NextResponse.redirect(new URL(MARKETING_URL))
@@ -41,10 +65,23 @@ export function middleware(request: NextRequest) {
   const hasSessionCookie = BETTER_AUTH_SESSION_COOKIE_NAMES.some((cookieName) =>
     request.cookies.has(cookieName),
   )
+  const isPublicBrandAsset =
+    ["GET", "HEAD"].includes(request.method) &&
+    PUBLIC_BRAND_ASSET_PATHS.has(request.nextUrl.pathname)
+  const isPublicAppAssociation =
+    ["GET", "HEAD"].includes(request.method) &&
+    [
+      "/.well-known/apple-app-site-association",
+      "/.well-known/assetlinks.json",
+    ].includes(request.nextUrl.pathname)
 
   if (
     !hasSessionCookie &&
-    !["/login", "/staff-onboarding"].includes(request.nextUrl.pathname)
+    !isPublicBrandAsset &&
+    !isPublicAppAssociation &&
+    !["/login", "/signup", "/staff-onboarding"].includes(
+      request.nextUrl.pathname,
+    )
   ) {
     const loginUrl = new URL("/login", request.nextUrl.origin)
     loginUrl.searchParams.set(

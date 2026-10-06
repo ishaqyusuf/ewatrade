@@ -13,7 +13,22 @@ export function makeQueryClient() {
       onError: (error) => captureDashboardError(error, "dashboard.mutation"),
     }),
     queryCache: new QueryCache({
-      onError: (error) => captureDashboardError(error, "dashboard.query"),
+      onError: (error, query) => {
+        captureDashboardError(error, "dashboard.query")
+        const data =
+          error && typeof error === "object" && "data" in error
+            ? error.data
+            : null
+        if (
+          data &&
+          typeof data === "object" &&
+          "code" in data &&
+          ["FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"].includes(String(data.code))
+        ) {
+          // A rejected fresh read must not keep an earlier authorized payload visible.
+          query.setState({ data: undefined, status: "error" })
+        }
+      },
     }),
     defaultOptions: {
       queries: {

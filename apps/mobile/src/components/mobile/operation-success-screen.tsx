@@ -10,8 +10,7 @@ import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 type SuccessCopy = {
-  description: string
-  eyebrow: string
+  description?: string
   title: string
 }
 
@@ -23,35 +22,13 @@ function getSuccessCopy(
     return {
       description:
         "The order is saved on this device and will sync when you are back online.",
-      eyebrow: "Order queued",
-      title: "Order saved successfully",
+      title: "Order queued",
     }
   }
 
-  if (kind === "order") {
-    return {
-      description:
-        "The order has been recorded and is ready for the next step.",
-      eyebrow: "Order created",
-      title: "Sale complete",
-    }
-  }
-
-  if (kind === "service") {
-    return {
-      description:
-        "Your service is now available in the catalog and ready to use.",
-      eyebrow: "Service created",
-      title: "Your service is ready",
-    }
-  }
-
-  return {
-    description:
-      "Your product is now available in the catalog and ready to use.",
-    eyebrow: "Product created",
-    title: "Your product is ready",
-  }
+  if (kind === "order") return { title: "Order created" }
+  if (kind === "service") return { title: "Service added" }
+  return { title: "Product added" }
 }
 
 function paymentLabel(paymentState: OperationSuccessParams["paymentState"]) {
@@ -121,15 +98,14 @@ export function OperationSuccessScreen({
             </View>
           </View>
 
-          <Text className="text-center text-xs font-bold uppercase tracking-[1.8px] text-success">
-            {copy.eyebrow}
-          </Text>
           <Text className="mt-3 text-center text-3xl font-extrabold leading-9 text-foreground">
             {copy.title}
           </Text>
-          <Text className="mt-3 max-w-[320px] text-center text-sm leading-6 text-muted-foreground">
-            {copy.description}
-          </Text>
+          {copy.description ? (
+            <Text className="mt-3 max-w-[320px] text-center text-sm leading-6 text-muted-foreground">
+              {copy.description}
+            </Text>
+          ) : null}
 
           <View className="mt-8 w-full rounded-2xl bg-muted px-4">
             {kind === "order" ? (

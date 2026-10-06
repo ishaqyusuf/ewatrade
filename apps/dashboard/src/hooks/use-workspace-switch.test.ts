@@ -185,3 +185,40 @@ describe("workspace switch actions", () => {
     expect(harness.assignedUrls).toEqual([])
   })
 })
+
+test("All stores navigates to Inventory and a concrete selection exits All stores even for the default", async () => {
+  const harness = createHarness(new Response(JSON.stringify({ success: true })))
+  const actions = createWorkspaceSwitchActions(
+    { ...context, inventoryScope: "all" },
+    harness.dependencies,
+  )
+  expect(await actions.switchAllStores()).toEqual({ status: "success" })
+  expect(JSON.parse(String(harness.requests[0]?.init?.body))).toEqual({
+    scope: "all",
+  })
+  expect(harness.assignedUrls).toEqual(["/inventory"])
+  expect(await actions.switchStore("store-a")).toEqual({ status: "success" })
+  expect(harness.requests).toHaveLength(2)
+})
+
+test("a revoked cookie can be repaired even when only one Store remains", async () => {
+  const harness = createHarness(
+    new Response(JSON.stringify({ success: true }), { status: 200 }),
+  )
+  const repaired = {
+    ...context,
+    storeSelectionNeedsRepair: true,
+    stores: context.stores.slice(0, 1),
+    tenants: context.tenants.slice(0, 1),
+  }
+  const actions = createWorkspaceSwitchActions(repaired, harness.dependencies)
+  expect(await actions.switchStore("store-a")).toEqual({ status: "success" })
+  expect(harness.requests).toHaveLength(1)
+  expect(harness.requests[0]?.init?.body).toBe(
+    JSON.stringify({ storeId: "store-a" }),
+  )
+  expect(harness.effects).toEqual(["clear-cache"])
+  expect(
+    renderToStaticMarkup(createElement(WorkspaceDropdown, { ctx: repaired })),
+  ).not.toContain('disabled=""')
+})

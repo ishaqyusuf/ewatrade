@@ -48,9 +48,10 @@ function SheetContent({
         className={cn(
           "fixed inset-y-0 z-50 h-dvh outline-none transition-transform duration-300 ease-in-out motion-reduce:transition-none md:p-4",
           side === "left"
-            ? "left-0 w-3/4 max-w-sm data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full"
-            : "right-0 w-full sm:w-3/4 sm:max-w-[520px] data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
+            ? "left-0 w-full md:w-3/4 md:max-w-sm data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full"
+            : "right-0 w-full md:w-3/4 md:max-w-[520px] data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
           popupClassName,
+          "max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:p-0",
         )}
         {...props}
       >

@@ -1,19 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { StatusBadge } from "@/components/mobile/status-badge"
-import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { formatMinorMoney } from "@ewatrade/utils"
-import type { ReactNode } from "react"
-import { VariableContextProvider } from "nativewind"
-import type {
-  OrderDetailContentProps,
-  OrderDetailPrimaryActionProps,
-} from "@/components/mobile/order-detail/order-detail-presentation"
-import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   type CommercialOrder,
   type CommercialOrderLine,
@@ -31,6 +16,21 @@ import {
   canFulfillCommercialOrderLine,
   getCommercialOrderOverviewSummary,
 } from "@/components/mobile/commerce/commercial-order-overview-model"
+import type {
+  OrderDetailContentProps,
+  OrderDetailPrimaryActionProps,
+} from "@/components/mobile/order-detail/order-detail-presentation"
+import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
+import { StatusBadge } from "@/components/mobile/status-badge"
+import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
+import { formatMinorMoney } from "@ewatrade/utils"
+import { VariableContextProvider } from "nativewind"
+import type { ReactNode } from "react"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function ClassicOrderDetailContent({
   activity,
@@ -454,9 +454,17 @@ function OrderLineRow({
             {commerceLineOption(line)}
           </Text>
           <Text className="text-sm text-muted-foreground" selectable>
-            {formatCommerceQuantity(line.quantity)} ×{" "}
-            {formatMinorMoney(line.unitPriceMinor, order.currencyCode)}
+            {formatCommerceQuantity(line.quantity)}
+            {line.unitPriceMinor === null ? " · " : " × "}
+            {line.unitPriceMinor === null
+              ? "Price entered during order"
+              : formatMinorMoney(line.unitPriceMinor, order.currencyCode)}
           </Text>
+          {line.note ? (
+            <Text className="text-sm text-muted-foreground" selectable>
+              {line.note}
+            </Text>
+          ) : null}
         </View>
         <Text
           className="font-extrabold tabular-nums text-foreground"

@@ -18,13 +18,23 @@ import { getLoginDestination } from "@/lib/login-navigation"
 
 import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 
 export function LoginForm({
   next,
   initialError,
   marketingUrl,
-}: { next?: string; initialError?: string; marketingUrl: string }) {
+  accountEntry,
+}: {
+  next?: string
+  initialError?: string
+  marketingUrl: string
+  accountEntry?: {
+    emailField: ReactNode
+    canSignIn: boolean
+    signIn(): Promise<void>
+  }
+}) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -41,6 +51,10 @@ export function LoginForm({
     setError(null)
 
     try {
+      if (accountEntry) {
+        await accountEntry.signIn()
+        return
+      }
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -58,8 +72,12 @@ export function LoginForm({
       }
 
       window.location.assign(getLoginDestination(next))
-    } catch {
-      setError("Network error. Please check your connection.")
+    } catch (cause) {
+      setError(
+        accountEntry && cause instanceof Error
+          ? cause.message
+          : "Network error. Please check your connection.",
+      )
     } finally {
       setLoading(false)
     }
@@ -92,59 +110,65 @@ export function LoginForm({
               <FieldLabel htmlFor="email" className="text-sm font-medium">
                 Email address
               </FieldLabel>
-              <Input
-                disabled={loading}
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
+              {accountEntry?.emailField ?? (
+                <Input
+                  disabled={loading}
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              )}
             </Field>
 
             {/* Password */}
-            <Field className="gap-1.5">
-              <div className="flex items-center justify-between">
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <a
-                  href={`${marketingUrl}/contact`}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Need help?
-                </a>
-              </div>
-              <InputGroup appearance="form">
-                <InputGroupInput
-                  disabled={loading}
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupButton
-                    disabled={loading}
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    size="icon-sm"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
+            {!accountEntry && (
+              <Field className="gap-1.5">
+                <div className="flex items-center justify-between">
+                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  <a
+                    href={`${marketingUrl}/contact`}
+                    className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    {showPassword ? (
-                      <HugeiconsIcon icon={ViewOffSlashIcon} />
-                    ) : (
-                      <HugeiconsIcon icon={ViewIcon} />
-                    )}
-                  </InputGroupButton>
-                </InputGroupAddon>
-              </InputGroup>
-            </Field>
+                    Need help?
+                  </a>
+                </div>
+                <InputGroup appearance="form">
+                  <InputGroupInput
+                    disabled={loading}
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      disabled={loading}
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      size="icon-sm"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showPassword ? (
+                        <HugeiconsIcon icon={ViewOffSlashIcon} />
+                      ) : (
+                        <HugeiconsIcon icon={ViewIcon} />
+                      )}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+              </Field>
+            )}
 
             {error && (
               <FormFeedback appearance="dashboard">{error}</FormFeedback>
@@ -154,7 +178,7 @@ export function LoginForm({
               <SubmitButton
                 isSubmitting={loading}
                 type="submit"
-                disabled={loading}
+                disabled={loading || (accountEntry && !accountEntry.canSignIn)}
                 className="mt-1 w-full"
               >
                 {loading ? "Signing in…" : "Sign in"}

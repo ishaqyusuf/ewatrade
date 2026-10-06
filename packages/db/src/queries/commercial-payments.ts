@@ -418,6 +418,7 @@ export async function listCommercialOrderPaymentsPage(
     defaultCurrencyCode: string
     limit?: number
     query?: string
+    storeId?: string
     tenantId: string
   },
 ) {
@@ -438,6 +439,7 @@ export async function listCommercialOrderPaymentsPage(
     : []
   const baseWhere: Prisma.CommercialOrderPaymentWhereInput = {
     tenantId: input.tenantId,
+    ...(input.storeId ? {order: {is: {storeId: input.storeId}}} : {}),
     type: CommercialPaymentType.PAYMENT,
     method: { not: CommercialPaymentMethod.CUSTOMER_CREDIT },
   }

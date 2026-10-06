@@ -71,11 +71,7 @@ export function ClassicCatalogMasthead({
           </Text>
         </View>
       ) : (
-        <SecondarySheetHeader
-          description="Products track stock. Services stay outside inventory."
-          icon="Warehouse"
-          title="Catalog items"
-        />
+        <SecondarySheetHeader icon="Warehouse" title="Catalog items" />
       )}
     </View>
   )

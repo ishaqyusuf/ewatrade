@@ -1,0 +1,15 @@
+{
+  "updated": [
+    ".brain/BRAIN.md",
+    ".brain/architecture/mobile-design-modules.md",
+    ".brain/decisions/2026-10-02-classic-home-initial-avatar-colors.md",
+    ".brain/decisions/2026-10-02-classic-home-translucent-status-bar.md",
+    ".brain/decisions/2026-10-02-native-scroll-motion.md",
+    ".brain/design/2026-10-02-mobile-dashboard-five-direction-workshop.md",
+    ".brain/features/mobile-accessibility-large-text.md",
+    ".brain/features/mobile-home-guided-journey.md",
+    ".brain/features/mobile-scroll-motion.md",
+    ".brain/tasks/in-progress.md"
+  ],
+  "apiDatabaseMigrationChanges": false
+}

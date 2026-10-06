@@ -48,6 +48,8 @@ type DashboardNavDefinition = Omit<DashboardNavItem, "children"> & {
 export type DashboardNavContext = Partial<
   Omit<WorkspaceFeatureAvailability, "hasInventoryActivity" | "storeId">
 > & {
+  staffAccessMode?: "LEGACY" | "SCOPED"
+  catalogEditor?: boolean
   businessProfileKey?: string | null
   isPlatformAdmin?: boolean
   operatingModel?: BusinessOperatingModel | null
@@ -55,8 +57,15 @@ export type DashboardNavContext = Partial<
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
 
-const canManageCatalog = (role: EwaTradeRole | null) =>
-  role ? canManageSalesOperations(role) : false
+const canManageCatalog = (
+  role: EwaTradeRole | null,
+  context: DashboardNavContext,
+) =>
+  role
+    ? context.staffAccessMode === "SCOPED" && !canManageTenant(role)
+      ? context.catalogEditor === true
+      : canManageSalesOperations(role)
+    : false
 
 const canUseRetailOps = (role: EwaTradeRole | null) =>
   role ? canOperatePos(role) : false
@@ -129,7 +138,26 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     href: "/inventory",
     icon: "inventory",
     label: "Inventory",
-    canAccess: canOperateInventory,
+    canAccess: (role, context) =>
+      canOperateInventory(role, context.staffAccessMode),
+    children: [
+      {
+        href: "/inventory/operations",
+        icon: "inventory",
+        label: "Operations",
+        description: "Stock operation history",
+        canAccess: (role, context) =>
+          canOperateInventory(role, context.staffAccessMode),
+      },
+      {
+        href: "/inventory/transfers",
+        icon: "inventory",
+        label: "Stock transfers",
+        description: "Incoming and outgoing stock transfers",
+        canAccess: (role, context) =>
+          canOperateInventory(role, context.staffAccessMode),
+      },
+    ],
   },
   {
     description: "Sales sessions and order operations",
@@ -266,6 +294,20 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         canAccess: canManageTenantRole,
       },
       {
+        description: "Manage business Stores",
+        href: "/settings/stores",
+        icon: "settings",
+        label: "Stores",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Order receipt defaults and Store overrides",
+        href: "/settings/receipts",
+        icon: "settings",
+        label: "Receipts",
+        canAccess: canManageTenantRole,
+      },
+      {
         description: "Business domain settings",
         href: "/settings/domains",
         icon: "settings",
@@ -340,6 +382,24 @@ function flattenNavItems(items: DashboardNavItem[]): DashboardNavItem[] {
   ])
 }
 
+function scopedPageAllowed(
+  href: string,
+  role: EwaTradeRole | null,
+  context: DashboardNavContext,
+) {
+  if (context.staffAccessMode !== "SCOPED" || (role && canManageTenant(role)))
+    return true
+  return [
+    "/",
+    "/sales",
+    "/customers",
+    "/inventory",
+    "/inventory/operations",
+    "/inventory/transfers",
+    "/catalog",
+  ].includes(href)
+}
+
 function filterAndStripDefinitions(
   items: DashboardNavDefinition[],
   role: EwaTradeRole | null,
@@ -347,6 +407,7 @@ function filterAndStripDefinitions(
 ): DashboardNavItem[] {
   return items.flatMap((item) => {
     if (
+      !scopedPageAllowed(item.href, role, context) ||
       !item.canAccess(role, context) ||
       (item.isVisible && !item.isVisible(context))
     ) {
@@ -401,6 +462,7 @@ export function canAccessDashboardPath(
   context: DashboardNavContext = {},
 ) {
   const normalizedRole = getNormalizedRole(role)
+  if (!scopedPageAllowed(pathname, normalizedRole, context)) return false
   const matchedKnownPath = flattenDefinitions(DASHBOARD_NAV)
     .filter((item) => matchesPath(pathname, item.href, item.end))
     .sort((left, right) => right.href.length - left.href.length)[0]

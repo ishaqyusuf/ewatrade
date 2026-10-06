@@ -33,9 +33,9 @@ export const metadata: Metadata = {
       "One connected place for the products you sell, the orders you take, and the work that follows.",
     images: [
       {
-        url: "/brand/ewatrade-social-preview-v3.png",
-        width: 1727,
-        height: 910,
+        url: "/brand/ewatrade-social-preview-v4.png",
+        width: 1200,
+        height: 630,
         alt: "ẸwáTrade — Come. Trade. Together. Products. Orders. What’s next.",
       },
     ],
@@ -47,15 +47,28 @@ export const metadata: Metadata = {
       "One connected place for the products you sell, the orders you take, and the work that follows.",
     images: [
       {
-        url: "/brand/ewatrade-social-preview-v3.png",
+        url: "/brand/ewatrade-social-preview-v4.png",
         alt: "ẸwáTrade — Come. Trade. Together. Products. Orders. What’s next.",
       },
     ],
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/brand/ewatrade-mark.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      {
+        url: "/brand/ewatrade-mark-precision-rise-v1.svg",
+        type: "image/svg+xml",
+        sizes: "any",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/brand/ewatrade-mark-precision-rise-v1-reverse.svg",
+        type: "image/svg+xml",
+        sizes: "any",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    apple: "/brand/ewatrade-mark-precision-rise-v1.png",
   },
 }
 

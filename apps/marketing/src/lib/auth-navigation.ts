@@ -1,10 +1,4 @@
-import { resolveDashboardUrl } from "./dashboard-url"
-
+import { getDashboardRouteUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 export function getDashboardLoginUrl() {
-  const dashboardUrl = resolveDashboardUrl({
-    configuredUrl: process.env.NEXT_PUBLIC_DASHBOARD_URL,
-    isProduction: process.env.NODE_ENV === "production",
-    platformDomain: process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
-  })
-  return `${dashboardUrl.replace(/\/+$/, "")}/login`
+  return getDashboardRouteUrl("/login")
 }

@@ -82,16 +82,6 @@ const contracts = [
     ],
   },
   {
-    file: "app/design-system/staff-onboarding.tsx",
-    markers: [
-      "shouldShowInternalDesignSystemEntry",
-      "StaffOnboardingMarketNameplate",
-      'type PreviewState = "disabled" | "enabled" | "error" | "loading"',
-      "onSubmit={() => undefined}",
-      "name.trim().length > 0",
-    ],
-  },
-  {
     file: "components/mobile/staff-onboarding-market-nameplate.tsx",
     markers: [
       'keyboardAutoScrollEnabled={largeTextLayout || Platform.OS !== "android"}',
@@ -102,13 +92,6 @@ const contracts = [
       'testID="staff-onboarding-submit"',
       'tone="marigold"',
       'trailingIcon="ArrowRight"',
-    ],
-  },
-  {
-    file: "components/mobile/design-system/design-system-screen.tsx",
-    markers: [
-      'router.push("/design-system/staff-onboarding")',
-      "Preview staff onboarding",
     ],
   },
 ]

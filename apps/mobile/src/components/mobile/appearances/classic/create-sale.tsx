@@ -21,7 +21,6 @@ import { formatMinorMoney } from "@ewatrade/utils"
 
 export function ClassicSaleStageHeader({
   current,
-  description,
   onBack,
   title,
 }: SaleStageHeaderProps) {
@@ -48,9 +47,6 @@ export function ClassicSaleStageHeader({
           </Pressable>
         ) : null}
       </View>
-      <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
-        {description}
-      </Text>
     </View>
   )
 }
@@ -165,7 +161,6 @@ export function ClassicSelectedOrderLine({
 }
 
 export function ClassicCustomerActionRow({
-  description,
   icon,
   onPress,
   title,
@@ -183,7 +178,6 @@ export function ClassicCustomerActionRow({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{title}</Text>
-        <Text className="text-xs text-muted-foreground">{description}</Text>
       </View>
       <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
     </Pressable>

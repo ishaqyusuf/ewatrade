@@ -12,7 +12,7 @@ describe("Android native app URL launcher", () => {
     expect(() =>
       validateAndroidAppUrl({
         expectedScheme: "ewatrade-dev",
-        url: "exp+ewatrade://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A3096%2F--%2Fdesign-system%2Fbusiness-home-market-ledger",
+        url: "exp+ewatrade://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A3096%2F--%2Fdashboard",
       }),
     ).toThrow("app-specific URL")
 

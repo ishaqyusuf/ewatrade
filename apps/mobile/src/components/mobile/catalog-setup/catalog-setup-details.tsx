@@ -4,6 +4,8 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { catalogCategoryLabelEmoji } from "@ewatrade/utils/catalog-category-emojis"
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { Image } from "expo-image"
 import { useState } from "react"
 import { View } from "react-native"
@@ -12,13 +14,11 @@ import {
   CatalogIllustrationPreview,
 } from "./catalog-illustration-library"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
-import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { CatalogInventoryCodes } from "./catalog-inventory-codes"
 import { CatalogSetupOptions } from "./catalog-setup-options"
 import { CatalogSetupPricing } from "./catalog-setup-pricing"
 import { CatalogSetupService } from "./catalog-setup-service"
 import { CatalogSetupUnits } from "./catalog-setup-units"
-import { catalogCategoryLabelEmoji } from "@ewatrade/utils/catalog-category-emojis"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export type CatalogEditorKey =
@@ -57,7 +57,7 @@ export function CatalogDetailRow({
   disabled = false,
 }: {
   label: string
-  description: string
+  description?: string
   icon: IconKeys
   emoji?: string
   onPress: () => void
@@ -83,7 +83,9 @@ export function CatalogDetailRow({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-bold text-foreground">{label}</Text>
-        <Text className="text-sm text-muted-foreground">{description}</Text>
+        {description ? (
+          <Text className="text-sm text-muted-foreground">{description}</Text>
+        ) : null}
       </View>
       <Icon name="ChevronRight" className="size-sm text-muted-foreground" />
     </Pressable>
@@ -332,14 +334,12 @@ function CatalogImageEditor({ model }: { model: CatalogSetupModel }) {
       <View className="gap-1">
         <CatalogDetailRow
           label="Choose a photo"
-          description="Select an image from this device."
           icon="Camera"
           disabled={disabled}
           onPress={() => void select("photos")}
         />
         <CatalogDetailRow
           label="Take a photo"
-          description="Use your camera."
           icon="Camera"
           disabled={disabled}
           onPress={() => void select("camera")}

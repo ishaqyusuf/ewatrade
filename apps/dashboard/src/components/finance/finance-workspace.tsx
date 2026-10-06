@@ -3,6 +3,7 @@ import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { ExpenseTableSkeleton } from "@/components/tables/expenses/skeleton"
+import { FinanceBankStatementTableSkeleton } from "@/components/tables/finance-bank-statements/skeleton"
 import { FinanceSupplierDataTable } from "@/components/tables/finance-suppliers/data-table"
 import { FinanceSupplierTableSkeleton } from "@/components/tables/finance-suppliers/skeleton"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -12,6 +13,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { Suspense } from "react"
 import { ExpenseDataTable } from "../tables/expenses/data-table"
+import { FinanceBankStatements } from "./bank-statements"
 import { FinanceCashCountHistory } from "./cash-count-history"
 import { ExpenseSearchFilter } from "./expense-search-filter"
 import { FinanceAccounts } from "./finance-accounts"
@@ -23,7 +25,7 @@ export function FinanceWorkspace({
   view,
   initialTableSettings,
 }: {
-  view: "overview" | "spending" | "accounts" | "reports" | "suppliers"
+  view: "overview" | "spending" | "accounts" | "reports" | "suppliers" | "bank"
   initialTableSettings?: TableSettings
 }) {
   const trpc = useTRPC()
@@ -45,6 +47,23 @@ export function FinanceWorkspace({
           </section>
         ) : (
           <>
+            {view === "bank" ? (
+              <ErrorBoundary errorComponent={WorkspaceError}>
+                <Suspense
+                  fallback={
+                    <FinanceBankStatementTableSkeleton
+                      settings={initialTableSettings}
+                    />
+                  }
+                >
+                  <FinanceBankStatements
+                    key={book.id}
+                    book={book}
+                    initialTableSettings={initialTableSettings}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            ) : null}
             {view === "suppliers" ? (
               <section className="flex min-w-0 flex-col gap-5">
                 <p className="text-sm text-muted-foreground">

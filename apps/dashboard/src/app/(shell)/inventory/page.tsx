@@ -13,7 +13,10 @@ export const metadata: Metadata = {
   title: "Inventory | EwaTrade",
 }
 
-export default async function InventoryRoutePage() {
+export default async function InventoryRoutePage({
+  searchParams,
+}: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams
   const session = await getServerSession()
 
   if (!session) {
@@ -26,7 +29,7 @@ export default async function InventoryRoutePage() {
     redirect("/login?error=no_tenant")
   }
 
-  if (!canOperateInventory(ctx.membership.role)) {
+  if (!canOperateInventory(ctx.membership.role, ctx.membership.staffAccessMode)) {
     redirect("/")
   }
 
@@ -42,22 +45,20 @@ export default async function InventoryRoutePage() {
   })
 
   void Promise.allSettled([
+    ...(typeof params.catalogDetail === "string" && params.catalogDetail
+      ? [
+          prefetch(
+            trpc.catalog.detail.overview.queryOptions({
+              itemId: params.catalogDetail,
+              storeId: store.id,
+            }),
+          ),
+        ]
+      : []),
     prefetch(
       trpc.inventory.balanceReport.queryOptions({
         includeCompatibleTotals: true,
-        storeId: store.id,
-      }),
-    ),
-    prefetch(
-      trpc.inventory.operationHistory.queryOptions({
-        limit: 50,
-        storeId: store.id,
-      }),
-    ),
-    prefetch(
-      trpc.inventory.transfers.queryOptions({
-        limit: 100,
-        storeId: store.id,
+        storeId: ctx.inventoryScope === "all" ? undefined : store.id,
       }),
     ),
   ])
@@ -67,7 +68,11 @@ export default async function InventoryRoutePage() {
       <Suspense
         fallback={<InventoryTableSkeleton settings={initialSettings} />}
       >
-        <InventoryPage store={store} initialSettings={initialSettings} />
+        <InventoryPage
+          store={store}
+          allStores={ctx.inventoryScope === "all"}
+          initialSettings={initialSettings}
+        />
       </Suspense>
     </HydrateClient>
   )

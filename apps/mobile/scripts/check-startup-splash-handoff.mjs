@@ -9,13 +9,6 @@ const appVariant = readFileSync(
 )
 const indexRoute = readFileSync(join(mobileDir, "src/app/index.tsx"), "utf8")
 const rootLayout = readFileSync(join(mobileDir, "src/app/_layout.tsx"), "utf8")
-const designSystemScreen = readFileSync(
-  join(
-    mobileDir,
-    "src/components/mobile/design-system/design-system-screen.tsx",
-  ),
-  "utf8",
-)
 const splashSurface = readFileSync(
   join(mobileDir, "src/components/mobile/startup-splash.tsx"),
   "utf8",
@@ -28,11 +21,6 @@ const gatePath = join(
   mobileDir,
   "src/components/mobile/startup-splash-gate.tsx",
 )
-const reviewRoutePath = join(
-  mobileDir,
-  "src/app/design-system/startup-splash.tsx",
-)
-
 const failures = []
 
 if (!existsSync(gatePath)) {
@@ -68,32 +56,6 @@ if (
   )
 }
 
-if (!existsSync(reviewRoutePath)) {
-  failures.push("the protected internal startup splash review route is missing")
-} else {
-  const reviewRoute = readFileSync(reviewRoutePath, "utf8")
-  for (const marker of [
-    "shouldShowInternalDesignSystemEntry",
-    '<Redirect href="/login" />',
-    "<StartupSplash />",
-  ]) {
-    if (!reviewRoute.includes(marker)) {
-      failures.push(`startup splash review route is missing ${marker}`)
-    }
-  }
-}
-
-for (const marker of [
-  "Preview startup splash",
-  'router.push("/design-system/startup-splash")',
-]) {
-  if (!designSystemScreen.includes(marker)) {
-    failures.push(
-      `the Mobile Design System cannot open the splash via ${marker}`,
-    )
-  }
-}
-
 if (!/<StartupSplashGate\s+[\s\S]*?\/>/.test(rootLayout)) {
   failures.push("the root layout does not mount the rich startup gate")
 }
@@ -110,49 +72,60 @@ if (indexRoute.includes("MINIMUM_STARTUP_SPLASH_MS")) {
   )
 }
 
+const marketDaySplash = readFileSync(
+  join(
+    mobileDir,
+    "src/components/mobile/appearances/market-day/startup-splash.tsx",
+  ),
+  "utf8",
+)
+const classicSplash = readFileSync(
+  join(
+    mobileDir,
+    "src/components/mobile/appearances/classic/startup-splash.tsx",
+  ),
+  "utf8",
+)
 for (const marker of [
-  "pulseOuter",
-  "marketSun",
-  "skyRoute",
-  "markTile",
-  "ẸwáTrade",
-  "Market day, every day",
-  "canvasCut",
-  "Opening your market",
-  "height: 235",
-  'rotate: "-4deg"',
-  "height: 132",
-  "width: 126",
-  "fontSize: 57",
-  "height: 124",
-  "right: -33",
-  "top: 119",
-  "height: 34",
-  "right: -35",
-  "top: 291",
-  "width: 250",
+  "MarketDayStartupSplash",
+  "ClassicStartupSplash",
+  'useMobileDesign("startup-splash")',
 ]) {
-  if (!splashSurface.includes(marker)) {
-    failures.push(`the rich splash surface is missing ${marker}`)
-  }
+  if (!splashSurface.includes(marker))
+    failures.push(`splash router is missing ${marker}`)
+}
+for (const marker of [
+  "<BrandMark",
+  "<BrandWordmark reverse",
+  "Market day, every day",
+  "Opening your market",
+]) {
+  if (!marketDaySplash.includes(marker))
+    failures.push(`Market Day splash is missing ${marker}`)
+}
+if (!classicSplash.includes('<BrandLogo reverse={colorScheme === "dark"}')) {
+  failures.push("Classic splash must use the theme-aware Precision Rise logo")
 }
 
-for (const color of [
-  "#17684F",
+for (const marker of [
+  "BRAND_THEME.light.primary",
+  "BRAND_THEME.light.primaryForeground",
   "#FFBD3E",
   "#E94F2F",
   "#79C8E8",
-  "#FFF4D6",
-  "#FFF9ED",
-  "#091C19",
 ]) {
-  if (!marketDayTheme.includes(color)) {
-    failures.push(`the Market Pulse palette is missing ${color}`)
-  }
+  if (!marketDayTheme.includes(marker))
+    failures.push(`Market Day palette is missing ${marker}`)
 }
 
-if (!appConfig.includes("market-pulse-splash-mark.png")) {
-  failures.push("the native gate does not use the approved doorway mark")
+for (const marker of [
+  "variantConfig.icons.splashDark",
+  "variantConfig.icons.splashLight",
+  "image: nativeSplashImageLight",
+  "image: nativeSplashImageDark",
+]) {
+  if (!appConfig.includes(marker))
+    failures.push(`native splash config is missing ${marker}`)
 }
 
 if (failures.length > 0) {

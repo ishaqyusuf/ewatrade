@@ -1,0 +1,115 @@
+{
+  "passed": true,
+  "changedFiles": [
+    "dev-precision-rise-ios-dark.png",
+    "dev-precision-rise-ios-light.png",
+    "dev-precision-rise-loading-icon.png",
+    "preview-precision-rise-ios-dark.png",
+    "preview-precision-rise-ios-light.png",
+    "preview-precision-rise-loading-icon.png"
+  ],
+  "checks": [
+    {
+      "file": "dev-precision-rise-adaptive-icon.png",
+      "maxRadius": 322,
+      "safeCircleRadius": 338
+    },
+    {
+      "file": "dev-precision-rise-ios-dark.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "dev-precision-rise-ios-light.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "dev-precision-rise-loading-icon.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "dev-precision-rise-splash-logo-dark.png",
+      "size": 640,
+      "transparent": true
+    },
+    {
+      "file": "dev-precision-rise-splash-logo.png",
+      "size": 640,
+      "transparent": true
+    },
+    {
+      "file": "precision-rise-adaptive-icon.png",
+      "maxRadius": 322,
+      "safeCircleRadius": 338
+    },
+    {
+      "file": "precision-rise-ios-dark.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "precision-rise-ios-light.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "precision-rise-loading-icon.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "precision-rise-splash-logo-dark.png",
+      "size": 640,
+      "transparent": true
+    },
+    {
+      "file": "precision-rise-splash-logo.png",
+      "size": 640,
+      "transparent": true
+    },
+    {
+      "file": "preview-precision-rise-adaptive-icon.png",
+      "maxRadius": 322,
+      "safeCircleRadius": 338
+    },
+    {
+      "file": "preview-precision-rise-ios-dark.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "preview-precision-rise-ios-light.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "preview-precision-rise-loading-icon.png",
+      "size": 1024,
+      "opaque": true
+    },
+    {
+      "file": "preview-precision-rise-splash-logo-dark.png",
+      "size": 640,
+      "transparent": true
+    },
+    {
+      "file": "preview-precision-rise-splash-logo.png",
+      "size": 640,
+      "transparent": true
+    }
+  ],
+  "patterns": [
+    {
+      "environment": "development",
+      "originalLightBackgroundSamplesMatch": 5,
+      "pattern": "blueprint grid and guides"
+    },
+    {
+      "environment": "preview",
+      "originalLightBackgroundSamplesMatch": 5,
+      "pattern": "market-print dots"
+    }
+  ]
+}

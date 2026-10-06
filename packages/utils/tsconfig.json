@@ -1,6 +1,7 @@
 {
   "extends": "../../packages/tsconfig/base.json",
   "compilerOptions": {
+    "target": "ES2022",
     "types": ["bun"]
   },
   "include": ["src/**/*.ts"],

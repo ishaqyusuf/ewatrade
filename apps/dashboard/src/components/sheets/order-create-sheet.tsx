@@ -8,7 +8,10 @@ import { Sheet } from "@ewatrade/ui"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
-export function OrderCreateSheet({ store }: { store: StoreSummary }) {
+export function OrderCreateSheet({
+  store,
+  customerDirectory = true,
+}: { store: StoreSummary; customerDirectory?: boolean }) {
   const { setParams, sheet } = useOrderParams()
   const open = sheet === "create"
   const { closeError, requestClose } = useSheetDismissal(() =>
@@ -28,7 +31,11 @@ export function OrderCreateSheet({ store }: { store: StoreSummary }) {
           title="New order"
           description="Choose items first. Customer details are optional."
         >
-          <OrderForm key={`${store.id}:create`} store={store} />
+          <OrderForm
+            key={`${store.id}:create`}
+            store={store}
+            customerDirectory={customerDirectory}
+          />
         </SheetFrame>
       ) : null}
     </Sheet>

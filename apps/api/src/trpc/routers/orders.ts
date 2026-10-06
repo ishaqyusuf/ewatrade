@@ -23,7 +23,19 @@ import {
   returnCommercialOrderProductLine,
   updateCommercialOrderReminderSettings,
 } from "@ewatrade/db/queries"
+import {
+  getOrderReceiptSettings,
+  getOrderReceipts,
+  saveOrderReceiptSettings,
+} from "@ewatrade/db/queries"
+import { ReceiptRenderError } from "@ewatrade/order-receipts"
+import { renderOrderReceipts } from "@ewatrade/order-receipts/pdf"
 import { TRPCError } from "@trpc/server"
+import {
+  orderReceiptPrepareSchema,
+  orderReceiptSettingsGetSchema,
+  orderReceiptSettingsSaveSchema,
+} from "../../schemas/order-receipts"
 
 import {
   commercialOrderAuthorizeChargeOnlyServiceLineSchema,
@@ -53,12 +65,15 @@ function assertCanOperateOrders(role: string) {
   }
 }
 
-function assertCanManageOrderReminders(role: string) {
+function assertCanManageOrderReminders(
+  role: string,
+  subject = "Order reminders",
+) {
   const normalized = normalizeRole(role)
   if (!normalized || !canManageTenant(normalized)) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "Only Owners and Admins can manage Order reminders.",
+      message: `Only Owners and Admins can manage ${subject}.`,
     })
   }
 }
@@ -140,9 +155,90 @@ function orderError(error: CatalogError | FinanceError) {
 }
 
 export const ordersRouter = createTRPCRouter({
+  receiptSettings: protectedProcedure
+    .input(orderReceiptSettingsGetSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await getOrderReceiptSettings(ctx.db, {
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw orderError(error)
+        throw error
+      }
+    }),
+  saveReceiptSettings: protectedProcedure
+    .input(orderReceiptSettingsSaveSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageOrderReminders(
+        ctx.tenantContext.membership.role,
+        "receipt settings",
+      )
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await saveOrderReceiptSettings(ctx.db, {
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw orderError(error)
+        throw error
+      }
+    }),
+  prepareReceipts: protectedProcedure
+    .input(orderReceiptPrepareSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        const receipts = await getOrderReceipts(ctx.db, {
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+        const pdf = await renderOrderReceipts(receipts)
+        const pages = input.includeImages
+          ? await (
+              await import("@ewatrade/order-receipts/images")
+            ).renderReceiptImages(pdf)
+          : undefined
+        return {
+          pages,
+          pdfBase64: pdf.toString("base64"),
+          orderNumbers: receipts.map((receipt) => receipt.orderNumber),
+          generatedAt: receipts[0]?.generatedAt,
+          settingsSource: receipts[0]?.settingsSource,
+        }
+      } catch (error) {
+        if (error instanceof ReceiptRenderError)
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message })
+        if (error instanceof CatalogError) throw orderError(error)
+        throw error
+      }
+    }),
   customerCount: protectedProcedure.query(async ({ ctx }) => {
     assertCanOperateOrders(ctx.tenantContext.membership.role)
     return countCommercialOrderCustomers(ctx.db, {
+      storeId:
+        ctx.tenantContext.staffAccess?.mode === "SCOPED"
+          ? ctx.tenantContext.activeStore?.id
+          : undefined,
       tenantId: ctx.tenantContext.tenant.id,
     })
   }),
