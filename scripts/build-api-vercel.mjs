@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process"
 import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { apiBundleExternalArgs } from "./api-bundle-externals.mjs"
 
 // Mirror the existing isolated Preview deploy bundle inside Vercel's disposable
 // checkout. Never rewrite source in an ordinary development checkout.
@@ -21,6 +22,7 @@ run([
   "--target=bun",
   "--packages=bundle",
   "--env=disable",
+  ...apiBundleExternalArgs(),
   "--outfile=apps/api/src/bundle.js",
   "apps/api/src/index.ts",
 ])
