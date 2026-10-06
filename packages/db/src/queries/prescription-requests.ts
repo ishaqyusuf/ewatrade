@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto"
+import { saleEligibleCatalogItem } from "./product-usage"
 
 import { decryptPrescriptionData } from "@ewatrade/prescriptions"
 import {
@@ -2431,6 +2432,7 @@ export async function recordPrescriptionPharmacistReview(
         const offering = await tx.sellableOffering.findFirst({
           where: {
             id: line.offeringId,
+            catalogItem: saleEligibleCatalogItem,
             kind: SellableOfferingKind.PRODUCT_UNIT,
             status: CatalogRecordStatus.ACTIVE,
             storeAvailability: {

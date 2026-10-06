@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import {
   mkdirSync,
   mkdtempSync,
@@ -16,12 +17,34 @@ import {
   apiBuildSandboxProfile,
   apiTypeScriptDiagnostics,
   prepareCommittedApiArtifact,
+  preparedApiBuildCommand,
   probeApiBuildSandbox,
   resolveApiBuildTools,
   validatePrismaSchemaEngine,
 } from "./release-api-build.mjs"
 
 const roots: string[] = []
+
+test("provider preparation accepts the checked bundle and rejects missing or changed bytes", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "ewatrade-bundle-check-"))
+  roots.push(root)
+  mkdirSync(path.join(root, "src"))
+  const original = "export default { fetch() {} }\n"
+  const command = preparedApiBuildCommand(
+    createHash("sha256").update(original).digest("hex"),
+  )
+  expect(command.length).toBeLessThanOrEqual(256)
+  const run = () =>
+    spawnSync("/bin/sh", ["-c", command], { cwd: root, stdio: "ignore" }).status
+  expect(run()).not.toBe(0)
+  writeFileSync(path.join(root, "src/bundle.js"), original)
+  expect(run()).toBe(0)
+  writeFileSync(path.join(root, "src/bundle.js"), "changed bytes")
+  expect(run()).not.toBe(0)
+  expect(() => preparedApiBuildCommand("'; invalid shell input")).toThrow(
+    "API_BUILD_INVALID_BUNDLE_HASH",
+  )
+})
 
 test("compiler diagnostics retain known source locations and codes without exposing raw values or outside paths", () => {
   const output = [
@@ -61,7 +84,9 @@ test("a Bun driver is refused before any Git read, install or provider access", 
 
 function context() {
   const root = realpathSync(
-    mkdtempSync(path.join(tmpdir(), "ewatrade-api-isolation-test-")),
+    // Match the production stage parent; the sandbox intentionally grants only
+    // these ancestor directory reads to Bun's bundler, not arbitrary TMPDIRs.
+    mkdtempSync(path.join("/private/tmp", "ewatrade-api-isolation-test-")),
   )
   roots.push(root)
   const stage = path.join(root, "source")
@@ -232,7 +257,29 @@ test.skipIf(process.platform !== "darwin")(
     const entryPath = path.join(source, "index.ts")
     const outside = path.join(path.dirname(ctx.stage), "outside.js")
     const executed = path.join(ctx.home, "must-not-execute.txt")
-    const entrySource = `import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(executed)},'FAKE_EXECUTED');export const value=process.env.API_BUILD_FAKE_SECRET;`
+    const receipts = path.join(
+      ctx.stage,
+      "node_modules/@ewatrade/order-receipts",
+    )
+    mkdirSync(receipts, { recursive: true })
+    writeFileSync(
+      path.join(receipts, "package.json"),
+      JSON.stringify({
+        name: "@ewatrade/order-receipts",
+        type: "module",
+        exports: { ".": "./index.js", "./images": "./images.js" },
+      }),
+    )
+    writeFileSync(
+      path.join(receipts, "index.js"),
+      "export class ReceiptRenderError extends Error {}",
+    )
+    writeFileSync(
+      path.join(receipts, "images.js"),
+      "import addon from './host.node'; export const native = addon;",
+    )
+    writeFileSync(path.join(receipts, "host.node"), "FAKE_HOST_ONLY_ADDON")
+    const entrySource = `import {ReceiptRenderError} from '@ewatrade/order-receipts';import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(executed)},'FAKE_EXECUTED');export const value=process.env.API_BUILD_FAKE_SECRET;export {ReceiptRenderError};export const images=()=>import('@ewatrade/order-receipts/images');`
     writeFileSync(entryPath, entrySource)
     writeFileSync(outside, 'export default "FAKE_HOST_CONTENT";')
     writeFileSync(
@@ -252,11 +299,21 @@ test.skipIf(process.platform !== "darwin")(
       env: ctx.environment,
       encoding: "utf8",
     })
-    expect(result.status).toBe(0)
+    const safeFailure = result.stderr?.match(
+      /API_BUILD_STAGE_FAILED:[a-z0-9:,_-]+/i,
+    )?.[0]
+    expect(
+      result.status,
+      safeFailure ?? `bundle fixture exit ${result.status}`,
+    ).toBe(0)
     expect(JSON.parse(readFileSync(resultPath, "utf8"))).toEqual({
       compiled: true,
       outsideDenied: true,
     })
+    const bundle = readFileSync(outputPath, "utf8")
+    expect(bundle).toContain('from "@ewatrade/order-receipts"')
+    expect(bundle).toContain('import("@ewatrade/order-receipts/images")')
+    expect(bundle).not.toContain("FAKE_HOST_ONLY_ADDON")
   },
 )
 

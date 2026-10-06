@@ -7,12 +7,12 @@ import {
 } from "@ewatrade/utils/app-update"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { requireOptionalNativeModule } from "expo"
-import Constants from "expo-constants"
 import * as FileSystem from "expo-file-system/legacy"
 import * as Linking from "expo-linking"
 import * as Updates from "expo-updates"
 import { Platform } from "react-native"
 import { create } from "zustand"
+import { readLegacyAppIdentity } from "./app-update-legacy-identity"
 import {
   APP_UPDATE_RESUME_ROUTES,
   type AppUpdateResume,
@@ -74,25 +74,43 @@ export async function withAppUpdateLock<T>(
     useAppUpdate.setState({ busy: false })
   }
 }
+type NativeIdentity = { applicationId: string; buildNumber: string }
+let legacyIdentity: NativeIdentity | null = null
+let identityRequest: Promise<void> | null = null
+
 export function installedBuild() {
   if (Platform.OS !== "android" || Updates.channel !== "preview") return null
-  const native = installer?.identity()
-  if (native && native.applicationId !== APP_UPDATE_SCOPE.applicationId)
-    return null
   try {
+    const native = installer ? installer.identity() : legacyIdentity
+    if (native?.applicationId !== APP_UPDATE_SCOPE.applicationId) return null
     return {
       ...APP_UPDATE_SCOPE,
-      buildNumber: parseBuildNumber(
-        native?.buildNumber ?? Constants.nativeBuildVersion,
-      ),
+      buildNumber: parseBuildNumber(native.buildNumber),
     }
   } catch {
     return null
   }
 }
+
+export async function resolveInstalledBuild() {
+  if (Platform.OS !== "android" || Updates.channel !== "preview") return null
+  if (!installer && !legacyIdentity) {
+    identityRequest ??= readLegacyAppIdentity()
+      .then((identity) => {
+        legacyIdentity = identity
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        identityRequest = null
+      })
+    await identityRequest
+  }
+  return installedBuild()
+}
+
 export async function checkNativeBuild(manual = false): Promise<boolean> {
   if (__DEV__) return false
-  const installed = installedBuild()
+  const installed = await resolveInstalledBuild()
   if (!installed) return false
   if (useAppUpdate.getState().visible && !manual) return true
   const url = new URL("/api/mobile/builds/check", getBaseUrl())
@@ -103,23 +121,24 @@ export async function checkNativeBuild(manual = false): Promise<boolean> {
     headers: { Accept: "application/json" },
   })
   // Allow staged rollout when this API has not been deployed yet.
-  if (response.status === 404) return false
+  if (response.status === 404) {
+    clearBuildOffer()
+    return false
+  }
   if (!response.ok)
     throw new Error("Could not check new builds. Try again when connected.")
   const result = await response.json()
   if (!result || typeof result !== "object" || !("build" in result))
     throw new Error("Invalid build response")
   if (!result.build) {
-    useAppUpdate.setState({
-      build: null,
-      phase: "idle",
-      visible: false,
-      error: null,
-    })
+    clearBuildOffer()
     return false
   }
   const build = parsePublishedBuild(result.build)
-  if (!isNewerBuild(build, installed)) return false
+  if (!isNewerBuild(build, installed)) {
+    clearBuildOffer()
+    return false
+  }
   let dismissed = false
   try {
     const value = JSON.parse(
@@ -136,6 +155,38 @@ export async function checkNativeBuild(manual = false): Promise<boolean> {
     visible: manual || !dismissed,
   })
   return manual || !dismissed
+}
+
+function clearBuildOffer() {
+  useAppUpdate.setState({
+    build: null,
+    phase: "idle",
+    visible: false,
+    error: null,
+    progress: undefined,
+  })
+}
+
+async function assertBuildStillAvailable(build: PublishedMobileBuild) {
+  const available = await checkNativeBuild(true)
+  const current = useAppUpdate.getState().build
+  if (!available || current?.revision !== build.revision)
+    throw new Error("This build changed. Check for updates again.")
+}
+
+async function saveBuildResume(build: PublishedMobileBuild, route: string) {
+  const session = getSession()
+  if (!session || !APP_UPDATE_RESUME_ROUTES.includes(route)) return
+  const snapshot: AppUpdateResume = {
+    schemaVersion: 1,
+    route,
+    targetBuild: build.buildNumber,
+    userId: session.profile.id,
+    businessId: session.profile.businessId ?? null,
+    storeId: session.profile.storeId ?? null,
+    savedAt: Date.now(),
+  }
+  await AsyncStorage.setItem(APP_UPDATE_RESUME_KEY, JSON.stringify(snapshot))
 }
 export async function dismissNativeBuild() {
   if (running) return
@@ -185,6 +236,8 @@ export async function downloadAndInstallBuild(route: string) {
     try {
       useAppUpdate.setState({ error: null })
       if (!installer) {
+        await assertBuildStillAvailable(build)
+        await saveBuildResume(build, route)
         await Linking.openURL(build.artifactUrl)
         useAppUpdate.setState({ phase: "installing" })
         return
@@ -226,28 +279,8 @@ export async function downloadAndInstallBuild(route: string) {
         build.buildNumber,
       )
       // Re-read before handoff. A withdrawn/replaced build must not be installed.
-      const stillAvailable = await checkNativeBuild(true)
-      if (
-        !stillAvailable ||
-        useAppUpdate.getState().build?.revision !== build.revision
-      )
-        throw new Error("This build changed. Check for updates again.")
-      const session = getSession()
-      if (session && APP_UPDATE_RESUME_ROUTES.includes(route)) {
-        const snapshot: AppUpdateResume = {
-          schemaVersion: 1,
-          route,
-          targetBuild: build.buildNumber,
-          userId: session.profile.id,
-          businessId: session.profile.businessId ?? null,
-          storeId: session.profile.storeId ?? null,
-          savedAt: Date.now(),
-        }
-        await AsyncStorage.setItem(
-          APP_UPDATE_RESUME_KEY,
-          JSON.stringify(snapshot),
-        )
-      }
+      await assertBuildStillAvailable(build)
+      await saveBuildResume(build, route)
       await installer.installApk(uri)
       useAppUpdate.setState({ phase: "installing", visible: true })
     } catch (error) {

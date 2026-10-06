@@ -70,6 +70,61 @@ export function ServiceWorkSearchFilter({
   ]
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "priority",
+            label: "Priority",
+            allLabel: "Any priority",
+            options: SERVICE_PRIORITY_FILTERS.map((value) => ({
+              value,
+              label: priorityLabels[value],
+            })),
+          },
+          {
+            id: "due",
+            label: "Due date",
+            allLabel: "Any due date",
+            options: SERVICE_DUE_FILTERS.filter((value) => value !== "all").map(
+              (value) => ({ value, label: dueLabels[value] }),
+            ),
+          },
+          ...(canManage
+            ? [
+                {
+                  id: "assignee",
+                  label: "Assignee",
+                  allLabel: "All assignees",
+                  options: (assignees.data ?? []).map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                  })),
+                  loading: assignees.isPending,
+                  error: assignees.isError,
+                  onRetry: () => void assignees.refetch(),
+                },
+              ]
+            : []),
+        ],
+        values: {
+          priority: filter.priority ? [filter.priority] : [],
+          due: filter.due && filter.due !== "all" ? [filter.due] : [],
+          assignee: filter.assigneeUserId ? [filter.assigneeUserId] : [],
+        },
+        onApply: (draft) =>
+          setFilter({
+            priority:
+              SERVICE_PRIORITY_FILTERS.find(
+                (value) => value === draft.priority?.[0],
+              ) ?? null,
+            due:
+              SERVICE_DUE_FILTERS.find((value) => value === draft.due?.[0]) ??
+              null,
+            ...(canManage
+              ? { assigneeUserId: draft.assignee?.[0] ?? null }
+              : {}),
+          }),
+      }}
       placeholder="Search service work..."
       value={filter.query ?? ""}
       onSearch={(query) => void setFilter({ query: query || null })}

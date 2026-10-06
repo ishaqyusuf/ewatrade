@@ -26,7 +26,28 @@ export function PrescriptionReport({
     trpc.prescriptions.report.queryOptions({ from, storeId, to }),
   )
   if (report.isLoading) {
-    return <div className="h-72 animate-pulse bg-muted" />
+    return (
+      <>
+        <div className="hidden h-72 animate-pulse bg-muted md:block" />
+        <div
+          aria-label="Loading prescription summaries"
+          data-summary-grid
+          data-summary-skeleton
+          className="grid gap-3 md:hidden"
+        >
+          {[
+            "requests",
+            "quotes",
+            "paid",
+            "pickup",
+            "delivery",
+            "conversion",
+          ].map((label) => (
+            <div key={label} className="h-28 animate-pulse bg-muted" />
+          ))}
+        </div>
+      </>
+    )
   }
   if (report.isError) {
     return (
@@ -79,11 +100,21 @@ export function PrescriptionReport({
           ]}
         />
       </ControlField>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div
+        data-summary-grid
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+      >
         {cards.map(([label, value]) => (
           <div className="border border-border bg-card p-5" key={String(label)}>
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="mt-2 text-3xl font-semibold tabular-nums">{value}</p>
+            <p data-summary-label className="text-sm text-muted-foreground">
+              {label}
+            </p>
+            <p
+              data-summary-value
+              className="mt-2 text-3xl font-semibold tabular-nums"
+            >
+              {value}
+            </p>
           </div>
         ))}
       </div>

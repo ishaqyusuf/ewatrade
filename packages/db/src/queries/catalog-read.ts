@@ -184,6 +184,8 @@ export function serializeCatalogItem(item: CatalogItemGraph) {
     product: item.product
       ? {
           id: item.product.id,
+          usage: item.product.usage,
+          updatedAt: item.product.updatedAt.toISOString(),
           currentUnitConfiguration: item.product.currentUnitConfiguration
             ? {
                 canonicalBalanceScale:

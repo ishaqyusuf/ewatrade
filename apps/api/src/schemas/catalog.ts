@@ -227,6 +227,7 @@ export const catalogCreateProductSchema = z
   .object({
     ...catalogItemFields,
     kind: z.literal("product"),
+    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
     openingStockQuantity: exactQuantitySchema.optional(),
     unitConfiguration: z
       .object({
@@ -305,6 +306,7 @@ export const catalogCreateSimpleProductSchema = z
     ...simpleCatalogItemFields,
     canonicalUnitName: z.string().trim().min(1).max(80),
     kind: z.literal("product"),
+    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
     openingStockQuantity: exactQuantitySchema.optional(),
     priceMinor: catalogPriceMinorSchema.optional(),
   })
@@ -406,5 +408,12 @@ export const catalogPublishUnitConfigurationSchema = z
   .object({
     configurationId: z.string().trim().min(1),
     stockTransitionOperationId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+export const catalogSetProductUsageSchema = z
+  .object({
+    itemId: z.string().trim().min(1).max(128),
+    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]),
+    expectedUpdatedAt: z.coerce.date(),
   })
   .strict()

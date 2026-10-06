@@ -5,6 +5,7 @@ import {
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
 import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
+import { isSaleEligibleProduct } from "@ewatrade/utils/product-usage"
 
 export type OrderCatalogItem = RouterOutputs["catalog"]["listItems"][number]
 
@@ -19,7 +20,10 @@ export function availableOrderOfferings(
   storeId: string,
 ) {
   return items
-    .filter((item) => item.status === "active")
+    .filter(
+      (item) =>
+        item.status === "active" && isSaleEligibleProduct(item.product?.usage),
+    )
     .flatMap((item) =>
       item.variants
         .filter((variant) => variant.status === "active")

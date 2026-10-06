@@ -4,6 +4,7 @@
   "private": true,
   "main": "src/index.ts",
   "exports": {
+    "./product-usage": "./src/product-usage.ts",
     "./catalog-category-suggestions": "./src/catalog-category-suggestions.ts",
     "./catalog-category-emojis": "./src/catalog-category-emojis.ts",
     ".": "./src/index.ts",

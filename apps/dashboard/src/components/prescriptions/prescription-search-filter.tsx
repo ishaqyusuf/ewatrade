@@ -75,6 +75,80 @@ export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
   ]
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "statuses",
+            label: "Status",
+            multiple: true,
+            allLabel: "All statuses",
+            options: PRESCRIPTION_STATUSES.map((value) => ({
+              value,
+              label: label(value),
+            })),
+          },
+          {
+            id: "assignees",
+            label: "Assignee",
+            multiple: true,
+            allLabel: "All assignees",
+            options: assignees.map((item) => ({
+              value: item.id,
+              label: item.name,
+            })),
+            loading: context.isPending,
+            error: context.isError,
+            onRetry: () => void context.refetch(),
+          },
+          {
+            id: "date",
+            label: "Date range",
+            summary: (draft) =>
+              draft.from?.[0] || draft.to?.[0]
+                ? `${draft.from?.[0] ?? "Any date"} – ${draft.to?.[0] ? `before ${draft.to[0]}` : "Any date"}`
+                : "Any date",
+            render: (draft, update) => (
+              <DateRangeFilter
+                start={draft.from?.[0]}
+                end={draft.to?.[0]}
+                endExclusive
+                onSelect={({ start, end }) =>
+                  update({ from: start ? [start] : [], to: end ? [end] : [] })
+                }
+              />
+            ),
+          },
+          {
+            id: "sources",
+            label: "Source",
+            multiple: true,
+            allLabel: "All sources",
+            options: PRESCRIPTION_SOURCES.map((value) => ({
+              value,
+              label: label(value),
+            })),
+          },
+        ],
+        values: {
+          statuses: filter.statuses ?? [],
+          assignees: filter.assignees ?? [],
+          sources: filter.sources ?? [],
+          from: filter.from ? [filter.from] : [],
+          to: filter.to ? [filter.to] : [],
+        },
+        onApply: (draft) =>
+          setFilter({
+            statuses: PRESCRIPTION_STATUSES.filter((value) =>
+              draft.statuses?.includes(value),
+            ),
+            assignees: draft.assignees?.length ? draft.assignees : null,
+            sources: PRESCRIPTION_SOURCES.filter((value) =>
+              draft.sources?.includes(value),
+            ),
+            from: draft.from?.[0] ?? null,
+            to: draft.to?.[0] ?? null,
+          }),
+      }}
       placeholder="Search prescription requests..."
       value={filter.q ?? ""}
       onSearch={(q) => void setFilter({ q: q || null })}

@@ -122,9 +122,21 @@ function verifyDeployment(url, expectedId) {
     )
   }
   const legal = JSON.parse(protectedGet("/api/trpc/auth.legalPublication", url))
-  if (legal.result?.data?.json?.signupAvailable !== false) {
+  const publication = legal.result?.data?.json
+  // Preview is an explicit legal testing environment in the committed server
+  // contract. This does not enable the separate direct Better Auth signup route.
+  if (
+    publication?.signupAvailable !== true ||
+    publication.acceptanceRequired !== false ||
+    typeof publication.effective !== "boolean" ||
+    (publication.effective
+      ? typeof publication.version !== "string" ||
+        publication.version.length === 0 ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(publication.effectiveDate)
+      : publication.version !== null || publication.effectiveDate !== null)
+  ) {
     throw new Error(
-      "Preview signup unexpectedly available; alias was not moved.",
+      "Preview legal testing contract mismatch; alias was not moved.",
     )
   }
   const allowedOrigin = readEnvironmentFile(

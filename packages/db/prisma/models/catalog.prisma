@@ -32,9 +32,16 @@ model CatalogItem {
   @@index([tenantId, updatedAt])
 }
 
+enum ProductUsage {
+  FOR_SALE
+  INTERNAL_USE
+  BOTH
+}
+
 model CatalogProduct {
   id                                String                     @id @default(cuid())
   catalogItemId                     String                     @unique
+  usage                             ProductUsage               @default(FOR_SALE)
   currentUnitConfigurationVersionId String?                    @unique
   createdAt                         DateTime                   @default(now())
   updatedAt                         DateTime                   @updatedAt

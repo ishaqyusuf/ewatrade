@@ -26,9 +26,11 @@ function DialogContent({
       <DialogPrimitive.Popup
         {...props}
         data-slot="dialog-content"
+        data-mobile-overlay=""
         className={cn(
           "fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-xl max-h-[calc(100svh-10vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto border border-border bg-background text-primary outline-none transition-opacity duration-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none",
           className,
+          "max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:border-0 max-md:rounded-none",
         )}
       >
         {children}

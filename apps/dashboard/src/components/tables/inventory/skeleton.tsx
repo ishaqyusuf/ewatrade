@@ -19,6 +19,8 @@ export function InventoryTableSkeleton({
     <div className="grid gap-6">
       <div
         aria-label="Loading inventory summary"
+        data-summary-grid
+        data-summary-skeleton
         className="grid h-32 grid-cols-3 divide-x divide-border border border-border"
       >
         {[0, 1, 2].map((id) => (

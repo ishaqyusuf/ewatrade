@@ -113,7 +113,7 @@ export function CustomersPage({
     <ScrollableContent>
       <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
         <CollapsibleSummary>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div data-summary-grid className="grid gap-4 sm:grid-cols-3">
             {[
               ["Customers", customers.length],
               [
@@ -122,7 +122,12 @@ export function CustomersPage({
               ],
               ["Revenue", formatFinanceMoney(totalMinor, store.currencyCode)],
             ].map(([label, value]) => (
-              <MetricCard key={label} label={String(label)} value={value} />
+              <MetricCard
+                key={label}
+                label={String(label)}
+                value={value}
+                money={label === "Revenue"}
+              />
             ))}
           </div>
         </CollapsibleSummary>

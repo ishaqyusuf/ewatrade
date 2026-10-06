@@ -10,6 +10,7 @@ import {
   getSaleOfferingDisabledReasons,
   subtractExactDecimals,
 } from "@ewatrade/utils"
+import { isSaleEligibleProduct } from "@ewatrade/utils/product-usage"
 
 export type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 export type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
@@ -61,86 +62,88 @@ export function flattenSaleOfferings(
 ): SaleOfferingChoice[] {
   if (!storeId) return []
 
-  const choices = items.flatMap((item) =>
-    item.variants.flatMap((variant) =>
-      item.kind === kind || !kind
-        ? variant.offerings.flatMap((offering) => {
-            if (
-              offering.status !== "active" ||
-              offering.pricingPolicy !== "fixed" ||
-              !offering.stores.some(
-                (row) => row.storeId === storeId && row.isAvailable,
-              )
-            )
-              return []
-            const inventoryUnit =
-              item.product?.currentUnitConfiguration?.units.find(
-                (unit) => unit.id === offering.productUnit?.inventoryUnitId,
-              )
-            const balance = item.product?.stockBalances.find(
-              (row) =>
-                row.storeId === storeId &&
-                row.variantId === variant.id &&
-                (inventoryUnit?.stockBehavior === "packaged_stock"
-                  ? row.kind === "packaged_stock" &&
-                    row.inventoryUnitId ===
-                      offering.productUnit?.inventoryUnitId
-                  : row.kind === "shared_pool"),
-            )
-            const disabledReasons = getSaleOfferingDisabledReasons({
-              fixedPriceMinor: offering.fixedPriceMinor,
-              kind:
-                offering.kind === "product_unit" ? "product_unit" : "service",
-              onHandQuantity: balance?.onHandQuantity,
-              reservedQuantity: balance?.reservedQuantity,
-            })
-            const availableBalanceQuantity = balance
-              ? subtractExactDecimals(
-                  balance.onHandQuantity,
-                  balance.reservedQuantity,
+  const choices = items
+    .filter((item) => isSaleEligibleProduct(item.product?.usage))
+    .flatMap((item) =>
+      item.variants.flatMap((variant) =>
+        item.kind === kind || !kind
+          ? variant.offerings.flatMap((offering) => {
+              if (
+                offering.status !== "active" ||
+                offering.pricingPolicy !== "fixed" ||
+                !offering.stores.some(
+                  (row) => row.storeId === storeId && row.isAvailable,
                 )
-              : undefined
-            const availableQuantity =
-              availableBalanceQuantity === undefined
-                ? undefined
-                : inventoryUnit?.stockBehavior === "packaged_stock"
-                  ? availableBalanceQuantity
-                  : inventoryUnit
-                    ? floorExactDecimalQuotient(
-                        availableBalanceQuantity,
-                        inventoryUnit.factor,
-                        inventoryUnit.transactionScale,
-                      )
-                    : undefined
-            return [
-              {
-                availableQuantity,
-                balanceRevision: balance?.revision,
-                catalogItemId: item.id,
-                configurationVersionId:
-                  item.product?.currentUnitConfiguration?.id,
-                currencyCode: offering.currencyCode,
-                displayName:
-                  item.variants.length > 1
-                    ? `${item.name} · ${variant.name}`
-                    : item.name,
-                disabledReason: disabledReasons.join(" · ") || undefined,
+              )
+                return []
+              const inventoryUnit =
+                item.product?.currentUnitConfiguration?.units.find(
+                  (unit) => unit.id === offering.productUnit?.inventoryUnitId,
+                )
+              const balance = item.product?.stockBalances.find(
+                (row) =>
+                  row.storeId === storeId &&
+                  row.variantId === variant.id &&
+                  (inventoryUnit?.stockBehavior === "packaged_stock"
+                    ? row.kind === "packaged_stock" &&
+                      row.inventoryUnitId ===
+                        offering.productUnit?.inventoryUnitId
+                    : row.kind === "shared_pool"),
+              )
+              const disabledReasons = getSaleOfferingDisabledReasons({
                 fixedPriceMinor: offering.fixedPriceMinor,
-                id: offering.id,
-                imageUrl: variant.imageUrl ?? item.imageUrl,
-                itemName: item.name,
                 kind:
-                  offering.kind === "product_unit"
-                    ? ("product_unit" as const)
-                    : ("service" as const),
-                offeringName: offering.name,
-                unitName: inventoryUnit?.name,
-              },
-            ]
-          })
-        : [],
-    ),
-  )
+                  offering.kind === "product_unit" ? "product_unit" : "service",
+                onHandQuantity: balance?.onHandQuantity,
+                reservedQuantity: balance?.reservedQuantity,
+              })
+              const availableBalanceQuantity = balance
+                ? subtractExactDecimals(
+                    balance.onHandQuantity,
+                    balance.reservedQuantity,
+                  )
+                : undefined
+              const availableQuantity =
+                availableBalanceQuantity === undefined
+                  ? undefined
+                  : inventoryUnit?.stockBehavior === "packaged_stock"
+                    ? availableBalanceQuantity
+                    : inventoryUnit
+                      ? floorExactDecimalQuotient(
+                          availableBalanceQuantity,
+                          inventoryUnit.factor,
+                          inventoryUnit.transactionScale,
+                        )
+                      : undefined
+              return [
+                {
+                  availableQuantity,
+                  balanceRevision: balance?.revision,
+                  catalogItemId: item.id,
+                  configurationVersionId:
+                    item.product?.currentUnitConfiguration?.id,
+                  currencyCode: offering.currencyCode,
+                  displayName:
+                    item.variants.length > 1
+                      ? `${item.name} · ${variant.name}`
+                      : item.name,
+                  disabledReason: disabledReasons.join(" · ") || undefined,
+                  fixedPriceMinor: offering.fixedPriceMinor,
+                  id: offering.id,
+                  imageUrl: variant.imageUrl ?? item.imageUrl,
+                  itemName: item.name,
+                  kind:
+                    offering.kind === "product_unit"
+                      ? ("product_unit" as const)
+                      : ("service" as const),
+                  offeringName: offering.name,
+                  unitName: inventoryUnit?.name,
+                },
+              ]
+            })
+          : [],
+      ),
+    )
 
   return getSelectableSaleItemChoices(choices)
 }

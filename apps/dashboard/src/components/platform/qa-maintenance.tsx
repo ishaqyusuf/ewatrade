@@ -123,7 +123,10 @@ export function QaMaintenance() {
             {preview.error.message}
           </FormFeedback>
         ) : null}
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div
+          data-summary-grid
+          className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
           {Object.entries(preview.data?.counts ?? {}).map(([label, value]) => (
             <MetricCard
               key={label}

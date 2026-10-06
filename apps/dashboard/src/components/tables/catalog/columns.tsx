@@ -6,6 +6,7 @@ import { selectColumn } from "@/components/tables/core"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
+import { productUsageLabels } from "@ewatrade/utils/product-usage"
 import { Package01Icon, ToolsIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -161,6 +162,9 @@ export function createCatalogColumns(
             </Button>
             <p className="truncate text-xs text-muted-foreground">
               {itemDetail(row.original)}
+              {row.original.product
+                ? ` · ${productUsageLabels[row.original.product.usage ?? "FOR_SALE"]}`
+                : ""}
             </p>
           </div>
         </div>

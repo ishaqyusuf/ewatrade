@@ -41,14 +41,19 @@ function CommerceReports({ store }: { store: Store }) {
   return (
     <section className="grid gap-4">
       <h2 className="font-semibold">Commerce</h2>
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        data-summary-grid
+        className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
         <Metric label="Orders" value={orders.orderCount} />
         <Metric
           label="Order value"
+          money
           value={money(orders.orderValueMinor, store.currencyCode)}
         />
         <Metric
           label="Service revenue"
+          money
           value={money(
             service.commercial.serviceRevenueMinor,
             store.currencyCode,
@@ -81,7 +86,10 @@ function InventoryReports({ store }: { store: Store }) {
   return (
     <section className="grid gap-4">
       <h2 className="font-semibold">Inventory</h2>
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        data-summary-grid
+        className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
         <Metric label="Balance sources" value={balances.rows.length} />
         <Metric
           label="Provisional commands"
@@ -121,7 +129,10 @@ function ServiceReports({ store }: { store: Store }) {
   return (
     <section className="grid gap-4">
       <h2 className="font-semibold">Service operations</h2>
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        data-summary-grid
+        className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
         <Metric label="Work in progress" value={service.work.wip} />
         <Metric label="Ready" value={service.work.ready} />
         <Metric label="Blocked" value={service.work.blocked} />

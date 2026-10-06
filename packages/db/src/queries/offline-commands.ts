@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { saleEligibleCatalogItem } from "./product-usage"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
@@ -166,6 +167,7 @@ async function authoritativeState(
     },
     where: {
       id: { in: input.payload.lines.map((line) => line.offeringId) },
+      catalogItem: saleEligibleCatalogItem,
       tenantId: input.tenantId,
     },
   })

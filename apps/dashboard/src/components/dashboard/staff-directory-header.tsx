@@ -73,6 +73,39 @@ export function StaffDirectoryHeader({
         }
       >
         <SearchFilter
+          mobileFilters={{
+            groups: [
+              {
+                id: "role",
+                label: "Role",
+                allLabel: "All roles",
+                options: roles.map((value) => ({
+                  value,
+                  label: getStaffRoleLabel(value),
+                })),
+              },
+              {
+                id: "status",
+                label: "Status",
+                allLabel: "All statuses",
+                options: statuses.map((value) => ({
+                  value,
+                  label: getStaffStatusLabel(value),
+                })),
+              },
+            ],
+            values: {
+              role: staffRole === "all" ? [] : [staffRole],
+              status: staffStatus === "all" ? [] : [staffStatus],
+            },
+            onApply: (draft) =>
+              setParams({
+                staffRole:
+                  roles.find((value) => value === draft.role?.[0]) ?? null,
+                staffStatus:
+                  statuses.find((value) => value === draft.status?.[0]) ?? null,
+              }),
+          }}
           placeholder="Search staff..."
           value={staffQuery}
           onSearch={(value) => void setParams({ staffQuery: value || null })}

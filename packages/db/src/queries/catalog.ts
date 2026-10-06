@@ -19,6 +19,7 @@ export type {
 } from "./catalog-read"
 import { createHash } from "node:crypto"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
+import { type ProductUsage, productUsages } from "@ewatrade/utils/product-usage"
 
 import {
   EXACT_CANONICAL_MAX_SCALE,
@@ -103,6 +104,7 @@ type CatalogOptionGroupInput = {
 }
 
 export type CreateCatalogProductInput = {
+  usage?: ProductUsage
   categoryId?: string
   subcategoryId?: string
   actorUserId: string
@@ -182,6 +184,7 @@ export type CreateSimpleCatalogItemInput =
   | {
       actorUserId: string
       canonicalUnitName: string
+      usage?: ProductUsage
       clientOperationId: string
       description?: string
       kind: "product"
@@ -665,6 +668,16 @@ function assertProductUnitConfiguration(input: CreateCatalogProductInput) {
 
 function assertCreateCatalogItem(input: CreateCatalogItemInput) {
   if (
+    input.kind === "product" &&
+    input.usage !== undefined &&
+    !productUsages.includes(input.usage)
+  ) {
+    throw new CatalogError(
+      "INVALID_CATALOG_ITEM",
+      "Choose a valid Product usage.",
+    )
+  }
+  if (
     input.illustrationId !== undefined &&
     (!findCatalogIllustration(input.illustrationId) ||
       input.photoAssetIds?.length)
@@ -958,7 +971,7 @@ export async function createCatalogItem(
 
     if (input.kind === "product") {
       const product = await tx.catalogProduct.create({
-        data: { catalogItemId: item.id },
+        data: { catalogItemId: item.id, usage: input.usage ?? "FOR_SALE" },
       })
       productId = product.id
       const configuration = await tx.unitConfigurationVersion.create({
@@ -1356,6 +1369,7 @@ export async function createSimpleCatalogItem(
     description: input.description,
     kind: "product",
     name: input.name,
+    usage: input.usage,
     openingStockQuantity: input.openingStockQuantity,
     storeId: input.storeId,
     tenantId: input.tenantId,

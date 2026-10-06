@@ -69,6 +69,7 @@
     "jobs:deploy": "bun --filter @ewatrade/jobs deploy",
     "jobs:preview:deploy": "bun --filter @ewatrade/jobs deploy:preview",
     "app:update": "bun --env-file=/dev/null ../local-infra-kit/bin/app-update.ts",
+    "test:app-update-client": "bun --env-file=/dev/null scripts/test-app-update-client.ts",
     "release": "bun --env-file=/dev/null ../local-infra-kit/bin/infra.ts release",
     "lint": "turbo lint",
     "qa:accelerator:artifact": "node scripts/check-qa-accelerator-artifact.mjs",

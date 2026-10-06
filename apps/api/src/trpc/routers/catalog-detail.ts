@@ -26,7 +26,12 @@ export const catalogDetailRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Catalog item not found.",
         })
-      return result
+      return {
+        ...result,
+        canManageUsage: ["OWNER", "ADMIN"].includes(
+          ctx.tenantContext.membership.role,
+        ),
+      }
     }),
   orders: protectedProcedure
     .input(catalogDetailPageSchema)

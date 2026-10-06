@@ -30,6 +30,8 @@ export const PRISMA_SCHEMA_ENGINE: Readonly<{
   sha256: string
 }>
 export function validatePrismaSchemaEngine(compressed: Buffer): Buffer
+export function preparedApiBuildCommand(bundleSha256: string): string
+export function assertSupportedApiProviderConfig(config: unknown): void
 export const API_BUILD_RECIPE: Readonly<{
   version: number
   runtime: string

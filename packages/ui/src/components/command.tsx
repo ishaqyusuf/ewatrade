@@ -30,13 +30,16 @@ function CommandDialog({
     <DialogPrimitive.Root {...props}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-foreground/30" />
-        <DialogPrimitive.Popup className="fixed left-1/2 top-8 z-50 w-[min(740px,calc(100vw-24px))] -translate-x-1/2 overflow-hidden border border-border bg-background p-0 outline-none">
+        <DialogPrimitive.Popup
+          data-mobile-overlay=""
+          className="fixed left-1/2 top-8 z-50 w-[min(740px,calc(100vw-24px))] -translate-x-1/2 overflow-hidden border border-border bg-background p-0 outline-none max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:border-0"
+        >
           <DialogPrimitive.Title className="sr-only">
             Dashboard search
           </DialogPrimitive.Title>
           <Command
             shouldFilter={false}
-            className="max-h-[calc(100dvh-64px)] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-input]]:h-[55px] [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3"
+            className="max-h-[calc(100dvh-64px)] max-md:max-h-dvh [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-input]]:h-[55px] [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3"
           >
             {children}
           </Command>

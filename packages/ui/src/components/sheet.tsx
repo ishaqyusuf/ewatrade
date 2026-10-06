@@ -32,6 +32,7 @@ function SheetContent({
   title,
   className,
   popupClassName,
+  mobileLayout = "fullscreen",
   children,
   ...props
 }: Omit<SheetPrimitive.Popup.Props, "className"> & {
@@ -39,25 +40,30 @@ function SheetContent({
   title?: string
   className?: string
   popupClassName?: string
+  mobileLayout?: "fullscreen" | "bottom"
 }) {
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Popup
         data-slot="sheet-content"
+        data-mobile-overlay=""
         className={cn(
           "fixed inset-y-0 z-50 h-dvh outline-none transition-transform duration-300 ease-in-out motion-reduce:transition-none md:p-4",
           side === "left"
-            ? "left-0 w-full md:w-3/4 md:max-w-sm data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full"
-            : "right-0 w-full md:w-3/4 md:max-w-[520px] data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
+            ? "left-0 w-full sm:w-3/4 sm:max-w-sm data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full"
+            : "right-0 w-full sm:w-3/4 sm:max-w-[520px] data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
           popupClassName,
-          "max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:p-0",
+          mobileLayout === "bottom"
+            ? "max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:h-auto max-md:max-h-[90dvh] max-md:w-full max-md:max-w-none max-md:p-0 max-md:data-[starting-style]:translate-x-0 max-md:data-[starting-style]:translate-y-full max-md:data-[ending-style]:translate-x-0 max-md:data-[ending-style]:translate-y-full"
+            : "max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:p-0",
         )}
         {...props}
       >
         <div
           className={cn(
-            "relative flex h-full w-full flex-col overflow-hidden border border-border bg-[#FAFAF9] p-6 dark:bg-[#0C0C0C]",
+            "relative flex h-full w-full flex-col overflow-hidden border border-border bg-[#FAFAF9] p-6 max-md:border-0 dark:bg-[#0C0C0C]",
+            mobileLayout === "bottom" && "max-md:border-t",
             className,
           )}
         >

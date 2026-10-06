@@ -21,6 +21,7 @@ import {
   Field as UiField,
 } from "@ewatrade/ui"
 import { useCatalogThemeClass } from "./catalog-appearance"
+import { ProductUsageField } from "./product-usage-field"
 
 import { catalogChoiceDraftIdentity } from "@/lib/catalog-choice-drafts"
 import { resolveCatalogUnitFactors } from "@/lib/catalog-selling-units"
@@ -739,6 +740,7 @@ export function CatalogItemForm({
             category: category.trim() || undefined,
             description: form.description.trim() || undefined,
             kind: "product",
+            usage: form.usage,
             name: form.name.trim(),
             openingStockQuantity,
             optionGroups: showAdvanced ? normalizedOptionGroups : undefined,
@@ -905,6 +907,7 @@ export function CatalogItemForm({
       description: form.description.trim() || undefined,
       kind: "product",
       name: form.name.trim(),
+      usage: form.usage,
       openingStockQuantity,
       priceMinor,
       storeId,
@@ -1084,6 +1087,14 @@ export function CatalogItemForm({
                   />
                 </Field>
 
+                {form.kind === "product" ? (
+                  <ProductUsageField
+                    value={form.usage}
+                    onChange={(usage) =>
+                      setForm((current) => ({ ...current, usage }))
+                    }
+                  />
+                ) : null}
                 <div
                   hidden={
                     showAdvanced ||

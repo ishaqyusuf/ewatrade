@@ -119,6 +119,75 @@ export function StoreConversationTableHeader({
   ]
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "store",
+            label: "Store",
+            allLabel: "Current store",
+            options: stores.map((item) => ({
+              value: item.id,
+              label: item.name,
+            })),
+          },
+          {
+            id: "assignment",
+            label: "Assignment",
+            allLabel: "All assignments",
+            options: assignments
+              .filter(([value]) => value !== "all")
+              .map(([value, label]) => ({ value, label })),
+          },
+          {
+            id: "sla",
+            label: "Response SLA",
+            allLabel: "All response times",
+            options: slas
+              .filter(([value]) => value !== "all")
+              .map(([value, label]) => ({ value, label })),
+          },
+          {
+            id: "sort",
+            label: "Sort",
+            allLabel: "Newest activity",
+            options: sorts
+              .filter(([value]) => value !== "last_customer_activity:desc")
+              .map(([value, label]) => ({ value, label })),
+          },
+          {
+            id: "kinds",
+            label: "Request kinds",
+            multiple: true,
+            allLabel: "All kinds",
+            options: requestKinds.map(([value, label]) => ({ value, label })),
+          },
+        ],
+        values: {
+          store: selectedStore ? [selectedStore] : [],
+          assignment: selectedAssignment === "all" ? [] : [selectedAssignment],
+          sla: selectedSla === "all" ? [] : [selectedSla],
+          sort:
+            currentSort === "last_customer_activity:desc" ? [] : [currentSort],
+          kinds: selectedKinds,
+        },
+        onApply: (draft) =>
+          params.setFilters({
+            store: draft.store?.[0] ?? null,
+            assignment:
+              assignments.find(
+                ([value]) => value === draft.assignment?.[0],
+              )?.[0] ?? "all",
+            sla: slas.find(([value]) => value === draft.sla?.[0])?.[0] ?? "all",
+            sort:
+              draft.sort?.[0] === "response_due_at:asc"
+                ? "response_due_at"
+                : "last_customer_activity",
+            direction: draft.sort?.[0]?.endsWith(":asc") ? "asc" : "desc",
+            requestKinds: requestKinds
+              .filter(([value]) => draft.kinds?.includes(value))
+              .map(([value]) => value),
+          }),
+      }}
       placeholder="Search conversations..."
       value={queryDraft}
       onSearch={(value) => {

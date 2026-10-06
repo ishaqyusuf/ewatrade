@@ -53,7 +53,11 @@ export function FinanceSupplierAgingView({
         All Stores, including unassigned opening balances. As of{" "}
         {aging.asOfDate} UTC · Snapshot {aging.snapshotSequence}.
       </p>
-      <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <dl
+        data-summary-grid
+        data-summary-money
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      >
         <div>
           <dt className="text-sm text-muted-foreground">Recorded payable</dt>
           <dd className="text-lg font-medium tabular-nums">

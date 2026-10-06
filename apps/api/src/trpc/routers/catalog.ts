@@ -21,6 +21,7 @@ import {
   listProductUnitConfigurations,
   publishProductUnitConfiguration,
   setCatalogOfferingStoreAvailability,
+  setCatalogProductUsage,
   updateProductUnitConfigurationDraft,
 } from "@ewatrade/db/queries"
 import type { TenantContext } from "@ewatrade/db/tenant-context"
@@ -42,6 +43,7 @@ import {
   catalogProductUnitConfigurationsSchema,
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
+  catalogSetProductUsageSchema,
   catalogUpdateUnitConfigurationDraftSchema,
 } from "../../schemas/catalog"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -151,6 +153,24 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  setProductUsage: protectedProcedure
+    .input(catalogSetProductUsageSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await setCatalogProductUsage(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) {
+          if (error.code === "FORBIDDEN")
+            throw new TRPCError({ code: "FORBIDDEN", message: error.message })
+          throw catalogTRPCError(error)
+        }
+        throw error
+      }
+    }),
   detail: catalogDetailRouter,
   photos: catalogPhotosRouter,
   categories: catalogCategoriesRouter,

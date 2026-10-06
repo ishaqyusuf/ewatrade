@@ -37,6 +37,24 @@ export function DomainSearchFilter() {
   }
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "status",
+            label: "Connection status",
+            multiple: true,
+            allLabel: "All statuses",
+            options: statuses.map(([value, label]) => ({ value, label })),
+          },
+        ],
+        values: { status: selectedStatuses },
+        onApply: (draft) =>
+          setFilters({
+            domainStatuses: statuses
+              .filter(([value]) => draft.status?.includes(value))
+              .map(([value]) => value),
+          }),
+      }}
       placeholder="Search domains..."
       value={query}
       onSearch={(value) => setFilters({ domainQuery: value || null })}

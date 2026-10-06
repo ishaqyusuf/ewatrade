@@ -57,6 +57,10 @@ import {
   buildScopedListCursorWhere,
   buildScopedListPageWhere,
 } from "./list-sort"
+import {
+  assertSaleProductUsage,
+  saleEligibleCatalogItem,
+} from "./product-usage"
 import { loadTenantActors } from "./tenant-actors"
 
 export type CreateCommercialOrderInput = {
@@ -622,6 +626,10 @@ export async function createCommercialOrderInTransaction(
     unitPriceMinor: number | null
   }> = []
 
+  await assertSaleProductUsage(tx, {
+    tenantId: input.tenantId,
+    offeringIds: input.lines.map((line) => line.offeringId),
+  })
   for (const lineInput of input.lines) {
     const progressiveManual = Boolean(
       lineInput.progressiveAvailabilityAttestationId,
@@ -640,6 +648,7 @@ export async function createCommercialOrderInTransaction(
       },
       where: {
         id: lineInput.offeringId,
+        catalogItem: saleEligibleCatalogItem,
         status: progressiveManual
           ? { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] }
           : CatalogRecordStatus.ACTIVE,

@@ -225,7 +225,10 @@ export function StaffPage({
     <ScrollableContent>
       <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
         <CollapsibleSummary>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div
+            data-summary-grid
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"
+          >
             {[
               ["Staff", summary.total],
               ["Active", summary.active],

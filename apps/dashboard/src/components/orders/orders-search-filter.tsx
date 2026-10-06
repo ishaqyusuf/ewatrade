@@ -27,6 +27,26 @@ export function OrdersSearchFilter() {
   const { filter, setFilter } = useOrderParams()
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "status",
+            label: "Status",
+            allLabel: "All statuses",
+            options: ORDER_STATUSES.map((value) => ({
+              value,
+              label: labels[value],
+            })),
+          },
+        ],
+        values: { status: filter.status ? [filter.status] : [] },
+        onApply: (draft) =>
+          setFilter({
+            status:
+              ORDER_STATUSES.find((value) => value === draft.status?.[0]) ??
+              null,
+          }),
+      }}
       placeholder="Search orders..."
       value={filter.query ?? ""}
       onSearch={(query) => void setFilter({ query: query || null })}

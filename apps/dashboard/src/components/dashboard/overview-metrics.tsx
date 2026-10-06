@@ -43,11 +43,17 @@ export async function OverviewMetrics({
     todayStart: startOfToday(),
     monthStart: startOfMonth(),
   })
-  const metrics = [
+  const metrics: Array<{
+    label: string
+    value: string
+    sub: string
+    money?: boolean
+  }> = [
     ...(availability.hasOrders
       ? [
           {
             label: "Revenue today",
+            money: true,
             value: store
               ? money(summary.revenueTodayMinor, store.currencyCode)
               : "—",
@@ -82,7 +88,10 @@ export async function OverviewMetrics({
   return (
     <>
       {metrics.length > 0 ? (
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
+        <dl
+          data-summary-grid
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6"
+        >
           {metrics.map((metric) => (
             <div
               key={metric.label}
@@ -91,10 +100,16 @@ export async function OverviewMetrics({
               <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {metric.label}
               </dt>
-              <dd className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+              <dd
+                data-summary-money={metric.money || undefined}
+                className="mt-2 text-3xl font-semibold tracking-tight tabular-nums"
+              >
                 {metric.value}
               </dd>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p
+                data-summary-detail
+                className="mt-0.5 text-xs text-muted-foreground"
+              >
                 {metric.sub}
               </p>
             </div>
@@ -117,6 +132,8 @@ export function OverviewMetricsSkeleton({
   return (
     <output
       aria-label="Loading overview summaries"
+      data-summary-grid
+      data-summary-skeleton
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6"
     >
       {labels.map((label) => (

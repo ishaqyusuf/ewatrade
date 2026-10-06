@@ -6,6 +6,7 @@ import {
   DirectoryRecord,
 } from "@/components/tables/core"
 import { Badge } from "@ewatrade/ui"
+import { productUsageLabels } from "@ewatrade/utils/product-usage"
 import type { Row } from "@tanstack/react-table"
 import {
   CatalogItemThumbnail,
@@ -43,7 +44,11 @@ export function CatalogCollection({
             media={<CatalogItemThumbnail item={item} storeId={storeId} />}
             title={item.name}
             onOpen={() => openDetail(item.id)}
-            description={itemDetail(item)}
+            description={`${itemDetail(item)}${
+              item.product
+                ? ` · ${productUsageLabels[item.product.usage ?? "FOR_SALE"]}`
+                : ""
+            }`}
             badges={
               <>
                 <CatalogKindBadge item={item} />

@@ -23,6 +23,7 @@ import {
 } from "@ewatrade/ui"
 import Link from "next/link"
 import { useMemo } from "react"
+import { ProductUsageForm } from "../product-usage-form"
 import { CatalogDetailActivity } from "./activity"
 import { type CatalogDetail, dateTime, money, orderHref } from "./display"
 export function CatalogDetailOverview({
@@ -50,6 +51,15 @@ export function CatalogDetailOverview({
   })
   return (
     <div className="grid gap-6">
+      {product ? (
+        <ProductUsageForm
+          key={`${item.id}:${product.updatedAt}`}
+          itemId={item.id}
+          usage={product.usage}
+          updatedAt={product.updatedAt}
+          canManage={detail.canManageUsage}
+        />
+      ) : null}
       <div className={product ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
         <Card size="sm">
           <CardHeader>

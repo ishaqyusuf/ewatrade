@@ -124,7 +124,7 @@ export async function runPreviewBuildAndPublish(input: {
     else await runAppUpdate(args, { root: input.root, config: appUpdateConfig })
   } catch {
     throw new Error(
-      `Preview build ${build.id} succeeded, but in-app publication failed. Fix the publisher configuration, then retry without rebuilding: bun release:mobile:publish ${args.slice(1).join(" ")}`,
+      `Preview build ${build.id} succeeded, but in-app publication failed. Fix the publisher configuration, then retry without rebuilding: bun app:update ${args.join(" ")}`,
     )
   }
   return 0

@@ -6,7 +6,7 @@ import {
   cancelBuildDownload,
   dismissNativeBuild,
   downloadAndInstallBuild,
-  installedBuild,
+  resolveInstalledBuild,
   useAppUpdate,
 } from "@/lib/app-update-client"
 import { getAppUpdateResume } from "@/lib/app-update-restoration"
@@ -17,7 +17,9 @@ import { type Href, usePathname, useRouter } from "expo-router"
 import { useEffect } from "react"
 import { Modal } from "react-native"
 
-export function AppBuildUpdate() {
+export function AppBuildUpdate({
+  restoreRoute = true,
+}: { restoreRoute?: boolean } = {}) {
   const state = useAppUpdate()
   const pathname = usePathname()
   const router = useRouter()
@@ -26,12 +28,13 @@ export function AppBuildUpdate() {
     ? MarketDayAutoUpdateScreen
     : ClassicAutoUpdateScreen
   useEffect(() => {
-    const current = installedBuild()
+    if (!restoreRoute) return
     const session = getSession()
-    if (!current || !session || pathname === "/login" || pathname === "/")
-      return
+    if (!session || pathname === "/login" || pathname === "/") return
     let alive = true
     void (async () => {
+      const current = await resolveInstalledBuild()
+      if (!current || !alive) return
       const raw = await AsyncStorage.getItem(APP_UPDATE_RESUME_KEY)
       if (!raw) return
       const snapshot = JSON.parse(raw)
@@ -56,7 +59,7 @@ export function AppBuildUpdate() {
     return () => {
       alive = false
     }
-  }, [pathname, router])
+  }, [pathname, router, restoreRoute])
   const phase = state.phase
   const busy = phase === "downloading" || phase === "verifying"
   const titles = {

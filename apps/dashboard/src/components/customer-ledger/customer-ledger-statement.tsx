@@ -135,7 +135,11 @@ export function CustomerLedgerStatement({
           becomes settlement only when explicitly applied.
         </AlertDescription>
       </Alert>
-      <dl className="grid gap-5 border-b border-border pb-5 sm:grid-cols-3">
+      <dl
+        data-summary-grid
+        data-summary-money
+        className="grid gap-5 border-b border-border pb-5 sm:grid-cols-3"
+      >
         <div>
           <dt className="text-sm text-muted-foreground">
             Recorded amount owed

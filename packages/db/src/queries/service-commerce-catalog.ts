@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { saleEligibleCatalogItem } from "./product-usage"
 
 import {
   getCatalogPricePromotionConfirmationImpact,
@@ -271,6 +272,7 @@ export async function listServiceCommerceCatalogMatches(
     take: 100,
     where: {
       kind: requiredKind,
+      catalogItem: saleEligibleCatalogItem,
       status: { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] },
       tenantId: input.tenantId,
     },
@@ -510,6 +512,7 @@ export async function linkServiceCommerceCatalogOffering(
         },
         where: {
           id: input.offeringId,
+          catalogItem: saleEligibleCatalogItem,
           kind:
             sourceLine.kind === "product"
               ? SellableOfferingKind.PRODUCT_UNIT

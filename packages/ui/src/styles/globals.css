@@ -8,6 +8,20 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@media (width < 48rem) {
+  html:has([data-mobile-overlay][data-open]) {
+    /* Dialog scroll locking reserves a gutter that otherwise shrinks the viewport. */
+    scrollbar-gutter: auto !important;
+    overflow: hidden !important;
+  }
+
+  [data-mobile-overlay] {
+    /* Desktop/custom sm widths must not override the mobile overlay width. */
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
 @layer utilities {
   :is(button, input, textarea, select, [role="button"]).rounded-full {
     border-radius: var(--radius);

@@ -3,6 +3,7 @@ import {
   catalogCreateProductSchema,
   catalogCreateSimpleProductSchema,
   catalogListItemsPageSchema,
+  catalogSetProductUsageSchema,
 } from "./catalog"
 
 function productInput() {
@@ -45,6 +46,36 @@ function productInput() {
 }
 
 describe("catalog Product variant input", () => {
+  test("accepts the three usage choices without changing legacy defaults", () => {
+    expect(
+      catalogCreateProductSchema.parse(productInput()).usage,
+    ).toBeUndefined()
+    for (const usage of ["FOR_SALE", "INTERNAL_USE", "BOTH"] as const) {
+      expect(
+        catalogCreateProductSchema.parse({ ...productInput(), usage }).usage,
+      ).toBe(usage)
+      expect(
+        catalogCreateSimpleProductSchema.parse({
+          clientOperationId: "usage-simple-test",
+          kind: "product",
+          canonicalUnitName: "Bag",
+          name: "Feed",
+          usage,
+        }).usage,
+      ).toBe(usage)
+    }
+    expect(
+      catalogCreateProductSchema.safeParse({ ...productInput(), usage: "feed" })
+        .success,
+    ).toBe(false)
+    expect(
+      catalogSetProductUsageSchema.safeParse({
+        itemId: "feed",
+        usage: "INTERNAL_USE",
+        expectedUpdatedAt: "invalid",
+      }).success,
+    ).toBe(false)
+  })
   test("requires explicit manual mode without a saved or dummy fixed price", () => {
     const input = productInput()
     const variant = input.variants[0]

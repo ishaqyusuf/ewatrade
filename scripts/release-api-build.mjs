@@ -37,7 +37,7 @@ export const PRISMA_SCHEMA_ENGINE = Object.freeze({
   sha256: "c24765c3d6edc8715cee7ca773565100859ba70b0fa2fb8931513dd810060ac3",
 })
 export const API_BUILD_RECIPE = Object.freeze({
-  version: 1,
+  version: 3,
   runtime: PIN,
   install: [
     "--frozen-lockfile",
@@ -61,13 +61,14 @@ export const API_BUILD_RECIPE = Object.freeze({
   bundle: [
     "--target=bun",
     "--packages=bundle",
+    "--external=@ewatrade/order-receipts",
     "--env=disable",
     ...apiBundleExternalArgs(),
     "--outfile=apps/api/src/bundle.js",
     "apps/api/src/index.ts",
   ],
   upload: "fresh-commit-snapshot-with-regular-generated-files",
-  providerBuildCommand: "absent",
+  providerBuildCommand: "verify-prepared-bundle-sha256",
   schemaEngine: PRISMA_SCHEMA_ENGINE,
 })
 const FORWARDER =
@@ -75,6 +76,28 @@ const FORWARDER =
 
 function digest(bytes) {
   return createHash("sha256").update(bytes).digest("hex")
+}
+
+// The strict source check above is performed before this upload-only command is
+// created. Without an explicit command, Vercel infers a second Turbo workspace
+// build, including the entire database package, instead of packaging the bundle.
+export function preparedApiBuildCommand(bundleSha256) {
+  if (!/^[0-9a-f]{64}$/.test(bundleSha256))
+    throw new Error("API_BUILD_INVALID_BUNDLE_HASH")
+  const code = `process.exit(Number(require("node:crypto").createHash("sha256").update(require("node:fs").readFileSync("src/bundle.js")).digest("hex")!=="${bundleSha256}"))`
+  return `node -e '${code}'`
+}
+
+export function assertSupportedApiProviderConfig(config) {
+  // The committed repository supports ordinary Vercel checkout builds as well
+  // as this isolated preparation path. Never execute that provider command here:
+  // the upload replaces it with the verified bundle's hash check below.
+  if (
+    config?.framework !== "hono" ||
+    (config.buildCommand !== undefined &&
+      config.buildCommand !== "node ../../scripts/build-api-vercel.mjs")
+  )
+    throw new Error("API_BUILD_PROVIDER_REBUILD_UNSUPPORTED")
 }
 
 export function apiBuildEnvironment({ home, temp, cache, bunBinary }) {
@@ -324,6 +347,9 @@ export function bundleCommittedApiEntry(context) {
       "--no-install",
       "--target=bun",
       "--packages=bundle",
+      // Keep the workspace package boundary so its canvas addon and PDF worker
+      // resolve from its own dependencies on the deployment platform.
+      "--external=@ewatrade/order-receipts",
       "--env=disable",
       ...apiBundleExternalArgs(),
       `--outfile=${path.join(context.stage, "apps/api/src/bundle.js")}`,
@@ -584,11 +610,7 @@ export async function prepareCommittedApiArtifact({ repository, revision }) {
     const providerConfig = JSON.parse(
       readFileSync(path.join(stage, "apps/api/vercel.json"), "utf8"),
     )
-    if (
-      providerConfig.framework !== "hono" ||
-      providerConfig.buildCommand !== undefined
-    )
-      throw new Error("API_BUILD_PROVIDER_REBUILD_UNSUPPORTED")
+    assertSupportedApiProviderConfig(providerConfig)
     const sandboxBinary = "/usr/bin/sandbox-exec"
     accessSync(sandboxBinary, constants.X_OK)
     const outputPath = path.join(stage, "apps/api/src/bundle.js")
@@ -726,6 +748,10 @@ export async function prepareCommittedApiArtifact({ repository, revision }) {
     writeFileSync(
       path.join(uploadSnapshot.stage, "apps/api/src/index.ts"),
       FORWARDER,
+    )
+    writeFileSync(
+      path.join(uploadSnapshot.stage, "apps/api/vercel.json"),
+      `${JSON.stringify({ ...providerConfig, buildCommand: preparedApiBuildCommand(digest(bundle)) }, null, 2)}\n`,
     )
     return {
       ...uploadSnapshot,

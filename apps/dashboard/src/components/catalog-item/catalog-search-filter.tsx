@@ -31,6 +31,40 @@ export function CatalogSearchFilter() {
   }
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "kind",
+            label: "Item type",
+            allLabel: "All types",
+            options: kinds.map((item) => ({
+              value: item.id,
+              label: item.label,
+            })),
+          },
+          {
+            id: "status",
+            label: "Status",
+            allLabel: "All statuses",
+            options: statuses.map((item) => ({
+              value: item.id,
+              label: item.label,
+            })),
+          },
+        ],
+        values: {
+          kind: catalogKind ? [catalogKind] : [],
+          status: catalogStatus ? [catalogStatus] : [],
+        },
+        onApply: (draft) =>
+          setParams({
+            catalogKind:
+              kinds.find((item) => item.id === draft.kind?.[0])?.id ?? null,
+            catalogStatus:
+              statuses.find((item) => item.id === draft.status?.[0])?.id ??
+              null,
+          }),
+      }}
       placeholder="Search items..."
       value={catalogQuery}
       onSearch={(value) => void setParams({ catalogQuery: value || null })}

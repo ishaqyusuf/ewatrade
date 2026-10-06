@@ -20,9 +20,11 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-[#f6f6f3]/60 transition-opacity duration-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 dark:bg-[#0C0C0C]/80" />
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
+        data-mobile-overlay=""
         className={cn(
           "fixed top-1/2 left-1/2 z-50 flex w-[90vw] max-w-[455px] max-h-[calc(100svh-10vw)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-y-auto border border-border bg-background p-4 text-primary outline-none transition-opacity duration-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
           className,
+          "max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:border-0 max-md:rounded-none max-md:pt-[max(1rem,env(safe-area-inset-top))] max-md:pb-[max(1rem,env(safe-area-inset-bottom))]",
         )}
         {...props}
       />

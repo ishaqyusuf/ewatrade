@@ -44,6 +44,8 @@ export function ReportSectionSkeleton({
       <h2 className="text-sm font-medium">{title}</h2>
       <div
         aria-hidden="true"
+        data-summary-grid
+        data-summary-skeleton
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         {Array.from({ length: count }, (_, index) => (

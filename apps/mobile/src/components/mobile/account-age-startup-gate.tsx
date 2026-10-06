@@ -1,3 +1,4 @@
+import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -54,6 +55,8 @@ export function AccountAgeStartupGate({
 
   return (
     <MobileScreen contentClassName="justify-center gap-6">
+      {/* Keep recovery updates available while workspace access is gated. */}
+      <AppAutoUpdateModal restoreRoute={false} />
       <AuthBrandHeader
         subtitle={
           ageStatus.isSuccess
@@ -61,7 +64,9 @@ export function AccountAgeStartupGate({
             : "Checking your saved age range before opening your workspace."
         }
         title={
-          ageStatus.isSuccess ? "Confirm your age range" : "Checking your account"
+          ageStatus.isSuccess
+            ? "Confirm your age range"
+            : "Checking your account"
         }
       />
       {ageStatus.isPending ? (

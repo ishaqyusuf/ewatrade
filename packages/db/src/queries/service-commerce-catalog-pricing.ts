@@ -2,6 +2,7 @@ import {
   type ServiceCommerceCatalogPriceEvidence,
   selectCatalogPriceSuggestion,
 } from "@ewatrade/service-commerce"
+import { saleEligibleCatalogItem } from "./product-usage"
 
 import {
   CatalogRecordStatus,
@@ -51,6 +52,7 @@ export async function getServiceCommerceCatalogPriceSuggestionSnapshots(
       currencyCode: input.currencyCode,
       id: { in: offeringIds },
       status: { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] },
+      catalogItem: saleEligibleCatalogItem,
       tenantId: input.tenantId,
     },
   })
@@ -184,7 +186,12 @@ export async function getServiceCommerceCatalogPriceSuggestionSnapshots(
       }
     }
     for (const line of saleLines) {
-      if (line.offeringId !== offering.id || !line.order.completedAt) continue
+      if (
+        line.offeringId !== offering.id ||
+        !line.order.completedAt ||
+        line.unitPriceMinor === null
+      )
+        continue
       const currentStore = line.order.storeId === input.storeId
       evidence.push(
         currentStore
@@ -276,6 +283,7 @@ export async function getServiceCommerceCatalogPriceSuggestions(
             ? SellableOfferingKind.PRODUCT_UNIT
             : SellableOfferingKind.SERVICE,
         status: { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] },
+        catalogItem: saleEligibleCatalogItem,
         tenantId: input.tenantId,
       },
     }),
@@ -431,7 +439,7 @@ export async function getServiceCommerceCatalogPriceSuggestions(
     if (quoteEvidenceCount >= quoteEvidenceLimit) break
   }
   for (const line of saleLines) {
-    if (!line.order.completedAt) continue
+    if (!line.order.completedAt || line.unitPriceMinor === null) continue
     const currentStore = line.order.storeId === input.storeId
     evidence.push(
       currentStore

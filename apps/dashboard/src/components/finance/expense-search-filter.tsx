@@ -21,6 +21,26 @@ export function ExpenseSearchFilter() {
   const { expenseQuery, expenseStatus, setParams } = useFinanceParams()
   return (
     <SearchFilter
+      mobileFilters={{
+        groups: [
+          {
+            id: "status",
+            label: "Payment status",
+            allLabel: "All statuses",
+            options: statuses.map((item) => ({
+              value: item.id,
+              label: item.label,
+            })),
+          },
+        ],
+        values: { status: expenseStatus ? [expenseStatus] : [] },
+        onApply: (draft) =>
+          setParams({
+            expenseStatus:
+              statuses.find((item) => item.id === draft.status?.[0])?.id ??
+              null,
+          }),
+      }}
       value={expenseQuery}
       placeholder="Search expenses..."
       onSearch={(value) => void setParams({ expenseQuery: value || null })}

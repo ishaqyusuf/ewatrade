@@ -147,7 +147,11 @@ function StatementPages({
         Recorded finance entries only. Sales and customer payments that have not
         been posted are excluded. Refresh to include newer entries.
       </p>
-      <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <dl
+        data-summary-grid
+        data-summary-money
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+      >
         {[
           ["Opening balance", statement.openingBalanceMinor],
           ["Money in", statement.debitMinor],

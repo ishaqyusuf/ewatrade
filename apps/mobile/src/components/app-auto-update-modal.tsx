@@ -7,12 +7,14 @@ import { MarketDayAutoUpdateScreen } from "@/components/mobile/appearances/marke
 import { normalizeDownloadProgress } from "@/components/mobile/updates/updates-presentation"
 import { useLaunchAutoUpdate } from "@/hooks/use-launch-auto-update"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { AppBuildUpdate } from "./app-build-update"
 import { Modal } from "react-native"
+import { AppBuildUpdate } from "./app-build-update"
 
 // This existing full-screen host is an app-lifecycle surface, not a compact
 // confirmation sheet. Its single hook remains the owner of automatic updates.
-export function AppAutoUpdateModal() {
+export function AppAutoUpdateModal({
+  restoreRoute = true,
+}: { restoreRoute?: boolean } = {}) {
   const { dismissFailure, downloadProgress, errorMessage, phase, visible } =
     useLaunchAutoUpdate()
   const Presentation =
@@ -36,7 +38,7 @@ export function AppAutoUpdateModal() {
         : "Restarting into the updated app."
   return (
     <>
-      <AppBuildUpdate />
+      <AppBuildUpdate restoreRoute={restoreRoute} />
       <Modal
         animationType="fade"
         onRequestClose={failed ? dismissFailure : () => undefined}

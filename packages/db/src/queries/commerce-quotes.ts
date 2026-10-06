@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto"
+import { saleEligibleCatalogItem } from "./product-usage"
 
 import {
   type ServiceCommerceAction,
@@ -1368,6 +1369,7 @@ export async function issueCommerceQuote(
       },
       where: {
         id: { in: mappedOfferingIds },
+        catalogItem: saleEligibleCatalogItem,
         status: {
           in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT],
         },
@@ -2914,6 +2916,7 @@ async function assertSelectedOptionAvailability(
       },
       where: {
         id: line.offeringId,
+        catalogItem: saleEligibleCatalogItem,
         status: {
           in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT],
         },

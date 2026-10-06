@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client"
+import { saleEligibleCatalogItem } from "./product-usage"
 
 export async function listPrescriptionSelectableOfferings(
   db: PrismaClient,
@@ -18,6 +19,7 @@ export async function listPrescriptionSelectableOfferings(
     },
     where: {
       kind: "PRODUCT_UNIT",
+      catalogItem: saleEligibleCatalogItem,
       status: "ACTIVE",
       storeAvailability: {
         some: { isAvailable: true, storeId: input.storeId },

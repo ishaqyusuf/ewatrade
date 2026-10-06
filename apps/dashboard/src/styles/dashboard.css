@@ -86,3 +86,77 @@
 .catalog-theme[data-slot="sheet-content"] > div {
   background: var(--background);
 }
+
+/* Shared compact page summaries; existing classes retain desktop presentation. */
+@media (width < 48rem) {
+  [data-summary-grid] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    height: auto;
+    border: 0;
+  }
+
+  [data-summary-grid] > * {
+    display: grid;
+    align-content: start;
+    gap: 0.25rem;
+    min-width: 0;
+    min-height: 4.75rem;
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+  }
+
+  [data-summary-grid] > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    align-items: center;
+    min-height: 3.75rem;
+    column-gap: 0.5rem;
+  }
+
+  [data-summary-grid] > * > dt,
+  [data-summary-grid] [data-summary-label] {
+    min-width: 0;
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  [data-summary-grid] > * > dd,
+  [data-summary-grid] [data-summary-value] {
+    min-width: 0;
+    margin: 0;
+    font-size: 1.5rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  [data-summary-grid] > :last-child:nth-child(odd) > dd,
+  [data-summary-grid] > :last-child:nth-child(odd) > [data-summary-value] {
+    text-align: end;
+  }
+
+  [data-summary-grid] > * > dd[data-summary-money],
+  [data-summary-grid][data-summary-money] > * > dd {
+    font-size: 1.125rem;
+  }
+
+  [data-summary-grid] [data-summary-detail] {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  [data-summary-grid][data-summary-skeleton] > * {
+    height: 4.75rem;
+  }
+
+  [data-summary-grid][data-summary-skeleton] > :last-child:nth-child(odd) {
+    height: 3.75rem;
+  }
+}

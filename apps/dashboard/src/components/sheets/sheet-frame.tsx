@@ -48,12 +48,9 @@ export function SheetFrame({
   return (
     <SheetContent
       className="flex flex-col p-0"
+      mobileLayout={mobileBottomSheet ? "bottom" : "fullscreen"}
       finalFocus={finalFocus}
-      popupClassName={cn(
-        mobileBottomSheet &&
-          "inset-x-0 top-auto h-auto max-h-[90dvh] sm:inset-y-0 sm:left-auto sm:h-dvh sm:max-h-none",
-        popupClassName,
-      )}
+      popupClassName={popupClassName}
     >
       <SheetHeader className="shrink-0 flex-row items-start justify-between gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
         <div className="min-w-0 space-y-2">
@@ -83,6 +80,7 @@ export function SheetFrame({
       <section
         className={cn(
           "min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pb-6",
+          mobileBottomSheet && "pb-[max(1.5rem,env(safe-area-inset-bottom))]",
           contentClassName,
         )}
         aria-label={`${title} content`}

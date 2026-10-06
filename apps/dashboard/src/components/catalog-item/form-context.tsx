@@ -12,6 +12,7 @@ import {
 } from "react"
 
 import { useZodForm } from "@/hooks/use-zod-form"
+import { type ProductUsage, productUsages } from "@ewatrade/utils/product-usage"
 import { FormProvider, useWatch } from "react-hook-form"
 import { z } from "zod"
 
@@ -24,6 +25,7 @@ export type SimpleCatalogItemFormState = {
   openingStockQuantity: string
   price: string
   unitName: string
+  usage: ProductUsage
 }
 
 type CatalogItemFormContextValue = {
@@ -46,6 +48,7 @@ const initialForm: SimpleCatalogItemFormState = {
   openingStockQuantity: "",
   price: "",
   unitName: "",
+  usage: "FOR_SALE",
 }
 
 export const catalogItemFormSchema = z.object({
@@ -55,6 +58,7 @@ export const catalogItemFormSchema = z.object({
   openingStockQuantity: z.string(),
   price: z.string(),
   unitName: z.string(),
+  usage: z.enum(productUsages),
 })
 
 export function CatalogItemFormProvider({

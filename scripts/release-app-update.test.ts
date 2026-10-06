@@ -83,5 +83,14 @@ test("failed builds never publish and publication failure gives a no-rebuild rec
         throw new Error("offline")
       },
     }),
-  ).rejects.toThrow("bun release:mobile:publish")
+  ).rejects.toThrow("bun app:update publish --backend preview")
+})
+
+test("the recovery command resolves to the existing publisher CLI", async () => {
+  const { scripts } = await Bun.file(
+    new URL("../package.json", import.meta.url),
+  ).json()
+  expect(scripts["app:update"]).toBe(
+    "bun --env-file=/dev/null ../local-infra-kit/bin/app-update.ts",
+  )
 })

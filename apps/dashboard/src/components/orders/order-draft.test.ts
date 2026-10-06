@@ -60,6 +60,8 @@ function eggs(): OrderCatalogItem {
     ],
     product: {
       id: "product",
+      usage: "FOR_SALE",
+      updatedAt: "2026-10-06T00:00:00.000Z",
       currentUnitConfiguration: {
         id: "config",
         version: 1,
@@ -249,5 +251,19 @@ describe("catalog-first order drafts", () => {
     expect(
       availableOrderOfferings([item], "store").map((row) => row.id),
     ).toEqual(["big-crate"])
+  })
+
+  test("internal supplies are excluded while for-sale and dual-use Products remain selectable", () => {
+    const item = eggs()
+    if (!item.product) throw new Error("Product fixture missing")
+    for (const usage of ["FOR_SALE", "BOTH"] as const) {
+      item.product.usage = usage
+      expect(availableOrderOfferings([item], "store")).toHaveLength(4)
+    }
+    item.product.usage = "INTERNAL_USE"
+    expect(availableOrderOfferings([item], "store")).toEqual([])
+    expect(
+      orderCatalogChoices([item], availableOrderOfferings([item], "store")),
+    ).toEqual([])
   })
 })

@@ -219,7 +219,11 @@ function FinanceSupplierHistory({
           advances are shown separately.
         </AlertDescription>
       </Alert>
-      <dl className="grid gap-4 sm:grid-cols-2">
+      <dl
+        data-summary-grid
+        data-summary-money
+        className="grid gap-4 sm:grid-cols-2"
+      >
         <div>
           <dt className="text-sm text-muted-foreground">Recorded payable</dt>
           <dd className="font-medium tabular-nums">
