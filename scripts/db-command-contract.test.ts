@@ -77,7 +77,7 @@ describe("shared database command contract", () => {
       "utf8",
     )
     expect(deploySource).toContain(
-      "Run database push separately through local-infra-kit or release:run first.",
+      "Run database push separately through local-infra-kit, or use `bun release`.",
     )
     expect(deploySource).toContain("env.DATABASE_URL = undefined")
     expect(deploySource).toContain('"EWATRADE_DATABASE_URL"')
@@ -92,9 +92,10 @@ describe("shared database command contract", () => {
     ]) {
       expect(deploySource).not.toContain(retired)
     }
-    expect(scripts("package.json")["release:run"]).toBe(
-      "bun --env-file=/dev/null scripts/release.ts run",
+    expect(scripts("package.json").release).toBe(
+      "bun --env-file=/dev/null ../local-infra-kit/bin/infra.ts release",
     )
+    expect(scripts("package.json")["release:run"]).toBeUndefined()
     expect(
       scripts("package.json")["release:database:operation"],
     ).toBeUndefined()

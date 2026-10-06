@@ -33,13 +33,9 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [1, "android", "build", "profile_override"],
   [1, "android", "build", "local_override"],
   [1, "android", "build", "auto_submit"],
-  [1, "android", "build", "native_policy"],
-  [1, "android", "build", "native_policy_second"],
-  [1, "android", "build", "native_decision"],
   [1, "android", "build", "revision"],
   [1, "android", "build", "dirty"],
   [1, "android", "build", "dirty_after_login"],
-  [1, "ios", "build", "native_policy"],
   [1, "android", "build", "attachment"],
   [0, "android", "build", "preview"],
   [1, "android", "build", "preview_attachment"],
@@ -70,12 +66,10 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [0, "android", "update"],
   [0, "ios", "update"],
   [0, "all", "update"],
-  [1, "android", "update", "compatibility"],
   [1, "android", "update", "revision"],
   [1, "android", "update", "dirty"],
   [1, "android", "update", "missing_expected_commit"],
   [1, "android", "update", "dirty_after_login"],
-  [1, "android", "update", "compatibility_second"],
 ] as const) {
   test(`handles ${platform} ${operation} with expected exit ${expectedExitCode}${mismatch ? ` (${mismatch})` : ""} and isolates EAS authentication`, async () => {
     const root = await mkdtemp(path.join(tmpdir(), "ewatrade-eas-test-"))
@@ -146,14 +140,6 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     await writeFile(
       path.join(root, "scripts", "release-app-update.ts"),
       `import { writeFileSync } from "node:fs"; export async function assertPreviewPublisherReady() {} export async function runPreviewBuildAndPublish(input) { const result = await input.runJson(input.command); if (result.code === 0) writeFileSync(${JSON.stringify(path.join(root, "preview-publication.txt"))}, input.expectedCommit); return result.code; }\n`,
-    )
-    await writeFile(
-      path.join(root, "scripts", "release-mobile-preflight.ts"),
-      `import { appendFileSync } from "node:fs"; let calls = 0; export async function assertMobilePublishReady(input) { calls += 1; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "compatibility\\n"); if (process.env.EAS_TEST_COMPAT_FAIL === "1" || (process.env.EAS_TEST_COMPAT_FAIL_SECOND === "1" && calls === 2)) throw new Error("signed compatibility bundle unavailable"); return { revision: process.env.EAS_TEST_GIT_REVISION_MISMATCH === "1" ? "${"c".repeat(40)}" : input.revision, environment: input.environment, platforms: input.platforms }; }\n`,
-    )
-    await writeFile(
-      path.join(root, "scripts", "release-mobile-build-preflight.ts"),
-      `import { appendFileSync } from "node:fs"; let calls = 0; export async function assertMobileBuildReady(input) { calls += 1; appendFileSync(process.env.EAS_TEST_PREFLIGHT_CAPTURE, "native-build\\n"); if (process.env.EAS_TEST_NATIVE_FAIL === "1" || (process.env.EAS_TEST_NATIVE_FAIL_SECOND === "1" && calls === 2)) throw new Error("native version proof refused"); return { revision: input.revision, environment: input.environment, platforms: process.env.EAS_TEST_NATIVE_DECISION_MISMATCH === "1" ? ["all"] : input.platforms }; }\n`,
     )
     for (const [label, relativePath] of [
       ["teen", "scripts/check-teen-release-readiness.mjs"],
@@ -241,11 +227,6 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         PATH: `${fakeBin}${path.delimiter}${process.env.PATH ?? ""}`,
         EAS_TEST_CAPTURE: capturePath,
         EAS_TEST_AUTH_CAPTURE: authCapturePath,
-        EAS_TEST_NATIVE_FAIL: mismatch === "native_policy" ? "1" : undefined,
-        EAS_TEST_NATIVE_FAIL_SECOND:
-          mismatch === "native_policy_second" ? "1" : undefined,
-        EAS_TEST_NATIVE_DECISION_MISMATCH:
-          mismatch === "native_decision" ? "1" : undefined,
         EAS_TEST_PREFLIGHT_CAPTURE: preflightCapturePath,
         EAS_TEST_PREFLIGHT_FAIL:
           mismatch === "attachment" ||
@@ -261,10 +242,6 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
                     mismatch === undefined
                   ? "legal"
                   : undefined,
-        EAS_TEST_COMPAT_FAIL:
-          mismatch === "compatibility" || quickPreview ? "1" : undefined,
-        EAS_TEST_COMPAT_FAIL_SECOND:
-          mismatch === "compatibility_second" ? "1" : undefined,
         EAS_TEST_DIRTY_AFTER_ATTACHMENT:
           mismatch === "dirty_after_login" ? "1" : undefined,
         EAS_TEST_GIT_REVISION_MISMATCH:
@@ -317,15 +294,11 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
             ? "teen\napi\nlegal\nios-login\nios-identity\n"
             : "teen\napi\nlegal\n"
         const events =
-          mismatch === "ios_identity"
+          mismatch === "ios_identity" ||
+          mismatch === "revision" ||
+          mismatch === "dirty"
             ? ordinary
-            : mismatch === "revision" || mismatch === "dirty"
-              ? ordinary
-              : mismatch === "native_policy" || mismatch === "native_decision"
-                ? `${ordinary}native-build\n`
-                : mismatch === "native_policy_second"
-                  ? `${ordinary}native-build\nattachment\nnative-build\n`
-                  : `${ordinary}native-build\nattachment\n`
+            : `${ordinary}attachment\n`
         expect(await readFile(preflightCapturePath, "utf8")).toBe(events)
       }
       await expect(readFile(capturePath)).rejects.toMatchObject({
@@ -336,7 +309,6 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
           "attachment",
           "preview_attachment",
           "dirty_after_login",
-          "native_policy_second",
         ].includes(mismatch ?? "")
       )
         expect(await readFile(authCapturePath, "utf8")).toBe("login\n")
@@ -370,17 +342,11 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
           : preview
             ? "attachment\n"
             : operation === "update"
-              ? mismatch === "dirty_after_login"
-                ? "teen\napi\nlegal\ncompatibility\nattachment\n"
-                : mismatch === "compatibility_second"
-                  ? "teen\napi\nlegal\ncompatibility\nattachment\ncompatibility\n"
-                  : mismatch === "teen"
-                    ? "teen\n"
-                    : mismatch === "attachment"
-                      ? "teen\napi\nlegal\ncompatibility\nattachment\n"
-                      : mismatch === "compatibility"
-                        ? "teen\napi\nlegal\ncompatibility\n"
-                        : "teen\napi\nlegal\n"
+              ? mismatch === "teen"
+                ? "teen\n"
+                : mismatch === "attachment" || mismatch === "dirty_after_login"
+                  ? "teen\napi\nlegal\nattachment\n"
+                  : "teen\napi\nlegal\n"
               : mismatch === "attachment"
                 ? "teen\napi\nlegal\nbilling\nattachment\n"
                 : platform === "ios"
@@ -491,14 +457,14 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         })
       else
         expect(await readFile(preflightCapturePath, "utf8")).toBe(
-          `${preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}native-build\nattachment\nnative-build\n`,
+          `${preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
         )
     }
     if (operation === "update") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
         quickPreview
           ? "attachment\n"
-          : `${preview ? "" : platform === "ios" || platform === "all" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}compatibility\nattachment\ncompatibility\n`,
+          : `${preview ? "" : platform === "ios" || platform === "all" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
       )
       expect(
         await readFile(
