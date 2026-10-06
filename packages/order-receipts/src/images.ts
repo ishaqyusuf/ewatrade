@@ -1,14 +1,10 @@
 import { createCanvas } from "@napi-rs/canvas"
-import {
-  GlobalWorkerOptions,
-  getDocument,
-} from "pdfjs-dist/legacy/build/pdf.mjs"
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs"
+// PDF.js runs its worker in-process on servers. Importing it registers
+// globalThis.pdfjsWorker, so no worker URL is resolved at runtime and server
+// bundles keep the worker as an ordinary dependency.
+import "pdfjs-dist/legacy/build/pdf.worker.mjs"
 import { ReceiptRenderError } from "./types"
-
-// Resolve the installed worker, including when the caller is a server bundle.
-GlobalWorkerOptions.workerSrc = import.meta.resolve(
-  "pdfjs-dist/legacy/build/pdf.worker.mjs",
-)
 
 export async function renderReceiptImages(pdf: Uint8Array) {
   const task = getDocument({
