@@ -1,7 +1,7 @@
 "use client"
 
 import { DateRangeFilter } from "@/components/date-range-filter"
-import { parseDateOnly } from "@/lib/date-range"
+import { formatInclusiveRangeLabel, parseDateOnly } from "@/lib/date-range"
 import {
   Button,
   DropdownMenu,
@@ -15,6 +15,7 @@ import { useEffect, useState } from "react"
 export function DateRangeControl({
   end,
   endExclusive = false,
+  inclusiveLabel = false,
   label = "Date range",
   maxDays,
   min,
@@ -23,6 +24,8 @@ export function DateRangeControl({
 }: {
   end: string
   endExclusive?: boolean
+  /** With `endExclusive`, shows the last included day and the day count. */
+  inclusiveLabel?: boolean
   label?: string
   maxDays?: number
   min?: string
@@ -68,8 +71,14 @@ export function DateRangeControl({
       >
         <HugeiconsIcon icon={Calendar03Icon} className="size-4" />
         <span className="truncate">
-          {start} – {end}
-          {endExclusive ? " (exclusive)" : ""}
+          {endExclusive && inclusiveLabel ? (
+            formatInclusiveRangeLabel(start, end)
+          ) : (
+            <>
+              {start} – {end}
+              {endExclusive ? " (exclusive)" : ""}
+            </>
+          )}
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -85,7 +94,12 @@ export function DateRangeControl({
           min={min}
           onSelect={setDraft}
         />
-        <div className="flex items-center justify-end border-t border-border p-2">
+        <div className="flex items-center justify-end gap-3 border-t border-border p-2">
+          {maxDays ? (
+            <p className="mr-auto px-1 text-xs text-muted-foreground">
+              Up to {maxDays} days
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="outline"

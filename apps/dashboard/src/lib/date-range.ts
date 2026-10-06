@@ -18,6 +18,43 @@ export function shiftDateOnly(value: string, days: number) {
   return formatDateOnly(date)
 }
 
+/** Fixed names: ICU versions disagree on "Sep" versus "Sept". */
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const
+
+function formatDayMonth(date: Date, withYear: boolean) {
+  const dayMonth = `${date.getDate()} ${SHORT_MONTHS[date.getMonth()]}`
+  return withYear ? `${dayMonth} ${date.getFullYear()}` : dayMonth
+}
+
+/** "7 Sep – 6 Oct 2026 · 30 days" for an exclusive end of 2026-10-07. */
+export function formatInclusiveRangeLabel(start: string, exclusiveEnd: string) {
+  const from = parseDateOnly(start)
+  const through = parseDateOnly(shiftDateOnly(exclusiveEnd, -1))
+  if (!from || !through) return `${start} – ${exclusiveEnd}`
+  const days = Math.round(
+    (Date.parse(exclusiveEnd) - Date.parse(start)) / 86400000,
+  )
+  const sameYear = from.getFullYear() === through.getFullYear()
+  const range =
+    from.getTime() === through.getTime()
+      ? formatDayMonth(through, true)
+      : `${formatDayMonth(from, !sameYear)} – ${formatDayMonth(through, true)}`
+  return `${range} · ${days} ${days === 1 ? "day" : "days"}`
+}
+
 export function getDatePresets(now = new Date()) {
   const year = now.getFullYear()
   const month = now.getMonth()

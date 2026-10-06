@@ -1,7 +1,6 @@
 "use client"
 import {
   Button,
-  ControlField,
   SelectControl,
   Table,
   TableBody,
@@ -9,13 +8,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  cn,
 } from "@ewatrade/ui"
 
 import { DateRangeControl } from "@/components/date-range-control"
 import { PageHeader, PageToolbar } from "@/components/page-header"
-import { MetricCard } from "@/components/reports/metric-card"
 import { ReportError } from "@/components/reports/report-error"
-import { ReportSection as ReportPanel } from "@/components/reports/report-section"
+import {
+  ReportHeadlineStrip,
+  ReportHeadlineStripSkeleton,
+} from "@/components/reports/report-headline-strip"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
   InlineRowCheckbox,
@@ -26,6 +32,9 @@ import {
 import {
   type ServiceCommerceReportDetail,
   type ServiceCommerceReportRange,
+  type ServiceCommerceReportSection,
+  isServiceCommerceReportDetail,
+  isServiceCommerceReportSection,
   resolveServiceCommerceReportRange,
   useServiceCommerceReportParams,
 } from "@/hooks/use-service-commerce-report-params"
@@ -35,23 +44,20 @@ import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { type ReactNode, useMemo } from "react"
+import {
+  type ReportMetric,
+  type ReportMetricGroup,
+  type ReportSectionContent,
+  buildReportSections,
+  formatReportDuration,
+  humanizeReportValue,
+  lifecycleFunnel,
+  usageAttributionLabel,
+} from "./report-sections"
 
 type StoreOption = { id: string; name: string }
 
-const COST_LABELS: Record<
-  ServiceCommerceReportOutput["costs"][number]["costKind"],
-  string
-> = {
-  bsp_or_twilio_markup: "BSP or Twilio markup",
-  delivery: "Delivery",
-  ewatrade_subscription: "EwaTrade subscription",
-  ewatrade_usage: "EwaTrade usage",
-  meta_delivered_message: "Meta delivered messages",
-  number: "Number fees",
-  payment_provider_fee: "Payment-provider fees",
-  revenue: "Business revenue",
-  tax: "Tax",
-}
+const countFormat = new Intl.NumberFormat("en-NG")
 
 const DETAIL_LABELS: Record<ServiceCommerceReportDetail, string> = {
   catalog: "Catalog",
@@ -63,12 +69,6 @@ const DETAIL_LABELS: Record<ServiceCommerceReportDetail, string> = {
 
 function formatDateInput(value: Date) {
   return value.toISOString().slice(0, 10)
-}
-
-function humanize(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function numericReportValues(value: unknown): number[] {
@@ -91,53 +91,175 @@ function hasReportActivity(report: ServiceCommerceReportOutput) {
   ].some((value) => value > 0)
 }
 
-function ReportSection({
-  children,
-  detail,
-  onOpenDetail,
-  title,
-}: {
-  children: ReactNode
-  detail: ServiceCommerceReportDetail
-  onOpenDetail: (detail: ServiceCommerceReportDetail) => void
-  title: string
-}) {
+function MetricValue({ metric }: { metric: ReportMetric }) {
+  if (
+    metric.value === null ||
+    (metric.format === "money" && !metric.currencyCode)
+  )
+    return (
+      <dd
+        className="cursor-help text-right italic text-muted-foreground underline decoration-dotted underline-offset-4"
+        title={
+          metric.unknownReason ??
+          "Not available for this window. It is never shown as zero."
+        }
+      >
+        Unknown
+      </dd>
+    )
+  const text =
+    metric.format === "money" && metric.currencyCode
+      ? formatMinorMoney(metric.value, metric.currencyCode)
+      : metric.format === "duration"
+        ? formatReportDuration(metric.value)
+        : countFormat.format(metric.value)
   return (
-    <ReportPanel
-      title={title}
-      actions={
-        <Button
-          appearance="form"
-          onClick={() => onOpenDetail(detail)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          View detail
-        </Button>
-      }
+    <dd
+      className={cn(
+        "whitespace-nowrap text-right tabular-nums",
+        metric.value === 0 ? "text-muted-foreground" : "font-semibold",
+      )}
     >
-      {children}
-    </ReportPanel>
+      {text}
+    </dd>
   )
 }
 
-function CountList({
-  entries,
+function MetricRow({ metric }: { metric: ReportMetric }) {
+  const recorded = metric.value !== null && metric.value !== 0
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-border py-2 text-sm">
+      <dt
+        className={cn(
+          "min-w-0 flex-1",
+          recorded ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        {metric.label}
+        {metric.current ? (
+          <span
+            className="ml-1.5 border border-border px-1 align-[1px] text-[10px] uppercase tracking-wide text-muted-foreground"
+            title="Current snapshot, not a count inside the window"
+          >
+            now
+          </span>
+        ) : null}
+        {metric.note ? (
+          <span className="block text-xs text-muted-foreground">
+            {metric.note}
+          </span>
+        ) : null}
+        {metric.shareOf !== undefined ? (
+          <span aria-hidden="true" className="mt-1 block h-0.5 bg-muted">
+            <span
+              className="block h-full bg-primary"
+              style={{
+                width: `${metric.shareOf > 0 && metric.value ? (metric.value / metric.shareOf) * 100 : 0}%`,
+              }}
+            />
+          </span>
+        ) : null}
+      </dt>
+      <MetricValue metric={metric} />
+    </div>
+  )
+}
+
+function MetricGroups({ groups }: { groups: ReportMetricGroup[] }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13.5rem),1fr))] gap-x-8 gap-y-5">
+      {groups.map((group) => (
+        <section aria-label={group.title} key={group.title}>
+          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {group.title}
+          </h3>
+          <dl>
+            {group.metrics.map((metric) => (
+              <MetricRow key={metric.label} metric={metric} />
+            ))}
+          </dl>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+function LifecycleFunnel({
+  lifecycle,
 }: {
-  entries: Array<{ label: string; value: number | string }>
+  lifecycle: ServiceCommerceReportOutput["lifecycle"]
+}) {
+  const steps = lifecycleFunnel(lifecycle)
+  const largest = Math.max(...steps.map((step) => step.count), 1)
+  return (
+    <div className="grid gap-2.5">
+      <ol aria-label="Lifecycle funnel" className="grid gap-2.5">
+        {steps.map((step) => (
+          <li
+            className="grid grid-cols-[minmax(0,1fr)_3.5rem_3rem] items-center gap-x-3 gap-y-1.5 text-sm sm:grid-cols-[10rem_minmax(0,1fr)_4rem_3rem]"
+            key={step.label}
+          >
+            <span>{step.label}</span>
+            <span
+              aria-hidden="true"
+              className="col-span-3 row-start-2 h-2.5 bg-muted sm:col-span-1 sm:row-start-auto"
+            >
+              <span
+                className="block h-full bg-primary"
+                style={{ width: `${(step.count / largest) * 100}%` }}
+              />
+            </span>
+            <span
+              className={cn(
+                "text-right tabular-nums",
+                step.count === 0 ? "text-muted-foreground" : "font-semibold",
+              )}
+            >
+              {countFormat.format(step.count)}
+            </span>
+            <span
+              className="text-right text-xs tabular-nums text-muted-foreground"
+              title="Compared with the step above"
+            >
+              {step.ratio === undefined
+                ? ""
+                : step.ratio === null
+                  ? "—"
+                  : `${step.ratio}%`}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs text-muted-foreground">
+        Percentages compare counts in this window with the step above. They
+        don't follow the same customers through, so a step can be above 100%.
+      </p>
+    </div>
+  )
+}
+
+function SectionPanel({
+  children,
+  description,
+  title,
+}: {
+  children: ReactNode
+  description: string
+  title: string
 }) {
   return (
-    <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {entries.map((entry) => (
-        <div className="border border-border p-3" key={entry.label}>
-          <dt className="text-xs text-muted-foreground">{entry.label}</dt>
-          <dd className="mt-1 text-lg font-medium tabular-nums">
-            {entry.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <section
+      aria-label={title}
+      className="grid min-w-0 gap-5 border border-border bg-background p-4 sm:p-6"
+    >
+      <div>
+        <h2 className="font-semibold">{title}</h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -164,23 +286,20 @@ function drilldownRowKey(row: DrilldownRow) {
   ].join(":")
 }
 
-function ReportDrilldown({
-  detail,
+function ReportDailyDetail({
+  category,
   end,
-  onClose,
   start,
   storeId,
 }: {
-  detail: ServiceCommerceReportDetail | null
+  category: ServiceCommerceReportDetail
   end: Date
-  onClose: () => void
   start: Date
   storeId: string | null
 }) {
   const trpc = useTRPC()
-  const category = detail ?? "lifecycle"
-  const drilldown = useQuery({
-    ...trpc.serviceCommerce.reportDrilldown.queryOptions(
+  const drilldown = useQuery(
+    trpc.serviceCommerce.reportDrilldown.queryOptions(
       {
         category,
         end,
@@ -189,8 +308,7 @@ function ReportDrilldown({
       },
       { retry: false },
     ),
-    enabled: detail !== null,
-  })
+  )
   const rowKeys = useMemo(
     () => drilldown.data?.rows.map(drilldownRowKey) ?? [],
     [drilldown.data],
@@ -201,43 +319,30 @@ function ReportDrilldown({
     disabled: drilldown.isFetching,
   })
 
-  if (!detail) return null
-
   return (
     <section
-      aria-label={`${DETAIL_LABELS[detail]} report detail`}
-      className="border border-primary/30 bg-primary/5 p-5"
+      aria-label={`${DETAIL_LABELS[category]} daily detail`}
+      className="grid min-w-0 gap-3 border-t border-border pt-5"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold">{DETAIL_LABELS[detail]} detail</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Aggregate daily outcomes only. Customer content, provider operation
-            identifiers, and private media are never included.
-          </p>
-        </div>
-        <Button
-          appearance="form"
-          onClick={onClose}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          Close detail
-        </Button>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 className="text-sm font-semibold">Daily detail</h3>
+        <p className="text-xs text-muted-foreground">
+          Daily totals only. Customer content, provider operation identifiers
+          and private media are never included.
+        </p>
       </div>
       {drilldown.data?.mayBeTruncated ? (
-        <output className="mt-3 block text-sm text-amber-700">
+        <output className="block text-sm text-amber-700 dark:text-amber-400">
           This detail reached its safe query limit and may be incomplete.
         </output>
       ) : null}
       {drilldown.isLoading ? (
         <output
           aria-label="Loading report detail"
-          className="mt-4 block h-24 animate-pulse bg-muted"
+          className="block h-32 animate-pulse bg-muted"
         />
       ) : drilldown.isError ? (
-        <div className="mt-4 grid gap-3" role="alert">
+        <div className="grid gap-3" role="alert">
           <p className="text-sm text-destructive">
             Report detail is temporarily unavailable.
           </p>
@@ -254,17 +359,15 @@ function ReportDrilldown({
         </div>
       ) : drilldown.data?.rows.length ? (
         <>
-          <div className="mt-4">
-            <InlineSelectionStatus selection={selection} />
-          </div>
+          <InlineSelectionStatus selection={selection} />
           <section
-            className="mt-2 overflow-x-auto"
+            className="overflow-x-auto border border-border"
             // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
             tabIndex={0}
             aria-label="Report detail table"
           >
             <Table className="w-full min-w-[37rem] text-left text-sm">
-              <TableHeader className="border-b border-border text-sm font-normal text-muted-foreground">
+              <TableHeader className="bg-muted/40 text-xs text-muted-foreground">
                 <TableRow>
                   <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
                     <InlineSelectAllCheckbox
@@ -295,7 +398,7 @@ function ReportDrilldown({
               <TableBody>
                 {drilldown.data.rows.map((row) => (
                   <TableRow
-                    className="border-b border-border/70"
+                    className="border-b border-border/70 last:border-b-0"
                     key={drilldownRowKey(row)}
                     data-state={
                       selection.isSelected(drilldownRowKey(row))
@@ -307,32 +410,23 @@ function ReportDrilldown({
                       <InlineRowCheckbox
                         selection={selection}
                         id={drilldownRowKey(row)}
-                        label={`Select ${row.date} ${humanize(row.category)} ${humanize(row.outcome)}`}
+                        label={`Select ${row.date} ${humanizeReportValue(row.category)} ${humanizeReportValue(row.outcome)}`}
                       />
                     </TableCell>
                     <TableCell className="px-4 py-2 tabular-nums">
                       {row.date}
                     </TableCell>
                     <TableCell className="px-4 py-2">
-                      {humanize(row.category)}
+                      {humanizeReportValue(row.category)}
                     </TableCell>
                     <TableCell className="px-4 py-2">
-                      {humanize(row.outcome)}
+                      {humanizeReportValue(row.outcome)}
                     </TableCell>
                     <TableCell className="px-4 py-2 text-muted-foreground">
-                      {[
-                        row.connectionId
-                          ? `Connection ${row.connectionId}`
-                          : null,
-                        row.recipientMarket,
-                        row.messageCategory,
-                        row.billingOwner,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ") || "—"}
+                      {usageAttributionLabel(row) || "—"}
                     </TableCell>
                     <TableCell className="px-4 py-2 text-right tabular-nums">
-                      {row.count}
+                      {countFormat.format(row.count)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -341,8 +435,9 @@ function ReportDrilldown({
           </section>
         </>
       ) : (
-        <p className="mt-4 text-sm text-muted-foreground">
-          No aggregate events were recorded for this detail and date range.
+        <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
+          No daily totals were recorded for {DETAIL_LABELS[category]} in this
+          window.
         </p>
       )}
     </section>
@@ -387,35 +482,35 @@ export function ServiceCommerceReportWorkspace({
         <PageHeader
           eyebrow="Service Commerce"
           title="Operational reports"
-          description="Lifecycle, Catalog, reliability, media and cost facts are scoped to the selected Store and occurrence window."
+          description="Aggregate counts for the selected Store and dates. Customer content, contacts and private media are never included."
         >
           <PageToolbar
             actions={
               <>
-                <ControlField label={<>Store</>}>
-                  <SelectControl
-                    aria-label="Service Commerce report store"
-                    onValueChange={(value) =>
-                      void params.setScope({
-                        from: scope.from,
-                        store: value || null,
-                        to: scope.to,
-                      })
-                    }
-                    value={storeId ?? ""}
-                    options={[
-                      { value: "", label: <>All tenant stores</> },
-                      ...(stores.map((store) => ({
-                        value: store.id,
-                        label: store.name,
-                      })) ?? []),
-                    ]}
-                  />
-                </ControlField>
+                <SelectControl
+                  aria-label="Service Commerce report Store"
+                  className="h-9 w-full sm:w-64"
+                  onValueChange={(value) =>
+                    void params.setScope({
+                      from: scope.from,
+                      store: value || null,
+                      to: scope.to,
+                    })
+                  }
+                  value={storeId ?? ""}
+                  options={[
+                    { value: "", label: <>All Stores</> },
+                    ...stores.map((store) => ({
+                      value: store.id,
+                      label: store.name,
+                    })),
+                  ]}
+                />
                 <DateRangeControl
                   start={formatDateInput(scope.from)}
                   end={formatDateInput(scope.to)}
                   endExclusive
+                  inclusiveLabel
                   maxDays={366}
                   label="Operational report date range"
                   onApply={({ start, end }) =>
@@ -426,21 +521,10 @@ export function ServiceCommerceReportWorkspace({
                     })
                   }
                 />
-                <p className="text-xs text-muted-foreground">
-                  Maximum 366 days
-                </p>
               </>
             }
           />
         </PageHeader>
-
-        <ReportDrilldown
-          detail={params.detail}
-          end={scope.to}
-          onClose={() => void params.setDetail(null)}
-          start={scope.from}
-          storeId={storeId}
-        />
 
         {report.isLoading ? (
           <ReportLoading />
@@ -461,14 +545,18 @@ export function ServiceCommerceReportWorkspace({
         ) : (
           <>
             {report.data.mayBeTruncated ? (
-              <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700">
+              <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
                 One or more report queries reached their safe limit. Totals may
                 be incomplete for this date range.
               </output>
             ) : null}
             <ReportContent
-              onOpenDetail={(detail) => void params.setDetail(detail)}
+              end={scope.to}
+              onSectionChange={(section) => void params.setSection(section)}
               report={report.data}
+              section={params.section}
+              start={scope.from}
+              storeId={storeId}
             />
           </>
         )}
@@ -478,427 +566,152 @@ export function ServiceCommerceReportWorkspace({
 }
 
 function ReportContent({
-  onOpenDetail,
+  end,
+  onSectionChange,
   report,
+  section,
+  start,
+  storeId,
 }: {
-  onOpenDetail: (detail: ServiceCommerceReportDetail) => void
+  end: Date
+  onSectionChange: (section: ServiceCommerceReportSection) => void
   report: ServiceCommerceReportOutput
+  section: ServiceCommerceReportSection
+  start: Date
+  storeId: string | null
 }) {
-  const {
-    catalog,
-    costs,
-    lifecycle,
-    media,
-    observability,
-    reliability,
-    storeConversations,
-  } = report
+  const sections = useMemo(() => buildReportSections(report), [report])
+  const { lifecycle } = report
+  const showStores =
+    report.scope.storeId === null && report.storeBreakdown.length > 0
+  const activeSection =
+    section === "stores" && !showStores ? "lifecycle" : section
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Requests" value={lifecycle.requestsReceived} />
-        <MetricCard label="Quotes issued" value={lifecycle.quotesIssued} />
-        <MetricCard
-          label="Bookings confirmed"
-          value={lifecycle.bookingsConfirmed}
-        />
-        <MetricCard
-          label="Payment value"
-          money
-          value={formatMinorMoney(
-            lifecycle.paymentValueMinor,
-            report.currencyCode,
-          )}
-        />
-      </div>
+      <ReportHeadlineStrip
+        label="Headline figures"
+        items={[
+          {
+            label: "Requests",
+            value: countFormat.format(lifecycle.requestsReceived),
+            detail: "Received in this window",
+            muted: lifecycle.requestsReceived === 0,
+          },
+          {
+            label: "Quotes issued",
+            value: countFormat.format(lifecycle.quotesIssued),
+            detail: `${countFormat.format(lifecycle.quotesAccepted)} accepted`,
+            muted: lifecycle.quotesIssued === 0,
+          },
+          {
+            label: "Bookings confirmed",
+            value: countFormat.format(lifecycle.bookingsConfirmed),
+            detail: `${countFormat.format(lifecycle.bookingsCompleted)} completed`,
+            muted: lifecycle.bookingsConfirmed === 0,
+          },
+          {
+            label: "Payment value",
+            value: formatMinorMoney(
+              lifecycle.paymentValueMinor,
+              report.currencyCode,
+            ),
+            detail: `${countFormat.format(lifecycle.paymentsSucceeded)} ${lifecycle.paymentsSucceeded === 1 ? "payment" : "payments"} succeeded`,
+            money: true,
+            muted: lifecycle.paymentValueMinor === 0,
+          },
+        ]}
+      />
 
-      <ReportSection
-        detail="lifecycle"
-        onOpenDetail={onOpenDetail}
-        title="Lifecycle"
+      <Tabs
+        className="min-w-0 gap-6"
+        onValueChange={(value) => {
+          if (isServiceCommerceReportSection(value)) onSectionChange(value)
+        }}
+        value={activeSection}
       >
-        <CountList
-          entries={[
-            { label: "Quotes accepted", value: lifecycle.quotesAccepted },
-            { label: "Payments succeeded", value: lifecycle.paymentsSucceeded },
-            { label: "Pickup completed", value: lifecycle.pickupsCompleted },
-            {
-              label: "Delivery completed",
-              value: lifecycle.deliveriesCompleted,
-            },
-            {
-              label: "Service completions",
-              value: lifecycle.serviceCompletions,
-            },
-            { label: "Bookings completed", value: lifecycle.bookingsCompleted },
-          ]}
-        />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <CountList
-            entries={lifecycle.byChannel.map((entry) => ({
-              label: humanize(entry.channel),
-              value: entry.count,
-            }))}
-          />
-          <CountList
-            entries={lifecycle.bySource.map((entry) => ({
-              label: humanize(entry.source),
-              value: entry.count,
-            }))}
-          />
+        <div className="min-w-0 overflow-x-auto border-b border-border pb-1.5 [scrollbar-width:none]">
+          <TabsList
+            aria-label="Report sections"
+            className="w-max"
+            variant="line"
+          >
+            {sections.map((content) => (
+              <TabsTrigger key={content.key} value={content.key}>
+                {content.tab}
+              </TabsTrigger>
+            ))}
+            {showStores ? (
+              <TabsTrigger value="stores">
+                Stores · {report.storeBreakdown.length}
+              </TabsTrigger>
+            ) : null}
+          </TabsList>
         </div>
-      </ReportSection>
-
-      <section className="border border-border bg-background p-5">
-        <h2 className="font-semibold">Store Conversation service quality</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Content-free operational counts for the selected Store and occurrence
-          window. Customer messages, contacts, credentials and provider
-          identifiers are never included.
-        </p>
-        <div className="mt-4 grid gap-5">
-          <div>
-            <h3 className="mb-2 text-sm font-medium">Lifecycle and team</h3>
-            <CountList
-              entries={[
-                {
-                  label: "Conversations started",
-                  value: storeConversations.lifecycle.conversationsStarted,
-                },
-                {
-                  label: "Customer messages",
-                  value: storeConversations.lifecycle.customerMessages,
-                },
-                {
-                  label: "Store replies",
-                  value: storeConversations.lifecycle.storeReplies,
-                },
-                {
-                  label: "First response average",
-                  value:
-                    storeConversations.lifecycle.firstResponse
-                      .averageSeconds === null
-                      ? "Unknown"
-                      : `${Math.round(storeConversations.lifecycle.firstResponse.averageSeconds)}s`,
-                },
-                { label: "Claims", value: storeConversations.team.claimed },
-                {
-                  label: "Unclaimed now",
-                  value: storeConversations.team.unclaimedCurrent,
-                },
-                {
-                  label: "Overdue now",
-                  value: storeConversations.team.overdueCurrent,
-                },
-                {
-                  label: "Escalations opened",
-                  value: storeConversations.team.escalationsOpened,
-                },
-                {
-                  label: "Escalations resolved",
-                  value: storeConversations.team.escalationsResolved,
-                },
-              ]}
+        {sections.map((content) => (
+          <TabsContent key={content.key} value={content.key}>
+            <SectionTab
+              content={content}
+              end={end}
+              report={report}
+              start={start}
+              storeId={storeId}
             />
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-medium">
-              Availability and channels
-            </h3>
-            <CountList
-              entries={[
-                {
-                  label: "Paused",
-                  value: storeConversations.availability.paused,
-                },
-                {
-                  label: "Resumed",
-                  value: storeConversations.availability.resumed,
-                },
-                {
-                  label: "Schedule updates",
-                  value: storeConversations.availability.scheduleUpdates,
-                },
-                {
-                  label: "Coverage blocks",
-                  value:
-                    storeConversations.availability.coverageBlockObservations,
-                },
-                {
-                  label: "Policy blocks",
-                  value:
-                    storeConversations.availability.policyBlockObservations,
-                },
-                {
-                  label: "Provider blocks",
-                  value:
-                    storeConversations.availability.providerBlockObservations,
-                },
-                {
-                  label: "Web messages",
-                  value: storeConversations.channels.webMessages,
-                },
-                {
-                  label: "Mobile messages",
-                  value: storeConversations.channels.mobileMessages,
-                },
-                {
-                  label: "WhatsApp messages",
-                  value: storeConversations.channels.whatsAppMessages,
-                },
-                {
-                  label: "Bridge initiated / confirmed",
-                  value: `${storeConversations.channels.bridgeInitiated} / ${storeConversations.channels.bridgeConfirmed}`,
-                },
-              ]}
-            />
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-medium">
-              Notifications and provider delivery
-            </h3>
-            <CountList
-              entries={[
-                {
-                  label: "Notifications scheduled",
-                  value: storeConversations.notifications.scheduled,
-                },
-                {
-                  label: "Notifications delivered",
-                  value: storeConversations.notifications.delivered,
-                },
-                {
-                  label: "Coalesced / cancelled by read",
-                  value: `${storeConversations.notifications.coalesced} / ${storeConversations.notifications.cancelledByRead}`,
-                },
-                {
-                  label: "Suppressed / unavailable",
-                  value: `${storeConversations.notifications.suppressed} / ${storeConversations.notifications.unavailable}`,
-                },
-                {
-                  label: "Provider attempts",
-                  value: storeConversations.providerReliability.attempts,
-                },
-                {
-                  label: "Provider failures",
-                  value: storeConversations.providerReliability.failed,
-                },
-                {
-                  label: "Provider outcome unknown",
-                  value: storeConversations.providerReliability.outcomeUnknown,
-                },
-                {
-                  label: "Cost observations known / unknown",
-                  value: `${storeConversations.costVisibility.knownObservations} / ${storeConversations.costVisibility.unknownObservations}`,
-                },
-              ]}
-            />
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-medium">
-              Request and current outcome snapshots
-            </h3>
-            <CountList
-              entries={[
-                {
-                  label: "Product requests",
-                  value: storeConversations.lifecycle.requestKinds.product,
-                },
-                {
-                  label: "Service requests",
-                  value: storeConversations.lifecycle.requestKinds.service,
-                },
-                {
-                  label: "Prescription requests",
-                  value: storeConversations.lifecycle.requestKinds.prescription,
-                },
-                {
-                  label: "Active now",
-                  value: storeConversations.lifecycle.currentSnapshot.active,
-                },
-                {
-                  label: "Archived now",
-                  value: storeConversations.lifecycle.currentSnapshot.archived,
-                },
-                {
-                  label: "Restricted now",
-                  value:
-                    storeConversations.lifecycle.currentSnapshot.restricted,
-                },
-              ]}
-            />
-            <p className="mt-3 text-xs text-muted-foreground">
-              Scheduled closure and arbitrary WhatsApp history remain unknown
-              because those historical observations are not persisted. They are
-              not reported as zero.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <ReportSection
-        detail="catalog"
-        onOpenDetail={onOpenDetail}
-        title="Progressive Catalog"
-      >
-        <CountList
-          entries={[
-            { label: "Demand resolved", value: catalog.demandResolved },
-            { label: "Drafts created", value: catalog.draftsCreated },
-            {
-              label: "Existing Offerings matched",
-              value: catalog.existingOfferingsMatched,
-            },
-            { label: "Resolution unknown", value: catalog.resolutionUnknown },
-            { label: "Quote overrides", value: catalog.quoteOverrides },
-            {
-              label: "Quote override unknown",
-              value: catalog.quoteOverrideUnknown,
-            },
-            {
-              label: "Reusable price promotions",
-              value: catalog.reusablePricePromotions,
-            },
-            {
-              label: "Procure-to-order commitments",
-              value: catalog.procureToOrderCommitments,
-            },
-            {
-              label: "Managed inventory graduations",
-              value: catalog.managedInventoryGraduations,
-            },
-          ]}
-        />
-      </ReportSection>
-
-      <ReportSection
-        detail="reliability"
-        onOpenDetail={onOpenDetail}
-        title="Reliability and recovery"
-      >
-        <CountList
-          entries={[
-            { label: "Provider attempts", value: reliability.providerAttempts },
-            { label: "Provider failures", value: reliability.providerFailures },
-            { label: "Provider retries", value: reliability.providerRetries },
-            { label: "Job recoveries", value: reliability.jobRecoveries },
-            {
-              label: "Job recovery attempts",
-              value: reliability.jobRecoveryAttempts,
-            },
-            {
-              label: "Stale capability rejections",
-              value: reliability.staleCapabilityRejections,
-            },
-          ]}
-        />
-        <div className="mt-4">
-          <CountList
-            entries={observability.map((entry) => ({
-              label: `${humanize(entry.kind)} · ${humanize(entry.outcome)}`,
-              value: entry.count,
-            }))}
-          />
-        </div>
-      </ReportSection>
-
-      <ReportSection
-        detail="media"
-        onOpenDetail={onOpenDetail}
-        title="Media safety and observations"
-      >
-        <p className="mb-4 text-sm text-muted-foreground">
-          Aggregate safety and conversion facts only; media content, object keys
-          and customer descriptions remain private.
-        </p>
-        <CountList
-          entries={[
-            { label: "Active attachments", value: media.attachmentsActive },
-            { label: "Safe attachments", value: media.attachmentsSafe },
-            {
-              label: "Quarantined attachments",
-              value: media.attachmentsQuarantined,
-            },
-            { label: "Rejected attachments", value: media.attachmentsRejected },
-            {
-              label: "Retryable attachments",
-              value: media.attachmentsRetryable,
-            },
-            { label: "Current observations", value: media.observationsCurrent },
-            {
-              label: "Observation conversions",
-              value: media.observationsConverted,
-            },
-          ]}
-        />
-      </ReportSection>
-
-      <ReportSection
-        detail="costs"
-        onOpenDetail={onOpenDetail}
-        title="Costs and billing ownership"
-      >
-        <p className="mb-4 text-sm text-muted-foreground">
-          A known zero remains zero. External costs that are not yet available
-          stay unknown and are never estimated into another category.
-        </p>
-        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {costs.map((cost) => (
-            <div
-              className="border border-border p-3"
-              key={`${cost.costKind}:${cost.currencyCode ?? "unknown"}`}
+          </TabsContent>
+        ))}
+        {showStores ? (
+          <TabsContent value="stores">
+            <SectionPanel
+              description="Each Store's share of the headline figures in this window."
+              title="Store breakdown"
             >
-              <dt className="text-xs text-muted-foreground">
-                {COST_LABELS[cost.costKind]}
-              </dt>
-              <dd className="mt-1 text-lg font-medium">
-                {cost.knownTotalMinor === null || cost.currencyCode === null
-                  ? "Unknown"
-                  : formatMinorMoney(cost.knownTotalMinor, cost.currencyCode)}
-              </dd>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {cost.knownCount} known · {cost.unknownCount} unknown
-              </p>
-            </div>
-          ))}
-        </dl>
-        {report.usageCostsByDimension.length > 0 ? (
-          <div className="mt-4">
-            <p className="mb-2 text-sm text-muted-foreground">
-              Aggregate Meta usage attribution by Connection, recipient market,
-              message category and billing owner.
-            </p>
-            <CountList
-              entries={report.usageCostsByDimension.map((dimension) => ({
-                label:
-                  [
-                    dimension.connectionId
-                      ? `Connection ${dimension.connectionId}`
-                      : null,
-                    dimension.recipientMarket,
-                    dimension.messageCategory,
-                    dimension.billingOwner,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || "Unattributed",
-                value: dimension.costs.reduce(
-                  (count, cost) => count + cost.knownCount + cost.unknownCount,
-                  0,
-                ),
-              }))}
-            />
-          </div>
+              <StoreBreakdownTable report={report} />
+            </SectionPanel>
+          </TabsContent>
         ) : null}
-      </ReportSection>
-
-      {report.scope.storeId === null && report.storeBreakdown.length > 0 ? (
-        <section className="border border-border bg-background p-5">
-          <h2 className="font-semibold">Store breakdown</h2>
-          <StoreBreakdownTable report={report} />
-        </section>
-      ) : null}
+      </Tabs>
     </div>
+  )
+}
+
+function SectionTab({
+  content,
+  end,
+  report,
+  start,
+  storeId,
+}: {
+  content: ReportSectionContent
+  end: Date
+  report: ServiceCommerceReportOutput
+  start: Date
+  storeId: string | null
+}) {
+  return (
+    <SectionPanel description={content.description} title={content.title}>
+      {content.key === "lifecycle" ? (
+        <LifecycleFunnel lifecycle={report.lifecycle} />
+      ) : null}
+      {content.groups.length ? (
+        <MetricGroups groups={content.groups} />
+      ) : content.key === "costs" ? (
+        <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
+          No cost facts were recorded for this Store and window. Costs appear
+          here once a provider or EwaTrade usage fact exists.
+        </p>
+      ) : null}
+      {content.footnote ? (
+        <p className="text-xs text-muted-foreground">{content.footnote}</p>
+      ) : null}
+      {isServiceCommerceReportDetail(content.key) ? (
+        <ReportDailyDetail
+          category={content.key}
+          end={end}
+          start={start}
+          storeId={storeId}
+        />
+      ) : null}
+    </SectionPanel>
   )
 }
 
@@ -916,18 +729,16 @@ function StoreBreakdownTable({
     scope: JSON.stringify(report.scope),
   })
   return (
-    <>
-      <div className="mt-4">
-        <InlineSelectionStatus selection={selection} />
-      </div>
+    <div className="grid min-w-0 gap-3">
+      <InlineSelectionStatus selection={selection} />
       <section
-        className="mt-2 overflow-x-auto"
+        className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
         tabIndex={0}
         aria-label="Store breakdown table"
       >
         <Table className="w-full min-w-[41rem] text-left text-sm">
-          <TableHeader className="border-b border-border text-xs text-muted-foreground">
+          <TableHeader className="bg-muted/40 text-xs text-muted-foreground">
             <TableRow>
               <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
                 <InlineSelectAllCheckbox
@@ -967,7 +778,7 @@ function StoreBreakdownTable({
           <TableBody>
             {report.storeBreakdown.map((store) => (
               <TableRow
-                className="border-b border-border/70"
+                className="border-b border-border/70 last:border-b-0"
                 key={store.storeId}
                 data-state={
                   selection.isSelected(store.storeId) ? "selected" : undefined
@@ -983,24 +794,30 @@ function StoreBreakdownTable({
                 <TableCell className="px-4 py-2 font-normal">
                   {store.name}
                 </TableCell>
-                <TableCell className="px-4 py-2 text-right tabular-nums">
-                  {store.requestsReceived}
-                </TableCell>
-                <TableCell className="px-4 py-2 text-right tabular-nums">
-                  {store.quotesIssued}
-                </TableCell>
-                <TableCell className="px-4 py-2 text-right tabular-nums">
-                  {store.paymentsSucceeded}
-                </TableCell>
-                <TableCell className="px-4 py-2 text-right tabular-nums">
-                  {store.completions}
-                </TableCell>
+                {(
+                  [
+                    ["requests", store.requestsReceived],
+                    ["quotes", store.quotesIssued],
+                    ["payments", store.paymentsSucceeded],
+                    ["completions", store.completions],
+                  ] as const
+                ).map(([column, value]) => (
+                  <TableCell
+                    className={cn(
+                      "px-4 py-2 text-right tabular-nums",
+                      value === 0 && "text-muted-foreground",
+                    )}
+                    key={column}
+                  >
+                    {countFormat.format(value)}
+                  </TableCell>
+                ))}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </section>
-    </>
+    </div>
   )
 }
 
@@ -1008,20 +825,19 @@ function ReportLoading() {
   return (
     <div className="grid min-w-0 gap-6">
       <output className="sr-only">Loading Service Commerce report</output>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
+      <ReportHeadlineStripSkeleton count={4} />
+      <div
+        aria-hidden="true"
+        className="flex gap-4 overflow-hidden border-b border-border pb-3"
+      >
+        {Array.from({ length: 6 }, (_, index) => (
           <div
-            className="h-28 animate-pulse bg-muted"
-            key={`report-card-skeleton-${index + 1}`}
+            className="h-5 w-20 shrink-0 animate-pulse bg-muted"
+            key={`report-tab-skeleton-${index + 1}`}
           />
         ))}
       </div>
-      {Array.from({ length: 4 }, (_, index) => (
-        <div
-          className="h-52 animate-pulse bg-muted"
-          key={`report-section-skeleton-${index + 1}`}
-        />
-      ))}
+      <div aria-hidden="true" className="h-96 animate-pulse bg-muted" />
     </div>
   )
 }

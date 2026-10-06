@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 
 import {
   getServiceCommerceReportDefaultRange,
+  isServiceCommerceReportDetail,
+  isServiceCommerceReportSection,
   loadServiceCommerceReportParams,
   resolveServiceCommerceReportRange,
   withServiceCommerceReportUserNavigation,
@@ -84,5 +86,19 @@ describe("Service Commerce report URL range", () => {
     ).toMatchObject({
       detail: null,
     })
+  })
+
+  test("accepts the non-drilldown report tabs and keeps drilldown sections separate", () => {
+    expect(
+      loadServiceCommerceReportParams({ detail: "conversations" }),
+    ).toMatchObject({ detail: "conversations" })
+    expect(loadServiceCommerceReportParams({ detail: "stores" })).toMatchObject(
+      { detail: "stores" },
+    )
+    expect(isServiceCommerceReportSection("costs")).toBe(true)
+    expect(isServiceCommerceReportSection("customer_content")).toBe(false)
+    expect(isServiceCommerceReportDetail("media")).toBe(true)
+    expect(isServiceCommerceReportDetail("conversations")).toBe(false)
+    expect(isServiceCommerceReportDetail("stores")).toBe(false)
   })
 })

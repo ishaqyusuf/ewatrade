@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { getDatePresets, parseDateOnly, shiftDateOnly } from "./date-range"
+import {
+  formatInclusiveRangeLabel,
+  getDatePresets,
+  parseDateOnly,
+  shiftDateOnly,
+} from "./date-range"
 
 describe("date range URL and calendar boundaries", () => {
   test("rejects invalid dates instead of normalizing them", () => {
@@ -24,5 +29,19 @@ describe("date range URL and calendar boundaries", () => {
       start: "2026-07-01",
       end: "2026-09-30",
     })
+  })
+  test("labels an exclusive-end range by its last included day", () => {
+    expect(formatInclusiveRangeLabel("2026-09-07", "2026-10-07")).toBe(
+      "7 Sep – 6 Oct 2026 · 30 days",
+    )
+    expect(formatInclusiveRangeLabel("2025-12-20", "2026-01-04")).toBe(
+      "20 Dec 2025 – 3 Jan 2026 · 15 days",
+    )
+    expect(formatInclusiveRangeLabel("2026-10-06", "2026-10-07")).toBe(
+      "6 Oct 2026 · 1 day",
+    )
+    expect(formatInclusiveRangeLabel("bad", "2026-10-07")).toBe(
+      "bad – 2026-10-07",
+    )
   })
 })

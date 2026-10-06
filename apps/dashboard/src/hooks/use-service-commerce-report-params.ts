@@ -17,8 +17,37 @@ export const SERVICE_COMMERCE_REPORT_DETAILS = [
 export type ServiceCommerceReportDetail =
   (typeof SERVICE_COMMERCE_REPORT_DETAILS)[number]
 
+/**
+ * Report tabs. Drilldown sections keep their names so earlier `?detail=` links
+ * still open the same section; Conversations and Stores have no drilldown.
+ */
+export const SERVICE_COMMERCE_REPORT_SECTIONS = [
+  "lifecycle",
+  "conversations",
+  "catalog",
+  "reliability",
+  "media",
+  "costs",
+  "stores",
+] as const
+
+export type ServiceCommerceReportSection =
+  (typeof SERVICE_COMMERCE_REPORT_SECTIONS)[number]
+
+export function isServiceCommerceReportSection(
+  value: unknown,
+): value is ServiceCommerceReportSection {
+  return SERVICE_COMMERCE_REPORT_SECTIONS.some((section) => section === value)
+}
+
+export function isServiceCommerceReportDetail(
+  section: ServiceCommerceReportSection,
+): section is ServiceCommerceReportDetail {
+  return SERVICE_COMMERCE_REPORT_DETAILS.some((detail) => detail === section)
+}
+
 const serviceCommerceReportParams = {
-  detail: parseAsStringEnum([...SERVICE_COMMERCE_REPORT_DETAILS]),
+  detail: parseAsStringEnum([...SERVICE_COMMERCE_REPORT_SECTIONS]),
   from: parseAsIsoDate,
   store: parseAsString,
   to: parseAsIsoDate,
@@ -85,10 +114,11 @@ export function useServiceCommerceReportParams() {
   const setUserParams = withServiceCommerceReportUserNavigation(setParams)
 
   return {
-    detail: params.detail,
     from: params.from,
-    setDetail: (detail: ServiceCommerceReportDetail | null) =>
-      setUserParams({ detail }),
+    /** Lifecycle is the default tab and is kept out of the URL. */
+    section: params.detail ?? "lifecycle",
+    setSection: (section: ServiceCommerceReportSection) =>
+      setUserParams({ detail: section === "lifecycle" ? null : section }),
     setScope: (scope: {
       from: Date
       store: string | null
