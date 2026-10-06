@@ -1,0 +1,30 @@
+{
+  "name": "@ewatrade/assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./setup/contracts": "./src/setup/contracts.ts",
+    "./setup/messages": "./src/setup/messages.ts",
+    "./setup/prompt": "./src/setup/prompt.ts",
+    "./setup/tools": "./src/setup/tools.ts",
+    "./setup/rehearsal": "./src/setup/rehearsal.ts"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "bun test src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ewatrade/utils": "workspace:*",
+    "ai": "6.0.141",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@ewatrade/ai": "workspace:*",
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "catalog:"
+  }
+}

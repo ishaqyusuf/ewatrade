@@ -1,0 +1,159 @@
+// AI assistant persistence. The model never writes domain records: it stages
+// Setup Draft entities that an owner reviews before existing commands commit them.
+
+enum AssistantConversationPurpose {
+  SETUP
+  GENERAL
+}
+
+enum AssistantConversationStatus {
+  OFFERED
+  ACTIVE
+  COMPLETED
+  SKIPPED
+  ARCHIVED
+}
+
+enum AssistantRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SetupDraftEntityKind {
+  PRODUCT
+  SERVICE
+  CUSTOMER
+}
+
+enum SetupDraftEntityState {
+  PROPOSED
+  NEEDS_INPUT
+  CONFIRMED
+  COMMITTED
+  FAILED
+  SKIPPED
+}
+
+model AssistantConversation {
+  id           String                       @id @default(cuid())
+  tenantId     String
+  storeId      String
+  ownerUserId  String
+  purpose      AssistantConversationPurpose
+  status       AssistantConversationStatus  @default(OFFERED)
+  title        String?
+  lastSequence Int                          @default(0)
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store      Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  owner      User               @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  messages   AssistantMessage[]
+  runs       AssistantRun[]
+  setupDraft SetupDraft?
+
+  @@index([tenantId, storeId, ownerUserId, purpose])
+}
+
+model AssistantMessage {
+  id              String   @id
+  conversationId  String
+  sequence        Int
+  role            String
+  // AI SDK UIMessage parts, bounded and allowlisted before persistence.
+  parts           Json
+  clientRequestId String?
+  createdAt       DateTime @default(now())
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, sequence])
+  @@unique([conversationId, clientRequestId])
+}
+
+model AssistantRun {
+  id             String             @id @default(cuid())
+  conversationId String
+  actorUserId    String
+  requestId      String
+  provider       String
+  model          String
+  promptVersion  String
+  status         AssistantRunStatus @default(RUNNING)
+  errorCode      String?
+  startedAt      DateTime           @default(now())
+  completedAt    DateTime?
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  usageEvents  AssistantUsageEvent[]
+
+  @@unique([actorUserId, requestId])
+}
+
+// Recorded from the first release so later coin settlement has no data gap.
+model AssistantUsageEvent {
+  id                String   @id @default(cuid())
+  runId             String
+  tenantId          String
+  actorUserId       String
+  provider          String
+  model             String
+  requestClass      String   @default("chat")
+  inputTokens       Int?
+  cachedInputTokens Int?
+  outputTokens      Int?
+  totalTokens       Int?
+  stepCount         Int      @default(0)
+  durationMs        Int?
+  outcome           String
+  createdAt         DateTime @default(now())
+
+  run AssistantRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
+// One rolling budget row per Tenant and assistant purpose.
+model AssistantBudget {
+  scopeKey        String   @id
+  windowStartedAt DateTime
+  requests        Int      @default(0)
+  tokens          Int      @default(0)
+  updatedAt       DateTime @updatedAt
+}
+
+model SetupDraft {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  tenantId       String
+  storeId        String
+  revision       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  entities     SetupDraftEntity[]
+}
+
+model SetupDraftEntity {
+  id                String                @id @default(cuid())
+  draftId           String
+  key               String
+  kind              SetupDraftEntityKind
+  state             SetupDraftEntityState @default(PROPOSED)
+  payload           Json
+  // Where the value came from (message id and quoted span); never model-only.
+  source            Json?
+  openQuestions     Json?
+  sortOrder         Int                   @default(0)
+  committedRecordId String?
+  errorCode         String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  draft SetupDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@unique([draftId, key])
+}

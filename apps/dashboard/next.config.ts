@@ -33,6 +33,10 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
       destination: `${apiOrigin}/api/finance/expense-receipts/:path*`,
     },
     {
+      source: "/api/assistant/:path*",
+      destination: `${apiOrigin}/api/assistant/:path*`,
+    },
+    {
       source: "/api/catalog/photos/:path*",
       destination: `${apiOrigin}/api/catalog/photos/:path*`,
     },

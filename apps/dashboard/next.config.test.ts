@@ -34,3 +34,10 @@ test("proxies catalog private photo transport through the existing authenticated
     destination: "https://api.example.test/api/catalog/photos/:path*",
   })
 })
+
+test("proxies the streaming setup assistant chat to the API", () => {
+  expect(getDashboardApiRewrites("https://api.example.test")).toContainEqual({
+    source: "/api/assistant/:path*",
+    destination: "https://api.example.test/api/assistant/:path*",
+  })
+})

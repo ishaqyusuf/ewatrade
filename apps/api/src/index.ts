@@ -16,6 +16,7 @@ import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
+import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
@@ -188,6 +189,7 @@ registerFinanceExpenseReceiptDeliveryRoutes(app, {
 })
 registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
+registerAssistantChatRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)
 registerServiceCommerceMediaDeliveryRoutes(app)
 registerServiceCommerceMediaUploadRoutes(app)

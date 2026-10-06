@@ -1,5 +1,6 @@
 model Store {
   staffStoreAssignments StaffStoreAssignment[]
+  assistantConversations AssistantConversation[]
   catalogItemIllustrations                          CatalogItemIllustration[]
   catalogPhotoAssets                                CatalogPhotoAsset[]
   financeBills                                      FinanceBill[]

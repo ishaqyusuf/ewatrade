@@ -49,7 +49,12 @@
     "@ewatrade/onboarding": "workspace:*",
     "@ewatrade/order-receipts": "workspace:*",
     "react-pdf": "10.4.1",
-    "pdfjs-dist": "5.4.296"
+    "pdfjs-dist": "5.4.296",
+    "@ai-sdk/react": "3.0.143",
+    "@ewatrade/assistant": "workspace:*",
+    "ai": "6.0.141",
+    "streamdown": "2.6.0",
+    "use-stick-to-bottom": "^1.1.3"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

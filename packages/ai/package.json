@@ -1,0 +1,29 @@
+{
+  "name": "@ewatrade/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./runtime-config": "./src/runtime-config.ts",
+    "./provider": "./src/provider.ts",
+    "./rehearsal-model": "./src/rehearsal-model.ts"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "test": "bun test src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/deepseek": "2.0.26",
+    "@ai-sdk/openai": "3.0.48",
+    "@ai-sdk/provider": "3.0.8",
+    "ai": "6.0.141",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "typescript": "catalog:"
+  }
+}

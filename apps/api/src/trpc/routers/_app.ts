@@ -23,6 +23,7 @@ import { serviceCommerceRouter } from "./service-commerce"
 import { serviceCommunicationsRouter } from "./service-communications"
 import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
+import { setupAssistantRouter } from "./setup-assistant"
 import { storeSubscriptionsRouter } from "./store-subscriptions"
 import { tenantRouter } from "./tenant"
 
@@ -55,6 +56,7 @@ export const appRouter = createTRPCRouter({
   serviceReporting: serviceReportingRouter,
   retailOps: retailOpsRouter,
   search: searchRouter,
+  setupAssistant: setupAssistantRouter,
   tenant: tenantRouter,
 })
 

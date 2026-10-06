@@ -24,6 +24,7 @@ model Tenant {
   createdAt                                         DateTime                                             @default(now())
   updatedAt                                         DateTime                                             @updatedAt
   users                                             Membership[]
+  assistantConversations                            AssistantConversation[]
   stores                                            Store[]
   catalogItemIllustrations                          CatalogItemIllustration[]
   catalogPhotoAssets                                CatalogPhotoAsset[]
@@ -371,6 +372,7 @@ model User {
   accounts                                       Account[]
   sessions                                       Session[]
   memberships                                    Membership[]
+  assistantConversations                         AssistantConversation[]
   retailOpsStaffProfiles                         RetailOpsStaffProfile[]                           @relation("RetailOpsStaffProfileUser")
   sentMessages                                   Message[]
   automationEvents                               AutomationEvent[]                                 @relation("AutomationActor")

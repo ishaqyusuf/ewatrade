@@ -34,7 +34,9 @@
     "./app-update": "./src/queries/app-update.ts",
     "./staff-store-access": "./src/queries/staff-store-access.ts",
     "./tenant-context": "./src/queries/tenants.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./assistant": "./src/queries/assistant.ts",
+    "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

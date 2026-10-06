@@ -8,6 +8,7 @@ import {
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { PageHeader } from "@/components/page-header"
+import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
 import { OrderDetailsSheet } from "@/components/sheets/order-details-sheet"
@@ -23,7 +24,12 @@ import { Suspense } from "react"
 
 export const metadata: Metadata = { title: "Overview | EwaTrade" }
 
-export default async function DashboardHomePage() {
+export default async function DashboardHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const setupRequested = (await searchParams).setup === "assistant"
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
   const store = ctx?.activeStore
@@ -63,15 +69,23 @@ export default async function DashboardHomePage() {
           <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
         ) : null}
       </div>
-      {actions.length > 0 && store ? (
-        <GettingStarted
-          actions={actions}
-          store={{
-            businessProfileKey:
-              store.businessOnboarding?.businessProfileKey ?? null,
-            id: store.id,
-            currencyCode: store.currencyCode,
-          }}
+      {(actions.length > 0 || setupRequested) && store ? (
+        <SetupAssistant
+          hasCatalogItems={availability?.hasCatalogItems ?? false}
+          requested={setupRequested}
+          fallback={
+            actions.length === 0 ? null : (
+              <GettingStarted
+                actions={actions}
+                store={{
+                  businessProfileKey:
+                    store.businessOnboarding?.businessProfileKey ?? null,
+                  id: store.id,
+                  currencyCode: store.currencyCode,
+                }}
+              />
+            )
+          }
         />
       ) : null}
       {availability && store && tenant ? (
@@ -111,7 +125,9 @@ export default async function DashboardHomePage() {
       {store && canUpdateStock ? (
         <InventoryOperationSheet key={`stock:${store.id}`} store={store} />
       ) : null}
-      {store && canCreateOrder ? <OrderDetailsSheet key={`details:${store.id}`} storeId={store.id} /> : null}
+      {store && canCreateOrder ? (
+        <OrderDetailsSheet key={`details:${store.id}`} storeId={store.id} />
+      ) : null}
     </div>
   )
 }

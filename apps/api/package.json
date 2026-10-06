@@ -45,7 +45,9 @@
     "resend": "^6.30.0",
     "superjson": "^2.2.6",
     "zod": "catalog:",
-    "@ewatrade/order-receipts": "workspace:*"
+    "@ewatrade/order-receipts": "workspace:*",
+    "@ewatrade/ai": "workspace:*",
+    "@ewatrade/assistant": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
