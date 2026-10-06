@@ -30,6 +30,38 @@ const optional = [
   "NEXT_PUBLIC_CHAT_URL", // falls back to CHAT_URL
 ]
 const notNeeded = [...featuresOff, ...tooling, ...optional]
+// Hosted Preview runs without these test-feature flags, real email sending and
+// the full URL set from .env.preview (owner decision, 6 Oct 2026). Production
+// still checks every name here.
+const previewOnly = [
+  "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
+  "ACCOUNT_PRIVACY_PROCESSING_ENABLED",
+  "ACCOUNT_PRIVACY_COMPLETION_ENABLED",
+  "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED",
+  "ACCOUNT_PRIVACY_CONVERSATION_ACCESS_PROCESSING_ENABLED",
+  "ACCOUNT_PRIVACY_CONVERSATION_OUTCOME_PROCESSING_ENABLED",
+  "PLAY_REFUND_REVIEW_INTAKE_ENABLED",
+  "PLAY_REFUND_REVIEW_ALERTS_ENABLED",
+  "PLAY_REFUND_REVIEW_ACK_ENABLED",
+  "STORE_BILLING_ENABLED",
+  "QA_ACCELERATOR_SECRET",
+  "QA_MESSAGING_TEST_ADAPTER_ENABLED",
+  "INTERNAL_API_KEY",
+  "RESEND_API_KEY",
+  "EMAIL_FROM",
+  "EMAIL_REPLY_TO",
+  "EMAIL_DELIVERY_MODE",
+  "MARKETING_INBOX_EMAILS",
+  "STOREFRONT_URL",
+  "NEXT_PUBLIC_STOREFRONT_URL",
+  "NEXT_PUBLIC_DASHBOARD_URL",
+  "NEXT_PUBLIC_MARKETING_URL",
+  "NEXT_PUBLIC_API_URL",
+  "API_URL",
+  "BETTER_AUTH_URL",
+  "BETTER_AUTH_PRODUCTION_URL",
+  "NEXT_PUBLIC_SIGNUP_ENABLED",
+]
 
 export default {
   project: "ewatrade",
@@ -56,6 +88,7 @@ export default {
           "VERCEL_STOREFRONT_PROJECT_ID", // used by a Trigger job, not the dashboard
           "VERCEL_API_TOKEN", // opt-in: lets signup create tenant domains on Vercel
         ],
+        ignoreIn: { preview: previewOnly },
       },
     },
     {
@@ -70,6 +103,7 @@ export default {
           "NEXT_PUBLIC_PLATFORM_DOMAIN",
           "NEXT_PUBLIC_STOREFRONT_URL", // service pages fall back to STOREFRONT_URL
         ],
+        ignoreIn: { preview: previewOnly },
       },
     },
     {
@@ -84,6 +118,7 @@ export default {
           ...notNeeded,
           "MARKETING_INBOX_EMAILS", // team notifications fall back to EMAIL_REPLY_TO
         ],
+        ignoreIn: { preview: previewOnly },
       },
     },
     {
