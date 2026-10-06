@@ -46,6 +46,7 @@
     "dev:pos": "bun run dev --filter pos",
     "dev:dashboard": "bun run dev --filter dashboard",
     "dev:api": "bun run dev --filter api",
+    "eas:auth": "bun --env-file=/dev/null ./scripts/eas-account-runner.ts auth",
     "eas:build": "bun --env-file=/dev/null ./scripts/eas-account-runner.ts build",
     "eas:submit": "bun --env-file=/dev/null ./scripts/eas-account-runner.ts submit",
     "eas:view": "bun --env-file=/dev/null ./scripts/eas-account-runner.ts view",

@@ -13,6 +13,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 
 type Operation =
+  | "auth"
   | "build"
   | "submit"
   | "update"
@@ -71,6 +72,7 @@ const actionArgs = process.argv.slice(3)
 if (
   !operation ||
   ![
+    "auth",
     "build",
     "submit",
     "update",
@@ -85,6 +87,11 @@ if (
 ) {
   console.error(getUsage())
   process.exit(1)
+}
+
+if (operation === "auth") {
+  await authenticateSharedSession(actionArgs)
+  process.exit(0)
 }
 
 const target = resolveTarget(operation, actionArgs)
@@ -830,6 +837,7 @@ function toEnvKey(value: string): string {
 function getUsage(): string {
   return [
     "Usage:",
+    "  bun run eas:auth [--account <name>]",
     "  bun run eas:build <--preview|--prod> --expected-commit <full-sha> [--platform android|ios] [--account <name>]",
     "  bun run eas:build --dev [--platform android|ios] [--account <name>]",
     "  bun run eas:submit [--prod] [--platform android|ios] --id <build-id> --expected-version <version> --expected-commit <full-sha> [--account <name>]",
@@ -890,6 +898,60 @@ async function assertPreviewMobileTarget(
     productionWebUrl: production.EXPO_PUBLIC_WEB_URL,
     productionChatUrl: production.EXPO_PUBLIC_CHAT_URL,
   })
+}
+
+/**
+ * Signs the global EAS CLI in to the ewatrade account for release tooling,
+ * which reads EAS (fingerprints, builds, env) through the shared session that
+ * other apps on this machine also switch. Every other operation stays isolated.
+ */
+async function authenticateSharedSession(args: string[]): Promise<void> {
+  const env = await loadEnvFiles({ ...Bun.env }, [
+    path.join(REPO_DIR, ".env"),
+    path.join(APP_DIR, ".env"),
+  ])
+  const selected = getAccountSelector(args, env)
+  const prefix = selected ? `EAS_${toEnvKey(selected)}` : "EAS"
+  const login = getFirstEnv(env, [`${prefix}_EMAIL`, `${prefix}_LOGIN`])
+  const password = getFirstEnv(env, [`${prefix}_PASSWORD`])
+  const username = getFirstEnv(env, [`${prefix}_USERNAME`]) ?? null
+  if (!login || !password) {
+    console.error(
+      `Missing EAS credentials: set ${prefix}_EMAIL and ${prefix}_PASSWORD.`,
+    )
+    process.exit(1)
+  }
+  const home = Bun.env.HOME
+  if (!home) throw new Error("HOME is not set; the EAS session has no path.")
+  const statePath = path.join(home, ".expo", "state.json")
+  let state: Record<string, unknown> = {}
+  try {
+    state = JSON.parse(await readFile(statePath, "utf8"))
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+  }
+  const current = (state.auth as { username?: string } | undefined)?.username
+  if (current && username && current.toLowerCase() === username.toLowerCase()) {
+    console.log(`EAS session already matches ${current}.`)
+    return
+  }
+  const session = await loginWithEmailAndPassword(login, password)
+  state.auth = {
+    sessionSecret: session.sessionSecret,
+    userId: session.id,
+    username: session.username,
+    currentConnection: "Username-Password-Authentication",
+  }
+  await mkdir(path.dirname(statePath), { recursive: true })
+  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  })
+  console.log(
+    current
+      ? `Switched the EAS session from ${current} to ${session.username}.`
+      : `Authenticated the EAS session as ${session.username}.`,
+  )
 }
 
 async function loadEnvFiles(

@@ -111,7 +111,10 @@ export default {
       // the release waits until Ready. Preview serves preview-api.ewatrade.com.
       name: "api",
       app: "apps/api",
-      paths: ["scripts/build-api-vercel.mjs", "scripts/api-bundle-externals.mjs"],
+      paths: [
+        "scripts/build-api-vercel.mjs",
+        "scripts/api-bundle-externals.mjs",
+      ],
       vercel: { team, projects: ["ewatrade-api"] },
       env: {
         ignore: [
@@ -144,6 +147,9 @@ export default {
       expo: {
         appDir: "apps/mobile",
         platforms: ["android"],
+        // The global EAS CLI is shared with other apps' accounts (GND); switch
+        // it to ewatrade's before the release reads EAS.
+        login: "bun run eas:auth",
         update: {
           preview:
             "bun run eas:update --preview --platform {platforms} --expected-commit {sha}",
