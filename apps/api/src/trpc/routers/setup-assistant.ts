@@ -6,6 +6,7 @@ import {
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "@ewatrade/assistant/setup/contracts"
+import { summarizeSetupFollowUp } from "@ewatrade/assistant/setup/follow-up"
 import {
   setupBeginMessage,
   setupCommitSummaryMessage,
@@ -40,18 +41,53 @@ import { readSetupPrerequisites } from "../../assistant/setup-prerequisites"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
 const keysSchema = z.array(z.string().min(1).max(140)).min(1).max(200)
+const conversationIdSchema = z.string().min(1).max(64)
+
+/**
+ * The setup belongs to the active Store. Writes name the conversation the owner
+ * is looking at, so a Store switch in another tab (or a revoked role, checked by
+ * the scope) refuses instead of acting on a different Store's setup list.
+ */
+export function assertSetupConversationCurrent(
+  conversation: { id: string } | null | undefined,
+  expectedConversationId: string,
+) {
+  if (conversation && conversation.id !== expectedConversationId)
+    throw new TRPCError({
+      code: "CONFLICT",
+      message:
+        "Your active store changed. Switch back to the store you were setting up, or open this store's setup list.",
+    })
+}
 
 async function requireDraft(
   db: Parameters<typeof findSetupConversation>[0],
   scope: Parameters<typeof findSetupConversation>[1],
+  expectedConversationId?: string,
 ) {
   const conversation = await findSetupConversation(db, scope)
+  if (expectedConversationId)
+    assertSetupConversationCurrent(conversation, expectedConversationId)
   if (!conversation?.setupDraft)
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "Start the setup assistant first.",
     })
   return { conversation, draftId: conversation.setupDraft.id }
+}
+
+type DraftEntities = Awaited<ReturnType<typeof readSetupDraft>>["entities"]
+
+/** What the owner still has to finish, for the launchpad and follow-up copy. */
+function setupFollowUpState(entities: DraftEntities) {
+  const committed = entities.filter((entity) => entity.state === "COMMITTED")
+  return {
+    ...summarizeSetupFollowUp(entities),
+    committed: committed.length,
+    balancesPending: committed.filter((entity) =>
+      isOpeningBalancePending(entity.errorCode),
+    ).length,
+  }
 }
 
 export const setupAssistantRouter = createTRPCRouter({
@@ -73,6 +109,7 @@ export const setupAssistantRouter = createTRPCRouter({
         draft: null,
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
         prerequisites: { termsRequired: false, financeBookMissing: false },
+        followUp: setupFollowUpState([]),
       }
     const [messages, draft] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
@@ -97,6 +134,7 @@ export const setupAssistantRouter = createTRPCRouter({
       draft,
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
       prerequisites,
+      followUp: setupFollowUpState(draft.entities),
     }
   }),
 
@@ -119,17 +157,20 @@ export const setupAssistantRouter = createTRPCRouter({
 
   begin: protectedProcedure.mutation(async ({ ctx }) => {
     const scope = requireSetupAssistantScope(ctx)
-    const { conversation } = await requireDraft(ctx.db, scope)
+    const { conversation, draftId } = await requireDraft(ctx.db, scope)
     if (conversation.status === "ACTIVE") return { status: "ACTIVE" as const }
+    const resuming =
+      conversation.status === "SKIPPED" || conversation.status === "COMPLETED"
+    const followUp = resuming
+      ? summarizeSetupFollowUp((await readSetupDraft(ctx.db, draftId)).entities)
+      : undefined
     const changed = await setAssistantConversationStatus(ctx.db, {
       conversationId: conversation.id,
-      from: ["OFFERED", "SKIPPED"],
+      from: ["OFFERED", "SKIPPED", "COMPLETED"],
       to: "ACTIVE",
       appendMessages: [
         {
-          ...(conversation.status === "SKIPPED"
-            ? setupResumeMessage()
-            : setupBeginMessage()),
+          ...(resuming ? setupResumeMessage(followUp) : setupBeginMessage()),
           id: newAssistantMessageId(),
         },
       ],
@@ -153,16 +194,33 @@ export const setupAssistantRouter = createTRPCRouter({
     return { status: "SKIPPED" as const }
   }),
 
+  /** "Done for now" after records were added; the launchpad offers to continue. */
+  finish: protectedProcedure.mutation(async ({ ctx }) => {
+    const scope = requireSetupAssistantScope(ctx)
+    const { conversation } = await requireDraft(ctx.db, scope)
+    await setAssistantConversationStatus(ctx.db, {
+      conversationId: conversation.id,
+      from: ["ACTIVE"],
+      to: "COMPLETED",
+    })
+    return { status: "COMPLETED" as const }
+  }),
+
   updateEntity: protectedProcedure
     .input(
       z.object({
+        conversationId: conversationIdSchema,
         key: z.string().min(1).max(140),
         payload: setupEntityPayloadSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
-      const { draftId } = await requireDraft(ctx.db, scope)
+      const { draftId } = await requireDraft(
+        ctx.db,
+        scope,
+        input.conversationId,
+      )
       const draft = await readSetupDraft(ctx.db, draftId)
       const current = draft.entities.find((entity) => entity.key === input.key)
       if (!current)
@@ -204,15 +262,24 @@ export const setupAssistantRouter = createTRPCRouter({
   setEntityState: protectedProcedure
     .input(
       z.object({
+        conversationId: conversationIdSchema,
         keys: keysSchema,
         state: z.enum(["CONFIRMED", "PROPOSED", "SKIPPED"]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
-      const { draftId } = await requireDraft(ctx.db, scope)
+      const { draftId } = await requireDraft(
+        ctx.db,
+        scope,
+        input.conversationId,
+      )
       if (input.state !== "PROPOSED")
-        return setSetupDraftEntityStates(ctx.db, { draftId, ...input })
+        return setSetupDraftEntityStates(ctx.db, {
+          draftId,
+          keys: input.keys,
+          state: input.state,
+        })
       // Reopening recomputes readiness so a record missing a price stays unconfirmable.
       const draft = await readSetupDraft(ctx.db, draftId)
       const groups = { NEEDS_INPUT: [] as string[], PROPOSED: [] as string[] }
@@ -241,60 +308,73 @@ export const setupAssistantRouter = createTRPCRouter({
     }),
 
   removeEntities: protectedProcedure
-    .input(z.object({ keys: keysSchema }))
+    .input(z.object({ conversationId: conversationIdSchema, keys: keysSchema }))
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
-      const { draftId } = await requireDraft(ctx.db, scope)
+      const { draftId } = await requireDraft(
+        ctx.db,
+        scope,
+        input.conversationId,
+      )
       return removeSetupDraftEntities(ctx.db, { draftId, keys: input.keys })
     }),
 
   /** Adds confirmed records to the business in bounded batches; call until remaining is 0. */
-  commit: protectedProcedure.mutation(async ({ ctx }) => {
-    const scope = requireSetupAssistantScope(ctx)
-    const { conversation, draftId } = await requireDraft(ctx.db, scope)
-    if (conversation.status !== "ACTIVE")
-      throw new TRPCError({
-        code: "CONFLICT",
-        message: "Resume the setup assistant before adding records.",
-      })
-    const outcome = await commitSetupDraft(ctx.db, scope, draftId).catch(
-      (error: unknown) => {
-        console.error("[setup-commit] batch failed", {
-          requestId: ctx.requestId,
-          ...describeCommitError(error),
-        })
-        throw error
-      },
-    )
-    if (
-      !outcome.interrupted &&
-      outcome.remaining === 0 &&
-      outcome.results.length > 0
-    ) {
-      const draft = await readSetupDraft(ctx.db, draftId)
-      const committed = draft.entities.filter(
-        (entity) => entity.state === "COMMITTED",
+  commit: protectedProcedure
+    .input(z.object({ conversationId: conversationIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const { conversation, draftId } = await requireDraft(
+        ctx.db,
+        scope,
+        input.conversationId,
       )
-      await appendAssistantMessage(ctx.db, {
-        conversationId: conversation.id,
-        message: {
-          ...setupCommitSummaryMessage({
-            products: committed.filter((entity) => entity.kind === "PRODUCT")
-              .length,
-            services: committed.filter((entity) => entity.kind === "SERVICE")
-              .length,
-            customers: committed.filter((entity) => entity.kind === "CUSTOMER")
-              .length,
-            balancesPending: committed.filter((entity) =>
-              isOpeningBalancePending(entity.errorCode),
-            ).length,
-            failed: draft.entities.filter((entity) => entity.state === "FAILED")
-              .length,
-          }),
-          id: newAssistantMessageId(),
+      if (conversation.status !== "ACTIVE")
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Resume the setup assistant before adding records.",
+        })
+      const outcome = await commitSetupDraft(ctx.db, scope, draftId).catch(
+        (error: unknown) => {
+          console.error("[setup-commit] batch failed", {
+            requestId: ctx.requestId,
+            ...describeCommitError(error),
+          })
+          throw error
         },
-      })
-    }
-    return outcome
-  }),
+      )
+      if (
+        !outcome.interrupted &&
+        outcome.remaining === 0 &&
+        outcome.results.length > 0
+      ) {
+        const draft = await readSetupDraft(ctx.db, draftId)
+        const committed = draft.entities.filter(
+          (entity) => entity.state === "COMMITTED",
+        )
+        await appendAssistantMessage(ctx.db, {
+          conversationId: conversation.id,
+          message: {
+            ...setupCommitSummaryMessage({
+              products: committed.filter((entity) => entity.kind === "PRODUCT")
+                .length,
+              services: committed.filter((entity) => entity.kind === "SERVICE")
+                .length,
+              customers: committed.filter(
+                (entity) => entity.kind === "CUSTOMER",
+              ).length,
+              balancesPending: committed.filter((entity) =>
+                isOpeningBalancePending(entity.errorCode),
+              ).length,
+              failed: draft.entities.filter(
+                (entity) => entity.state === "FAILED",
+              ).length,
+              followUp: summarizeSetupFollowUp(draft.entities),
+            }),
+            id: newAssistantMessageId(),
+          },
+        })
+      }
+      return outcome
+    }),
 })

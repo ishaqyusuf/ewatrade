@@ -16,6 +16,16 @@ import type { SetupPrerequisiteState } from "./setup-prerequisites"
 
 type SetupChatMessage = UIMessage<never, SetupAssistantDataParts>
 
+type SetupFollowUpState = {
+  open: number
+  needsDetails: number
+  readyToConfirm: number
+  waitingToAdd: number
+  failed: number
+  committed: number
+  balancesPending: number
+}
+
 /**
  * Post-onboarding entry. The API decides availability (flag, role, Store);
  * whenever the assistant is unavailable or skipped, the ordinary launchpad shows.
@@ -23,11 +33,17 @@ type SetupChatMessage = UIMessage<never, SetupAssistantDataParts>
 export function SetupAssistant({
   hasCatalogItems,
   requested,
+  offerSetup,
   fallback,
 }: {
   hasCatalogItems: boolean
   /** Explicit `?setup=assistant` entry, e.g. after adding a first item by hand. */
   requested: boolean
+  /**
+   * Whether to offer a setup that has not started yet (the launchpad still has
+   * steps). Setups already started always show their progress.
+   */
+  offerSetup: boolean
   fallback: ReactNode
 }) {
   const trpc = useTRPC()
@@ -46,13 +62,16 @@ export function SetupAssistant({
   const skip = useMutation(
     trpc.setupAssistant.skip.mutationOptions({ onSuccess: refresh }),
   )
+  const finish = useMutation(
+    trpc.setupAssistant.finish.mutationOptions({ onSuccess: refresh }),
+  )
   const started = useRef(false)
   const data = state.data
   const conversation = data?.enabled ? data.conversation : null
   const shouldStart =
     data?.enabled === true &&
     !data.conversation &&
-    (!hasCatalogItems || requested)
+    ((!hasCatalogItems && offerSetup) || requested)
 
   useEffect(() => {
     if (!shouldStart || started.current) return
@@ -64,8 +83,10 @@ export function SetupAssistant({
   // never changes the Overview; only an explicit entry waits on a skeleton.
   if (state.isPending) return requested ? <SetupSkeleton /> : fallback
   if (!data?.enabled) return fallback
-  if (!conversation && hasCatalogItems && !requested)
-    return (
+  if (!conversation && !requested && (hasCatalogItems || !offerSetup))
+    return !offerSetup ? (
+      fallback
+    ) : (
       <>
         <ResumeBanner
           pending={start.isPending}
@@ -75,11 +96,22 @@ export function SetupAssistant({
       </>
     )
   if (!conversation) return <SetupSkeleton />
-  if (conversation.status === "SKIPPED" || conversation.status === "COMPLETED")
+  // Optional so an older API without the field still shows the banner.
+  const followUp: SetupFollowUpState | undefined =
+    "followUp" in data ? data.followUp : undefined
+  if (
+    conversation.status === "SKIPPED" ||
+    conversation.status === "COMPLETED"
+  ) {
+    const unfinished =
+      (followUp?.open ?? 0) > 0 || (followUp?.balancesPending ?? 0) > 0
     return (
       <>
-        {conversation.status === "SKIPPED" ? (
+        {(conversation.status === "SKIPPED" && offerSetup) ||
+        unfinished ||
+        requested ? (
           <ResumeBanner
+            followUp={followUp}
             pending={begin.isPending}
             onResume={() => begin.mutate()}
           />
@@ -87,6 +119,7 @@ export function SetupAssistant({
         {fallback}
       </>
     )
+  }
   if (conversation.status !== "OFFERED" && conversation.status !== "ACTIVE")
     return fallback
 
@@ -98,9 +131,11 @@ export function SetupAssistant({
       entities={(data.draft?.entities ?? []) as SetupDraftEntity[]}
       currencyCode={data.currencyCode}
       prerequisites={data.prerequisites}
-      offerPending={begin.isPending || skip.isPending}
+      hasAdded={(followUp?.committed ?? 0) > 0}
+      offerPending={begin.isPending || skip.isPending || finish.isPending}
       onBegin={() => begin.mutate()}
       onSkip={() => skip.mutate()}
+      onFinish={() => finish.mutate()}
     />
   )
 }
@@ -114,21 +149,58 @@ function SetupSkeleton() {
   )
 }
 
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? "" : "s"}`
+}
+
+/** What the launchpad says about an unfinished or finished setup. */
+function resumeCopy(followUp?: SetupFollowUpState) {
+  if (!followUp || (followUp.committed === 0 && followUp.open === 0))
+    return {
+      text: "Prefer to describe your business instead? The setup assistant can build your list for you.",
+      action: "Set up with AI",
+    }
+  const notes: string[] = []
+  if (followUp.needsDetails)
+    notes.push(`${plural(followUp.needsDetails, "record")} still need details`)
+  const ready = followUp.readyToConfirm + followUp.waitingToAdd
+  if (ready) notes.push(`${plural(ready, "record")} ready to add`)
+  if (followUp.failed) notes.push(`${plural(followUp.failed, "record")} to fix`)
+  if (followUp.balancesPending)
+    notes.push(
+      `${plural(followUp.balancesPending, "customer balance")} waiting to be recorded`,
+    )
+  return notes.length
+    ? {
+        text: `Your setup list has ${notes.join(", ")}.`,
+        action: "Continue setup",
+      }
+    : {
+        text: "Want to add more products, services or customers? The setup assistant can help.",
+        action: "Add more with AI",
+      }
+}
+
 function ResumeBanner({
+  followUp,
   pending,
   onResume,
-}: { pending: boolean; onResume: () => void }) {
+}: {
+  followUp?: SetupFollowUpState
+  pending: boolean
+  onResume: () => void
+}) {
+  const copy = resumeCopy(followUp)
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
       <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
         <HugeiconsIcon icon={SparklesIcon} className="size-4" />
       </span>
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-        Prefer to describe your business instead? The setup assistant can build
-        your list for you.
+        {copy.text}
       </p>
       <Button type="button" size="sm" disabled={pending} onClick={onResume}>
-        Set up with AI
+        {copy.action}
       </Button>
     </div>
   )
@@ -141,9 +213,11 @@ function SetupWorkspace({
   entities,
   currencyCode,
   prerequisites,
+  hasAdded,
   offerPending,
   onBegin,
   onSkip,
+  onFinish,
 }: {
   conversationId: string
   status: "OFFERED" | "ACTIVE"
@@ -151,14 +225,18 @@ function SetupWorkspace({
   entities: SetupDraftEntity[]
   currencyCode: string
   prerequisites?: SetupPrerequisiteState
+  /** Once records are in the business, leaving is "done for now", not a skip. */
+  hasAdded: boolean
   offerPending: boolean
   onBegin: () => void
   onSkip: () => void
+  onFinish: () => void
 }) {
   const [listOpen, setListOpen] = useState(false)
   const count = entities.filter((entity) => entity.state !== "SKIPPED").length
   const panel = (
     <SetupDraftPanel
+      conversationId={conversationId}
       entities={entities}
       currencyCode={currencyCode}
       prerequisites={prerequisites}
@@ -198,9 +276,9 @@ function SetupWorkspace({
                   size="sm"
                   variant="ghost"
                   disabled={offerPending}
-                  onClick={onSkip}
+                  onClick={hasAdded ? onFinish : onSkip}
                 >
-                  Skip for now
+                  {hasAdded ? "Done for now" : "Skip for now"}
                 </Button>
               </>
             ) : null}

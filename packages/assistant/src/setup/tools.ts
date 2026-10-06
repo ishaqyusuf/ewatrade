@@ -119,7 +119,9 @@ const itemInputSchema = z.object({
     .string()
     .max(32)
     .optional()
-    .describe("Products only: quantity on hand now, in unitName units."),
+    .describe(
+      "Products only: quantity on hand now, in unitName units. Leave it out for products with options: stock is counted per option in Inventory.",
+    ),
   categoryKey: z.string().max(120).optional(),
   quickSetupKey: z.string().max(120).optional(),
   sellingUnits: z
@@ -143,7 +145,10 @@ const itemInputSchema = z.object({
       }),
     )
     .max(3)
-    .optional(),
+    .optional()
+    .describe(
+      "Products only: choices the customer picks, e.g. Size: Small, Large. Every combination becomes its own variant at the same price (at most 36).",
+    ),
   quote: quoteField,
   followUps: followUpsField,
 })

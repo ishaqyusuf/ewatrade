@@ -69,10 +69,11 @@ export default async function DashboardHomePage({
           <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
         ) : null}
       </div>
-      {(actions.length > 0 || setupRequested) && store ? (
+      {store ? (
         <SetupAssistant
           hasCatalogItems={availability?.hasCatalogItems ?? false}
           requested={setupRequested}
+          offerSetup={actions.length > 0}
           fallback={
             actions.length === 0 ? null : (
               <GettingStarted

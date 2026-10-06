@@ -22,10 +22,13 @@ import {
 } from "./setup-prerequisites"
 
 export function SetupDraftPanel({
+  conversationId,
   entities,
   currencyCode,
   prerequisites,
 }: {
+  /** The Store's setup this list belongs to; writes are refused after a Store switch. */
+  conversationId: string
   entities: SetupDraftEntity[]
   currencyCode: string
   prerequisites?: SetupPrerequisiteState
@@ -110,7 +113,7 @@ export function SetupDraftPanel({
     setProgress({ done, failed, total })
     try {
       for (let round = 0; round < 50; round += 1) {
-        const outcome = await commit.mutateAsync()
+        const outcome = await commit.mutateAsync({ conversationId })
         done += outcome.results.filter((r) => r.state === "COMMITTED").length
         failed += outcome.results.filter((r) => r.state === "FAILED").length
         setProgress({ done, failed, total })
@@ -123,10 +126,19 @@ export function SetupDraftPanel({
         }
         if (outcome.remaining === 0 || outcome.results.length === 0) break
       }
-    } catch {
-      // Every record commit is idempotent, so pressing Add again is always safe.
+    } catch (cause) {
+      // Server wording is replaced by generic public errors, so refusals are
+      // explained here by code; anything else is retry-safe because every
+      // record commit is idempotent.
+      const code = (cause as { data?: { code?: string } } | null)?.data?.code
       setCommitError(
-        "Adding stopped before everything was added. Your list is saved; press Add again to continue.",
+        code === "CONFLICT"
+          ? "Your setup changed in another tab or your active store changed. Reload this page and check the store before adding."
+          : code === "FORBIDDEN"
+            ? "Only the business owner or an admin can add records. Your access may have changed."
+            : code === "PRECONDITION_FAILED"
+              ? "Choose a store before adding records."
+              : "Adding stopped before everything was added. Your list is saved; press Add again to continue.",
       )
     } finally {
       setProgress(null)
@@ -172,6 +184,7 @@ export function SetupDraftPanel({
             disabled={pending}
             onClick={() =>
               setState.mutate({
+                conversationId,
                 keys: ready.map((entity) => entity.key),
                 state: "CONFIRMED",
               })
@@ -199,7 +212,11 @@ export function SetupDraftPanel({
               )
               .map((entity) => entity.key)
             if (blocked.length > 0)
-              setState.mutate({ keys: blocked, state: "CONFIRMED" })
+              setState.mutate({
+                conversationId,
+                keys: blocked,
+                state: "CONFIRMED",
+              })
             else refresh()
           }}
           onFinanceReady={() => {
@@ -224,10 +241,18 @@ export function SetupDraftPanel({
                     currencyCode={currencyCode}
                     pending={pending}
                     onSave={(payload: SetupEntityPayload) =>
-                      update.mutate({ key: entity.key, payload })
+                      update.mutate({
+                        conversationId,
+                        key: entity.key,
+                        payload,
+                      })
                     }
                     onState={(state) =>
-                      setState.mutate({ keys: [entity.key], state })
+                      setState.mutate({
+                        conversationId,
+                        keys: [entity.key],
+                        state,
+                      })
                     }
                   />
                 ))}

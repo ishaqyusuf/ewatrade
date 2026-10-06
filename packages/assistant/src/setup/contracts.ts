@@ -3,7 +3,7 @@ import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v1"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v2"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */
@@ -187,6 +187,16 @@ export function deriveSetupEntityState(
     derived.push({
       field: "price",
       question: `How much do you charge for ${payload.name}?`,
+      required: true,
+    })
+  if (
+    payload.kind === "product" &&
+    payload.options?.length &&
+    payload.openingStock !== undefined
+  )
+    derived.push({
+      field: "stock",
+      question: `Stock for ${payload.name} is counted per option (${payload.options.map((option) => option.name).join(", ")}). Remove the total here and add each option's stock in Inventory after adding.`,
       required: true,
     })
   const merged = [

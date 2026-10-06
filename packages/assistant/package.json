@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./setup/contracts": "./src/setup/contracts.ts",
+    "./setup/follow-up": "./src/setup/follow-up.ts",
     "./setup/messages": "./src/setup/messages.ts",
     "./setup/prompt": "./src/setup/prompt.ts",
     "./setup/tools": "./src/setup/tools.ts",

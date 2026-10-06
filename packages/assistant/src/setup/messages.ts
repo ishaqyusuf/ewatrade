@@ -1,5 +1,7 @@
 /** Client-safe constants and server-authored copy shared by API and dashboard. */
 
+import type { SetupFollowUp } from "./follow-up"
+
 export const SETUP_OFFER_PART = "data-setup-offer" as const
 export const SETUP_DRAFT_PART = "data-setup-draft" as const
 export const SETUP_RUN_PART = "data-setup-run" as const
@@ -79,13 +81,18 @@ export function setupBeginMessage(): TextMessage {
   }
 }
 
-export function setupResumeMessage(): TextMessage {
+export function setupResumeMessage(followUp?: SetupFollowUp): TextMessage {
+  const pending = followUp ? followUpLines(followUp) : []
   return {
     role: "assistant",
     parts: [
       {
         type: "text",
-        text: "Welcome back! Your setup list is saved. Tell me anything else you sell, prices you'd like to change, or customers to add.",
+        text: pending.length
+          ? ["Welcome back! Let's finish your setup list.", ...pending].join(
+              "\n\n",
+            )
+          : "Welcome back! Your setup list is saved. Tell me anything else you sell, prices you'd like to change, or customers to add.",
       },
     ],
   }
@@ -101,12 +108,30 @@ function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? "" : "s"}`
 }
 
+/** Next questions first, then what is ready to confirm or add. */
+function followUpLines(followUp: SetupFollowUp) {
+  const lines: string[] = []
+  if (followUp.questions.length)
+    lines.push(
+      followUp.questions.length === 1
+        ? (followUp.questions[0] as string)
+        : followUp.questions.map((question) => `- ${question}`).join("\n"),
+    )
+  const ready = followUp.readyToConfirm + followUp.waitingToAdd
+  if (ready)
+    lines.push(
+      `${plural(ready, "record")} ${ready === 1 ? "is" : "are"} ready in your setup list. Confirm ${ready === 1 ? "it" : "them"} and press Add when you're happy.`,
+    )
+  return lines
+}
+
 export function setupCommitSummaryMessage(input: {
   products: number
   services: number
   customers: number
   balancesPending: number
   failed: number
+  followUp?: SetupFollowUp
 }): TextMessage {
   const added = [
     input.products ? plural(input.products, "product") : null,
@@ -126,7 +151,10 @@ export function setupCommitSummaryMessage(input: {
     lines.push(
       `${plural(input.failed, "record")} could not be added. Check the setup list, fix the details and confirm again.`,
     )
-  lines.push("Tell me if there is anything else you'd like to add.")
+  const pending = input.followUp ? followUpLines(input.followUp) : []
+  if (pending.length)
+    lines.push("Let's finish the rest of your list.", ...pending)
+  else lines.push("Tell me if there is anything else you'd like to add.")
   return {
     role: "assistant",
     parts: [{ type: "text", text: lines.join("\n\n") }],

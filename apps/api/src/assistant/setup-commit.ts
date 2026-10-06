@@ -39,6 +39,8 @@ export const isOpeningBalancePending = (code: string | null | undefined) =>
   code === OPENING_BALANCE_NEEDS_FINANCE ||
   code === OPENING_BALANCE_FAILED ||
   code === OPENING_BALANCE_PENDING
+/** Every option combination becomes a Sellable Variant; keep the grid reviewable. */
+export const MAX_SETUP_VARIANTS = 36
 /** Stop starting new records well before the dashboard proxy's request timeout. */
 const COMMIT_TIME_BUDGET_MS = 5_000
 
@@ -63,6 +65,52 @@ function unitKey(name: string, used: Set<string>) {
   for (let index = 2; used.has(key); index += 1) key = `${base}-${index}`
   used.add(key)
   return key
+}
+
+type OptionGroup = {
+  key: string
+  name: string
+  values: Array<{ key: string; label: string }>
+}
+
+/** Option Groups and every value combination, first combination as the default. */
+export function setupProductOptionGrid(payload: SetupProductPayload) {
+  const groupKeys = new Set<string>()
+  const optionGroups: OptionGroup[] = (payload.options ?? []).map((group) => {
+    const valueKeys = new Set<string>()
+    const seen = new Set<string>()
+    return {
+      key: unitKey(group.name, groupKeys),
+      name: group.name,
+      values: group.values
+        .filter((label) => {
+          const normalized = label.trim().toLowerCase()
+          if (seen.has(normalized)) return false
+          seen.add(normalized)
+          return true
+        })
+        .map((label) => ({ key: unitKey(label, valueKeys), label })),
+    }
+  })
+  let combinations: Array<
+    Array<{ group: OptionGroup; key: string; label: string }>
+  > = [[]]
+  for (const group of optionGroups)
+    combinations = combinations.flatMap((combination) =>
+      group.values.map((value) => [...combination, { group, ...value }]),
+    )
+  if (combinations.length > MAX_SETUP_VARIANTS)
+    throw new CatalogError(
+      "INVALID_CATALOG_ITEM",
+      `${payload.name} has ${combinations.length} option combinations. Keep it to ${MAX_SETUP_VARIANTS} or fewer, or add the rest in Catalog.`,
+    )
+  // Stock is counted per variant, so a single total cannot be placed honestly.
+  if (optionGroups.length > 0 && payload.openingStock !== undefined)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      `Stock for ${payload.name} is counted per option. Remove the total here and add each option's stock in Inventory.`,
+    )
+  return { optionGroups, combinations }
 }
 
 /** Category vocabulary is stored by label; the catalog repository materializes presets. */
@@ -129,6 +177,8 @@ export function catalogCommandForSetupEntity(
       ],
     }
 
+  const { optionGroups, combinations } = setupProductOptionGrid(payload)
+  const variantKeys = new Set<string>()
   const used = new Set<string>()
   const canonicalKey = unitKey(payload.unitName, used)
   const sameName = (name: string) =>
@@ -161,29 +211,51 @@ export function catalogCommandForSetupEntity(
         })),
       ],
     },
-    variants: [
-      {
-        isDefault: true,
-        key: "default",
-        name: payload.name,
+    ...(optionGroups.length > 0 ? { optionGroups } : {}),
+    variants: combinations.map((combination, index) => {
+      // Offering keys are unique across the item, so option variants prefix them.
+      const variantKey =
+        combination.length === 0
+          ? "default"
+          : unitKey(
+              combination.map((value) => value.key).join("-"),
+              variantKeys,
+            )
+      const offeringKey = (key: string) =>
+        combination.length === 0 ? key : `${variantKey}-${key}`
+      return {
+        isDefault: index === 0,
+        key: variantKey,
+        name:
+          combination.length === 0
+            ? payload.name
+            : combination.map((value) => value.label).join(" / "),
+        ...(combination.length > 0
+          ? {
+              selections: combination.map((value) => ({
+                groupKey: value.group.key,
+                valueKey: value.key,
+              })),
+            }
+          : {}),
         offerings: [
           {
             fixedPriceMinor: payload.priceMinor,
             inventoryUnitKey: canonicalKey,
-            key: canonicalKey,
+            key: offeringKey(canonicalKey),
             name: payload.unitName,
-            pricingPolicy: "fixed",
+            pricingPolicy: "fixed" as const,
           },
           ...sellingUnits.map((unit) => ({
             fixedPriceMinor: unit.priceMinor,
             inventoryUnitKey: unit.key,
-            key: unit.key,
+            key: offeringKey(unit.key),
             name: unit.name,
             pricingPolicy: "fixed" as const,
           })),
         ],
-      },
-    ],
+      }
+    }),
   }
 }
 
