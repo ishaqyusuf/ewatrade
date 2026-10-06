@@ -1,9 +1,0 @@
-{
-  "dockDownwardHide": "Observed in screenshot",
-  "dockUpwardReveal": "Observed mid-transition; settled geometry pending",
-  "bottomEdge": "Not accepted: delayed/misread gestures",
-  "elasticRelease": "Not accepted: held/released captures not reliable",
-  "smoothness": "Not accepted: recording only 5 frames / 3.667778 seconds",
-  "driverState": "finished",
-  "settings": "originals confirmed restored; unchanged since readback"
-}

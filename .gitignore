@@ -27,3 +27,4 @@ packages/db/generated
 packages/jobs/.trigger/
 /output/
 /outputs/
+/artifacts/
