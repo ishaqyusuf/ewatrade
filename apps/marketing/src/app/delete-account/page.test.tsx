@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test"
 import { ExternalDeletionRequestForm } from "@/components/legal/external-deletion-request-form"
+import { renderToStaticMarkup } from "react-dom/server"
 import Page from "./page"
 
-test("public deletion page hides intake until the same email-code configuration as the API is ready", async () => {
+test("public deletion page offers an email request path until verified intake is ready", async () => {
   const keys = [
     "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
     "ACCOUNT_PRIVACY_OTP_SECRET",
@@ -17,6 +18,16 @@ test("public deletion page hides intake until the same email-code configuration 
   )
   const intake = async () =>
     (await Page({ searchParams: Promise.resolve({}) })).props.afterSections
+  const expectEmailRequest = async () => {
+    const html = renderToStaticMarkup(await intake())
+    expect(html).toContain("Request account deletion")
+    expect(html).toContain(
+      "mailto:founders@ewatrade.com?subject=EwaTrade%20account%20deletion%20request",
+    )
+    expect(html).toContain(
+      "Sending the request does not mean deletion is complete",
+    )
+  }
   try {
     process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED = "true"
     process.env.ACCOUNT_PRIVACY_OTP_SECRET = "short-secret"
@@ -25,20 +36,20 @@ test("public deletion page hides intake until the same email-code configuration 
     process.env.EMAIL_DELIVERY_MODE = "live"
     Reflect.deleteProperty(process.env, "EMAIL_CAPTURE_FILE")
     process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = "x-client-ip"
-    expect(await intake()).toBeUndefined()
+    await expectEmailRequest()
 
     process.env.ACCOUNT_PRIVACY_OTP_SECRET = "a".repeat(32)
     expect((await intake())?.type).toBe(ExternalDeletionRequestForm)
 
     process.env.EMAIL_DELIVERY_MODE = "console"
-    expect(await intake()).toBeUndefined()
+    await expectEmailRequest()
     process.env.EMAIL_DELIVERY_MODE = "live"
     process.env.EMAIL_CAPTURE_FILE = "/tmp/captured-mail.jsonl"
-    expect(await intake()).toBeUndefined()
+    await expectEmailRequest()
     Reflect.deleteProperty(process.env, "EMAIL_CAPTURE_FILE")
 
     process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = " "
-    expect(await intake()).toBeUndefined()
+    await expectEmailRequest()
   } finally {
     for (const key of keys) {
       const value = previous[key]
