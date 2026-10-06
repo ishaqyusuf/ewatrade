@@ -44,6 +44,9 @@ const nextConfig: NextConfig = {
   // Vercel's basic build machine repeatedly exhausts memory in Next's
   // duplicate type-check worker. CI/package type checks remain authoritative.
   typescript: { ignoreBuildErrors: process.env.VERCEL === "1" },
+  // /api/trpc bundles the API router, whose receipt image export loads this
+  // native addon. Turbopack cannot bundle its `.node` binary, so Node loads it.
+  serverExternalPackages: ["@napi-rs/canvas"],
   transpilePackages: [
     "@ewatrade/onboarding",
     "@ewatrade/events",
