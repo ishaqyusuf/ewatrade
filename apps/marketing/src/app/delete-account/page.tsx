@@ -23,11 +23,11 @@ function EmailDeletionRequest() {
         Request account deletion
       </h2>
       <p className="leading-7 text-muted-foreground">
-        Email us from the address associated with your EwaTrade account to start
-        a deletion request. We will verify your identity and review any business
-        records that require separate handling. Sending the request does not
-        mean deletion is complete. Do not email passwords, one-time codes, card
-        details or identity documents.
+        Email us to start a deletion request. Include the address associated
+        with your EwaTrade account if you know it. We will verify your identity
+        and review any business records that require separate handling. Sending
+        the request does not mean deletion is complete. Do not email passwords,
+        one-time codes, card details or identity documents.
       </p>
       <a
         href={`mailto:${email}?subject=EwaTrade%20account%20deletion%20request`}
