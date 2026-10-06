@@ -184,7 +184,12 @@ export async function getServiceCommerceCatalogPriceSuggestionSnapshots(
       }
     }
     for (const line of saleLines) {
-      if (line.offeringId !== offering.id || !line.order.completedAt) continue
+      if (
+        line.offeringId !== offering.id ||
+        !line.order.completedAt ||
+        line.unitPriceMinor === null
+      )
+        continue
       const currentStore = line.order.storeId === input.storeId
       evidence.push(
         currentStore
@@ -431,7 +436,7 @@ export async function getServiceCommerceCatalogPriceSuggestions(
     if (quoteEvidenceCount >= quoteEvidenceLimit) break
   }
   for (const line of saleLines) {
-    if (!line.order.completedAt) continue
+    if (!line.order.completedAt || line.unitPriceMinor === null) continue
     const currentStore = line.order.storeId === input.storeId
     evidence.push(
       currentStore
