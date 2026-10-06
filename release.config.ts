@@ -29,20 +29,11 @@ export default {
       vercel: { team, projects: ["ewatrade-marketing"] },
     },
     {
-      // Deployed from the command line from the exact released commit.
+      // Vercel builds the API from the Git push too (scripts/build-api-vercel.mjs);
+      // the release waits until Ready. Preview serves preview-api.ewatrade.com.
       name: "api",
       app: "apps/api",
-      paths: [
-        "scripts/deploy-api.mjs",
-        "scripts/deploy-api-preview.mjs",
-        "scripts/build-api-vercel.mjs",
-        "scripts/release-api-*.mjs",
-        "scripts/release-vercel-deployment-output.mjs",
-      ],
-      deploy: {
-        preview: "bun run api:preview:deploy --revision {sha}",
-        production: "bun run api:deploy --revision {sha}",
-      },
+      paths: ["scripts/build-api-vercel.mjs", "scripts/api-bundle-externals.mjs"],
       vercel: { team, projects: ["ewatrade-api"] },
     },
     {
