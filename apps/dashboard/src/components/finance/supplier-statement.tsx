@@ -1,5 +1,11 @@
 "use client"
 
+import {
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
 import {
@@ -17,7 +23,7 @@ import {
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FinanceSupplierAging } from "./supplier-aging"
 import type { FinanceBook } from "./types"
 
@@ -121,6 +127,16 @@ function FinanceSupplierHistory({
       setSnapshot(query.data.snapshotSequence)
     }
   }, [query.data, query.isFetching, refreshing, snapshot])
+
+  const entryIds = useMemo(
+    () => query.data?.data.map((entry) => entry.id) ?? [],
+    [query.data],
+  )
+  const selection = useInlineSelection({
+    ids: entryIds,
+    scope: `${snapshot ?? ""}:${cursors.at(-1) ?? ""}`,
+    disabled: query.isFetching || refreshing,
+  })
 
   async function refresh() {
     if (refreshing || query.isFetching) return
@@ -258,15 +274,22 @@ function FinanceSupplierHistory({
         Page {cursors.length} · Snapshot {statement.snapshotSequence}. Refresh
         to include newer entries or corrections.
       </p>
+      <InlineSelectionStatus selection={selection} />
       <section
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: This wide historical table needs keyboard scrolling.
         tabIndex={0}
         aria-label="Supplier statement entries"
       >
-        <Table className="min-w-[620px]">
+        <Table className="min-w-[660px]">
           <TableHeader>
             <TableRow>
+              <TableHead scope="col" className="w-10">
+                <InlineSelectAllCheckbox
+                  selection={selection}
+                  label="Select all loaded supplier entries"
+                />
+              </TableHead>
               <TableHead scope="col">Date (UTC)</TableHead>
               <TableHead scope="col">Record</TableHead>
               <TableHead scope="col" className="text-right">
@@ -280,7 +303,19 @@ function FinanceSupplierHistory({
           <TableBody>
             {statement.data.length ? (
               statement.data.map((entry) => (
-                <TableRow key={entry.id}>
+                <TableRow
+                  key={entry.id}
+                  data-state={
+                    selection.isSelected(entry.id) ? "selected" : undefined
+                  }
+                >
+                  <TableCell className="align-top">
+                    <InlineRowCheckbox
+                      selection={selection}
+                      id={entry.id}
+                      label={`Select entry ${entry.sequence}`}
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-nowrap align-top">
                     {new Date(entry.effectiveAt).toISOString().slice(0, 10)}
                   </TableCell>
@@ -316,7 +351,7 @@ function FinanceSupplierHistory({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4}>
+                <TableCell colSpan={5}>
                   No recorded supplier activity.
                 </TableCell>
               </TableRow>

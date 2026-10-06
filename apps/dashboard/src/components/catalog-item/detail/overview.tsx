@@ -1,4 +1,10 @@
 "use client"
+import {
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import {
@@ -16,6 +22,7 @@ import {
   TableRow,
 } from "@ewatrade/ui"
 import Link from "next/link"
+import { useMemo } from "react"
 import { CatalogDetailActivity } from "./activity"
 import { type CatalogDetail, dateTime, money, orderHref } from "./display"
 export function CatalogDetailOverview({
@@ -30,6 +37,17 @@ export function CatalogDetailOverview({
   const main =
     units.find((unit) => unit.stockBehavior === "canonical_shared") ??
     units.find((unit) => unit.factor === "1")
+  const offeringIds = useMemo(
+    () =>
+      item.variants.flatMap((variant) =>
+        variant.offerings.map((offering) => offering.id),
+      ),
+    [item.variants],
+  )
+  const offeringSelection = useInlineSelection({
+    ids: offeringIds,
+    scope: `${item.id}:${storeId}`,
+  })
   return (
     <div className="grid gap-6">
       <div className={product ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
@@ -132,10 +150,17 @@ export function CatalogDetailOverview({
             </Button>
           ) : null}
         </div>
+        <InlineSelectionStatus selection={offeringSelection} />
         <div className="overflow-x-auto border">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <InlineSelectAllCheckbox
+                    selection={offeringSelection}
+                    label="Select all current prices"
+                  />
+                </TableHead>
                 <TableHead>Choice</TableHead>
                 <TableHead>Selling unit</TableHead>
                 <TableHead>Price</TableHead>
@@ -145,7 +170,21 @@ export function CatalogDetailOverview({
             <TableBody>
               {item.variants.flatMap((variant) =>
                 variant.offerings.map((offering) => (
-                  <TableRow key={offering.id}>
+                  <TableRow
+                    key={offering.id}
+                    data-state={
+                      offeringSelection.isSelected(offering.id)
+                        ? "selected"
+                        : undefined
+                    }
+                  >
+                    <TableCell>
+                      <InlineRowCheckbox
+                        selection={offeringSelection}
+                        id={offering.id}
+                        label={`Select ${variant.name} ${offering.name}`}
+                      />
+                    </TableCell>
                     <TableCell>{variant.name}</TableCell>
                     <TableCell>
                       {units.find(

@@ -1,6 +1,12 @@
 "use client"
 
 import { DateRangeControl } from "@/components/date-range-control"
+import {
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useFinanceRangeParams } from "@/hooks/use-finance-range-params"
 import { useTRPC } from "@/trpc/client"
@@ -16,7 +22,7 @@ import {
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FinanceStatementExport } from "./statement-export"
 import type { FinanceBook } from "./types"
 
@@ -105,6 +111,16 @@ function StatementPages({
     if (snapshot === undefined && query.data && !query.isFetching)
       setSnapshot(query.data.snapshotSequence)
   }, [query.data, query.isFetching, snapshot])
+  // Entry rows only; opening/closing figures stay statement summaries.
+  const entryIds = useMemo(
+    () => query.data?.items.map((entry) => entry.id) ?? [],
+    [query.data],
+  )
+  const selection = useInlineSelection({
+    ids: entryIds,
+    scope: String(cursors.at(-1) ?? ""),
+    disabled: query.isFetching,
+  })
   if (query.isPending) return <output>Loading statement…</output>
   if (query.isError)
     return (
@@ -149,15 +165,25 @@ function StatementPages({
         {money(statement.pageOpeningBalanceMinor)} · Snapshot{" "}
         {statement.snapshotSequence}
       </p>
+      <InlineSelectionStatus
+        selection={selection}
+        note="Export full statement includes every entry"
+      />
       <section
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the wide statement.
         tabIndex={0}
         aria-label="Account statement entries"
       >
-        <Table className="w-full min-w-[680px] text-sm">
+        <Table className="w-full min-w-[720px] text-sm">
           <TableHeader>
             <TableRow className="border-b border-border text-left">
+              <TableHead scope="col" className="w-10 p-3">
+                <InlineSelectAllCheckbox
+                  selection={selection}
+                  label="Select all loaded statement entries"
+                />
+              </TableHead>
               <TableHead scope="col" className="p-3">
                 Date (UTC)
               </TableHead>
@@ -181,7 +207,17 @@ function StatementPages({
                 <TableRow
                   key={entry.id}
                   className="border-b border-border last:border-0"
+                  data-state={
+                    selection.isSelected(entry.id) ? "selected" : undefined
+                  }
                 >
+                  <TableCell className="p-3 align-top">
+                    <InlineRowCheckbox
+                      selection={selection}
+                      id={entry.id}
+                      label={`Select entry ${entry.description}`}
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-nowrap p-3 align-top">
                     {new Date(entry.effectiveAt).toISOString().slice(0, 10)}
                   </TableCell>
@@ -246,7 +282,7 @@ function StatementPages({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="p-6 text-center text-muted-foreground"
                 >
                   No recorded activity in this period.

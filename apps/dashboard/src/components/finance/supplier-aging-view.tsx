@@ -1,6 +1,12 @@
 "use client"
 
 import {
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  useInlineSelection,
+} from "@/components/tables/core"
+import {
   Button,
   Table,
   TableBody,
@@ -10,6 +16,7 @@ import {
   TableRow,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { useMemo } from "react"
 import {
   type SupplierAging,
   supplierAgingBucketLabels,
@@ -27,6 +34,15 @@ export function FinanceSupplierAgingView({
   onNext: () => void
 }) {
   const money = (value: string) => formatFinanceMoney(value, aging.currencyCode)
+  // Source entries only; aging buckets are aggregates and stay unselectable.
+  const sourceIds = useMemo(
+    () => aging.data.map((source) => source.sourceEntryId),
+    [aging.data],
+  )
+  const selection = useInlineSelection({
+    ids: sourceIds,
+    scope: `${aging.snapshotSequence}:${aging.asOfDate}:${page}`,
+  })
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div>
@@ -95,15 +111,22 @@ export function FinanceSupplierAgingView({
           pinned when paging.
         </p>
       </div>
+      <InlineSelectionStatus selection={selection} />
       <section
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Wide source table supports keyboard scrolling.
         tabIndex={0}
         aria-label="Outstanding supplier payable sources"
       >
-        <Table className="min-w-[620px]">
+        <Table className="min-w-[660px]">
           <TableHeader>
             <TableRow>
+              <TableHead scope="col" className="w-10">
+                <InlineSelectAllCheckbox
+                  selection={selection}
+                  label="Select all loaded payable sources"
+                />
+              </TableHead>
               <TableHead scope="col">Record</TableHead>
               <TableHead scope="col">Original due (UTC)</TableHead>
               <TableHead scope="col" className="text-right">
@@ -117,7 +140,21 @@ export function FinanceSupplierAgingView({
           <TableBody>
             {aging.data.length ? (
               aging.data.map((source) => (
-                <TableRow key={source.sourceEntryId}>
+                <TableRow
+                  key={source.sourceEntryId}
+                  data-state={
+                    selection.isSelected(source.sourceEntryId)
+                      ? "selected"
+                      : undefined
+                  }
+                >
+                  <TableCell className="align-top">
+                    <InlineRowCheckbox
+                      selection={selection}
+                      id={source.sourceEntryId}
+                      label={`Select payable source ${source.sequence}`}
+                    />
+                  </TableCell>
                   <TableCell className="max-w-sm align-top">
                     <p className="break-words">{source.description}</p>
                     <p className="text-xs text-muted-foreground">
@@ -153,7 +190,7 @@ export function FinanceSupplierAgingView({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4}>
+                <TableCell colSpan={5}>
                   No outstanding recorded payables at this day and snapshot.
                 </TableCell>
               </TableRow>

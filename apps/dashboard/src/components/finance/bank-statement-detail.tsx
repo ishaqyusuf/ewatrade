@@ -144,6 +144,18 @@ export function FinanceBankStatementDetail({
     .toString()
   const money = (amount: string) =>
     formatFinanceMoney(amount, data.currencyCode)
+  // Select-all follows the match rules: unmatched rows only, at most 50.
+  const selectionLocked = query.isFetching || Boolean(recoveryError)
+  const eligibleBankRowIds = data.rows
+    .filter((row) => !row.activeMatchId)
+    .map((row) => row.id)
+  const candidateIds = data.candidates.map((line) => line.id)
+  const allBankSelected =
+    eligibleBankRowIds.length > 0 &&
+    eligibleBankRowIds.every((id) => bankRowIds.includes(id))
+  const allCandidatesSelected =
+    candidateIds.length > 0 &&
+    candidateIds.every((id) => journalLineIds.includes(id))
   const account = book.accounts.find((item) => item.id === data.accountId)
   return (
     <div className="grid min-w-0 gap-6">
@@ -206,7 +218,23 @@ export function FinanceBankStatementDetail({
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    <span className="sr-only">Select bank transaction</span>
+                    <Checkbox
+                      aria-label={
+                        eligibleBankRowIds.length > 50
+                          ? "Select all unmatched bank transactions (more than 50; select up to 50 individually)"
+                          : "Select all unmatched bank transactions"
+                      }
+                      checked={allBankSelected}
+                      indeterminate={bankRowIds.length > 0 && !allBankSelected}
+                      disabled={
+                        selectionLocked ||
+                        eligibleBankRowIds.length === 0 ||
+                        eligibleBankRowIds.length > 50
+                      }
+                      onCheckedChange={(checked) =>
+                        setBankRowIds(checked ? eligibleBankRowIds : [])
+                      }
+                    />
                   </TableHead>
                   <TableHead>Bank ID</TableHead>
                   <TableHead>Date</TableHead>
@@ -284,7 +312,25 @@ export function FinanceBankStatementDetail({
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    <span className="sr-only">Select posted record</span>
+                    <Checkbox
+                      aria-label={
+                        candidateIds.length > 50
+                          ? "Select all posted candidates (more than 50; select up to 50 individually)"
+                          : "Select all posted candidates"
+                      }
+                      checked={allCandidatesSelected}
+                      indeterminate={
+                        journalLineIds.length > 0 && !allCandidatesSelected
+                      }
+                      disabled={
+                        selectionLocked ||
+                        candidateIds.length === 0 ||
+                        candidateIds.length > 50
+                      }
+                      onCheckedChange={(checked) =>
+                        setJournalLineIds(checked ? candidateIds : [])
+                      }
+                    />
                   </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Posted record</TableHead>
@@ -358,13 +404,26 @@ export function FinanceBankStatementDetail({
         </Alert>
       ) : null}
       <div className="sticky bottom-0 grid gap-3 border border-border bg-background p-4">
-        <div className="flex flex-wrap justify-between gap-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span>
             {bankRowIds.length}/50 bank · {money(bankTotal)}
           </span>
           <span>
             {journalLineIds.length}/50 posted · {money(postedTotal)}
           </span>
+          {bankRowIds.length || journalLineIds.length ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setBankRowIds([])
+                setJournalLineIds([])
+              }}
+            >
+              Deselect all
+            </Button>
+          ) : null}
         </div>
         {selectionError && (bankRowIds.length || journalLineIds.length) ? (
           <p className="text-sm text-muted-foreground">{selectionError}</p>

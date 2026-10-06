@@ -6,8 +6,15 @@ import {
   ReportSection,
   ReportSectionSkeleton,
 } from "@/components/reports/report-section"
+import {
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { useFinanceRangeParams } from "@/hooks/use-finance-range-params"
 import { useTRPC } from "@/trpc/client"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   Disclosure,
   Table,
@@ -20,7 +27,7 @@ import {
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { FinancePeriodHistory } from "./period-history"
 import {
   FinanceReportAccountLedger,
@@ -300,66 +307,114 @@ function ReportResults({
             Resolve this before relying on reports.
           </FormFeedback>
         ) : null}
-        <section
-          className="overflow-x-auto"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
-          tabIndex={0}
-          aria-label="Trial balance table"
-        >
-          <Table className="w-full min-w-[560px] text-sm">
-            <TableHeader>
-              <TableRow className="border-b border-border">
-                <TableHead scope="col" className="p-3 text-left">
-                  Account
-                </TableHead>
-                <TableHead scope="col" className="p-3 text-right">
-                  Debit
-                </TableHead>
-                <TableHead scope="col" className="p-3 text-right">
-                  Credit
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.trialBalance.accounts.map((account) => (
-                <TableRow
-                  key={account.accountId}
-                  className="border-b border-border"
-                >
-                  <TableCell className="p-3">
-                    <ReportAccountLink
-                      accountId={account.accountId}
-                      label={`${account.code} · ${account.name}`}
-                      from={report.bookkeepingStartsAt}
-                      through={report.through}
-                      snapshot={report.snapshotSequence}
-                    />
-                  </TableCell>
-                  <TableCell className="p-3 text-right tabular-nums">
-                    {money(account.closingDebitMinor)}
-                  </TableCell>
-                  <TableCell className="p-3 text-right tabular-nums">
-                    {money(account.closingCreditMinor)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter className="bg-muted text-foreground">
-              <TableRow className="font-medium">
-                <TableHead scope="row" className="p-3 text-left">
-                  Total
-                </TableHead>
-                <TableCell className="p-3 text-right tabular-nums">
-                  {money(report.trialBalance.debitMinor)}
-                </TableCell>
-                <TableCell className="p-3 text-right tabular-nums">
-                  {money(report.trialBalance.creditMinor)}
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </section>
+        <TrialBalanceTable report={report} money={money} />
       </ReportSection>
     </div>
+  )
+}
+
+type FinanceReport = RouterOutputs["finance"]["reports"]
+
+/** Account rows are selectable; the Total footer remains a report summary. */
+function TrialBalanceTable({
+  report,
+  money,
+}: {
+  report: FinanceReport
+  money: (value: string) => string
+}) {
+  const accountIds = useMemo(
+    () => report.trialBalance.accounts.map((account) => account.accountId),
+    [report.trialBalance.accounts],
+  )
+  const selection = useInlineSelection({
+    ids: accountIds,
+    scope: `${report.snapshotSequence}:${report.through}`,
+  })
+  return (
+    <>
+      <InlineSelectionStatus
+        selection={selection}
+        note="The report pack export includes every account"
+      />
+      <section
+        className="overflow-x-auto"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
+        tabIndex={0}
+        aria-label="Trial balance table"
+      >
+        <Table className="w-full min-w-[600px] text-sm">
+          <TableHeader>
+            <TableRow className="border-b border-border">
+              <TableHead scope="col" className="w-10 p-3">
+                <InlineSelectAllCheckbox
+                  selection={selection}
+                  label="Select all trial balance accounts"
+                />
+              </TableHead>
+              <TableHead scope="col" className="p-3 text-left">
+                Account
+              </TableHead>
+              <TableHead scope="col" className="p-3 text-right">
+                Debit
+              </TableHead>
+              <TableHead scope="col" className="p-3 text-right">
+                Credit
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.trialBalance.accounts.map((account) => (
+              <TableRow
+                key={account.accountId}
+                className="border-b border-border"
+                data-state={
+                  selection.isSelected(account.accountId)
+                    ? "selected"
+                    : undefined
+                }
+              >
+                <TableCell className="p-3">
+                  <InlineRowCheckbox
+                    selection={selection}
+                    id={account.accountId}
+                    label={`Select ${account.code} ${account.name}`}
+                  />
+                </TableCell>
+                <TableCell className="p-3">
+                  <ReportAccountLink
+                    accountId={account.accountId}
+                    label={`${account.code} · ${account.name}`}
+                    from={report.bookkeepingStartsAt}
+                    through={report.through}
+                    snapshot={report.snapshotSequence}
+                  />
+                </TableCell>
+                <TableCell className="p-3 text-right tabular-nums">
+                  {money(account.closingDebitMinor)}
+                </TableCell>
+                <TableCell className="p-3 text-right tabular-nums">
+                  {money(account.closingCreditMinor)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter className="bg-muted text-foreground">
+            <TableRow className="font-medium">
+              <TableCell className="p-3" />
+              <TableHead scope="row" className="p-3 text-left">
+                Total
+              </TableHead>
+              <TableCell className="p-3 text-right tabular-nums">
+                {money(report.trialBalance.debitMinor)}
+              </TableCell>
+              <TableCell className="p-3 text-right tabular-nums">
+                {money(report.trialBalance.creditMinor)}
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </section>
+    </>
   )
 }

@@ -8,6 +8,14 @@ export {
   DirectoryToolbar,
 } from "./collection"
 export { EmptyState, NoResults } from "./empty-states"
+export {
+  type InlineSelection,
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  pruneInlineSelection,
+  useInlineSelection,
+} from "./inline-selection"
 export { HorizontalPagination } from "./horizontal-pagination"
 export { Portal } from "./portal"
 export {

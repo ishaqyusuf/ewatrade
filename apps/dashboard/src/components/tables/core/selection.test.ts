@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { pruneInlineSelection } from "./inline-selection"
 import { pruneRowSelection } from "./selection"
 
 describe("loaded row selection", () => {
@@ -17,5 +18,18 @@ describe("loaded row selection", () => {
     expect(
       pruneRowSelection({ a: false, b: true }, new Set(["a", "b"])),
     ).toEqual({ b: true })
+  })
+})
+
+describe("inline table selection", () => {
+  test("drops IDs that are no longer loaded", () => {
+    expect([...pruneInlineSelection(new Set(["a", "b"]), ["b", "c"])]).toEqual([
+      "b",
+    ])
+  })
+
+  test("returns the same set when every selected ID is still loaded", () => {
+    const previous = new Set(["a"])
+    expect(pruneInlineSelection(previous, ["a", "b"])).toBe(previous)
   })
 })

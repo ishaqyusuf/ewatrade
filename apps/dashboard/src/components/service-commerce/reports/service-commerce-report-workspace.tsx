@@ -18,6 +18,12 @@ import { ReportError } from "@/components/reports/report-error"
 import { ReportSection as ReportPanel } from "@/components/reports/report-section"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
+  InlineRowCheckbox,
+  InlineSelectAllCheckbox,
+  InlineSelectionStatus,
+  useInlineSelection,
+} from "@/components/tables/core"
+import {
   type ServiceCommerceReportDetail,
   type ServiceCommerceReportRange,
   resolveServiceCommerceReportRange,
@@ -135,6 +141,29 @@ function CountList({
   )
 }
 
+type DrilldownRow = {
+  date: string
+  category: string
+  outcome: string
+  connectionId?: string | null
+  recipientMarket?: string | null
+  messageCategory?: string | null
+  billingOwner?: string | null
+}
+
+/** Daily aggregate rows have no ID; this composite key is unique per row. */
+function drilldownRowKey(row: DrilldownRow) {
+  return [
+    row.date,
+    row.category,
+    row.outcome,
+    row.connectionId ?? "",
+    row.recipientMarket ?? "",
+    row.messageCategory ?? "",
+    row.billingOwner ?? "",
+  ].join(":")
+}
+
 function ReportDrilldown({
   detail,
   end,
@@ -161,6 +190,15 @@ function ReportDrilldown({
       { retry: false },
     ),
     enabled: detail !== null,
+  })
+  const rowKeys = useMemo(
+    () => drilldown.data?.rows.map(drilldownRowKey) ?? [],
+    [drilldown.data],
+  )
+  const selection = useInlineSelection({
+    ids: rowKeys,
+    scope: `${category}:${storeId ?? "all"}:${start.toISOString()}:${end.toISOString()}`,
+    disabled: drilldown.isFetching,
   })
 
   if (!detail) return null
@@ -215,78 +253,93 @@ function ReportDrilldown({
           </Button>
         </div>
       ) : drilldown.data?.rows.length ? (
-        <section
-          className="mt-4 overflow-x-auto"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
-          tabIndex={0}
-          aria-label="Report detail table"
-        >
-          <Table className="w-full min-w-[34rem] text-left text-sm">
-            <TableHeader className="border-b border-border text-sm font-normal text-muted-foreground">
-              <TableRow>
-                <TableHead scope="col" className="px-4 py-2 font-normal">
-                  Date
-                </TableHead>
-                <TableHead scope="col" className="px-4 py-2 font-normal">
-                  Category
-                </TableHead>
-                <TableHead scope="col" className="px-4 py-2 font-normal">
-                  Outcome
-                </TableHead>
-                <TableHead scope="col" className="px-4 py-2 font-normal">
-                  Usage attribution
-                </TableHead>
-                <TableHead
-                  scope="col"
-                  className="px-4 py-2 text-right font-normal"
-                >
-                  Count
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {drilldown.data.rows.map((row) => (
-                <TableRow
-                  className="border-b border-border/70"
-                  key={[
-                    row.date,
-                    row.category,
-                    row.outcome,
-                    row.connectionId ?? "",
-                    row.recipientMarket ?? "",
-                    row.messageCategory ?? "",
-                    row.billingOwner ?? "",
-                  ].join(":")}
-                >
-                  <TableCell className="px-4 py-2 tabular-nums">
-                    {row.date}
-                  </TableCell>
-                  <TableCell className="px-4 py-2">
-                    {humanize(row.category)}
-                  </TableCell>
-                  <TableCell className="px-4 py-2">
-                    {humanize(row.outcome)}
-                  </TableCell>
-                  <TableCell className="px-4 py-2 text-muted-foreground">
-                    {[
-                      row.connectionId
-                        ? `Connection ${row.connectionId}`
-                        : null,
-                      row.recipientMarket,
-                      row.messageCategory,
-                      row.billingOwner,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
-                  </TableCell>
-                  <TableCell className="px-4 py-2 text-right tabular-nums">
-                    {row.count}
-                  </TableCell>
+        <>
+          <div className="mt-4">
+            <InlineSelectionStatus selection={selection} />
+          </div>
+          <section
+            className="mt-2 overflow-x-auto"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
+            tabIndex={0}
+            aria-label="Report detail table"
+          >
+            <Table className="w-full min-w-[37rem] text-left text-sm">
+              <TableHeader className="border-b border-border text-sm font-normal text-muted-foreground">
+                <TableRow>
+                  <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
+                    <InlineSelectAllCheckbox
+                      selection={selection}
+                      label="Select all detail rows"
+                    />
+                  </TableHead>
+                  <TableHead scope="col" className="px-4 py-2 font-normal">
+                    Date
+                  </TableHead>
+                  <TableHead scope="col" className="px-4 py-2 font-normal">
+                    Category
+                  </TableHead>
+                  <TableHead scope="col" className="px-4 py-2 font-normal">
+                    Outcome
+                  </TableHead>
+                  <TableHead scope="col" className="px-4 py-2 font-normal">
+                    Usage attribution
+                  </TableHead>
+                  <TableHead
+                    scope="col"
+                    className="px-4 py-2 text-right font-normal"
+                  >
+                    Count
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </section>
+              </TableHeader>
+              <TableBody>
+                {drilldown.data.rows.map((row) => (
+                  <TableRow
+                    className="border-b border-border/70"
+                    key={drilldownRowKey(row)}
+                    data-state={
+                      selection.isSelected(drilldownRowKey(row))
+                        ? "selected"
+                        : undefined
+                    }
+                  >
+                    <TableCell className="px-4 py-2">
+                      <InlineRowCheckbox
+                        selection={selection}
+                        id={drilldownRowKey(row)}
+                        label={`Select ${row.date} ${humanize(row.category)} ${humanize(row.outcome)}`}
+                      />
+                    </TableCell>
+                    <TableCell className="px-4 py-2 tabular-nums">
+                      {row.date}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {humanize(row.category)}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      {humanize(row.outcome)}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-muted-foreground">
+                      {[
+                        row.connectionId
+                          ? `Connection ${row.connectionId}`
+                          : null,
+                        row.recipientMarket,
+                        row.messageCategory,
+                        row.billingOwner,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right tabular-nums">
+                      {row.count}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </section>
+        </>
       ) : (
         <p className="mt-4 text-sm text-muted-foreground">
           No aggregate events were recorded for this detail and date range.
@@ -452,6 +505,7 @@ function ReportContent({
         />
         <MetricCard
           label="Payment value"
+          money
           value={formatMinorMoney(
             lifecycle.paymentValueMinor,
             report.currencyCode,
@@ -841,73 +895,112 @@ function ReportContent({
       {report.scope.storeId === null && report.storeBreakdown.length > 0 ? (
         <section className="border border-border bg-background p-5">
           <h2 className="font-semibold">Store breakdown</h2>
-          <section
-            className="mt-4 overflow-x-auto"
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
-            tabIndex={0}
-            aria-label="Store breakdown table"
-          >
-            <Table className="w-full min-w-[38rem] text-left text-sm">
-              <TableHeader className="border-b border-border text-xs text-muted-foreground">
-                <TableRow>
-                  <TableHead scope="col" className="px-4 py-2 font-normal">
-                    Store
-                  </TableHead>
-                  <TableHead
-                    scope="col"
-                    className="px-4 py-2 text-right font-normal"
-                  >
-                    Requests
-                  </TableHead>
-                  <TableHead
-                    scope="col"
-                    className="px-4 py-2 text-right font-normal"
-                  >
-                    Quotes
-                  </TableHead>
-                  <TableHead
-                    scope="col"
-                    className="px-4 py-2 text-right font-normal"
-                  >
-                    Payments
-                  </TableHead>
-                  <TableHead
-                    scope="col"
-                    className="px-4 py-2 text-right font-normal"
-                  >
-                    Completions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {report.storeBreakdown.map((store) => (
-                  <TableRow
-                    className="border-b border-border/70"
-                    key={store.storeId}
-                  >
-                    <TableCell className="px-4 py-2 font-normal">
-                      {store.name}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right tabular-nums">
-                      {store.requestsReceived}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right tabular-nums">
-                      {store.quotesIssued}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right tabular-nums">
-                      {store.paymentsSucceeded}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right tabular-nums">
-                      {store.completions}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </section>
+          <StoreBreakdownTable report={report} />
         </section>
       ) : null}
     </div>
+  )
+}
+
+function StoreBreakdownTable({
+  report,
+}: {
+  report: ServiceCommerceReportOutput
+}) {
+  const storeIds = useMemo(
+    () => report.storeBreakdown.map((store) => store.storeId),
+    [report.storeBreakdown],
+  )
+  const selection = useInlineSelection({
+    ids: storeIds,
+    scope: JSON.stringify(report.scope),
+  })
+  return (
+    <>
+      <div className="mt-4">
+        <InlineSelectionStatus selection={selection} />
+      </div>
+      <section
+        className="mt-2 overflow-x-auto"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
+        tabIndex={0}
+        aria-label="Store breakdown table"
+      >
+        <Table className="w-full min-w-[41rem] text-left text-sm">
+          <TableHeader className="border-b border-border text-xs text-muted-foreground">
+            <TableRow>
+              <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
+                <InlineSelectAllCheckbox
+                  selection={selection}
+                  label="Select all Stores in this breakdown"
+                />
+              </TableHead>
+              <TableHead scope="col" className="px-4 py-2 font-normal">
+                Store
+              </TableHead>
+              <TableHead
+                scope="col"
+                className="px-4 py-2 text-right font-normal"
+              >
+                Requests
+              </TableHead>
+              <TableHead
+                scope="col"
+                className="px-4 py-2 text-right font-normal"
+              >
+                Quotes
+              </TableHead>
+              <TableHead
+                scope="col"
+                className="px-4 py-2 text-right font-normal"
+              >
+                Payments
+              </TableHead>
+              <TableHead
+                scope="col"
+                className="px-4 py-2 text-right font-normal"
+              >
+                Completions
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.storeBreakdown.map((store) => (
+              <TableRow
+                className="border-b border-border/70"
+                key={store.storeId}
+                data-state={
+                  selection.isSelected(store.storeId) ? "selected" : undefined
+                }
+              >
+                <TableCell className="px-4 py-2">
+                  <InlineRowCheckbox
+                    selection={selection}
+                    id={store.storeId}
+                    label={`Select ${store.name}`}
+                  />
+                </TableCell>
+                <TableCell className="px-4 py-2 font-normal">
+                  {store.name}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right tabular-nums">
+                  {store.requestsReceived}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right tabular-nums">
+                  {store.quotesIssued}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right tabular-nums">
+                  {store.paymentsSucceeded}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right tabular-nums">
+                  {store.completions}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </section>
+    </>
   )
 }
 
