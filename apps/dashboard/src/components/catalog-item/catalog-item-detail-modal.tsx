@@ -47,7 +47,7 @@ export function CatalogItemDetailModal({
       <DialogContent
         className={cn(
           theme,
-          "flex max-h-[calc(100svh-2rem)] w-[calc(100vw-2rem)] max-w-[860px] flex-col overflow-hidden",
+          "flex h-dvh max-h-dvh w-screen max-w-none flex-col overflow-hidden max-md:inset-0 max-md:translate-x-0 max-md:translate-y-0 md:h-auto md:max-h-[calc(100svh-2rem)] md:w-[calc(100vw-2rem)] md:max-w-[860px]",
         )}
         finalFocus={() =>
           document.querySelector<HTMLButtonElement>(
