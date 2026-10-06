@@ -1,4 +1,3 @@
-import { createCanvas } from "@napi-rs/canvas"
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs"
 // PDF.js runs its worker in-process on servers. Importing it registers
 // globalThis.pdfjsWorker, so no worker URL is resolved at runtime and server
@@ -6,7 +5,20 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs"
 import "pdfjs-dist/legacy/build/pdf.worker.mjs"
 import { ReceiptRenderError } from "./types"
 
+// @napi-rs/canvas is native, so server bundles keep it external. Loading it only
+// here means a missing binary fails image rendering, never server startup.
+async function loadCanvas() {
+  try {
+    return await import("@napi-rs/canvas")
+  } catch (error) {
+    throw new Error("Receipt image rendering is unavailable on this server.", {
+      cause: error,
+    })
+  }
+}
+
 export async function renderReceiptImages(pdf: Uint8Array) {
+  const { createCanvas } = await loadCanvas()
   const task = getDocument({
     data: Uint8Array.from(pdf),
     isEvalSupported: false,

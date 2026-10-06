@@ -15,6 +15,7 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { gunzipSync } from "node:zlib"
+import { apiBundleExternalArgs } from "./api-bundle-externals.mjs"
 import { materializeCommittedApiStage } from "./release-api-source-stage.mjs"
 import { apiBuildWorkspaceFilters } from "./release-api-workspaces.mjs"
 
@@ -61,6 +62,7 @@ export const API_BUILD_RECIPE = Object.freeze({
     "--target=bun",
     "--packages=bundle",
     "--env=disable",
+    ...apiBundleExternalArgs(),
     "--outfile=apps/api/src/bundle.js",
     "apps/api/src/index.ts",
   ],
@@ -323,6 +325,7 @@ export function bundleCommittedApiEntry(context) {
       "--target=bun",
       "--packages=bundle",
       "--env=disable",
+      ...apiBundleExternalArgs(),
       `--outfile=${path.join(context.stage, "apps/api/src/bundle.js")}`,
       "apps/api/src/index.ts",
     ],
