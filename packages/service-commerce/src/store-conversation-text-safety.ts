@@ -1,3 +1,5 @@
+import { createOpenAiStoreConversationTextSafetyProvider } from "./store-conversation-text-safety-openai"
+
 export type StoreConversationTextSafetyProvider = {
   inspect(input: { text: string; signal: AbortSignal }): Promise<{
     decision: "allow" | "reject" | "review"
@@ -28,10 +30,24 @@ export function createQaStoreConversationTextSafetyProvider(): StoreConversation
   }
 }
 
-/** No Production provider is approved or configured. All Production posts fail closed. */
+/**
+ * Production screens only through an explicitly selected live provider with a
+ * key (`openai-moderation`); without one, every Production post fails closed.
+ */
 export function getConfiguredStoreConversationTextSafetyProvider(
   environment: NodeJS.ProcessEnv = process.env,
 ): StoreConversationTextSafetyProvider | null {
+  if (
+    environment.STORE_CONVERSATION_TEXT_SAFETY_PROVIDER === "openai-moderation"
+  ) {
+    const apiKey =
+      environment.STORE_CONVERSATION_TEXT_SAFETY_OPENAI_API_KEY?.trim() ||
+      environment.OPENAI_API_KEY?.trim()
+    return apiKey
+      ? createOpenAiStoreConversationTextSafetyProvider({ apiKey })
+      : null
+  }
+
   if (
     environment.APP_ENV === "production" ||
     ["prod", "production"].includes(environment.DEV_PROFILE ?? "")

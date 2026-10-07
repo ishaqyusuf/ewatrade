@@ -28,6 +28,7 @@ const optional = [
   "EARLY_ACCESS_LINK_TTL_DAYS", // has a default
   "PLATFORM_DOMAIN", // defaults to ewatrade.com
   "NEXT_PUBLIC_CHAT_URL", // falls back to CHAT_URL
+  "STORE_CONVERSATION_TEXT_SAFETY_OPENAI_API_KEY", // falls back to OPENAI_API_KEY
 ]
 const notNeeded = [...featuresOff, ...tooling, ...optional]
 // Hosted Preview runs without these test-feature flags, real email sending and
