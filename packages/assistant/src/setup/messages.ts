@@ -65,19 +65,37 @@ function followUpLines(followUp: SetupFollowUp) {
 export function setupCommitSummaryMessage(input: {
   products: number
   services: number
+  /** Products the business uses but does not sell. */
+  internalUse?: number
   customers: number
+  /** Cash pockets and bank or mobile money accounts. */
+  moneyAccounts?: number
   balancesPending: number
   failed: number
   followUp?: SetupFollowUp
 }): TextMessage {
+  const internalUse = input.internalUse ?? 0
+  const moneyAccounts = input.moneyAccounts ?? 0
   const added = [
     input.products ? plural(input.products, "product") : null,
     input.services ? plural(input.services, "service") : null,
+    internalUse
+      ? `${internalUse} ${internalUse === 1 ? "item" : "items"} you use`
+      : null,
     input.customers ? plural(input.customers, "customer") : null,
-  ].filter(Boolean)
+    moneyAccounts
+      ? `${moneyAccounts} cash and bank ${moneyAccounts === 1 ? "account" : "accounts"}`
+      : null,
+  ].filter((entry): entry is string => entry !== null)
+  const places = [
+    input.products || input.services || internalUse ? "Catalog" : null,
+    input.customers ? "Customers" : null,
+    moneyAccounts ? "Finance" : null,
+  ].filter((entry): entry is string => entry !== null)
+  const stock = input.products || internalUse
   const lines = [
     added.length
-      ? `Done! Your business now has ${listJoin(added as string[])} from this setup. You can find them in Catalog and Customers, and stock is ready in Inventory.`
+      ? `Done! Your business now has ${listJoin(added)} from this setup. You can find them in ${listJoin(places)}${stock ? ", and stock is ready in Inventory" : ""}.`
       : "Nothing new was added this time.",
   ]
   if (input.balancesPending)

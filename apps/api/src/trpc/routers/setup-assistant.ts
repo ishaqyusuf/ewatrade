@@ -11,6 +11,7 @@ import { summarizeSetupFollowUp } from "@ewatrade/assistant/setup/follow-up"
 import { setupCommitSummaryMessage } from "@ewatrade/assistant/setup/messages"
 import {
   appendAssistantMessage,
+  appendAssistantMessageIfLatest,
   createSetupConversation,
   findSetupConversation,
   listAssistantMessages,
@@ -80,6 +81,15 @@ async function requireDraft(
 }
 
 type DraftEntities = Awaited<ReturnType<typeof readSetupDraft>>["entities"]
+
+function isInternalUse(payload: unknown) {
+  const parsed = setupEntityPayloadSchema.safeParse(payload)
+  return (
+    parsed.success &&
+    parsed.data.kind === "product" &&
+    parsed.data.usage === "INTERNAL_USE"
+  )
+}
 
 /** What the owner still has to finish, for the launchpad and follow-up copy. */
 function setupFollowUpState(entities: DraftEntities) {
@@ -217,18 +227,18 @@ export const setupAssistantRouter = createTRPCRouter({
       if (!last || Date.now() - last.createdAt.getTime() < SETUP_VISIT_GAP_MS)
         return { appended: false }
       const text = await composeSetupWelcome(ctx.db, scope, draftId)
-      // Another tab may have greeted while the message was being written.
-      const latest = await readLastAssistantMessage(ctx.db, conversation.id)
-      if (latest?.id !== last.id) return { appended: false }
-      await appendAssistantMessage(ctx.db, {
+      // Another tab or a double mount may have greeted while this one was
+      // written: append only if nothing new arrived, under a row lock.
+      const appended = await appendAssistantMessageIfLatest(ctx.db, {
         conversationId: conversation.id,
+        expectedLastMessageId: last.id,
         message: {
           id: newAssistantMessageId(),
           role: "assistant",
           parts: [{ type: "text", text }],
         },
       })
-      return { appended: true }
+      return { appended }
     }),
 
   skip: protectedProcedure.mutation(async ({ ctx }) => {
@@ -406,12 +416,21 @@ export const setupAssistantRouter = createTRPCRouter({
           conversationId: conversation.id,
           message: {
             ...setupCommitSummaryMessage({
-              products: committed.filter((entity) => entity.kind === "PRODUCT")
-                .length,
+              products: committed.filter(
+                (entity) =>
+                  entity.kind === "PRODUCT" && !isInternalUse(entity.payload),
+              ).length,
               services: committed.filter((entity) => entity.kind === "SERVICE")
                 .length,
+              internalUse: committed.filter(
+                (entity) =>
+                  entity.kind === "PRODUCT" && isInternalUse(entity.payload),
+              ).length,
               customers: committed.filter(
                 (entity) => entity.kind === "CUSTOMER",
+              ).length,
+              moneyAccounts: committed.filter(
+                (entity) => entity.kind === "MONEY_ACCOUNT",
               ).length,
               balancesPending: committed.filter((entity) =>
                 isOpeningBalancePending(entity.errorCode),

@@ -634,6 +634,39 @@ export async function markSetupDraftArea(
     : apply(db)
 }
 
+/**
+ * Appends only if `expectedLastMessageId` is still the newest message, with the
+ * conversation row locked, so two concurrent visits greet the owner once.
+ */
+export async function appendAssistantMessageIfLatest(
+  db: DbClient,
+  input: {
+    conversationId: string
+    expectedLastMessageId: string
+    message: AssistantStoredMessage
+  },
+) {
+  const apply = async (tx: Prisma.TransactionClient) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+    )
+    const latest = await tx.assistantMessage.findFirst({
+      where: { conversationId: input.conversationId },
+      orderBy: { sequence: "desc" },
+      select: { id: true },
+    })
+    if (latest?.id !== input.expectedLastMessageId) return false
+    await appendAssistantMessage(tx, {
+      conversationId: input.conversationId,
+      message: input.message,
+    })
+    return true
+  }
+  return "$transaction" in db
+    ? db.$transaction(apply, transactionOptions)
+    : apply(db)
+}
+
 /** The newest message, to tell a new visit from a reload. */
 export async function readLastAssistantMessage(
   db: DbClient,

@@ -107,3 +107,39 @@ describe("setup follow-up", () => {
     expect(done).toContain("anything else you'd like to add")
   })
 })
+
+describe("add summary", () => {
+  test("names items used and cash and bank accounts separately", () => {
+    const summary = setupCommitSummaryMessage({
+      products: 3,
+      services: 0,
+      internalUse: 1,
+      customers: 1,
+      moneyAccounts: 2,
+      balancesPending: 0,
+      failed: 0,
+    })
+    const text = summary.parts[0]?.type === "text" ? summary.parts[0].text : ""
+    expect(text).toContain(
+      "Done! Your business now has 3 products, 1 item you use, 1 customer and 2 cash and bank accounts from this setup.",
+    )
+    expect(text).toContain(
+      "You can find them in Catalog, Customers and Finance, and stock is ready in Inventory.",
+    )
+  })
+
+  test("accounts only point to Finance without a stock line", () => {
+    const summary = setupCommitSummaryMessage({
+      products: 0,
+      services: 0,
+      customers: 0,
+      moneyAccounts: 1,
+      balancesPending: 0,
+      failed: 0,
+    })
+    const text = summary.parts[0]?.type === "text" ? summary.parts[0].text : ""
+    expect(text).toContain(
+      "Done! Your business now has 1 cash and bank account from this setup. You can find them in Finance.",
+    )
+  })
+})
