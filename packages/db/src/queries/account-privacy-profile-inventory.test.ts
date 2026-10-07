@@ -22,6 +22,8 @@ test("profile inventory returns counts and field presence without personal value
           emailVerifiedAt: null,
           phoneVerifiedAt: null,
           isPlatformAdmin: false,
+          ageBand: "UNDECLARED",
+          ageDeclaredAt: null,
         }
       },
     },
@@ -99,3 +101,54 @@ test("removed User does not hide retained auth, session or OTP rows", async () =
     verificationRows: 1,
   })
 })
+
+test.each([
+  ["younger teen", "AGE_13_TO_15", null, 1],
+  ["older teen", "AGE_16_TO_17", null, 1],
+  ["adult", "ADULT", null, 1],
+  ["timestamp only", "UNDECLARED", new Date("2026-09-01T00:00:00Z"), 1],
+  ["band and timestamp", "ADULT", new Date("2026-09-01T00:00:00Z"), 2],
+  ["cleared", "UNDECLARED", null, 0],
+])(
+  "profile inventory counts %s declaration without returning it",
+  async (_label, ageBand, ageDeclaredAt, expectedCount) => {
+    const db = {
+      user: {
+        findUnique: async (query: { select: Record<string, boolean> }) => {
+          expect(query.select).toMatchObject({
+            ageBand: true,
+            ageDeclaredAt: true,
+          })
+          return {
+            email: "anonymous@example.test",
+            name: "",
+            image: null,
+            phone: null,
+            firstName: null,
+            lastName: null,
+            displayName: null,
+            avatarUrl: null,
+            metadata: null,
+            emailVerifiedAt: null,
+            phoneVerifiedAt: null,
+            isPlatformAdmin: false,
+            ageBand,
+            ageDeclaredAt,
+          }
+        },
+      },
+      account: { count: async () => 0 },
+      session: { count: async () => 0 },
+      legalAcceptance: { count: async () => 0 },
+      verification: { count: async () => 0 },
+    } as unknown as PrismaClient
+    const result = await getAccountPrivacyProfileInventory(
+      db,
+      "user-1",
+      "member@example.test",
+    )
+    expect(result.personalFieldCount).toBe(expectedCount)
+    expect(result).not.toHaveProperty("ageBand")
+    expect(result).not.toHaveProperty("ageDeclaredAt")
+  },
+)

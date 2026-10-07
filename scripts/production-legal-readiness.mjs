@@ -179,7 +179,8 @@ export async function probeProductionLegal(
       )
       continue
     }
-    const html = await response.text()
+    // React separates adjacent text with comments; comments are not visible content.
+    const html = (await response.text()).replace(/<!--[\s\S]*?-->/g, "")
     const heading = /<h1\b[^>]*>([^<]*)<\/h1>/i.exec(html)?.[1]?.trim()
     const deletionIntakeMissing =
       slug === "delete-account" &&

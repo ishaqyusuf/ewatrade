@@ -11,6 +11,10 @@ import { getAccountPrivacyCommercialInventory } from "./account-privacy-commerci
 import { getAccountPrivacyConversationInventory } from "./account-privacy-conversation-inventory"
 import { getAccountPrivacyPrescriptionInventory } from "./account-privacy-prescription-inventory"
 import { getAccountPrivacyProfileInventory } from "./account-privacy-profile-inventory"
+import {
+  getApprovedAccountPrivacyProfilePolicy,
+  isAccountPrivacyProfileMinimizationConfirmed,
+} from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
 import type { DbClient } from "./types"
 
@@ -238,6 +242,78 @@ export async function submitExternalDeletionRequest(
         select: { id: true, emailVerified: true },
       })
       const userId = user?.emailVerified ? user.id : null
+      // A minimized profile no longer has the intake email. Recover only one
+      // proven account request after a fresh OTP, without rewriting its subject
+      // or contact. A currently registered email always takes precedence.
+      if (!user) {
+        const previous = await tx.accountPrivacyRequest.findMany({
+          where: {
+            contactEmail: email,
+            status: { in: ["PROCESSING", "COMPLETED"] },
+            domainOutcomes: {
+              some: {
+                domain: "ACCOUNT_PROFILE",
+                processor: "account-privacy-profile-v1",
+              },
+            },
+          },
+          take: 2,
+          select: {
+            ...requestProjection,
+            requestKey: true,
+            userId: true,
+            verifiedSubjectUserId: true,
+            verifiedAt: true,
+            contactEmail: true,
+            user: { select: { email: true, emailVerified: true } },
+            domainOutcomes: {
+              where: { domain: "ACCOUNT_PROFILE" },
+              select: {
+                userId: true,
+                processor: true,
+                policyVersion: true,
+                disposition: true,
+                processedAt: true,
+                nextReviewAt: true,
+                evidenceDigest: true,
+              },
+            },
+          },
+        })
+        if (previous.length) {
+          const request = previous.length === 1 ? previous[0] : null
+          const now = new Date()
+          const policy = getApprovedAccountPrivacyProfilePolicy(
+            process.env,
+            now,
+          )
+          const outcome = request?.domainOutcomes[0]
+          if (!request?.verifiedSubjectUserId || !policy || !outcome)
+            return null
+          const inventory = await getAccountPrivacyProfileInventory(
+            tx,
+            request.verifiedSubjectUserId,
+            email,
+          )
+          if (
+            !isAccountPrivacyProfileMinimizationConfirmed({
+              request,
+              outcome,
+              inventory,
+              policy,
+              now,
+            })
+          )
+            return null
+          return {
+            id: request.id,
+            status: request.status,
+            requestedAt: request.requestedAt,
+            updatedAt: request.updatedAt,
+            completedAt: request.completedAt,
+          }
+        }
+      }
       return tx.accountPrivacyRequest.upsert({
         where: {
           requestKey: userId
@@ -715,6 +791,9 @@ export async function getAccountPrivacyReview(
           accessRevocation,
           profileUserExists: profileReviewInventory?.userExists ?? false,
           legalAcceptanceCount: profileReviewInventory?.legalAcceptances ?? 0,
+          approvedLegalAcceptanceDisposition:
+            getApprovedAccountPrivacyProfilePolicy()
+              ?.legalAcceptanceDisposition,
           outcomes: domainOutcomes,
           approvedPolicyVersion:
             process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION ?? null,

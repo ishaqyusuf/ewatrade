@@ -1,10 +1,16 @@
 import { describe, expect, test } from "bun:test"
+import { createHash } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
   ACCOUNT_PRIVACY_REQUIRED_DOMAINS,
   assessAccountPrivacyCompletion,
   completeAccountPrivacyRequest,
 } from "./account-privacy-completion"
+import {
+  accountPrivacyProfileEvidence,
+  accountPrivacyPseudonymousEmail,
+  getApprovedAccountPrivacyProfilePolicy,
+} from "./account-privacy-profile-policy"
 
 const now = new Date("2026-09-25T00:00:00.000Z")
 const digest = "a".repeat(64)
@@ -123,7 +129,9 @@ function fixture(
     survivingUsers?: number
     unchangedProfileEmail?: number
     linkedAuthAccounts?: number
+    legalAcceptances?: number
     profileFields?: Record<string, unknown> | null
+    additional?: string
   } = {},
 ) {
   const linkedConversationQueries: unknown[] = []
@@ -150,6 +158,7 @@ function fixture(
   const expandedCommercialQueries: Record<string, unknown[]> = {}
   const directConversationQueries: Record<string, unknown[]> = {}
   const userQueries: unknown[] = []
+  const profileQueries: unknown[] = []
   const verificationQueries: unknown[] = []
   const request = {
     id: "request-1",
@@ -179,10 +188,23 @@ function fixture(
     ...overrides,
   }
   const db = {
+    ...Object.fromEntries(
+      [
+        "assistantConversation",
+        "assistantRun",
+        "message",
+        "automationEvent",
+        "productAnalyticsEvent",
+      ].map((model) => [
+        model,
+        { count: async () => (live.additional === model ? 1 : 0) },
+      ]),
+    ),
     accountPrivacyRequest: { findUnique: async () => request },
     user: {
-      findUnique: async () =>
-        live.profileFields === undefined
+      findUnique: async (query: unknown) => {
+        profileQueries.push(query)
+        return live.profileFields === undefined
           ? {
               name: "",
               image: null,
@@ -196,8 +218,11 @@ function fixture(
               emailVerifiedAt: null,
               phoneVerifiedAt: null,
               isPlatformAdmin: false,
+              ageBand: "UNDECLARED",
+              ageDeclaredAt: null,
             }
-          : live.profileFields,
+          : live.profileFields
+      },
       count: async (query: unknown) => {
         userQueries.push(query)
         return (query as { where: { email?: unknown } }).where.email
@@ -205,6 +230,7 @@ function fixture(
           : (live.survivingUsers ?? 1)
       },
     },
+    legalAcceptance: { count: async () => live.legalAcceptances ?? 0 },
     membership: { count: async () => live.memberships ?? 0 },
     session: { count: async () => live.sessions ?? 0 },
     verification: {
@@ -493,6 +519,7 @@ function fixture(
     commercialQueries,
     expandedCommercialQueries,
     userQueries,
+    profileQueries,
     verificationQueries,
   }
 }
@@ -976,6 +1003,165 @@ describe("account privacy completion assessment", () => {
     )
   })
 
+  test.each([
+    ["younger teen band", "AGE_13_TO_15", null],
+    ["older teen band", "AGE_16_TO_17", null],
+    ["adult band", "ADULT", null],
+    ["declaration timestamp", "UNDECLARED", new Date("2026-09-01T00:00:00Z")],
+    ["cleared declaration", "UNDECLARED", null],
+  ])(
+    "anonymization checks %s independently of identity fields",
+    async (_label, ageBand, ageDeclaredAt) => {
+      const rows = outcomes()
+      const profile = rows.find((row) => row.domain === "ACCOUNT_PROFILE")
+      if (!profile) throw new Error("Missing profile fixture")
+      profile.disposition = "ANONYMIZATION_CONFIRMED"
+      profile.nextReviewAt = null
+      const { db, profileQueries } = fixture(
+        { domainOutcomes: rows },
+        {
+          unchangedProfileEmail: 0,
+          profileFields: {
+            name: "",
+            image: null,
+            phone: null,
+            firstName: null,
+            lastName: null,
+            displayName: null,
+            avatarUrl: null,
+            metadata: null,
+            emailVerifiedAt: null,
+            phoneVerifiedAt: null,
+            isPlatformAdmin: false,
+            ageBand,
+            ageDeclaredAt,
+          },
+        },
+      )
+      const assessment = await assessAccountPrivacyCompletion(db, "request-1", {
+        approvedPolicyVersion: policyVersion,
+        now,
+      })
+      expect(
+        assessment.blockers.includes("ACCOUNT_PROFILE_PERSONAL_FIELDS_REMAIN"),
+      ).toBe(ageBand !== "UNDECLARED" || ageDeclaredAt !== null)
+      expect(profileQueries).toContainEqual(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            ageBand: true,
+            ageDeclaredAt: true,
+          }),
+        }),
+      )
+    },
+  )
+
+  test.each([
+    "clean",
+    "age remains",
+    "auth remains",
+    "OTP remains",
+    "bad digest",
+    "wrong email",
+    "missing policy",
+  ])(
+    "minimized retention outcome requires current proof: %s",
+    async (scenario) => {
+      const envKeys = [
+        "ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION",
+        "ACCOUNT_PRIVACY_PROFILE_POLICY_JSON",
+        "ACCOUNT_PRIVACY_APPROVED_PROFILE_POLICY_SHA256",
+      ]
+      const previous = Object.fromEntries(
+        envKeys.map((key) => [key, process.env[key]]),
+      )
+      try {
+        const source = JSON.stringify({
+          version: policyVersion,
+          approvalReference: "qa-only-profile-review",
+          approvedAt: "2026-09-24T00:00:00.000Z",
+          mode: "PSEUDONYMIZE",
+          legalAcceptanceDisposition: "RETAIN",
+          retentionPurpose: "QA retained linkage",
+          reviewAt: "2026-10-25T00:00:00.000Z",
+        })
+        process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION = policyVersion
+        process.env.ACCOUNT_PRIVACY_PROFILE_POLICY_JSON = source
+        process.env.ACCOUNT_PRIVACY_APPROVED_PROFILE_POLICY_SHA256 = createHash(
+          "sha256",
+        )
+          .update(source)
+          .digest("hex")
+        const policy = getApprovedAccountPrivacyProfilePolicy(process.env, now)
+        if (!policy) throw new Error("QA profile policy missing")
+        const rows = outcomes()
+        const profile = rows.find((row) => row.domain === "ACCOUNT_PROFILE")
+        if (!profile) throw new Error("Profile outcome missing")
+        profile.processor = "account-privacy-profile-v1"
+        profile.evidenceDigest =
+          scenario === "bad digest"
+            ? "b".repeat(64)
+            : accountPrivacyProfileEvidence({
+                requestId: "request-1",
+                subjectId: "user-1",
+                policy,
+                legalAcceptanceCount: 2,
+              })
+        const email =
+          scenario === "wrong email"
+            ? "different@example.test"
+            : accountPrivacyPseudonymousEmail("request-1", "user-1")
+        const { db } = fixture(
+          { domainOutcomes: rows, user: { email, emailVerified: false } },
+          {
+            unchangedProfileEmail: 0,
+            linkedAuthAccounts: scenario === "auth remains" ? 1 : 0,
+            storedMobileOtp: scenario === "OTP remains" ? 1 : 0,
+            legalAcceptances: 2,
+            profileFields: {
+              email,
+              name: "",
+              image: null,
+              phone: null,
+              firstName: null,
+              lastName: null,
+              displayName: null,
+              avatarUrl: null,
+              metadata: null,
+              emailVerifiedAt: null,
+              phoneVerifiedAt: null,
+              isPlatformAdmin: false,
+              ageBand: scenario === "age remains" ? "ADULT" : "UNDECLARED",
+              ageDeclaredAt: null,
+            },
+          },
+        )
+        if (scenario === "missing policy")
+          Reflect.deleteProperty(
+            process.env,
+            "ACCOUNT_PRIVACY_APPROVED_PROFILE_POLICY_SHA256",
+          )
+        const assessment = await assessAccountPrivacyCompletion(
+          db,
+          "request-1",
+          { approvedPolicyVersion: policyVersion, now },
+        )
+        expect(
+          assessment.blockers.includes(
+            "ACCOUNT_PROFILE_MINIMIZATION_UNCONFIRMED",
+          ),
+        ).toBe(scenario !== "clean")
+        expect(assessment.eligible).toBe(scenario === "clean")
+      } finally {
+        for (const key of envKeys) {
+          if (previous[key] === undefined)
+            Reflect.deleteProperty(process.env, key)
+          else process.env[key] = previous[key]
+        }
+      }
+    },
+  )
+
   test("requires a real subscription outcome when the subject initiated checkout", async () => {
     const rows = outcomes()
     const subscription = rows.find(
@@ -1435,6 +1621,27 @@ describe("account privacy completion assessment", () => {
     expect(assessment.blockers).toContain("EMAIL_INVITATION_REVIEW_REQUIRED")
   })
 })
+
+test.each([
+  "assistantConversation",
+  "assistantRun",
+  "message",
+  "automationEvent",
+  "productAnalyticsEvent",
+])(
+  "completion refuses unhandled %s records despite a complete ledger",
+  async (model) => {
+    const { db } = fixture({}, { additional: model })
+    const assessment = await assessAccountPrivacyCompletion(db, "request-1", {
+      approvedPolicyVersion: policyVersion,
+      now,
+    })
+    expect(assessment.eligible).toBe(false)
+    expect(assessment.blockers).toContain(
+      "ADDITIONAL_PERSONAL_DATA_REVIEW_REQUIRED",
+    )
+  },
+)
 
 function completionFixture(
   live: { otherProviderTokens?: number; linkedConversations?: number } = {},

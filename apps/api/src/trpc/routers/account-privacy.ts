@@ -8,6 +8,7 @@ import {
   AccountPrivacyMembershipError,
   AccountPrivacyNoticePreparationError,
   AccountPrivacyPrescriptionOutcomeError,
+  AccountPrivacyProfileError,
   AccountPrivacySubscriptionError,
   beginAccountPrivacyReview,
   completeAccountPrivacyRequest,
@@ -22,6 +23,7 @@ import {
   getAccountLegalStatus,
   getAccountPrivacyReview,
   listAccountPrivacyRequests,
+  processAccountPrivacyProfile,
   recordLegalAcceptance,
   requestAccountDeletion,
   revokeAccountPrivacyAccess,
@@ -270,6 +272,24 @@ export const accountPrivacyRouter = createTRPCRouter({
         })
       } catch (error) {
         if (error instanceof AccountPrivacyPrescriptionOutcomeError)
+          throw new TRPCError({
+            code:
+              error.code === "NOT_FOUND" ? "NOT_FOUND" : "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
+  processProfile: platformAdminProcedure
+    .input(z.object({ requestId: z.string().min(1) }).strict())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await processAccountPrivacyProfile(ctx.db, {
+          requestId: input.requestId,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        if (error instanceof AccountPrivacyProfileError)
           throw new TRPCError({
             code:
               error.code === "NOT_FOUND" ? "NOT_FOUND" : "PRECONDITION_FAILED",

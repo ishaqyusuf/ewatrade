@@ -1,7 +1,13 @@
 import type { PrismaClient } from "../../generated/prisma/client"
+import { getAccountPrivacyAdditionalInventory } from "./account-privacy-additional-inventory"
 import { getAccountPrivacyCommercialInventory } from "./account-privacy-commercial-inventory"
 import { getAccountPrivacyConversationInventory } from "./account-privacy-conversation-inventory"
 import { getAccountPrivacyPrescriptionInventory } from "./account-privacy-prescription-inventory"
+import { getAccountPrivacyProfileInventory } from "./account-privacy-profile-inventory"
+import {
+  getApprovedAccountPrivacyProfilePolicy,
+  isAccountPrivacyProfileMinimizationConfirmed,
+} from "./account-privacy-profile-policy"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 
 export type AccountPrivacyCompletionCode =
@@ -89,6 +95,12 @@ export async function assessAccountPrivacyCompletion(
   db: Pick<
     PrismaClient,
     | "accountPrivacyRequest"
+    | "legalAcceptance"
+    | "assistantConversation"
+    | "assistantRun"
+    | "message"
+    | "automationEvent"
+    | "productAnalyticsEvent"
     | "user"
     | "membership"
     | "session"
@@ -241,6 +253,9 @@ export async function assessAccountPrivacyCompletion(
   const now = input.now ?? new Date()
   if (request.verifiedSubjectUserId) {
     const subjectId = request.verifiedSubjectUserId
+    const additional = await getAccountPrivacyAdditionalInventory(db, subjectId)
+    if (Object.values(additional).some((count) => count > 0))
+      blockers.push("ADDITIONAL_PERSONAL_DATA_REVIEW_REQUIRED")
     const profileOutcome = request.domainOutcomes.find(
       (outcome) => outcome.domain === "ACCOUNT_PROFILE",
     )
@@ -261,9 +276,35 @@ export async function assessAccountPrivacyCompletion(
       profileOutcome.policyVersion === input.approvedPolicyVersion &&
       !!request.verifiedAt &&
       profileOutcome.processedAt >= request.verifiedAt
+    let profileMinimized = false
+    if (profileOutcome?.processor === "account-privacy-profile-v1") {
+      const policy = getApprovedAccountPrivacyProfilePolicy(process.env, now)
+      const inventory = matchedRequestContact
+        ? await getAccountPrivacyProfileInventory(
+            db,
+            subjectId,
+            matchedRequestContact,
+          )
+        : null
+      profileMinimized = Boolean(
+        policy &&
+          policy.version === input.approvedPolicyVersion &&
+          inventory &&
+          isAccountPrivacyProfileMinimizationConfirmed({
+            request,
+            outcome: profileOutcome,
+            inventory,
+            policy,
+            now,
+          }),
+      )
+      if (!profileMinimized)
+        blockers.push("ACCOUNT_PROFILE_MINIMIZATION_UNCONFIRMED")
+    }
+    const profileContactReplaced = profileAnonymized || profileMinimized
     if (
-      (!profileAnonymized && request.user?.emailVerified === false) ||
-      (!profileAnonymized &&
+      (!profileContactReplaced && request.user?.emailVerified === false) ||
+      (!profileContactReplaced &&
         request.contactEmail &&
         request.user?.email &&
         request.contactEmail.trim().toLowerCase() !==
@@ -273,7 +314,7 @@ export async function assessAccountPrivacyCompletion(
     // The User relation is cleared by physical deletion. A matched account
     // request can still use its email-verified intake contact for invitation
     // review; an unmatched/external request cannot establish that scope.
-    const verifiedEmail = profileAnonymized
+    const verifiedEmail = profileContactReplaced
       ? matchedRequestContact
       : request.user?.emailVerified
         ? request.user.email.trim().toLowerCase()
@@ -296,9 +337,10 @@ export async function assessAccountPrivacyCompletion(
       if (liveMobileOtp > 0) blockers.push("IDENTITY_VERIFICATION_REMAINS")
       if (
         profileOutcome &&
-        ["ERASURE_CONFIRMED", "ANONYMIZATION_CONFIRMED"].includes(
-          profileOutcome.disposition,
-        )
+        (profileMinimized ||
+          ["ERASURE_CONFIRMED", "ANONYMIZATION_CONFIRMED"].includes(
+            profileOutcome.disposition,
+          ))
       ) {
         const storedMobileOtp = await db.verification.count({
           where: { identifier: { in: otpIdentifiers } },
@@ -475,6 +517,8 @@ export async function assessAccountPrivacyCompletion(
           emailVerifiedAt: true,
           phoneVerifiedAt: true,
           isPlatformAdmin: true,
+          ageBand: true,
+          ageDeclaredAt: true,
         },
       })
       if (!profile) blockers.push("ACCOUNT_PROFILE_ANONYMIZATION_USER_MISSING")
@@ -490,7 +534,9 @@ export async function assessAccountPrivacyCompletion(
           profile.metadata !== null ||
           profile.emailVerifiedAt ||
           profile.phoneVerifiedAt ||
-          profile.isPlatformAdmin)
+          profile.isPlatformAdmin ||
+          profile.ageBand !== "UNDECLARED" ||
+          profile.ageDeclaredAt)
       )
         blockers.push("ACCOUNT_PROFILE_PERSONAL_FIELDS_REMAIN")
       if (verifiedEmail) {

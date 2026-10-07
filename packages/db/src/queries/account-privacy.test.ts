@@ -182,11 +182,11 @@ describe("account privacy authority boundaries", () => {
       where: { userId: "user-two", requestKey: "account-deletion:user-two" },
     })
   })
-  test("draft acceptance fails before any persistence", async () => {
+  test("an unpublished version fails before any persistence", async () => {
     await expect(
       recordLegalAcceptance({} as PrismaClient, {
         userId: "user-one",
-        version: LEGAL_DOCUMENT_VERSION,
+        version: "qa-unpublished-policy-version",
         surface: "mobile",
       }),
     ).rejects.toThrow("not approved")

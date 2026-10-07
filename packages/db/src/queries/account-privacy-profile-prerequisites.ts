@@ -35,6 +35,7 @@ export function assessAccountPrivacyProfilePrerequisites(input: {
   accessRevocation: { status: string; userId: string } | null
   profileUserExists: boolean
   legalAcceptanceCount: number
+  approvedLegalAcceptanceDisposition?: "ERASE" | "RETAIN"
   outcomes: readonly Outcome[]
   approvedPolicyVersion: string | null
   now?: Date
@@ -58,7 +59,10 @@ export function assessAccountPrivacyProfilePrerequisites(input: {
     blockers.push("IDENTITY_REVIEW_REQUIRED")
   if (input.status !== "PROCESSING") blockers.push("REQUEST_NOT_PROCESSING")
   if (!input.profileUserExists) blockers.push("SUBJECT_USER_MISSING")
-  if (input.legalAcceptanceCount > 0)
+  if (
+    input.legalAcceptanceCount > 0 &&
+    !input.approvedLegalAcceptanceDisposition
+  )
     blockers.push("LEGAL_ACCEPTANCE_DISPOSITION_REQUIRED")
   if (
     !subjectId ||
