@@ -11,6 +11,7 @@ const featuresOff = [
   "ACCOUNT_PRIVACY_NOTICE_RECIPIENT_HMAC_KEY",
   "CATALOG_PHOTO_REVIEW_OPENAI_API_KEY", // photo review is off
   "APPLE_CLIENT_IDS", // Sign in with Apple, iOS only
+  "ASSISTANT_SETUP_MEDIA_ENABLED", // setup voice/photos/files stay off until OpenAI credit
 ]
 const tooling = [
   "QA_ACCELERATOR_ENABLED", // QA only; must stay off in production
@@ -18,6 +19,7 @@ const tooling = [
   "SENTRY_AUTH_TOKEN", // build-time source map upload
   "DEV_PROFILE", // local env-profile selector
   "DEBUG_PERF", // local performance debugging
+  "ASSISTANT_LIVE_SMOKE", // opt-in live model tests, never set on a deployment
 ]
 const optional = [
   "LOGLY_COLLECTOR_URL", // Logly logging stays off without these
