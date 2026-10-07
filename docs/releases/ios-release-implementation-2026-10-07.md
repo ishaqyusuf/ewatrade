@@ -6,8 +6,9 @@ submission pending. HalaalVest remains saved until EwaTrade is ready.
 
 Implementation is isolated on `codex/ewatrade-ios-release-20261007`, based on
 `3dcab47bee60b84d75035be862be85730395322e`. No Production configuration, database,
-deployment, email delivery, EAS update/build, TestFlight upload or submission is
-claimed by this implementation record. Concurrent main mobile changes are preserved.
+deployment, email delivery, completed iOS binary, EAS update, TestFlight upload or
+submission is claimed by this implementation record. A guarded Preview build
+attempt is recorded below. Concurrent main mobile changes are preserved.
 
 ## Prepared source
 
@@ -115,5 +116,27 @@ actual SDK collection, reachability and Xcode privacy report from the exact buil
 Preview/Production channels and fingerprint runtime policy are already configured.
 Guarded commands remain `bun run eas:build --preview --platform ios --expected-commit
 <FULL_SHA>` and `bun run eas:update --preview --platform ios`. Compatible JS/assets
-can update OTA; native SDK/permission changes require a new binary. These commands
-have not been executed by this implementation record.
+can update OTA; native SDK/permission changes require a new binary. The guarded Preview build was attempted at source `c9927cbd0023ad63bb5d2ccb3f23bfdba4f0cc88`.
+Expo's live Preview environment attachment check passed in an isolated session
+as ishaqyusuf. Preview Sentry opt-in flag is absent, and the build profile forces
+Sentry off. EAS initialized the Preview iOS build number to1, then exited1 because
+no internal-distribution credentials are configured. No binary or successful
+build exists from this attempt; Production signing credentials do not establish
+Preview internal-distribution readiness. The Preview identity/host check-only
+command also passed before the attempt. No EAS Update was published.
+
+
+## Published review packet and owner handoff
+
+Draft PR [#57](https://github.com/ishaqyusuf/ewatrade/pull/57), source `c9927cbd`, is
+published and attached to this task. Vercel Preview builds were triggered by the
+branch push; Dashboard reported success, API and Marketing remained pending at
+last readback. This is not Production deployment or end-to-end acceptance.
+
+The owner chose existing reviewer access, then requested normal registration and
+Production QA using a service named “Cairo”; the destination is awaiting clarification.
+A Production dashboard sign-in tab is retained. The selected founders address is
+entered, but no authenticated session or account access is claimed. New passwords
+must be entered by the owner in the private ordinary setup flow, never in chat.
+See the companion iOS privacy/reviewer packet for source inventory and actual
+signed-build evidence still needed.
