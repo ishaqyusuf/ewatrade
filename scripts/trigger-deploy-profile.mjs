@@ -1,6 +1,23 @@
 import { applyDatabaseProfile } from "./database-profile.mjs"
 import { EWATRADE_TRIGGER_TARGETS } from "./release-trigger-target.mjs"
 
+/**
+ * Prefixed so one Vercel shared variable can serve every EwaTrade project
+ * without colliding with other products; the SDK's default name is a fallback.
+ */
+export const TRIGGER_SECRET_KEY_ENV = "EWATRADE_TRIGGER_SECRET_KEY"
+
+export function triggerSecretKeyFrom(env) {
+  return (
+    env[TRIGGER_SECRET_KEY_ENV]?.trim() || env.TRIGGER_SECRET_KEY?.trim() || ""
+  )
+}
+
+// Trigger.dev issues tr_prod_sk_ keys today; older projects keep valid
+// tr_prod_ keys. Public (pk_) keys and empty suffixes are refused.
+const HOSTED_PROD_SECRET_KEY =
+  /^tr_prod_(?:sk_[A-Za-z0-9_-]{1,512}|(?!sk_|pk_)[A-Za-z0-9_-]{1,512})$/
+
 export const TRIGGER_JOB_ENV_KEYS = [
   "APP_ENV",
   "BLOB_STORE_ID",
@@ -35,7 +52,7 @@ export const TRIGGER_JOB_ENV_KEYS = [
   "SERVICE_WHATSAPP_WEBHOOK_URL",
   "TEST_EMAILS",
   "TEST_EMAIL",
-  "TRIGGER_SECRET_KEY",
+  TRIGGER_SECRET_KEY_ENV,
   "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
 ]
 
@@ -54,7 +71,7 @@ const isolatedPreviewKeys = new Set([
   "SERVICE_SMS_WEBHOOK_URL",
   "SERVICE_WHATSAPP_WEBHOOK_TOKEN",
   "SERVICE_WHATSAPP_WEBHOOK_URL",
-  "TRIGGER_SECRET_KEY",
+  TRIGGER_SECRET_KEY_ENV,
   "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
 ])
 
@@ -98,13 +115,9 @@ export function assertTriggerDeployProfile(env) {
     )
   }
   triggerProjectForEnv(env)
-  if (
-    !/^tr_prod_sk_[A-Za-z0-9_-]{1,512}$/.test(
-      env.TRIGGER_SECRET_KEY?.trim() ?? "",
-    )
-  ) {
+  if (!HOSTED_PROD_SECRET_KEY.test(triggerSecretKeyFrom(env))) {
     throw new Error(
-      "The selected jobs profile requires its own hosted prod TRIGGER_SECRET_KEY (tr_prod_sk_).",
+      `The selected jobs profile requires its own hosted prod ${TRIGGER_SECRET_KEY_ENV} (tr_prod_sk_… or tr_prod_…).`,
     )
   }
   if (
@@ -141,6 +154,7 @@ export function selectedTriggerDeployEnvironment(env, selected, production) {
   const result = { ...env }
   for (const key of [
     ...TRIGGER_JOB_ENV_KEYS,
+    "TRIGGER_SECRET_KEY",
     "TRIGGER_PROJECT_ID",
     "TRIGGER_PROFILE",
     "TRIGGER_ACCESS_TOKEN",
@@ -150,9 +164,19 @@ export function selectedTriggerDeployEnvironment(env, selected, production) {
     const value = selected[key]?.trim()
     if (value) result[key] = value
   }
+  // Both names resolve to the selected file's key, never a base-file one.
+  const secretKey = triggerSecretKeyFrom(selected)
+  if (secretKey) {
+    result[TRIGGER_SECRET_KEY_ENV] = secretKey
+    result.TRIGGER_SECRET_KEY = secretKey
+  }
   if (env.APP_ENV === "preview") {
     for (const key of isolatedPreviewKeys) {
-      if (result[key] && result[key] === production[key]?.trim()) {
+      const productionValue =
+        key === TRIGGER_SECRET_KEY_ENV
+          ? triggerSecretKeyFrom(production)
+          : production[key]?.trim()
+      if (result[key] && result[key] === productionValue) {
         throw new Error(`Preview jobs refuses the Production value for ${key}.`)
       }
     }

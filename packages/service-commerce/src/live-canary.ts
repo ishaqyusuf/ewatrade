@@ -53,7 +53,7 @@ const ENVIRONMENT_KEYS_BY_KIND: Record<
   meta_whatsapp: [
     ...COMMON_ENVIRONMENT_KEYS,
     "TRIGGER_PROJECT_ID",
-    "TRIGGER_SECRET_KEY",
+    "EWATRADE_TRIGGER_SECRET_KEY",
     "META_APP_ID",
     "META_APP_SECRET",
     "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
@@ -205,7 +205,13 @@ export function evaluateServiceCommerceLiveCanaryPreflight(
   }
 
   const missingEnvironmentKeys = ENVIRONMENT_KEYS_BY_KIND[input.kind].filter(
-    (key) => !hasNonEmptyEnvironmentValue(input.environment, key),
+    (key) =>
+      !hasNonEmptyEnvironmentValue(input.environment, key) &&
+      // The SDK's default name is still accepted for the prefixed Trigger key.
+      !(
+        key === "EWATRADE_TRIGGER_SECRET_KEY" &&
+        hasNonEmptyEnvironmentValue(input.environment, "TRIGGER_SECRET_KEY")
+      ),
   )
   const missingEvidence = missingEvidenceFor(input.kind, input.evidence ?? {})
   const unsupportedAdapterReasons = unsupportedAdapterReasonCodes(input.kind)

@@ -134,6 +134,7 @@ test("candidate environment cannot inherit provider, DB, runtime preload or pack
       "NPM_TOKEN",
       "VERCEL_TOKEN",
       "TRIGGER_SECRET_KEY",
+      "EWATRADE_TRIGGER_SECRET_KEY",
       "EWATRADE_DATABASE_URL",
       "DATABASE_URL",
       "EXPO_TOKEN",

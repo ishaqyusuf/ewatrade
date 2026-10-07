@@ -20,7 +20,8 @@ const configuredMetaEnvironment = Object.fromEntries(
 Object.assign(configuredMetaEnvironment, {
   APP_ENV: "production",
   DATABASE_PROFILE_VERIFIED: "true",
-  EWATRADE_DATABASE_URL: "postgresql://user:password@database.example.com:5432/ewatrade",
+  EWATRADE_DATABASE_URL:
+    "postgresql://user:password@database.example.com:5432/ewatrade",
 })
 
 const metaEvidence = {
@@ -93,7 +94,7 @@ describe("Service Commerce live-canary offline preflight", () => {
         "DATABASE_PROFILE_VERIFIED",
         "EWATRADE_DATABASE_URL",
         "TRIGGER_PROJECT_ID",
-        "TRIGGER_SECRET_KEY",
+        "EWATRADE_TRIGGER_SECRET_KEY",
         "META_APP_ID",
         "META_APP_SECRET",
         "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
@@ -170,7 +171,8 @@ describe("Service Commerce live-canary offline preflight", () => {
         APP_ENV: "development",
         COMMUNICATIONS_CREDENTIAL_ENCRYPTION_KEY: "",
         DATABASE_PROFILE_VERIFIED: "0",
-        EWATRADE_DATABASE_URL: "postgresql://user:password@localhost:5432/ewatrade",
+        EWATRADE_DATABASE_URL:
+          "postgresql://user:password@localhost:5432/ewatrade",
         META_APP_ID: "configured",
         META_APP_SECRET: secret,
         REDIS_URL: "configured",

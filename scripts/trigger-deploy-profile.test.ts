@@ -16,8 +16,8 @@ import { EWATRADE_TRIGGER_TARGETS } from "./release-trigger-target.mjs"
 import {
   selectedTriggerDeployEnvironment,
   syncedTriggerJobEnvironment,
-  triggerProjectForConfigEnv,
   triggerDeployCommand,
+  triggerProjectForConfigEnv,
 } from "./trigger-deploy-profile.mjs"
 
 const preview = {
@@ -102,13 +102,44 @@ describe("Trigger jobs selected deployment profile", () => {
       "tr_prod_sk_FAKE value",
       "tr_prod_sk_FAKE/invalid",
       `tr_prod_sk_${"x".repeat(513)}`,
+      `tr_prod_${"x".repeat(513)}`,
     ]) {
-      const env = { ...preview, TRIGGER_SECRET_KEY: key }
-      expect(() => triggerDeployCommand(["trigger", "deploy"], env)).toThrow(
-        "hosted prod",
-      )
-      expect(() => syncedTriggerJobEnvironment(env)).toThrow("hosted prod")
+      for (const name of [
+        "TRIGGER_SECRET_KEY",
+        "EWATRADE_TRIGGER_SECRET_KEY",
+      ]) {
+        const env = { ...preview, TRIGGER_SECRET_KEY: "", [name]: key }
+        expect(() => triggerDeployCommand(["trigger", "deploy"], env)).toThrow(
+          "hosted prod",
+        )
+        expect(() => syncedTriggerJobEnvironment(env)).toThrow("hosted prod")
+      }
     }
+  })
+
+  test("accepts current and older hosted prod secret keys under either name", () => {
+    for (const key of [
+      "tr_prod_sk_FAKE_NOT_A_REAL_KEY",
+      "tr_prod_FAKENOTAREALKEY1234",
+    ])
+      for (const name of [
+        "TRIGGER_SECRET_KEY",
+        "EWATRADE_TRIGGER_SECRET_KEY",
+      ]) {
+        const env = { ...preview, TRIGGER_SECRET_KEY: "", [name]: key }
+        expect(() =>
+          triggerDeployCommand(["trigger", "deploy"], env),
+        ).not.toThrow()
+      }
+    // The prefixed name wins when both are present.
+    const result = selectedTriggerDeployEnvironment(
+      preview,
+      { ...preview, EWATRADE_TRIGGER_SECRET_KEY: "tr_prod_sk_FAKE_PREFIXED" },
+      production,
+    )
+    expect(
+      syncedTriggerJobEnvironment(result).EWATRADE_TRIGGER_SECRET_KEY,
+    ).toBe("tr_prod_sk_FAKE_PREFIXED")
   })
 
   test("refuses aliases, equals forms, positional projects and profile/config/payload overrides", () => {
@@ -159,9 +190,17 @@ describe("Trigger jobs selected deployment profile", () => {
     expect(result.OPENAI_API_KEY).toBeUndefined()
     expect(result.RESEND_API_KEY).toBeUndefined()
     expect(result.TRIGGER_ACCESS_TOKEN).toBeUndefined()
-    expect(syncedTriggerJobEnvironment(result).TRIGGER_SECRET_KEY).toBe(
-      preview.TRIGGER_SECRET_KEY,
-    )
+    expect(
+      syncedTriggerJobEnvironment(result).EWATRADE_TRIGGER_SECRET_KEY,
+    ).toBe(preview.TRIGGER_SECRET_KEY)
+    // A base-file key under the new name never fills a missing selected key.
+    expect(() =>
+      selectedTriggerDeployEnvironment(
+        { ...preview, EWATRADE_TRIGGER_SECRET_KEY: "tr_prod_sk_FAKE_BASE" },
+        { ...preview, TRIGGER_SECRET_KEY: "" },
+        production,
+      ),
+    ).toThrow()
     expect(() =>
       selectedTriggerDeployEnvironment(
         preview,
