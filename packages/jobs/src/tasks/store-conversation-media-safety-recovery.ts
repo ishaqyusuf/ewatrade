@@ -4,8 +4,7 @@ import {
   listPendingStoreConversationMediaSafetyWork,
   preparePendingStoreConversationMediaSafetyWork,
 } from "@ewatrade/db/queries"
-import { logger, schedules, task } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 import { prescriptionMediaSafety } from "./prescription-media-safety"
 import { serviceCommerceMediaSafety } from "./service-commerce-media-safety"
@@ -146,8 +145,7 @@ export const storeConversationMediaSafetyRecoveryWorker = task({
   },
 })
 
-export const storeConversationMediaSafetyRecovery = schedules.task({
-  cron: automaticJobCron("*/5 * * * *"),
+export const storeConversationMediaSafetyRecovery = task({
   id: "store-conversations.media-safety-recovery",
   maxDuration: 60,
   run: async () => {

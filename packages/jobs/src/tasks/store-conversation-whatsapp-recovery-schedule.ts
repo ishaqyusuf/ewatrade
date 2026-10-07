@@ -1,7 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import { listDueStoreConversationWhatsAppRecoveries } from "@ewatrade/db/queries"
-import { logger, schedules } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 import { storeConversationWhatsAppRecovery } from "./store-conversation-whatsapp-recovery"
 
@@ -39,8 +38,7 @@ export async function runStoreConversationWhatsAppRecoverySchedule(
     : { queued: recoveries.length }
 }
 
-export const storeConversationWhatsAppRecoverySchedule = schedules.task({
-  cron: automaticJobCron("* * * * *"),
+export const storeConversationWhatsAppRecoverySchedule = task({
   id: "store-conversation.whatsapp-recovery-schedule",
   maxDuration: 120,
   run: async () => {

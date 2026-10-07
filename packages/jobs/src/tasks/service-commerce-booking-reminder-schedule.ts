@@ -1,7 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import { listServiceCommerceBookingReminderScopes } from "@ewatrade/db/queries"
-import { logger, schedules, task } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 import { serviceCommerceBookingReminders } from "./service-commerce-booking-reminders"
 
@@ -84,8 +83,7 @@ export const serviceCommerceBookingReminderScheduleContinuation = task({
   },
 })
 
-export const serviceCommerceBookingReminderSchedule = schedules.task({
-  cron: automaticJobCron("*/5 * * * *"),
+export const serviceCommerceBookingReminderSchedule = task({
   id: "service-commerce.booking-reminder-schedule",
   maxDuration: 120,
   run: async () => {

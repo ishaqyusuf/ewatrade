@@ -1,7 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import { recordOverdueStoreConversationEscalations } from "@ewatrade/db/queries"
-import { logger, schedules } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 type Dependencies = {
   record(input: { limit: number; now: Date }): Promise<{
@@ -21,8 +20,7 @@ export async function runStoreConversationEscalations(
   return dependencies.record({ limit: 200, now })
 }
 
-export const storeConversationEscalations = schedules.task({
-  cron: automaticJobCron("* * * * *"),
+export const storeConversationEscalations = task({
   id: "store-conversations.escalations",
   maxDuration: 120,
   run: async () => {

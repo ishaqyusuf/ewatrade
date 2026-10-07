@@ -14,12 +14,10 @@ import {
   listCatalogPhotoCleanupCandidates,
 } from "@ewatrade/db/catalog-photo-lifecycle"
 import { prisma } from "@ewatrade/db/client"
-import { schedules } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { task } from "@trigger.dev/sdk/v3"
 
-export const catalogPhotoCleanup = schedules.task({
+export const catalogPhotoCleanup = task({
   id: "catalog.photo.cleanup",
-  cron: automaticJobCron("*/5 * * * *"),
   maxDuration: 600,
   queue: { concurrencyLimit: 1 },
   run: async () => {

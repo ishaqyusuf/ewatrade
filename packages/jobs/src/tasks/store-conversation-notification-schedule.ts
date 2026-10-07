@@ -5,8 +5,7 @@ import {
   listWaitingStoreConversationReopeningIntents,
   releaseStoreConversationReopeningIntent,
 } from "@ewatrade/db/queries"
-import { logger, schedules } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 import { storeConversationNotificationDispatch } from "./store-conversation-notification-dispatch"
 import { storeConversationNotificationVerification } from "./store-conversation-notification-verification"
@@ -107,8 +106,7 @@ export async function runStoreConversationNotificationSchedule(
   }
 }
 
-export const storeConversationNotificationSchedule = schedules.task({
-  cron: automaticJobCron("* * * * *"),
+export const storeConversationNotificationSchedule = task({
   id: "store-conversation.notification-schedule",
   maxDuration: 120,
   run: async () => {

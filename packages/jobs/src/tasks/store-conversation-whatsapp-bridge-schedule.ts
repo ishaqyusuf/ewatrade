@@ -1,7 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import { listDueStoreConversationWhatsAppBridgePrompts } from "@ewatrade/db/queries"
-import { logger, schedules } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 import { storeConversationWhatsAppBridgePrompt } from "./store-conversation-whatsapp-bridge-prompt"
 
@@ -40,8 +39,7 @@ export async function runStoreConversationWhatsAppBridgeSchedule(
     : { queued: prompts.length }
 }
 
-export const storeConversationWhatsAppBridgeSchedule = schedules.task({
-  cron: automaticJobCron("* * * * *"),
+export const storeConversationWhatsAppBridgeSchedule = task({
   id: "store-conversation.whatsapp-bridge-schedule",
   maxDuration: 120,
   run: async () => {

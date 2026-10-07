@@ -1,9 +1,7 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3"
+import { logger, task } from "@trigger.dev/sdk/v3"
 import { runAccountPrivacyNoticeAlert } from "../handlers/account-privacy-notice-alert"
-import { automaticJobCron } from "../schedule-policy"
 
-export const accountPrivacyNoticeAlert = schedules.task({
-  cron: automaticJobCron("*/15 * * * *"),
+export const accountPrivacyNoticeAlert = task({
   id: "account-privacy.notice-alert",
   maxDuration: 120,
   run: async () => {

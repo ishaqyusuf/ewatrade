@@ -1,7 +1,6 @@
 import { prisma } from "@ewatrade/db/client"
 import { listDueServiceNotificationIntentIds } from "@ewatrade/db/queries"
-import { logger, schedules, task } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 import {
   type ServiceNotificationDispatchPayload,
@@ -17,8 +16,7 @@ export const serviceNotificationDispatch = task({
   },
 })
 
-export const serviceNotificationSchedule = schedules.task({
-  cron: automaticJobCron("*/5 * * * *"),
+export const serviceNotificationSchedule = task({
   id: "services.notification.schedule",
   maxDuration: 120,
   run: async () => {

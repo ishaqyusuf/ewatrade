@@ -3,8 +3,7 @@ import {
   expireStoreConversationGuestCredential,
   listDueStoreConversationGuestCredentialExpiries,
 } from "@ewatrade/db/queries"
-import { logger, schedules } from "@trigger.dev/sdk/v3"
-import { automaticJobCron } from "../schedule-policy"
+import { logger, task } from "@trigger.dev/sdk/v3"
 
 const SCHEDULE_LIMIT = 100
 
@@ -40,8 +39,7 @@ export async function runStoreConversationCredentialExpiry(
   return { expired: credentials.length - failed, failed }
 }
 
-export const storeConversationCredentialExpiry = schedules.task({
-  cron: automaticJobCron("0 * * * *"),
+export const storeConversationCredentialExpiry = task({
   id: "store-conversation.credential-expiry",
   maxDuration: 120,
   run: async () => {

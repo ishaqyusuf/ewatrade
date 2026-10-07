@@ -1,12 +1,11 @@
 import { isCatalogPhotoReviewConfigured } from "@ewatrade/catalog/photo-review-openai"
 import { listCatalogPhotoReviewCandidates } from "@ewatrade/db/catalog-photo-review"
 import { prisma } from "@ewatrade/db/client"
-import { schedules, task } from "@trigger.dev/sdk/v3"
+import { task } from "@trigger.dev/sdk/v3"
 import {
   type CatalogPhotoReviewPayload,
   catalogPhotoReviewHandler,
 } from "../handlers/catalog-photo-review"
-import { automaticJobCron } from "../schedule-policy"
 
 const queue = { name: "catalog-photo-review", concurrencyLimit: 1 }
 
@@ -18,9 +17,8 @@ export const catalogPhotoReview = task({
   run: catalogPhotoReviewHandler,
 })
 
-export const catalogPhotoReviewRecovery = schedules.task({
+export const catalogPhotoReviewRecovery = task({
   id: "catalog.photo.review-recovery",
-  cron: automaticJobCron("* * * * *"),
   maxDuration: 300,
   queue,
   run: async () => {
