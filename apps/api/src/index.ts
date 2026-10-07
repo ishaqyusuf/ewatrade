@@ -1,3 +1,4 @@
+import "./shared-env"
 import "./instrument"
 import { appUpdateDependencies } from "./app-update/context"
 import { registerAppUpdateRoutes } from "./app-update/routes"

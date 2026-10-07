@@ -5,10 +5,14 @@ import {
   onboardingRequestLogIgnore,
   onboardingSignupResponseHeaders,
 } from "@ewatrade/onboarding/lib/onboarding-request-logging"
+import { applyEwatradeSharedEnv } from "@ewatrade/utils/shared-env"
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
 
 const appRoot = dirname(fileURLToPath(import.meta.url))
+
+// Builds read env before instrumentation runs, so map shared names here too.
+applyEwatradeSharedEnv()
 
 function isInternalQaBuild(env = process.env) {
   const variant = (env.APP_ENV ?? env.NODE_ENV ?? "production").toLowerCase()

@@ -65,6 +65,9 @@ const previewOnly = [
 
 export default {
   project: "ewatrade",
+  // Vercel team shared variables are EWATRADE_-prefixed; apps map them back to
+  // plain names at start-up (packages/utils/src/shared-env.ts).
+  sharedEnvPrefix: "EWATRADE_",
   components: [
     {
       // Runs first, before any new code goes live. Production asks for confirmation.
