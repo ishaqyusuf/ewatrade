@@ -33,7 +33,6 @@ export function ManageStaffAccessModal({
   onSaved,
 }: { onSaved: () => Promise<void> }) {
   const { accessUserId, setAccessUserId } = useStaffParams()
-  const workflow = useDashboardWorkflow()
   const [saving, setSaving] = useState(false)
   const { closeError, requestClose } = useSheetDismissal(() =>
     setAccessUserId(null),
@@ -83,6 +82,7 @@ function AccessForm({
   onSaved: () => Promise<void>
   onSavingChange: (saving: boolean) => void
 }) {
+  const workflow = useDashboardWorkflow()
   const [ready, setReady] = useState(false)
   const [stores, setStores] = useState<Array<{ id: string; name: string }>>([])
   const [access, setAccess] = useState<Access | null>(null)
