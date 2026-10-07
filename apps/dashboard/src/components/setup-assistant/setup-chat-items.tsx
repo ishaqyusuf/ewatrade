@@ -163,6 +163,11 @@ export function SetupChatItems({ keys }: { keys: string[] }) {
                   type="button"
                   size="sm"
                   disabled={adding !== null}
+                  aria-label={
+                    entity.state === "FAILED"
+                      ? `Try adding ${payload.name} again`
+                      : `Add ${payload.name} to my business`
+                  }
                   onClick={() => void add(entity, conversationId)}
                 >
                   {adding === entity.key
