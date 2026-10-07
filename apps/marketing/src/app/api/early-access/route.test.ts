@@ -259,7 +259,9 @@ test("verification links are bound to the approved session and unlock email veri
     request(`/api/early-access/verify?token=${verificationSession.token}`),
   )
   expect(confirmed.status).toBe(303)
-  expect(confirmed.headers.get("location")).toBe(approved().formData.accessUrl)
+  expect<unknown>(confirmed.headers.get("location")).toBe(
+    approved().formData.accessUrl,
+  )
   expect(confirmed.headers.get("cache-control")).toBe("no-store")
   expect(verificationSession.completed).toBe(true)
   const body = await (

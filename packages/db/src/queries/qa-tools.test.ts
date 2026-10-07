@@ -20,6 +20,7 @@ const membership = {
     stores: [{ id: "store", status: "ACTIVE" }],
   },
 }
+type QaToolsFacts = Parameters<typeof resolveAuthenticatedQaFixtureContext>[0]
 const input = {
   enabled: true,
   domainRoutes: '{"example.qa.test":"tester@example.com"}',
@@ -40,7 +41,7 @@ describe("authenticated QA draft tooling", () => {
     })
   })
 
-  test.each([
+  test.each<QaToolsFacts>([
     { ...input, enabled: false },
     { ...input, session: null },
     { ...input, membership: null },
