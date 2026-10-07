@@ -365,6 +365,10 @@ async function commitCustomer(
     })
     return { recordId: customerId, errorCode: null }
   } catch (error) {
+    console.error("[setup-commit] customer balance not recorded", {
+      entityId: entity.id,
+      ...describeCommitError(error),
+    })
     return {
       recordId: customerId,
       errorCode: OPENING_BALANCE_FAILED,
