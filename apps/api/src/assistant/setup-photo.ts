@@ -4,6 +4,7 @@ import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage
 import { uploadCatalogPhoto } from "@ewatrade/catalog/photo-upload"
 import type { AssistantScope } from "@ewatrade/db/assistant"
 import { readSentAssistantAttachment } from "@ewatrade/db/assistant-attachments"
+import { ASSISTANT_ATTACHMENT_RETENTION_EXPIRED } from "@ewatrade/db/assistant-operations"
 import {
   createCatalogPhotoIntent,
   getCatalogPhotoUploadTarget,
@@ -39,7 +40,14 @@ export async function prepareSetupProductPhoto(
       conversationId: input.conversationId,
       attachmentId: input.attachmentId,
     })
-    if (!attachment || attachment.kind !== "IMAGE")
+    // Retention may already have deleted the bytes; never open a Catalog
+    // upload for a photo that can no longer be read.
+    if (
+      !attachment ||
+      attachment.kind !== "IMAGE" ||
+      !attachment.storagePath ||
+      attachment.errorCode === ASSISTANT_ATTACHMENT_RETENTION_EXPIRED
+    )
       return { skipped: SETUP_PHOTO_NOT_ADDED }
     const actor = {
       actorUserId: scope.userId,
