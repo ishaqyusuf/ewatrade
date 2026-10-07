@@ -216,6 +216,13 @@ const itemInputSchema = z.object({
   ...provenanceFields,
 })
 
+const finishedAreaField = z
+  .enum(SETUP_AREAS)
+  .optional()
+  .describe(
+    'Set when the owner said this is everything for one area, e.g. "that\'s all I sell" -> "sell", "no more customers" -> "customers". Marks that area done.',
+  )
+
 const moneyAccountInputSchema = z.object({
   key: z.string().max(140).optional(),
   name: z
@@ -522,6 +529,31 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
     }
   }
 
+  const areaState = async () => {
+    const areas = summarizeSetupAreas(
+      await (deps.readAreaMarks?.() ?? Promise.resolve(null)),
+      await deps.readDraft(),
+    )
+    return { areas, nextArea: nextSetupArea(areas)?.area ?? null }
+  }
+  /**
+   * Marks an area done on the staging call that adds its last records, so the
+   * mark does not rest on a separate setup_set_area call the model can skip.
+   */
+  const finishArea = async (
+    result: ToolEnvelope<unknown>,
+    area: SetupArea | undefined,
+  ): Promise<ToolEnvelope<unknown>> => {
+    if (!area || result.status === "failed" || !deps.markArea) return result
+    if (!(await authorized())) return NOT_AUTHORIZED
+    const marked = await deps.markArea(area, "DONE")
+    deps.onDraftChanged?.({ revision: marked.revision, keys: [] })
+    return {
+      ...result,
+      data: { ...(result.data as object), ...(await areaState()) },
+    }
+  }
+
   return {
     setup_get_context: tool({
       description:
@@ -553,7 +585,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
     }),
     setup_set_area: tool({
       description:
-        'Record that the owner finished ("done") or does not want ("skipped") one setup area, so you move on to the next. Use "open" to reopen it. Areas: sell, use, customers, money.',
+        'Record that the owner finished ("done") or does not want ("skipped") one setup area. Call it in the same turn the owner says so, before you introduce the next area; when you are staging records in that turn, set finishedArea on that call instead. Use "open" to reopen an area. Areas: sell, use, customers, money.',
       inputSchema: z.object({
         area: z.enum(SETUP_AREAS),
         status: z.enum(["done", "skipped", "open"]),
@@ -570,15 +602,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           status === "done" ? "DONE" : status === "skipped" ? "SKIPPED" : null,
         )
         deps.onDraftChanged?.({ revision: result.revision, keys: [] })
-        const areas = summarizeSetupAreas(
-          await (deps.readAreaMarks?.() ?? Promise.resolve(null)),
-          await deps.readDraft(),
-        )
-        return {
-          status: "success",
-          data: { areas, nextArea: nextSetupArea(areas)?.area ?? null },
-          warnings: [],
-        }
+        return { status: "success", data: await areaState(), warnings: [] }
       },
     }),
     setup_search_quick_setups: tool({
@@ -649,10 +673,13 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
     setup_draft_upsert_items: tool({
       description:
         "Stage products or services in the owner's setup draft. Nothing is created in the business until the owner confirms. Re-send an item with its key to update it.",
-      inputSchema: z.object({ items: z.array(itemInputSchema).min(1).max(25) }),
-      execute: async ({ items }) => {
+      inputSchema: z.object({
+        items: z.array(itemInputSchema).min(1).max(25),
+        finishedArea: finishedAreaField,
+      }),
+      execute: async ({ items, finishedArea }) => {
         const warnings: string[] = []
-        return stage(
+        const result = await stage(
           items.map((item) => ({
             key: item.key,
             name: item.name,
@@ -665,6 +692,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           })),
           warnings,
         )
+        return finishArea(result, finishedArea)
       },
     }),
     setup_draft_upsert_customers: tool({
@@ -672,10 +700,11 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         "Stage customers (and what they owe or are owed today) in the setup draft. Nothing is created until the owner confirms.",
       inputSchema: z.object({
         customers: z.array(customerInputSchema).min(1).max(25),
+        finishedArea: finishedAreaField,
       }),
-      execute: async ({ customers }) => {
+      execute: async ({ customers, finishedArea }) => {
         const warnings: string[] = []
-        return stage(
+        const result = await stage(
           customers.map((customer) => ({
             key: customer.key,
             name: customer.name,
@@ -688,6 +717,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           })),
           warnings,
         )
+        return finishArea(result, finishedArea)
       },
     }),
     setup_draft_upsert_money_accounts: tool({
@@ -695,10 +725,11 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         "Stage where the business keeps its money: each cash pocket and each bank or mobile money account, with the balance in it now if the owner said. The first cash pocket is added to Shop cash, the cash account Finance already keeps for the business. Nothing is created until the owner confirms.",
       inputSchema: z.object({
         accounts: z.array(moneyAccountInputSchema).min(1).max(15),
+        finishedArea: finishedAreaField,
       }),
-      execute: async ({ accounts }) => {
+      execute: async ({ accounts, finishedArea }) => {
         const warnings: string[] = []
-        return stage(
+        const result = await stage(
           accounts.map((account) => ({
             key: account.key,
             name: account.name,
@@ -711,6 +742,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           })),
           warnings,
         )
+        return finishArea(result, finishedArea)
       },
     }),
     setup_draft_remove: tool({

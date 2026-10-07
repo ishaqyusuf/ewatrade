@@ -297,8 +297,14 @@ suite("setup assistant with a live model", () => {
     const eggs =
       chat.find("product", /egg|ẹyin|eyin/i) ??
       [...chat.draft.values()][0]?.payload
-    expect(price(eggs)).toBe(400_000)
-    expect(stock(eggs)).toBe("10")
+    // A crate can be the stock unit or a selling unit over single eggs.
+    expect(
+      eggs?.kind === "product" && [
+        eggs.priceMinor,
+        ...(eggs.sellingUnits ?? []).map((unit) => unit.priceMinor),
+      ],
+    ).toContain(400_000)
+    expect(["10", "300"]).toContain(stock(eggs) ?? "")
   }, 120_000)
 
   test("AI-tailored openings for different businesses", async () => {

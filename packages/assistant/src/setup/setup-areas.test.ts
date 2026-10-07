@@ -189,6 +189,93 @@ describe("money accounts", () => {
   })
 })
 
+describe("closing an area", () => {
+  function areaTools(authorized = true) {
+    const marks: Record<string, string> = {}
+    const set = createSetupAssistantTools({
+      context: {
+        businessName: "B",
+        storeName: "S",
+        businessProfile: null,
+        operatingModel: null,
+        currencyCode: "NGN",
+        countryCode: "NG",
+        existing: { catalogItems: 0, customers: 0 },
+      },
+      sourceMessageId: "msg_1",
+      authorize: async () => authorized,
+      readDraft: async () => [],
+      writeEntities: async (entities) => ({
+        revision: 1,
+        changed: entities.map((e) => e.key),
+        rejected: [],
+      }),
+      removeEntities: async () => ({ revision: 1 }),
+      readAreaMarks: async () => ({ ...marks }),
+      markArea: async (area, mark) => {
+        if (mark) marks[area] = mark
+        else delete marks[area]
+        return { revision: 2 }
+      },
+    })
+    return { set, marks }
+  }
+  const lastProducts = {
+    items: [
+      {
+        kind: "product" as const,
+        name: "Turkey",
+        unitName: "Bird",
+        price: "25000",
+        openingStock: "4",
+      },
+    ],
+    finishedArea: "sell" as const,
+  }
+
+  test("the staging call that adds the last records marks the area done", async () => {
+    const { set, marks } = areaTools()
+    const result = await set.setup_draft_upsert_items.execute?.(
+      lastProducts,
+      call,
+    )
+    expect(marks).toEqual({ sell: "DONE" })
+    expect(result).toMatchObject({
+      status: "success",
+      data: { staged: [{ name: "Turkey" }], nextArea: "use" },
+    })
+  })
+
+  test("a refused staging call leaves the area open", async () => {
+    const { set, marks } = areaTools(false)
+    const result = await set.setup_draft_upsert_items.execute?.(
+      lastProducts,
+      call,
+    )
+    expect(result).toMatchObject({ status: "failed" })
+    expect(marks).toEqual({})
+  })
+
+  test("customers and money accounts can close their own areas", async () => {
+    const { set, marks } = areaTools()
+    await set.setup_draft_upsert_customers.execute?.(
+      {
+        customers: [{ name: "Mama Ade", owesBusiness: "15000" }],
+        finishedArea: "customers",
+      },
+      call,
+    )
+    await set.setup_draft_upsert_money_accounts.execute?.(
+      {
+        accounts: [{ name: "GTBank", purpose: "bank", balance: "120000" }],
+        finishedArea: "money",
+      },
+      call,
+    )
+    expect(marks).toEqual({ customers: "DONE", money: "DONE" })
+  })
+})
+
 describe("rehearsal reads all four areas", () => {
   test("items, internal-use items, customers and money accounts", () => {
     const parsed = parseSetupRehearsalLines(
