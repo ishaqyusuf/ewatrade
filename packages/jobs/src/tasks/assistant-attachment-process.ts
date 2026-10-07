@@ -1,12 +1,11 @@
 import { SETUP_ATTACHMENT_MAX_ATTEMPTS } from "@ewatrade/assistant/setup/attachment-processing"
 import { listAssistantAttachmentsToProcess } from "@ewatrade/db/assistant-attachments"
 import { prisma } from "@ewatrade/db/client"
-import { schedules, task } from "@trigger.dev/sdk/v3"
+import { task } from "@trigger.dev/sdk/v3"
 import {
   type AssistantAttachmentProcessPayload,
   assistantAttachmentProcessHandler,
 } from "../handlers/assistant-attachment-process"
-import { automaticJobCron } from "../schedule-policy"
 
 const queue = { name: "assistant-attachment-process", concurrencyLimit: 4 }
 
@@ -20,10 +19,12 @@ export const assistantAttachmentProcess = task({
     assistantAttachmentProcessHandler(payload),
 })
 
-/** Picks up uploads whose dispatch was lost or whose worker crashed. */
-export const assistantAttachmentProcessRecovery = schedules.task({
+/**
+ * Picks up uploads whose dispatch was lost or whose worker crashed. Started
+ * every minute by the shared cadence schedule.
+ */
+export const assistantAttachmentProcessRecovery = task({
   id: "assistant.attachment.process-recovery",
-  cron: automaticJobCron("*/2 * * * *"),
   maxDuration: 300,
   queue,
   run: async () => {

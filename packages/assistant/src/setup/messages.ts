@@ -22,6 +22,7 @@ export const SETUP_TOOL_LABELS: Record<string, string> = {
   setup_search_categories: "Choosing categories",
   setup_draft_upsert_items: "Adding to your setup",
   setup_draft_upsert_customers: "Adding customers",
+  setup_draft_upsert_money_accounts: "Adding money accounts",
   setup_draft_remove: "Removing from your setup",
 }
 

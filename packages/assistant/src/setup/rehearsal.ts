@@ -37,9 +37,13 @@ function attachmentLine(raw: string, attachmentId: string | null) {
   }
 }
 
+const MONEY_NAME =
+  /^(cash\b.*|.*bank\b.*|.*\b(opay|moniepoint|palmpay|kuda|wallet)\b.*)$/i
+
 export function parseSetupRehearsalLines(text: string) {
   const items: Array<Record<string, unknown>> = []
   const customers: Array<Record<string, unknown>> = []
+  const accounts: Array<Record<string, unknown>> = []
   let attachmentId: string | null = null
   for (const source of text.split(/\n|;/)) {
     const opening = /^<UNTRUSTED_CONTEXT[^>]*attachmentId="([^"]+)"/.exec(
@@ -71,7 +75,26 @@ export function parseSetupRehearsalLines(text: string) {
       })
       continue
     }
-    const [name, ...rest] = line.split(",").map((part) => part.trim())
+    // "Cash at hand, 25000" or "GTBank 120000": where the money is.
+    const money =
+      /^(.+?)[,:]?\s+(?:₦|ngn|n)?\s*([\d][\d,]*(?:\.\d{1,2})?k?)\s*$/i.exec(
+        line,
+      )
+    if (money?.[1] && MONEY_NAME.test(money[1].replace(/,$/, ""))) {
+      const name = money[1].replace(/,$/, "").trim()
+      accounts.push({
+        name,
+        purpose: /^cash\b/i.test(name) ? "cash" : "bank",
+        balance: toDigits(amount.exec(money[2] ?? "")),
+        quote: line.slice(0, 240),
+        ...provenance,
+      })
+      continue
+    }
+    const [rawName, ...rest] = line.split(",").map((part) => part.trim())
+    // "Layer feed (use), 0, 30 bags": used in the business, not sold.
+    const internalUse = /\(use\)/i.test(rawName ?? "")
+    const name = rawName?.replace(/\s*\(use\)\s*/i, "").trim()
     if (!name || /^\d/.test(name) || rest.length === 0) continue
     const price = toDigits(amount.exec(rest[0] ?? ""))
     const stockMatch = rest[1] ? /([\d.]+)\s*([a-z]+)?/i.exec(rest[1]) : null
@@ -87,11 +110,12 @@ export function parseSetupRehearsalLines(text: string) {
             .replace(/s$/i, "")
             .replace(/^\w/, (c) => c.toUpperCase())
         : undefined,
+      ...(internalUse ? { usage: "use", price: undefined } : {}),
       quote: line.slice(0, 240),
       ...provenance,
     })
   }
-  return { items, customers }
+  return { items, customers, accounts }
 }
 
 function lastText(message: PromptMessage | undefined) {
@@ -106,44 +130,35 @@ function lastText(message: PromptMessage | undefined) {
 export function respondSetupRehearsal(
   prompt: readonly PromptMessage[],
 ): SetupRehearsalTurn {
-  const last = prompt.at(-1)
-  if (last?.role === "tool") {
-    const calls = prompt.filter((message) => message.role === "tool").length
-    const userIndex = prompt.findLastIndex((message) => message.role === "user")
-    const parsed = parseSetupRehearsalLines(lastText(prompt[userIndex]))
-    const toolsSinceUser = prompt
-      .slice(userIndex)
-      .filter((message) => message.role === "tool").length
-    if (
-      toolsSinceUser === 1 &&
-      parsed.items.length > 0 &&
-      parsed.customers.length > 0
-    )
-      return {
-        kind: "tool",
-        toolName: "setup_draft_upsert_customers",
-        input: { customers: parsed.customers },
-      }
+  const userIndex = prompt.findLastIndex((message) => message.role === "user")
+  const parsed = parseSetupRehearsalLines(lastText(prompt[userIndex]))
+  // One tool call per non-empty area, in setup-area order, then the reply.
+  const calls = [
+    parsed.items.length
+      ? { toolName: "setup_draft_upsert_items", input: { items: parsed.items } }
+      : null,
+    parsed.customers.length
+      ? {
+          toolName: "setup_draft_upsert_customers",
+          input: { customers: parsed.customers },
+        }
+      : null,
+    parsed.accounts.length
+      ? {
+          toolName: "setup_draft_upsert_money_accounts",
+          input: { accounts: parsed.accounts },
+        }
+      : null,
+  ].filter((call) => call !== null)
+  const toolsSinceUser = prompt
+    .slice(userIndex)
+    .filter((message) => message.role === "tool").length
+  const next = calls[toolsSinceUser]
+  if (next) return { kind: "tool", ...next }
+  if (toolsSinceUser > 0)
     return {
       kind: "text",
-      text:
-        calls > 0
-          ? "I've added that to your setup list. Check each one in your setup list, fill in anything missing, then confirm the ones that look right."
-          : "Tell me what you sell, one per line.",
-    }
-  }
-  const parsed = parseSetupRehearsalLines(lastText(last))
-  if (parsed.items.length > 0)
-    return {
-      kind: "tool",
-      toolName: "setup_draft_upsert_items",
-      input: { items: parsed.items },
-    }
-  if (parsed.customers.length > 0)
-    return {
-      kind: "tool",
-      toolName: "setup_draft_upsert_customers",
-      input: { customers: parsed.customers },
+      text: "I've added that to your setup list. Check each one in your setup list, fill in anything missing, then confirm the ones that look right.",
     }
   return {
     kind: "text",

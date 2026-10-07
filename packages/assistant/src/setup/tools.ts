@@ -5,6 +5,7 @@ import { tool } from "ai"
 import { z } from "zod"
 import {
   SETUP_DRAFT_MAX_ENTITIES,
+  type SetupEntityKind,
   type SetupEntityPayload,
   type SetupEntitySource,
   type SetupOpenQuestion,
@@ -16,6 +17,7 @@ import {
   setupEntityKey,
   setupEntityKind,
   setupFollowUpFieldSchema,
+  setupMoneyAccountPayloadSchema,
   setupProductPayloadSchema,
   setupServicePayloadSchema,
 } from "./contracts"
@@ -32,7 +34,7 @@ export type SetupBusinessContext = {
 
 export type SetupDraftEntityView = {
   key: string
-  kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
+  kind: SetupEntityKind
   state: string
   payload: unknown
   openQuestions: unknown
@@ -40,7 +42,7 @@ export type SetupDraftEntityView = {
 
 export type SetupDraftEntityWrite = {
   key: string
-  kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
+  kind: SetupEntityKind
   state: "NEEDS_INPUT" | "PROPOSED"
   payload: SetupEntityPayload
   source: SetupEntitySource
@@ -188,6 +190,37 @@ const itemInputSchema = z.object({
     .describe(
       "Products only: attachmentId of a product photo the owner sent for this item.",
     ),
+  usage: z
+    .enum(["sell", "use", "both"])
+    .optional()
+    .describe(
+      "Products only. sell (default): sold to customers. use: used in the business but not sold, e.g. feed, packaging, fuel; needs no selling price. both: used and also sold.",
+    ),
+  quote: quoteField,
+  followUps: followUpsField,
+  ...provenanceFields,
+})
+
+const moneyAccountInputSchema = z.object({
+  key: z.string().max(140).optional(),
+  name: z
+    .string()
+    .min(1)
+    .max(100)
+    .describe('How the owner names it, e.g. "Shop cash", "GTBank", "Opay".'),
+  purpose: z
+    .enum(["cash", "bank"])
+    .describe(
+      "cash: money kept in hand or a till. bank: a bank or mobile money account.",
+    ),
+  bankName: z.string().max(60).optional(),
+  balance: z
+    .string()
+    .max(32)
+    .optional()
+    .describe(
+      "Money in it right now, major units as digits. Leave out if not said.",
+    ),
   quote: quoteField,
   followUps: followUpsField,
   ...provenanceFields,
@@ -272,9 +305,39 @@ function itemPayload(
     }),
     options: input.options,
     photoAttachmentId: input.photoAttachmentId,
+    usage:
+      input.usage === "use"
+        ? ("INTERNAL_USE" as const)
+        : input.usage === "both"
+          ? ("BOTH" as const)
+          : undefined,
   })
   warnings.push(...vocabulary)
   const parsed = setupProductPayloadSchema.safeParse(payload)
+  return parsed.success ? parsed.data : null
+}
+
+function moneyAccountPayload(
+  input: z.infer<typeof moneyAccountInputSchema>,
+  warnings: string[],
+): SetupEntityPayload | null {
+  const openingBalanceMinor =
+    input.balance === undefined
+      ? undefined
+      : (majorAmountToMinor(input.balance) ?? undefined)
+  if (input.balance && openingBalanceMinor === undefined)
+    warnings.push(
+      `Balance "${input.balance}" for ${input.name} was not an amount.`,
+    )
+  const parsed = setupMoneyAccountPayloadSchema.safeParse({
+    kind: "money_account",
+    name: input.name.trim(),
+    purpose: input.purpose === "bank" ? "BANK" : "CASH",
+    bankName: input.bankName?.trim() || undefined,
+    openingBalanceMinor,
+  })
+  if (!parsed.success)
+    warnings.push(`${input.name} has invalid account details.`)
   return parsed.success ? parsed.data : null
 }
 
@@ -571,6 +634,29 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
             sourceAttachmentId: customer.sourceAttachmentId,
             sourceLocation: customer.sourceLocation,
             uncertain: customer.uncertain,
+          })),
+          warnings,
+        )
+      },
+    }),
+    setup_draft_upsert_money_accounts: tool({
+      description:
+        "Stage where the business keeps its money: each cash pocket and each bank or mobile money account, with the balance in it now if the owner said. Nothing is created until the owner confirms.",
+      inputSchema: z.object({
+        accounts: z.array(moneyAccountInputSchema).min(1).max(15),
+      }),
+      execute: async ({ accounts }) => {
+        const warnings: string[] = []
+        return stage(
+          accounts.map((account) => ({
+            key: account.key,
+            name: account.name,
+            payload: moneyAccountPayload(account, warnings),
+            quote: account.quote,
+            followUps: account.followUps,
+            sourceAttachmentId: account.sourceAttachmentId,
+            sourceLocation: account.sourceLocation,
+            uncertain: account.uncertain,
           })),
           warnings,
         )

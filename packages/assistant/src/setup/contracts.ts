@@ -124,15 +124,33 @@ export const setupCustomerPayloadSchema = z
   })
   .strict()
 
+/**
+ * Where the business keeps its money. Opening balances are dated at the
+ * Finance book's start date by the add step, so no date is staged here.
+ */
+export const setupMoneyAccountPayloadSchema = z
+  .object({
+    kind: z.literal("money_account"),
+    name: z.string().trim().min(1).max(100),
+    purpose: z.enum(["CASH", "BANK"]),
+    bankName: z.string().trim().min(1).max(60).optional(),
+    openingBalanceMinor: z.number().int().min(0).max(10_000_000_000).optional(),
+  })
+  .strict()
+
 export const setupEntityPayloadSchema = z.discriminatedUnion("kind", [
   setupProductPayloadSchema,
   setupServicePayloadSchema,
   setupCustomerPayloadSchema,
+  setupMoneyAccountPayloadSchema,
 ])
 export type SetupEntityPayload = z.infer<typeof setupEntityPayloadSchema>
 export type SetupProductPayload = z.infer<typeof setupProductPayloadSchema>
 export type SetupServicePayload = z.infer<typeof setupServicePayloadSchema>
 export type SetupCustomerPayload = z.infer<typeof setupCustomerPayloadSchema>
+export type SetupMoneyAccountPayload = z.infer<
+  typeof setupMoneyAccountPayloadSchema
+>
 
 export const setupEntitySourceSchema = z.object({
   messageId: z.string().max(80).nullable(),
@@ -180,7 +198,12 @@ export function deriveSetupEntityState(
   questions: SetupOpenQuestion[],
 ): { state: "NEEDS_INPUT" | "PROPOSED"; questions: SetupOpenQuestion[] } {
   const derived: SetupOpenQuestion[] = []
-  if (payload.kind === "product" && payload.priceMinor === undefined)
+  // Items the business only uses (feed, packaging) are never sold: no price.
+  if (
+    payload.kind === "product" &&
+    payload.usage !== "INTERNAL_USE" &&
+    payload.priceMinor === undefined
+  )
     derived.push({
       field: "price",
       question: `What is your selling price for one ${payload.unitName.toLowerCase()} of ${payload.name}?`,
@@ -225,24 +248,41 @@ export function deriveSetupEntityState(
 function answered(payload: SetupEntityPayload, field: SetupFollowUpField) {
   switch (field) {
     case "price":
-      return payload.kind !== "customer" && payload.priceMinor !== undefined
+      return (
+        (payload.kind === "product" || payload.kind === "service") &&
+        (payload.priceMinor !== undefined ||
+          (payload.kind === "product" && payload.usage === "INTERNAL_USE"))
+      )
     case "stock":
       return payload.kind === "product" && payload.openingStock !== undefined
     case "category":
-      return payload.kind !== "customer" && payload.categoryKey !== undefined
+      return (
+        (payload.kind === "product" || payload.kind === "service") &&
+        payload.categoryKey !== undefined
+      )
     case "phone":
       return payload.kind === "customer" && payload.phone !== undefined
     case "balance":
-      return payload.kind === "customer" && payload.opening !== undefined
+      return payload.kind === "customer"
+        ? payload.opening !== undefined
+        : payload.kind === "money_account" &&
+            payload.openingBalanceMinor !== undefined
     default:
       return false
   }
 }
 
 export function setupEntityKind(payload: SetupEntityPayload) {
-  return payload.kind === "product"
-    ? ("PRODUCT" as const)
-    : payload.kind === "service"
-      ? ("SERVICE" as const)
-      : ("CUSTOMER" as const)
+  switch (payload.kind) {
+    case "product":
+      return "PRODUCT" as const
+    case "service":
+      return "SERVICE" as const
+    case "customer":
+      return "CUSTOMER" as const
+    case "money_account":
+      return "MONEY_ACCOUNT" as const
+  }
 }
+
+export type SetupEntityKind = ReturnType<typeof setupEntityKind>

@@ -24,6 +24,7 @@ enum SetupDraftEntityKind {
   PRODUCT
   SERVICE
   CUSTOMER
+  MONEY_ACCOUNT
 }
 
 enum SetupDraftEntityState {

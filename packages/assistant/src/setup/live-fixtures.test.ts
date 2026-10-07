@@ -122,7 +122,9 @@ function session(business: SetupBusinessContext) {
 }
 
 function price(payload: SetupEntityPayload | undefined) {
-  return payload && payload.kind !== "customer" ? payload.priceMinor : undefined
+  return payload?.kind === "product" || payload?.kind === "service"
+    ? payload.priceMinor
+    : undefined
 }
 
 function stock(payload: SetupEntityPayload | undefined) {
@@ -227,6 +229,35 @@ suite("setup assistant with a live model", () => {
     ).toBeLessThan(2)
     expect(reply.toLowerCase()).not.toContain("saved to your shop")
   }, 180_000)
+
+  test("items used but not sold and where the money is", async () => {
+    const chat = session(context({ businessName: "Fixture Layers Farm" }))
+    const reply = await chat.say(
+      "We don't sell these but we use them: layer feed, about 30 bags in store, and packaging nylon, 12 packs. Money: about 25,000 cash in the shop and 120,000 in our GTBank account.",
+    )
+    console.info("[live] areas reply:", reply)
+    const feed = chat.find("product", /feed/i)
+    const nylon = chat.find("product", /nylon|packag/i)
+    for (const item of [feed, nylon])
+      expect(item?.kind === "product" && item.usage).toBe("INTERNAL_USE")
+    expect(stock(feed)).toBe("30")
+    expect(stock(nylon)).toBe("12")
+    const accounts = [...chat.draft.values()]
+      .map((entity) => entity.payload)
+      .filter((payload) => payload.kind === "money_account")
+    expect(
+      accounts.map((account) =>
+        account.kind === "money_account"
+          ? [account.purpose, account.openingBalanceMinor]
+          : null,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        ["CASH", 2_500_000],
+        ["BANK", 12_000_000],
+      ]),
+    )
+  }, 120_000)
 
   test("Yoruba: understands the record and replies", async () => {
     const chat = session(context({ businessName: "Fixture Ẹyin Store" }))
