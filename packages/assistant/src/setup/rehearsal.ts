@@ -155,11 +155,13 @@ export function respondSetupRehearsal(
     .filter((message) => message.role === "tool").length
   const next = calls[toolsSinceUser]
   if (next) return { kind: "tool", ...next }
-  if (toolsSinceUser > 0)
+  if (toolsSinceUser > 0) {
+    const cash = parsed.accounts.some((account) => account.purpose === "cash")
     return {
       kind: "text",
-      text: "I've added that to your setup list. Check each one in your setup list, fill in anything missing, then confirm the ones that look right.",
+      text: `I've added that to your setup list.${cash ? " Cash goes into Shop cash, the cash account Finance already keeps for your business." : ""} Check each one in your setup list, fill in anything missing, then confirm the ones that look right.`,
     }
+  }
   return {
     kind: "text",
     text: "Tell me what you sell, one per line, like: Crate of eggs, 4500, 20 crates.",
