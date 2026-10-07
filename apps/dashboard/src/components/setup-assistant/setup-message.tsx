@@ -1,6 +1,10 @@
 "use client"
 
 import {
+  SETUP_ATTACHMENT_PART,
+  type SetupAttachmentPartData,
+} from "@ewatrade/assistant/setup/attachments"
+import {
   SETUP_OFFER_PART,
   SETUP_TOOL_LABELS,
 } from "@ewatrade/assistant/setup/messages"
@@ -10,6 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { UIMessage } from "ai"
 import { memo } from "react"
 import { Streamdown } from "streamdown"
+import { SetupSentAttachment } from "./setup-attachment-chips"
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
@@ -45,16 +50,26 @@ export const SetupMessage = memo(function SetupMessage({
   streaming: boolean
   offer: OfferProps
 }) {
-  if (message.role === "user")
+  if (message.role === "user") {
+    const text = message.parts
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .join("")
+    const files = message.parts.flatMap((part) =>
+      part.type === SETUP_ATTACHMENT_PART
+        ? [(part as { data: SetupAttachmentPartData }).data]
+        : [],
+    )
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-          {message.parts
-            .map((part) => (part.type === "text" ? part.text : ""))
-            .join("")}
+        <div className="flex max-w-[85%] flex-col gap-2 rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+          {text ? <p className="whitespace-pre-wrap">{text}</p> : null}
+          {files.map((file) => (
+            <SetupSentAttachment key={file.attachmentId} data={file} inverted />
+          ))}
         </div>
       </div>
     )
+  }
 
   const tools = message.parts.filter((part) => part.type.startsWith("tool-"))
   const texts = message.parts.filter((part) => part.type === "text")

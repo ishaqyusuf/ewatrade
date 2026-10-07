@@ -5,12 +5,15 @@ import { Badge, Button, Input, MoneyInput, cn } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
 import Link from "next/link"
 import { type ReactNode, useId, useState } from "react"
+import { AttachmentThumbnail } from "./setup-attachment-chips"
 import {
+  type SetupAttachmentName,
   type SetupDraftEntity,
   entityEmoji,
   entityErrorCopy,
   entityPayload,
   entityQuestions,
+  entitySource,
   entitySummary,
 } from "./setup-format"
 
@@ -25,6 +28,8 @@ const STATE_LABEL: Record<SetupDraftEntity["state"], string> = {
 
 type CardProps = {
   entity: SetupDraftEntity
+  /** Files sent in this setup, to show where a record was read from. */
+  attachments?: Map<string, SetupAttachmentName>
   currencyCode: string
   pending: boolean
   onSave: (payload: SetupEntityPayload) => void
@@ -33,6 +38,7 @@ type CardProps = {
 
 export function SetupDraftCard({
   entity,
+  attachments,
   currencyCode,
   pending,
   onSave,
@@ -44,6 +50,12 @@ export function SetupDraftCard({
   const emoji = entityEmoji(payload)
   const skipped = entity.state === "SKIPPED"
   const locked = entity.state === "COMMITTED"
+  const source = entitySource(entity)
+  const origin = source.attachmentId
+    ? attachments?.get(source.attachmentId)
+    : undefined
+  const photoId =
+    payload.kind === "product" ? payload.photoAttachmentId : undefined
 
   return (
     <li
@@ -76,6 +88,34 @@ export function SetupDraftCard({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {entitySummary(payload, currencyCode)}
           </p>
+          {origin || (source.uncertain && !locked) ? (
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+              {origin ? (
+                <span className="min-w-0 truncate">
+                  From {origin.fileName}
+                  {source.location ? ` · ${source.location}` : ""}
+                </span>
+              ) : null}
+              {source.uncertain && !locked ? (
+                <Badge variant="outline" title="Part of this was hard to read">
+                  Check this
+                </Badge>
+              ) : null}
+            </p>
+          ) : null}
+          {photoId ? (
+            <div className="mt-2 flex items-center gap-2">
+              <AttachmentThumbnail
+                src={`/api/assistant/attachments/${encodeURIComponent(photoId)}/content`}
+                kind="IMAGE"
+              />
+              <span className="text-[11px] text-muted-foreground">
+                {locked
+                  ? "Photo sent with this product"
+                  : "This photo is added with the product"}
+              </span>
+            </div>
+          ) : null}
           {entity.state === "FAILED" || (locked && entity.errorCode) ? (
             <p
               role={entity.state === "FAILED" ? "alert" : undefined}

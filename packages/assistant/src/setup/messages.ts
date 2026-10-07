@@ -1,5 +1,6 @@
 /** Client-safe constants and server-authored copy shared by API and dashboard. */
 
+import type { SetupAttachmentPartData } from "./attachments"
 import type { SetupFollowUp } from "./follow-up"
 
 export const SETUP_OFFER_PART = "data-setup-offer" as const
@@ -11,7 +12,8 @@ export type SetupDraftChange = { revision: number; keys: string[] }
 export type SetupAssistantDataParts = {
   "setup-offer": Record<string, never>
   "setup-draft": SetupDraftChange
-  "setup-run": { remainingRequests: number }
+  "setup-run": { runId: string; remainingRequests: number }
+  "setup-attachment": SetupAttachmentPartData
 }
 
 export const SETUP_TOOL_LABELS: Record<string, string> = {

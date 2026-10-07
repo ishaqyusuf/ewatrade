@@ -20,11 +20,46 @@ function toDigits(match: RegExpExecArray | null) {
   return String(match[2] ? value * 1000 : value)
 }
 
+/**
+ * Attachment blocks render rows as "[row 4] Eggs | 4500 | 20"; the rehearsal
+ * reads them like typed lines and cites the row, as a real model is told to.
+ */
+function attachmentLine(raw: string, attachmentId: string | null) {
+  const marker = /^\[(row|line|page) (\d+)\](?: \(hard to read\))?\s*/.exec(raw)
+  if (!marker || !attachmentId) return null
+  return {
+    text: raw.slice(marker[0].length).replace(/\s*\|\s*/g, ", "),
+    provenance: {
+      sourceAttachmentId: attachmentId,
+      sourceLocation: `${marker[1]} ${marker[2]}`,
+      ...(raw.includes("(hard to read)") ? { uncertain: true } : {}),
+    },
+  }
+}
+
 export function parseSetupRehearsalLines(text: string) {
   const items: Array<Record<string, unknown>> = []
   const customers: Array<Record<string, unknown>> = []
-  for (const raw of text.split(/\n|;/)) {
-    const line = raw.replace(/^\s*[-*•\d.)]+\s*/, "").trim()
+  let attachmentId: string | null = null
+  for (const source of text.split(/\n|;/)) {
+    const opening = /^<UNTRUSTED_CONTEXT[^>]*attachmentId="([^"]+)"/.exec(
+      source,
+    )
+    if (opening) {
+      attachmentId = opening[1] ?? null
+      continue
+    }
+    if (source.startsWith("</UNTRUSTED_CONTEXT")) {
+      attachmentId = null
+      continue
+    }
+    const fromAttachment = attachmentLine(source.trim(), attachmentId)
+    if (attachmentId && !fromAttachment) continue
+    const provenance = fromAttachment?.provenance ?? {}
+    const line = (fromAttachment?.text ?? source)
+      .replace(/^\s*\([^)]*\)\s*/, "")
+      .replace(/^\s*[-*•\d.)]+\s*/, "")
+      .trim()
     if (!line) continue
     const owes = /^(.+?)\s+owes(?:\s+me)?\s+(.+)$/i.exec(line)
     if (owes?.[1]) {
@@ -32,6 +67,7 @@ export function parseSetupRehearsalLines(text: string) {
         name: owes[1].trim(),
         owesBusiness: toDigits(amount.exec(owes[2] ?? "")),
         quote: line.slice(0, 240),
+        ...provenance,
       })
       continue
     }
@@ -52,6 +88,7 @@ export function parseSetupRehearsalLines(text: string) {
             .replace(/^\w/, (c) => c.toUpperCase())
         : undefined,
       quote: line.slice(0, 240),
+      ...provenance,
     })
   }
   return { items, customers }

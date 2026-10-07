@@ -19,6 +19,29 @@ export type SetupDraftEntity = {
   openQuestions: unknown
   errorCode?: string | null
   committedRecordId?: string | null
+  source?: unknown
+}
+
+export type SetupAttachmentName = {
+  id: string
+  fileName: string
+  kind: string
+  contentType: string
+}
+
+/** Where a record's values were read from, for the "check this" hints. */
+export function entitySource(entity: SetupDraftEntity) {
+  const source = (entity.source ?? {}) as {
+    attachmentId?: unknown
+    location?: unknown
+    uncertain?: unknown
+  }
+  return {
+    attachmentId:
+      typeof source.attachmentId === "string" ? source.attachmentId : null,
+    location: typeof source.location === "string" ? source.location : null,
+    uncertain: source.uncertain === true,
+  }
 }
 
 const ERROR_COPY: Record<string, string> = {
@@ -34,6 +57,8 @@ const ERROR_COPY: Record<string, string> = {
     "Customer added. Set up Finance at the top of this list and their balance is recorded right after.",
   OPENING_BALANCE_PENDING:
     "Customer added. Their opening balance is still being recorded; press Add to finish.",
+  PHOTO_NOT_ADDED:
+    "Added without its photo. You can add the photo from Catalog.",
   OPENING_BALANCE_FAILED:
     "Customer added, but their balance was not recorded yet. Try again.",
 }

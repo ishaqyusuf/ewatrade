@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./runtime-config": "./src/runtime-config.ts",
+    "./media": "./src/media.ts",
     "./provider": "./src/provider.ts",
-    "./rehearsal-model": "./src/rehearsal-model.ts"
+    "./rehearsal-model": "./src/rehearsal-model.ts",
+    "./runtime-config": "./src/runtime-config.ts"
   },
   "scripts": {
     "lint": "biome check .",

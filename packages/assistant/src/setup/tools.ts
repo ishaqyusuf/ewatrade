@@ -47,9 +47,20 @@ export type SetupDraftEntityWrite = {
   openQuestions: SetupOpenQuestion[]
 }
 
+/** Attachments sent in this conversation that records may cite. */
+export type SetupKnownAttachment = {
+  id: string
+  kind: "IMAGE" | "AUDIO" | "PDF" | "SPREADSHEET" | "TEXT"
+  /** For photos: what the photo read found it to be. */
+  imageKind?: "document" | "product_photo" | "other" | null
+}
+
 export type SetupToolDependencies = {
   context: SetupBusinessContext
   sourceMessageId: string | null
+  knownAttachments?: SetupKnownAttachment[]
+  /** Re-checks membership and conversation state before every draft write. */
+  authorize?: () => Promise<boolean>
   readDraft: () => Promise<SetupDraftEntityView[]>
   writeEntities: (
     entities: SetupDraftEntityWrite[],
@@ -72,6 +83,27 @@ const quoteField = z
   .describe(
     "Short exact words from the owner's message that support this record.",
   )
+
+const provenanceFields = {
+  sourceAttachmentId: z
+    .string()
+    .max(64)
+    .optional()
+    .describe(
+      "attachmentId of the file, photo or voice note this record was read from.",
+    ),
+  sourceLocation: z
+    .string()
+    .max(40)
+    .optional()
+    .describe('Where in that attachment, e.g. "row 4", "page 2", "line 7".'),
+  uncertain: z
+    .boolean()
+    .optional()
+    .describe(
+      "True when the source line or cell was hard to read or ambiguous.",
+    ),
+}
 
 const followUpsField = z
   .array(
@@ -149,8 +181,16 @@ const itemInputSchema = z.object({
     .describe(
       "Products only: choices the customer picks, e.g. Size: Small, Large. Every combination becomes its own variant at the same price (at most 36).",
     ),
+  photoAttachmentId: z
+    .string()
+    .max(64)
+    .optional()
+    .describe(
+      "Products only: attachmentId of a product photo the owner sent for this item.",
+    ),
   quote: quoteField,
   followUps: followUpsField,
+  ...provenanceFields,
 })
 
 const customerInputSchema = z.object({
@@ -172,7 +212,14 @@ const customerInputSchema = z.object({
     ),
   quote: quoteField,
   followUps: followUpsField,
+  ...provenanceFields,
 })
+
+type Provenance = {
+  sourceAttachmentId?: string
+  sourceLocation?: string
+  uncertain?: boolean
+}
 
 function itemPayload(
   input: z.infer<typeof itemInputSchema>,
@@ -224,6 +271,7 @@ function itemPayload(
       ]
     }),
     options: input.options,
+    photoAttachmentId: input.photoAttachmentId,
   })
   warnings.push(...vocabulary)
   const parsed = setupProductPayloadSchema.safeParse(payload)
@@ -257,20 +305,75 @@ function customerPayload(
   return parsed.success ? parsed.data : null
 }
 
+const NOT_AUTHORIZED: ToolEnvelope<never> = {
+  status: "failed",
+  warnings: [
+    "The setup list can no longer be changed in this conversation. Tell the owner to reopen setup.",
+  ],
+}
+
 export function createSetupAssistantTools(deps: SetupToolDependencies) {
-  const stage = async (
-    candidates: Array<{
-      key?: string
-      payload: SetupEntityPayload | null
+  const authorized = async () => (deps.authorize ? deps.authorize() : true)
+  const known = new Map(
+    (deps.knownAttachments ?? []).map((attachment) => [
+      attachment.id,
+      attachment,
+    ]),
+  )
+  /** Only attachments actually sent here may be cited; product photos must be photos. */
+  const checkedProvenance = (
+    candidate: {
       name: string
-      quote?: string
-      followUps?: Array<{ field: SetupOpenQuestion["field"]; question: string }>
-    }>,
+      payload: SetupEntityPayload | null
+    } & Provenance,
+    warnings: string[],
+  ) => {
+    let payload = candidate.payload
+    if (
+      payload?.kind === "product" &&
+      payload.photoAttachmentId &&
+      known.get(payload.photoAttachmentId)?.kind !== "IMAGE"
+    ) {
+      warnings.push(
+        `The photo for ${candidate.name} was not found and was left out.`,
+      )
+      payload = { ...payload, photoAttachmentId: undefined }
+    }
+    const attachmentId =
+      candidate.sourceAttachmentId && known.has(candidate.sourceAttachmentId)
+        ? candidate.sourceAttachmentId
+        : undefined
+    if (candidate.sourceAttachmentId && !attachmentId)
+      warnings.push(
+        `Unknown attachment ${candidate.sourceAttachmentId} was ignored.`,
+      )
+    return {
+      payload,
+      attachmentId,
+      location: attachmentId ? candidate.sourceLocation : undefined,
+      uncertain: candidate.uncertain || undefined,
+    }
+  }
+  const stage = async (
+    candidates: Array<
+      {
+        key?: string
+        payload: SetupEntityPayload | null
+        name: string
+        quote?: string
+        followUps?: Array<{
+          field: SetupOpenQuestion["field"]
+          question: string
+        }>
+      } & Provenance
+    >,
     warnings: string[],
   ): Promise<ToolEnvelope<unknown>> => {
     const current = await deps.readDraft()
     const writes: SetupDraftEntityWrite[] = []
-    for (const candidate of candidates) {
+    for (const raw of candidates) {
+      const provenance = checkedProvenance(raw, warnings)
+      const candidate = { ...raw, payload: provenance.payload }
       if (!candidate.payload) {
         warnings.push(
           `${candidate.name} was not added; its details were invalid.`,
@@ -293,7 +396,15 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         kind: setupEntityKind(candidate.payload),
         state: derived.state,
         payload: candidate.payload,
-        source: { messageId: deps.sourceMessageId, quote: candidate.quote },
+        source: {
+          messageId: deps.sourceMessageId,
+          quote: candidate.quote,
+          ...(provenance.attachmentId
+            ? { attachmentId: provenance.attachmentId }
+            : {}),
+          ...(provenance.location ? { location: provenance.location } : {}),
+          ...(provenance.uncertain ? { uncertain: true } : {}),
+        },
         openQuestions: derived.questions,
       })
     }
@@ -308,6 +419,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         ],
       }
     if (writes.length === 0) return { status: "failed", warnings }
+    if (!(await authorized())) return NOT_AUTHORIZED
     const result = await deps.writeEntities(writes)
     if (result.rejected.length > 0)
       warnings.push(
@@ -433,6 +545,9 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
             payload: itemPayload(item, warnings),
             quote: item.quote,
             followUps: item.followUps,
+            sourceAttachmentId: item.sourceAttachmentId,
+            sourceLocation: item.sourceLocation,
+            uncertain: item.uncertain,
           })),
           warnings,
         )
@@ -453,6 +568,9 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
             payload: customerPayload(customer, warnings),
             quote: customer.quote,
             followUps: customer.followUps,
+            sourceAttachmentId: customer.sourceAttachmentId,
+            sourceLocation: customer.sourceLocation,
+            uncertain: customer.uncertain,
           })),
           warnings,
         )
@@ -465,6 +583,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         keys: z.array(z.string().max(140)).min(1).max(25),
       }),
       execute: async ({ keys }): Promise<ToolEnvelope<unknown>> => {
+        if (!(await authorized())) return NOT_AUTHORIZED
         const result = await deps.removeEntities(keys)
         deps.onDraftChanged?.({ revision: result.revision, keys })
         return { status: "success", data: { removed: keys }, warnings: [] }

@@ -36,6 +36,7 @@
     "./tenant-context": "./src/queries/tenants.ts",
     "./types": "./src/types.ts",
     "./assistant": "./src/queries/assistant.ts",
+    "./assistant-attachments": "./src/queries/assistant-attachments.ts",
     "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts"
   },
   "scripts": {

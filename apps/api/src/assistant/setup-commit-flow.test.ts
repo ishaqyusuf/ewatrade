@@ -80,11 +80,74 @@ function harness(entities: Entity[], overrides: Partial<SetupCommitDeps> = {}) {
     })) as never,
     ensureCustomerLedgerAccount: mock(async () => ({ id: "acct_1" })) as never,
     recordCustomerLedgerOpening: mock(async () => ({ id: "entry_1" })) as never,
+    prepareProductPhoto: mock(async () => ({ assetId: "asset_1" })) as never,
+    enqueuePhotoReview: mock(async () => undefined),
     now: () => 0,
     ...overrides,
   }
   return { deps, outcomes }
 }
+
+const withPhoto = (key: string): Entity => ({
+  ...product(key),
+  payload: {
+    kind: "product",
+    name: key,
+    unitName: "Crate",
+    priceMinor: 450_000,
+    photoAttachmentId: "att_photo",
+  },
+})
+
+describe("product photos sent in the setup chat", () => {
+  test("are attached inside item creation and queued for review", async () => {
+    const { deps } = harness([withPhoto("eggs")])
+    const result = await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "LIVE" },
+      "draft",
+      deps,
+    )
+    expect(result.results[0]).toMatchObject({ state: "COMMITTED" })
+    expect(deps.prepareProductPhoto).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ dataClassification: "LIVE" }),
+      {
+        entityId: "ent_eggs",
+        conversationId: "conv_1",
+        attachmentId: "att_photo",
+      },
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ photoAssetIds: ["asset_1"] }),
+    )
+    expect(deps.enqueuePhotoReview).toHaveBeenCalledWith("asset_1")
+  })
+
+  test("a photo that cannot be added never blocks the product", async () => {
+    const { deps, outcomes } = harness([withPhoto("eggs")], {
+      prepareProductPhoto: mock(async () => ({
+        skipped: "PHOTO_NOT_ADDED" as const,
+      })) as never,
+    })
+    const result = await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "QA" },
+      "draft",
+      deps,
+    )
+    expect(result.results[0]).toMatchObject({ state: "COMMITTED" })
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.not.objectContaining({ photoAssetIds: expect.anything() }),
+    )
+    expect(deps.enqueuePhotoReview).not.toHaveBeenCalled()
+    expect(outcomes.at(-1)).toMatchObject({
+      outcome: { state: "COMMITTED", errorCode: "PHOTO_NOT_ADDED" },
+    })
+  })
+})
 
 describe("setup commit flow", () => {
   test("commits products and a customer with a stable ledger command", async () => {

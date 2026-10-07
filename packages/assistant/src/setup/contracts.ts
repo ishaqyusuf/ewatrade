@@ -3,7 +3,7 @@ import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v2"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v3"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */
@@ -92,6 +92,8 @@ export const setupProductPayloadSchema = z
       .max(3)
       .optional(),
     usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    /** A product photo the owner sent in this setup; attached only on add. */
+    photoAttachmentId: z.string().max(64).optional(),
   })
   .strict()
 
@@ -135,6 +137,11 @@ export type SetupCustomerPayload = z.infer<typeof setupCustomerPayloadSchema>
 export const setupEntitySourceSchema = z.object({
   messageId: z.string().max(80).nullable(),
   quote: z.string().max(240).optional(),
+  /** The attachment the values were read from, and where in it. */
+  attachmentId: z.string().max(64).optional(),
+  location: z.string().max(40).optional(),
+  /** Read from a hard-to-read line or cell: the owner should check it. */
+  uncertain: z.boolean().optional(),
 })
 export type SetupEntitySource = z.infer<typeof setupEntitySourceSchema>
 

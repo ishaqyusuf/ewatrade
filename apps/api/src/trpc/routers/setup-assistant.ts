@@ -25,6 +25,7 @@ import {
   setSetupDraftEntityStates,
   upsertSetupDraftEntities,
 } from "@ewatrade/db/assistant"
+import { listSentAssistantAttachments } from "@ewatrade/db/assistant-attachments"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import {
@@ -39,6 +40,7 @@ import {
 } from "../../assistant/setup-context"
 import { readSetupPrerequisites } from "../../assistant/setup-prerequisites"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { setupAssistantAttachmentsRouter } from "./setup-assistant-attachments"
 
 const keysSchema = z.array(z.string().min(1).max(140)).min(1).max(200)
 const conversationIdSchema = z.string().min(1).max(64)
@@ -91,6 +93,8 @@ function setupFollowUpState(entities: DraftEntities) {
 }
 
 export const setupAssistantRouter = createTRPCRouter({
+  attachments: setupAssistantAttachmentsRouter,
+
   state: protectedProcedure.query(async ({ ctx }) => {
     const role = ctx.tenantContext.membership.role
     if (
@@ -110,10 +114,12 @@ export const setupAssistantRouter = createTRPCRouter({
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
         prerequisites: { termsRequired: false, financeBookMissing: false },
         followUp: setupFollowUpState([]),
+        attachments: [],
       }
-    const [messages, draft] = await Promise.all([
+    const [messages, draft, attachments] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
       readSetupDraft(ctx.db, conversation.setupDraft.id),
+      listSentAssistantAttachments(ctx.db, conversation.id),
     ])
     const prerequisites = await readSetupPrerequisites(
       ctx.db,
@@ -135,6 +141,7 @@ export const setupAssistantRouter = createTRPCRouter({
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
       prerequisites,
       followUp: setupFollowUpState(draft.entities),
+      attachments,
     }
   }),
 
@@ -334,15 +341,17 @@ export const setupAssistantRouter = createTRPCRouter({
           code: "CONFLICT",
           message: "Resume the setup assistant before adding records.",
         })
-      const outcome = await commitSetupDraft(ctx.db, scope, draftId).catch(
-        (error: unknown) => {
-          console.error("[setup-commit] batch failed", {
-            requestId: ctx.requestId,
-            ...describeCommitError(error),
-          })
-          throw error
-        },
-      )
+      const outcome = await commitSetupDraft(
+        ctx.db,
+        { ...scope, conversationId: conversation.id },
+        draftId,
+      ).catch((error: unknown) => {
+        console.error("[setup-commit] batch failed", {
+          requestId: ctx.requestId,
+          ...describeCommitError(error),
+        })
+        throw error
+      })
       if (
         !outcome.interrupted &&
         outcome.remaining === 0 &&

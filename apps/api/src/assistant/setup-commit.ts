@@ -22,7 +22,9 @@ import {
   getFinanceBook,
   recordCustomerLedgerOpening,
 } from "@ewatrade/db/queries"
+import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
+import { SETUP_PHOTO_NOT_ADDED, prepareSetupProductPhoto } from "./setup-photo"
 
 type Db = typeof prisma
 
@@ -361,6 +363,8 @@ async function commitCustomer(
 
 export type SetupCommitDeps = {
   readSetupDraft: typeof readSetupDraft
+  prepareProductPhoto: typeof prepareSetupProductPhoto
+  enqueuePhotoReview: (assetId: string) => Promise<void>
   recordOutcome: typeof recordSetupDraftCommitOutcome
   createCatalogItem: typeof createCatalogItem
   createCustomer: typeof createCustomer
@@ -372,6 +376,8 @@ export type SetupCommitDeps = {
 
 const defaultDeps: SetupCommitDeps = {
   readSetupDraft,
+  prepareProductPhoto: prepareSetupProductPhoto,
+  enqueuePhotoReview: enqueueCatalogPhotoReview,
   recordOutcome: recordSetupDraftCommitOutcome,
   createCatalogItem,
   createCustomer,
@@ -394,7 +400,11 @@ const isDomainError = (error: unknown) =>
  */
 export async function commitSetupDraft(
   db: Db,
-  scope: AssistantScope,
+  scope: AssistantScope & {
+    /** For product photos sent in this setup's chat. */
+    conversationId?: string
+    dataClassification?: "LIVE" | "QA"
+  },
   draftId: string,
   deps: SetupCommitDeps = defaultDeps,
 ) {
@@ -441,15 +451,48 @@ export async function commitSetupDraft(
         )
         outcome = { state: "COMMITTED", ...customer }
       } else {
+        const photoAttachmentId =
+          parsed.data.kind === "product"
+            ? parsed.data.photoAttachmentId
+            : undefined
+        // A photo problem never blocks adding the product itself.
+        const photo =
+          photoAttachmentId && scope.conversationId
+            ? await deps.prepareProductPhoto(
+                db,
+                {
+                  ...scope,
+                  dataClassification: scope.dataClassification ?? "QA",
+                },
+                {
+                  entityId: entity.id,
+                  conversationId: scope.conversationId,
+                  attachmentId: photoAttachmentId,
+                },
+              )
+            : null
+        const command = catalogCommandForSetupEntity(entity.id, parsed.data, {
+          actorUserId: scope.userId,
+          storeId: scope.storeId,
+          tenantId: scope.tenantId,
+        })
         const item = await deps.createCatalogItem(
           db,
-          catalogCommandForSetupEntity(entity.id, parsed.data, {
-            actorUserId: scope.userId,
-            storeId: scope.storeId,
-            tenantId: scope.tenantId,
-          }),
+          photo && "assetId" in photo
+            ? { ...command, photoAssetIds: [photo.assetId] }
+            : command,
         )
-        outcome = { state: "COMMITTED", recordId: item.id }
+        if (photo && "assetId" in photo)
+          await deps.enqueuePhotoReview(photo.assetId).catch(() => undefined)
+        outcome =
+          photo && "skipped" in photo
+            ? {
+                state: "COMMITTED",
+                recordId: item.id,
+                errorCode: SETUP_PHOTO_NOT_ADDED,
+                message: "Added without its photo. Add the photo from Catalog.",
+              }
+            : { state: "COMMITTED", recordId: item.id }
       }
     } catch (error) {
       if (!isDomainError(error)) {

@@ -10,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { SetupDraftCard } from "./setup-draft-card"
+import type { SetupAttachmentName } from "./setup-format"
 import {
   ENTITY_GROUPS,
   type SetupDraftEntity,
@@ -24,9 +25,11 @@ import {
 export function SetupDraftPanel({
   conversationId,
   entities,
+  attachments,
   currencyCode,
   prerequisites,
 }: {
+  attachments?: Map<string, SetupAttachmentName>
   /** The Store's setup this list belongs to; writes are refused after a Store switch. */
   conversationId: string
   entities: SetupDraftEntity[]
@@ -238,6 +241,7 @@ export function SetupDraftPanel({
                   <SetupDraftCard
                     key={entity.key}
                     entity={entity}
+                    attachments={attachments}
                     currencyCode={currencyCode}
                     pending={pending}
                     onSave={(payload: SetupEntityPayload) =>

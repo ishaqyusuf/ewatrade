@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./files/pdf-text": "./src/files/pdf-text.ts",
+    "./files/spreadsheet": "./src/files/spreadsheet.ts",
+    "./setup/attachment-processing": "./src/setup/attachment-processing.ts",
+    "./setup/attachments": "./src/setup/attachments.ts",
     "./setup/contracts": "./src/setup/contracts.ts",
     "./setup/follow-up": "./src/setup/follow-up.ts",
     "./setup/messages": "./src/setup/messages.ts",
     "./setup/prompt": "./src/setup/prompt.ts",
+    "./setup/rehearsal": "./src/setup/rehearsal.ts",
     "./setup/tools": "./src/setup/tools.ts",
-    "./setup/rehearsal": "./src/setup/rehearsal.ts"
+    "./setup/vision": "./src/setup/vision.ts"
   },
   "scripts": {
     "lint": "biome check .",
@@ -17,13 +22,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ewatrade/ai": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "ai": "6.0.141",
+    "fflate": "0.8.3",
+    "pdfjs-dist": "5.4.296",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@ewatrade/ai": "workspace:*",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/bun": "latest",
     "typescript": "catalog:"

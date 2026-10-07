@@ -8,10 +8,10 @@ import { SparklesIcon, TaskDone01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { UIMessage } from "ai"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { SetupChat } from "./setup-chat"
 import { SetupDraftPanel } from "./setup-draft-panel"
-import type { SetupDraftEntity } from "./setup-format"
+import type { SetupAttachmentName, SetupDraftEntity } from "./setup-format"
 import type { SetupPrerequisiteState } from "./setup-prerequisites"
 
 type SetupChatMessage = UIMessage<never, SetupAssistantDataParts>
@@ -129,6 +129,10 @@ export function SetupAssistant({
       status={conversation.status}
       messages={data.messages as unknown as SetupChatMessage[]}
       entities={(data.draft?.entities ?? []) as SetupDraftEntity[]}
+      attachments={
+        // Optional so an older API without the field still renders.
+        "attachments" in data ? (data.attachments as SetupAttachmentName[]) : []
+      }
       currencyCode={data.currencyCode}
       prerequisites={data.prerequisites}
       hasAdded={(followUp?.committed ?? 0) > 0}
@@ -211,6 +215,7 @@ function SetupWorkspace({
   status,
   messages,
   entities,
+  attachments,
   currencyCode,
   prerequisites,
   hasAdded,
@@ -223,6 +228,7 @@ function SetupWorkspace({
   status: "OFFERED" | "ACTIVE"
   messages: SetupChatMessage[]
   entities: SetupDraftEntity[]
+  attachments: SetupAttachmentName[]
   currencyCode: string
   prerequisites?: SetupPrerequisiteState
   /** Once records are in the business, leaving is "done for now", not a skip. */
@@ -234,10 +240,15 @@ function SetupWorkspace({
 }) {
   const [listOpen, setListOpen] = useState(false)
   const count = entities.filter((entity) => entity.state !== "SKIPPED").length
+  const attachmentNames = useMemo(
+    () => new Map(attachments.map((attachment) => [attachment.id, attachment])),
+    [attachments],
+  )
   const panel = (
     <SetupDraftPanel
       conversationId={conversationId}
       entities={entities}
+      attachments={attachmentNames}
       currencyCode={currencyCode}
       prerequisites={prerequisites}
     />

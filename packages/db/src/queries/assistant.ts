@@ -5,6 +5,7 @@ import {
   type SetupDraftEntityKind,
   type SetupDraftEntityState,
 } from "../../generated/prisma/client"
+import { claimAssistantAttachmentsForMessage } from "./assistant-attachments"
 import type { DbClient } from "./types"
 
 export type AssistantScope = {
@@ -220,6 +221,8 @@ export async function beginAssistantRun(
     provider: string
     requestId: string
     userMessage: AssistantStoredMessage
+    /** READY attachments sent with this message; bound in the same transaction. */
+    attachmentIds?: string[]
   },
 ) {
   const begin = async (tx: Prisma.TransactionClient) => {
@@ -233,6 +236,12 @@ export async function beginAssistantRun(
       select: { id: true, conversationId: true, status: true },
     })
     if (prior) return { replay: true as const, run: prior }
+    await claimAssistantAttachmentsForMessage(tx, {
+      conversationId: input.conversationId,
+      actorUserId: input.actorUserId,
+      messageId: input.userMessage.id,
+      attachmentIds: input.attachmentIds ?? [],
+    })
     await appendAssistantMessage(tx, {
       conversationId: input.conversationId,
       message: input.userMessage,
@@ -254,6 +263,62 @@ export async function beginAssistantRun(
   return "$transaction" in db
     ? db.$transaction(begin, transactionOptions)
     : begin(db)
+}
+
+/** Run status for reconnecting after a dropped stream; only the actor's own runs. */
+export async function readAssistantRun(
+  db: DbClient,
+  scope: AssistantScope,
+  runId: string,
+) {
+  return db.assistantRun.findFirst({
+    where: {
+      id: runId,
+      actorUserId: scope.userId,
+      conversation: { tenantId: scope.tenantId, storeId: scope.storeId },
+    },
+    select: {
+      id: true,
+      conversationId: true,
+      status: true,
+      errorCode: true,
+      startedAt: true,
+      completedAt: true,
+    },
+  })
+}
+
+/**
+ * Cheap re-check before each draft write inside a turn: the actor is still an
+ * active owner/admin of the Tenant and this Store's setup is still open.
+ */
+export async function isSetupActorStillAuthorized(
+  db: DbClient,
+  scope: AssistantScope,
+  conversationId: string,
+) {
+  const [membership, conversation] = await Promise.all([
+    db.membership.findFirst({
+      where: {
+        tenantId: scope.tenantId,
+        userId: scope.userId,
+        status: "ACTIVE",
+        role: { in: ["OWNER", "ADMIN"] },
+        tenant: { isActive: true },
+      },
+      select: { id: true },
+    }),
+    db.assistantConversation.findFirst({
+      where: {
+        id: conversationId,
+        tenantId: scope.tenantId,
+        storeId: scope.storeId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    }),
+  ])
+  return Boolean(membership && conversation)
 }
 
 export type AssistantUsage = {
@@ -363,7 +428,13 @@ export async function reserveAssistantBudget(
     await tx.assistantBudget.update({
       where: { scopeKey: input.scopeKey },
       data: reset
-        ? { windowStartedAt: now, requests: 1, tokens: 0 }
+        ? {
+            windowStartedAt: now,
+            requests: 1,
+            tokens: 0,
+            audioSeconds: 0,
+            visionImages: 0,
+          }
         : { requests: { increment: 1 } },
     })
     return {
@@ -374,6 +445,125 @@ export async function reserveAssistantBudget(
   return "$transaction" in db
     ? db.$transaction(reserve, transactionOptions)
     : reserve(db)
+}
+
+export type AssistantMediaBudgetLimits = {
+  maxAudioSeconds: number
+  maxVisionImages: number
+  windowMs: number
+}
+
+/**
+ * Reserves transcription seconds or vision images against the same rolling
+ * window as chat turns. Exhaustion refuses the media step, never the draft.
+ */
+export async function reserveAssistantMediaBudget(
+  db: DbClient,
+  input: {
+    scopeKey: string
+    limits: AssistantMediaBudgetLimits
+    audioSeconds?: number
+    images?: number
+  },
+) {
+  const audioSeconds = Math.max(0, Math.ceil(input.audioSeconds ?? 0))
+  const images = Math.max(0, Math.ceil(input.images ?? 0))
+  const reserve = async (tx: Prisma.TransactionClient) => {
+    const now = new Date()
+    await tx.assistantBudget.upsert({
+      where: { scopeKey: input.scopeKey },
+      create: { scopeKey: input.scopeKey, windowStartedAt: now },
+      update: {},
+    })
+    const [budget] = await tx.$queryRaw<
+      Array<{
+        audioSeconds: number
+        visionImages: number
+        windowStartedAt: Date
+      }>
+    >(Prisma.sql`
+      SELECT "audioSeconds", "visionImages", "windowStartedAt" FROM "AssistantBudget"
+      WHERE "scopeKey" = ${input.scopeKey} FOR UPDATE
+    `)
+    if (!budget) return { allowed: false as const }
+    const reset =
+      now.getTime() - budget.windowStartedAt.getTime() >= input.limits.windowMs
+    const usedAudio = reset ? 0 : budget.audioSeconds
+    const usedImages = reset ? 0 : budget.visionImages
+    if (
+      usedAudio + audioSeconds > input.limits.maxAudioSeconds ||
+      usedImages + images > input.limits.maxVisionImages
+    )
+      return { allowed: false as const }
+    await tx.assistantBudget.update({
+      where: { scopeKey: input.scopeKey },
+      data: reset
+        ? {
+            windowStartedAt: now,
+            requests: 0,
+            tokens: 0,
+            audioSeconds,
+            visionImages: images,
+          }
+        : {
+            audioSeconds: { increment: audioSeconds },
+            visionImages: { increment: images },
+          },
+    })
+    return { allowed: true as const }
+  }
+  return "$transaction" in db
+    ? db.$transaction(reserve, transactionOptions)
+    : reserve(db)
+}
+
+/** Usage for attachment work (transcription, vision, parsing) outside a run. */
+export async function recordAssistantAttachmentUsage(
+  db: DbClient,
+  input: {
+    attachmentId: string
+    tenantId: string
+    actorUserId: string
+    provider: string
+    model: string
+    requestClass: "transcribe" | "vision" | "extract"
+    outcome: "success" | "failed"
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+    audioSeconds?: number
+    imageCount?: number
+    durationMs?: number
+    budgetScopeKey?: string
+  },
+) {
+  const record = async (tx: Prisma.TransactionClient) => {
+    await tx.assistantUsageEvent.create({
+      data: {
+        attachmentId: input.attachmentId,
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        provider: input.provider,
+        model: input.model,
+        requestClass: input.requestClass,
+        inputTokens: input.inputTokens,
+        outputTokens: input.outputTokens,
+        totalTokens: input.totalTokens,
+        audioSeconds: input.audioSeconds,
+        imageCount: input.imageCount,
+        durationMs: input.durationMs,
+        outcome: input.outcome,
+      },
+    })
+    if (input.budgetScopeKey && input.totalTokens)
+      await tx.assistantBudget.updateMany({
+        where: { scopeKey: input.budgetScopeKey },
+        data: { tokens: { increment: input.totalTokens } },
+      })
+  }
+  return "$transaction" in db
+    ? db.$transaction(record, transactionOptions)
+    : record(db)
 }
 
 const entitySelect = {
