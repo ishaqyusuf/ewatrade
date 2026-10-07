@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./catalog-photo-review": "./src/catalog-photo-review.ts"
+    "./catalog-photo-review": "./src/catalog-photo-review.ts",
+    "./product-analytics": "./src/product-analytics.ts"
   },
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
@@ -30,7 +31,8 @@
     "@sentry/node": "^10.72.0",
     "@trigger.dev/sdk": "4.5.16",
     "sharp": "0.35.5",
-    "libheif-js": "1.23.2"
+    "libheif-js": "1.23.2",
+    "@ewatrade/events": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

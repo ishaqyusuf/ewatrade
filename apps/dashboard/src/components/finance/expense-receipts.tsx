@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { useFinanceForm } from "@/components/finance/form-context"
 import { FormFeedback } from "@/components/forms/form-feedback"
@@ -78,6 +79,7 @@ function ExpenseReceiptWorkspace({
   billId: string
   cancelled: boolean
 }) {
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { actorUserId, tenantId } = useFinanceForm()
@@ -777,6 +779,7 @@ function ExpenseReceiptWorkspace({
     setBusyAsset(receipt.id)
     const activeController = new AbortController()
     controller.current = activeController
+    workflow.track("expense_receipt_download", "started")
     setTransport("download")
     try {
       assertCurrent(activeController.signal)
@@ -788,6 +791,7 @@ function ExpenseReceiptWorkspace({
       )
       assertCurrent(activeController.signal)
       if (!canDownloadExpenseReceipt(fresh)) {
+        workflow.track("expense_receipt_download", "blocked")
         setError("Receipt access changed. Refresh the list before downloading.")
         await query.refetch()
         return
@@ -799,7 +803,12 @@ function ExpenseReceiptWorkspace({
         signal: activeController.signal,
         assertCurrent: () => assertCurrent(activeController.signal),
       })
+      workflow.track("expense_receipt_download", "completed")
     } catch (failure) {
+      workflow.track(
+        "expense_receipt_download",
+        activeController.signal.aborted ? "cancelled" : "failed",
+      )
       if (mounted.current)
         setError(
           activeController.signal.aborted

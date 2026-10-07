@@ -1,5 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Field,
   FieldGroup,
@@ -35,6 +36,7 @@ export function LoginForm({
     signIn(): Promise<void>
   }
 }) {
+  const workflow = useDashboardWorkflow()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -55,7 +57,7 @@ export function LoginForm({
         await accountEntry.signIn()
         return
       }
-      const res = await fetch("/api/auth/login", {
+      const res = await workflow.fetch("login", "/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

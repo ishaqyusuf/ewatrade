@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { receiptFileStem } from "@ewatrade/order-receipts"
 import { useEffect, useState } from "react"
 
@@ -6,6 +7,7 @@ export function useReceiptDownload(
   pdfBase64: string | undefined,
   orderNumbers: string[],
 ) {
+  const workflow = useDashboardWorkflow()
   const [url, setUrl] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState("")
@@ -28,6 +30,7 @@ export function useReceiptDownload(
     setPending(true)
     setError(null)
     setMessage("Preparing download…")
+    workflow.track("receipt_download", "started", { channel: "browser" })
     try {
       const bytes = Uint8Array.from(atob(pdfBase64), (char) =>
         char.charCodeAt(0),
@@ -50,10 +53,12 @@ export function useReceiptDownload(
       link.download = output.filename
       document.body.append(link)
       link.click()
+      workflow.track("receipt_download", "completed", { channel: "browser" })
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000)
       setMessage(`Download ready: ${output.filename}`)
     } catch (cause) {
+      workflow.track("receipt_download", "failed", { channel: "browser" })
       setError(
         cause instanceof Error
           ? cause.message

@@ -68,9 +68,11 @@ export default function RootLayout({
       )}
     >
       <body className="bg-background font-sans antialiased">
-        <Providers qaAcceleratorEnabled={qaAcceleratorEnabled}>
-          <DashboardEventsProvider>{children}</DashboardEventsProvider>
-        </Providers>
+        <DashboardEventsProvider>
+          <Providers qaAcceleratorEnabled={qaAcceleratorEnabled}>
+            {children}
+          </Providers>
+        </DashboardEventsProvider>
       </body>
     </html>
   )

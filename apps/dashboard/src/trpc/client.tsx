@@ -1,12 +1,14 @@
 "use client"
 
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
+import { useEvents } from "@ewatrade/events/client"
 import { resolveTenantDomain } from "@ewatrade/utils"
 import { QueryClientProvider, isServer } from "@tanstack/react-query"
 import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client"
 import { createTRPCContext } from "@trpc/tanstack-react-query"
 import { useState } from "react"
 import superjson from "superjson"
+import { dashboardAnalyticsLink } from "./analytics-link"
 import { makeQueryClient } from "./query-client"
 
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
@@ -41,10 +43,12 @@ function getTenantSlugFromBrowserHost() {
 export function TRPCReactProvider({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const events = useEvents()
   const queryClient = getQueryClient()
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
+        dashboardAnalyticsLink<AppRouter>(events.track),
         httpBatchLink({
           url: "/api/trpc",
           transformer: superjson,
@@ -53,6 +57,9 @@ export function TRPCReactProvider({
 
             return {
               "x-trpc-source": "react",
+              "x-ewatrade-analytics": events.canCollect()
+                ? "allowed"
+                : "denied",
               ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
             }
           },

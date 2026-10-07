@@ -1,10 +1,12 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { Button } from "@ewatrade/ui"
 import QRCode from "qrcode"
 import { useEffect, useState } from "react"
 
 export function QrCodeCard({ url }: { url: string }) {
+  const workflow = useDashboardWorkflow()
   const [image, setImage] = useState("")
 
   useEffect(() => {
@@ -19,10 +21,12 @@ export function QrCodeCard({ url }: { url: string }) {
 
   const download = () => {
     if (!image) return
+    workflow.track("channel_qr_download", "started")
     const anchor = document.createElement("a")
     anchor.download = "customer-entry-qr.png"
     anchor.href = image
     anchor.click()
+    workflow.track("channel_qr_download", "completed")
   }
 
   return (

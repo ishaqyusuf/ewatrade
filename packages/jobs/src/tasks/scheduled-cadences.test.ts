@@ -30,6 +30,7 @@ describe("scheduled cadences", () => {
     expect(Object.fromEntries([...byTask].sort())).toEqual({
       "account-privacy.notice-alert": "*/15 * * * *",
       "account-privacy.verification-expiry": "0 * * * *",
+      "analytics.dashboard.recovery": "* * * * *",
       "catalog.photo.cleanup": "*/5 * * * *",
       "catalog.photo.review-recovery": "* * * * *",
       "domains.reconcile": "*/15 * * * *",

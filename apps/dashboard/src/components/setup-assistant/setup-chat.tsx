@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
@@ -55,6 +56,8 @@ export function SetupChat({
   onBegin: () => void
   onSkip: () => void
 }) {
+  const settled = useRef(true)
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [input, setInput] = useState("")
@@ -96,7 +99,28 @@ export function SetupChat({
     onData: (part) => {
       if (part.type === "data-setup-draft") void refreshDraft()
     },
-    onFinish: () => void refreshDraft(),
+    onFinish: ({ isAbort, isError, isDisconnect }) => {
+      if (settled.current) return
+      settled.current = true
+      workflow.track(
+        "assistant_message",
+        isAbort
+          ? "cancelled"
+          : isError || isDisconnect
+            ? "failed"
+            : "completed",
+        { channel: "browser_stream" },
+      )
+      void refreshDraft()
+    },
+    onError: () => {
+      if (!settled.current) {
+        settled.current = true
+        workflow.track("assistant_message", "failed", {
+          channel: "browser_stream",
+        })
+      }
+    },
   })
   const { setMessages } = chat
 
@@ -118,6 +142,10 @@ export function SetupChat({
   const send = (text: string) => {
     const value = text.trim()
     if (!value || busy || !canType) return
+    settled.current = false
+    workflow.track("assistant_message", "started", {
+      channel: "browser_stream",
+    })
     void chat.sendMessage({ text: value })
     setInput("")
   }

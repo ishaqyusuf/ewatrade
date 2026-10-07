@@ -1,6 +1,9 @@
+"use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@ewatrade/ui"
 
 export function StaffEmptyState() {
+  useDashboardEmptyState("staff")
   return (
     <Empty>
       <EmptyHeader>

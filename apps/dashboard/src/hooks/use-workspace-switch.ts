@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import type { TenantContext } from "@/lib/tenant"
 import { clearDashboardDataCache } from "@/trpc/client"
@@ -119,13 +120,19 @@ export function createWorkspaceSwitchActions(
 }
 
 export function useWorkspaceSwitch(ctx: TenantContext) {
+  const workflow = useDashboardWorkflow()
   const pathname = usePathname()
   const [isSwitching, setIsSwitching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const actions = createWorkspaceSwitchActions(ctx, {
     assign: (url) => window.location.assign(url),
     clearCache: clearDashboardDataCache,
-    fetcher: (input, init) => fetch(input, init),
+    fetcher: (input, init) =>
+      workflow.fetch(
+        input === "/api/tenants/active" ? "business_switch" : "store_switch",
+        input,
+        init,
+      ),
     pathname,
   })
 

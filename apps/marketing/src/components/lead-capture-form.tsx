@@ -9,12 +9,15 @@ import { useLeadQuickFillRegistration } from "@/components/qa/lead-capture-quick
 import { QaQuickFillButton } from "@/components/qa/qa-quick-fill-button"
 import { useOptionalQaWebAccelerator } from "@/components/qa/qa-web-accelerator"
 import type { EarlyAccessQaPreview } from "@/lib/early-access-preview"
+import { createLeadCaptureAnalytics } from "@/lib/lead-capture-analytics"
 import { createLeadDraft } from "@/lib/qa-lead-fill"
+import { useEvents } from "@ewatrade/events/client"
 import {
   startTransition,
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -112,6 +115,8 @@ export function LeadCaptureForm({
   const qa = useOptionalQaWebAccelerator()
   const registerQuickFill = useLeadQuickFillRegistration()
   const { notify } = useNotifications()
+  const { track } = useEvents()
+  const analytics = useMemo(() => createLeadCaptureAnalytics(type), [type])
 
   function setField(field: keyof LeadDraft, value: string) {
     setPhoneInvalid(false)
@@ -164,10 +169,12 @@ export function LeadCaptureForm({
   ])
 
   async function handleSubmit(formData: FormData) {
+    analytics.start(track)
     const phone = draft.phone.trim()
       ? resolveSignupPhone(draft.phone, draft.countryCode)
       : ""
     if (type === "early-access" && phone === null) {
+      analytics.failed(track, "validation_error")
       setPhoneInvalid(true)
       return
     }
@@ -209,6 +216,7 @@ export function LeadCaptureForm({
       }
 
       if (!response.ok) {
+        analytics.failed(track, "http_error")
         setState("error")
         const nextMessage =
           result.message ?? "We could not save your request. Please try again."
@@ -229,6 +237,7 @@ export function LeadCaptureForm({
           ? "Your early access request has been received."
           : "You have been added to the waitlist.")
 
+      analytics.submitted(track)
       setState("success")
       setQaPreview(result.qaPreview ?? null)
       setMessage(nextMessage)
@@ -241,6 +250,7 @@ export function LeadCaptureForm({
         description: nextMessage,
       })
     } catch {
+      analytics.failed(track, "request_error")
       setState("error")
       const nextMessage = "Something went wrong while sending your request."
 
@@ -298,6 +308,7 @@ export function LeadCaptureForm({
       <form
         ref={formRef}
         className="mt-6"
+        onChangeCapture={() => analytics.start(track)}
         action={(formData) => {
           startTransition(() => {
             void handleSubmit(formData)
@@ -385,9 +396,10 @@ export function LeadCaptureForm({
               </p>
               <EarlyAccessContextFields
                 draft={draft}
-                onChange={(context) =>
+                onChange={(context) => {
+                  analytics.start(track)
                   setDraft((current) => ({ ...current, ...context }))
-                }
+                }}
               />
 
               <FieldGroup className="lead-capture-row grid md:grid-cols-2">
@@ -401,6 +413,7 @@ export function LeadCaptureForm({
                     value={draft.countryCode}
                     onValueChange={(country) => {
                       if (!country) return
+                      analytics.start(track)
                       setPhoneInvalid(false)
                       setDraft((current) => ({
                         ...current,

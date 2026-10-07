@@ -1,5 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { OpenSearchButton } from "@/components/dashboard/open-search-button"
 import {
@@ -49,6 +50,7 @@ function groupLabel(group: string) {
 }
 
 export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
+  const workflow = useDashboardWorkflow()
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
@@ -132,6 +134,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
         return
       }
 
+      workflow.track("search", "started", { channel: "command" })
       setIsLoading(true)
 
       try {
@@ -149,10 +152,15 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
           )
         }
 
+        workflow.track("search", "completed", {
+          channel: "command",
+          item_count: (data as DashboardSearchResponse).results.length,
+        })
         setResults((data as DashboardSearchResponse).results)
         setError(null)
       } catch (searchError) {
         if (!controller.signal.aborted) {
+          workflow.track("search", "failed", { channel: "command" })
           setError(
             searchError instanceof Error
               ? searchError.message
@@ -168,7 +176,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [open, query])
+  }, [open, query, workflow])
 
   function goTo(href: string) {
     setOpen(false)

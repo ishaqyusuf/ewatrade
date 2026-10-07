@@ -1,6 +1,7 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useTRPC } from "@/trpc/client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { Button } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
@@ -14,6 +15,7 @@ export function FinanceReportLedgerExport({
   bookId,
   ledger,
 }: { bookId: string; ledger: FinanceLedger }) {
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const client = useQueryClient()
   const generation = useRef(0)
@@ -34,6 +36,7 @@ export function FinanceReportLedgerExport({
     const cancelled = () => generation.current !== attempt
     setProgress(0)
     setError(undefined)
+    workflow.track("finance_ledger_export", "started", { channel: "browser" })
     try {
       const entries = await collectFinanceLedgerPages(
         ledger,
@@ -67,8 +70,12 @@ export function FinanceReportLedgerExport({
       link.href = url
       link.download = `report-account-${ledger.account.id}-snapshot-${ledger.snapshotSequence}.csv`
       link.click()
+      workflow.track("finance_ledger_export", "completed", {
+        channel: "browser",
+      })
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (failure) {
+      workflow.track("finance_ledger_export", "failed", { channel: "browser" })
       if (!cancelled())
         setError(
           failure instanceof Error
@@ -101,6 +108,7 @@ export function FinanceReportLedgerExport({
             variant="ghost"
             onClick={() => {
               generation.current += 1
+              workflow.track("finance_ledger_export", "cancelled")
               running.current = false
               setProgress(null)
             }}

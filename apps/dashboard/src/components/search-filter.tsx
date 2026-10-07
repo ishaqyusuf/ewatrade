@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { type FilterChip, FilterList } from "@/components/filter-list"
 import { SearchField } from "@/components/search-field"
@@ -37,6 +38,7 @@ export function SearchFilter({
   placeholder: string
   value: string
 }) {
+  const workflow = useDashboardWorkflow()
   const mobile = useMobileOverlay()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [open, setOpen] = useState(false)
@@ -48,6 +50,7 @@ export function SearchFilter({
   const searchRef = useRef<HTMLFormElement>(null)
   function clear() {
     setOpen(false)
+    workflow.track("filter", "completed", { channel: "clear" })
     onClear()
   }
   return (
@@ -60,7 +63,10 @@ export function SearchFilter({
             className="sm:max-w-[350px] sm:shrink-0 max-md:[&_input]:h-11 max-md:[&>svg]:top-[14px]"
             placeholder={placeholder}
             value={value}
-            onSearch={onSearch}
+            onSearch={(value) => {
+              workflow.track("search", "started", { channel: "table" })
+              onSearch(value)
+            }}
             onClear={clear}
             submit
           >
@@ -102,6 +108,9 @@ export function SearchFilter({
           <FilterList filters={filters} onClear={clear} />
         </div>
         <DropdownMenuContent
+          onClickCapture={() =>
+            workflow.track("filter", "started", { channel: "desktop" })
+          }
           anchor={searchRef}
           appearance="dashboard"
           className="w-(--anchor-width) max-w-[calc(100vw-32px)]"
@@ -115,7 +124,10 @@ export function SearchFilter({
         <SearchFilterSheet
           config={mobileFilters}
           triggerRef={triggerRef}
-          onApplied={() => setSheetOpen(false)}
+          onApplied={() => {
+            workflow.track("filter", "completed", { channel: "mobile_apply" })
+            setSheetOpen(false)
+          }}
         />
       ) : null}
     </Sheet>

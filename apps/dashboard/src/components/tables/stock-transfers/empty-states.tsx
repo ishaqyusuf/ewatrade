@@ -1,8 +1,11 @@
+"use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 import { Button } from "@ewatrade/ui"
 export function TransfersEmpty({
   filtered,
   onClear,
 }: { filtered: boolean; onClear: () => void }) {
+  useDashboardEmptyState("stock-transfers")
   return (
     <div className="grid justify-items-center gap-3 border border-border py-20 text-center">
       <h2 className="text-lg font-medium">

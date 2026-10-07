@@ -8,6 +8,7 @@ import { commercialOrderReminders } from "./commercial-order-reminders"
 import { domainReconciliation } from "./domains"
 import { playRefundReviewAlert } from "./play-refund-review-alert"
 import { prescriptionRetention } from "./prescription-retention"
+import { productAnalyticsRecovery } from "./product-analytics"
 import { serviceCommerceBookingReminderSchedule } from "./service-commerce-booking-reminder-schedule"
 import { serviceCommerceCustomerNotificationSchedule } from "./service-commerce-customer-notification-schedule"
 import { serviceNotificationSchedule } from "./service-notification-dispatch"
@@ -38,6 +39,7 @@ export const SCHEDULED_CADENCES = {
     cron: "* * * * *",
     tasks: [
       catalogPhotoReviewRecovery,
+      productAnalyticsRecovery,
       storeConversationEscalations,
       storeConversationNotificationSchedule,
       storeConversationWhatsAppBridgeSchedule,

@@ -1,0 +1,21 @@
+// Already-sanitized server envelopes. References stay internal for purge/QA rechecks.
+model ProductAnalyticsEvent {
+  id          String    @id @db.Uuid
+  userId      String
+  tenantId    String?
+  envelope    Json
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  availableAt DateTime  @default(now())
+  attempts    Int       @default(0)
+  leaseToken  String?
+  leaseUntil  DateTime?
+  deliveredAt DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([deliveredAt, availableAt, leaseUntil])
+  @@index([expiresAt])
+  @@index([userId])
+  @@index([tenantId])
+}

@@ -7,6 +7,12 @@ import {
   createAttributedBrowserAnalytics,
 } from "./browser-attribution"
 import { createBrowserStorage } from "./browser-storage"
+import {
+  type DashboardBrowserAction,
+  type WorkflowPhase,
+  dashboardBrowserActions,
+  workflowEvent,
+} from "./dashboard-workflows"
 import type { EventMetadata } from "./event-metadata"
 import { EventsContext } from "./events-context"
 
@@ -18,8 +24,26 @@ export function DashboardEventsRuntime({
   const track = useRef<(name: string, properties?: EventMetadata) => void>(
     () => {},
   )
+  const listeners = useRef(new Set<() => void>())
+  const canCollect = useRef<() => boolean>(() => false)
   const value = useMemo(
     () => ({
+      canCollect: () => canCollect.current(),
+      whenReady: (callback: () => void) => {
+        listeners.current.add(callback)
+        if (canCollect.current()) callback()
+        return () => {
+          listeners.current.delete(callback)
+        }
+      },
+      workflow: (
+        action: DashboardBrowserAction,
+        phase: WorkflowPhase,
+        metadata: EventMetadata = {},
+      ) => {
+        const event = workflowEvent(dashboardBrowserActions[action], phase)
+        track.current(event.name, { ...metadata, ...event.properties })
+      },
       track: (name: string, properties?: EventMetadata) =>
         track.current(name, properties),
     }),
@@ -45,6 +69,12 @@ export function DashboardEventsRuntime({
       },
     })
     let currentContext: CapturedContext = null
+    canCollect.current = () =>
+      contextReady &&
+      (!currentContext || currentContext.expiresAt > Date.now()) &&
+      navigator.doNotTrack !== "1" &&
+      !(navigator as Navigator & { globalPrivacyControl?: boolean })
+        .globalPrivacyControl
     track.current = (name, properties = {}) => {
       if (contextReady)
         client.track(name, properties, currentContext, route.current)
@@ -74,6 +104,15 @@ export function DashboardEventsRuntime({
         if (!disposed && current === sequence && context.success) {
           currentContext = context.data
           contextReady = true
+          if (canCollect.current()) {
+            for (const listener of listeners.current) {
+              try {
+                listener()
+              } catch {
+                /* Observations cannot block navigation. */
+              }
+            }
+          }
           client.trackPageView(route.current ?? "/", context.data)
           void client.flush()
         }
@@ -97,6 +136,7 @@ export function DashboardEventsRuntime({
     return () => {
       disposed = true
       track.current = () => {}
+      canCollect.current = () => false
       refresh.current = null
       clearInterval(timer)
       window.removeEventListener("focus", focus)

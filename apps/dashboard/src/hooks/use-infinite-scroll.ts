@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import type { Virtualizer } from "@tanstack/react-virtual"
 import { type RefObject, useCallback, useEffect, useRef } from "react"
@@ -32,6 +33,7 @@ export function useInfiniteScroll<
   fetchNextPage,
   threshold = 20,
 }: UseInfiniteScrollProps<TScrollElement>) {
+  const workflow = useDashboardWorkflow()
   const latest = useRef({
     rowVirtualizer,
     rowCount,
@@ -66,31 +68,51 @@ export function useInfiniteScroll<
     threshold,
   ])
 
-  const requestNextPage = useCallback((explicitRetry = false) => {
-    const state = latest.current
-    if (
-      !state.hasNextPage ||
-      state.isFetchingNextPage ||
-      requestInFlight.current ||
-      (state.isError && !explicitRetry)
-    ) {
-      return
-    }
+  const requestNextPage = useCallback(
+    (explicitRetry = false) => {
+      const state = latest.current
+      if (
+        !state.hasNextPage ||
+        state.isFetchingNextPage ||
+        requestInFlight.current ||
+        (state.isError && !explicitRetry)
+      ) {
+        return
+      }
 
-    requestInFlight.current = true
-    try {
-      Promise.resolve(state.fetchNextPage()).then(
-        () => {
-          requestInFlight.current = false
-        },
-        () => {
-          requestInFlight.current = false
-        },
-      )
-    } catch {
-      requestInFlight.current = false
-    }
-  }, [])
+      if (explicitRetry)
+        workflow.track("retry", "started", { channel: "pagination" })
+      requestInFlight.current = true
+      try {
+        Promise.resolve(state.fetchNextPage()).then(
+          (result) => {
+            if (explicitRetry)
+              workflow.track(
+                "retry",
+                result &&
+                  typeof result === "object" &&
+                  "isError" in result &&
+                  result.isError
+                  ? "failed"
+                  : "completed",
+                { channel: "pagination" },
+              )
+            requestInFlight.current = false
+          },
+          () => {
+            if (explicitRetry)
+              workflow.track("retry", "failed", { channel: "pagination" })
+            requestInFlight.current = false
+          },
+        )
+      } catch {
+        if (explicitRetry)
+          workflow.track("retry", "failed", { channel: "pagination" })
+        requestInFlight.current = false
+      }
+    },
+    [workflow],
+  )
 
   useEffect(() => {
     const scrollElement = scrollRef.current

@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Button,
   Checkbox,
@@ -23,6 +24,7 @@ import { useState } from "react"
 
 export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   const currencyCode = useStoreCurrency(storeId)
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [message, setMessage] = useState<string | null>(null)
@@ -506,6 +508,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             {privacyResult.data ? (
               <Button
                 onClick={() => {
+                  workflow.track("prescription_privacy_export", "started")
                   const blob = new Blob(
                     [JSON.stringify(privacyResult.data, null, 2)],
                     { type: "application/json" },
@@ -515,6 +518,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
                   anchor.href = url
                   anchor.download = `prescription-privacy-${privacyResult.data.privacyRequestId}.json`
                   anchor.click()
+                  workflow.track("prescription_privacy_export", "completed")
                   URL.revokeObjectURL(url)
                 }}
                 type="button"

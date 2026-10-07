@@ -3,12 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "files": [
-    "src",
-    "generated",
-    "prisma",
-    "prisma.config.ts"
-  ],
+  "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
     "./performance-tracing": "./src/performance-tracing.ts",
     "./onboarding-continuation": "./src/queries/onboarding-continuation.ts",
@@ -36,7 +31,8 @@
     "./tenant-context": "./src/queries/tenants.ts",
     "./types": "./src/types.ts",
     "./assistant": "./src/queries/assistant.ts",
-    "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts"
+    "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts",
+    "./product-analytics": "./src/queries/product-analytics.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

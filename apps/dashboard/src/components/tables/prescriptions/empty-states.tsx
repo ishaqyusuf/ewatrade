@@ -1,10 +1,12 @@
 "use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 
 import { usePrescriptionFilterParams } from "@/hooks/use-prescription-filter-params"
 import { usePrescriptionParams } from "@/hooks/use-prescription-params"
 import { Button } from "@ewatrade/ui"
 
 export function PrescriptionEmptyState() {
+  useDashboardEmptyState("prescriptions")
   const { setParams } = usePrescriptionParams()
   return (
     <div className="flex min-h-56 flex-col items-center justify-center text-center">
@@ -26,6 +28,7 @@ export function PrescriptionEmptyState() {
 }
 
 export function PrescriptionNoResults() {
+  useDashboardEmptyState("prescriptions_filtered")
   const { setFilter } = usePrescriptionFilterParams()
   return (
     <div className="flex min-h-56 flex-col items-center justify-center text-center">
