@@ -31,6 +31,7 @@ describe("scheduled cadences", () => {
       "account-privacy.notice-alert": "*/15 * * * *",
       "account-privacy.verification-expiry": "0 * * * *",
       "assistant.attachment.process-recovery": "* * * * *",
+      "assistant.maintenance": "0 * * * *",
       "catalog.photo.cleanup": "*/5 * * * *",
       "catalog.photo.review-recovery": "* * * * *",
       "domains.reconcile": "*/15 * * * *",

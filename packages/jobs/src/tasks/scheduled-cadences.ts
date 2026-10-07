@@ -3,6 +3,7 @@ import { automaticJobCron } from "../schedule-policy"
 import { accountPrivacyNoticeAlert } from "./account-privacy-notice-alert"
 import { accountPrivacyVerificationExpiry } from "./account-privacy-verification-expiry"
 import { assistantAttachmentProcessRecovery } from "./assistant-attachment-process"
+import { assistantMaintenance } from "./assistant-maintenance"
 import { catalogPhotoCleanup } from "./catalog-photo-cleanup"
 import { catalogPhotoReviewRecovery } from "./catalog-photo-review"
 import { commercialOrderReminders } from "./commercial-order-reminders"
@@ -68,6 +69,7 @@ export const SCHEDULED_CADENCES = {
     cron: "0 * * * *",
     tasks: [
       accountPrivacyVerificationExpiry,
+      assistantMaintenance,
       commercialOrderReminders,
       storeConversationCredentialExpiry,
     ],
