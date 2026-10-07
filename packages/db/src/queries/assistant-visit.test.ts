@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { appendAssistantMessageIfLatest } from "./assistant"
+import {
+  appendAssistantMessageIfLatest,
+  appendAssistantMessageIfLatestInTransaction,
+} from "./assistant"
 
 /** In-memory conversation whose transaction runs one caller at a time. */
 function fakeDb() {
@@ -9,6 +12,10 @@ function fakeDb() {
   let lastSequence = 1
   let queue = Promise.resolve()
   const tx = {
+    // Prisma's transaction client has $transaction too; calling it nests.
+    $transaction: () => {
+      throw new Error("A transaction was nested.")
+    },
     $queryRaw: async () => [],
     assistantMessage: {
       findFirst: async () => messages.at(-1) ?? null,
@@ -59,5 +66,25 @@ describe("welcome back on a new visit", () => {
     ])
     expect(results.sort()).toEqual([false, true])
     expect(messages.map((message) => message.id)).toEqual(["msg_last", "msg_a"])
+  })
+
+  test("inside a caller's transaction it writes there without nesting", async () => {
+    const { db, messages } = fakeDb()
+    const appended = await (
+      db as unknown as {
+        $transaction: (run: (tx: never) => Promise<boolean>) => Promise<boolean>
+      }
+    ).$transaction((tx) =>
+      appendAssistantMessageIfLatestInTransaction(tx, {
+        conversationId: "conv_1",
+        expectedLastMessageId: "msg_last",
+        message: welcome("msg_in_tx"),
+      }),
+    )
+    expect(appended).toBe(true)
+    expect(messages.map((message) => message.id)).toEqual([
+      "msg_last",
+      "msg_in_tx",
+    ])
   })
 })

@@ -1,8 +1,10 @@
 import type {
   AssistantAttachmentKind,
   Prisma,
+  PrismaClient,
 } from "../../generated/prisma/client"
 import type { AssistantScope } from "./assistant"
+import { type ArgsAfterClient, runInOwnTransaction } from "./own-transaction"
 import type { DbClient } from "./types"
 
 export class AssistantAttachmentError extends Error {
@@ -19,8 +21,6 @@ export class AssistantAttachmentError extends Error {
     this.name = "AssistantAttachmentError"
   }
 }
-
-const transactionOptions = { maxWait: 10_000, timeout: 30_000 }
 
 const attachmentSelect = {
   id: true,
@@ -62,8 +62,8 @@ function ownedWhere(scope: AssistantScope, attachmentId: string) {
   }
 }
 
-export async function createAssistantAttachmentIntent(
-  db: DbClient,
+export async function createAssistantAttachmentIntentInTransaction(
+  db: Prisma.TransactionClient,
   scope: AssistantScope,
   input: {
     conversationId: string
@@ -107,9 +107,17 @@ export async function createAssistantAttachmentIntent(
       select: attachmentSelect,
     })
   }
-  return "$transaction" in db
-    ? db.$transaction(create, transactionOptions)
-    : create(db)
+  return create(db)
+}
+
+/** Opens its own transaction; inside one, use createAssistantAttachmentIntentInTransaction. */
+export async function createAssistantAttachmentIntent(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof createAssistantAttachmentIntentInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    createAssistantAttachmentIntentInTransaction(tx, ...args),
+  )
 }
 
 export async function readAssistantAttachment(
@@ -342,8 +350,8 @@ export async function readAssistantAttachmentsForConversation(
  * An owner can drop a file before sending it; sent files stay as evidence.
  * Returns the removed row so the caller can delete its stored bytes.
  */
-export async function removeAssistantAttachment(
-  db: DbClient,
+export async function removeAssistantAttachmentInTransaction(
+  db: Prisma.TransactionClient,
   scope: AssistantScope,
   attachmentId: string,
 ) {
@@ -356,9 +364,17 @@ export async function removeAssistantAttachment(
     await tx.assistantAttachment.delete({ where: { id: row.id } })
     return row
   }
-  return "$transaction" in db
-    ? db.$transaction(remove, transactionOptions)
-    : remove(db)
+  return remove(db)
+}
+
+/** Opens its own transaction; inside one, use removeAssistantAttachmentInTransaction. */
+export async function removeAssistantAttachment(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof removeAssistantAttachmentInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    removeAssistantAttachmentInTransaction(tx, ...args),
+  )
 }
 
 /** Sent files of a conversation, so the setup list can show where records came from. */
