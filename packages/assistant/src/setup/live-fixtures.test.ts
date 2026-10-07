@@ -8,7 +8,11 @@ import { createAssistantLanguageModel } from "@ewatrade/ai/provider"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import { type ModelMessage, ToolLoopAgent, generateText, stepCountIs } from "ai"
 import type { SetupEntityPayload } from "./contracts"
-import { cleanSetupOpening, setupOpeningInstructions } from "./opening"
+import {
+  cleanSetupOpening,
+  setupOpeningFallback,
+  setupOpeningInstructions,
+} from "./opening"
 import { buildSetupAssistantInstructions } from "./prompt"
 import {
   type SetupBusinessContext,
@@ -64,6 +68,7 @@ function session(business: SetupBusinessContext) {
   const draft = new Map<string, SetupDraftEntityWrite>()
   const removed: string[] = []
   const messages: ModelMessage[] = []
+  const areaMarks: Record<string, string> = {}
   let revision = 0
 
   async function say(text: string) {
@@ -99,6 +104,13 @@ function session(business: SetupBusinessContext) {
           revision += 1
           return { revision }
         },
+        readAreaMarks: async () => ({ ...areaMarks }),
+        markArea: async (area, mark) => {
+          if (mark) areaMarks[area] = mark
+          else delete areaMarks[area]
+          revision += 1
+          return { revision }
+        },
       }),
       stopWhen: stepCountIs(8),
       maxOutputTokens: 2_000,
@@ -119,7 +131,20 @@ function session(business: SetupBusinessContext) {
     )?.payload
   }
 
-  return { say, draft, removed, find, provider: model.provider }
+  /** Seeds the conversation with the assistant's opening message. */
+  function open(text: string) {
+    messages.push({ role: "assistant", content: text })
+  }
+
+  return {
+    say,
+    open,
+    draft,
+    removed,
+    areaMarks,
+    find,
+    provider: model.provider,
+  }
 }
 
 function price(payload: SetupEntityPayload | undefined) {
@@ -313,6 +338,52 @@ suite("setup assistant with a live model", () => {
       expect(text).toMatch(/\?|tell me/i)
     }
   }, 120_000)
+
+  test("guided flow: batched follow-up, the rest at once, areas move on", async () => {
+    const business = context({
+      businessName: "Fixture Guided Farm",
+      operatingModel: "products",
+    })
+    const chat = session(business)
+    chat.open(setupOpeningFallback(business, "Amina"))
+    const first = await chat.say("I sell eggs.")
+    console.info("[live] guided 1:", first)
+    // One batched follow-up: several missing facts asked together, not one.
+    const asked = [
+      /price|how much|₦|naira/i,
+      /how many|stock|have now|right now/i,
+      /crate|piece|tray|how do you sell|sell it/i,
+    ]
+    expect(
+      asked.filter((pattern) => pattern.test(first)).length,
+    ).toBeGreaterThanOrEqual(2)
+    const second = await chat.say(
+      "By crate, 4500 per crate, and single eggs at 200 each. I have 30 crates now.",
+    )
+    console.info("[live] guided 2:", second)
+    // A crate can be the stock unit or a selling unit over single eggs.
+    const eggs = chat.find("product", /egg/i)
+    expect(
+      eggs?.kind === "product" && [
+        eggs.priceMinor,
+        ...(eggs.sellingUnits ?? []).map((unit) => unit.priceMinor),
+      ],
+    ).toContain(450_000)
+    expect(second).toMatch(/other|more|rest|anything else|all of them|at once/i)
+    const third = await chat.say(
+      "Also broilers 9000 each, 45 birds, and turkey 25000 each, 4 birds. That's all I sell.",
+    )
+    console.info("[live] guided 3:", third)
+    expect(price(chat.find("product", /broiler/i))).toBe(900_000)
+    expect(price(chat.find("product", /turkey/i))).toBe(2_500_000)
+    expect(chat.areaMarks.sell).toBe("DONE")
+    // The next area is things used but not sold.
+    expect(third).toMatch(/use|feed|packag|don't sell|do not sell/i)
+    const fourth = await chat.say("Skip that one for now.")
+    console.info("[live] guided 4:", fourth)
+    expect(chat.areaMarks.use).toBe("SKIPPED")
+    expect(fourth).toMatch(/customer|owe/i)
+  }, 240_000)
 
   test("reports token usage for the fixture run", () => {
     console.info("[live] total usage:", totals)
