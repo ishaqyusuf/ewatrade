@@ -7,11 +7,13 @@ import { describe, expect, test } from "bun:test"
 import { createAssistantLanguageModel } from "@ewatrade/ai/provider"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import { type ModelMessage, ToolLoopAgent, generateText, stepCountIs } from "ai"
+import { summarizeSetupAreas } from "./areas"
 import type { SetupEntityPayload } from "./contracts"
 import {
   cleanSetupOpening,
   setupOpeningFallback,
   setupOpeningInstructions,
+  setupWelcomeBackInstructions,
 } from "./opening"
 import { buildSetupAssistantInstructions } from "./prompt"
 import {
@@ -146,6 +148,9 @@ function session(business: SetupBusinessContext) {
     provider: model.provider,
   }
 }
+
+/** Offers of photos, files or voice notes; "profile" alone does not count. */
+const NO_MEDIA = /\b(voice|photos?|files?|uploads?|record book)\b/i
 
 function price(payload: SetupEntityPayload | undefined) {
   return payload?.kind === "product" || payload?.kind === "service"
@@ -345,7 +350,28 @@ suite("setup assistant with a live model", () => {
       expect(text).toContain(business.businessName)
       expect(text.toLowerCase()).toMatch(/compulsory|optional|no pressure|skip/)
       expect(text).toMatch(/\?|tell me/i)
+      // Photos, files and voice notes are off unless the server says so.
+      expect(text).not.toMatch(NO_MEDIA)
     }
+    const farm = context({ businessName: "Fixture Layers Farm" })
+    const welcome = await generateText({
+      model: model.model,
+      system: setupWelcomeBackInstructions(
+        farm,
+        "Amina",
+        summarizeSetupAreas(null, []),
+        undefined,
+      ),
+      prompt: "Write the message now.",
+      maxOutputTokens: 600,
+      providerOptions: model.providerOptions as never,
+    })
+    totals.inputTokens += welcome.usage.inputTokens ?? 0
+    totals.outputTokens += welcome.usage.outputTokens ?? 0
+    const welcomeText = cleanSetupOpening(welcome.text) ?? ""
+    console.info("[live] welcome back:", welcomeText)
+    expect(welcomeText).toContain("Amina")
+    expect(welcomeText).not.toMatch(NO_MEDIA)
   }, 120_000)
 
   test("guided flow: batched follow-up, the rest at once, areas move on", async () => {

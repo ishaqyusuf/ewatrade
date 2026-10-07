@@ -46,6 +46,8 @@ import {
 } from "./model-resolution"
 import {
   SETUP_BUDGET_LIMITS,
+  SETUP_MEDIA_DISABLED,
+  isSetupAssistantMediaEnabled,
   requireSetupAssistantScope,
 } from "./setup-context"
 import { AssistantLimitError, AssistantStreamGuard } from "./stream-guard"
@@ -250,6 +252,13 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
     const attachmentIds = body.message.parts.flatMap((part) =>
       part.type === SETUP_ATTACHMENT_PART ? [part.data.attachmentId] : [],
     )
+    if (attachmentIds.length > 0 && !isSetupAssistantMediaEnabled())
+      return failure(
+        context,
+        412,
+        SETUP_MEDIA_DISABLED.code,
+        SETUP_MEDIA_DISABLED.message,
+      )
     const attachments = await repository.readAttachmentsToSend(attachmentIds)
     const refusal = attachmentSendRefusal(attachments, {
       conversationId: conversation.id,

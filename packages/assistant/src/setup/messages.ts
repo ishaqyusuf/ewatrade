@@ -63,8 +63,13 @@ function followUpLines(followUp: SetupFollowUp) {
 }
 
 /** One batched question for everything else the owner sells (7 October direction). */
-export const SETUP_MORE_PRODUCTS_INVITE =
-  "Do you sell anything else? Tell me about all of it in one message: how you sell each item, the price for each way you sell it, and how many you have now. You can also send a price list, a photo or a file."
+export function setupMoreProductsInvite(mediaEnabled: boolean) {
+  const ask =
+    "Do you sell anything else? Tell me about all of it in one message: how you sell each item, the price for each way you sell it, and how many you have now."
+  return mediaEnabled
+    ? `${ask} You can also send a price list, a photo or a file.`
+    : ask
+}
 
 export function setupCommitSummaryMessage(input: {
   products: number
@@ -79,6 +84,8 @@ export function setupCommitSummaryMessage(input: {
   followUp?: SetupFollowUp
   /** A product or service was just added from the chat: ask for the rest at once. */
   inviteMore?: boolean
+  /** Photos, files and voice notes are on, so the invite may offer them. */
+  mediaEnabled?: boolean
 }): TextMessage {
   const internalUse = input.internalUse ?? 0
   const moneyAccounts = input.moneyAccounts ?? 0
@@ -118,7 +125,7 @@ export function setupCommitSummaryMessage(input: {
   else
     lines.push(
       input.inviteMore
-        ? SETUP_MORE_PRODUCTS_INVITE
+        ? setupMoreProductsInvite(input.mediaEnabled === true)
         : "Tell me if there is anything else you'd like to add.",
     )
   return {

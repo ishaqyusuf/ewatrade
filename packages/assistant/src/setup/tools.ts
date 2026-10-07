@@ -39,6 +39,11 @@ export type SetupBusinessContext = {
   currencyCode: string
   countryCode: string | null
   existing: { catalogItems: number; customers: number }
+  /**
+   * Photos, files and voice notes can be sent (ASSISTANT_SETUP_MEDIA_ENABLED).
+   * Absent means off: the owner types everything.
+   */
+  mediaEnabled?: boolean
 }
 
 export type SetupDraftEntityView = {

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { createRehearsalModel } from "@ewatrade/ai/rehearsal-model"
 import type { RehearsalTurn } from "@ewatrade/ai/rehearsal-model"
 import type { SetupDraftEntityWrite } from "@ewatrade/assistant/setup/tools"
@@ -420,6 +420,15 @@ describe("assistant chat turn", () => {
 })
 
 describe("chat with attachments", () => {
+  const previousMedia = process.env.ASSISTANT_SETUP_MEDIA_ENABLED
+  beforeAll(() => {
+    process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "true"
+  })
+  afterAll(() => {
+    if (previousMedia === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_SETUP_MEDIA_ENABLED")
+    else process.env.ASSISTANT_SETUP_MEDIA_ENABLED = previousMedia
+  })
   const priceList = {
     id: "att_sheet",
     conversationId: "conv_1",
@@ -446,6 +455,22 @@ describe("chat with attachments", () => {
       ...(text ? [{ type: "text", text }] : []),
       { type: "data-setup-attachment", data: { attachmentId } },
     ],
+  })
+
+  test("with photos, files and voice notes off, a file is refused before any run", async () => {
+    process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "false"
+    try {
+      const fake = fakeRepository({ attachments: [priceList] })
+      const { server } = app(fake)
+      const response = await chat(server, {
+        message: attachmentMessage("att_sheet", "Here is my price list"),
+      })
+      expect(response.status).toBe(412)
+      expect((await json(response)).code).toBe("MEDIA_DISABLED")
+      expect(fake.calls.begun).toBe(0)
+    } finally {
+      process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "true"
+    }
   })
 
   test("a file still being read is refused before any run", async () => {
