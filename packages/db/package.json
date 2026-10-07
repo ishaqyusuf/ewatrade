@@ -51,7 +51,7 @@
     "db:push": "prisma db push",
     "lint": "biome check .",
     "typecheck": "bun run db:generate && tsc --noEmit",
-    "db:generate": "prisma generate --config prisma.generate.config.ts",
+    "db:generate": "prisma generate --config prisma.generate.config.ts && bun scripts/align-prisma-client-types.ts",
     "db:format": "prisma format",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
