@@ -14,6 +14,30 @@ export const EWATRADE_SHARED_ENV_NAMES = [
   "EMAIL_FROM",
   "EMAIL_REPLY_TO",
   "MARKETING_INBOX_EMAILS",
+  // URLs and domains
+  "API_URL",
+  "STOREFRONT_URL",
+  "PLATFORM_DOMAIN",
+  "ALLOWED_API_ORIGINS",
+  "BETTER_AUTH_TRUSTED_ORIGINS",
+  // Integrations, logging, app identity and flags
+  "VERCEL_STOREFRONT_PROJECT_ID",
+  "VERCEL_API_TOKEN",
+  "LOGLY_PROJECT_KEY",
+  "LOGLY_MOBILE_PROJECT_KEY",
+  "LOGLY_COLLECTOR_URL",
+  "APPLE_CLIENT_IDS",
+  "EARLY_ACCESS_LINK_TTL_DAYS",
+  "QA_ACCELERATOR_ENABLED",
+  // Browser-visible values: next.config maps them before Next inlines them.
+  "NEXT_PUBLIC_API_URL",
+  "NEXT_PUBLIC_DASHBOARD_URL",
+  "NEXT_PUBLIC_MARKETING_URL",
+  "NEXT_PUBLIC_PLATFORM_DOMAIN",
+  "NEXT_PUBLIC_LOGLY_ENABLED",
+  "NEXT_PUBLIC_LOGLY_PROJECT",
+  "NEXT_PUBLIC_SIGNUP_ENABLED",
+  "NEXT_PUBLIC_STOREFRONT_URL",
 ] as const
 
 /** Returns the names it filled, for start-up diagnostics (never values). */
