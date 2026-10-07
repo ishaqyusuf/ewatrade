@@ -379,7 +379,13 @@ export const setupAssistantRouter = createTRPCRouter({
 
   /** Adds confirmed records to the business in bounded batches; call until remaining is 0. */
   commit: protectedProcedure
-    .input(z.object({ conversationId: conversationIdSchema }))
+    .input(
+      z.object({
+        conversationId: conversationIdSchema,
+        /** Add only these records, e.g. one product from the chat. */
+        keys: keysSchema.optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
       const { conversation, draftId } = await requireDraft(
@@ -396,6 +402,8 @@ export const setupAssistantRouter = createTRPCRouter({
         ctx.db,
         { ...scope, conversationId: conversation.id },
         draftId,
+        undefined,
+        { keys: input.keys },
       ).catch((error: unknown) => {
         console.error("[setup-commit] batch failed", {
           requestId: ctx.requestId,
@@ -439,6 +447,20 @@ export const setupAssistantRouter = createTRPCRouter({
                 (entity) => entity.state === "FAILED",
               ).length,
               followUp: summarizeSetupFollowUp(draft.entities),
+              // Adding a product from the chat leads straight into the rest of the list.
+              inviteMore:
+                input.keys !== undefined &&
+                outcome.results.some(
+                  (result) =>
+                    result.state === "COMMITTED" &&
+                    committed.some(
+                      (entity) =>
+                        entity.key === result.key &&
+                        (entity.kind === "SERVICE" ||
+                          (entity.kind === "PRODUCT" &&
+                            !isInternalUse(entity.payload))),
+                    ),
+                ),
             }),
             id: newAssistantMessageId(),
           },

@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { deriveSetupEntityState } from "./contracts"
 import { type SetupFollowUpEntity, summarizeSetupFollowUp } from "./follow-up"
-import { setupCommitSummaryMessage } from "./messages"
+import {
+  SETUP_MORE_PRODUCTS_INVITE,
+  setupCommitSummaryMessage,
+} from "./messages"
 
 function product(
   name: string,
@@ -105,6 +108,19 @@ describe("setup follow-up", () => {
       }),
     )
     expect(done).toContain("anything else you'd like to add")
+    const invited = text(
+      setupCommitSummaryMessage({
+        products: 1,
+        services: 0,
+        customers: 0,
+        balancesPending: 0,
+        failed: 0,
+        followUp: summarizeSetupFollowUp([]),
+        inviteMore: true,
+      }),
+    )
+    expect(invited).toContain(SETUP_MORE_PRODUCTS_INVITE)
+    expect(invited).not.toContain("anything else you'd like to add")
   })
 })
 

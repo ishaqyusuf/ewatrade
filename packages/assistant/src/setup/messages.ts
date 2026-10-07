@@ -62,6 +62,10 @@ function followUpLines(followUp: SetupFollowUp) {
   return lines
 }
 
+/** One batched question for everything else the owner sells (7 October direction). */
+export const SETUP_MORE_PRODUCTS_INVITE =
+  "Do you sell anything else? Tell me about all of it in one message: how you sell each item, the price for each way you sell it, and how many you have now. You can also send a price list, a photo or a file."
+
 export function setupCommitSummaryMessage(input: {
   products: number
   services: number
@@ -73,6 +77,8 @@ export function setupCommitSummaryMessage(input: {
   balancesPending: number
   failed: number
   followUp?: SetupFollowUp
+  /** A product or service was just added from the chat: ask for the rest at once. */
+  inviteMore?: boolean
 }): TextMessage {
   const internalUse = input.internalUse ?? 0
   const moneyAccounts = input.moneyAccounts ?? 0
@@ -109,7 +115,12 @@ export function setupCommitSummaryMessage(input: {
   const pending = input.followUp ? followUpLines(input.followUp) : []
   if (pending.length)
     lines.push("Let's finish the rest of your list.", ...pending)
-  else lines.push("Tell me if there is anything else you'd like to add.")
+  else
+    lines.push(
+      input.inviteMore
+        ? SETUP_MORE_PRODUCTS_INVITE
+        : "Tell me if there is anything else you'd like to add.",
+    )
   return {
     role: "assistant",
     parts: [{ type: "text", text: lines.join("\n\n") }],

@@ -327,6 +327,17 @@ describe("setup commit flow", () => {
     expect(deps.createFinanceMoneyAccount).not.toHaveBeenCalled()
   })
 
+  test("an add from the chat commits only the named records", async () => {
+    const { deps } = harness([product("eggs"), product("broiler"), customer])
+    const result = await commitSetupDraft(db, scope, "draft", deps, {
+      keys: ["broiler"],
+    })
+    expect(result).toMatchObject({ remaining: 0, interrupted: false })
+    expect(result.results.map((r) => r.key)).toEqual(["broiler"])
+    expect(deps.createCatalogItem).toHaveBeenCalledTimes(1)
+    expect(deps.createCustomer).not.toHaveBeenCalled()
+  })
+
   test("the time budget stops starting new records", async () => {
     let clock = 0
     const { deps } = harness([product("a"), product("b"), product("c")], {

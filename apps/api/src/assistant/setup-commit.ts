@@ -423,13 +423,16 @@ export async function commitSetupDraft(
   },
   draftId: string,
   deps: SetupCommitDeps = defaultDeps,
+  /** Only these records, e.g. the one product the owner added from the chat. */
+  options: { keys?: readonly string[] } = {},
 ) {
   const draft = await deps.readSetupDraft(db, draftId)
   const pending = draft.entities.filter(
     (entity) =>
-      entity.state === "CONFIRMED" ||
-      (entity.state === "COMMITTED" &&
-        isOpeningBalancePending(entity.errorCode)),
+      (!options.keys || options.keys.includes(entity.key)) &&
+      (entity.state === "CONFIRMED" ||
+        (entity.state === "COMMITTED" &&
+          isOpeningBalancePending(entity.errorCode))),
   )
   const batch = pending.slice(0, SETUP_COMMIT_BATCH_SIZE)
   const defaultCashId = defaultCashEntityId(draft.entities)

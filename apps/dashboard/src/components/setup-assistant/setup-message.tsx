@@ -12,6 +12,7 @@ import type { UIMessage } from "ai"
 import { memo } from "react"
 import { Streamdown } from "streamdown"
 import { SetupSentAttachment } from "./setup-attachment-chips"
+import { SetupChatItems } from "./setup-chat-items"
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
@@ -61,6 +62,7 @@ export const SetupMessage = memo(function SetupMessage({
 
   const tools = message.parts.filter((part) => part.type.startsWith("tool-"))
   const texts = message.parts.filter((part) => part.type === "text")
+  const staged = stagedKeys(tools)
 
   return (
     <div className="flex gap-3">
@@ -113,7 +115,25 @@ export const SetupMessage = memo(function SetupMessage({
             </Streamdown>
           ) : null,
         )}
+        {staged.length > 0 && !streaming ? (
+          <SetupChatItems keys={staged} />
+        ) : null}
       </div>
     </div>
   )
 })
+
+/** Keys of the records this message's draft tools staged (their `data.staged`). */
+function stagedKeys(tools: UIMessage["parts"]) {
+  const keys = new Set<string>()
+  for (const part of tools) {
+    if (!("state" in part) || part.state !== "output-available") continue
+    const staged = (part as { output?: { data?: { staged?: unknown } } }).output
+      ?.data?.staged
+    if (!Array.isArray(staged)) continue
+    for (const entry of staged)
+      if (typeof (entry as { key?: unknown })?.key === "string")
+        keys.add((entry as { key: string }).key)
+  }
+  return [...keys]
+}
