@@ -1,12 +1,11 @@
+import { isPreviewIntakeBlocked } from "@ewatrade/onboarding/lib/preview-intake-guard"
 import { type NextRequest, NextResponse } from "next/server"
 
 export const config = { matcher: "/:path*" }
 
 export function proxy(request: NextRequest) {
-  if (
-    process.env.VERCEL_ENV !== "preview" &&
-    process.env.APP_ENV !== "preview"
-  ) {
+  // Outside Preview, or in a Preview opened with PREVIEW_INTAKE_ENABLED.
+  if (!isPreviewIntakeBlocked()) {
     return NextResponse.next()
   }
 
