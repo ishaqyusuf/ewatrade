@@ -120,6 +120,23 @@ describe("setup follow-up", () => {
     expect(invited).not.toContain("anything else you'd like to add")
     // Photos, files and voice notes are off unless the server says so.
     expect(invited).not.toMatch(/photo|file|price list|voice/i)
+    // A service has no stock: the invite asks for prices or per-job quotes.
+    const summaryFor = (products: number, services: number) =>
+      text(
+        setupCommitSummaryMessage({
+          products,
+          services,
+          customers: 0,
+          balancesPending: 0,
+          failed: 0,
+          followUp: summarizeSetupFollowUp([]),
+          inviteMore: true,
+        }),
+      )
+    const serviceInvite = summaryFor(0, 1)
+    expect(serviceInvite).toContain(setupMoreProductsInvite(false, "services"))
+    expect(serviceInvite).not.toMatch(/how many|have now/i)
+    expect(summaryFor(1, 1)).toContain(setupMoreProductsInvite(false, "both"))
     const withMedia = text(
       setupCommitSummaryMessage({
         products: 1,

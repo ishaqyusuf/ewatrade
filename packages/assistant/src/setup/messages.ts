@@ -62,10 +62,23 @@ function followUpLines(followUp: SetupFollowUp) {
   return lines
 }
 
-/** One batched question for everything else the owner sells (7 October direction). */
-export function setupMoreProductsInvite(mediaEnabled: boolean) {
-  const ask =
-    "Do you sell anything else? Tell me about all of it in one message: how you sell each item, the price for each way you sell it, and how many you have now."
+const MORE_INVITES = {
+  products:
+    "Do you sell anything else? Tell me about all of it in one message: how you sell each item, the price for each way you sell it, and how many you have now.",
+  services:
+    "Do you offer any other services? Tell me about all of them in one message: what each one is, and its price or whether you quote per job.",
+  both: "Do you sell or offer anything else? Tell me about all of it in one message: for each product, how you sell it, the price for each way and how many you have now; for each service, its price or whether you quote per job.",
+} as const
+
+/**
+ * One batched question for everything else the owner sells (7 October
+ * direction), worded for what was just added: services have no stock.
+ */
+export function setupMoreProductsInvite(
+  mediaEnabled: boolean,
+  added: keyof typeof MORE_INVITES = "products",
+) {
+  const ask = MORE_INVITES[added]
   return mediaEnabled
     ? `${ask} You can also send a price list, a photo or a file.`
     : ask
@@ -125,7 +138,10 @@ export function setupCommitSummaryMessage(input: {
   else
     lines.push(
       input.inviteMore
-        ? setupMoreProductsInvite(input.mediaEnabled === true)
+        ? setupMoreProductsInvite(
+            input.mediaEnabled === true,
+            !input.services ? "products" : input.products ? "both" : "services",
+          )
         : "Tell me if there is anything else you'd like to add.",
     )
   return {

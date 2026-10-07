@@ -165,11 +165,12 @@ function FinancePrompt({ onReady }: { onReady: () => void }) {
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today
 
   return (
-    <PromptCard title="Set up Finance for customer balances">
+    <PromptCard title="Set up Finance for your balances">
       <p className="text-xs text-muted-foreground">
-        What customers owe you, or what you hold for them, is kept in your
-        business books. Choose when your books start; the waiting balances are
-        recorded right after. Older sales and payments are not imported.
+        Your cash and bank accounts, and what customers owe you or what you hold
+        for them, are kept in your business books. Choose when your books start;
+        anything waiting is added right after. Older sales and payments are not
+        imported.
       </p>
       <div className="flex flex-wrap items-end gap-2">
         <div className="grid gap-1">

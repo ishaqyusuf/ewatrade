@@ -132,6 +132,23 @@ describe("opening and welcome back", () => {
     expect(text).toContain("main service")
   })
 
+  test("fallback examples fit the onboarding profile", () => {
+    const opening = (key: string, operatingModel = "products") =>
+      setupOpeningFallback(
+        { ...context, businessProfile: { key, title: key }, operatingModel },
+        null,
+      )
+    expect(opening("general-retail-groceries")).toContain("Indomie: ₦9,500")
+    expect(opening("general-retail-groceries")).not.toContain("Eggs")
+    const laundry = opening("laundry-dry-cleaning", "services")
+    expect(laundry).toContain("Shirt wash and iron, ₦500 each")
+    expect(laundry).not.toContain("Haircut")
+    expect(opening("other-mixed-business", "services")).toContain(
+      '"Consultation, ₦10,000"',
+    )
+    expect(opening("other-mixed-business")).toContain("Eggs: ₦4,500")
+  })
+
   test("model instructions carry only trusted facts and the required parts", () => {
     const instructions = setupOpeningInstructions(context, "Amina")
     expect(instructions).toContain('"businessName":"Jawdah Poultry"')

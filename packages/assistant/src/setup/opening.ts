@@ -33,6 +33,57 @@ function money(currencyCode: string, major: number) {
   }
 }
 
+type Money = (major: number) => string
+
+/** Fallback examples that fit the onboarding profile; generic when unknown. */
+const PRODUCT_EXAMPLES: Record<string, (money: Money) => string> = {
+  "general-retail-groceries": (m) =>
+    `Indomie: ${m(9500)} a carton or ${m(250)} a pack, 15 cartons now.`,
+  "animal-feed-agricultural-supplies": (m) =>
+    `Eggs: ${m(4500)} a crate or ${m(200)} a piece, 20 crates now.`,
+  "fashion-apparel": (m) =>
+    `Men's T-shirt: ${m(6000)} each, sizes M, L and XL, 25 now.`,
+  "fabrics-tailoring": (m) =>
+    `Ankara fabric: ${m(18000)} for 6 yards or ${m(3500)} a yard, 10 pieces now.`,
+  "drinks-water-distribution": (m) =>
+    `Bottled water: ${m(2800)} a pack of 12 or ${m(300)} a bottle, 40 packs now.`,
+  "food-bakery-catering": (m) =>
+    `Sliced bread: ${m(1200)} a loaf, 30 loaves now.`,
+  "beauty-salon-spa": (m) => `Hair cream: ${m(3500)} a jar, 12 jars now.`,
+  "laundry-dry-cleaning": (m) => `Garment bag: ${m(1500)} each, 30 now.`,
+  "electronics-phone-shops": (m) => `Phone charger: ${m(4500)} each, 20 now.`,
+  "repair-maintenance": (m) =>
+    `Engine oil: ${m(8000)} a 4-litre gallon, 10 gallons now.`,
+  "pharmacy-health-retail": (m) =>
+    `Paracetamol: ${m(800)} a pack or ${m(100)} a card, 30 packs now.`,
+  "hardware-building-materials": (m) =>
+    `Cement: ${m(9000)} a bag, 80 bags now.`,
+  "wholesale-distribution": (m) =>
+    `Spaghetti: ${m(19000)} a carton of 20, 50 cartons now.`,
+}
+const DEFAULT_PRODUCT_EXAMPLE = PRODUCT_EXAMPLES[
+  "animal-feed-agricultural-supplies"
+] as (money: Money) => string
+
+const SERVICE_EXAMPLES: Record<string, (money: Money) => string> = {
+  "beauty-salon-spa": (m) =>
+    `"Haircut, ${m(3000)}" or "Braids, priced by style"`,
+  "laundry-dry-cleaning": (m) =>
+    `"Shirt wash and iron, ${m(500)} each" or "Duvet cleaning, priced by size"`,
+  "repair-maintenance": (m) =>
+    `"Generator servicing, ${m(15000)}" or "Repairs, priced per job"`,
+  "electronics-phone-shops": (m) =>
+    `"Phone screen replacement, ${m(25000)}" or "Repairs, priced per job"`,
+  "fabrics-tailoring": (m) =>
+    `"Sewing a native outfit, ${m(15000)}" or "Adjustments, priced per job"`,
+  "food-bakery-catering": (m) =>
+    `"Small chops for 50 guests, ${m(75000)}" or "Event catering, priced per event"`,
+  "professional-services": (m) =>
+    `"Consultation, ${m(20000)} an hour" or "Website design, priced per project"`,
+}
+const defaultServiceExample = (m: Money) =>
+  `"Consultation, ${m(10000)}" or "Repairs, priced per job"`
+
 function trustedFacts(
   context: SetupBusinessContext,
   firstName: string | null,
@@ -83,10 +134,12 @@ export function setupOpeningFallback(
   firstName: string | null,
 ) {
   const hello = firstName ? `Welcome, ${firstName}!` : "Welcome!"
+  const profile = context.businessProfile?.key ?? ""
+  const price = (major: number) => money(context.currencyCode, major)
   const question =
     context.operatingModel === "services"
-      ? `Let's start with your main service. What is it, and do you charge a fixed price (how much?) or quote per job? For example: "Haircut, ${money(context.currencyCode, 3000)}" or "Repairs, priced per job".`
-      : `Let's start with your main product. How do you sell it (by the piece, crate, bag or more than one way), what is the price for each, and how many do you have right now? Anything else I should know about it? For example: "Eggs: ${money(context.currencyCode, 4500)} a crate or ${money(context.currencyCode, 200)} a piece, 20 crates now."`
+      ? `Let's start with your main service. What is it, and do you charge a fixed price (how much?) or quote per job? For example: ${(SERVICE_EXAMPLES[profile] ?? defaultServiceExample)(price)}.`
+      : `Let's start with your main product. How do you sell it (by the piece, crate, bag or more than one way), what is the price for each, and how many do you have right now? Anything else I should know about it? For example: "${(PRODUCT_EXAMPLES[profile] ?? DEFAULT_PRODUCT_EXAMPLE)(price)}"`
   return [
     context.mediaEnabled
       ? `${hello} I'm here to set up ${context.businessName} on EwaTrade with you. You can type, send a voice note in any language, or send a photo or file of your price list or record book.`
