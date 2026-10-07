@@ -546,6 +546,32 @@ suite("setup assistant with a live model", () => {
     expect(fourth).toMatch(/customer|owe/i)
   }, 240_000)
 
+  test("laundry: services are asked about price or quote, never stock", async () => {
+    const chat = session(
+      context({
+        businessName: "Fixture Fresh Laundry",
+        businessProfile: profile("laundry-dry-cleaning"),
+        operatingModel: "services",
+      }),
+    )
+    const reply = await chat.say(
+      "We wash shirts, iron trousers and dry-clean suits.",
+    )
+    console.info("[live] laundry reply:", reply)
+    const services = [...chat.draft.values()].filter(
+      (entity) => entity.payload.kind === "service",
+    )
+    expect(services.length).toBeGreaterThanOrEqual(3)
+    expect(reply).toMatch(/price|how much|charge|quote|₦/i)
+    expect(reply).not.toMatch(/how many|in stock|\bstock\b/i)
+    for (const service of services)
+      expect(
+        (service.openQuestions as Array<{ field: string }>).map(
+          (question) => question.field,
+        ),
+      ).not.toContain("stock")
+  }, 120_000)
+
   test("first product added from the chat, then the rest at once", async () => {
     const business = context({
       businessName: "Fixture Egg Depot",

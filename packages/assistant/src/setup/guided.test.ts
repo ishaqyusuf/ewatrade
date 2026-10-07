@@ -5,6 +5,7 @@ import {
   summarizeSetupAreas,
   unfinishedSetupAreas,
 } from "./areas"
+import { deriveSetupEntityState } from "./contracts"
 import { summarizeSetupFollowUp } from "./follow-up"
 import {
   cleanSetupOpening,
@@ -210,7 +211,7 @@ describe("guided prompt", () => {
     const prompt = buildSetupAssistantInstructions(context)
     expect(prompt).toContain("never one field at a time")
     expect(prompt).toContain("setup_set_area")
-    expect(prompt).toContain("Guide the first product fully")
+    expect(prompt).toContain("Guide the first product or service fully")
     expect(prompt).toContain("No buttons or choices to click")
     expect(prompt).toContain("Add to my business")
   })
@@ -285,5 +286,57 @@ describe("photos, files and voice notes", () => {
         /voice|photo|file|upload/i,
       )
     }
+  })
+})
+
+describe("services", () => {
+  test("follow-ups ask a service's price or quote, never how many", () => {
+    const prompt = buildSetupAssistantInstructions(context)
+    expect(prompt).toContain(
+      "For a service, ask its price or whether they quote per job",
+    )
+    expect(prompt).toContain("never ask how many of a service they have")
+    const derived = deriveSetupEntityState(
+      {
+        kind: "service",
+        name: "Shirt wash",
+        pricing: "fixed",
+        priceMinor: 50_000,
+      },
+      [
+        {
+          field: "stock",
+          question: "How many shirt washes do you have?",
+          required: false,
+        },
+        {
+          field: "category",
+          question: "Which category is it in?",
+          required: false,
+        },
+      ],
+    )
+    expect(derived.questions.map((question) => question.field)).toEqual([
+      "category",
+    ])
+    expect(derived.state).toBe("PROPOSED")
+    // Products still keep their stock question.
+    expect(
+      deriveSetupEntityState(
+        {
+          kind: "product",
+          name: "Eggs",
+          unitName: "Crate",
+          priceMinor: 450_000,
+        },
+        [
+          {
+            field: "stock",
+            question: "How many crates do you have?",
+            required: false,
+          },
+        ],
+      ).questions.map((question) => question.field),
+    ).toEqual(["stock"])
   })
 })
