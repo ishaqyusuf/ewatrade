@@ -35,6 +35,7 @@ import {
 } from "../../assistant/setup-commit"
 import {
   isSetupAssistantEnabled,
+  isSetupAssistantMediaEnabled,
   requireSetupAssistantScope,
 } from "../../assistant/setup-context"
 import {
@@ -129,6 +130,7 @@ export const setupAssistantRouter = createTRPCRouter({
         followUp: setupFollowUpState([]),
         areas: summarizeSetupAreas(null, []),
         attachments: [],
+        mediaEnabled: isSetupAssistantMediaEnabled(),
       }
     const [messages, draft, sent] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
@@ -169,6 +171,7 @@ export const setupAssistantRouter = createTRPCRouter({
       followUp: setupFollowUpState(draft.entities),
       areas: summarizeSetupAreas(draft.areas, draft.entities),
       attachments,
+      mediaEnabled: isSetupAssistantMediaEnabled(),
     }
   }),
 
@@ -461,6 +464,7 @@ export const setupAssistantRouter = createTRPCRouter({
                 (entity) => entity.state === "FAILED",
               ).length,
               followUp: summarizeSetupFollowUp(draft.entities),
+              mediaEnabled: isSetupAssistantMediaEnabled(),
               // Adding a product from the chat leads straight into the rest of the list.
               inviteMore:
                 input.keys !== undefined &&

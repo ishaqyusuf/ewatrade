@@ -115,10 +115,13 @@ export function SetupAssistant({
   if (!data?.enabled) return fallback
   // The assistant stays reachable for every owner, not only before the
   // first Catalog item.
+  // Optional so an older API without the field stays typing-only.
+  const mediaEnabled = "mediaEnabled" in data && data.mediaEnabled === true
   if (!conversation && !requested && (hasCatalogItems || !offerSetup))
     return (
       <>
         <ResumeBanner
+          mediaEnabled={mediaEnabled}
           pending={start.isPending}
           onResume={() => start.mutate()}
         />
@@ -138,6 +141,7 @@ export function SetupAssistant({
     return (
       <>
         <ResumeBanner
+          mediaEnabled={mediaEnabled}
           followUp={followUp}
           areas={areas}
           pending={begin.isPending}
@@ -162,6 +166,7 @@ export function SetupAssistant({
       }
       currencyCode={data.currencyCode}
       prerequisites={data.prerequisites}
+      mediaEnabled={mediaEnabled}
       hasAdded={(followUp?.committed ?? 0) > 0}
       pending={begin.isPending || skip.isPending || finish.isPending}
       onSkip={() => skip.mutate()}
@@ -187,6 +192,7 @@ function plural(count: number, word: string) {
 function resumeCopy(
   followUp?: SetupFollowUpState,
   areas: SetupAreaState[] = [],
+  mediaEnabled = false,
 ) {
   const openAreas = areas.filter(
     (entry) => entry.status === "OPEN" || entry.status === "STARTED",
@@ -199,7 +205,9 @@ function resumeCopy(
           action: "Continue setup",
         }
       : {
-          text: "Prefer to describe your business instead? The setup assistant can build your list for you, by chat, voice note or a photo of your price list.",
+          text: mediaEnabled
+            ? "Prefer to describe your business instead? The setup assistant can build your list for you, by chat, voice note or a photo of your price list."
+            : "Prefer to describe your business instead? The setup assistant can build your list for you, by chat.",
           action: "Set up with AI",
         }
   const notes: string[] = []
@@ -226,15 +234,17 @@ function resumeCopy(
 function ResumeBanner({
   followUp,
   areas,
+  mediaEnabled,
   pending,
   onResume,
 }: {
   followUp?: SetupFollowUpState
   areas?: SetupAreaState[]
+  mediaEnabled: boolean
   pending: boolean
   onResume: () => void
 }) {
-  const copy = resumeCopy(followUp, areas)
+  const copy = resumeCopy(followUp, areas, mediaEnabled)
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
       <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -258,6 +268,7 @@ function SetupWorkspace({
   attachments,
   currencyCode,
   prerequisites,
+  mediaEnabled,
   hasAdded,
   pending,
   onSkip,
@@ -270,6 +281,8 @@ function SetupWorkspace({
   attachments: SetupAttachmentName[]
   currencyCode: string
   prerequisites?: SetupPrerequisiteState
+  /** Photos, files and voice notes; when off, the owner only types. */
+  mediaEnabled: boolean
   /** Once records are in the business, leaving is "done for now", not a skip. */
   hasAdded: boolean
   pending: boolean
@@ -337,6 +350,7 @@ function SetupWorkspace({
           conversationId={conversationId}
           status={status}
           initialMessages={messages}
+          mediaEnabled={mediaEnabled}
         />
       </div>
       {status === "ACTIVE" ? (

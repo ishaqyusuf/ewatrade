@@ -1,10 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { deriveSetupEntityState } from "./contracts"
 import { type SetupFollowUpEntity, summarizeSetupFollowUp } from "./follow-up"
-import {
-  SETUP_MORE_PRODUCTS_INVITE,
-  setupCommitSummaryMessage,
-} from "./messages"
+import { setupCommitSummaryMessage, setupMoreProductsInvite } from "./messages"
 
 function product(
   name: string,
@@ -119,8 +116,25 @@ describe("setup follow-up", () => {
         inviteMore: true,
       }),
     )
-    expect(invited).toContain(SETUP_MORE_PRODUCTS_INVITE)
+    expect(invited).toContain(setupMoreProductsInvite(false))
     expect(invited).not.toContain("anything else you'd like to add")
+    // Photos, files and voice notes are off unless the server says so.
+    expect(invited).not.toMatch(/photo|file|price list|voice/i)
+    const withMedia = text(
+      setupCommitSummaryMessage({
+        products: 1,
+        services: 0,
+        customers: 0,
+        balancesPending: 0,
+        failed: 0,
+        followUp: summarizeSetupFollowUp([]),
+        inviteMore: true,
+        mediaEnabled: true,
+      }),
+    )
+    expect(withMedia).toContain(
+      "You can also send a price list, a photo or a file.",
+    )
   })
 })
 

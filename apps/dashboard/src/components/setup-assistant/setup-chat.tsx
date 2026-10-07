@@ -64,10 +64,13 @@ export function SetupChat({
   conversationId,
   status,
   initialMessages,
+  mediaEnabled,
 }: {
   conversationId: string
   status: "OFFERED" | "ACTIVE"
   initialMessages: SetupChatMessage[]
+  /** Photos, files and voice notes; when off, the owner only types. */
+  mediaEnabled: boolean
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -228,6 +231,7 @@ export function SetupChat({
         <SetupComposer
           conversationId={conversationId}
           busy={busy}
+          mediaEnabled={mediaEnabled}
           onSend={send}
           onStop={stop}
         />

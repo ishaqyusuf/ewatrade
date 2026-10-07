@@ -43,12 +43,15 @@ const ACCEPT = [
 export function SetupComposer({
   conversationId,
   busy,
+  mediaEnabled,
   onSend,
   onStop,
 }: {
   conversationId: string
   /** The assistant is answering; sending waits, Stop is offered. */
   busy: boolean
+  /** Photos, files and voice notes; when off, the owner only types. */
+  mediaEnabled: boolean
   onSend: (parts: SetupComposerPart[]) => void
   onStop: () => void
 }) {
@@ -179,29 +182,34 @@ export function SetupComposer({
               }
             }}
           />
-          <InputGroupAddon align="block-end" className="justify-between">
-            <div className="flex items-center gap-1">
-              <InputGroupButton
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Attach a photo or file"
-                disabled={recording}
-                onClick={() => fileRef.current?.click()}
-              >
-                <HugeiconsIcon icon={Attachment01Icon} className="size-4" />
-              </InputGroupButton>
-              <InputGroupButton
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Record a voice note"
-                disabled={recording || recorder.state.kind === "requesting"}
-                onClick={() => void recorder.start()}
-              >
-                <HugeiconsIcon icon={Mic01Icon} className="size-4" />
-              </InputGroupButton>
-            </div>
+          <InputGroupAddon
+            align="block-end"
+            className={mediaEnabled ? "justify-between" : "justify-end"}
+          >
+            {mediaEnabled ? (
+              <div className="flex items-center gap-1">
+                <InputGroupButton
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Attach a photo or file"
+                  disabled={recording}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <HugeiconsIcon icon={Attachment01Icon} className="size-4" />
+                </InputGroupButton>
+                <InputGroupButton
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Record a voice note"
+                  disabled={recording || recorder.state.kind === "requesting"}
+                  onClick={() => void recorder.start()}
+                >
+                  <HugeiconsIcon icon={Mic01Icon} className="size-4" />
+                </InputGroupButton>
+              </div>
+            ) : null}
             {busy ? (
               <InputGroupButton
                 type="button"
@@ -225,20 +233,22 @@ export function SetupComposer({
             )}
           </InputGroupAddon>
         </InputGroup>
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept={ACCEPT}
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden
-          onChange={(event) => {
-            for (const file of Array.from(event.target.files ?? []))
-              void attachments.add(file)
-            event.target.value = ""
-          }}
-        />
+        {mediaEnabled ? (
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept={ACCEPT}
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(event) => {
+              for (const file of Array.from(event.target.files ?? []))
+                void attachments.add(file)
+              event.target.value = ""
+            }}
+          />
+        ) : null}
       </form>
       <p className="mt-2 text-[11px] text-muted-foreground">
         {transcriptHint

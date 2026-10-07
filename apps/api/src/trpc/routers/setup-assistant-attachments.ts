@@ -23,7 +23,10 @@ import {
   setupAttachmentStorage,
   setupAttachmentTarget,
 } from "../../assistant/attachment-storage"
-import { requireSetupAssistantScope } from "../../assistant/setup-context"
+import {
+  requireSetupAssistantMedia,
+  requireSetupAssistantScope,
+} from "../../assistant/setup-context"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
 function extractionOf(row: Pick<AssistantAttachmentRecord, "extraction">) {
@@ -68,6 +71,7 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
+      requireSetupAssistantMedia()
       const conversation = await findSetupConversation(ctx.db, scope)
       if (
         !conversation ||

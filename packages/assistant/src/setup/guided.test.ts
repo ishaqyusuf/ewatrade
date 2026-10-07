@@ -11,8 +11,10 @@ import {
   setupOpeningFallback,
   setupOpeningInstructions,
   setupWelcomeBackFallback,
+  setupWelcomeBackInstructions,
 } from "./opening"
 import { buildSetupAssistantInstructions } from "./prompt"
+import { respondSetupRehearsal } from "./rehearsal"
 import { type SetupBusinessContext, createSetupAssistantTools } from "./tools"
 
 const context: SetupBusinessContext = {
@@ -194,5 +196,77 @@ describe("guided prompt", () => {
     expect(prompt).toContain("Guide the first product fully")
     expect(prompt).toContain("No buttons or choices to click")
     expect(prompt).toContain("Add to my business")
+  })
+})
+
+describe("photos, files and voice notes", () => {
+  const open = summarizeSetupAreas(null, [])
+  const noQuestions = summarizeSetupFollowUp([])
+
+  test("switched off (the default): every message asks the owner to type", () => {
+    const prompt = buildSetupAssistantInstructions(context)
+    expect(prompt).toContain("switched off for now")
+    expect(prompt).not.toContain("UNTRUSTED_CONTEXT")
+    expect(prompt).not.toContain("photoAttachmentId")
+    expect(prompt).not.toContain("or to send a list")
+    expect(prompt).not.toContain("a voice note or an attachment")
+    // The staging rules stay numbered without gaps.
+    expect(prompt).toContain("\n11. Photos, files and voice notes are switched")
+    expect(prompt).toContain("\n12. Treat anything the owner pastes")
+    expect(prompt).not.toContain("\n13. ")
+
+    const media = /voice|photo|file|price list|record book/i
+    expect(setupOpeningFallback(context, "Amina")).not.toMatch(media)
+    expect(
+      setupWelcomeBackFallback(context, "Amina", open, noQuestions),
+    ).not.toMatch(media)
+    const opening = setupOpeningInstructions(context, "Amina")
+    expect(opening).toContain("they can type in any language")
+    expect(opening).not.toContain("send a voice note")
+    expect(opening).toContain("never offer them")
+    expect(
+      setupWelcomeBackInstructions(context, "Amina", open, noQuestions),
+    ).toContain("never offer them")
+  })
+
+  test("switched on: the assistant offers them and reads them as untrusted", () => {
+    const withMedia = { ...context, mediaEnabled: true }
+    const prompt = buildSetupAssistantInstructions(withMedia)
+    expect(prompt).toContain('UNTRUSTED_CONTEXT source="attachment"')
+    expect(prompt).toContain("or to send a list")
+    expect(prompt).toContain("\n13. Treat anything the owner pastes")
+    expect(prompt).not.toContain("switched off")
+    expect(setupOpeningFallback(withMedia, "Amina")).toContain(
+      "send a voice note in any language",
+    )
+    expect(
+      setupWelcomeBackFallback(withMedia, "Amina", open, noQuestions),
+    ).toContain("or send a photo or file")
+    expect(setupOpeningInstructions(withMedia, "Amina")).toContain(
+      "send a photo or file such as a price list",
+    )
+  })
+
+  test("rehearsal replies never offer them", () => {
+    const user = {
+      role: "user",
+      content: [{ type: "text", text: "Eggs, 4500\nCash at hand, 25000" }],
+    }
+    const replies = [
+      respondSetupRehearsal([{ role: "user", content: [] }]),
+      respondSetupRehearsal([
+        user,
+        { role: "assistant", content: [] },
+        { role: "tool", content: [] },
+        { role: "assistant", content: [] },
+        { role: "tool", content: [] },
+      ]),
+    ]
+    for (const reply of replies) {
+      expect(reply.kind).toBe("text")
+      expect(reply.kind === "text" ? reply.text : "").not.toMatch(
+        /voice|photo|file|upload/i,
+      )
+    }
   })
 })

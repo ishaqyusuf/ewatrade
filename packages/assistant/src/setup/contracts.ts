@@ -3,7 +3,7 @@ import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v6"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v7"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */

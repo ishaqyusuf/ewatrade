@@ -53,8 +53,12 @@ function trustedFacts(
   })
 }
 
-const SHARED_RULES =
-  "Write plain, warm text in English, as one short chat message of at most about 100 words: no headings, no emojis, at most one short list. Never invent facts about the business beyond the context, never claim anything was saved or created, and do not offer buttons or choices to click: the owner answers by typing, a voice note in any language, or a photo or file."
+function sharedRules(context: SetupBusinessContext) {
+  const answers = context.mediaEnabled
+    ? "the owner answers by typing, a voice note in any language, or a photo or file."
+    : "the owner answers by typing, in any language. Photos, files and voice notes are switched off: never offer them."
+  return `Write plain, warm text in English, as one short chat message of at most about 100 words: no headings, no emojis, at most one short list. Never invent facts about the business beyond the context, never claim anything was saved or created, and do not offer buttons or choices to click: ${answers}`
+}
 
 export function setupOpeningInstructions(
   context: SetupBusinessContext,
@@ -67,11 +71,11 @@ Trusted business context (from the server): ${trustedFacts(context, firstName, n
 
 The message must:
 1. Greet the owner (by first name if known) and name the business.
-2. Say in one sentence that you can set up their shop with them right here, and that they can type, send a voice note in any language, or send a photo or file such as a price list or record book.
+2. ${context.mediaEnabled ? "Say in one sentence that you can set up their shop with them right here, and that they can type, send a voice note in any language, or send a photo or file such as a price list or record book." : "Say in one sentence that you can set up their shop with them right here in this chat, and that they can type in any language."}
 3. Say plainly that nothing here is compulsory and they can stop any time and continue later from the dashboard or in this chat.
 4. End with ONE batched question about their main ${context.operatingModel === "services" ? "service: what it is, whether it has a fixed price or is quoted per job, and the price" : "product: how they sell it (one or more ways, such as by piece, crate or bag), the price for each way, how many they have right now, and anything else about it"}. Give one short example that fits this kind of business and uses the ${context.currencyCode} currency.
 
-${SHARED_RULES}`
+${sharedRules(context)}`
 }
 
 export function setupOpeningFallback(
@@ -84,7 +88,9 @@ export function setupOpeningFallback(
       ? `Let's start with your main service. What is it, and do you charge a fixed price (how much?) or quote per job? For example: "Haircut, ${money(context.currencyCode, 3000)}" or "Repairs, priced per job".`
       : `Let's start with your main product. How do you sell it (by the piece, crate, bag or more than one way), what is the price for each, and how many do you have right now? Anything else I should know about it? For example: "Eggs: ${money(context.currencyCode, 4500)} a crate or ${money(context.currencyCode, 200)} a piece, 20 crates now."`
   return [
-    `${hello} I'm here to set up ${context.businessName} on EwaTrade with you. You can type, send a voice note in any language, or send a photo or file of your price list or record book.`,
+    context.mediaEnabled
+      ? `${hello} I'm here to set up ${context.businessName} on EwaTrade with you. You can type, send a voice note in any language, or send a photo or file of your price list or record book.`
+      : `${hello} I'm here to set up ${context.businessName} on EwaTrade with you, right here in this chat. Just type, in any language.`,
     "Nothing here is compulsory. You can stop any time and continue later from your dashboard or in this chat.",
     question,
   ].join("\n\n")
@@ -126,7 +132,7 @@ The message must:
 3. Offer to continue with the next open area by asking its batched question, or with the pending questions listed, in one message. If nothing is open, offer to add more products, customers or accounts, or to change anything.
 4. Remind them nothing is compulsory.
 
-${SHARED_RULES}`
+${sharedRules(context)}`
 }
 
 export function setupWelcomeBackFallback(
@@ -147,11 +153,14 @@ export function setupWelcomeBackFallback(
       `${ready} record${ready === 1 ? " is" : "s are"} ready in your setup list. Confirm and add them whenever you're happy.`,
     )
   const next = nextSetupArea(progress)
+  const tellMe = context.mediaEnabled
+    ? "Tell me about them in one message, or send a photo or file."
+    : "Tell me about them in one message."
   if (next && !followUp?.questions.length)
     lines.push(
       open.length > 1
-        ? `Still to set up for ${context.businessName}: ${open.map((entry) => entry.label).join("; ")}. Shall we continue with ${next.label}? Tell me about them in one message, or send a photo or file.`
-        : `Shall we continue with ${next.label}? Tell me about them in one message, or send a photo or file.`,
+        ? `Still to set up for ${context.businessName}: ${open.map((entry) => entry.label).join("; ")}. Shall we continue with ${next.label}? ${tellMe}`
+        : `Shall we continue with ${next.label}? ${tellMe}`,
     )
   else if (!next && !followUp?.questions.length && !ready)
     lines.push(
