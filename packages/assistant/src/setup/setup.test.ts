@@ -268,4 +268,25 @@ describe("setup rehearsal script", () => {
       kind: "text",
     })
   })
+
+  test("says a staged cash pocket goes into Shop cash", () => {
+    const turn = (text: string) => {
+      const user = { role: "user", content: [{ type: "text", text }] }
+      return respondSetupRehearsal([
+        user,
+        { role: "assistant", content: [] },
+        { role: "tool", content: [] },
+      ])
+    }
+    const shopCash =
+      "Cash goes into Shop cash, the cash account Finance already keeps for your business."
+    expect(turn("Cash at hand, 25000")).toMatchObject({
+      kind: "text",
+      text: expect.stringContaining(shopCash),
+    })
+    expect(turn("GTBank 120000")).toMatchObject({
+      kind: "text",
+      text: expect.not.stringContaining("Shop cash"),
+    })
+  })
 })

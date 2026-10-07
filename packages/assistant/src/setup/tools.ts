@@ -692,7 +692,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
     }),
     setup_draft_upsert_money_accounts: tool({
       description:
-        "Stage where the business keeps its money: each cash pocket and each bank or mobile money account, with the balance in it now if the owner said. Nothing is created until the owner confirms.",
+        "Stage where the business keeps its money: each cash pocket and each bank or mobile money account, with the balance in it now if the owner said. The first cash pocket is added to Shop cash, the cash account Finance already keeps for the business. Nothing is created until the owner confirms.",
       inputSchema: z.object({
         accounts: z.array(moneyAccountInputSchema).min(1).max(15),
       }),

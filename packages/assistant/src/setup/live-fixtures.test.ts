@@ -283,6 +283,9 @@ suite("setup assistant with a live model", () => {
         ["BANK", 12_000_000],
       ]),
     )
+    // The first cash pocket goes into the Shop cash account Finance keeps.
+    expect(reply).toMatch(/shop cash/i)
+    expect(reply).toMatch(/finance/i)
   }, 120_000)
 
   test("Yoruba: understands the record and replies", async () => {
