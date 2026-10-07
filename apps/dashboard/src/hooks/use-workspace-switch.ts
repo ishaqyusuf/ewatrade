@@ -17,7 +17,7 @@ type SwitchResult =
 type SwitchDependencies = {
   assign: (url: string) => void
   clearCache: () => void
-  fetcher: typeof fetch
+  fetcher: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   pathname: string
 }
 

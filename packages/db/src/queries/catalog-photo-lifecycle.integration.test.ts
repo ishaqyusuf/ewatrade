@@ -80,9 +80,14 @@ describeWithServiceCommerceDatabase(
         )
         expect(replay).toEqual(selection)
         expect(selection.subcategoryId).not.toBeNull()
+        const { subcategoryId } = selection
+        if (subcategoryId === null)
+          throw new Error(
+            "Expected the category label to resolve a subcategory",
+          )
         expect(
           (await listCatalogCategories(db, scope))[0]?.children[0]?.id,
-        ).toBe(selection.subcategoryId)
+        ).toBe(subcategoryId)
         await expect(
           db.$transaction(
             (tx) =>
@@ -173,10 +178,12 @@ describeWithServiceCommerceDatabase(
         }
         expect(await replaceCatalogItemPhotos(db, replacement)).toEqual({
           assetIds: [asset.assetId],
+          illustrationId: undefined,
           replayed: false,
         })
         expect(await replaceCatalogItemPhotos(db, replacement)).toEqual({
           assetIds: [asset.assetId],
+          illustrationId: undefined,
           replayed: true,
         })
         await expect(
@@ -276,7 +283,7 @@ describeWithServiceCommerceDatabase(
             assetIds: [],
             clientOperationId: "owned-clear-photos",
           }),
-        ).toEqual({ assetIds: [], replayed: false })
+        ).toEqual({ assetIds: [], illustrationId: undefined, replayed: false })
         expect(
           (
             await db.catalogPhotoAsset.findUnique({

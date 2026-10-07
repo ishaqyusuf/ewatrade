@@ -4,6 +4,7 @@ import {
   financeCashAdjustmentReversalSchema,
   financeExpenseSchema,
   financeMoneySchema,
+  financePeriodCloseChecklistSchema,
 } from "./finance"
 
 test("owner-funded payments cannot also claim a business money account", () => {
@@ -126,5 +127,31 @@ test("cash adjustment reversals require reviewed sequence, reason, and date", ()
     expect(financeCashAdjustmentReversalSchema.safeParse(invalid).success).toBe(
       false,
     )
+  }
+})
+
+const periodCloseThrough = new Date("2025-12-31T23:59:59.999Z")
+
+test("strict checklist input permits only Book and cutoff, never caller authority or verdict", () => {
+  expect(
+    financePeriodCloseChecklistSchema.parse({
+      bookId: "book",
+      through: periodCloseThrough.toISOString(),
+    }).through,
+  ).toEqual(periodCloseThrough)
+  for (const extra of [
+    { tenantId: "other" },
+    { actorUserId: "owner" },
+    { snapshotSequence: "9" },
+    { operationallyReconciled: true },
+    { checks: [] },
+  ]) {
+    expect(
+      financePeriodCloseChecklistSchema.safeParse({
+        bookId: "book",
+        through: periodCloseThrough,
+        ...extra,
+      }).success,
+    ).toBe(false)
   }
 })

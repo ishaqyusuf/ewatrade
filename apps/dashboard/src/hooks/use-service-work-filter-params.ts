@@ -1,12 +1,17 @@
-import { createLoader, parseAsString, parseAsStringEnum } from "nuqs/server"
+import {
+  type LoaderInput,
+  createLoader,
+  parseAsString,
+  parseAsStringEnum,
+} from "nuqs/server"
 
 export const SERVICE_DUE_FILTERS = ["all", "overdue", "today"] as const
 export const SERVICE_PRIORITY_FILTERS = ["normal", "urgent"] as const
 
 export const serviceWorkFilterParams = {
   serviceAssignee: parseAsString,
-  serviceDue: parseAsStringEnum(SERVICE_DUE_FILTERS),
-  servicePriority: parseAsStringEnum(SERVICE_PRIORITY_FILTERS),
+  serviceDue: parseAsStringEnum([...SERVICE_DUE_FILTERS]),
+  servicePriority: parseAsStringEnum([...SERVICE_PRIORITY_FILTERS]),
   serviceQuery: parseAsString,
 }
 
@@ -20,9 +25,9 @@ export type ServiceWorkFilters = {
 const loadServiceWorkFilterState = createLoader(serviceWorkFilterParams)
 
 export async function loadServiceWorkFilterParams(
-  searchParams: Parameters<typeof loadServiceWorkFilterState>[0],
+  searchParams: LoaderInput | Promise<LoaderInput>,
 ): Promise<ServiceWorkFilters> {
-  const params = await loadServiceWorkFilterState(searchParams)
+  const params = loadServiceWorkFilterState(await searchParams)
   return {
     assigneeUserId: params.serviceAssignee,
     due: params.serviceDue,

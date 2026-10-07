@@ -710,13 +710,13 @@ describe("historical original restock source", () => {
       "duplicate",
     ]) {
       const source = originalReturnScope()
+      const original = source.snapshot.returns[0]
+      if (!original) throw new Error("Expected an original return")
       if (change === "tenant") source.snapshot.tenantId = "other"
       if (change === "book") source.snapshot.bookId = "other"
       if (change === "line") source.snapshot.lines = []
-      if (change === "disposition")
-        source.snapshot.returns[0].disposition = "QUARANTINE"
-      if (change === "duplicate")
-        source.snapshot.returns.push(source.snapshot.returns[0])
+      if (change === "disposition") original.disposition = "QUARANTINE"
+      if (change === "duplicate") source.snapshot.returns.push(original)
       await expect(
         readReviewedReturnCostPostingsInTransaction(
           tx,
