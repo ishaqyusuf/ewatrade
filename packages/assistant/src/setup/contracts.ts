@@ -3,7 +3,7 @@ import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v8"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v9"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */
@@ -234,7 +234,9 @@ export function deriveSetupEntityState(
     ...questions.filter(
       (question) =>
         !derived.some((entry) => entry.field === question.field) &&
-        !answered(payload, question.field),
+        !answered(payload, question.field) &&
+        // Only products are counted; a service never has stock to ask about.
+        (question.field !== "stock" || payload.kind === "product"),
     ),
   ]
   return {
