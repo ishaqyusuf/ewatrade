@@ -196,7 +196,16 @@ export type SetupAttachmentPartData = {
   kind: SetupAttachmentKind
   fileName: string
   summary: string
+  /** Set when read back after retention deleted the file's content. */
+  expired?: boolean
 }
+
+/**
+ * The errorCode the hourly retention job writes on a sent attachment whose
+ * bytes, transcript and extraction it deleted (ASSISTANT_ATTACHMENT_RETENTION_EXPIRED
+ * in @ewatrade/db/assistant-operations).
+ */
+export const SETUP_ATTACHMENT_EXPIRED = "RETENTION_EXPIRED"
 
 function duration(ms: number | null | undefined) {
   if (!ms) return null

@@ -1,4 +1,5 @@
 import { summarizeSetupAreas } from "@ewatrade/assistant/setup/areas"
+import { SETUP_ATTACHMENT_EXPIRED } from "@ewatrade/assistant/setup/attachments"
 import {
   type SetupOpenQuestion,
   deriveSetupEntityState,
@@ -26,6 +27,7 @@ import {
 import { listSentAssistantAttachments } from "@ewatrade/db/assistant-attachments"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import { withExpiredAttachments } from "../../assistant/chat-attachments"
 import {
   commitSetupDraft,
   describeCommitError,
@@ -128,11 +130,20 @@ export const setupAssistantRouter = createTRPCRouter({
         areas: summarizeSetupAreas(null, []),
         attachments: [],
       }
-    const [messages, draft, attachments] = await Promise.all([
+    const [messages, draft, sent] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
       readSetupDraft(ctx.db, conversation.setupDraft.id),
       listSentAssistantAttachments(ctx.db, conversation.id),
     ])
+    const attachments = sent.map(({ errorCode, ...attachment }) => ({
+      ...attachment,
+      expired: errorCode === SETUP_ATTACHMENT_EXPIRED,
+    }))
+    const expired = new Set(
+      attachments
+        .filter((attachment) => attachment.expired)
+        .map((attachment) => attachment.id),
+    )
     const prerequisites = await readSetupPrerequisites(
       ctx.db,
       {
@@ -148,7 +159,10 @@ export const setupAssistantRouter = createTRPCRouter({
         id: conversation.id,
         status: conversation.status,
       },
-      messages: messages.map(({ id, role, parts }) => ({ id, role, parts })),
+      messages: withExpiredAttachments(
+        messages.map(({ id, role, parts }) => ({ id, role, parts })),
+        expired,
+      ),
       draft,
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
       prerequisites,

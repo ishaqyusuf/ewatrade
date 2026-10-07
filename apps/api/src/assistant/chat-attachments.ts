@@ -1,4 +1,5 @@
 import {
+  SETUP_ATTACHMENT_EXPIRED,
   SETUP_ATTACHMENT_PART,
   type SetupAttachmentExtraction,
   type SetupAttachmentKind,
@@ -18,6 +19,7 @@ export type ChatAttachmentRow = {
   durationMs: number | null
   transcript: string | null
   extraction: unknown
+  errorCode?: string | null
 }
 
 type StoredPart = { type: string; text?: string; data?: unknown }
@@ -114,6 +116,11 @@ export function withAttachmentText<M extends StoredMessage>(
           type: "text",
           text: `(an attachment that is no longer available: ${data?.fileName ?? "file"})`,
         }
+      if (row.errorCode === SETUP_ATTACHMENT_EXPIRED)
+        return {
+          type: "text",
+          text: `(attachment ${row.fileName} has expired: its content was deleted and is no longer available)`,
+        }
       if (!full.has(row.id))
         return {
           type: "text",
@@ -132,6 +139,29 @@ export function withAttachmentText<M extends StoredMessage>(
           options.maxCharsEach,
         ),
       }
+    })
+    return { ...message, parts }
+  })
+}
+
+/**
+ * Flags attachment parts whose content retention deleted, for display. Stored
+ * parts are JSON, so anything that is not an attachment part passes through.
+ */
+export function withExpiredAttachments<M extends { parts: unknown }>(
+  messages: M[],
+  expiredIds: ReadonlySet<string>,
+): M[] {
+  if (expiredIds.size === 0) return messages
+  return messages.map((message) => {
+    if (!Array.isArray(message.parts)) return message
+    const parts = message.parts.map((part: unknown) => {
+      const stored = part as StoredPart | null
+      if (stored?.type !== SETUP_ATTACHMENT_PART) return part
+      const data = stored.data as Partial<SetupAttachmentPartData> | undefined
+      return data?.attachmentId && expiredIds.has(data.attachmentId)
+        ? { ...stored, data: { ...data, expired: true } }
+        : part
     })
     return { ...message, parts }
   })

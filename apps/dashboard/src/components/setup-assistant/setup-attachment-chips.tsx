@@ -147,7 +147,7 @@ export function SetupSentAttachment({
     >
       <AttachmentThumbnail
         src={
-          data.kind === "IMAGE"
+          data.kind === "IMAGE" && !data.expired
             ? `/api/assistant/attachments/${encodeURIComponent(data.attachmentId)}/content`
             : null
         }
@@ -166,7 +166,7 @@ export function SetupSentAttachment({
             inverted ? "text-primary-foreground/75" : "text-muted-foreground",
           )}
         >
-          {data.summary}
+          {data.expired ? "Expired, no longer kept" : data.summary}
         </p>
       </div>
     </div>

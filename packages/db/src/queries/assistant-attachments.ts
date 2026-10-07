@@ -370,7 +370,13 @@ export async function listSentAssistantAttachments(
     where: { conversationId, messageId: { not: null } },
     orderBy: { createdAt: "asc" },
     take: 100,
-    select: { id: true, fileName: true, kind: true, contentType: true },
+    select: {
+      id: true,
+      fileName: true,
+      kind: true,
+      contentType: true,
+      errorCode: true,
+    },
   })
 }
 
