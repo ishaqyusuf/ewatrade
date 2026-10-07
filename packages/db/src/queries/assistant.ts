@@ -867,42 +867,57 @@ export async function readSetupBusinessFacts(
 }
 
 /** Records the outcome of one commit attempt; committed records stay immutable. */
+type SetupDraftCommitOutcomeInput = {
+  draftId: string
+  key: string
+  outcome:
+    | { state: "COMMITTED"; recordId: string; errorCode?: string | null }
+    | { state: "FAILED"; errorCode: string }
+}
+
+/**
+ * Writes a record's add outcome inside a transaction the caller already holds.
+ * Never starts a nested transaction: Prisma's interactive-transaction client
+ * also exposes `$transaction`, and nesting one there leaves the connection in a
+ * state where every later transaction in the process fails with P2028.
+ */
+export async function recordSetupDraftCommitOutcomeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: SetupDraftCommitOutcomeInput,
+) {
+  await tx.setupDraftEntity.updateMany({
+    where: {
+      draftId: input.draftId,
+      key: input.key,
+      ...(input.outcome.state === "FAILED"
+        ? { state: { not: "COMMITTED" } }
+        : {}),
+    },
+    data:
+      input.outcome.state === "COMMITTED"
+        ? {
+            state: "COMMITTED",
+            committedRecordId: input.outcome.recordId,
+            errorCode: input.outcome.errorCode ?? null,
+          }
+        : { state: "FAILED", errorCode: input.outcome.errorCode },
+  })
+  const draft = await tx.setupDraft.update({
+    where: { id: input.draftId },
+    data: { revision: { increment: 1 } },
+    select: { revision: true },
+  })
+  return draft.revision
+}
+
 export async function recordSetupDraftCommitOutcome(
   db: DbClient,
-  input: {
-    draftId: string
-    key: string
-    outcome:
-      | { state: "COMMITTED"; recordId: string; errorCode?: string | null }
-      | { state: "FAILED"; errorCode: string }
-  },
+  input: SetupDraftCommitOutcomeInput,
 ) {
-  const apply = async (tx: Prisma.TransactionClient) => {
-    await tx.setupDraftEntity.updateMany({
-      where: {
-        draftId: input.draftId,
-        key: input.key,
-        ...(input.outcome.state === "FAILED"
-          ? { state: { not: "COMMITTED" } }
-          : {}),
-      },
-      data:
-        input.outcome.state === "COMMITTED"
-          ? {
-              state: "COMMITTED",
-              committedRecordId: input.outcome.recordId,
-              errorCode: input.outcome.errorCode ?? null,
-            }
-          : { state: "FAILED", errorCode: input.outcome.errorCode },
-    })
-    const draft = await tx.setupDraft.update({
-      where: { id: input.draftId },
-      data: { revision: { increment: 1 } },
-      select: { revision: true },
-    })
-    return draft.revision
-  }
   return "$transaction" in db
-    ? db.$transaction(apply, transactionOptions)
-    : apply(db)
+    ? db.$transaction(
+        (tx) => recordSetupDraftCommitOutcomeInTransaction(tx, input),
+        transactionOptions,
+      )
+    : recordSetupDraftCommitOutcomeInTransaction(db, input)
 }

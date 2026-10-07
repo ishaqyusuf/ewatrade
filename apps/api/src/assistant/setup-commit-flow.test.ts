@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test"
+import { recordSetupDraftCommitOutcomeInTransaction } from "@ewatrade/db/assistant"
 import { CatalogError } from "@ewatrade/db/queries"
 import {
   MONEY_ACCOUNT_NEEDS_FINANCE,
@@ -70,22 +71,24 @@ const db = {
 
 function harness(entities: Entity[], overrides: Partial<SetupCommitDeps> = {}) {
   const outcomes: Array<{ key: string; outcome: unknown; inTx: boolean }> = []
+  const record = mock(
+    async (client: unknown, input: { key: string; outcome: unknown }) => {
+      outcomes.push({
+        key: input.key,
+        outcome: input.outcome,
+        inTx: (client as { tx?: boolean }).tx === true,
+      })
+      return 1
+    },
+  )
   const deps: SetupCommitDeps = {
     readSetupDraft: mock(async () => ({
       id: "draft",
       revision: 1,
       entities,
     })) as never,
-    recordOutcome: mock(
-      async (client: unknown, input: { key: string; outcome: unknown }) => {
-        outcomes.push({
-          key: input.key,
-          outcome: input.outcome,
-          inTx: (client as { tx?: boolean }).tx === true,
-        })
-        return 1
-      },
-    ) as never,
+    recordOutcome: record as never,
+    recordOutcomeInTransaction: record as never,
     createCatalogItem: mock(async (_db: unknown, input: { name: string }) => ({
       id: `item_${input.name}`,
     })) as never,
@@ -336,6 +339,35 @@ describe("setup commit flow", () => {
     expect(result.results.map((r) => r.key)).toEqual(["broiler"])
     expect(deps.createCatalogItem).toHaveBeenCalledTimes(1)
     expect(deps.createCustomer).not.toHaveBeenCalled()
+  })
+
+  test("a new customer's outcome is written in its transaction without nesting another (P2028)", async () => {
+    const nested = mock(() => {
+      throw new Error("A nested $transaction must never start here.")
+    })
+    const tx = {
+      $transaction: nested,
+      setupDraftEntity: { updateMany: mock(async () => ({ count: 1 })) },
+      setupDraft: { update: mock(async () => ({ revision: 2 })) },
+    }
+    const txDb = {
+      $transaction: (fn: (client: unknown) => unknown) => fn(tx),
+    } as never
+    const { deps } = harness([customer], {
+      recordOutcomeInTransaction: recordSetupDraftCommitOutcomeInTransaction,
+    })
+    const result = await commitSetupDraft(txDb, scope, "draft", deps)
+    expect(result.interrupted).toBe(false)
+    expect(result.results[0]).toMatchObject({ state: "COMMITTED" })
+    expect(nested).not.toHaveBeenCalled()
+    expect(tx.setupDraftEntity.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          state: "COMMITTED",
+          errorCode: OPENING_BALANCE_PENDING,
+        }),
+      }),
+    )
   })
 
   test("the time budget stops starting new records", async () => {

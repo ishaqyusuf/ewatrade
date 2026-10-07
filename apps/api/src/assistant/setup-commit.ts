@@ -10,6 +10,7 @@ import {
   type AssistantScope,
   readSetupDraft,
   recordSetupDraftCommitOutcome,
+  recordSetupDraftCommitOutcomeInTransaction,
 } from "@ewatrade/db/assistant"
 import {
   CatalogError,
@@ -321,7 +322,7 @@ async function commitCustomer(
           phone: payload.phone,
           email: payload.email,
         })
-        await deps.recordOutcome(tx, {
+        await deps.recordOutcomeInTransaction(tx, {
           draftId,
           key,
           outcome: {
@@ -382,6 +383,8 @@ export type SetupCommitDeps = {
   prepareProductPhoto: typeof prepareSetupProductPhoto
   enqueuePhotoReview: (assetId: string) => Promise<void>
   recordOutcome: typeof recordSetupDraftCommitOutcome
+  /** Inside the customer-creation transaction; never nests a transaction. */
+  recordOutcomeInTransaction: typeof recordSetupDraftCommitOutcomeInTransaction
   createCatalogItem: typeof createCatalogItem
   createCustomer: typeof createCustomer
   getFinanceBook: typeof getFinanceBook
@@ -397,6 +400,7 @@ const defaultDeps: SetupCommitDeps = {
   prepareProductPhoto: prepareSetupProductPhoto,
   enqueuePhotoReview: enqueueCatalogPhotoReview,
   recordOutcome: recordSetupDraftCommitOutcome,
+  recordOutcomeInTransaction: recordSetupDraftCommitOutcomeInTransaction,
   createCatalogItem,
   createCustomer,
   getFinanceBook,
