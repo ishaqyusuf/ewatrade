@@ -73,6 +73,8 @@ const ERROR_COPY: Record<string, string> = {
 }
 
 const MONEY_ERROR_COPY: Record<string, string> = {
+  MONEY_ACCOUNT_SHOP_CASH:
+    "Added to Shop cash, the cash account Finance already keeps for your business.",
   OPENING_BALANCE_NEEDS_FINANCE:
     "Account added. Set up Finance at the top of this list and its balance is recorded right after.",
   OPENING_BALANCE_FAILED:

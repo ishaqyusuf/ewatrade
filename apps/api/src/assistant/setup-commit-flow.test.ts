@@ -308,6 +308,11 @@ describe("setup commit flow", () => {
       key: "money:Home safe",
       outcome: { state: "COMMITTED", errorCode: null },
     })
+    expect(
+      outcomes.find((entry) => entry.key === "money:Cash at hand"),
+    ).toMatchObject({
+      outcome: { state: "COMMITTED", errorCode: "MONEY_ACCOUNT_SHOP_CASH" },
+    })
   })
 
   test("without a Finance book cash and bank accounts fail with a Finance prompt", async () => {

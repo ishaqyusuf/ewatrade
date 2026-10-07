@@ -13,6 +13,7 @@ import {
 } from "@ewatrade/db/queries"
 import {
   MONEY_ACCOUNT_NEEDS_FINANCE,
+  MONEY_ACCOUNT_SHOP_CASH,
   OPENING_BALANCE_FAILED,
   OPENING_BALANCE_NEEDS_FINANCE,
 } from "./setup-commit-codes"
@@ -93,18 +94,16 @@ export async function commitSetupMoneyAccount(
             "Set up Finance to add your cash and bank accounts. This account is kept here until then.",
         }
 
+  const shopCash = book.accounts.find(
+    (account) =>
+      account.code === DEFAULT_CASH_CODE &&
+      account.purpose === "CASH" &&
+      !account.archivedAt,
+  )
   let accountId = entity.committedRecordId
   if (!accountId) {
-    const defaultCash = options.useDefaultCash
-      ? book.accounts.find(
-          (account) =>
-            account.code === DEFAULT_CASH_CODE &&
-            account.purpose === "CASH" &&
-            !account.archivedAt,
-        )
-      : undefined
     accountId =
-      defaultCash?.id ??
+      (options.useDefaultCash ? shopCash?.id : undefined) ??
       (
         await deps.createFinanceMoneyAccount(db, {
           ...actor,
@@ -116,8 +115,13 @@ export async function commitSetupMoneyAccount(
       ).id
   }
 
-  if (!payload.openingBalanceMinor)
-    return { state: "COMMITTED", recordId: accountId, errorCode: null }
+  // The owner named the pocket, but Finance keeps it as "Shop cash"; say so on the card.
+  const added = {
+    state: "COMMITTED",
+    recordId: accountId,
+    errorCode: accountId === shopCash?.id ? MONEY_ACCOUNT_SHOP_CASH : null,
+  } as const
+  if (!payload.openingBalanceMinor) return added
   try {
     await deps.recordFinanceMoneyMovement(db, {
       ...actor,
@@ -129,7 +133,7 @@ export async function commitSetupMoneyAccount(
       description: "Opening balance from business setup",
       effectiveAt: book.startsAt,
     })
-    return { state: "COMMITTED", recordId: accountId, errorCode: null }
+    return added
   } catch (error) {
     if (!(error instanceof FinanceError)) throw error
     return {

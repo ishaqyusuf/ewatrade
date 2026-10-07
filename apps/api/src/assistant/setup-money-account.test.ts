@@ -6,6 +6,7 @@ import {
 import { FinanceError } from "@ewatrade/db/queries"
 import {
   MONEY_ACCOUNT_NEEDS_FINANCE,
+  MONEY_ACCOUNT_SHOP_CASH,
   OPENING_BALANCE_FAILED,
   OPENING_BALANCE_NEEDS_FINANCE,
 } from "./setup-commit-codes"
@@ -154,7 +155,11 @@ describe("setup money accounts", () => {
       { useDefaultCash: true },
       d,
     )
-    expect(outcome).toMatchObject({ state: "COMMITTED", recordId: "acct_cash" })
+    expect(outcome).toEqual({
+      state: "COMMITTED",
+      recordId: "acct_cash",
+      errorCode: MONEY_ACCOUNT_SHOP_CASH,
+    })
     expect(d.createFinanceMoneyAccount).not.toHaveBeenCalled()
     expect(d.recordFinanceMoneyMovement).toHaveBeenCalledWith(
       db,
@@ -163,6 +168,31 @@ describe("setup money accounts", () => {
         amountMinor: "5000000",
       }),
     )
+  })
+
+  test("a retried Shop cash pocket keeps its note; a named cash account has none", async () => {
+    const retry = await commitSetupMoneyAccount(
+      db,
+      scope,
+      entity("ent_cash", "acct_cash"),
+      cash,
+      { useDefaultCash: true },
+      deps(),
+    )
+    expect(retry).toMatchObject({ errorCode: MONEY_ACCOUNT_SHOP_CASH })
+    const second = await commitSetupMoneyAccount(
+      db,
+      scope,
+      entity("ent_safe"),
+      { ...cash, name: "Home safe" },
+      { useDefaultCash: false },
+      deps(),
+    )
+    expect(second).toEqual({
+      state: "COMMITTED",
+      recordId: "acct_new",
+      errorCode: null,
+    })
   })
 
   test("no balance creates the account only", async () => {
