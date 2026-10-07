@@ -5,7 +5,6 @@ import {
   SETUP_ATTACHMENT_TYPES,
   type SetupAttachmentPartData,
 } from "@ewatrade/assistant/setup/attachments"
-import { SETUP_QUICK_PROMPTS } from "@ewatrade/assistant/setup/messages"
 import {
   Button,
   InputGroup,
@@ -44,14 +43,12 @@ const ACCEPT = [
 export function SetupComposer({
   conversationId,
   busy,
-  showQuickPrompts,
   onSend,
   onStop,
 }: {
   conversationId: string
   /** The assistant is answering; sending waits, Stop is offered. */
   busy: boolean
-  showQuickPrompts: boolean
   onSend: (parts: SetupComposerPart[]) => void
   onStop: () => void
 }) {
@@ -101,24 +98,6 @@ export function SetupComposer({
 
   return (
     <div className="border-t border-border px-4 py-3 sm:px-6">
-      {showQuickPrompts ? (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {SETUP_QUICK_PROMPTS.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => {
-                setInput(`${prompt.replace("…", "")}\n`)
-                inputRef.current?.focus()
-              }}
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       {attachments.items.length > 0 ? (
         <ul aria-label="Files to send" className="mb-2 flex flex-wrap gap-2">
           {attachments.items.map((item) => (

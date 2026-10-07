@@ -6,6 +6,7 @@ import {
   completeAssistantRun,
   isSetupActorStillAuthorized,
   listAssistantMessages,
+  markSetupDraftArea,
   readAssistantConversation,
   readAssistantRun,
   readSetupDraft,
@@ -41,6 +42,12 @@ export type AssistantChatRepository = {
   readDraftEntities: (
     draftId: string,
   ) => Promise<Awaited<ReturnType<typeof readSetupDraft>>["entities"]>
+  readAreaMarks: (draftId: string) => Promise<unknown>
+  markArea: (
+    draftId: string,
+    area: string,
+    mark: "DONE" | "SKIPPED" | null,
+  ) => Promise<{ revision: number }>
   writeDraftEntities: (
     draftId: string,
     entities: SetupDraftEntityWrite[],
@@ -78,6 +85,9 @@ export function createAssistantChatRepository(
       listAssistantMessages(db, conversationId, options),
     readDraftEntities: async (draftId) =>
       (await readSetupDraft(db, draftId)).entities,
+    readAreaMarks: async (draftId) => (await readSetupDraft(db, draftId)).areas,
+    markArea: (draftId, area, mark) =>
+      markSetupDraftArea(db, { draftId, area, mark }),
     writeDraftEntities: (draftId, entities) =>
       upsertSetupDraftEntities(db, { draftId, entities }),
     removeDraftEntities: (draftId, keys) =>

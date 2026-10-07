@@ -23,14 +23,9 @@ export const SETUP_TOOL_LABELS: Record<string, string> = {
   setup_draft_upsert_items: "Adding to your setup",
   setup_draft_upsert_customers: "Adding customers",
   setup_draft_upsert_money_accounts: "Adding money accounts",
+  setup_set_area: "Updating your setup steps",
   setup_draft_remove: "Removing from your setup",
 }
-
-export const SETUP_QUICK_PROMPTS = [
-  "Here is what I sell…",
-  "I offer these services…",
-  "These customers owe me money…",
-] as const
 
 type TextMessage = {
   role: "assistant"
@@ -38,67 +33,6 @@ type TextMessage = {
     | { type: "text"; text: string }
     | { type: typeof SETUP_OFFER_PART; data: Record<string, never> }
   >
-}
-
-export function setupGreetingMessages(input: {
-  businessName: string
-  firstName: string | null
-  businessType: string | null
-}): TextMessage[] {
-  const hello = input.firstName ? `Welcome, ${input.firstName}!` : "Welcome!"
-  const type = input.businessType
-    ? ` I see you run a ${input.businessType.toLowerCase()} business.`
-    : ""
-  return [
-    {
-      role: "assistant",
-      parts: [
-        {
-          type: "text",
-          text: `${hello} ${input.businessName} is ready on EwaTrade.${type}`,
-        },
-      ],
-    },
-    {
-      role: "assistant",
-      parts: [
-        {
-          type: "text",
-          text: "Would you like me to set up your products, services, prices, stock and customers for you? Just tell me about your business in your own words, any language is fine. Or you can skip this and set things up yourself.",
-        },
-        { type: SETUP_OFFER_PART, data: {} },
-      ],
-    },
-  ]
-}
-
-export function setupBeginMessage(): TextMessage {
-  return {
-    role: "assistant",
-    parts: [
-      {
-        type: "text",
-        text: "Great! Tell me what you sell or the services you offer, with prices and how many you have now if you know. You can list them like:\n\n- Crate of eggs, 4500, 20 crates\n- Broiler chicken, 9000 each\n- Mama Ade owes me 15,000\n\nI'll put everything in a setup list you can check before anything is added.",
-      },
-    ],
-  }
-}
-
-export function setupResumeMessage(followUp?: SetupFollowUp): TextMessage {
-  const pending = followUp ? followUpLines(followUp) : []
-  return {
-    role: "assistant",
-    parts: [
-      {
-        type: "text",
-        text: pending.length
-          ? ["Welcome back! Let's finish your setup list.", ...pending].join(
-              "\n\n",
-            )
-          : "Welcome back! Your setup list is saved. Tell me anything else you sell, prices you'd like to change, or customers to add.",
-      },
-    ],
-  }
 }
 
 function listJoin(items: string[]) {

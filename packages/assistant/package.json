@@ -6,11 +6,13 @@
   "exports": {
     "./files/pdf-text": "./src/files/pdf-text.ts",
     "./files/spreadsheet": "./src/files/spreadsheet.ts",
+    "./setup/areas": "./src/setup/areas.ts",
     "./setup/attachment-processing": "./src/setup/attachment-processing.ts",
     "./setup/attachments": "./src/setup/attachments.ts",
     "./setup/contracts": "./src/setup/contracts.ts",
     "./setup/follow-up": "./src/setup/follow-up.ts",
     "./setup/messages": "./src/setup/messages.ts",
+    "./setup/opening": "./src/setup/opening.ts",
     "./setup/prompt": "./src/setup/prompt.ts",
     "./setup/rehearsal": "./src/setup/rehearsal.ts",
     "./setup/tools": "./src/setup/tools.ts",

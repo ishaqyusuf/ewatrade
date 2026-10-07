@@ -16,6 +16,13 @@ import type { SetupPrerequisiteState } from "./setup-prerequisites"
 
 type SetupChatMessage = UIMessage<never, SetupAssistantDataParts>
 
+type SetupAreaState = {
+  area: string
+  label: string
+  status: "DONE" | "SKIPPED" | "STARTED" | "OPEN"
+  records: number
+}
+
 type SetupFollowUpState = {
   open: number
   needsDetails: number
@@ -65,7 +72,15 @@ export function SetupAssistant({
   const finish = useMutation(
     trpc.setupAssistant.finish.mutationOptions({ onSuccess: refresh }),
   )
+  const visit = useMutation(
+    trpc.setupAssistant.visit.mutationOptions({
+      onSuccess: (result) => {
+        if (result.appended) void refresh()
+      },
+    }),
+  )
   const started = useRef(false)
+  const visited = useRef<string | null>(null)
   const data = state.data
   const conversation = data?.enabled ? data.conversation : null
   const shouldStart =
@@ -79,14 +94,29 @@ export function SetupAssistant({
     start.mutate()
   }, [shouldStart, start])
 
+  // Chat only: a setup still waiting on the old offer step opens straight in,
+  // and each new visit (not a reload; the server checks) gets a fresh welcome.
+  const conversationId = conversation?.id ?? null
+  const conversationStatus = conversation?.status ?? null
+  useEffect(() => {
+    if (!conversationId || visited.current === conversationId) return
+    if (conversationStatus === "OFFERED") {
+      visited.current = conversationId
+      begin.mutate()
+    } else if (conversationStatus === "ACTIVE") {
+      visited.current = conversationId
+      visit.mutate({ conversationId })
+    }
+  }, [conversationId, conversationStatus, begin, visit])
+
   // The launchpad shows while availability loads, so a disabled assistant
   // never changes the Overview; only an explicit entry waits on a skeleton.
   if (state.isPending) return requested ? <SetupSkeleton /> : fallback
   if (!data?.enabled) return fallback
+  // The assistant stays reachable for every owner, not only before the
+  // first Catalog item.
   if (!conversation && !requested && (hasCatalogItems || !offerSetup))
-    return !offerSetup ? (
-      fallback
-    ) : (
+    return (
       <>
         <ResumeBanner
           pending={start.isPending}
@@ -99,23 +129,20 @@ export function SetupAssistant({
   // Optional so an older API without the field still shows the banner.
   const followUp: SetupFollowUpState | undefined =
     "followUp" in data ? data.followUp : undefined
+  const areas: SetupAreaState[] =
+    "areas" in data ? (data.areas as SetupAreaState[]) : []
   if (
     conversation.status === "SKIPPED" ||
     conversation.status === "COMPLETED"
   ) {
-    const unfinished =
-      (followUp?.open ?? 0) > 0 || (followUp?.balancesPending ?? 0) > 0
     return (
       <>
-        {(conversation.status === "SKIPPED" && offerSetup) ||
-        unfinished ||
-        requested ? (
-          <ResumeBanner
-            followUp={followUp}
-            pending={begin.isPending}
-            onResume={() => begin.mutate()}
-          />
-        ) : null}
+        <ResumeBanner
+          followUp={followUp}
+          areas={areas}
+          pending={begin.isPending}
+          onResume={() => begin.mutate()}
+        />
         {fallback}
       </>
     )
@@ -136,8 +163,7 @@ export function SetupAssistant({
       currencyCode={data.currencyCode}
       prerequisites={data.prerequisites}
       hasAdded={(followUp?.committed ?? 0) > 0}
-      offerPending={begin.isPending || skip.isPending || finish.isPending}
-      onBegin={() => begin.mutate()}
+      pending={begin.isPending || skip.isPending || finish.isPending}
       onSkip={() => skip.mutate()}
       onFinish={() => finish.mutate()}
     />
@@ -158,12 +184,24 @@ function plural(count: number, word: string) {
 }
 
 /** What the launchpad says about an unfinished or finished setup. */
-function resumeCopy(followUp?: SetupFollowUpState) {
+function resumeCopy(
+  followUp?: SetupFollowUpState,
+  areas: SetupAreaState[] = [],
+) {
+  const openAreas = areas.filter(
+    (entry) => entry.status === "OPEN" || entry.status === "STARTED",
+  )
+  const started = areas.some((entry) => entry.status !== "OPEN")
   if (!followUp || (followUp.committed === 0 && followUp.open === 0))
-    return {
-      text: "Prefer to describe your business instead? The setup assistant can build your list for you.",
-      action: "Set up with AI",
-    }
+    return started && openAreas.length
+      ? {
+          text: `Still to set up: ${openAreas.map((entry) => entry.label).join("; ")}. Nothing is compulsory.`,
+          action: "Continue setup",
+        }
+      : {
+          text: "Prefer to describe your business instead? The setup assistant can build your list for you, by chat, voice note or a photo of your price list.",
+          action: "Set up with AI",
+        }
   const notes: string[] = []
   if (followUp.needsDetails)
     notes.push(`${plural(followUp.needsDetails, "record")} still need details`)
@@ -187,14 +225,16 @@ function resumeCopy(followUp?: SetupFollowUpState) {
 
 function ResumeBanner({
   followUp,
+  areas,
   pending,
   onResume,
 }: {
   followUp?: SetupFollowUpState
+  areas?: SetupAreaState[]
   pending: boolean
   onResume: () => void
 }) {
-  const copy = resumeCopy(followUp)
+  const copy = resumeCopy(followUp, areas)
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3">
       <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -219,8 +259,7 @@ function SetupWorkspace({
   currencyCode,
   prerequisites,
   hasAdded,
-  offerPending,
-  onBegin,
+  pending,
   onSkip,
   onFinish,
 }: {
@@ -233,8 +272,7 @@ function SetupWorkspace({
   prerequisites?: SetupPrerequisiteState
   /** Once records are in the business, leaving is "done for now", not a skip. */
   hasAdded: boolean
-  offerPending: boolean
-  onBegin: () => void
+  pending: boolean
   onSkip: () => void
   onFinish: () => void
 }) {
@@ -286,7 +324,7 @@ function SetupWorkspace({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  disabled={offerPending}
+                  disabled={pending}
                   onClick={hasAdded ? onFinish : onSkip}
                 >
                   {hasAdded ? "Done for now" : "Skip for now"}
@@ -299,9 +337,6 @@ function SetupWorkspace({
           conversationId={conversationId}
           status={status}
           initialMessages={messages}
-          offerPending={offerPending}
-          onBegin={onBegin}
-          onSkip={onSkip}
         />
       </div>
       {status === "ACTIVE" ? (

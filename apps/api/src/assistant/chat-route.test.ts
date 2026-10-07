@@ -104,6 +104,8 @@ function fakeRepository(
       },
     ],
     readDraftEntities: async () => [],
+    readAreaMarks: async () => null,
+    markArea: async () => ({ revision: 1 }),
     writeDraftEntities: async (_draftId, entities) => {
       calls.writes.push(...entities)
       return {

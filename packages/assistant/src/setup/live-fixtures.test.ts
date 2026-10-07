@@ -6,8 +6,9 @@
 import { describe, expect, test } from "bun:test"
 import { createAssistantLanguageModel } from "@ewatrade/ai/provider"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
-import { type ModelMessage, ToolLoopAgent, stepCountIs } from "ai"
+import { type ModelMessage, ToolLoopAgent, generateText, stepCountIs } from "ai"
 import type { SetupEntityPayload } from "./contracts"
+import { cleanSetupOpening, setupOpeningInstructions } from "./opening"
 import { buildSetupAssistantInstructions } from "./prompt"
 import {
   type SetupBusinessContext,
@@ -270,6 +271,47 @@ suite("setup assistant with a live model", () => {
       [...chat.draft.values()][0]?.payload
     expect(price(eggs)).toBe(400_000)
     expect(stock(eggs)).toBe("10")
+  }, 120_000)
+
+  test("AI-tailored openings for different businesses", async () => {
+    const environment = liveEnvironment()
+    const configuration = resolveAssistantRuntimeConfiguration(
+      null,
+      environment,
+    )
+    const model =
+      configuration &&
+      createAssistantLanguageModel(configuration, { environment })
+    if (!model) throw new Error("No live assistant provider key configured.")
+    for (const business of [
+      context({
+        businessName: "Fixture Layers Farm",
+        businessProfile: { key: "farming", title: "Poultry farm" },
+        operatingModel: "products",
+        orderChannels: ["walk_in", "phone_whatsapp"],
+      }),
+      context({
+        businessName: "Fixture Stitches",
+        businessProfile: { key: "fashion", title: "Tailoring and fashion" },
+        operatingModel: "services",
+      }),
+    ]) {
+      const result = await generateText({
+        model: model.model,
+        system: setupOpeningInstructions(business, "Amina"),
+        prompt: "Write the message now.",
+        maxOutputTokens: 600,
+        providerOptions: model.providerOptions as never,
+      })
+      const text = cleanSetupOpening(result.text) ?? ""
+      totals.inputTokens += result.usage.inputTokens ?? 0
+      totals.outputTokens += result.usage.outputTokens ?? 0
+      console.info(`[live] opening for ${business.businessName}:`, text)
+      expect(text).toContain("Amina")
+      expect(text).toContain(business.businessName)
+      expect(text.toLowerCase()).toMatch(/compulsory|optional|no pressure|skip/)
+      expect(text).toMatch(/\?|tell me/i)
+    }
   }, 120_000)
 
   test("reports token usage for the fixture run", () => {

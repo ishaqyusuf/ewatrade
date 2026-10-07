@@ -75,6 +75,7 @@ export async function loadSetupBusinessContext(
       ? { key: profile.key, title: profile.title }
       : null,
     operatingModel: onboarding?.operatingModel ?? null,
+    orderChannels: onboarding?.orderChannels ?? [],
     currencyCode: facts.currencyCode,
     countryCode: facts.countryCode,
     existing: facts.existing,

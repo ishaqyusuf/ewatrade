@@ -4,6 +4,13 @@ import { listCatalogSetupHelpers } from "@ewatrade/utils/catalog-setup-helpers"
 import { tool } from "ai"
 import { z } from "zod"
 import {
+  SETUP_AREAS,
+  type SetupArea,
+  type SetupAreaMark,
+  nextSetupArea,
+  summarizeSetupAreas,
+} from "./areas"
+import {
   SETUP_DRAFT_MAX_ENTITIES,
   type SetupEntityKind,
   type SetupEntityPayload,
@@ -27,6 +34,8 @@ export type SetupBusinessContext = {
   storeName: string
   businessProfile: { key: string; title: string } | null
   operatingModel: string | null
+  /** Onboarding order channels, e.g. walk_in, phone_whatsapp. */
+  orderChannels?: string[]
   currencyCode: string
   countryCode: string | null
   existing: { catalogItems: number; customers: number }
@@ -68,6 +77,12 @@ export type SetupToolDependencies = {
     entities: SetupDraftEntityWrite[],
   ) => Promise<{ revision: number; changed: string[]; rejected: string[] }>
   removeEntities: (keys: string[]) => Promise<{ revision: number }>
+  /** Explicit DONE/SKIPPED marks per setup area. */
+  readAreaMarks?: () => Promise<unknown>
+  markArea?: (
+    area: SetupArea,
+    mark: SetupAreaMark | null,
+  ) => Promise<{ revision: number }>
   onDraftChanged?: (change: { revision: number; keys: string[] }) => void
 }
 
@@ -513,11 +528,17 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         "Read the business profile and the current setup draft (records already staged, their keys and what is still missing). Call this before updating existing records.",
       inputSchema: z.object({}),
       execute: async (): Promise<ToolEnvelope<unknown>> => {
-        const draft = await deps.readDraft()
+        const [draft, marks] = await Promise.all([
+          deps.readDraft(),
+          deps.readAreaMarks?.() ?? Promise.resolve(null),
+        ])
+        const areas = summarizeSetupAreas(marks, draft)
         return {
           status: "success",
           data: {
             business: deps.context,
+            areas,
+            nextArea: nextSetupArea(areas)?.area ?? null,
             draft: draft.map((entity) => ({
               key: entity.key,
               kind: entity.kind,
@@ -526,6 +547,36 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
               openQuestions: entity.openQuestions,
             })),
           },
+          warnings: [],
+        }
+      },
+    }),
+    setup_set_area: tool({
+      description:
+        'Record that the owner finished ("done") or does not want ("skipped") one setup area, so you move on to the next. Use "open" to reopen it. Areas: sell, use, customers, money.',
+      inputSchema: z.object({
+        area: z.enum(SETUP_AREAS),
+        status: z.enum(["done", "skipped", "open"]),
+      }),
+      execute: async ({ area, status }): Promise<ToolEnvelope<unknown>> => {
+        if (!deps.markArea)
+          return {
+            status: "failed",
+            warnings: ["Areas cannot be changed here."],
+          }
+        if (!(await authorized())) return NOT_AUTHORIZED
+        const result = await deps.markArea(
+          area,
+          status === "done" ? "DONE" : status === "skipped" ? "SKIPPED" : null,
+        )
+        deps.onDraftChanged?.({ revision: result.revision, keys: [] })
+        const areas = summarizeSetupAreas(
+          await (deps.readAreaMarks?.() ?? Promise.resolve(null)),
+          await deps.readDraft(),
+        )
+        return {
+          status: "success",
+          data: { areas, nextArea: nextSetupArea(areas)?.area ?? null },
           warnings: [],
         }
       },

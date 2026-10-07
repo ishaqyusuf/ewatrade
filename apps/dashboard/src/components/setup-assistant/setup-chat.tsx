@@ -64,16 +64,10 @@ export function SetupChat({
   conversationId,
   status,
   initialMessages,
-  offerPending,
-  onBegin,
-  onSkip,
 }: {
   conversationId: string
   status: "OFFERED" | "ACTIVE"
   initialMessages: SetupChatMessage[]
-  offerPending: boolean
-  onBegin: () => void
-  onSkip: () => void
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -215,12 +209,6 @@ export function SetupChat({
               key={message.id}
               message={message}
               streaming={busy && message.id === last?.id}
-              offer={{
-                offerOpen: status === "OFFERED",
-                pending: offerPending,
-                onBegin,
-                onSkip,
-              }}
             />
           ))}
           {chat.status === "submitted" || recovering ? (
@@ -240,9 +228,6 @@ export function SetupChat({
         <SetupComposer
           conversationId={conversationId}
           busy={busy}
-          showQuickPrompts={chat.messages.every(
-            (message) => message.role !== "user",
-          )}
           onSend={send}
           onStop={stop}
         />

@@ -1,3 +1,4 @@
+import { summarizeSetupAreas } from "@ewatrade/assistant/setup/areas"
 import {
   type SetupOpenQuestion,
   deriveSetupEntityState,
@@ -7,18 +8,14 @@ import {
   setupOpenQuestionSchema,
 } from "@ewatrade/assistant/setup/contracts"
 import { summarizeSetupFollowUp } from "@ewatrade/assistant/setup/follow-up"
-import {
-  setupBeginMessage,
-  setupCommitSummaryMessage,
-  setupGreetingMessages,
-  setupResumeMessage,
-} from "@ewatrade/assistant/setup/messages"
+import { setupCommitSummaryMessage } from "@ewatrade/assistant/setup/messages"
 import {
   appendAssistantMessage,
   createSetupConversation,
   findSetupConversation,
   listAssistantMessages,
   newAssistantMessageId,
+  readLastAssistantMessage,
   readSetupDraft,
   removeSetupDraftEntities,
   setAssistantConversationStatus,
@@ -35,9 +32,13 @@ import {
 } from "../../assistant/setup-commit"
 import {
   isSetupAssistantEnabled,
-  loadSetupBusinessContext,
   requireSetupAssistantScope,
 } from "../../assistant/setup-context"
+import {
+  SETUP_VISIT_GAP_MS,
+  composeSetupOpening,
+  composeSetupWelcome,
+} from "../../assistant/setup-opening"
 import { readSetupPrerequisites } from "../../assistant/setup-prerequisites"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import { setupAssistantAttachmentsRouter } from "./setup-assistant-attachments"
@@ -114,6 +115,7 @@ export const setupAssistantRouter = createTRPCRouter({
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
         prerequisites: { termsRequired: false, financeBookMissing: false },
         followUp: setupFollowUpState([]),
+        areas: summarizeSetupAreas(null, []),
         attachments: [],
       }
     const [messages, draft, attachments] = await Promise.all([
@@ -141,6 +143,7 @@ export const setupAssistantRouter = createTRPCRouter({
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
       prerequisites,
       followUp: setupFollowUpState(draft.entities),
+      areas: summarizeSetupAreas(draft.areas, draft.entities),
       attachments,
     }
   }),
@@ -149,15 +152,19 @@ export const setupAssistantRouter = createTRPCRouter({
     const scope = requireSetupAssistantScope(ctx)
     const existing = await findSetupConversation(ctx.db, scope)
     if (existing) return { conversationId: existing.id }
-    const { context, firstName } = await loadSetupBusinessContext(ctx.db, scope)
+    // The chat opens straight into the guided setup: no offer step.
+    const opening = await composeSetupOpening(ctx.db, scope)
     const conversation = await createSetupConversation(
       ctx.db,
       scope,
-      setupGreetingMessages({
-        businessName: context.businessName,
-        firstName,
-        businessType: context.businessProfile?.title ?? null,
-      }).map((message) => ({ ...message, id: newAssistantMessageId() })),
+      [
+        {
+          id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text: opening }],
+        },
+      ],
+      { status: "ACTIVE" },
     )
     return { conversationId: conversation.id }
   }),
@@ -166,19 +173,21 @@ export const setupAssistantRouter = createTRPCRouter({
     const scope = requireSetupAssistantScope(ctx)
     const { conversation, draftId } = await requireDraft(ctx.db, scope)
     if (conversation.status === "ACTIVE") return { status: "ACTIVE" as const }
-    const resuming =
-      conversation.status === "SKIPPED" || conversation.status === "COMPLETED"
-    const followUp = resuming
-      ? summarizeSetupFollowUp((await readSetupDraft(ctx.db, draftId)).entities)
-      : undefined
+    // Older conversations still OFFERED get the guided opening; finished or
+    // skipped ones come back with a tailored welcome.
+    const text =
+      conversation.status === "OFFERED"
+        ? await composeSetupOpening(ctx.db, scope)
+        : await composeSetupWelcome(ctx.db, scope, draftId)
     const changed = await setAssistantConversationStatus(ctx.db, {
       conversationId: conversation.id,
       from: ["OFFERED", "SKIPPED", "COMPLETED"],
       to: "ACTIVE",
       appendMessages: [
         {
-          ...(resuming ? setupResumeMessage(followUp) : setupBeginMessage()),
           id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text }],
         },
       ],
     })
@@ -189,6 +198,38 @@ export const setupAssistantRouter = createTRPCRouter({
       })
     return { status: "ACTIVE" as const }
   }),
+
+  /**
+   * A new visit (not a reload): after a quiet gap the chat greets the owner
+   * again and mentions what is unfinished. Idempotent inside the gap.
+   */
+  visit: protectedProcedure
+    .input(z.object({ conversationId: conversationIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const { conversation, draftId } = await requireDraft(
+        ctx.db,
+        scope,
+        input.conversationId,
+      )
+      if (conversation.status !== "ACTIVE") return { appended: false }
+      const last = await readLastAssistantMessage(ctx.db, conversation.id)
+      if (!last || Date.now() - last.createdAt.getTime() < SETUP_VISIT_GAP_MS)
+        return { appended: false }
+      const text = await composeSetupWelcome(ctx.db, scope, draftId)
+      // Another tab may have greeted while the message was being written.
+      const latest = await readLastAssistantMessage(ctx.db, conversation.id)
+      if (latest?.id !== last.id) return { appended: false }
+      await appendAssistantMessage(ctx.db, {
+        conversationId: conversation.id,
+        message: {
+          id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text }],
+        },
+      })
+      return { appended: true }
+    }),
 
   skip: protectedProcedure.mutation(async ({ ctx }) => {
     const scope = requireSetupAssistantScope(ctx)

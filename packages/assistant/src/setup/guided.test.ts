@@ -1,0 +1,198 @@
+import { describe, expect, test } from "bun:test"
+import {
+  nextSetupArea,
+  parseSetupAreaMarks,
+  summarizeSetupAreas,
+  unfinishedSetupAreas,
+} from "./areas"
+import { summarizeSetupFollowUp } from "./follow-up"
+import {
+  cleanSetupOpening,
+  setupOpeningFallback,
+  setupOpeningInstructions,
+  setupWelcomeBackFallback,
+} from "./opening"
+import { buildSetupAssistantInstructions } from "./prompt"
+import { type SetupBusinessContext, createSetupAssistantTools } from "./tools"
+
+const context: SetupBusinessContext = {
+  businessName: "Jawdah Poultry",
+  storeName: "Main",
+  businessProfile: { key: "farming", title: "Poultry farm" },
+  operatingModel: "products",
+  orderChannels: ["walk_in", "phone_whatsapp"],
+  currencyCode: "NGN",
+  countryCode: "NG",
+  existing: { catalogItems: 0, customers: 0 },
+}
+
+const eggs = {
+  state: "PROPOSED",
+  payload: { kind: "product", name: "Eggs", unitName: "Crate" },
+}
+const feed = {
+  state: "PROPOSED",
+  payload: {
+    kind: "product",
+    name: "Feed",
+    unitName: "Bag",
+    usage: "INTERNAL_USE",
+  },
+}
+
+describe("setup areas", () => {
+  test("records place an area as started; marks finish or skip it", () => {
+    const progress = summarizeSetupAreas({ customers: "SKIPPED" }, [eggs, feed])
+    expect(
+      progress.map((entry) => [entry.area, entry.status, entry.records]),
+    ).toEqual([
+      ["sell", "STARTED", 1],
+      ["use", "STARTED", 1],
+      ["customers", "SKIPPED", 0],
+      ["money", "OPEN", 0],
+    ])
+    expect(nextSetupArea(progress)?.area).toBe("sell")
+    expect(unfinishedSetupAreas(progress).map((entry) => entry.area)).toEqual([
+      "sell",
+      "use",
+      "money",
+    ])
+  })
+
+  test("unknown or invalid marks are ignored", () => {
+    expect(
+      parseSetupAreaMarks({ sell: "DONE", use: "MAYBE", other: "DONE" }),
+    ).toEqual({ sell: "DONE" })
+    expect(parseSetupAreaMarks("not json")).toEqual({})
+    expect(
+      nextSetupArea(
+        summarizeSetupAreas(
+          { sell: "DONE", use: "DONE", customers: "DONE", money: "SKIPPED" },
+          [],
+        ),
+      ),
+    ).toBeNull()
+  })
+
+  test("the area tool marks, re-checks authority and reports the next area", async () => {
+    let marks: Record<string, string> = {}
+    let allowed = true
+    const tools = createSetupAssistantTools({
+      context,
+      sourceMessageId: "msg_1",
+      authorize: async () => allowed,
+      readDraft: async () => [],
+      writeEntities: async () => ({ revision: 1, changed: [], rejected: [] }),
+      removeEntities: async () => ({ revision: 1 }),
+      readAreaMarks: async () => marks,
+      markArea: async (area, mark) => {
+        marks = { ...marks }
+        if (mark) marks[area] = mark
+        else delete marks[area]
+        return { revision: 2 }
+      },
+    })
+    const call = { toolCallId: "t", messages: [] }
+    const result = await tools.setup_set_area.execute?.(
+      { area: "sell", status: "done" },
+      call,
+    )
+    expect(marks).toEqual({ sell: "DONE" })
+    expect(JSON.stringify(result)).toContain('"nextArea":"use"')
+    await tools.setup_set_area.execute?.({ area: "sell", status: "open" }, call)
+    expect(marks).toEqual({})
+    allowed = false
+    const refused = await tools.setup_set_area.execute?.(
+      { area: "money", status: "skipped" },
+      call,
+    )
+    expect(marks).toEqual({})
+    expect(JSON.stringify(refused)).toContain("can no longer be changed")
+  })
+})
+
+describe("opening and welcome back", () => {
+  test("the fallback opening is chat-only and asks one batched product question", () => {
+    const text = setupOpeningFallback(context, "Amina")
+    expect(text).toContain("Welcome, Amina!")
+    expect(text).toContain("Jawdah Poultry")
+    expect(text).toContain("Nothing here is compulsory")
+    expect(text).toContain("how many do you have right now")
+    expect(text).toContain("₦4,500")
+  })
+
+  test("service businesses are asked about their main service instead", () => {
+    const text = setupOpeningFallback(
+      { ...context, operatingModel: "services" },
+      null,
+    )
+    expect(text.startsWith("Welcome!")).toBe(true)
+    expect(text).toContain("main service")
+  })
+
+  test("model instructions carry only trusted facts and the required parts", () => {
+    const instructions = setupOpeningInstructions(context, "Amina")
+    expect(instructions).toContain('"businessName":"Jawdah Poultry"')
+    expect(instructions).toContain("walk-in customers")
+    expect(instructions).toContain("nothing here is compulsory")
+    expect(instructions).toContain("ONE batched question")
+  })
+
+  test("welcome back mentions open areas, pending questions and ready records", () => {
+    const entities = [
+      { kind: "PRODUCT" as const, openQuestions: [], ...eggs },
+      {
+        kind: "PRODUCT" as const,
+        state: "NEEDS_INPUT",
+        payload: { kind: "product", name: "Turkey", unitName: "Bird" },
+        openQuestions: [
+          {
+            field: "price",
+            question: "What is your selling price for one bird of Turkey?",
+            required: true,
+          },
+        ],
+      },
+    ]
+    const text = setupWelcomeBackFallback(
+      context,
+      "Amina",
+      summarizeSetupAreas({}, entities),
+      summarizeSetupFollowUp(entities),
+    )
+    expect(text).toContain("Welcome back, Amina! How can I help today?")
+    expect(text).toContain("selling price for one bird of Turkey")
+    expect(text).toContain("1 record is ready")
+    expect(text).toContain("Nothing is compulsory")
+  })
+
+  test("a finished setup offers more instead of open areas", () => {
+    const text = setupWelcomeBackFallback(
+      context,
+      null,
+      summarizeSetupAreas(
+        { sell: "DONE", use: "SKIPPED", customers: "DONE", money: "DONE" },
+        [],
+      ),
+      summarizeSetupFollowUp([]),
+    )
+    expect(text).toContain("Your setup is done")
+  })
+
+  test("model output is bounded and empty answers fall back", () => {
+    expect(cleanSetupOpening("  ok ")).toBeNull()
+    expect(cleanSetupOpening(null)).toBeNull()
+    expect(cleanSetupOpening("x".repeat(2_000))?.length).toBe(1_201)
+  })
+})
+
+describe("guided prompt", () => {
+  test("asks in batches, follows the areas and never offers buttons", () => {
+    const prompt = buildSetupAssistantInstructions(context)
+    expect(prompt).toContain("never one field at a time")
+    expect(prompt).toContain("setup_set_area")
+    expect(prompt).toContain("Guide the first product fully")
+    expect(prompt).toContain("No buttons or choices to click")
+    expect(prompt).toContain("Add to my business")
+  })
+})

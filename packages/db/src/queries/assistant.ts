@@ -78,6 +78,9 @@ export async function createSetupConversation(
   db: DbClient,
   scope: AssistantScope,
   initialMessages: AssistantStoredMessage[],
+  options: {
+    status?: Extract<AssistantConversationStatus, "ACTIVE" | "OFFERED">
+  } = {},
 ) {
   const create = async (tx: Prisma.TransactionClient) => {
     const existing = await findSetupConversation(tx, scope)
@@ -88,7 +91,7 @@ export async function createSetupConversation(
         storeId: scope.storeId,
         ownerUserId: scope.userId,
         purpose: "SETUP",
-        status: "OFFERED",
+        status: options.status ?? "OFFERED",
         title: "Business setup",
         lastSequence: initialMessages.length,
         setupDraft: {
@@ -586,9 +589,99 @@ export async function readSetupDraft(db: DbClient, draftId: string) {
     select: {
       id: true,
       revision: true,
+      areas: true,
       entities: { orderBy: { sortOrder: "asc" }, select: entitySelect },
     },
   })
+}
+
+/**
+ * Marks one setup area DONE or SKIPPED (null reopens it). Read-modify-write in
+ * one transaction with the draft row locked, so concurrent marks never lose one.
+ */
+export async function markSetupDraftArea(
+  db: DbClient,
+  input: { draftId: string; area: string; mark: "DONE" | "SKIPPED" | null },
+) {
+  const apply = async (tx: Prisma.TransactionClient) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${input.draftId} FOR UPDATE`,
+    )
+    const draft = await tx.setupDraft.findUniqueOrThrow({
+      where: { id: input.draftId },
+      select: { areas: true },
+    })
+    const areas =
+      draft.areas &&
+      typeof draft.areas === "object" &&
+      !Array.isArray(draft.areas)
+        ? { ...(draft.areas as Record<string, unknown>) }
+        : {}
+    if (input.mark) areas[input.area] = input.mark
+    else delete areas[input.area]
+    const updated = await tx.setupDraft.update({
+      where: { id: input.draftId },
+      data: {
+        areas: areas as Prisma.InputJsonValue,
+        revision: { increment: 1 },
+      },
+      select: { revision: true, areas: true },
+    })
+    return updated
+  }
+  return "$transaction" in db
+    ? db.$transaction(apply, transactionOptions)
+    : apply(db)
+}
+
+/** The newest message, to tell a new visit from a reload. */
+export async function readLastAssistantMessage(
+  db: DbClient,
+  conversationId: string,
+) {
+  return db.assistantMessage.findFirst({
+    where: { conversationId },
+    orderBy: { sequence: "desc" },
+    select: { id: true, role: true, createdAt: true },
+  })
+}
+
+/** Usage for a model call that is not a chat turn or attachment (opening, welcome). */
+export async function recordAssistantMessageUsage(
+  db: DbClient,
+  input: {
+    tenantId: string
+    actorUserId: string
+    provider: string
+    model: string
+    requestClass: "opening" | "welcome"
+    outcome: "success" | "failed" | "fallback"
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+    durationMs?: number
+    budgetScopeKey?: string
+  },
+) {
+  await db.assistantUsageEvent.create({
+    data: {
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      provider: input.provider,
+      model: input.model,
+      requestClass: input.requestClass,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      totalTokens: input.totalTokens,
+      durationMs: input.durationMs,
+      outcome: input.outcome,
+    },
+  })
+  if (input.budgetScopeKey && input.totalTokens)
+    await db.assistantBudget.updateMany({
+      where: { scopeKey: input.budgetScopeKey },
+      data: { tokens: { increment: input.totalTokens } },
+    })
 }
 
 /** Model and owner edits both reopen confirmation; committed records are immutable. */

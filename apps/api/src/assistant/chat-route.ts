@@ -380,6 +380,8 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
           knownAttachments: knownAttachments(sentAttachments),
           authorize: () => repository.isActorStillAuthorized(conversation.id),
           readDraft: () => repository.readDraftEntities(draftId),
+          readAreaMarks: () => repository.readAreaMarks(draftId),
+          markArea: (area, mark) => repository.markArea(draftId, area, mark),
           writeEntities: (entities) =>
             repository.writeDraftEntities(draftId, entities),
           removeEntities: (keys) =>

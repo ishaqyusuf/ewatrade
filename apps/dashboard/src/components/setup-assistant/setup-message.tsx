@@ -4,11 +4,8 @@ import {
   SETUP_ATTACHMENT_PART,
   type SetupAttachmentPartData,
 } from "@ewatrade/assistant/setup/attachments"
-import {
-  SETUP_OFFER_PART,
-  SETUP_TOOL_LABELS,
-} from "@ewatrade/assistant/setup/messages"
-import { Button, cn } from "@ewatrade/ui"
+import { SETUP_TOOL_LABELS } from "@ewatrade/assistant/setup/messages"
+import { cn } from "@ewatrade/ui"
 import { CheckmarkCircle02Icon, SparklesIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { UIMessage } from "ai"
@@ -34,21 +31,12 @@ const markdownComponents = {
   img: () => null,
 }
 
-type OfferProps = {
-  offerOpen: boolean
-  pending: boolean
-  onBegin: () => void
-  onSkip: () => void
-}
-
 export const SetupMessage = memo(function SetupMessage({
   message,
   streaming,
-  offer,
 }: {
   message: UIMessage
   streaming: boolean
-  offer: OfferProps
 }) {
   if (message.role === "user") {
     const text = message.parts
@@ -73,7 +61,6 @@ export const SetupMessage = memo(function SetupMessage({
 
   const tools = message.parts.filter((part) => part.type.startsWith("tool-"))
   const texts = message.parts.filter((part) => part.type === "text")
-  const hasOffer = message.parts.some((part) => part.type === SETUP_OFFER_PART)
 
   return (
     <div className="flex gap-3">
@@ -126,26 +113,6 @@ export const SetupMessage = memo(function SetupMessage({
             </Streamdown>
           ) : null,
         )}
-        {hasOffer && offer.offerOpen ? (
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button
-              type="button"
-              disabled={offer.pending}
-              onClick={offer.onBegin}
-            >
-              <HugeiconsIcon icon={SparklesIcon} className="size-4" />
-              Set up with AI
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={offer.pending}
-              onClick={offer.onSkip}
-            >
-              I'll do it myself
-            </Button>
-          </div>
-        ) : null}
       </div>
     </div>
   )
