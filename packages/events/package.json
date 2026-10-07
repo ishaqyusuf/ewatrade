@@ -11,7 +11,10 @@
     "./identity-server": "./src/identity-server.ts",
     "./browser": "./src/browser-attribution.ts",
     "./metadata": "./src/event-metadata.ts",
-    "./qa-policy-server": "./src/qa-policy.server.ts"
+    "./qa-policy-server": "./src/qa-policy.server.ts",
+    "./dashboard-workflows": "./src/dashboard-workflows.ts",
+    "./dashboard-client": "./src/dashboard-workflow-client.ts",
+    "./server-dashboard": "./src/server-dashboard.ts"
   },
   "scripts": {
     "test": "bun test src",

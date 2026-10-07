@@ -13,6 +13,9 @@ import {
   validateQaDerivedSession,
 } from "@ewatrade/db/queries"
 import { toPublicError } from "@ewatrade/errors"
+import { dashboardProcedure } from "@ewatrade/events/dashboard-workflows"
+import { dashboardCommandId } from "@ewatrade/events/server-dashboard"
+import { recordDashboardOutcome } from "@ewatrade/jobs/product-analytics"
 import {
   getTrustedPrivacyNetworkSource,
   getTrustedQaNetworkSource,
@@ -362,6 +365,44 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   })
 })
 
+// Outside the staff transaction: next() resolves only after commit has succeeded.
+const captureDashboardOutcome = t.middleware(async (opts) => {
+  const result = await opts.next()
+  if (
+    process.env.NEXT_PUBLIC_LOGLY_DASHBOARD_ENABLED !== "true" ||
+    opts.ctx.requestHeaders.get("x-ewatrade-analytics") !== "allowed" ||
+    opts.type !== "mutation" ||
+    !result.ok ||
+    !opts.ctx.session ||
+    opts.ctx.isInternalRequest ||
+    !dashboardProcedure(opts.path)
+  )
+    return result
+  try {
+    const tenant = opts.ctx.tenantContext?.tenant
+    await recordDashboardOutcome({
+      headers: opts.ctx.requestHeaders,
+      principal: {
+        userId: opts.ctx.session.user.id,
+        email: opts.ctx.session.user.email,
+        internal: opts.ctx.session.user.isPlatformAdmin,
+        tenantId: tenant?.id,
+        tenantName: tenant?.name,
+        dataClassification: tenant?.dataClassification,
+        role: opts.ctx.tenantContext?.membership.role,
+        qaSession: Boolean(opts.ctx.qaSessionScope),
+      },
+      path: opts.path,
+      output: result.data,
+      requestId: opts.ctx.requestId,
+      commandId: dashboardCommandId(await opts.getRawInput()),
+    })
+  } catch {
+    /* Optional capture cannot fail a committed business operation. */
+  }
+  return result
+})
+
 const enforceStaffWriteTransaction = t.middleware(async (opts) => {
   if (
     opts.type !== "mutation" ||
@@ -438,9 +479,9 @@ export const publicProcedure = t.procedure
   .use(withTimingMiddleware)
   .use(withPrimaryDbMiddleware)
 
-export const authenticatedProcedure = publicProcedure.use(
-  requireGlobalAuthMiddleware,
-)
+export const authenticatedProcedure = publicProcedure
+  .use(requireGlobalAuthMiddleware)
+  .use(captureDashboardOutcome)
 
 // Mobile entry may authenticate a derived QA session, but its only consumer
 // must read the server-validated scope instead of enumerating global access.
@@ -474,6 +515,7 @@ export const platformAdminProcedure = authenticatedProcedure.use(
 export const protectedProcedure = publicProcedure
   .use(requireAuthMiddleware)
   .use(withTenantPermissionMiddleware)
+  .use(captureDashboardOutcome)
   .use(enforceStaffWriteTransaction)
   .use(enforceStaffStoreAccess)
   .use(enforceQaProviderBoundary)
@@ -535,6 +577,7 @@ export const protectedOrInternalProcedure = publicProcedure
       },
     })
   })
+  .use(captureDashboardOutcome)
   .use(enforceStaffWriteTransaction)
   .use(enforceStaffStoreAccess)
   .use(enforceQaProviderBoundary)

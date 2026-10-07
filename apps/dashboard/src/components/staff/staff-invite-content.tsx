@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { createStaffFixture } from "@/components/qa/fixture-recipes"
@@ -38,6 +39,7 @@ export function StaffInviteContent({
   onClose: () => Promise<unknown>
   onInvited: (qaInviteUrl: string | null) => Promise<void>
 }) {
+  const workflow = useDashboardWorkflow()
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm)
   const [stores, setStores] = useState<Array<{ id: string; name: string }>>([])
   const [assignments, setAssignments] = useState([
@@ -104,7 +106,7 @@ export function StaffInviteContent({
     setIsSaving(true)
 
     try {
-      const response = await fetch("/api/staff", {
+      const response = await workflow.fetch("staff_invite", "/api/staff", {
         body: JSON.stringify({
           email: inviteForm.email.trim(),
           name: inviteForm.name.trim() || undefined,

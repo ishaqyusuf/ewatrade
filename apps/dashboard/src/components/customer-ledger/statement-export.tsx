@@ -4,6 +4,7 @@ import {
   customerLedgerCsv,
 } from "@/lib/customer-ledger/statement-export"
 import { useTRPC } from "@/trpc/client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
@@ -11,6 +12,7 @@ export function CustomerLedgerExport({
   accountId,
   snapshotSequence,
 }: { accountId: string; snapshotSequence: string }) {
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const client = useQueryClient()
   const [busy, setBusy] = useState(false)
@@ -28,6 +30,9 @@ export function CustomerLedgerExport({
     running.current = true
     setBusy(true)
     setError(null)
+    workflow.track("customer_statement_export", "started", {
+      channel: "browser",
+    })
     try {
       const read = (afterSequence?: string) =>
         client.fetchQuery(
@@ -58,8 +63,14 @@ export function CustomerLedgerExport({
       link.href = url
       link.download = `customer-statement-${accountId}-snapshot-${snapshotSequence}.csv`
       link.click()
+      workflow.track("customer_statement_export", "completed", {
+        channel: "browser",
+      })
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (failure) {
+      workflow.track("customer_statement_export", "failed", {
+        channel: "browser",
+      })
       if (mounted.current)
         setError(failure instanceof Error ? failure.message : "Export failed.")
     } finally {

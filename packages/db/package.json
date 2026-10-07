@@ -33,7 +33,8 @@
     "./assistant": "./src/queries/assistant.ts",
     "./assistant-attachments": "./src/queries/assistant-attachments.ts",
     "./assistant-operations": "./src/queries/assistant-operations.ts",
-    "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts"
+    "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts",
+    "./product-analytics": "./src/queries/product-analytics.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

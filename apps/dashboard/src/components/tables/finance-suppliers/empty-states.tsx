@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 
 import { EmptyState, NoResults } from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -8,6 +9,7 @@ export function FinanceSupplierEmptyState({
 }: {
   filtered: boolean
 }) {
+  useDashboardEmptyState("finance-suppliers")
   const { setParams } = useFinanceParams()
 
   if (filtered) {

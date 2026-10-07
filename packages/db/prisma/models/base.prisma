@@ -1,4 +1,5 @@
 model Tenant {
+  productAnalyticsEvents ProductAnalyticsEvent[]
   staffStoreAssignments StaffStoreAssignment[]
   staffAccessAuditEvents StaffAccessAuditEvent[]
   financeExpenseReceiptAssets                       FinanceExpenseReceiptAsset[]
@@ -349,6 +350,7 @@ model LeadCapture {
 }
 
 model User {
+  productAnalyticsEvents ProductAnalyticsEvent[]
   accountPrivacyRequests                         AccountPrivacyRequest[]
   legalAcceptances                               LegalAcceptance[]
   id                                             String                                            @id @default(cuid())

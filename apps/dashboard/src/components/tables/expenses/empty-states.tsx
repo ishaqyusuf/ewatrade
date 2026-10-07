@@ -1,5 +1,8 @@
+"use client"
 import { OpenFinanceSheet } from "@/components/finance/open-finance-sheet"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 export function ExpenseEmptyState({ filtered }: { filtered: boolean }) {
+  useDashboardEmptyState("expenses")
   return (
     <div className="grid justify-items-center gap-3 border-y border-border py-16 text-center">
       <h3 className="font-medium">

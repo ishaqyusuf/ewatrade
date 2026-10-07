@@ -1,4 +1,8 @@
 "use client"
+import {
+  useDashboardEmptyState,
+  useDashboardWorkflow,
+} from "@ewatrade/events/dashboard-client"
 
 import { Button } from "@ewatrade/ui"
 import Link from "next/link"
@@ -10,6 +14,7 @@ export function StoreConversationEmptyState({
   filtered: boolean
   onClearFilters: () => void
 }) {
+  useDashboardEmptyState("conversations")
   return (
     <section className="grid justify-items-center gap-2 rounded-none border border-dashed border-border bg-background p-10 text-center">
       <h2 className="font-semibold">
@@ -60,6 +65,7 @@ export function StoreConversationAccessState() {
 }
 
 export function StoreConversationErrorState({ retry }: { retry: () => void }) {
+  const workflow = useDashboardWorkflow()
   return (
     <div
       className="rounded-none border border-destructive/30 bg-destructive/5 p-5"
@@ -72,7 +78,10 @@ export function StoreConversationErrorState({ retry }: { retry: () => void }) {
       </p>
       <Button
         className="mt-4"
-        onClick={retry}
+        onClick={() => {
+          workflow.track("retry", "started", { channel: "conversations" })
+          retry()
+        }}
         variant="outline"
         appearance="form"
       >

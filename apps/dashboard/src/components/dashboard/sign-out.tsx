@@ -1,5 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { clearDashboardDataCache } from "@/trpc/client"
 import { DropdownMenuItem } from "@ewatrade/ui"
@@ -11,6 +12,7 @@ import { type MouseEvent, useState } from "react"
 type ErrorResponse = { error?: string }
 
 export function SignOut() {
+  const workflow = useDashboardWorkflow()
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +25,9 @@ export function SignOut() {
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/logout", { method: "POST" })
+      const response = await workflow.fetch("logout", "/api/auth/logout", {
+        method: "POST",
+      })
       if (!response.ok) {
         const body = (await response
           .json()

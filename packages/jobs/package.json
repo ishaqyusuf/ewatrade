@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalog-photo-review": "./src/catalog-photo-review.ts",
-    "./assistant-attachments": "./src/assistant-attachments.ts"
+    "./assistant-attachments": "./src/assistant-attachments.ts",
+    "./product-analytics": "./src/product-analytics.ts"
   },
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs bun ../../scripts/with-trigger-profile.mjs -- trigger dev",
@@ -34,6 +35,7 @@
     "libheif-js": "1.23.2",
     "@ewatrade/ai": "workspace:*",
     "@ewatrade/assistant": "workspace:*",
+    "@ewatrade/events": "workspace:*",
     "@ewatrade/private-media": "workspace:*"
   },
   "devDependencies": {

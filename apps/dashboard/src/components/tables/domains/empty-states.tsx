@@ -1,9 +1,11 @@
 "use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 
 import { useDomainParams } from "@/hooks/use-domain-params"
 import { Button } from "@ewatrade/ui"
 
 export function DomainsEmptyState({ filtered }: { filtered: boolean }) {
+  useDashboardEmptyState("domains")
   const { setParams } = useDomainParams()
 
   return (

@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { useState } from "react"
 import type { EarlyAccessQaPreview } from "../../lib/early-access-preview"
@@ -8,6 +9,7 @@ export function VerifyApprovedEmail({
   accessToken,
   email,
 }: { accessToken: string; email: string }) {
+  const workflow = useDashboardWorkflow()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
   const [preview, setPreview] = useState<EarlyAccessQaPreview | null>(null)
@@ -15,11 +17,15 @@ export function VerifyApprovedEmail({
     setBusy(true)
     setMessage("")
     try {
-      const response = await fetch("/api/early-access/verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessToken }),
-      })
+      const response = await workflow.fetch(
+        "verify_email",
+        "/api/early-access/verification",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken }),
+        },
+      )
       const result = (await response.json()) as {
         message?: string
         qaPreview?: EarlyAccessQaPreview

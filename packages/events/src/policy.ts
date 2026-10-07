@@ -35,10 +35,41 @@ const routeNames = new Set([
   "chat",
   "r",
   "setup",
+  "signup",
+  "sales",
+  "finance",
+  "services",
+  "conversations",
+  "prescriptions",
+  "onboarding",
 ])
 export function safeRoute(route?: string) {
   const first = route?.split(/[?#]/)[0]?.split("/").filter(Boolean)[0] ?? ""
-  return routeNames.has(first) ? `/${first}` : "/other"
+  if (!routeNames.has(first)) return "/other"
+  const second = route?.split(/[?#]/)[0]?.split("/").filter(Boolean)[1]
+  const staticChildren: Record<string, readonly string[]> = {
+    settings: [
+      "business",
+      "stores",
+      "staff",
+      "billing",
+      "receipts",
+      "compliance",
+      "customer-channels",
+      "channels",
+      "service-commerce",
+      "domains",
+      "notifications",
+      "privacy",
+    ],
+    finance: ["reports", "expenses", "purchases", "accounts", "suppliers"],
+    services: ["reports", "settings"],
+    prescriptions: ["reports", "settings"],
+    inventory: ["counts", "transfers", "closeouts", "operations"],
+  }
+  return second && staticChildren[first]?.includes(second)
+    ? `/${first}/${second}`
+    : `/${first}`
 }
 
 export function safeBatch(

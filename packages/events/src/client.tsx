@@ -81,6 +81,9 @@ function AnonymousEventsBridge({ children }: { children: ReactNode }) {
   const track = useTrack()
   const value = useMemo(
     () => ({
+      canCollect: () => false,
+      whenReady: () => () => {},
+      workflow: () => {},
       track(name: string, properties: EventMetadata = {}) {
         if (isEventName(name)) track(name, safeEventMetadata(properties))
       },

@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import type { OnboardingDraft } from "@ewatrade/db/onboarding-continuation"
 import { useEffect, useState } from "react"
@@ -67,6 +68,7 @@ const ageChoices: Array<{
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function SignupFlow() {
+  const workflow = useDashboardWorkflow()
   const [entryAgeChoice, setEntryAgeChoice] = useState<
     EligibleAgeBand | "UNDER_13" | null
   >(null)
@@ -276,7 +278,7 @@ export function SignupFlow() {
         ...legalAcceptance,
       }
 
-      const response = await fetch("/api/auth/signup", {
+      const response = await workflow.fetch("signup", "/api/auth/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),

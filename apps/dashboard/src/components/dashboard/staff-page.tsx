@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { StaffDirectoryHeader } from "@/components/dashboard/staff-directory-header"
@@ -54,6 +55,7 @@ export function StaffPage({
   const router = useRouter()
   const { setInviteOpen } = useStaffParams()
   const { staffQuery, staffRole, staffStatus } = useStaffDirectoryParams()
+  const workflow = useDashboardWorkflow()
   const [staff, setStaff] = useState(initialStaff)
   const [isLoading, setIsLoading] = useState(false)
   const [updatingStaffUserId, setUpdatingStaffUserId] = useState<string | null>(
@@ -191,7 +193,7 @@ export function StaffPage({
 
     try {
       const nextStatus = getNextStaffStatus(member)
-      const response = await fetch("/api/staff", {
+      const response = await workflow.fetch("staff_update", "/api/staff", {
         body: JSON.stringify({
           operation: "status",
           staffUserId: member.user.id,

@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "ewatrade",
@@ -89,6 +90,7 @@
         "@tanstack/react-table": "^8.21.3",
         "@tanstack/react-virtual": "^3.13.23",
         "@trpc/client": "^11.16.0",
+        "@trpc/server": "^11.16.0",
         "@trpc/tanstack-react-query": "^11.16.0",
         "ai": "6.0.141",
         "framer-motion": "^12.38.0",
@@ -507,6 +509,7 @@
         "@ewatrade/domains": "workspace:*",
         "@ewatrade/email": "workspace:*",
         "@ewatrade/errors": "workspace:*",
+        "@ewatrade/events": "workspace:*",
         "@ewatrade/notifications": "workspace:*",
         "@ewatrade/observability": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
@@ -577,6 +580,7 @@
         "@ewatrade/auth": "workspace:*",
         "@ewatrade/db": "workspace:*",
         "@ewatrade/email": "workspace:*",
+        "@ewatrade/events": "workspace:*",
         "@ewatrade/notifications": "workspace:*",
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
@@ -4589,6 +4593,8 @@
     "@ewatrade/events/@types/node": ["@types/node@25.9.5", "", { "dependencies": { "undici-types": ">=7.24.0 <7.24.7" } }, "sha512-OScDchr2fwuUmWdf4kZ9h7PcJiYDVInhJizG/biAq3cAvqwYktuy/TYGGdZNMtNTFUP7rnb0NU4TUdm82kt4Rg=="],
 
     "@ewatrade/mobile/@types/react": ["@types/react@19.1.17", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA=="],
+
+    "@ewatrade/ui/tailwind-merge": ["tailwind-merge@3.7.0", "", {}, "sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA=="],
 
     "@expo/cli/@expo/prebuild-config": ["@expo/prebuild-config@54.0.9", "", { "dependencies": { "@expo/config": "~12.0.14", "@expo/config-plugins": "~54.0.5", "@expo/config-types": "^54.0.10", "@expo/image-utils": "^0.8.8", "@expo/json-file": "^10.0.16", "@react-native/normalize-colors": "0.81.5", "debug": "^4.3.1", "resolve-from": "^5.0.0", "semver": "^7.6.0", "xml2js": "0.6.0" }, "peerDependencies": { "expo": "*" } }, "sha512-3/Rmyzt8vduPjnSVHbnc0wYFrlhwLWn2g596rDyKcLGeqN2WTLJbzVeznsrUwyzhBNXgnTomZWO5HDzbZ/4E7g=="],
 

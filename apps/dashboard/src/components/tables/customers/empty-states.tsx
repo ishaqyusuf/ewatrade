@@ -1,6 +1,9 @@
+"use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 export function CustomerDirectoryEmptyState({
   filtered,
 }: { filtered: boolean }) {
+  useDashboardEmptyState("customers")
   return (
     <div className="grid min-h-40 place-items-center border border-border px-4 text-center">
       <div>

@@ -2,6 +2,7 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { Button } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
@@ -16,6 +17,7 @@ export function FinanceStatementExport({
   bookId: string
   statement: Statement
 }) {
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const client = useQueryClient()
   const cancelled = useRef(false)
@@ -34,6 +36,9 @@ export function FinanceStatementExport({
     cancelled.current = false
     setProgress(0)
     setError(null)
+    workflow.track("finance_statement_export", "started", {
+      channel: "browser",
+    })
     try {
       const rows: string[][] = [
         ["Account", statement.account.name],
@@ -118,8 +123,14 @@ export function FinanceStatementExport({
       link.href = url
       link.download = `account-statement-${statement.account.id}-${statement.snapshotSequence}.csv`
       link.click()
+      workflow.track("finance_statement_export", "completed", {
+        channel: "browser",
+      })
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (failure) {
+      workflow.track("finance_statement_export", "failed", {
+        channel: "browser",
+      })
       if (!cancelled.current)
         setError(
           failure instanceof Error
@@ -150,6 +161,7 @@ export function FinanceStatementExport({
             variant="ghost"
             onClick={() => {
               cancelled.current = true
+              workflow.track("finance_statement_export", "cancelled")
               setProgress(null)
             }}
           >

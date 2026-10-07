@@ -1,4 +1,8 @@
 "use client"
+import {
+  useDashboardEmptyState,
+  useDashboardWorkflow,
+} from "@ewatrade/events/dashboard-client"
 
 import { Button } from "@ewatrade/ui"
 import type { ReactNode } from "react"
@@ -18,6 +22,8 @@ export function EmptyState({
   onAction,
   appearance = "default",
 }: EmptyStateProps) {
+  useDashboardEmptyState("directory")
+  const workflow = useDashboardWorkflow()
   return (
     <div className="flex items-center justify-center py-20">
       <div className="flex max-w-lg flex-col items-center">
@@ -29,7 +35,10 @@ export function EmptyState({
           appearance={appearance}
           type="button"
           variant="outline"
-          onClick={onAction}
+          onClick={() => {
+            workflow.track("empty_state", "started")
+            onAction()
+          }}
         >
           {actionLabel}
         </Button>

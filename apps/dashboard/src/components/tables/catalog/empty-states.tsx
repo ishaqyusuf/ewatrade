@@ -1,7 +1,10 @@
+"use client"
+import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 import { Package01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 export function CatalogEmptyState({ filtered }: { filtered: boolean }) {
+  useDashboardEmptyState("catalog")
   return (
     <div className="flex min-h-56 flex-col items-center justify-center text-center">
       <div className="flex size-10 items-center justify-center rounded-lg bg-muted">

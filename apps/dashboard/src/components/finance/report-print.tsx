@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Button,
   Dialog,
@@ -11,6 +12,7 @@ import type { FinanceReport } from "./report-csv"
 import { buildFinanceReportPrintDocument } from "./report-print-document"
 
 export function FinanceReportPrint({ report }: { report: FinanceReport }) {
+  const workflow = useDashboardWorkflow()
   const [preview, setPreview] = useState<FinanceReport | null>(null)
   const frame = useRef<HTMLIFrameElement>(null)
   return (
@@ -18,7 +20,10 @@ export function FinanceReportPrint({ report }: { report: FinanceReport }) {
       <Button
         appearance="form"
         variant="outline"
-        onClick={() => setPreview(report)}
+        onClick={() => {
+          workflow.track("report_print", "started")
+          setPreview(report)
+        }}
       >
         Print report
       </Button>
@@ -40,7 +45,12 @@ export function FinanceReportPrint({ report }: { report: FinanceReport }) {
               <div className="flex gap-2">
                 <Button
                   appearance="form"
-                  onClick={() => frame.current?.contentWindow?.print()}
+                  onClick={() => {
+                    if (frame.current?.contentWindow) {
+                      frame.current.contentWindow.print()
+                      workflow.track("report_print", "completed")
+                    }
+                  }}
                 >
                   Print / Save PDF
                 </Button>

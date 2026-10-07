@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
@@ -72,6 +73,8 @@ export function SetupChat({
   /** Photos, files and voice notes; when off, the owner only types. */
   mediaEnabled: boolean
 }) {
+  const settled = useRef(true)
+  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const refreshDraft = () =>
@@ -150,10 +153,29 @@ export function SetupChat({
       if (part.type === "data-setup-draft") void refreshDraft()
     },
     onError: (error) => {
+      if (!settled.current) {
+        settled.current = true
+        workflow.track("assistant_message", "failed", {
+          channel: "browser_stream",
+        })
+      }
       const runId = runIdRef.current
       if (runId && !errorBody(error)) void recover(runId)
     },
-    onFinish: () => void refreshDraft(),
+    onFinish: ({ isAbort, isError, isDisconnect }) => {
+      void refreshDraft()
+      if (settled.current) return
+      settled.current = true
+      workflow.track(
+        "assistant_message",
+        isAbort
+          ? "cancelled"
+          : isError || isDisconnect
+            ? "failed"
+            : "completed",
+        { channel: "browser_stream" },
+      )
+    },
   })
   const { setMessages, clearError } = chat
 
@@ -182,6 +204,10 @@ export function SetupChat({
   const canType = status === "ACTIVE"
   const send = (parts: SetupComposerPart[]) => {
     if (parts.length === 0 || busy || !canType) return
+    settled.current = false
+    workflow.track("assistant_message", "started", {
+      channel: "browser_stream",
+    })
     void chat.sendMessage({ parts })
   }
   const stop = () => {

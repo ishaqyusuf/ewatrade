@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
@@ -32,6 +33,7 @@ export function ManageStaffAccessModal({
   onSaved,
 }: { onSaved: () => Promise<void> }) {
   const { accessUserId, setAccessUserId } = useStaffParams()
+  const workflow = useDashboardWorkflow()
   const [saving, setSaving] = useState(false)
   const { closeError, requestClose } = useSheetDismissal(() =>
     setAccessUserId(null),
@@ -151,7 +153,7 @@ function AccessForm({
         onSavingChange(true)
         setError(null)
         try {
-          const response = await fetch("/api/staff", {
+          const response = await workflow.fetch("staff_update", "/api/staff", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Command,
   CommandEmpty,
@@ -89,6 +90,7 @@ const COUNTRIES = [
 ]
 
 export function StoreSetupForm() {
+  const workflow = useDashboardWorkflow()
   const router = useRouter()
   const form = useZodForm<StoreSetupValues>(storeSetupSchema, {
     defaultValues: {
@@ -136,7 +138,7 @@ export function StoreSetupForm() {
 
   const createStore = useMutation({
     mutationFn: async (values: StoreSetupValues) => {
-      const res = await fetch("/api/stores", {
+      const res = await workflow.fetch("store_create", "/api/stores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

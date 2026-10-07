@@ -1,4 +1,5 @@
 "use client"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Button,
   Checkbox,
@@ -39,6 +40,7 @@ export function StaffOnboardingForm({
   legalVersion,
   marketingUrl,
 }: Props) {
+  const workflow = useDashboardWorkflow()
   const [sent, setSent] = useState(qaInvitation)
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -52,29 +54,35 @@ export function StaffOnboardingForm({
     setPending(true)
     setError(null)
     try {
-      const result = await fetch("/api/staff-onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operation,
-          inviteToken,
-          ...(operation === "complete"
-            ? {
-                ...(!qaInvitation ? { code } : {}),
-                name,
-                ...(invite.needsPassword ? { password, confirmPassword } : {}),
-                ...(ageBand ? { ageBand } : {}),
-                ...(legalVersion && agreed
-                  ? {
-                      legalVersion,
-                      acceptedTerms: true,
-                      acknowledgedPrivacyNotice: true,
-                    }
-                  : {}),
-              }
-            : {}),
-        }),
-      })
+      const result = await workflow.fetch(
+        operation === "complete" ? "staff_onboarding" : "staff_onboarding_code",
+        "/api/staff-onboarding",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            operation,
+            inviteToken,
+            ...(operation === "complete"
+              ? {
+                  ...(!qaInvitation ? { code } : {}),
+                  name,
+                  ...(invite.needsPassword
+                    ? { password, confirmPassword }
+                    : {}),
+                  ...(ageBand ? { ageBand } : {}),
+                  ...(legalVersion && agreed
+                    ? {
+                        legalVersion,
+                        acceptedTerms: true,
+                        acknowledgedPrivacyNotice: true,
+                      }
+                    : {}),
+                }
+              : {}),
+          }),
+        },
+      )
       const body = await result.json()
       if (!result.ok) {
         setError(body.error ?? "Staff setup could not be completed.")
