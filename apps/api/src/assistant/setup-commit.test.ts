@@ -214,6 +214,28 @@ describe("setup options become catalog variants", () => {
     )
   })
 
+  test("items used but not sold need no price and keep their stock", async () => {
+    const command = catalogCommandForSetupEntity(
+      "ent_11",
+      {
+        kind: "product",
+        name: "Grower feed",
+        unitName: "Bag",
+        openingStock: "12",
+        usage: "INTERNAL_USE",
+      },
+      scope,
+    )
+    expect(command).toMatchObject({
+      kind: "product",
+      usage: "INTERNAL_USE",
+      openingStockQuantity: "12",
+    })
+    await expect(createCatalogItem(validationOnlyDb, command)).rejects.toBe(
+      reachedDatabase,
+    )
+  })
+
   test("a total stock with options and oversized grids are refused clearly", () => {
     expect(() =>
       catalogCommandForSetupEntity(

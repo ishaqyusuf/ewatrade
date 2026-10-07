@@ -24,6 +24,13 @@ const customer = (
   errorCode,
 })
 
+const money = (state: string, errorCode: string | null = null) => ({
+  kind: "MONEY_ACCOUNT",
+  state,
+  payload: { kind: "money_account", name: "GTBank", purpose: "BANK" },
+  errorCode,
+})
+
 describe("setup prerequisite needs", () => {
   test("Terms only matter while catalog records remain to be added", () => {
     expect(setupPrerequisiteNeeds([product("CONFIRMED")]).catalog).toBe(true)
@@ -53,5 +60,24 @@ describe("setup prerequisite needs", () => {
     expect(
       setupPrerequisiteNeeds([customer("COMMITTED", true, null)]).balances,
     ).toBe(false)
+  })
+
+  test("cash and bank accounts need Finance whether or not they have a balance", () => {
+    expect(setupPrerequisiteNeeds([money("CONFIRMED")])).toEqual({
+      catalog: false,
+      balances: true,
+    })
+    expect(
+      setupPrerequisiteNeeds([money("FAILED", "MONEY_ACCOUNT_NEEDS_FINANCE")])
+        .balances,
+    ).toBe(true)
+    expect(setupPrerequisiteNeeds([money("FAILED", "CONFLICT")]).balances).toBe(
+      false,
+    )
+    expect(setupPrerequisiteNeeds([money("SKIPPED")]).balances).toBe(false)
+    expect(
+      setupPrerequisiteNeeds([money("COMMITTED", "OPENING_BALANCE_FAILED")])
+        .balances,
+    ).toBe(true)
   })
 })

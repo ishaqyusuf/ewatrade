@@ -1,10 +1,7 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import {
-  type SetupEntityPayload,
-  deriveSetupEntityState,
-} from "@ewatrade/assistant/setup/contracts"
+import { deriveSetupEntityState } from "@ewatrade/assistant/setup/contracts"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
@@ -13,9 +10,12 @@ import { SetupDraftCard } from "./setup-draft-card"
 import type { SetupAttachmentName } from "./setup-format"
 import {
   ENTITY_GROUPS,
+  type SetupCardPayload,
   type SetupDraftEntity,
+  entityGroup,
   entityQuestions,
   isBalancePending,
+  isWaitingForFinance,
 } from "./setup-format"
 import {
   type SetupPrerequisiteState,
@@ -223,16 +223,28 @@ export function SetupDraftPanel({
             else refresh()
           }}
           onFinanceReady={() => {
-            refresh()
-            // Customers already added are only waiting for their balance.
+            // Cash and bank accounts that waited for Finance go back into the queue.
+            const waiting = entities
+              .filter(isWaitingForFinance)
+              .map((entity) => entity.key)
+            if (waiting.length > 0)
+              setState.mutate({
+                conversationId,
+                keys: waiting,
+                state: "CONFIRMED",
+              })
+            else refresh()
+            // Records already added are only waiting for their balance.
             if (active.some(isBalancePending)) void addToBusiness()
           }}
         />
         {ENTITY_GROUPS.map((group) => {
-          const rows = entities.filter((entity) => entity.kind === group.kind)
+          const rows = entities.filter(
+            (entity) => entityGroup(entity) === group.group,
+          )
           if (rows.length === 0) return null
           return (
-            <section key={group.kind} aria-label={group.title}>
+            <section key={group.group} aria-label={group.title}>
               <h3 className="bg-muted/40 px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {group.title} ({rows.length})
               </h3>
@@ -244,7 +256,7 @@ export function SetupDraftPanel({
                     attachments={attachments}
                     currencyCode={currencyCode}
                     pending={pending}
-                    onSave={(payload: SetupEntityPayload) =>
+                    onSave={(payload: SetupCardPayload) =>
                       update.mutate({
                         conversationId,
                         key: entity.key,

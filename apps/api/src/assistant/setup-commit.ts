@@ -18,12 +18,32 @@ import {
   FinanceError,
   createCatalogItem,
   createCustomer,
+  createFinanceMoneyAccount,
   ensureCustomerLedgerAccount,
   getFinanceBook,
   recordCustomerLedgerOpening,
+  recordFinanceMoneyMovement,
 } from "@ewatrade/db/queries"
 import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
+import {
+  OPENING_BALANCE_FAILED,
+  OPENING_BALANCE_NEEDS_FINANCE,
+  OPENING_BALANCE_PENDING,
+  isOpeningBalancePending,
+} from "./setup-commit-codes"
+import {
+  commitSetupMoneyAccount,
+  defaultCashEntityId,
+} from "./setup-money-account"
+
+export {
+  MONEY_ACCOUNT_NEEDS_FINANCE,
+  OPENING_BALANCE_FAILED,
+  OPENING_BALANCE_NEEDS_FINANCE,
+  OPENING_BALANCE_PENDING,
+  isOpeningBalancePending,
+} from "./setup-commit-codes"
 import { SETUP_PHOTO_NOT_ADDED, prepareSetupProductPhoto } from "./setup-photo"
 
 type Db = typeof prisma
@@ -33,14 +53,6 @@ export const SETUP_COMMIT_BATCH_SIZE = 6
 const CANONICAL_BALANCE_SCALE = 18
 const TRANSACTION_SCALE = 2
 
-export const OPENING_BALANCE_NEEDS_FINANCE = "OPENING_BALANCE_NEEDS_FINANCE"
-export const OPENING_BALANCE_FAILED = "OPENING_BALANCE_FAILED"
-/** Set with the customer so an interrupted request still retries the balance. */
-export const OPENING_BALANCE_PENDING = "OPENING_BALANCE_PENDING"
-export const isOpeningBalancePending = (code: string | null | undefined) =>
-  code === OPENING_BALANCE_NEEDS_FINANCE ||
-  code === OPENING_BALANCE_FAILED ||
-  code === OPENING_BALANCE_PENDING
 /** Every option combination becomes a Sellable Variant; keep the grid reviewable. */
 export const MAX_SETUP_VARIANTS = 36
 /** Stop starting new records well before the dashboard proxy's request timeout. */
@@ -371,6 +383,8 @@ export type SetupCommitDeps = {
   getFinanceBook: typeof getFinanceBook
   ensureCustomerLedgerAccount: typeof ensureCustomerLedgerAccount
   recordCustomerLedgerOpening: typeof recordCustomerLedgerOpening
+  createFinanceMoneyAccount: typeof createFinanceMoneyAccount
+  recordFinanceMoneyMovement: typeof recordFinanceMoneyMovement
   now: () => number
 }
 
@@ -384,6 +398,8 @@ const defaultDeps: SetupCommitDeps = {
   getFinanceBook,
   ensureCustomerLedgerAccount,
   recordCustomerLedgerOpening,
+  createFinanceMoneyAccount,
+  recordFinanceMoneyMovement,
   now: Date.now,
 }
 
@@ -416,6 +432,7 @@ export async function commitSetupDraft(
         isOpeningBalancePending(entity.errorCode)),
   )
   const batch = pending.slice(0, SETUP_COMMIT_BATCH_SIZE)
+  const defaultCashId = defaultCashEntityId(draft.entities)
   const results: SetupCommitResult[] = []
   const startedAt = deps.now()
   let handled = 0
@@ -450,6 +467,15 @@ export async function commitSetupDraft(
           deps,
         )
         outcome = { state: "COMMITTED", ...customer }
+      } else if (parsed.data.kind === "money_account") {
+        outcome = await commitSetupMoneyAccount(
+          db,
+          scope,
+          entity,
+          parsed.data,
+          { useDefaultCash: entity.id === defaultCashId },
+          deps,
+        )
       } else {
         const photoAttachmentId =
           parsed.data.kind === "product"

@@ -1,18 +1,20 @@
 import { describe, expect, mock, test } from "bun:test"
 import { CatalogError } from "@ewatrade/db/queries"
 import {
+  MONEY_ACCOUNT_NEEDS_FINANCE,
   OPENING_BALANCE_NEEDS_FINANCE,
   OPENING_BALANCE_PENDING,
   type SetupCommitDeps,
   commitSetupDraft,
 } from "./setup-commit"
+import { setupMoneyAccountCode } from "./setup-money-account"
 
 const scope = { tenantId: "tenant_1", storeId: "store_1", userId: "user_1" }
 
 type Entity = {
   id: string
   key: string
-  kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
+  kind: "PRODUCT" | "SERVICE" | "CUSTOMER" | "MONEY_ACCOUNT"
   state: string
   payload: unknown
   errorCode: string | null
@@ -48,6 +50,20 @@ const customer: Entity = {
   committedRecordId: null,
 }
 
+const money = (
+  key: string,
+  purpose: "CASH" | "BANK",
+  openingBalanceMinor?: number,
+): Entity => ({
+  id: `ent_${key}`,
+  key: `money:${key}`,
+  kind: "MONEY_ACCOUNT",
+  state: "CONFIRMED",
+  payload: { kind: "money_account", name: key, purpose, openingBalanceMinor },
+  errorCode: null,
+  committedRecordId: null,
+})
+
 const db = {
   $transaction: (fn: (tx: unknown) => unknown) => fn({ tx: true }),
 } as never
@@ -77,9 +93,21 @@ function harness(entities: Entity[], overrides: Partial<SetupCommitDeps> = {}) {
     getFinanceBook: mock(async () => ({
       id: "book_1",
       currencyCode: "NGN",
+      startsAt: new Date("2026-10-01T00:00:00.000Z"),
+      accounts: [
+        { id: "acct_cash", code: "1000", purpose: "CASH", archivedAt: null },
+      ],
     })) as never,
     ensureCustomerLedgerAccount: mock(async () => ({ id: "acct_1" })) as never,
     recordCustomerLedgerOpening: mock(async () => ({ id: "entry_1" })) as never,
+    createFinanceMoneyAccount: mock(
+      async (_db: unknown, input: { code: string }) => ({
+        id: `acct_${input.code}`,
+      }),
+    ) as never,
+    recordFinanceMoneyMovement: mock(async () => ({
+      id: "journal_1",
+    })) as never,
     prepareProductPhoto: mock(async () => ({ assetId: "asset_1" })) as never,
     enqueuePhotoReview: mock(async () => undefined),
     now: () => 0,
@@ -252,6 +280,46 @@ describe("setup commit flow", () => {
       errorCode: OPENING_BALANCE_NEEDS_FINANCE,
     })
     expect(deps.recordCustomerLedgerOpening).not.toHaveBeenCalled()
+  })
+
+  test("cash and bank accounts are added with balances; the first cash pocket reuses Shop cash", async () => {
+    const { deps, outcomes } = harness([
+      product("eggs"),
+      money("Cash at hand", "CASH", 5_000_000),
+      money("GTBank", "BANK", 25_000_000),
+      money("Home safe", "CASH"),
+    ])
+    const result = await commitSetupDraft(db, scope, "draft", deps)
+    expect(result).toMatchObject({ remaining: 0, interrupted: false })
+    expect(result.results.map((r) => [r.name, r.state, r.recordId])).toEqual([
+      ["eggs", "COMMITTED", "item_eggs"],
+      ["Cash at hand", "COMMITTED", "acct_cash"],
+      ["GTBank", "COMMITTED", `acct_${setupMoneyAccountCode("ent_GTBank")}`],
+      [
+        "Home safe",
+        "COMMITTED",
+        `acct_${setupMoneyAccountCode("ent_Home safe")}`,
+      ],
+    ])
+    expect(deps.createFinanceMoneyAccount).toHaveBeenCalledTimes(2)
+    // Only the two pockets with a balance post an opening entry.
+    expect(deps.recordFinanceMoneyMovement).toHaveBeenCalledTimes(2)
+    expect(outcomes.at(-1)).toMatchObject({
+      key: "money:Home safe",
+      outcome: { state: "COMMITTED", errorCode: null },
+    })
+  })
+
+  test("without a Finance book cash and bank accounts fail with a Finance prompt", async () => {
+    const { deps } = harness([money("GTBank", "BANK", 25_000_000)], {
+      getFinanceBook: mock(async () => null) as never,
+    })
+    const result = await commitSetupDraft(db, scope, "draft", deps)
+    expect(result.results[0]).toMatchObject({
+      state: "FAILED",
+      errorCode: MONEY_ACCOUNT_NEEDS_FINANCE,
+    })
+    expect(deps.createFinanceMoneyAccount).not.toHaveBeenCalled()
   })
 
   test("the time budget stops starting new records", async () => {
