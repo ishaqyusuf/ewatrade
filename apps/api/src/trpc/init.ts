@@ -385,7 +385,7 @@ const captureDashboardOutcome = t.middleware(async (opts) => {
       principal: {
         userId: opts.ctx.session.user.id,
         email: opts.ctx.session.user.email,
-        internal: opts.ctx.session.user.isPlatformAdmin,
+        internal: opts.ctx.session.user.isPlatformAdmin === true,
         tenantId: tenant?.id,
         tenantName: tenant?.name,
         dataClassification: tenant?.dataClassification,
