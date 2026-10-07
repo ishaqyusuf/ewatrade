@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+import { createAssistantLanguageModel } from "@ewatrade/ai/provider"
 import { createRehearsalModel } from "@ewatrade/ai/rehearsal-model"
 import type { RehearsalTurn } from "@ewatrade/ai/rehearsal-model"
+import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import type { SetupDraftEntityWrite } from "@ewatrade/assistant/setup/tools"
 import { AssistantRecordError } from "@ewatrade/db/assistant"
 import { OpenAPIHono } from "@hono/zod-openapi"
@@ -319,6 +321,72 @@ describe("assistant chat turn", () => {
     expect(fake.calls.persistedAssistantMessage).toBe(true)
     expect(() => guard.acquire(scope.userId).release()).not.toThrow()
   })
+
+  test("a provider failure mid-turn tells the owner, records a failed run and frees the slot", async () => {
+    const fake = fakeRepository()
+    const guard = new AssistantStreamGuard({
+      windowMs: 60_000,
+      requestLimit: 10,
+      concurrencyLimit: 1,
+    })
+    const { server } = app(fake, {
+      guard,
+      model: {
+        ...scriptedModel([]),
+        model: createRehearsalModel(() => {
+          throw new Error("Provider answered 503.")
+        }),
+      },
+    })
+    const response = await chat(server)
+    expect(response.status).toBe(200)
+    const body = await response.text()
+    expect(body).toContain(
+      "Something went wrong. Your setup list is safe, please try again.",
+    )
+    expect(body).not.toContain("Provider answered 503")
+    await Bun.sleep(100)
+    expect(fake.calls.completed.at(-1)).toMatchObject({
+      status: "FAILED",
+      errorCode: "STREAM_FAILED",
+    })
+    expect(fake.calls.writes).toEqual([])
+    expect(() => guard.acquire(scope.userId).release()).not.toThrow()
+  })
+
+  // Live (ASSISTANT_LIVE_SMOKE=1): the real provider refuses an invalid key.
+  const liveOutage = process.env.ASSISTANT_LIVE_SMOKE === "1" ? test : test.skip
+  liveOutage(
+    "a real provider outage reaches the owner only as the safe message",
+    async () => {
+      const environment = {
+        ASSISTANT_DEEPSEEK_API_KEY: "sk-invalid-outage-test",
+      }
+      const configuration = resolveAssistantRuntimeConfiguration(
+        null,
+        environment,
+      )
+      const live =
+        configuration &&
+        createAssistantLanguageModel(configuration, { environment })
+      if (!live) throw new Error("No live model could be built.")
+      const fake = fakeRepository()
+      const { server } = app(fake, { model: { ...live, rehearsal: false } })
+      const response = await chat(server)
+      const body = await response.text()
+      expect(body).toContain(
+        "Something went wrong. Your setup list is safe, please try again.",
+      )
+      expect(body).not.toMatch(/api key|authenticat|unauthori|401|deepseek/i)
+      await Bun.sleep(100)
+      expect(fake.calls.completed.at(-1)).toMatchObject({
+        status: "FAILED",
+        errorCode: "STREAM_FAILED",
+      })
+      expect(fake.calls.writes).toEqual([])
+    },
+    60_000,
+  )
 
   test("a dropped connection still finishes and saves the turn", async () => {
     const fake = fakeRepository()

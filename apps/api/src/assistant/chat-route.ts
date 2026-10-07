@@ -370,6 +370,14 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
       },
     )
     let failed = false
+    const streamFailed = (error: unknown) => {
+      failed = true
+      console.error("[assistant] turn failed", {
+        runId: begun.run.id,
+        name: error instanceof Error ? error.name : "unknown",
+      })
+      return STREAM_FAILURE_MESSAGE
+    }
 
     const stream = createUIMessageStream<SetupUIMessage>({
       originalMessages: history,
@@ -420,12 +428,16 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
           messages: modelMessages,
           abortSignal: controller.signal,
         })
-        writer.merge(result.toUIMessageStream({ sendReasoning: false }))
+        writer.merge(
+          result.toUIMessageStream({
+            sendReasoning: false,
+            // The model's own stream reports provider errors; its default
+            // would send the provider's message to the browser.
+            onError: (error) => streamFailed(error),
+          }),
+        )
       },
-      onError: () => {
-        failed = true
-        return "Something went wrong. Your setup list is safe, please try again."
-      },
+      onError: (error) => streamFailed(error),
       onFinish: async ({ responseMessage, isAborted }) => {
         clearTimeout(deadline)
         try {
@@ -490,6 +502,10 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
     if (!streaming) lease.release()
   }
 }
+
+/** What the owner sees when a turn fails; provider details stay server-side. */
+const STREAM_FAILURE_MESSAGE =
+  "Something went wrong. Your setup list is safe, please try again."
 
 const runIdSchema = z.string().min(1).max(64)
 
