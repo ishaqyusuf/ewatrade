@@ -111,6 +111,11 @@ const Minus = hugeIcon("Minus")
 const MoreHorizontal = hugeIcon("MoreHorizontal")
 const Undo2 = hugeIcon("Undo02Icon")
 const WandSparkles = hugeIcon("MagicWand01Icon")
+const Sparkles = hugeIcon("SparklesIcon")
+const ArrowUp = hugeIcon("ArrowUp02Icon")
+const ArrowDown = hugeIcon("ArrowDown02Icon")
+const Store = hugeIcon("Store01Icon")
+const Package = hugeIcon("PackageIcon")
 const Pencil = hugeIcon("Pencil")
 const Phone = hugeIcon("Phone")
 const PieChart = hugeIcon("PieChart")
@@ -365,6 +370,11 @@ const appIcons = {
   Warehouse,
   Wallet,
   WandSparkles,
+  Sparkles,
+  ArrowUp,
+  ArrowDown,
+  Store,
+  Package,
   Wind,
   WifiOff,
   Wrench,

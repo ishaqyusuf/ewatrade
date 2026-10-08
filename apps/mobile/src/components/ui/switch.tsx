@@ -10,7 +10,8 @@ function Switch({ className, ...props }: SwitchPrimitives.RootProps) {
         Platform.select({
           web: "focus-visible:border-ring focus-visible:ring-ring/50 peer inline-flex outline-none transition-all focus-visible:ring-[3px] disabled:cursor-not-allowed",
         }),
-        props.checked ? "bg-primary" : "bg-input dark:bg-input/80",
+        // The off track must stay visible on white cards (non-text contrast).
+        props.checked ? "bg-primary" : "bg-muted-foreground/45 dark:bg-input",
         props.disabled && "opacity-50",
         className,
       )}
@@ -18,7 +19,7 @@ function Switch({ className, ...props }: SwitchPrimitives.RootProps) {
     >
       <SwitchPrimitives.Thumb
         className={cn(
-          "bg-background size-4 rounded-full transition-transform",
+          "size-4 rounded-full bg-white shadow-sm transition-transform",
           Platform.select({
             web: "pointer-events-none block ring-0",
           }),

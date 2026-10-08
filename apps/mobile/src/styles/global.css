@@ -65,6 +65,20 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* Green Till (DESIGN-SYSTEM.md): gold create/sell accent, ink CTA, tints. */
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-ink: var(--ink);
+  --color-tint-mint: var(--tint-mint);
+  --color-tint-mint-foreground: var(--tint-mint-foreground);
+  --color-tint-amber: var(--tint-amber);
+  --color-tint-amber-foreground: var(--tint-amber-foreground);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-sky-foreground: var(--tint-sky-foreground);
+  --color-tint-lilac: var(--tint-lilac);
+  --color-tint-lilac-foreground: var(--tint-lilac-foreground);
+  --color-tint-rose: var(--tint-rose);
+  --color-tint-rose-foreground: var(--tint-rose-foreground);
 }
 
 @layer base {
@@ -111,6 +125,20 @@
     --chart-3: rgb(217, 119, 6);
     --chart-4: rgb(31, 41, 55);
     --chart-5: rgb(225, 29, 72);
+
+    --gold: #F2A51A;
+    --gold-foreground: #1E1E1C;
+    --ink: #1E1E1C;
+    --tint-mint: #E4F2EA;
+    --tint-mint-foreground: #135C45;
+    --tint-amber: #FFF1D9;
+    --tint-amber-foreground: #8A4B00;
+    --tint-sky: #E3EEFB;
+    --tint-sky-foreground: #1D4F91;
+    --tint-lilac: #EEE8FB;
+    --tint-lilac-foreground: #5B3AA8;
+    --tint-rose: #FCE8E6;
+    --tint-rose-foreground: #9B1C1C;
   }
 }
 
@@ -157,6 +185,20 @@
       --chart-3: rgb(251, 191, 36);
       --chart-4: rgb(115, 115, 115);
       --chart-5: rgb(244, 63, 94);
+
+      --gold: #F5B12E;
+      --gold-foreground: #1E1E1C;
+      --ink: #F0F3F1;
+      --tint-mint: #17302A;
+      --tint-mint-foreground: #8CD5B5;
+      --tint-amber: #33270F;
+      --tint-amber-foreground: #F8C66A;
+      --tint-sky: #172A40;
+      --tint-sky-foreground: #9CC3F5;
+      --tint-lilac: #2A2340;
+      --tint-lilac-foreground: #C4B2F5;
+      --tint-rose: #3A1D1D;
+      --tint-rose-foreground: #F7A3A3;
     }
   }
 }

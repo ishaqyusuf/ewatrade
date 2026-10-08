@@ -1,7 +1,8 @@
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Icon, type IconKeys } from "@/components/ui/icon"
-import { useColors } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
@@ -19,8 +20,19 @@ export type ActionButtonProps = ButtonProps & {
   isLoading?: boolean
   labelClassName?: string
   loadingLabel?: string
+  /**
+   * Green Till surfaces: `gold` for create/sell, `cream` on a hero card,
+   * `soft` for a tinted secondary action.
+   */
+  tone?: "cream" | "gold" | "soft"
   trailingIcon?: IconKeys
 }
+
+const toneClasses = {
+  cream: "bg-[#FFF9ED] active:opacity-90 dark:bg-[#F3FBF6]",
+  gold: "bg-gold active:opacity-90",
+  soft: "bg-accent active:opacity-90",
+} as const
 
 export function ActionButton({
   children,
@@ -28,17 +40,28 @@ export function ActionButton({
   contentClassName,
   disabled,
   disabledForegroundColor,
-  foregroundColor: foregroundColorOverride,
+  foregroundColor: foregroundColorOverrideProp,
   icon,
   iconSize = 16,
   isLoading,
   labelClassName,
   loadingLabel,
+  tone,
   trailingIcon,
   variant,
   ...props
 }: ActionButtonProps) {
+  let foregroundColorOverride = foregroundColorOverrideProp
   const colors = useColors()
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  if (tone && !foregroundColorOverride)
+    foregroundColorOverride =
+      tone === "gold"
+        ? palette.goldForeground
+        : tone === "cream"
+          ? palette.heroTo
+          : colors.accentForeground
   const largeTextLayout = useLargeTextLayout()
   const isDisabled = !!disabled || !!isLoading
   const isDefaultVariant = !variant || variant === "default"
@@ -83,7 +106,9 @@ export function ActionButton({
           isDefaultVariant &&
             (isDisabled
               ? "bg-muted active:bg-muted"
-              : "bg-primary active:bg-primary/90"),
+              : tone
+                ? toneClasses[tone]
+                : "bg-primary active:bg-primary/90"),
           isOutlineVariant && "bg-muted/60 active:bg-accent",
           variant === "destructive" &&
             "bg-destructive/10 active:bg-destructive/20",

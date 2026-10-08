@@ -30,3 +30,26 @@
 - Preserve NativeWind discipline: choose `className` or `style` per native element and avoid unnecessary mixing.
 - Shared foundation primitives for redesign work live under `src/components/mobile`: `ActionButton`, `EmptyState`, `FormField`, `OtpInput`, `QuantityStepper`, `StatusBadge`, `StatusBanner`, and `TimelineRow`.
 - Design 01 commerce previews include navigable Orders, Customers, Customer overview, and Order overview screens. These routes use static typed preview data until the owner approves promotion into production mobile surfaces.
+
+## Green Till (2026 redesign)
+
+The visual system chosen from the mobile quality workshop. Source of truth:
+`artifacts/mobile-quality-workshop/DESIGN-SYSTEM.md` (local) and the Brain batch
+board (`.brain/tasks/green-till-batch-board.md`).
+
+- **Tokens** (`src/styles/global.css`, `src/lib/green-till-theme.ts`): hero gradient,
+  `gold` (same value as the dock's centre accent), `ink`, and five tint pairs
+  (`tint-mint`, `tint-amber`, `tint-sky`, `tint-lilac`, `tint-rose`, each with
+  `-foreground`). Mint means paid/done, amber owed/offline, rose risk/low stock, sky
+  logistics/info, lilac people.
+- **Components** (`src/components/mobile/green-till/`):
+  - `HeroCard` (hero-card.tsx): the one answer per screen.
+  - In kit.tsx: `SectionHeader`, `QuickActionRow`, `AttentionRail`, `ListCard` +
+    `RecordRow`, `StatusPill`, `SetupSteps`, `GhostPreview`, `NudgeCard`,
+    `ToggleRow`.
+  - Auth: `auth-screen.tsx`, `auth-stage.tsx`, `auth-list.tsx`.
+- **Restyled shared pieces**: `StatusBanner` (tinted, optional `linkLabel`),
+  `ActionButton` `tone="gold" | "cream" | "soft"`, `Switch` (visible off track).
+- **Rules**: never mix `className` and inline `style` on one element; money and counts
+  use tabular numbers; honest numbers (skeletons, "—" with a reason, "as of" times,
+  "Waiting to sync"). Guard: `scripts/check-green-till-kit.mjs`.
