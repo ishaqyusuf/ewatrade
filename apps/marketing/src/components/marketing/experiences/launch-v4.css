@@ -249,7 +249,7 @@
 .launch-v4 .gg-rail-fill { position: absolute; inset: 0; background: var(--gg-accent); transform-origin: 50% 0; transform: scaleY(var(--p, 0)); }
 .launch-v4 .gg-moment { min-width: 0;
   position: relative; min-height: 70vh; display: flex; flex-direction: column; justify-content: center; padding: 48px 0;
-  opacity: 0.4; transition: opacity 0.45s var(--ew-ease);
+  opacity: 1; transition: opacity 0.45s var(--ew-ease);
 }
 .launch-v4 .gg-moment.is-active { opacity: 1; }
 .launch-v4 .gg-moment:first-child { min-height: 56vh; justify-content: flex-start; padding-top: 8px; }

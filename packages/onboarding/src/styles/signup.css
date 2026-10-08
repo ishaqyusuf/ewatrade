@@ -591,7 +591,7 @@
 }
 
 .signup-preview-label {position:relative;font-family:SignupCal,sans-serif;font-size:24px;letter-spacing:-.02em;text-align:center;margin:0;}
-.signup-preview.launch-v4 {gap:20px;font-family:SignupInter,Inter,sans-serif;}
+.signup-preview.launch-v4 {--gg-wash:rgba(255,249,237,.1);gap:20px;font-family:SignupInter,Inter,sans-serif;}
 .signup-preview .signup-web-preview .b-view {--b-h:372px;}
 .signup-preview .signup-preview-mark {max-width:none;width:760px;inset:auto -220px -240px auto;opacity:.06;}
 .signup-preview .ew-phone {--pw:min(300px,calc((100dvh - 350px)*.46875));}

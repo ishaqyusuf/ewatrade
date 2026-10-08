@@ -137,7 +137,11 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
             {"\n        "}
             <div className={"b-duo"} id={"duo"} data-active={active}>
               {"\n          "}
-              <div className={"b-layer b-layer--web"} data-layer={"web"}>
+              <div
+                className={"b-layer b-layer--web"}
+                data-layer={"web"}
+                aria-hidden={active !== "web"}
+              >
                 {"\n            "}
                 <ProductPreview
                   view={view}
@@ -157,7 +161,11 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                 {"\n          "}
               </div>
               {"\n          "}
-              <div className={"b-layer b-layer--phone"} data-layer={"mobile"}>
+              <div
+                className={"b-layer b-layer--phone"}
+                data-layer={"mobile"}
+                aria-hidden={active !== "mobile"}
+              >
                 {"\n            "}
                 <div className={"b-phone-in"}>
                   {"\n              "}

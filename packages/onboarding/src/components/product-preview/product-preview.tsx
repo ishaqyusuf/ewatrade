@@ -28,6 +28,7 @@ export function ProductPreview({
     const content = inner.current
     if (!box || !content) return
     const resize = () => {
+      if (!box.clientWidth) return
       if (platform === "mobile") {
         const scale = box.clientWidth / 360
         content.style.setProperty("--s", String(scale))

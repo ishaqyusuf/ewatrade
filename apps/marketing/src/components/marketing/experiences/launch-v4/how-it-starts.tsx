@@ -212,6 +212,7 @@ export function HowItStarts() {
               <ProductPreview
                 platform={platform}
                 view="assistant"
+                label={`Sample business · ${biz.name}, ${biz.city}`}
                 state={{ biz, phase }}
               />
             </div>
