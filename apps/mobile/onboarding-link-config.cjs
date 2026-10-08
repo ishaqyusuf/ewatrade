@@ -4,7 +4,7 @@ function getOnboardingLinkConfig(variant, configured) {
   }
   const value =
     configured?.trim() ||
-    (variant === "production" ? "https://dashboard.ewatrade.com" : "")
+    (variant === "production" ? "https://dash.ewatrade.com" : "")
   if (!value) return null
   const url = new URL(value)
   if (
@@ -16,7 +16,8 @@ function getOnboardingLinkConfig(variant, configured) {
     (variant !== "development" &&
       variant !== "dev" &&
       url.protocol !== "https:") ||
-    (variant !== "production" && url.hostname === "dashboard.ewatrade.com")
+    (variant !== "production" &&
+      ["dash.ewatrade.com", "dashboard.ewatrade.com"].includes(url.hostname))
   ) {
     throw new Error("Onboarding website does not match the app variant.")
   }

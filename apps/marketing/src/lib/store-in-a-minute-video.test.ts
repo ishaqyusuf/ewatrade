@@ -190,13 +190,13 @@ test("VideoObject JSON-LD waits for both sources, a poster and a valid publicati
 
 test("signup URL carries the chapter's business profile", () => {
   Reflect.set(process.env, "NODE_ENV", "production")
-  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dashboard.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   expect(getCreateStoreUrl("pharmacy-health-retail")).toBe(
-    "https://dashboard.ewatrade.com/signup?profile=pharmacy-health-retail",
+    "https://dash.ewatrade.com/signup?profile=pharmacy-health-retail",
   )
-  expect(getCreateStoreUrl()).toBe("https://dashboard.ewatrade.com/signup")
+  expect(getCreateStoreUrl()).toBe("https://dash.ewatrade.com/signup")
   expect(getCreateStoreCta(true, "fashion-apparel")).toEqual({
-    href: "https://dashboard.ewatrade.com/signup?profile=fashion-apparel",
+    href: "https://dash.ewatrade.com/signup?profile=fashion-apparel",
     label: "Create your store",
     kind: "signup",
   })

@@ -3,8 +3,8 @@ const { getOnboardingLinkConfig } = require("./onboarding-link-config.cjs")
 
 test("native configuration claims only bounded setup paths per host", () => {
   expect(getOnboardingLinkConfig("production")).toEqual({
-    dashboardUrl: "https://dashboard.ewatrade.com",
-    host: "dashboard.ewatrade.com",
+    dashboardUrl: "https://dash.ewatrade.com",
+    host: "dash.ewatrade.com",
     paths: ["/signup", "/api/early-access/verify"],
   })
   expect(
@@ -18,9 +18,10 @@ test("native configuration claims only bounded setup paths per host", () => {
 
 test("native preview cannot claim production continuation domains", () => {
   for (const [variant, url] of [
+    ["preview", "https://dash.ewatrade.com"],
     ["preview", "https://dashboard.ewatrade.com"],
     ["preview", "http://preview.example.com"],
-    ["production", "https://user@dashboard.ewatrade.com"],
+    ["production", "https://user@dash.ewatrade.com"],
     ["unknown", "https://example.com"],
   ])
     expect(() => getOnboardingLinkConfig(variant, url)).toThrow()

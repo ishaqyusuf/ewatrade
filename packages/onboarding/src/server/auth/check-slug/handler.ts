@@ -55,6 +55,7 @@ async function checkAvailability(input: unknown) {
     "smtp",
     "ftp",
     "dashboard",
+    "dash",
     "pos",
     "storefront",
     "marketing",

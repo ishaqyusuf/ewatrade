@@ -188,7 +188,7 @@ beforeEach(() => {
   process.env.APP_ENV = "production"
   process.env.VERCEL_ENV = "production"
   process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true"
-  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dashboard.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   process.env.EMAIL_QA_DOMAIN_ROUTES = '{"ishaq.qa.test":"tester@example.com"}'
 })
 afterEach(() => {
@@ -206,7 +206,7 @@ const input = {
   businessProfileKey: "animal-feed-agricultural-supplies",
 }
 function request(body: unknown = input, ip = "192.0.2.1") {
-  return new NextRequest("https://dashboard.ewatrade.com/api/signup/start", {
+  return new NextRequest("https://dash.ewatrade.com/api/signup/start", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
     body: JSON.stringify(body),
@@ -235,10 +235,10 @@ test("start issues an unverified recipient-bound setup, profile and tester email
   expect(JSON.stringify(leads)).not.toContain("192.0.2.1")
   expect(dispatch.mock.lastCall?.[0][0]?.to).toBe("tester@example.com")
   expect(body.qaPreview.accessUrl).toStartWith(
-    "https://dashboard.ewatrade.com/api/early-access/verify?",
+    "https://dash.ewatrade.com/api/early-access/verify?",
   )
   const lookupRequest = new NextRequest(
-    `https://dashboard.ewatrade.com/api/early-access/session?token=${body.accessToken}`,
+    `https://dash.ewatrade.com/api/early-access/session?token=${body.accessToken}`,
   )
   expect((await (await lookup(lookupRequest)).json()).emailVerified).toBe(false)
   expect((await verify(new NextRequest(body.qaPreview.accessUrl))).status).toBe(
@@ -293,7 +293,7 @@ test("profile deep links persist canonical operating models through session read
     const { accessToken } = await response.json()
     const readback = await lookup(
       new NextRequest(
-        `https://dashboard.ewatrade.com/api/early-access/session?token=${accessToken}`,
+        `https://dash.ewatrade.com/api/early-access/session?token=${accessToken}`,
       ),
     )
     expect((await readback.json()).draft).toMatchObject({

@@ -31,21 +31,21 @@ describe("tenant domain resolution", () => {
 
   test("treats reserved platform subdomains as global app surfaces", () => {
     expect(
-      inferTenantSurfaceFromHostname("dashboard.ewatrade.com", "ewatrade.com"),
+      inferTenantSurfaceFromHostname("dash.ewatrade.com", "ewatrade.com"),
     ).toBe("dashboard")
     expect(
       extractTenantSlugFromPlatformHostname(
-        "dashboard.ewatrade.com",
+        "dash.ewatrade.com",
         "ewatrade.com",
       ),
     ).toBe(null)
     expect(
-      resolveTenantDomain("dashboard.ewatrade.com", {
+      resolveTenantDomain("dash.ewatrade.com", {
         platformDomain: "ewatrade.com",
       }),
     ).toEqual({
       kind: "tenant",
-      hostname: "dashboard.ewatrade.com",
+      hostname: "dash.ewatrade.com",
       surface: "dashboard",
       tenantSlug: null,
       isCustomDomain: false,
@@ -74,7 +74,7 @@ describe("tenant domain resolution", () => {
         platformDomain: "ewatrade.com",
         surface: "dashboard",
       }),
-    ).toBe("dashboard.ewatrade.com")
+    ).toBe("dash.ewatrade.com")
     expect(
       buildPlatformSurfaceHostname({
         platformDomain: "localhost",
@@ -82,4 +82,13 @@ describe("tenant domain resolution", () => {
       }),
     ).toBe("ewatrade-dashboard.localhost")
   })
+})
+
+// Keep previously issued links on the dashboard surface during the migration.
+test("legacy dashboard origin remains a global dashboard", () => {
+  expect(
+    resolveTenantDomain("dashboard.ewatrade.com", {
+      platformDomain: "ewatrade.com",
+    }),
+  ).toMatchObject({ surface: "dashboard", tenantSlug: null })
 })

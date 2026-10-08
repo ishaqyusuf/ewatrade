@@ -87,7 +87,7 @@ export function ProductPreview({
           <i />
           <i />
         </span>
-        <span className="b-url">dashboard.ewatrade.com</span>
+        <span className="b-url">dash.ewatrade.com</span>
       </div>
       <div className="b-view" ref={outer} aria-hidden="true">
         <div className="b-view-in" ref={inner}>

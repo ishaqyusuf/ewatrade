@@ -6,7 +6,7 @@ import type { WorkspaceWelcomeEmailInput } from "../templates/workspace-welcome"
 export const earlyAccessLead = {
   accessExpiresAt: "6 September 2026, 18:00 WAT",
   accessUrl:
-    "https://dashboard.ewatrade.com/signup?access_token=preview-early-access",
+    "https://dash.ewatrade.com/signup?access_token=preview-early-access",
   companyName: "Amina Home & Trade",
   email: "amina@example.com",
   fullName: "Amina Bello",

@@ -43,7 +43,7 @@ export function buildStaffInvitationLinks(
   const appUrl = new URL(
     environment.DASHBOARD_URL ??
       environment.NEXT_PUBLIC_DASHBOARD_URL ??
-      "https://dashboard.ewatrade.com",
+      "https://dash.ewatrade.com",
   )
   const inviteUrl = new URL(appUrl)
   if (token) {
