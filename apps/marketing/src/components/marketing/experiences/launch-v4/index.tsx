@@ -17,6 +17,38 @@ import "@ewatrade/onboarding/styles/product-preview.css"
 import "../launch-v4.css"
 function Landing({ signupEnabled }: MarketingExperienceProps) {
   const { platform } = usePlatform()
+  const [theme, setTheme] = useState<"light" | "dark">()
+  const [systemDark, setSystemDark] = useState(false)
+  useEffect(() => {
+    const media = matchMedia("(prefers-color-scheme: dark)")
+    const syncSystem = () => setSystemDark(media.matches)
+    const syncSaved = () => {
+      try {
+        const saved = localStorage.getItem("ewatrade-marketing-theme")
+        setTheme(saved === "light" || saved === "dark" ? saved : undefined)
+      } catch {
+        // The system theme still works when storage is unavailable.
+      }
+    }
+    syncSystem()
+    syncSaved()
+    media.addEventListener("change", syncSystem)
+    window.addEventListener("storage", syncSaved)
+    return () => {
+      media.removeEventListener("change", syncSystem)
+      window.removeEventListener("storage", syncSaved)
+    }
+  }, [])
+  const dark = theme ? theme === "dark" : systemDark
+  const toggleTheme = () => {
+    const next = dark ? "light" : "dark"
+    setTheme(next)
+    try {
+      localStorage.setItem("ewatrade-marketing-theme", next)
+    } catch {
+      // Keep the selected theme for this page when persistence is unavailable.
+    }
+  }
   const [floating, setFloating] = useState(false)
   useEffect(() => {
     const seen = new Set<Element>()
@@ -63,8 +95,17 @@ function Landing({ signupEnabled }: MarketingExperienceProps) {
     }
   }, [])
   return (
-    <div className="launch-v4" data-platform={platform} id="top">
-      <Header signupEnabled={signupEnabled} />
+    <div
+      className="launch-v4"
+      data-platform={platform}
+      data-theme={theme}
+      id="top"
+    >
+      <Header
+        signupEnabled={signupEnabled}
+        dark={dark}
+        onToggleTheme={toggleTheme}
+      />
       <div className="launch-content">
         <main id="main">
           <Hero signupEnabled={signupEnabled} />

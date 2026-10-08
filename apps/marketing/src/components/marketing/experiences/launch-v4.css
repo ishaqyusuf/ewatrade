@@ -843,3 +843,10 @@
 .launch-v4 .gg-ctl {min-height:44px;min-width:44px;}
 @media(max-width:960px){.launch-v4 .gg-how {display:flex;flex-direction:column;}.launch-v4 .gg-astage {width:100%;}}
 @media(prefers-reduced-motion:reduce){.launch-v4 *,.launch-v4 *::before,.launch-v4 *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+
+/* The theme control remains visible beside the menu on small screens. */
+.launch-v4 .gg-head-actions {margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.launch-v4 .gg-theme-toggle {display:grid;place-items:center;width:44px;height:44px;flex:none;border:0;border-radius:12px;background:var(--gg-wash);color:var(--ew-on-green);cursor:pointer;}
+.launch-v4 .gg-theme-toggle svg {width:21px;height:21px;}
+.launch-v4 .gg-theme-toggle:hover {background:var(--ew-on-green-line);}
+.launch-v4 .gg-theme-toggle:focus-visible {outline:2px solid var(--ew-gold);outline-offset:3px;}
