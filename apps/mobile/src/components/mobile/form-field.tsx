@@ -228,6 +228,7 @@ export function FormField({
                     ? "min-h-[72px] flex-1 border-0 bg-transparent px-0 py-0"
                     : "h-[48px] flex-1 border-0 bg-transparent px-0",
                   inputClassName,
+                  isGreenGate && "text-[15px] font-semibold",
                   isMarketVariant && "text-market-ink",
                 ),
               })}

@@ -1,19 +1,21 @@
+import {
+  AuthListCard,
+  AuthListRow,
+  AuthRadio,
+} from "@/components/mobile/green-till/auth-list"
 import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
+import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import type {
   SignUpCategoriesProps,
   SignUpPresentationProps,
 } from "@/components/mobile/sign-up/sign-up-presentation"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { cn } from "@/lib/utils"
 
 export function ClassicSignUpScreen({
   children,
   footer,
   header,
   onBack,
+  preview,
   step,
 }: SignUpPresentationProps) {
   return (
@@ -27,6 +29,13 @@ export function ClassicSignUpScreen({
       progress={header.step}
       footer={footer}
       motionKey={step}
+      stage={
+        <SetupPreviewStage
+          businessName={preview?.businessName}
+          chips={preview?.chips ?? []}
+          ownerLine={preview?.ownerLine}
+        />
+      }
       testID={`green-gate-setup-${header.step}`}
     >
       {children}
@@ -40,42 +49,19 @@ export function ClassicSignUpCategories({
   selectedKey,
 }: SignUpCategoriesProps) {
   return (
-    <View className="gap-0">
+    <AuthListCard>
       {profiles.map((profile) => (
-        <Pressable
+        <AuthListRow
           accessibilityLabel={`${profile.title}. ${profile.description}`}
           accessibilityRole="radio"
-          accessibilityState={{ selected: selectedKey === profile.key }}
-          className={cn(
-            "min-h-14 flex-row items-center gap-3 border-b border-border px-1 py-4 active:bg-muted",
-            selectedKey === profile.key && "bg-primary/10",
-          )}
-          haptic
+          control={<AuthRadio selected={selectedKey === profile.key} />}
           key={profile.key}
           onPress={() => onSelect(profile)}
+          selected={selectedKey === profile.key}
           testID={`business-profile-${profile.key}`}
-        >
-          <View
-            className={cn(
-              "size-[22px] shrink-0 items-center justify-center rounded-full border-2",
-              selectedKey === profile.key ? "border-primary" : "border-border",
-            )}
-          >
-            {selectedKey === profile.key ? (
-              <View className="size-2.5 rounded-full bg-primary" />
-            ) : null}
-          </View>
-          <View className="min-w-0 flex-1 gap-1">
-            <Text className="text-sm font-bold [-rn-line-height:21] text-foreground">
-              {profile.title}
-            </Text>
-            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
-              {profile.description}
-            </Text>
-          </View>
-          <Icon name="ChevronRight" className="size-sm text-muted-foreground" />
-        </Pressable>
+          title={profile.title}
+        />
       ))}
-    </View>
+    </AuthListCard>
   )
 }

@@ -1,3 +1,4 @@
+import { AuthChip } from "@/components/mobile/green-till/auth-list"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
@@ -19,6 +20,16 @@ export function SignUpChoice({
 }) {
   const largeText = useLargeTextLayout()
   const market = appearance === "market-day"
+  if (!market && !largeText)
+    return (
+      <AuthChip
+        accessibilityRole={multiple ? "checkbox" : "radio"}
+        label={label}
+        onPress={onPress}
+        selected={selected}
+        showCheck={multiple}
+      />
+    )
   return (
     <Pressable
       accessibilityRole={multiple ? "checkbox" : "button"}
@@ -28,7 +39,11 @@ export function SignUpChoice({
         largeText
           ? "min-h-14 w-full rounded-2xl py-3"
           : "min-h-11 rounded-full py-2",
-        selected ? (market ? "bg-market-palm" : "bg-primary") : "bg-muted",
+        selected
+          ? market
+            ? "bg-market-palm"
+            : "border-[1.5px] border-primary bg-accent"
+          : "bg-muted",
       )}
       haptic
       onPress={onPress}
@@ -39,7 +54,7 @@ export function SignUpChoice({
           selected
             ? market
               ? "text-market-on-palm"
-              : "text-primary-foreground"
+              : "text-primary"
             : "text-foreground",
         )}
       >

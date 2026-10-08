@@ -364,6 +364,8 @@ type AuthMethodButtonProps = {
   onPress: () => void
   pending?: boolean
   tone?: "primary" | "subtle"
+  /** Green Till 03: 48pt, plain brand mark, heavier label. */
+  variant?: "default" | "sso"
 }
 
 export function AuthMethodButton({
@@ -375,9 +377,45 @@ export function AuthMethodButton({
   onPress,
   pending,
   tone = "subtle",
+  variant = "default",
 }: AuthMethodButtonProps) {
   const colors = useColors()
   const isPrimary = tone === "primary"
+  if (variant === "sso")
+    return (
+      <Pressable
+        accessibilityRole="button"
+        disabled={disabled}
+        haptic
+        onPress={onPress}
+        style={{
+          alignItems: "center",
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderRadius: 14,
+          borderWidth: 1.5,
+          flexDirection: "row",
+          gap: 9,
+          justifyContent: "center",
+          minHeight: 48,
+          opacity: disabled ? 0.45 : 1,
+          paddingHorizontal: 12,
+        }}
+        transition
+      >
+        {brandIcon === "google" ? (
+          <GoogleLogo />
+        ) : (
+          <Icon className="size-sm text-foreground" name={icon} />
+        )}
+        <Text
+          className="text-[14px] font-extrabold [-rn-line-height:20] text-foreground"
+          numberOfLines={1}
+        >
+          {pending && loadingLabel ? loadingLabel : label}
+        </Text>
+      </Pressable>
+    )
 
   return (
     <Pressable
@@ -458,15 +496,23 @@ function GoogleLogo() {
 
 type AuthDividerProps = {
   label: string
+  /** Lowercase, untracked label for the Green Till 03 auth screens. */
+  plain?: boolean
 }
 
-export function AuthDivider({ label }: AuthDividerProps) {
+export function AuthDivider({ label, plain = false }: AuthDividerProps) {
   const colors = useColors()
 
   return (
     <View className="flex-row items-center gap-3">
       <View style={{ backgroundColor: colors.border, height: 1, flex: 1 }} />
-      <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
+      <Text
+        className={
+          plain
+            ? "text-xs font-bold text-muted-foreground"
+            : "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground"
+        }
+      >
         {label}
       </Text>
       <View style={{ backgroundColor: colors.border, height: 1, flex: 1 }} />
@@ -493,8 +539,9 @@ export function AuthFooterAction({
       href={href}
       transition
     >
-      <Text className="text-center text-xs leading-5 text-muted-foreground">
-        {eyebrow} <Text className="font-bold text-primary">{label}</Text>
+      <Text className="text-center text-[13px] [-rn-line-height:20] text-muted-foreground">
+        {eyebrow}{" "}
+        <Text className="text-[13px] font-extrabold text-primary">{label}</Text>
       </Text>
     </Pressable>
   )

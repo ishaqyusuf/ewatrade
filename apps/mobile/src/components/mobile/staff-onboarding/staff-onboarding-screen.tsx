@@ -7,6 +7,7 @@ import {
 import { ClassicStaffOnboardingScreen } from "@/components/mobile/appearances/classic/staff-onboarding-screen"
 import { MarketDayStaffOnboardingScreen } from "@/components/mobile/appearances/market-day/staff-onboarding-screen"
 import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
+import { SalesRepExampleStage } from "@/components/mobile/green-till/auth-stage"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -149,6 +150,7 @@ export function StaffOnboardingScreen() {
   if (!isAuthenticated && inviteToken) {
     return (
       <AuthFlowScreen
+        stage={<SalesRepExampleStage />}
         appearanceScreen="staff-onboarding"
         eyebrow="Staff invitation"
         title="Staff invitation"
@@ -212,6 +214,7 @@ export function StaffOnboardingScreen() {
     if (inviteToken) {
       return (
         <AuthFlowScreen
+          stage={<SalesRepExampleStage />}
           appearanceScreen="staff-onboarding"
           eyebrow="Staff invitation"
           title="Wrong account"
@@ -236,6 +239,7 @@ export function StaffOnboardingScreen() {
   if (ageStatus.isPending || ageStatus.isError || !ageStatus.data?.eligible) {
     return (
       <AuthFlowScreen
+        stage={<SalesRepExampleStage />}
         appearanceScreen="staff-onboarding"
         eyebrow="Staff invitation"
         title="Before accepting staff access"

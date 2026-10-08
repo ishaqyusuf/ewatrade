@@ -11,6 +11,7 @@ export function VerificationResendLine({
   message,
   onPress,
   wasResent,
+  cooldownSeconds = 0,
 }: {
   design: MobileDesign
   disabled: boolean
@@ -20,6 +21,8 @@ export function VerificationResendLine({
   message: string | null
   onPress: () => void
   wasResent: boolean
+  /** Seconds until another code can be sent (classic only). */
+  cooldownSeconds?: number
 }) {
   const lead = isSending
     ? "Sending code"
@@ -31,6 +34,18 @@ export function VerificationResendLine({
           ? "Code sent again"
           : "Didn't receive it?"
   const market = design === "market-day"
+  if (!market && cooldownSeconds > 0 && !isSending && !isVerifying && !isError)
+    return (
+      <Text
+        accessibilityLiveRegion="polite"
+        className="text-center text-[12.5px] [-rn-line-height:18] text-muted-foreground"
+      >
+        Send a new code in{" "}
+        <Text className="text-[12.5px] font-bold tabular-nums text-foreground">
+          {`${Math.floor(cooldownSeconds / 60)}:${String(cooldownSeconds % 60).padStart(2, "0")}`}
+        </Text>
+      </Text>
+    )
   return (
     <Pressable
       accessibilityLabel="Resend code"
@@ -63,7 +78,7 @@ export function VerificationResendLine({
               : "text-center text-xs font-bold leading-5 text-foreground"
           }
         >
-          {market ? "Resend code" : "tap to resend"}
+          Resend code
         </Text>
       ) : null}
     </Pressable>

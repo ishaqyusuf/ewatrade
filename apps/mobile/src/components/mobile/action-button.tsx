@@ -67,6 +67,7 @@ export function ActionButton({
               : colors.primary))
   const iconClassName = cn("size-sm", foregroundClassName)
 
+  const label = isLoading && loadingLabel ? loadingLabel : children
   return (
     <VariableContextProvider value={{ "--action-foreground": foregroundColor }}>
       <Button
@@ -116,10 +117,13 @@ export function ActionButton({
             />
           ) : null}
           <NativeText
+            // Android keeps a single-line label's old width when its text
+            // changes (Next → Get started); remount so it measures again.
+            key={typeof label === "string" ? label : undefined}
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
             numberOfLines={1}
             className={cn(
-              "text-[14px] font-bold [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+              "text-[14.5px] font-extrabold [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
               foregroundColorOverride || disabledForegroundColor
                 ? "text-[color:var(--action-foreground)]"
                 : foregroundClassName,
@@ -127,9 +131,7 @@ export function ActionButton({
               labelClassName,
             )}
           >
-            <NativeText style={{ color: foregroundColor }}>
-              {isLoading && loadingLabel ? loadingLabel : children}
-            </NativeText>
+            <NativeText style={{ color: foregroundColor }}>{label}</NativeText>
           </NativeText>
           {!isLoading && trailingIcon ? (
             <Icon

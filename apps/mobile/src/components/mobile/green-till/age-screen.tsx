@@ -1,9 +1,13 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import { AuthActionButton } from "@/components/mobile/auth-header"
+import {
+  AuthListCard,
+  AuthListRow,
+  AuthRadio,
+} from "@/components/mobile/green-till/auth-list"
 import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
+import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
 
 export type EligibleAgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
 export type AgeSelection = EligibleAgeBand | "UNDER_13" | null
@@ -18,10 +22,16 @@ export function AccountAgePresentation({
   selected,
   onSelect,
   onContinue,
+  onClose,
+  businessName,
 }: {
   selected: AgeSelection
   onSelect: (value: AgeSelection) => void
   onContinue: (value: EligibleAgeBand) => void
+  /** Leave setup after an under-13 answer. */
+  onClose?: () => void
+  /** Shown on the stage preview when setup started from an email link. */
+  businessName?: string
 }) {
   const continueWithAge = () => {
     if (selected && selected !== "UNDER_13") onContinue(selected)
@@ -33,43 +43,39 @@ export function AccountAgePresentation({
       subtitle="ẸwáTrade accounts are for people aged 13 or older."
       backHref="/login"
       backLabel="Back to login"
+      stage={<SetupPreviewStage businessName={businessName} chips={[]} />}
     >
-      <View className="overflow-hidden rounded-[20px] bg-muted px-4">
+      <AuthListCard>
         {choices.map((choice) => (
-          <Pressable
-            key={choice.value}
+          <AuthListRow
+            accessibilityLabel={choice.label}
             accessibilityRole="radio"
-            accessibilityState={{ selected: selected === choice.value }}
-            className="min-h-14 flex-row items-center gap-3 border-b border-border py-3"
+            control={<AuthRadio selected={selected === choice.value} />}
+            key={choice.value}
             onPress={() => onSelect(choice.value)}
-          >
-            <View
-              className={
-                selected === choice.value
-                  ? "size-[22px] items-center justify-center rounded-full border-2 border-primary"
-                  : "size-[22px] rounded-full border-2 border-border"
-              }
-            >
-              {selected === choice.value ? (
-                <View className="size-2.5 rounded-full bg-primary" />
-              ) : null}
-            </View>
-            <Text className="min-w-0 flex-1 text-sm font-semibold [-rn-line-height:21] text-foreground">
-              {choice.label}
-            </Text>
-          </Pressable>
+            selected={selected === choice.value}
+            title={choice.label}
+          />
         ))}
-      </View>
+      </AuthListCard>
       {selected === "UNDER_13" ? (
-        <StatusBanner
-          title="Unable to create an account"
-          message="ẸwáTrade accounts are not available to people under 13."
-          tone="warning"
-        />
+        <>
+          <StatusBanner
+            icon="Info"
+            message="ẸwáTrade accounts aren’t available under 13. You can close setup here."
+            tone="warning"
+          />
+          {onClose ? (
+            <ActionButton onPress={onClose} variant="secondary">
+              Close setup
+            </ActionButton>
+          ) : null}
+        </>
       ) : (
         <AuthActionButton
           disabled={!selected}
           onPress={continueWithAge}
+          trailingIcon="ArrowRight"
         >
           Continue
         </AuthActionButton>

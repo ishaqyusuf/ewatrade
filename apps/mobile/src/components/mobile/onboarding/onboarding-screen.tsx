@@ -28,7 +28,15 @@ export function OnboardingScreen() {
         Math.min(current + 1, ONBOARDING_STEPS.length - 1),
       )
   }
+  function previous() {
+    setStepIndex((current) => Math.max(current - 1, 0))
+  }
   return (
-    <Presentation stepIndex={stepIndex} onContinue={next} onFinish={finish} />
+    <Presentation
+      stepIndex={stepIndex}
+      onContinue={next}
+      onFinish={finish}
+      onPrevious={previous}
+    />
   )
 }

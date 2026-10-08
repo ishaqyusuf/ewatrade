@@ -5,10 +5,10 @@ import {
   OPERATING_CURRENCIES,
   type OperatingCurrencyCode,
 } from "@ewatrade/utils"
-import { View } from "react-native"
+import { ScrollView, View } from "react-native"
 
 type CurrencySelectorProps = {
-  appearance?: "classic" | "market-day"
+  appearance?: "classic" | "market-day" | "chips"
   disabled?: boolean
   label?: string
   onChange: (currencyCode: OperatingCurrencyCode) => void
@@ -23,6 +23,54 @@ export function CurrencySelector({
   value,
 }: CurrencySelectorProps) {
   const market = appearance === "market-day"
+  if (appearance === "chips")
+    return (
+      <View className="gap-2">
+        <Text className="text-xs font-bold [-rn-line-height:18] text-muted-foreground">
+          {label}
+        </Text>
+        <View className="-mx-[18px]">
+          <ScrollView
+            accessibilityRole="radiogroup"
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 18 }}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {OPERATING_CURRENCIES.map((currency) => {
+              const selected = currency.code === value
+              return (
+                <Pressable
+                  accessibilityLabel={`${currency.label}, ${currency.code}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected, disabled }}
+                  className={cn(
+                    "min-h-9 justify-center rounded-full border-[1.5px] px-[14px]",
+                    selected
+                      ? "border-primary bg-accent"
+                      : "border-transparent bg-muted",
+                  )}
+                  disabled={disabled}
+                  haptic
+                  key={currency.code}
+                  onPress={() => onChange(currency.code)}
+                >
+                  <Text
+                    className={cn(
+                      "text-[13px] font-extrabold [-rn-line-height:18]",
+                      selected ? "text-primary" : "text-foreground",
+                    )}
+                  >
+                    {selected
+                      ? `${currency.code} ${currency.symbol}`
+                      : currency.code}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    )
 
   return (
     <View className="gap-2.5">

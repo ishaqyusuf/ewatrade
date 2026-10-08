@@ -12,7 +12,7 @@ type OnboardingStep = {
 
 export const ONBOARDING_STEPS = [
   {
-    body: "Create one workspace for your team, catalog, orders, and daily work.",
+    body: "One workspace for your team, catalog, orders and daily work.",
     icon: "Building2",
     tasks: [
       { icon: "Building2", label: "Add business details" },
@@ -22,7 +22,7 @@ export const ONBOARDING_STEPS = [
     title: "Set up your business",
   },
   {
-    body: "Add Products, Services, prices, options, and units only when you need them.",
+    body: "Add products and services, with prices, options and units only when you need them.",
     icon: "Warehouse",
     tasks: [
       { icon: "ReceiptText", label: "Create your first item" },
@@ -32,7 +32,7 @@ export const ONBOARDING_STEPS = [
     title: "Build your catalog",
   },
   {
-    body: "Confirm orders, track service work, and keep supported actions queued when the connection drops.",
+    body: "Take orders, track service work, and keep selling when the connection drops.",
     icon: "Users",
     tasks: [
       { icon: "Receipt", label: "Create mixed orders" },
@@ -47,4 +47,6 @@ export type OnboardingPresentationProps = {
   stepIndex: number
   onContinue: () => void
   onFinish: () => void
+  /** Swipe back to the previous panel. */
+  onPrevious?: () => void
 }

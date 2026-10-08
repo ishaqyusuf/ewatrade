@@ -1,141 +1,147 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
+import {
+  AuthStagePill,
+  GreenTillAuthScreen,
+} from "@/components/mobile/green-till/auth-screen"
+import { IntroStage } from "@/components/mobile/green-till/auth-stage"
 import {
   ONBOARDING_STEPS,
   type OnboardingPresentationProps,
 } from "@/components/mobile/onboarding/onboarding-presentation"
-import { Icon } from "@/components/ui/icon"
-import { MotionView } from "@/components/ui/motion"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { useEffect, useRef } from "react"
+import { Gesture, GestureDetector } from "react-native-gesture-handler"
+import Animated, {
+  Easing,
+  FadeInDown,
+  ReduceMotion,
+  runOnJS,
+  useAnimatedStyle,
+  useReducedMotion,
+  withTiming,
+} from "react-native-reanimated"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+const ease = Easing.out(Easing.cubic)
+const SWIPE_DISTANCE = 48
+
+/** 03 Market Preview intro: example cards on the stage, copy and one action. */
 export function ClassicOnboardingScreen({
   stepIndex,
   onContinue,
   onFinish,
+  onPrevious,
 }: OnboardingPresentationProps) {
   const index = Math.max(0, Math.min(stepIndex, ONBOARDING_STEPS.length - 1))
   const step = ONBOARDING_STEPS[index] ?? ONBOARDING_STEPS[0]
   const last = index === ONBOARDING_STEPS.length - 1
+  const colors = useColors()
+  const insets = useSafeAreaInsets()
+  const previousIndex = useRef(index)
+  const direction: 1 | -1 = index >= previousIndex.current ? 1 : -1
+  useEffect(() => {
+    previousIndex.current = index
+  }, [index])
+
+  const swipe = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-16, 16])
+    .onEnd((event) => {
+      if (event.translationX < -SWIPE_DISTANCE) runOnJS(onContinue)()
+      else if (event.translationX > SWIPE_DISTANCE && onPrevious)
+        runOnJS(onPrevious)()
+    })
+
+  return (
+    <GestureDetector gesture={swipe}>
+      <View className="flex-1">
+        <GreenTillAuthScreen
+          title={step.title}
+          subtitle={step.body}
+          testID={`market-preview-intro-${index + 1}`}
+          stage={<IntroStage index={index} direction={direction} />}
+          actions={
+            <AuthStagePill
+              label="Skip"
+              accessibilityLabel="Skip introduction"
+              onPress={onFinish}
+            />
+          }
+          headerContent={
+            <View className="gap-2">
+              <IntroDots index={index} />
+              <Animated.View
+                key={`intro-copy-${index}`}
+                entering={FadeInDown.duration(260)
+                  .delay(80)
+                  .easing(ease)
+                  .withInitialValues({ transform: [{ translateY: 12 }] })
+                  .reduceMotion(ReduceMotion.System)}
+                style={{ gap: 4 }}
+              >
+                <Text
+                  accessibilityRole="header"
+                  className="text-[23px] font-extrabold tracking-tight [-rn-line-height:28] text-foreground"
+                >
+                  {step.title}
+                </Text>
+                <Text className="text-[13.5px] [-rn-line-height:20] text-muted-foreground">
+                  {step.body}
+                </Text>
+              </Animated.View>
+            </View>
+          }
+          footer={
+            <View
+              style={{
+                backgroundColor: colors.background,
+                paddingBottom: Math.max(insets.bottom, 12) + 8,
+                paddingHorizontal: 18,
+                paddingTop: 12,
+              }}
+            >
+              <ActionButton onPress={onContinue} trailingIcon="ArrowRight">
+                {last ? "Get started" : "Next"}
+              </ActionButton>
+            </View>
+          }
+        >
+          {null}
+        </GreenTillAuthScreen>
+      </View>
+    </GestureDetector>
+  )
+}
+
+function IntroDots({ index }: { index: number }) {
+  return (
+    <View
+      accessible
+      accessibilityLabel={`Introduction ${index + 1} of 3`}
+      style={{ flexDirection: "row", gap: 6, paddingVertical: 4 }}
+    >
+      {ONBOARDING_STEPS.map((item, itemIndex) => (
+        <IntroDot key={item.title} active={itemIndex === index} />
+      ))}
+    </View>
+  )
+}
+
+function IntroDot({ active }: { active: boolean }) {
   const { colorScheme } = useColorScheme()
   const colors = useColors()
-  const palette = GREEN_TILL_THEME[colorScheme]
-  return (
-    <GreenTillAuthScreen
-      title={step.title}
-      subtitle={step.body}
-      motionKey={index}
-      testID={`green-gate-intro-${index + 1}`}
-      headerContent={
-        <MotionView key={index}>
-          <View className="mt-6 gap-4">
-            <View className="flex-row items-center justify-between gap-3">
-              <View className="size-16 items-center justify-center rounded-[20px] bg-white/15">
-                <Icon className="size-[30px] text-white" name={step.icon} />
-              </View>
-              <View className="rounded-full bg-white/15 px-3 py-1.5">
-                <Text
-                  style={{
-                    color: palette.heroForeground,
-                    fontSize: 12,
-                    fontWeight: "800",
-                    lineHeight: 18,
-                  }}
-                >
-                  {index + 1} of 3
-                </Text>
-              </View>
-            </View>
-            <View className="gap-1.5">
-              <Text
-                accessibilityRole="header"
-                style={{
-                  color: palette.heroForeground,
-                  fontSize: 26,
-                  fontWeight: "800",
-                  lineHeight: 31,
-                  letterSpacing: -0.6,
-                }}
-              >
-                {step.title}
-              </Text>
-              <Text
-                style={{
-                  color: palette.heroMuted,
-                  fontSize: 14,
-                  lineHeight: 21,
-                }}
-              >
-                {step.body}
-              </Text>
-            </View>
-          </View>
-        </MotionView>
-      }
-    >
-      <Text className="text-base font-extrabold [-rn-line-height:24] text-foreground">
-        What happens next
-      </Text>
-      <View className="rounded-[20px] bg-muted px-4 py-1">
-        {step.tasks.map((task, taskIndex) => (
-          <View
-            key={task.label}
-            className="min-h-14 flex-row items-center gap-3 py-3"
-          >
-            <View className="size-7 items-center justify-center rounded-full bg-accent">
-              <Text
-                maxFontSizeMultiplier={1.3}
-                className="text-xs font-bold [-rn-line-height:18] text-primary"
-              >
-                {taskIndex + 1}
-              </Text>
-            </View>
-            <Text className="min-w-0 flex-1 text-sm font-semibold [-rn-line-height:21] text-foreground">
-              {task.label}
-            </Text>
-          </View>
-        ))}
-      </View>
-      <View className="min-h-6 flex-1" />
-      <View className="gap-3">
-        <View
-          accessible
-          accessibilityLabel={`Introduction ${index + 1} of 3`}
-          className="flex-row justify-center gap-1.5 py-1"
-        >
-          {ONBOARDING_STEPS.map((item, itemIndex) => (
-            <View
-              key={item.title}
-              style={{
-                width: itemIndex === index ? 22 : 7,
-                height: 7,
-                borderRadius: 7,
-                backgroundColor:
-                  itemIndex === index ? palette.gold : colors.border,
-              }}
-            />
-          ))}
-        </View>
-        <ActionButton onPress={onContinue} trailingIcon="ArrowRight">
-          {last ? "Get started" : "Continue"}
-        </ActionButton>
-        {!last ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Skip onboarding"
-            className="min-h-11 items-center justify-center"
-            onPress={onFinish}
-            haptic
-          >
-            <Text className="text-sm font-bold [-rn-line-height:21] text-primary">
-              Skip
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-    </GreenTillAuthScreen>
-  )
+  const reduceMotion = useReducedMotion()
+  const gold = GREEN_TILL_THEME[colorScheme].gold
+  const style = useAnimatedStyle(() => ({
+    width: reduceMotion
+      ? active
+        ? 22
+        : 7
+      : withTiming(active ? 22 : 7, { duration: 240, easing: ease }),
+    backgroundColor: active ? gold : colors.border,
+  }))
+  return <Animated.View style={[{ height: 7, borderRadius: 7 }, style]} />
 }

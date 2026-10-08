@@ -1,9 +1,11 @@
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
+import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
-import { View } from "@/components/ui/view"
+import Svg, { Path } from "react-native-svg"
 
 export const OTP_KEYPAD_ROWS = [
   ["1", "2", "3"],
@@ -19,7 +21,7 @@ type OtpKeypadProps = {
   onDeletePress: () => void
   onDigitPress: (digit: string) => void
   onPastePress: () => void
-  variant?: "default" | "market-tally"
+  variant?: "default" | "market-tally" | "green-till"
 }
 
 const DIGIT_LETTERS: Partial<Record<OtpKeypadKey, string>> = {
@@ -42,6 +44,26 @@ export function OtpKeypad({
 }: OtpKeypadProps) {
   const largeTextLayout = useLargeTextLayout()
   const isMarketTally = variant === "market-tally"
+  if (variant === "green-till")
+    return (
+      <View className="w-full gap-1.5">
+        {OTP_KEYPAD_ROWS.map((row) => (
+          <View className="flex-row gap-1.5" key={row.join("-")}>
+            {row.map((key) => (
+              <GreenTillKey
+                disabled={disabled}
+                key={key}
+                label={key}
+                largeTextLayout={largeTextLayout}
+                onDeletePress={onDeletePress}
+                onDigitPress={onDigitPress}
+                onPastePress={onPastePress}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+    )
 
   return (
     <View
@@ -230,6 +252,84 @@ function OtpKey({
           </Text>
         ) : null}
       </View>
+    </Pressable>
+  )
+}
+
+/** 03 Market Preview keypad: white keys, plain Paste and a backspace mark. */
+function GreenTillKey({
+  disabled,
+  label,
+  largeTextLayout,
+  onDeletePress,
+  onDigitPress,
+  onPastePress,
+}: {
+  disabled: boolean
+  label: OtpKeypadKey
+  largeTextLayout: boolean
+  onDeletePress: () => void
+  onDigitPress: (digit: string) => void
+  onPastePress: () => void
+}) {
+  const colors = useColors()
+  const height = largeTextLayout ? "h-[64px]" : "h-[46px]"
+  if (label === "paste" || label === "delete") {
+    const paste = label === "paste"
+    return (
+      <Pressable
+        accessibilityLabel={
+          paste ? "Paste verification code" : "Delete last digit"
+        }
+        className={cn(
+          height,
+          "flex-1 items-center justify-center rounded-[13px] active:bg-accent",
+          disabled && "opacity-60",
+        )}
+        disabled={disabled}
+        haptic
+        onPress={paste ? onPastePress : onDeletePress}
+        transition
+      >
+        {paste ? (
+          <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-primary">
+            Paste
+          </Text>
+        ) : (
+          <Svg
+            accessible={false}
+            fill="none"
+            height={20}
+            stroke={colors.primary}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.9}
+            viewBox="0 0 24 24"
+            width={20}
+          >
+            <Path d="M10 5a2 2 0 0 0-1.34.52l-6.33 5.74a1 1 0 0 0 0 1.48l6.33 5.74A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
+            <Path d="m12 9 6 6M18 9l-6 6" />
+          </Svg>
+        )}
+      </Pressable>
+    )
+  }
+  return (
+    <Pressable
+      accessibilityLabel={`Enter digit ${label}`}
+      className={cn(
+        height,
+        "flex-1 items-center justify-center rounded-[13px] bg-card shadow-sm active:bg-accent",
+        disabled && "opacity-60",
+      )}
+      disabled={disabled}
+      haptic
+      onPress={() => onDigitPress(label)}
+      transition
+    >
+      <Text className="text-[20px] font-bold [-rn-line-height:24] text-foreground">
+        {label}
+      </Text>
     </Pressable>
   )
 }

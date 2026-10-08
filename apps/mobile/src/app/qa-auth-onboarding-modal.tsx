@@ -14,9 +14,11 @@ import {
   type AgeSelection,
 } from "@/components/mobile/green-till/age-screen"
 import { ClassicNoAccessScreen } from "@/components/mobile/green-till/no-access-screen"
+import type { ApprovedNativeOnboarding } from "@/components/mobile/onboarding/onboarding-continuation-screen"
 import { OtpInput } from "@/components/mobile/otp-input"
 import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { SignUpChoice } from "@/components/mobile/sign-up/sign-up-choice"
+import { SignUpScreen } from "@/components/mobile/sign-up/sign-up-screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { VerificationResendLine } from "@/components/mobile/verify-email/verification-resend-line"
 import { Pressable } from "@/components/ui/pressable"
@@ -74,7 +76,6 @@ export default function AuthOnboardingQaRoute() {
         options={{
           headerShown: false,
           animation: "none",
-          statusBarStyle: "light",
         }}
       />
       <AuthQa key={JSON.stringify(params)} />
@@ -99,7 +100,7 @@ function AuthQa() {
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
   const [displayName, setDisplayName] = useState("")
-  const [code, setCode] = useState("")
+  const [code, setCode] = useState(params.view === "verify" ? "4821" : "")
   const [passwordMode, setPasswordMode] = useState(params.mode === "password")
   const [error, setError] = useState(params.state === "error")
   const [selected, setSelected] = useState("")
@@ -143,6 +144,8 @@ function AuthQa() {
           setView("setup")
           setStep(0)
         }}
+        onClose={() => setView("login")}
+        businessName="Jawdah Farms"
       />
     )
   if (view === "noaccess")
@@ -166,6 +169,7 @@ function AuthQa() {
         stepIndex={Math.min(step, 2)}
         onContinue={() => (step < 2 ? setStep(step + 1) : setView("login"))}
         onFinish={() => setView("login")}
+        onPrevious={() => setStep(Math.max(0, step - 1))}
       />
     )
   if (view === "login")
@@ -180,8 +184,11 @@ function AuthQa() {
               setStep(0)
             }}
           >
-            <Text className="text-sm font-bold text-primary">
-              Create your business account
+            <Text className="text-center text-[13px] [-rn-line-height:20] text-muted-foreground">
+              New to ẸwáTrade?{" "}
+              <Text className="text-[13px] font-extrabold text-primary">
+                Create a business account
+              </Text>
             </Text>
           </Pressable>
         }
@@ -217,22 +224,23 @@ function AuthQa() {
           </ActionButton>
           <Pressable
             accessibilityRole="button"
-            className="min-h-11 items-center justify-center"
+            className="-my-3 min-h-11 items-center justify-center"
             onPress={() => {
               setPasswordMode(!passwordMode)
               setError(false)
             }}
           >
-            <Text className="font-bold text-primary">
+            <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
               {passwordMode
                 ? "Use a login code instead"
                 : "Use a password instead"}
             </Text>
           </Pressable>
-          <AuthDivider label="or" />
+          <AuthDivider label="or" plain />
           <AuthMethodButton
             brandIcon="google"
-            label="Google"
+            label="Continue with Google"
+            variant="sso"
             onPress={() => setError(true)}
             disabled={busy || offline}
           />
@@ -250,7 +258,8 @@ function AuthQa() {
             disableSystemKeyboard
             value={code}
             onChange={setCode}
-            variant="reference"
+            invalid={error}
+            variant="green-till"
           />
         }
         resend={
@@ -269,6 +278,7 @@ function AuthQa() {
                 setError(false)
               }}
               wasResent={false}
+              cooldownSeconds={42}
             />
             {offline ? feedback : null}
           </>
@@ -288,6 +298,7 @@ function AuthQa() {
               setCode("4821")
               setError(false)
             }}
+            variant="green-till"
           />
         }
       />
@@ -312,6 +323,14 @@ function AuthQa() {
               : null
         }
         onSubmit={() => setError(true)}
+      />
+    )
+  if (view === "setup")
+    return (
+      <SignUpScreen
+        key={step}
+        ageBand="ADULT"
+        continuation={fixtureContinuation(step)}
       />
     )
   const steps = ["businessType", "profile", "business", "account"] as const
@@ -344,6 +363,18 @@ function AuthQa() {
       }}
       onBack={() => (step > 0 ? setStep(step - 1) : setView("login"))}
       footer={null}
+      preview={{
+        businessName: name || "Jawdah Farms",
+        chips: [
+          step >= 1 ? "Farming" : "",
+          step >= 2 ? "Walk-in · WhatsApp" : "",
+          step >= 3 ? "Ibadan" : "",
+        ].filter(Boolean),
+        ownerLine:
+          step >= 3
+            ? { title: "Owner · Ishaq", subtitle: "Just me" }
+            : undefined,
+      }}
     >
       {feedback}
       {step === 0 ? (
@@ -447,4 +478,29 @@ function AuthQa() {
       ) : null}
     </ClassicSignUpScreen>
   )
+}
+
+// Real setup screens with sample Jawdah Farms answers. Nothing is submitted
+// without a verified onboarding token.
+function fixtureContinuation(step: number) {
+  const steps = ["businessType", "profile", "business", "account"] as const
+  return {
+    accessToken: "qa-fixture",
+    businessName: "Jawdah Farms",
+    email: "ishaq@jawdahfarms.ng",
+    fullName: "Ishaq Bello",
+    phone: "08035550142",
+    draft: {
+      addressLine1: "Km 4, Old Oyo Road",
+      businessProfileKey: step > 0 ? "animal-feed-agricultural-supplies" : "",
+      city: "Ibadan",
+      currencyCode: "NGN",
+      operatingModel: "products",
+      orderChannels: ["walk_in", "phone_whatsapp"],
+      otherBusinessDescription: "",
+      phone: "08035550142",
+      step: steps[Math.max(0, Math.min(3, step))],
+      teamSize: "2_5",
+    },
+  } as unknown as ApprovedNativeOnboarding
 }

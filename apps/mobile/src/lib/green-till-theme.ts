@@ -1,4 +1,5 @@
 // Green Till workshop contract: shared roles for branded surfaces.
+// Values mirror artifacts/mobile-quality-workshop/DESIGN-SYSTEM.md.
 export const GREEN_TILL_THEME = {
   light: {
     heroFrom: "#17684F",
@@ -8,7 +9,23 @@ export const GREEN_TILL_THEME = {
     heroMuted: "rgba(255,249,237,0.72)",
     heroLine: "rgba(255,249,237,0.16)",
     gold: "#F2A51A",
+    goldForeground: "#1E1E1C",
     brandMark: "#FFFFFF",
+    // 03 Market Preview stage behind auth and onboarding forms.
+    stageCenter: "#EFF7F2",
+    stageEdge: "#E4F2EA",
+    stageInk: "#135C45",
+    mint: "#E4F2EA",
+    mintForeground: "#135C45",
+    amber: "#FFF1D9",
+    amberForeground: "#8A4B00",
+    sky: "#E3EEFB",
+    skyForeground: "#1D4F91",
+    lilac: "#EEE8FB",
+    lilacForeground: "#5B3AA8",
+    rose: "#FCE8E6",
+    roseForeground: "#9B1C1C",
+    cardShadow: "rgba(14,74,56,0.45)",
   },
   dark: {
     heroFrom: "#17543F",
@@ -18,6 +35,23 @@ export const GREEN_TILL_THEME = {
     heroMuted: "rgba(243,251,246,0.7)",
     heroLine: "rgba(243,251,246,0.14)",
     gold: "#F5B12E",
+    goldForeground: "#1E1E1C",
     brandMark: "#FFFFFF",
+    stageCenter: "#192B26",
+    stageEdge: "#17302A",
+    stageInk: "#8CD5B5",
+    mint: "#17302A",
+    mintForeground: "#8CD5B5",
+    amber: "#33270F",
+    amberForeground: "#F8C66A",
+    sky: "#172A40",
+    skyForeground: "#9CC3F5",
+    lilac: "#2A2340",
+    lilacForeground: "#C4B2F5",
+    rose: "#3A1D1D",
+    roseForeground: "#F7A3A3",
+    cardShadow: "rgba(0,0,0,0.6)",
   },
 } as const
+
+export type GreenTillTint = "mint" | "amber" | "sky" | "lilac" | "rose"

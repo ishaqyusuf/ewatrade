@@ -20,6 +20,8 @@ import { useLocalSearchParams } from "expo-router"
 import { useCallback, useEffect, useState } from "react"
 import { VerificationResendLine } from "./verification-resend-line"
 
+const RESEND_COOLDOWN_SECONDS = 60
+
 const OTP_LENGTH = 6
 
 function firstParam(value: string | string[] | undefined) {
@@ -112,6 +114,13 @@ export function VerifyEmailScreen() {
     "idle" | "resent" | "verifying" | "error"
   >("idle")
   const [message, setMessage] = useState<string | null>(null)
+  // A code was just sent to reach this screen; allow another after a minute.
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS)
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setTimeout(() => setCooldown((value) => value - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [cooldown])
   const requestOtpMutation = useMutation(
     trpc.auth.requestMobileOwnerOtp.mutationOptions({
       onError(error) {
@@ -121,6 +130,7 @@ export function VerifyEmailScreen() {
       onSuccess() {
         setStatus("resent")
         setMessage("Code sent again")
+        setCooldown(RESEND_COOLDOWN_SECONDS)
       },
     }),
   )
@@ -319,14 +329,12 @@ export function VerifyEmailScreen() {
       mode={mode}
       otp={
         <OtpInput
-          className={
-            design === "classic" ? "justify-center gap-1.5" : undefined
-          }
           disableSystemKeyboard
+          invalid={status === "error"}
           length={OTP_LENGTH}
           onChange={updateCode}
           value={code}
-          variant={design === "market-day" ? "market-tally" : "reference"}
+          variant={design === "market-day" ? "market-tally" : "green-till"}
         />
       }
       resend={
@@ -339,6 +347,7 @@ export function VerifyEmailScreen() {
           message={message}
           onPress={resendCode}
           wasResent={status === "resent"}
+          cooldownSeconds={design === "market-day" ? 0 : cooldown}
         />
       }
       keypad={
@@ -347,7 +356,7 @@ export function VerifyEmailScreen() {
           onDeletePress={removeLastDigit}
           onDigitPress={appendDigit}
           onPastePress={pasteCode}
-          variant={design === "market-day" ? "market-tally" : "default"}
+          variant={design === "market-day" ? "market-tally" : "green-till"}
         />
       }
     />

@@ -138,7 +138,7 @@ export function LoginScreen() {
         <AuthFooterAction
           eyebrow="New to ẸwáTrade?"
           href="/sign-up"
-          label="Create your business account"
+          label="Create a business account"
         />
       }
     >
@@ -147,7 +147,7 @@ export function LoginScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           label="Email address"
-          leadingIcon="Mail"
+          leadingIcon={design === "classic" ? undefined : "Mail"}
           onChangeText={setEmail}
           placeholder="Enter your email address"
           textContentType="emailAddress"
@@ -180,13 +180,13 @@ export function LoginScreen() {
         </AuthActionButton>
         <Pressable
           accessibilityRole="button"
-          className="min-h-11 items-center justify-center"
+          className="-my-3 min-h-11 items-center justify-center"
           onPress={() => {
             setUsePassword((current) => !current)
             setError(null)
           }}
         >
-          <Text className="font-semibold text-primary">
+          <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
             {usePassword
               ? "Use a login code instead"
               : "Use a password instead"}
@@ -200,7 +200,10 @@ export function LoginScreen() {
             tone="destructive"
           />
         ) : null}
-        <AuthDivider label="Or Continue With" />
+        <AuthDivider
+          label={design === "market-day" ? "Or Continue With" : "or"}
+          plain={design !== "market-day"}
+        />
         <AppleAuthButton
           onPress={appleAuth.startAppleAuth}
           disabled={appleAuth.isPending}
@@ -208,7 +211,8 @@ export function LoginScreen() {
         <AuthMethodButton
           brandIcon="google"
           disabled={googleAuth.isPending}
-          label="Google"
+          label={design === "market-day" ? "Google" : "Continue with Google"}
+          variant={design === "market-day" ? "default" : "sso"}
           loadingLabel="Connecting to Google"
           onPress={continueWithGoogle}
           pending={googleAuth.isPending}
