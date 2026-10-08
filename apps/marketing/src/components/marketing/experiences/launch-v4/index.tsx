@@ -91,7 +91,7 @@ export function LaunchV4Landing(props: MarketingExperienceProps) {
     type: "font/woff2",
     crossOrigin: "anonymous",
   })
-  preload("/shop-v3/inter-regular.woff2", {
+  preload("/shop-v3/inter-latin.woff2", {
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",

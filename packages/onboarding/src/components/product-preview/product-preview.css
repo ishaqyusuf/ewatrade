@@ -10,6 +10,13 @@
   font-family: "EwInter";
   src: url("/shop-v3/inter-regular.woff2") format("woff2");
   font-display: swap;
+  unicode-range: U+0250-02FF,U+0370-1DFF,U+1F00-1FFF,U+2070-209F,U+20D0-218F,U+2200-259F,U+2600-FFFC,U+10000-10FFFF;
+}
+@font-face {
+  font-family: "EwInter";
+  src: url("/shop-v3/inter-latin.woff2") format("woff2");
+  font-display: swap;
+  unicode-range: U+0000-024F,U+0300-036F,U+1E00-1EFF,U+2000-206F,U+20A0-20CF,U+2190-21FF,U+25A0-25FF,U+FFFD;
 }
 
 .launch-v4 {
@@ -389,7 +396,7 @@
   gap: 3px;
 }
 .launch-v4 .ew-dock span.on {
-  color: var(--ew-green);
+  color: var(--ew-mint-fg);
 }
 .launch-v4 .ew-dock svg {
   width: 20px;
