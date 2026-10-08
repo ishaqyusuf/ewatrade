@@ -12,9 +12,6 @@ type SourceCoverage = {
   source: string
 }
 
-const FINANCE_REASON =
-  "Finance ledger postings are not inventoried for QA Quick Fill."
-
 const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
   {
     reason:
@@ -167,7 +164,7 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
       "apps/mobile/src/components/mobile/customer-conversations/customer-notification-guest-form.tsx",
   },
   {
-    reason: "Customer ledger postings are not inventoried for QA Quick Fill.",
+    formIds: ["mobile.customer-ledger.entry"],
     source:
       "apps/mobile/src/components/mobile/customer-ledger/customer-ledger-command-form.tsx",
   },
@@ -203,45 +200,49 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
       "apps/mobile/src/components/mobile/finance/finance-bank-date-field.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.bank-import"],
     source:
       "apps/mobile/src/components/mobile/finance/finance-bank-import-screen.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.correction"],
     source:
       "apps/mobile/src/components/mobile/finance/finance-cash-action-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.cash-count"],
     source:
       "apps/mobile/src/components/mobile/finance/finance-cash-count-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.bill-payment", "mobile.finance.correction"],
     source:
       "apps/mobile/src/components/mobile/finance/finance-expense-forms.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.money"],
     source: "apps/mobile/src/components/mobile/finance/finance-money-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.correction"],
     source:
       "apps/mobile/src/components/mobile/finance/finance-movement-screen.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.period"],
     source:
       "apps/mobile/src/components/mobile/finance/finance-period-screen.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.expense"],
     source: "apps/mobile/src/components/mobile/finance/finance-screen.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: [
+      "mobile.finance.supplier",
+      "mobile.finance.supplier-entry",
+      "mobile.finance.correction",
+    ],
     source:
       "apps/mobile/src/components/mobile/finance/supplier-command-form.tsx",
   },
@@ -252,12 +253,12 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
       "apps/mobile/src/components/mobile/finance/supplier-finance-screen.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.supplier-purchase"],
     source:
       "apps/mobile/src/components/mobile/finance/supplier-purchase-recognition.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["mobile.finance.supplier-purchase"],
     source:
       "apps/mobile/src/components/mobile/finance/supplier-purchase-settlement-form.tsx",
   },
@@ -313,7 +314,7 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
     source: "apps/mobile/src/components/mobile/quantity-stepper.tsx",
   },
   {
-    reason: "Receipt display settings are not inventoried for QA Quick Fill.",
+    formIds: ["mobile.receipt.settings"],
     source:
       "apps/mobile/src/components/mobile/receipts/receipt-settings-screen.tsx",
   },
@@ -406,6 +407,10 @@ const RECIPE_SOURCE_OWNERS: Record<
 > = {
   "dashboard.catalog.item":
     "apps/dashboard/src/components/catalog-item/form.tsx",
+  "dashboard.finance.expense":
+    "apps/dashboard/src/components/finance/expense-form.tsx",
+  "dashboard.finance.supplier":
+    "apps/dashboard/src/components/finance/supplier-form.tsx",
   "dashboard.inventory.operation":
     "apps/dashboard/src/components/inventory/inventory-operation-form.tsx",
   "dashboard.order.create":
@@ -433,6 +438,10 @@ const RECIPE_SOURCE_OWNERS: Record<
     "apps/mobile/src/components/mobile/create-sale-customer-sheet.tsx",
   "mobile.customer.message":
     "apps/mobile/src/components/mobile/service-jobs/service-text-sheet.tsx",
+  "mobile.finance.expense":
+    "apps/mobile/src/components/mobile/finance/finance-screen.tsx",
+  "mobile.finance.supplier":
+    "apps/mobile/src/components/mobile/finance/supplier-command-form.tsx",
   "mobile.inventory.stock-intake":
     "apps/mobile/src/components/mobile/stock-intake/stock-intake-screen.tsx",
   "mobile.inventory.unit-conversion":
@@ -522,7 +531,7 @@ const WEB_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
       "apps/dashboard/src/components/customer-channels/team-routing-form.tsx",
   },
   {
-    reason: "Customer ledger postings are not inventoried for QA Quick Fill.",
+    formIds: ["dashboard.customer-ledger.entry"],
     source:
       "apps/dashboard/src/components/customer-ledger/forms/command-form.tsx",
   },
@@ -538,69 +547,69 @@ const WEB_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
     source: "apps/dashboard/src/components/domains/external-domain-flow.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.account"],
     source: "apps/dashboard/src/components/finance/account-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.bank-import"],
     source: "apps/dashboard/src/components/finance/bank-import-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.bank-match"],
     source: "apps/dashboard/src/components/finance/bank-match-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.bank-correction"],
     source:
       "apps/dashboard/src/components/finance/bank-owned-correction-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.bill-correction"],
     source: "apps/dashboard/src/components/finance/bill-correction-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.bill-payment"],
     source: "apps/dashboard/src/components/finance/bill-payment-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.cash-adjustment"],
     source: "apps/dashboard/src/components/finance/cash-adjustment-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.cash-adjustment-reversal"],
     source:
       "apps/dashboard/src/components/finance/cash-adjustment-reversal-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.cash-count"],
     source: "apps/dashboard/src/components/finance/cash-count-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.expense"],
     source: "apps/dashboard/src/components/finance/expense-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.money"],
     source: "apps/dashboard/src/components/finance/money-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.money-reversal"],
     source: "apps/dashboard/src/components/finance/money-reversal-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.period"],
     source: "apps/dashboard/src/components/finance/period-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.setup"],
     source: "apps/dashboard/src/components/finance/setup-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.supplier-entry"],
     source: "apps/dashboard/src/components/finance/supplier-entry-form.tsx",
   },
   {
-    reason: FINANCE_REASON,
+    formIds: ["dashboard.finance.supplier"],
     source: "apps/dashboard/src/components/finance/supplier-form.tsx",
   },
   {
@@ -644,7 +653,7 @@ const WEB_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
     source: "apps/dashboard/src/components/qa/qa-login-entry.tsx",
   },
   {
-    reason: "Receipt display settings are not inventoried for QA Quick Fill.",
+    formIds: ["dashboard.receipt.settings"],
     source: "apps/dashboard/src/components/receipts/settings-form.tsx",
   },
   {

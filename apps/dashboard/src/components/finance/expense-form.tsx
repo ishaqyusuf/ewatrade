@@ -11,6 +11,8 @@ import {
   FormDateControl,
   FormSelectControl,
 } from "@/components/forms/form-controls"
+import { createExpenseFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
@@ -20,7 +22,7 @@ import {
   parseFinanceMoney,
 } from "@ewatrade/utils/finance-money"
 import { useMutation } from "@tanstack/react-query"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { z } from "zod"
 import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBook } from "./types"
@@ -100,6 +102,8 @@ export function FinanceExpenseForm({
       paymentAmount: "",
     },
   })
+  const quickFillSnapshot = useRef<Values | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const paid = form.watch("paid")
   function submit(values: Values) {
     const amountMinor = parseFinanceMoney(values.amount)
@@ -181,6 +185,32 @@ export function FinanceExpenseForm({
   return (
     <form onSubmit={form.handleSubmit(setReview)}>
       <FieldGroup className="min-w-0 grid gap-5">
+        <QaDashboardQuickFill
+          canUndo={canUndoQuickFill}
+          formId="dashboard.finance.expense"
+          isDirty={form.formState.isDirty}
+          onFill={(context, sequence) => {
+            quickFillSnapshot.current = form.getValues()
+            const fixture = createExpenseFixture(context, sequence)
+            form.reset(
+              {
+                ...form.getValues(),
+                amount: fixture.amount,
+                date: fixture.date,
+                description: fixture.description,
+                payee: fixture.payee,
+              },
+              { keepDefaultValues: true },
+            )
+            setCanUndoQuickFill(true)
+          }}
+          onUndo={() => {
+            if (!quickFillSnapshot.current) return
+            form.reset(quickFillSnapshot.current, { keepDefaultValues: true })
+            quickFillSnapshot.current = null
+            setCanUndoQuickFill(false)
+          }}
+        />
         <FinanceField
           label="Paid to / owed to"
           error={form.formState.errors.payee?.message}

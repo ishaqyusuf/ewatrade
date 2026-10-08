@@ -1,8 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
+import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
+import { createSupplierFixture } from "@/internal-tooling/fixture-recipes"
 import { financeUtcDate } from "@/lib/finance-expense-input"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -146,6 +148,8 @@ export function SupplierCommandForm({
   const [review, setReview] = useState<Review | null>(null)
   const [preparing, setPreparing] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const quickFillSnapshot = useRef<{ code: string; name: string } | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   useEffect(() => {
     if (offline && preparing) setPreparing(false)
   }, [offline, preparing])
@@ -444,6 +448,27 @@ export function SupplierCommandForm({
         </View>
       ) : !supplier ? (
         <View className="gap-4">
+          <QaQuickFillButton
+            canUndo={canUndoQuickFill}
+            formId="mobile.finance.supplier"
+            isDirty={Boolean(code || name)}
+            onFill={(context, sequence) => {
+              quickFillSnapshot.current = { code, name }
+              const fixture = createSupplierFixture(context, sequence)
+              setCode(fixture.code)
+              setName(fixture.name)
+              setFormError(null)
+              setCanUndoQuickFill(true)
+            }}
+            onUndo={() => {
+              const snapshot = quickFillSnapshot.current
+              if (!snapshot) return
+              setCode(snapshot.code)
+              setName(snapshot.name)
+              quickFillSnapshot.current = null
+              setCanUndoQuickFill(false)
+            }}
+          />
           <FormField
             label="Supplier code"
             value={code}

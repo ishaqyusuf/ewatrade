@@ -1,9 +1,11 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
+import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { createExpenseFixture } from "@/internal-tooling/fixture-recipes"
 import { financeUtcDate } from "@/lib/finance-expense-input"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -14,7 +16,7 @@ import {
 } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { FlatList, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
@@ -97,6 +99,13 @@ function SpendingWorkspace({
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [category, setCategory] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
+  const quickFillSnapshot = useRef<{
+    amount: string
+    date: string
+    description: string
+    payee: string
+  } | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const categories =
     balances.data?.accounts.filter(
       (a) =>
@@ -139,6 +148,8 @@ function SpendingWorkspace({
     setDescription("")
     setAmount("")
     setFormError(null)
+    quickFillSnapshot.current = null
+    setCanUndoQuickFill(false)
   }
   async function confirm() {
     if (!review) return
@@ -247,6 +258,31 @@ function SpendingWorkspace({
           </View>
         ) : (
           <View className="gap-4">
+            <QaQuickFillButton
+              canUndo={canUndoQuickFill}
+              formId="mobile.finance.expense"
+              isDirty={Boolean(payee || description || amount)}
+              onFill={(context, sequence) => {
+                quickFillSnapshot.current = { amount, date, description, payee }
+                const fixture = createExpenseFixture(context, sequence)
+                setPayee(fixture.payee)
+                setDescription(fixture.description)
+                setAmount(fixture.amount)
+                setDate(fixture.date)
+                setFormError(null)
+                setCanUndoQuickFill(true)
+              }}
+              onUndo={() => {
+                const snapshot = quickFillSnapshot.current
+                if (!snapshot) return
+                setPayee(snapshot.payee)
+                setDescription(snapshot.description)
+                setAmount(snapshot.amount)
+                setDate(snapshot.date)
+                quickFillSnapshot.current = null
+                setCanUndoQuickFill(false)
+              }}
+            />
             <FormField
               label="Payee"
               maxLength={160}

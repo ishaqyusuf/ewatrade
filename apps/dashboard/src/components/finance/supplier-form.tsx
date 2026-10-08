@@ -9,9 +9,11 @@ import {
   Input,
 } from "@ewatrade/ui"
 import { useMutation } from "@tanstack/react-query"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { z } from "zod"
 
+import { createSupplierFixture } from "@/components/qa/fixture-recipes"
+import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
@@ -43,6 +45,8 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
   const form = useZodForm<Values>(schema, {
     defaultValues: { code: "", name: "" },
   })
+  const quickFillSnapshot = useRef<Values | null>(null)
+  const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
 
   function submit(values: Values) {
     const payload = {
@@ -84,6 +88,26 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
   return (
     <form onSubmit={form.handleSubmit(setReview)}>
       <FieldGroup className="min-w-0 grid gap-5">
+        <QaDashboardQuickFill
+          canUndo={canUndoQuickFill}
+          formId="dashboard.finance.supplier"
+          isDirty={form.formState.isDirty}
+          onFill={(context, sequence) => {
+            quickFillSnapshot.current = form.getValues()
+            const fixture = createSupplierFixture(context, sequence)
+            form.reset(
+              { ...form.getValues(), code: fixture.code, name: fixture.name },
+              { keepDefaultValues: true },
+            )
+            setCanUndoQuickFill(true)
+          }}
+          onUndo={() => {
+            if (!quickFillSnapshot.current) return
+            form.reset(quickFillSnapshot.current, { keepDefaultValues: true })
+            quickFillSnapshot.current = null
+            setCanUndoQuickFill(false)
+          }}
+        />
         <FinanceField
           label="Supplier code"
           error={form.formState.errors.code?.message}

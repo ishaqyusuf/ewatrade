@@ -159,6 +159,30 @@ export function createQaServiceFixture(
   }
 }
 
+export function createQaExpenseFixture(
+  context: QaFixtureContext,
+  sequence = 1,
+) {
+  const tag = context.invocationId.slice(-6).toUpperCase()
+  return {
+    amount: `${1_500 + sequence * 250}.00`,
+    date: context.now.toISOString().slice(0, 10),
+    description: `QA test expense ${tag}-${sequence}; manual submission required.`,
+    payee: `QA Payee ${tag}`,
+  }
+}
+
+export function createQaSupplierFixture(
+  context: QaFixtureContext,
+  sequence = 1,
+) {
+  const tag = context.invocationId.slice(-6).toUpperCase()
+  return {
+    code: `QA-${tag}-${sequence}`,
+    name: `QA Supplier ${tag}`,
+  }
+}
+
 export function createQaMessageFixture(context: QaFixtureContext) {
   return {
     message: `QA draft ${context.invocationId}: This is a safe test message. Review before sending.`,
@@ -210,6 +234,18 @@ export const QA_MOBILE_FORM_INVENTORY = [
   "mobile.staff.onboarding",
   "mobile.subscription",
   "mobile.verify-email",
+  "mobile.finance.expense",
+  "mobile.finance.supplier",
+  "mobile.customer-ledger.entry",
+  "mobile.finance.cash-count",
+  "mobile.finance.money",
+  "mobile.finance.supplier-entry",
+  "mobile.receipt.settings",
+  "mobile.finance.bank-import",
+  "mobile.finance.correction",
+  "mobile.finance.period",
+  "mobile.finance.bill-payment",
+  "mobile.finance.supplier-purchase",
 ] as const
 
 export const QA_DASHBOARD_FORM_INVENTORY = [
@@ -265,6 +301,24 @@ export const QA_DASHBOARD_FORM_INVENTORY = [
   "dashboard.store-conversation.filter",
   "dashboard.store-conversation.reply",
   "dashboard.store.setup",
+  "dashboard.finance.expense",
+  "dashboard.finance.supplier",
+  "dashboard.customer-ledger.entry",
+  "dashboard.finance.account",
+  "dashboard.finance.bill-payment",
+  "dashboard.finance.cash-count",
+  "dashboard.finance.money",
+  "dashboard.finance.supplier-entry",
+  "dashboard.receipt.settings",
+  "dashboard.finance.bank-correction",
+  "dashboard.finance.bank-import",
+  "dashboard.finance.bank-match",
+  "dashboard.finance.bill-correction",
+  "dashboard.finance.cash-adjustment",
+  "dashboard.finance.cash-adjustment-reversal",
+  "dashboard.finance.money-reversal",
+  "dashboard.finance.period",
+  "dashboard.finance.setup",
 ] as const
 
 const mobileRecipes = new Set([
@@ -282,11 +336,20 @@ const mobileRecipes = new Set([
   "mobile.service.job",
   "mobile.signup",
   "mobile.staff.invite",
+  "mobile.finance.expense",
+  "mobile.finance.supplier",
 ])
 const prerequisiteMobile = new Set([
   "mobile.catalog.setup-helper",
   "mobile.customer.guest-notification",
   "mobile.staff.onboarding",
+  "mobile.customer-ledger.entry",
+  "mobile.finance.cash-count",
+  "mobile.finance.money",
+  "mobile.finance.supplier-entry",
+  "mobile.receipt.settings",
+  "mobile.finance.bill-payment",
+  "mobile.finance.supplier-purchase",
 ])
 const excludedMobile = new Set([
   "mobile.app-lock-pin",
@@ -297,6 +360,9 @@ const excludedMobile = new Set([
   "mobile.qa-authorization",
   "mobile.subscription",
   "mobile.verify-email",
+  "mobile.finance.bank-import",
+  "mobile.finance.correction",
+  "mobile.finance.period",
 ])
 const dashboardRecipes = new Set([
   "dashboard.catalog.item",
@@ -307,6 +373,8 @@ const dashboardRecipes = new Set([
   "dashboard.staff.invite",
   "dashboard.store-conversation.assignment",
   "dashboard.store-conversation.reply",
+  "dashboard.finance.expense",
+  "dashboard.finance.supplier",
 ])
 const prerequisiteDashboard = new Set([
   "dashboard.booking.workspace",
@@ -326,6 +394,13 @@ const prerequisiteDashboard = new Set([
   "dashboard.service.setup",
   "dashboard.store.setup",
   "dashboard.store-conversation.moderation",
+  "dashboard.customer-ledger.entry",
+  "dashboard.finance.account",
+  "dashboard.finance.bill-payment",
+  "dashboard.finance.cash-count",
+  "dashboard.finance.money",
+  "dashboard.finance.supplier-entry",
+  "dashboard.receipt.settings",
 ])
 const excludedDashboard = new Set([
   "dashboard.compliance.pharmacy",
@@ -355,6 +430,15 @@ const excludedDashboard = new Set([
   "dashboard.service.media-observation",
   "dashboard.service.report-scope",
   "dashboard.store-conversation.filter",
+  "dashboard.finance.bank-correction",
+  "dashboard.finance.bank-import",
+  "dashboard.finance.bank-match",
+  "dashboard.finance.bill-correction",
+  "dashboard.finance.cash-adjustment",
+  "dashboard.finance.cash-adjustment-reversal",
+  "dashboard.finance.money-reversal",
+  "dashboard.finance.period",
+  "dashboard.finance.setup",
 ])
 
 export const QA_REACHABLE_RECIPE_IDS = [
