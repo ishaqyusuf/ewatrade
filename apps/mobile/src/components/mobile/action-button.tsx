@@ -180,7 +180,7 @@ export function ActionButton({
 
 type MarketDayActionButtonProps = Omit<
   ActionButtonProps,
-  "disabledForegroundColor" | "foregroundColor"
+  "disabledForegroundColor" | "foregroundColor" | "tone"
 > & {
   tone?: "marigold" | "palm" | "paprika"
 }

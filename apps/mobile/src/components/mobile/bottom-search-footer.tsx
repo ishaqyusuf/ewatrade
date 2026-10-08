@@ -23,6 +23,7 @@ type BottomSearchFooterProps = {
   onChangeText: (value: string) => void
   onHeightChange?: (height: number) => void
   placeholder: string
+  showDisabledOfflineSearch?: boolean
   searchVisible?: boolean
   totalCount: number
   value: string
@@ -44,6 +45,7 @@ export function BottomSearchFooter({
   onHeightChange,
   placeholder,
   searchVisible = true,
+  showDisabledOfflineSearch = false,
   totalCount,
   value,
   variant = "default",
@@ -55,13 +57,14 @@ export function BottomSearchFooter({
   const paddingBottom = includeSafeArea ? Math.max(insets.bottom, 8) : 8
 
   const effectiveSearchVisible =
-    (!isOffline || localSearch) &&
+    (!isOffline || localSearch || showDisabledOfflineSearch) &&
     searchVisible &&
     (alwaysShowSearch || shouldShowListSearch(totalCount))
 
   useEffect(() => {
-    if (!localSearch && isOffline && value) onChangeText("")
-  }, [isOffline, localSearch, onChangeText, value])
+    if (!localSearch && !showDisabledOfflineSearch && isOffline && value)
+      onChangeText("")
+  }, [isOffline, localSearch, onChangeText, value, showDisabledOfflineSearch])
 
   if (!children && !effectiveSearchVisible) return null
 
@@ -102,6 +105,7 @@ export function BottomSearchFooter({
                   autoCapitalize="none"
                   autoCorrect={false}
                   autoFocus={autoFocus}
+                  editable={!isOffline || localSearch}
                   containerClassName={
                     layout === "inline" ? "min-w-0 flex-1" : undefined
                   }
