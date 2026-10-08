@@ -7,6 +7,7 @@ const QA_ROUTES = new Set([
   "closeout-modal",
   "catalog-items-modal",
   "orders",
+  "receipt-settings-modal",
   "create-sale-modal",
   "customer-book-modal",
   "first-product-setup-modal",

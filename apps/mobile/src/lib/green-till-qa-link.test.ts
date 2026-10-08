@@ -13,6 +13,14 @@ describe("Green Till native QA links", () => {
       resolveGreenTillQaPath("ewatrade-dev://order/order_1/other", true),
     ).toBeNull()
   })
+  test("opens receipt settings only in development", () => {
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://receipt-settings-modal", true),
+    ).toBe("/receipt-settings-modal")
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://receipt-settings-modal", false),
+    ).toBeNull()
+  })
   test("opens Orders only in development", () => {
     expect(resolveGreenTillQaPath("ewatrade-dev://orders", true)).toBe(
       "/orders",
