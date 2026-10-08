@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 
 import { prisma } from "@ewatrade/db"
 import { onboardingDraftSchema } from "@ewatrade/db/onboarding-continuation"
+import { findBusinessProfile } from "@ewatrade/utils"
 import type { DirectSignupInput } from "./direct-signup-schema"
 import {
   EARLY_ACCESS_ONBOARDING_KIND,
@@ -48,9 +49,16 @@ export async function startDirectSignup(
   const email = input.email.trim().toLowerCase()
   const since = new Date(now.getTime() - HOUR_MS)
 
-  const draft = input.businessProfileKey
+  const profile = findBusinessProfile(input.businessProfileKey)
+  const draft = profile
     ? onboardingDraftSchema.parse({
-        businessProfileKey: input.businessProfileKey,
+        businessProfileKey: profile.key,
+        operatingModel:
+          profile.recommendedItemKinds.length === 1
+            ? profile.recommendedItemKinds[0] === "service"
+              ? "services"
+              : "products"
+            : "products_and_services",
         ...(input.phone ? { phone: input.phone } : {}),
       })
     : undefined

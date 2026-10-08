@@ -8,6 +8,7 @@ import {
 import {
   STORE_IN_A_MINUTE_CHAPTERS,
   type StoreInAMinuteChapterId,
+  type StoreInAMinuteConfig,
   type StoreInAMinuteVariant,
   type StoreInAMinuteVariantMedia,
   getChapterAtTime,
@@ -172,7 +173,7 @@ function PlaceholderScreen({ chapter }: { chapter: StoreInAMinuteChapterId }) {
   )
 }
 
-function Transcript() {
+function Transcript({ config }: { config: StoreInAMinuteConfig }) {
   return (
     <details className="shop-sim-transcript">
       <summary>
@@ -180,7 +181,13 @@ function Transcript() {
         <span aria-hidden="true">+</span>
       </summary>
       <div>
-        {STORE_IN_A_MINUTE_CHAPTERS.map((chapter) => (
+        <section aria-labelledby="sim-t-intro">
+          <h3 id="sim-t-intro">Introduction</h3>
+          <p>
+            <b>Narrator:</b> {config.introTranscript}
+          </p>
+        </section>
+        {config.chapters.map((chapter) => (
           <section key={chapter.id} aria-labelledby={`sim-t-${chapter.id}`}>
             <h3 id={`sim-t-${chapter.id}`}>
               {chapter.label} <span>· {chapter.business}</span>
@@ -192,6 +199,12 @@ function Transcript() {
             ))}
           </section>
         ))}
+        <section aria-labelledby="sim-t-outro">
+          <h3 id="sim-t-outro">Closing</h3>
+          <p>
+            <b>Narrator:</b> {config.outroTranscript}
+          </p>
+        </section>
       </div>
     </details>
   )
@@ -327,7 +340,7 @@ export function StoreInAMinute({ signupEnabled }: StoreInAMinuteProps) {
         QA rehearsal with fictional businesses. The signup form is shown
         separately; this edited demo does not measure full signup time.
       </p>
-      <Transcript />
+      <Transcript config={config} />
       <div className="shop-sim-cta">
         <a
           className="shop-button"

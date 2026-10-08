@@ -278,6 +278,29 @@ test("invalid profile and malformed payload cannot create sessions", async () =>
     (await POST(request({ ...input, accessToken: "injected" }))).status,
   ).toBe(400)
   expect(sessions.size).toBe(0)
+  expect(leads).toHaveLength(0)
+  expect(dispatch).not.toHaveBeenCalled()
+})
+
+test("profile deep links persist canonical operating models through session readback", async () => {
+  for (const [businessProfileKey, operatingModel] of [
+    ["laundry-dry-cleaning", "services"],
+    ["animal-feed-agricultural-supplies", "products"],
+    ["fabrics-tailoring", "products_and_services"],
+  ]) {
+    const response = await POST(request({ ...input, businessProfileKey }))
+    expect(response.status).toBe(200)
+    const { accessToken } = await response.json()
+    const readback = await lookup(
+      new NextRequest(
+        `https://dashboard.ewatrade.com/api/early-access/session?token=${accessToken}`,
+      ),
+    )
+    expect((await readback.json()).draft).toMatchObject({
+      businessProfileKey,
+      operatingModel,
+    })
+  }
 })
 
 test("existing account is refused and email budget serializes concurrent starts", async () => {

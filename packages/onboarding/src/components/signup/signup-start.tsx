@@ -78,9 +78,9 @@ export function SignupStart({
       <div className="signup-heading">
         <p className="signup-entry">Create your store</p>
         <h1>
-          Your store,
+          Start your next
           <br />
-          in a minute.
+          chapter.
         </h1>
         <p className="signup-intro">
           Start free. We’ll email you a link to confirm it’s you, then you can

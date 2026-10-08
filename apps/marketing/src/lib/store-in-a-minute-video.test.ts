@@ -133,7 +133,7 @@ test("VideoObject JSON-LD waits for both sources, a poster and a valid publicati
       "@type": "VideoObject",
       contentUrl: ready.NEXT_PUBLIC_STORE_IN_A_MINUTE_WEB_SRC,
       thumbnailUrl: [ready.NEXT_PUBLIC_STORE_IN_A_MINUTE_WEB_POSTER],
-      duration: "PT2M57S",
+      duration: "PT2M26S",
     },
   )
 })
@@ -194,7 +194,7 @@ test("switching edits keeps the position within the same business", () => {
   const { web, mobile } = getStoreInAMinuteConfig({}).variants
   mobile.chapterStarts.pharmacy = 40
   mobile.chapterStarts.boutique = 80
-  expect(getVariantSwitchTime(web, mobile, 54, "pharmacy")).toBe(60)
+  expect(getVariantSwitchTime(web, mobile, 47, "pharmacy")).toBe(60)
   expect(getVariantSwitchTime(web, mobile, 0, "pharmacy")).toBe(40)
   expect(getVariantSwitchTime(web, mobile, 1000, "pharmacy")).toBe(80)
 })
@@ -203,12 +203,24 @@ test("launch copy describes typed setup while media inputs remain disabled", () 
   const config = getStoreInAMinuteConfig({})
   const copy = [
     config.description,
+    config.introTranscript,
+    config.outroTranscript,
     ...config.chapters.flatMap((chapter) => [
       chapter.line,
       ...chapter.transcript.map((line) => line.text),
     ]),
   ].join(" ")
   expect(copy).not.toMatch(/voice note|photo|upload|spreadsheet|read aloud/i)
+})
+
+test("the accessible transcript includes the rendered intro and outro narration", () => {
+  const config = getStoreInAMinuteConfig({})
+  expect(config.introTranscript).toBe(
+    "Five businesses. One place to begin. A real EwaTrade setup rehearsal.",
+  )
+  expect(config.outroTranscript).toBe(
+    "Your business. Your next chapter. Come. Trade. Together.",
+  )
 })
 
 test("same-origin video metadata uses absolute canonical URLs", () => {

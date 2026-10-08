@@ -1,6 +1,6 @@
 # Direct signup, launch pricing and setup-video release preparation
 
-Status: draft source candidate; marketing launch and final media acceptance pending.
+Status: reviewable source and real-media candidate; final hosted acceptance and Production authorization pending.
 
 The public acquisition path changes from early access and waitlist requests to
 email-verified signup. Existing setup links remain valid. Account creation still
@@ -25,7 +25,9 @@ Footage is a labelled fictional QA rehearsal of the enabled text-only assistant.
 Marketing narration does not add spoken replies to the app. Voice, image, file and
 automatic-variant claims are excluded. The first measured rehearsal took 69.3 seconds
 after signup, so neither full signup timing nor a subminute setup claim is supported.
-Final Web/Mobile captures, renders, hosting and delivered-asset acceptance are pending.
+All ten Web/Mobile captures and twenty Catalog records pass actual readback. Final
+corrected films, captions, posters and adaptive renditions are in the dated public
+media package. Hosted playback acceptance follows this commit.
 
 ## Validation
 
@@ -34,7 +36,9 @@ applied through three-way patches to preserve newer assistant code and exclude t
 unrelated dirty shared checkout. Temporary local capture launcher changes were restored.
 
 - Integrated signup/pricing/API/navigation/error checks: 54 tests, 262 assertions.
-- Final pricing/player/legal-probe checks: 27 tests, 151 assertions.
+- Initial final pricing/player/legal-probe checks: 27 tests, 151 assertions.
+- Latest profile-default/signup regressions: 8 tests, 41 assertions.
+- Final 146-second player/complete transcript checks: 12 tests, 51 assertions.
 - Stream review: 115 unique source tests, 484 assertions, plus one guarded Development
   concurrency test with eight assertions and exact fixture cleanup. Repeated runs
   above are integration evidence, not additional unique coverage.
@@ -48,19 +52,47 @@ found only in comments. Actual account-deletion intake readiness remains separat
 
 ## Release gates
 
-The existing generated additive SIGNUP migration is applied in Development and absent
-from Preview/Production. Roll out through the reviewed target workflow before direct
-signup activation. No target schema rollout is claimed by this source packet.
+The SIGNUP enum is present in Development and absent from Preview/Production. Fresh
+read-only diffs from this isolated candidate show exactly one additive statement on
+each target: ALTER TYPE LeadCaptureType ADD VALUE SIGNUP, with no other Prisma drift.
+The existing generated migration stays in source. Existing Development migrate/push
+commands passed. Chosen hosted targets require a reviewed, authorized root db:push
+workflow; do not blindly replay a migration ledger that earlier schema pushes did
+not certify. No target rollout is claimed.
 
 The exact disposable Development signup browser submission awaits authorization after
 automatic approval review rejected the consequential action. No owner Terms were
 accepted. Protected Preview cannot establish ordinary Production intake acceptance.
 
-Local enabled analytics produced no POST batch. SDK Strict Effects cleanup is a
-hypothesis requiring production-build verification; delivered analytics remains open.
-Final media size, constrained-network playback, physical iOS Safari, exact hosted
-candidate and launch readback remain open. The assistant Production release is a
+Local development emitted no analytics POST batch. The production build passed all
+five player scenarios with five actual delivered video events in each. This isolates
+the failure to development lifecycle behavior; external collector acceptance stays open.
+Final constrained-network playback, exact hosted candidate and launch readback
+remain open. Physical iOS Safari and collector persistence are not claimed. The assistant Production release is a
 separate completed dependency, not evidence that this marketing candidate is live.
 
 Private Brain documentation contains the canonical task ledger and evidence reports
 and is intentionally excluded. A source-file manifest accompanies this candidate.
+
+Draft review: https://github.com/ishaqyusuf/ewatrade/pull/58, initial source commit
+c4b72daa. Final media assets and rollout evidence will be added before launch.
+
+## Final media delivery
+
+Both corrected films are 146.005 seconds at 24 fps, H.264/AAC. Web is 1920×1080
+(5,377,987 bytes); Mobile web is 720×1280 (3,931,981 bytes). Chapter starts are
+8/34/60/86/112 seconds. All signup scenes use the actual “Start your next chapter”
+heading. Complete intro/chapter/outro narration has English captions and transcript.
+Setup footage, clocks and exact twenty-record database proof are preserved.
+
+The versioned `/media/setup-2026-10-08/` package includes adaptive HLS, review MP4s,
+posters, captions, chapters, credits and an asset hash manifest. Web renditions are
+854×480/1280×720; Mobile is 480×854/720×1280 for portrait readability. Four-second
+segments cover 146 seconds. The entire explicit package is approximately 34.7 MB;
+a viewer requests its selected adaptive rendition, not the whole package. Raw
+footage, fixture identifiers, model caches and dependencies are excluded.
+
+Six public media paths and optional client analytics emission are configured only
+for this review branch. Strict analytics origin policy still refuses Preview events;
+client transport and actual watch milestones must be distinguished from Production
+collector acceptance. Production media settings and publication date remain unset.

@@ -1,11 +1,10 @@
 // Media and chapter configuration for the "Your store in a minute" section.
-// The video is recorded after the AI Setup Assistant ships; until both
-// variant sources are configured the section shows a placeholder outside
+// Until both variant sources are configured the section shows a placeholder outside
 // Production and renders nothing in Production.
 //
-// Chapter start times, duration and transcripts are draft values from the
-// storyboard (.brain/plans/2026-10-07-marketing-store-in-a-minute-video.md).
-// Replace them with the rendered video's real timings and final script.
+// Timings match the verified 8 October Web/Mobile renders and their media
+// contract (tools/marketing-video/output/media-contract.json). Chapter narration
+// matches the typed-only QA rehearsal; publication date is set only on release.
 
 export type StoreInAMinuteVariant = "web" | "mobile"
 
@@ -49,6 +48,8 @@ export type StoreInAMinuteVariantMedia = {
 export type StoreInAMinuteConfig = {
   title: string
   description: string
+  introTranscript: string
+  outroTranscript: string
   /** ISO date the final video was published; set it when it goes live. */
   uploadDate?: string
   chapters: StoreInAMinuteChapter[]
@@ -172,13 +173,13 @@ export const STORE_IN_A_MINUTE_CHAPTERS: StoreInAMinuteChapter[] = [
   },
 ]
 
-// Draft storyboard timings: 3 s intro, five chapters of about 34 s, 4 s outro.
-const DRAFT_STARTS: Record<StoreInAMinuteChapterId, number> = {
-  poultry: 0,
-  pharmacy: 37,
-  boutique: 71,
-  laundry: 105,
-  bakery: 139,
+// Verified edit: 8 s intro, five 26 s chapters, 8 s outro (146 s total).
+const CHAPTER_STARTS: Record<StoreInAMinuteChapterId, number> = {
+  poultry: 8,
+  pharmacy: 34,
+  boutique: 60,
+  laundry: 86,
+  bakery: 112,
 }
 
 export function getStoreInAMinuteConfig(
@@ -188,6 +189,9 @@ export function getStoreInAMinuteConfig(
     title: "Your business. Your next chapter.",
     description:
       "Five fictional businesses rehearse typed setup in EwaTrade, review their products and services, and confirm what to add. The signup form is shown separately.",
+    introTranscript:
+      "Five businesses. One place to begin. A real EwaTrade setup rehearsal.",
+    outroTranscript: "Your business. Your next chapter. Come. Trade. Together.",
     uploadDate: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_UPLOAD_DATE),
     chapters: STORE_IN_A_MINUTE_CHAPTERS,
     variants: {
@@ -197,8 +201,8 @@ export function getStoreInAMinuteConfig(
         src: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_WEB_SRC),
         poster: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_WEB_POSTER),
         captions: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_WEB_CAPTIONS),
-        durationSeconds: 177,
-        chapterStarts: { ...DRAFT_STARTS },
+        durationSeconds: 146,
+        chapterStarts: { ...CHAPTER_STARTS },
       },
       mobile: {
         variant: "mobile",
@@ -206,8 +210,8 @@ export function getStoreInAMinuteConfig(
         src: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_MOBILE_SRC),
         poster: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_MOBILE_POSTER),
         captions: clean(env.NEXT_PUBLIC_STORE_IN_A_MINUTE_MOBILE_CAPTIONS),
-        durationSeconds: 177,
-        chapterStarts: { ...DRAFT_STARTS },
+        durationSeconds: 146,
+        chapterStarts: { ...CHAPTER_STARTS },
       },
     },
   }

@@ -36,7 +36,9 @@ const outputDir =
   (await mkdtemp(join(tmpdir(), "ewatrade-section-qa-")))
 await mkdir(outputDir, { recursive: true })
 const mediaDir = join(outputDir, "fixtures")
-const media = getStoreInAMinuteConfig({}).variants
+// Fixture duration and seek expectations follow the verified film's configuration.
+const config = getStoreInAMinuteConfig({})
+const media = config.variants
 if (mode === "player") {
   await mkdir(mediaDir, { recursive: true })
   const duration = String(
@@ -382,6 +384,15 @@ async function matrix() {
     await page.locator(".shop-sim-transcript").getAttribute("open"),
     "",
   )
+  for (const narration of [config.introTranscript, config.outroTranscript])
+    assert.equal(
+      await page
+        .locator(".shop-sim-transcript")
+        .getByText(narration, { exact: false })
+        .isVisible(),
+      true,
+      "complete intro and outro narration is readable",
+    )
   report.pageErrors = errors
   assert.deepEqual(errors, [])
   await context.close()
