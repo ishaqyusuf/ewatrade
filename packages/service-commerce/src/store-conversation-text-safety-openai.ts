@@ -2,6 +2,21 @@ import type { StoreConversationTextSafetyProvider } from "./store-conversation-t
 
 // Pin the snapshot so a silent model change cannot alter what is allowed.
 export const OPENAI_TEXT_MODERATION_MODEL = "omni-moderation-2024-09-26"
+export const OPENAI_TEXT_MODERATION_CATEGORIES = [
+  "harassment",
+  "harassment/threatening",
+  "hate",
+  "hate/threatening",
+  "illicit",
+  "illicit/violent",
+  "self-harm",
+  "self-harm/intent",
+  "self-harm/instructions",
+  "sexual",
+  "sexual/minors",
+  "violence",
+  "violence/graphic",
+] as const
 const MAX_RESPONSE_BYTES = 64 * 1024
 const unavailable = () => new Error("Text safety screening is unavailable.")
 
@@ -80,10 +95,13 @@ export function createOpenAiStoreConversationTextSafetyProvider(options: {
         )
           throw unavailable()
         const verdict = object(result.results[0])
-        const categories = Object.values(object(verdict.categories))
+        const categoryFlags = object(verdict.categories)
+        const categories = Object.values(categoryFlags)
         if (
           typeof verdict.flagged !== "boolean" ||
-          !categories.length ||
+          OPENAI_TEXT_MODERATION_CATEGORIES.some(
+            (category) => typeof categoryFlags[category] !== "boolean",
+          ) ||
           categories.some((value) => typeof value !== "boolean")
         )
           throw unavailable()

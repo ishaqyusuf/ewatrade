@@ -111,10 +111,19 @@ export function SetupAssistant({
   const closed =
     conversation?.status === "SKIPPED" || conversation?.status === "COMPLETED"
   useEffect(() => {
-    if (!setupOpen || !closed || reopened.current) return
+    if (!setupOpen || !closed) {
+      reopened.current = false
+      return
+    }
+    if (reopened.current) return
     reopened.current = true
-    begin.mutate()
-  }, [setupOpen, closed, begin])
+    begin.mutate(undefined, {
+      onError: () => {
+        reopened.current = false
+        void setSetupOpen(false)
+      },
+    })
+  }, [setupOpen, closed, begin, setSetupOpen])
 
   // Chat only: a setup still waiting on the old offer step opens straight in,
   // and each new visit (not a reload; the server checks) gets a fresh welcome

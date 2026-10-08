@@ -14,6 +14,8 @@ const featuresOff = [
   "ASSISTANT_SETUP_MEDIA_ENABLED", // setup voice/photos/files stay off until OpenAI credit
 ]
 const tooling = [
+  "APP_UPDATE_BACKEND", // local app-update publisher tooling only
+  "APP_UPDATE_PUBLISH_TOKEN", // local app-update publisher credential only
   "QA_ACCELERATOR_ENABLED", // QA only; must stay off in production
   "EMAIL_QA_DOMAIN_ROUTES",
   "SENTRY_AUTH_TOKEN", // build-time source map upload

@@ -37,9 +37,21 @@ export function createQaStoreConversationTextSafetyProvider(): StoreConversation
 export function getConfiguredStoreConversationTextSafetyProvider(
   environment: NodeJS.ProcessEnv = process.env,
 ): StoreConversationTextSafetyProvider | null {
+  const production =
+    ["prod", "production"].includes(environment.APP_ENV ?? "") ||
+    ["prod", "production"].includes(environment.DEV_PROFILE ?? "") ||
+    (environment.NODE_ENV === "production" &&
+      !["local", "dev", "development", "preview"].includes(
+        environment.APP_ENV ?? environment.DEV_PROFILE ?? "",
+      ))
   if (
     environment.STORE_CONVERSATION_TEXT_SAFETY_PROVIDER === "openai-moderation"
   ) {
+    if (
+      production &&
+      !environment.STORE_CONVERSATION_TEXT_SAFETY_APPROVAL_REFERENCE?.trim()
+    )
+      return null
     const apiKey =
       environment.STORE_CONVERSATION_TEXT_SAFETY_OPENAI_API_KEY?.trim() ||
       environment.OPENAI_API_KEY?.trim()
@@ -48,11 +60,7 @@ export function getConfiguredStoreConversationTextSafetyProvider(
       : null
   }
 
-  if (
-    environment.APP_ENV === "production" ||
-    ["prod", "production"].includes(environment.DEV_PROFILE ?? "")
-  )
-    return null
+  if (production) return null
 
   // Local development uses the deterministic QA screen. Preview still opts in
   // explicitly, and Production can never select this fixture.

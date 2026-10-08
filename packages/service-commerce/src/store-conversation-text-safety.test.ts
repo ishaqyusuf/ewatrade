@@ -6,6 +6,7 @@ import {
   requireStoreConversationTextSafety,
 } from "./store-conversation-text-safety"
 import {
+  OPENAI_TEXT_MODERATION_CATEGORIES,
   OPENAI_TEXT_MODERATION_MODEL,
   createOpenAiStoreConversationTextSafetyProvider,
 } from "./store-conversation-text-safety-openai"
@@ -31,6 +32,28 @@ describe("Store Conversation text safety gate", () => {
         STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "qa-fixture",
       }),
     ).toBeNull()
+  })
+
+  test("a Production runtime without a non-production profile still requires approval", () => {
+    for (const environment of [
+      { NODE_ENV: "production" },
+      { APP_ENV: "prod", NODE_ENV: "test" },
+      { APP_ENV: "unknown", NODE_ENV: "production" },
+    ]) {
+      expect(
+        getConfiguredStoreConversationTextSafetyProvider({
+          ...environment,
+          STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "openai-moderation",
+          OPENAI_API_KEY: "synthetic-test-key",
+        }),
+      ).toBeNull()
+      expect(
+        getConfiguredStoreConversationTextSafetyProvider({
+          ...environment,
+          STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "qa-fixture",
+        }),
+      ).toBeNull()
+    }
   })
 
   test("requires an explicit non-production QA fixture switch", () => {
@@ -128,7 +151,20 @@ describe("OpenAI text moderation provider", () => {
     new Response(JSON.stringify(body), { status })
   const verdict = (flagged: boolean, categories = { hate: flagged }) => ({
     model: OPENAI_TEXT_MODERATION_MODEL,
-    results: [{ flagged, categories }],
+    results: [
+      {
+        flagged,
+        categories: {
+          ...Object.fromEntries(
+            OPENAI_TEXT_MODERATION_CATEGORIES.map((category) => [
+              category,
+              false,
+            ]),
+          ),
+          ...categories,
+        },
+      },
+    ],
   })
 
   test("Production uses it only when selected explicitly with a key", () => {
@@ -136,6 +172,13 @@ describe("OpenAI text moderation provider", () => {
       getConfiguredStoreConversationTextSafetyProvider({
         APP_ENV: "production",
         STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "openai-moderation",
+      }),
+    ).toBeNull()
+    expect(
+      getConfiguredStoreConversationTextSafetyProvider({
+        APP_ENV: "production",
+        STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "openai-moderation",
+        OPENAI_API_KEY: "sk-shared",
       }),
     ).toBeNull()
     for (const key of [
@@ -147,6 +190,8 @@ describe("OpenAI text moderation provider", () => {
           APP_ENV: "production",
           STORE_CONVERSATION_TEXT_SAFETY_PROVIDER: "openai-moderation",
           ...key,
+          STORE_CONVERSATION_TEXT_SAFETY_APPROVAL_REFERENCE:
+            "qa-only-processor-review",
         }),
       ).not.toBeNull()
     }
@@ -193,6 +238,11 @@ describe("OpenAI text moderation provider", () => {
 
   test("errors, other models and malformed verdicts fail closed without leaking", async () => {
     const bodies: (() => Promise<Response>)[] = [
+      async () =>
+        reply({
+          model: OPENAI_TEXT_MODERATION_MODEL,
+          results: [{ flagged: false, categories: { hate: false } }],
+        }),
       async () => reply({ error: { message: "quota sk-test" } }, 429),
       async () => reply({ ...verdict(false), model: "omni-moderation-latest" }),
       async () => reply({ model: OPENAI_TEXT_MODERATION_MODEL, results: [] }),
