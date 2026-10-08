@@ -542,7 +542,7 @@ export function NudgeCard({
           width: 40,
         }}
       >
-        <Icon className="size-5" color={colors.fg} name={icon} />
+        <Icon className="size-[20px]" color={colors.fg} name={icon} />
       </View>
       <View className="min-w-0 flex-1">
         <Text className="text-sm font-bold [-rn-line-height:19] text-foreground">

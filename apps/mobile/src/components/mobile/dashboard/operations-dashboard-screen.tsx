@@ -10,7 +10,11 @@ import {
   ClassicSalesRepOverview,
   ClassicSalesRepSection,
 } from "@/components/mobile/appearances/classic/dashboard-screen"
-import { GreenTillOwnerHome } from "@/components/mobile/appearances/classic/green-till-home"
+import {
+  GreenTillOwnerHome,
+  GreenTillRepHome,
+  type HomeRecentOrder,
+} from "@/components/mobile/appearances/classic/green-till-home"
 import { ClassicCounterHeader } from "@/components/mobile/appearances/classic/home-counter-parts"
 import {
   BusinessHomeMarketLedgerEmptyOrders,
@@ -201,7 +205,52 @@ export function OperationsDashboardSurface({
       { enabled: salesQueryEnabled, retry: false },
     ),
   )
+  const repSalesQueryEnabled = isAttendant && !isMarketDay && !isOffline
+  const repTodaySales = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...windows.today, mine: true, statuses: [...SALE_STATUSES] },
+      { enabled: repSalesQueryEnabled, retry: false },
+    ),
+  )
   const orderRows = orders.data ?? []
+  const toHomeOrder = (
+    order: (typeof orderRows)[number],
+    index: number,
+  ): HomeRecentOrder => {
+    const customer =
+      order.customerName || order.customerPhone || "Walk-in customer"
+    return {
+      amount: homeMoney(order.totalMinor, order.currencyCode),
+      avatar: recordAvatar(customer, index),
+      customer,
+      id: order.id,
+      meta: [
+        order.orderNumber,
+        order.lines
+          .map(
+            (line) =>
+              `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
+          )
+          .join(", "),
+        timeLabel(order.createdAt),
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      onPress: () =>
+        router.push(`/order/${encodeURIComponent(order.id)}` as never),
+      pill: orderPaymentPill(order),
+    }
+  }
+  const recentState: "empty" | "loaded" | "loading" | "unavailable" =
+    orders.data !== undefined
+      ? orderRows.length
+        ? "loaded"
+        : "empty"
+      : orders.isError
+        ? "unavailable"
+        : isOffline
+          ? "empty"
+          : "loading"
   const currency = profile?.currencyCode ?? "NGN"
   const orderValue = orderRows.reduce(
     (total, order) => total + order.totalMinor,
@@ -445,7 +494,21 @@ export function OperationsDashboardSurface({
           : createModal.present,
       }}
       hero={
-        isAttendant ? (
+        isAttendant && !isMarketDay ? (
+          <ClassicCounterHeader
+            businessName={profile?.businessName ?? "Business"}
+            greetingName={firstName}
+            hasNotification={isOffline || pendingCommandCount > 0}
+            hideSearch
+            onBusinessPress={() =>
+              router.push("/business-switch-modal" as never)
+            }
+            onNotificationPress={() =>
+              router.push("/sync-status-modal" as never)
+            }
+            roleLabel="Sales rep"
+          />
+        ) : isAttendant ? (
           <RepHero
             businessName={profile?.businessName ?? "Business"}
             cue={salesRepPresentation.heroCue}
@@ -565,43 +628,8 @@ export function OperationsDashboardSurface({
           onStockIn={() => router.push("/stock-intake-modal" as never)}
           onSync={() => router.push("/sync-status-modal" as never)}
           pendingCommandCount={pendingCommandCount}
-          recentOrders={orderRows.slice(0, 4).map((order, index) => {
-            const customer =
-              order.customerName || order.customerPhone || "Walk-in customer"
-            const pill = orderPaymentPill(order)
-            return {
-              amount: homeMoney(order.totalMinor, order.currencyCode),
-              avatar: recordAvatar(customer, index),
-              customer,
-              id: order.id,
-              meta: [
-                order.orderNumber,
-                order.lines
-                  .map(
-                    (line) =>
-                      `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-                  )
-                  .join(", "),
-                timeLabel(order.createdAt),
-              ]
-                .filter(Boolean)
-                .join(" · "),
-              onPress: () =>
-                router.push(`/order/${encodeURIComponent(order.id)}` as never),
-              pill,
-            }
-          })}
-          recentState={
-            orders.data !== undefined
-              ? orderRows.length
-                ? "loaded"
-                : "empty"
-              : orders.isError
-                ? "unavailable"
-                : isOffline
-                  ? "empty"
-                  : "loading"
-          }
+          recentOrders={orderRows.slice(0, 4).map(toHomeOrder)}
+          recentState={recentState}
           sales={
             todaySales.data
               ? {
@@ -677,6 +705,70 @@ export function OperationsDashboardSurface({
           message="Refresh to load your latest Store setup and catalog state."
           title="Store overview unavailable"
           tone="warning"
+        />
+      ) : isAttendant && !isMarketDay ? (
+        <GreenTillRepHome
+          canCreateSale={hasSellableCatalogItem}
+          isOffline={isOffline}
+          onCloseout={() => router.push("/closeout-modal" as never)}
+          onCustomers={
+            featureAvailability.hasCustomers && !scopedStaff
+              ? () => router.push("/customer-book-modal" as never)
+              : undefined
+          }
+          onNewSale={() => router.push("/create-sale-modal" as never)}
+          onSales={() => router.push("/your-sales" as never)}
+          onStockIn={
+            canManageMobileStock(profile?.role, profile?.staffAccessMode)
+              ? () => router.push("/stock-intake-modal" as never)
+              : undefined
+          }
+          onSync={() => router.push("/sync-status-modal" as never)}
+          pendingCommandCount={pendingCommandCount}
+          recentOrders={orderRows.slice(0, 4).map(toHomeOrder)}
+          recentState={recentState}
+          sales={
+            repTodaySales.data
+              ? {
+                  amount: homeMoney(
+                    repTodaySales.data.orderValueMinor,
+                    repTodaySales.data.currencyCode,
+                  ),
+                  delta: null,
+                  orderCount: repTodaySales.data.orderCount,
+                  partial:
+                    "partial" in repTodaySales.data &&
+                    !!repTodaySales.data.partial,
+                  stats:
+                    "paidByMethod" in repTodaySales.data
+                      ? [
+                          {
+                            label: "Cash",
+                            value: homeMoney(
+                              repTodaySales.data.paidByMethod.CASH ?? 0,
+                              repTodaySales.data.currencyCode,
+                            ),
+                          },
+                          {
+                            label: "Transfer",
+                            value: homeMoney(
+                              repTodaySales.data.paidByMethod.BANK_TRANSFER ??
+                                0,
+                              repTodaySales.data.currencyCode,
+                            ),
+                          },
+                          {
+                            label: "Items",
+                            value: String(repTodaySales.data.itemsSold),
+                          },
+                        ]
+                      : [],
+                  status: isOffline ? "cached" : "ready",
+                }
+              : repTodaySales.isError || isOffline
+                ? { status: "unavailable" }
+                : { status: "loading" }
+          }
         />
       ) : isAttendant ? (
         <RepOverview
@@ -790,6 +882,7 @@ export function OperationsDashboardSurface({
       ) : null}
 
       {isAttendant &&
+      isMarketDay &&
       canManageMobileStock(profile?.role, profile?.staffAccessMode) ? (
         <Pressable
           accessibilityRole="button"
@@ -804,7 +897,7 @@ export function OperationsDashboardSurface({
         </Pressable>
       ) : null}
 
-      {isAttendant ? (
+      {isAttendant && isMarketDay ? (
         <RepSection title="Your sales">
           <ActionButton
             variant="outline"

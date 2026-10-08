@@ -25,24 +25,26 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
     ]
   const tools = (
     <View className="flex-row gap-2">
-      <Pressable
-        accessibilityLabel={
-          props.onSearchPress
-            ? "Open global search"
-            : "Search unavailable offline"
-        }
-        accessibilityRole="button"
-        disabled={!props.onSearchPress}
-        className={cn(
-          "size-[38px] items-center justify-center rounded-full bg-card shadow-sm active:bg-accent",
-          !props.onSearchPress && "opacity-50",
-        )}
-        haptic={!!props.onSearchPress}
-        hitSlop={4}
-        onPress={props.onSearchPress}
-      >
-        <Icon className="size-[19px] text-foreground" name="Search" />
-      </Pressable>
+      {props.hideSearch ? null : (
+        <Pressable
+          accessibilityLabel={
+            props.onSearchPress
+              ? "Open global search"
+              : "Search unavailable offline"
+          }
+          accessibilityRole="button"
+          disabled={!props.onSearchPress}
+          className={cn(
+            "size-[38px] items-center justify-center rounded-full bg-card shadow-sm active:bg-accent",
+            !props.onSearchPress && "opacity-50",
+          )}
+          haptic={!!props.onSearchPress}
+          hitSlop={4}
+          onPress={props.onSearchPress}
+        >
+          <Icon className="size-[19px] text-foreground" name="Search" />
+        </Pressable>
+      )}
       <Pressable
         accessibilityLabel={
           props.hasNotification
@@ -111,10 +113,16 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
             >
               {props.businessName}
             </Text>
-            <Icon
-              className="size-[15px] text-muted-foreground"
-              name="ChevronDown"
-            />
+            {props.roleLabel ? (
+              <Text className="shrink-0 text-[13px] font-semibold text-muted-foreground">
+                · {props.roleLabel}
+              </Text>
+            ) : (
+              <Icon
+                className="size-[15px] text-muted-foreground"
+                name="ChevronDown"
+              />
+            )}
           </Pressable>
         </View>
         {largeText ? null : tools}

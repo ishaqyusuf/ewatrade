@@ -24,6 +24,10 @@ export type DashboardHeroProps = {
   onProfilePress?: () => void
   onSearchPress?: () => void
   cue?: string
+  /** Shown after the business name, such as "Sales rep". */
+  roleLabel?: string
+  /** Sales reps have no global search on Home. */
+  hideSearch?: boolean
 }
 
 export type DashboardSyncProps = {

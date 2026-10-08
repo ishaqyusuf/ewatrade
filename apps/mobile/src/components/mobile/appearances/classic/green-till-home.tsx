@@ -371,3 +371,110 @@ function HomeSkeleton() {
     </View>
   )
 }
+
+export type GreenTillRepHomeProps = {
+  canCreateSale: boolean
+  isOffline: boolean
+  onCloseout: () => void
+  onCustomers?: () => void
+  onNewSale: () => void
+  onSales: () => void
+  onStockIn?: () => void
+  onSync: () => void
+  pendingCommandCount: number
+  recentOrders: HomeRecentOrder[]
+  recentState: GreenTillOwnerHomeProps["recentState"]
+  sales: HomeSales
+}
+
+/** Green Till Home (01) for sales reps: their own sales today. */
+export function GreenTillRepHome(props: GreenTillRepHomeProps) {
+  const { sales } = props
+  const pill = props.isOffline
+    ? { label: "Offline", tone: "offline" as const }
+    : props.pendingCommandCount > 0
+      ? { label: `${props.pendingCommandCount} waiting`, tone: "busy" as const }
+      : { label: "Synced", tone: "synced" as const }
+  const tiles = [
+    props.onCustomers
+      ? {
+          icon: "Users" as const,
+          label: "Customers",
+          onPress: props.onCustomers,
+        }
+      : null,
+    {
+      icon: "ClipboardList" as const,
+      label: "Closeout",
+      onPress: props.onCloseout,
+    },
+    props.onStockIn
+      ? {
+          icon: "Download" as const,
+          label: "Stock in",
+          onPress: props.onStockIn,
+        }
+      : null,
+    { icon: "RefreshCw" as const, label: "Sync", onPress: props.onSync },
+  ].filter((tile) => tile !== null)
+  return (
+    <View>
+      {sales.status === "loading" ? (
+        <HeroSkeleton />
+      ) : sales.status === "unavailable" ? (
+        <HeroCard
+          label="Your sales today"
+          pill={pill}
+          sub="Your sales are unavailable right now. Pull down to try again."
+          title="—"
+        />
+      ) : (
+        <HeroCard
+          amount={sales.amount}
+          cta={
+            props.canCreateSale
+              ? {
+                  icon: "Plus",
+                  label: "Start a sale",
+                  onPress: props.onNewSale,
+                  testID: "rep-start-sale",
+                }
+              : undefined
+          }
+          label={`Your sales today${sales.asOf ? ` · as of ${sales.asOf}` : ""}`}
+          pill={pill}
+          stats={sales.stats}
+          sub={`${sales.orderCount} ${sales.orderCount === 1 ? "sale" : "sales"}${props.canCreateSale ? "" : " · no sellable items yet"}`}
+          testID="rep-sales-hero"
+        />
+      )}
+      {props.isOffline || props.pendingCommandCount > 0 ? (
+        <StatusBanner
+          className="mt-3"
+          icon="WifiOff"
+          linkLabel="View"
+          message="New sales still work. They upload when you reconnect."
+          onLinkPress={props.onSync}
+          title={`${props.pendingCommandCount} ${props.pendingCommandCount === 1 ? "sale" : "sales"} waiting to sync`}
+          tone="warning"
+        />
+      ) : null}
+      <QuickActionRow actions={tiles} />
+      <NudgeCard
+        actionLabel="Start"
+        icon="Clock"
+        onAction={props.onCloseout}
+        sub="Count cash and stock in your custody"
+        testID="rep-closeout-nudge"
+        tint="amber"
+        title="Close out before you leave"
+      />
+      <SectionHeader
+        actionLabel="See all"
+        onAction={props.onSales}
+        title="Your sales"
+      />
+      <RecentOrdersCard orders={props.recentOrders} state={props.recentState} />
+    </View>
+  )
+}

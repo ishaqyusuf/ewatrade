@@ -109,7 +109,7 @@ export function HeroCard({
           {delta ? (
             <View style={styles.deltaValue}>
               <Icon
-                className="size-3"
+                className="size-[12px]"
                 color={delta.direction === "up" ? "#8EF0BE" : "#FFB4A8"}
                 name={delta.direction === "up" ? "ArrowUp" : "ArrowDown"}
               />
