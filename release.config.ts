@@ -20,6 +20,7 @@ const tooling = [
   "DEV_PROFILE", // local env-profile selector
   "DEBUG_PERF", // local performance debugging
   "ASSISTANT_LIVE_SMOKE", // opt-in live model tests, never set on a deployment
+  "ASSISTANT_LIVE_MEASURE", // opt-in live setup measurement, tests only
 ]
 const optional = [
   "LOGLY_COLLECTOR_URL", // Logly logging stays off without these
