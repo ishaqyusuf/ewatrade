@@ -5,6 +5,20 @@ const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
 
 const contracts = [
   {
+    file: "src/components/mobile/appearances/classic/catalog-screen.tsx",
+    markers: ["<CatalogAvatar", "item.avatar"],
+  },
+  {
+    file: "src/components/mobile/catalog/catalog-avatar.tsx",
+    markers: [
+      "CatalogIllustrationPreview",
+      "variant=thumbnail",
+      'cachePolicy="none"',
+      '"x-store-id"',
+      "selected image unavailable",
+    ],
+  },
+  {
     file: "src/app/_layout.tsx",
     markers: ['name="catalog-item/[catalogItemId]"'],
   },

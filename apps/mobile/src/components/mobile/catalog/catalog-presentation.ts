@@ -4,10 +4,11 @@ import type {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native"
+import type { CatalogAvatarMedia } from "./catalog-avatar-model"
 
 export type CatalogKindFilter = "all" | "product" | "service"
 export type CatalogRow = {
-  imageUrl?: string | null
+  avatar?: CatalogAvatarMedia
   problem?: "out_of_stock" | "no_price" | "not_counted"
   detail: string
   availabilityLabel: string

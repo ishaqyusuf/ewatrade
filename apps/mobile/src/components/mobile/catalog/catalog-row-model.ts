@@ -1,5 +1,6 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney, subtractExactDecimals } from "@ewatrade/utils"
+import { selectCatalogAvatar } from "./catalog-avatar-model"
 import type { CatalogRow } from "./catalog-presentation"
 type CatalogItem = RouterOutputs["catalog"]["listItems"][number]
 
@@ -11,6 +12,11 @@ export function mapCatalogItem(
     item.variants.find((variant) => variant.isDefault) ?? item.variants[0]
   const offering = defaultVariant?.offerings[0]
   const currencyCode = offering?.currencyCode ?? "NGN"
+  const avatar = selectCatalogAvatar(
+    item,
+    storeId,
+    defaultVariant?.imageUrl ?? item.imageUrl,
+  )
   const priceLabel =
     offering?.pricingPolicy === "fixed" && offering.fixedPriceMinor !== null
       ? formatMinorMoney(offering.fixedPriceMinor, currencyCode).replace(
@@ -23,7 +29,7 @@ export function mapCatalogItem(
 
   if (item.kind === "service") {
     return {
-      imageUrl: defaultVariant?.imageUrl ?? item.imageUrl,
+      avatar,
       problem: priceLabel === "Price not set" ? "no_price" : undefined,
       detail: `${priceLabel} · No inventory`,
       availabilityLabel: "No inventory",
@@ -61,7 +67,7 @@ export function mapCatalogItem(
       : `${availableQuantity} ${unitName} available`
 
   return {
-    imageUrl: defaultVariant?.imageUrl ?? item.imageUrl,
+    avatar,
     problem:
       priceLabel === "Price not set"
         ? "no_price"

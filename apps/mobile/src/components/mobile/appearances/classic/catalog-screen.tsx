@@ -1,4 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { CatalogAvatar } from "@/components/mobile/catalog/catalog-avatar"
+import { selectCatalogAvatar } from "@/components/mobile/catalog/catalog-avatar-model"
 import type {
   CatalogChoiceProps,
   CatalogFrameProps,
@@ -14,7 +16,6 @@ import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
-import { Image } from "expo-image"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -180,26 +181,11 @@ export function ClassicCatalogRow({
             item.kind === "service" ? "bg-tint-lilac" : "bg-tint-mint",
           )}
         >
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={{ width: 42, height: 42 }}
-              contentFit="cover"
-              recyclingKey={item.id}
-            />
-          ) : (
-            <Text
-              maxFontSizeMultiplier={1.3}
-              className={cn(
-                "text-sm font-bold",
-                item.kind === "service"
-                  ? "text-tint-lilac-foreground"
-                  : "text-tint-mint-foreground",
-              )}
-            >
-              {item.name.trim().slice(0, 1).toLocaleUpperCase()}
-            </Text>
-          )}
+          <CatalogAvatar
+            media={item.avatar ?? selectCatalogAvatar(item)}
+            name={item.name}
+            service={item.kind === "service"}
+          />
         </View>
         <View
           className={cn(
