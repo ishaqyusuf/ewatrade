@@ -16,15 +16,6 @@ type StepSuccessProps = {
   storefrontUrl?: string
 }
 
-function displayAddress(url: string) {
-  try {
-    const parsed = new URL(url)
-    return parsed.host + (parsed.pathname === "/" ? "" : parsed.pathname)
-  } catch {
-    return url.replace(/^https?:\/\//, "")
-  }
-}
-
 export function StepSuccess({
   businessName,
   dashboardUrl,
@@ -77,10 +68,7 @@ export function StepSuccess({
               rel="noopener noreferrer"
             >
               <span>
-                <small>{surface.label}</small>
-                <span className="signup-address-output">
-                  {displayAddress(surface.href)}
-                </span>
+                <span className="signup-address-output">{surface.label}</span>
                 <small>{surface.description}</small>
               </span>
               <span aria-hidden="true">↗</span>
