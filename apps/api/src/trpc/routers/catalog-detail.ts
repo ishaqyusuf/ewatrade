@@ -12,15 +12,16 @@ import {
   catalogDetailSchema,
 } from "../../schemas/catalog-detail"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { orderScope } from "../order-scope"
 
 export const catalogDetailRouter = createTRPCRouter({
   overview: protectedProcedure
     .input(catalogDetailSchema)
     .query(async ({ ctx, input }) => {
-      const result = await getCatalogItemDetail(
-        ctx.db,
-        catalogDetailScope(input, ctx.tenantContext),
-      )
+      const result = await getCatalogItemDetail(ctx.db, {
+        ...(await orderScope(ctx, { storeId: input.storeId })),
+        ...catalogDetailScope(input, ctx.tenantContext),
+      })
       if (!result)
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -36,7 +37,10 @@ export const catalogDetailRouter = createTRPCRouter({
   orders: protectedProcedure
     .input(catalogDetailPageSchema)
     .query(async ({ ctx, input }) => {
-      const scope = catalogDetailScope(input, ctx.tenantContext)
+      const scope = {
+        ...(await orderScope(ctx, { storeId: input.storeId })),
+        ...catalogDetailScope(input, ctx.tenantContext),
+      }
       const item = await ctx.db.catalogItem.findFirst({
         where: { id: input.itemId, tenantId: scope.tenantId },
         select: { id: true },
@@ -51,7 +55,10 @@ export const catalogDetailRouter = createTRPCRouter({
   activity: protectedProcedure
     .input(catalogActivitySchema)
     .query(async ({ ctx, input }) => {
-      const scope = catalogDetailScope(input, ctx.tenantContext)
+      const scope = {
+        ...(await orderScope(ctx, { storeId: input.storeId })),
+        ...catalogDetailScope(input, ctx.tenantContext),
+      }
       const item = await ctx.db.catalogItem.findFirst({
         where: { id: input.itemId, tenantId: scope.tenantId },
         select: { id: true },

@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server"
 
 import { globalSearchSchema } from "../../schemas/search"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { orderScope } from "../order-scope"
 
 export const searchRouter = createTRPCRouter({
   global: protectedProcedure
@@ -23,6 +24,7 @@ export const searchRouter = createTRPCRouter({
 
       return globalSearch(ctx.db, {
         ...input,
+        orderScope: await orderScope(ctx),
         canSearchStaff: canManageSalesOperations(role),
         tenantId: ctx.tenantContext.tenant.id,
       })

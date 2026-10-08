@@ -58,6 +58,11 @@ import {
   buildScopedListPageWhere,
 } from "./list-sort"
 import {
+  type OrderScope,
+  customerHistoryWhere,
+  openOrderWhere,
+} from "./order-visibility"
+import {
   assertSaleProductUsage,
   saleEligibleCatalogItem,
 } from "./product-usage"
@@ -1021,11 +1026,22 @@ export async function createCommercialOrder(
 
 export async function getCommercialOrder(
   db: PrismaClient,
-  input: { orderId: string; tenantId: string },
+  input: {
+    orderId?: string
+    orderNumber?: string
+    storeId?: string
+    tenantId: string
+  },
 ) {
+  if (!input.orderId && !input.orderNumber) return null
   const order = await db.commercialOrder.findFirst({
     include: orderGraph,
-    where: { id: input.orderId, tenantId: input.tenantId },
+    where: {
+      id: input.orderId,
+      orderNumber: input.orderNumber,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
   })
   if (!order) return null
   const [result] = await attachOrderActors(db, input.tenantId, [
@@ -1036,26 +1052,75 @@ export async function getCommercialOrder(
 
 export async function listCommercialOrders(
   db: PrismaClient,
-  input: { limit?: number; storeId?: string; tenantId: string },
+  input: OrderScope & { limit?: number },
 ) {
   const orders = await db.commercialOrder.findMany({
     include: orderGraph,
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(input.limit ?? 50, 1), 100),
-    where: { storeId: input.storeId, tenantId: input.tenantId },
+    where: {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      createdByUserId: input.createdByUserId,
+    },
   })
   return attachOrderActors(db, input.tenantId, orders.map(serializeOrder))
 }
 
+/** Bounded lookup results have per-order amounts, never counts or aggregate totals. */
+export async function lookupCommercialOrders(
+  db: PrismaClient,
+  input: OrderScope & {
+    customerId?: string
+    phone?: string
+    orderNumber?: string
+    history?: boolean
+  },
+) {
+  const { createdByUserId: _, ...storeScope } = input
+  const identity: Prisma.CommercialOrderWhereInput = input.orderNumber
+    ? { orderNumber: { equals: input.orderNumber, mode: "insensitive" } }
+    : input.customerId
+      ? { customerId: input.customerId }
+      : {
+          OR: [
+            { customerPhone: input.phone },
+            {
+              customer: {
+                is: { normalizedPhone: input.phone?.replace(/[^\d+]/g, "") },
+              },
+            },
+          ],
+        }
+  if (!input.orderNumber && !input.customerId && !input.phone) return []
+  const records = await db.commercialOrder.findMany({
+    include: orderGraph,
+    where: {
+      tenantId: storeScope.tenantId,
+      storeId: storeScope.storeId,
+      AND: [
+        identity,
+        ...(input.orderNumber
+          ? []
+          : [input.history ? customerHistoryWhere(input) : openOrderWhere]),
+      ],
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 50,
+  })
+  return attachOrderActors(db, input.tenantId, records.map(serializeOrder))
+}
+
 export async function getCommercialOrderReportSummary(
   db: PrismaClient,
-  input: { storeId?: string; tenantId: string },
+  input: OrderScope,
 ) {
   const summary = await db.commercialOrder.aggregate({
     _count: { _all: true },
     _sum: { totalMinor: true },
     where: {
       tenantId: input.tenantId,
+      createdByUserId: input.createdByUserId,
       ...(input.storeId ? { storeId: input.storeId } : {}),
     },
   })
@@ -1068,7 +1133,7 @@ export async function getCommercialOrderReportSummary(
 
 export async function countCommercialOrderCustomers(
   db: PrismaClient,
-  input: { storeId?: string; tenantId: string },
+  input: OrderScope,
 ) {
   const storeFilter = input.storeId
     ? Prisma.sql`AND "storeId" = ${input.storeId}`
@@ -1085,6 +1150,7 @@ export async function countCommercialOrderCustomers(
     FROM "CommercialOrder"
     WHERE "tenantId" = ${input.tenantId}
     ${storeFilter}
+    ${input.createdByUserId ? Prisma.sql`AND "createdByUserId" = ${input.createdByUserId}` : Prisma.empty}
   `)
 
   return Number(rows[0]?.count ?? 0)
@@ -1093,6 +1159,7 @@ export async function countCommercialOrderCustomers(
 export async function listCommercialOrdersPage(
   db: PrismaClient,
   input: {
+    createdByUserId?: string
     createdAfter?: Date
     cursor?: string
     limit?: number
@@ -1110,6 +1177,7 @@ export async function listCommercialOrdersPage(
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
   const normalizedQuery = input.query?.trim()
   const baseWhere: Prisma.CommercialOrderWhereInput = {
+    createdByUserId: input.createdByUserId,
     createdAt: input.createdAfter ? { gte: input.createdAfter } : undefined,
     status: input.statuses?.length ? { in: input.statuses } : undefined,
     storeId: input.storeId,

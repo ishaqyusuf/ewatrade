@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import type { OrderScope } from "./order-visibility"
 import { listRetailOpsStaff } from "./retail-ops-staff"
 
 export type GlobalSearchResult =
@@ -79,6 +80,7 @@ function customerIdentity(input: {
 export async function globalSearch(
   db: PrismaClient,
   input: {
+    orderScope?: OrderScope
     canSearchStaff: boolean
     limit?: number
     query: string
@@ -91,6 +93,7 @@ export async function globalSearch(
   const perTypeLimit = Math.min(Math.max(input.limit ?? 6, 1), 10)
   const textWhere = { contains: query, mode: "insensitive" as const }
   const customerOrderWhere: Prisma.CommercialOrderWhereInput = {
+    ...input.orderScope,
     tenantId: input.tenantId,
     OR: [
       { customerEmail: textWhere },
@@ -156,11 +159,23 @@ export async function globalSearch(
           customerName: true,
           id: true,
           orderNumber: true,
+          createdByUserId: true,
           paymentStatus: true,
           status: true,
         },
         take: perTypeLimit,
         where: {
+          storeId: input.orderScope?.storeId,
+          AND: input.orderScope?.createdByUserId
+            ? [
+                {
+                  OR: [
+                    { createdByUserId: input.orderScope.createdByUserId },
+                    { orderNumber: { equals: query, mode: "insensitive" } },
+                  ],
+                },
+              ]
+            : undefined,
           OR: [
             { customerEmail: textWhere },
             { customerName: textWhere },
@@ -221,6 +236,16 @@ export async function globalSearch(
             },
           ],
           tenantId: input.tenantId,
+          storeId: input.orderScope?.storeId,
+          AND: input.orderScope?.createdByUserId
+            ? [
+                {
+                  commercialOrder: {
+                    is: { createdByUserId: input.orderScope.createdByUserId },
+                  },
+                },
+              ]
+            : undefined,
         },
       }),
       input.canSearchStaff
@@ -232,6 +257,15 @@ export async function globalSearch(
         : [],
     ])
 
+  const actors = orders.length
+    ? await db.user.findMany({
+        where: { id: { in: orders.map((order) => order.createdByUserId) } },
+        select: { id: true, name: true, displayName: true },
+      })
+    : []
+  const actorNames = new Map(
+    actors.map((actor) => [actor.id, actor.displayName || actor.name]),
+  )
   const results: GlobalSearchResult[] = []
 
   for (const item of catalogItems) {
@@ -297,7 +331,7 @@ export async function globalSearch(
       createdAt: order.createdAt,
       id: `order:${order.id}`,
       orderId: order.id,
-      subtitle: `${order.customerName ?? "Walk-in customer"} · ${order.paymentStatus.toLowerCase().replaceAll("_", " ")}`,
+      subtitle: `Taken by ${actorNames.get(order.createdByUserId) || "a sales rep"} · ${order.customerName ?? "Walk-in customer"} · ${order.paymentStatus.toLowerCase().replaceAll("_", " ")}`,
       title: order.orderNumber,
       type: "order",
     })
