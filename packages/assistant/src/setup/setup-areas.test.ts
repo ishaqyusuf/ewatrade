@@ -308,3 +308,132 @@ describe("rehearsal reads all four areas", () => {
     ])
   })
 })
+
+describe("library illustrations", () => {
+  function staging(previous: SetupDraftEntityWrite[] = []) {
+    const writes: SetupDraftEntityWrite[] = []
+    const set = createSetupAssistantTools({
+      context: {
+        businessName: "B",
+        storeName: "S",
+        businessProfile: {
+          key: "animal-feed-agricultural-supplies",
+          title: "Farming",
+        },
+        operatingModel: null,
+        currencyCode: "NGN",
+        countryCode: "NG",
+        existing: { catalogItems: 0, customers: 0 },
+      },
+      sourceMessageId: "msg_1",
+      knownAttachments: [
+        { id: "att_photo", kind: "IMAGE", imageKind: "product_photo" },
+      ],
+      readDraft: async () =>
+        previous.map((entity) => ({
+          key: entity.key,
+          kind: entity.kind,
+          state: entity.state,
+          payload: entity.payload,
+          openQuestions: entity.openQuestions,
+        })),
+      writeEntities: async (entities) => {
+        writes.push(...entities)
+        return {
+          revision: 1,
+          changed: entities.map((e) => e.key),
+          rejected: [],
+        }
+      },
+      removeEntities: async () => ({ revision: 1 }),
+    })
+    const stage = (item: Record<string, unknown>) =>
+      set.setup_draft_upsert_items.execute?.({ items: [item] } as never, call)
+    return { stage, writes }
+  }
+  const eggs = {
+    kind: "product",
+    name: "Crate of eggs",
+    unitName: "Crate",
+    price: "4500",
+  }
+
+  test("a staged product or service gets the library's best match", async () => {
+    const { stage, writes } = staging()
+    await stage(eggs)
+    await stage({
+      kind: "service",
+      name: "Shirt wash",
+      pricing: "fixed",
+      price: "500",
+    })
+    await stage({
+      kind: "product",
+      name: "Bag of rice",
+      unitName: "Bag",
+      price: "75000",
+    })
+    expect(
+      writes.map((write) => [
+        write.payload.name,
+        "illustrationId" in write.payload ? write.payload.illustrationId : "-",
+      ]),
+    ).toEqual([
+      ["Crate of eggs", "ill-egg"],
+      ["Shirt wash", "ill-shirt"],
+      ["Bag of rice", "-"],
+    ])
+  })
+
+  test("an earlier choice survives updates, including the owner's none", async () => {
+    const chosen = (illustrationId: string | null): SetupDraftEntityWrite => ({
+      key: "product:crate-of-eggs",
+      kind: "PRODUCT",
+      state: "PROPOSED",
+      payload: {
+        kind: "product",
+        name: "Crate of eggs",
+        unitName: "Crate",
+        priceMinor: 450_000,
+        illustrationId,
+      },
+      source: { messageId: "msg_0" },
+      openQuestions: [],
+    })
+    for (const illustrationId of ["ill-egg-tray", null]) {
+      const { stage, writes } = staging([chosen(illustrationId)])
+      await stage({ ...eggs, key: "product:crate-of-eggs", price: "4800" })
+      expect(writes[0]?.payload).toMatchObject({
+        priceMinor: 480_000,
+        illustrationId,
+      })
+    }
+  })
+
+  test("a product photo from the chat takes the illustration's place", async () => {
+    const { stage, writes } = staging()
+    await stage({ ...eggs, photoAttachmentId: "att_photo" })
+    expect(writes[0]?.payload).toMatchObject({ photoAttachmentId: "att_photo" })
+    expect(
+      writes[0]?.payload.kind === "product" && writes[0].payload.illustrationId,
+    ).toBeUndefined()
+  })
+
+  test("only library illustrations are accepted", () => {
+    const base = { kind: "product", name: "Eggs", unitName: "Crate" }
+    expect(
+      setupEntityPayloadSchema.safeParse({ ...base, illustrationId: "ill-egg" })
+        .success,
+    ).toBe(true)
+    expect(
+      setupEntityPayloadSchema.safeParse({ ...base, illustrationId: null })
+        .success,
+    ).toBe(true)
+    expect(
+      setupEntityPayloadSchema.safeParse({
+        ...base,
+        illustrationId: "ill-made-up",
+      }).success,
+    ).toBe(false)
+  })
+})

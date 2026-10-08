@@ -1,4 +1,5 @@
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
@@ -62,6 +63,19 @@ export const setupOpenQuestionSchema = z.object({
 })
 export type SetupOpenQuestion = z.infer<typeof setupOpenQuestionSchema>
 
+/**
+ * A library illustration shown and added with a product or service; null when
+ * the owner chose none, so it is not picked again.
+ */
+const illustrationIdField = z
+  .string()
+  .max(80)
+  .refine((id) => Boolean(findCatalogIllustration(id)), {
+    message: "Choose an illustration from the library.",
+  })
+  .nullable()
+  .optional()
+
 export const setupProductPayloadSchema = z
   .object({
     kind: z.literal("product"),
@@ -94,6 +108,7 @@ export const setupProductPayloadSchema = z
     usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
     /** A product photo the owner sent in this setup; attached only on add. */
     photoAttachmentId: z.string().max(64).optional(),
+    illustrationId: illustrationIdField,
   })
   .strict()
 
@@ -106,6 +121,7 @@ export const setupServicePayloadSchema = z
     priceMinor: z.number().int().min(0).max(100_000_000).optional(),
     categoryKey: z.string().max(120).optional(),
     quickSetupKey: z.string().max(120).optional(),
+    illustrationId: illustrationIdField,
   })
   .strict()
 

@@ -1,5 +1,6 @@
 import { catalogCategoryEmoji } from "@ewatrade/utils/catalog-category-emojis"
 import { getCatalogCategoryPresets } from "@ewatrade/utils/catalog-category-presets"
+import { recommendCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { listCatalogSetupHelpers } from "@ewatrade/utils/catalog-setup-helpers"
 import { tool } from "ai"
 import { z } from "zod"
@@ -23,6 +24,7 @@ import {
   setupCustomerPayloadSchema,
   setupEntityKey,
   setupEntityKind,
+  setupEntityPayloadSchema,
   setupFollowUpFieldSchema,
   setupMoneyAccountPayloadSchema,
   setupProductPayloadSchema,
@@ -395,6 +397,35 @@ function customerPayload(
   return parsed.success ? parsed.data : null
 }
 
+/**
+ * Products and services carry a library illustration: the one already chosen
+ * (kept across updates, including the owner's "none"), else the best match for
+ * the name. A product photo sent in the chat takes its place.
+ */
+function illustrated(
+  payload: SetupEntityPayload,
+  previous: unknown,
+  businessProfileKey: string | null,
+): SetupEntityPayload {
+  if (payload.kind !== "product" && payload.kind !== "service") return payload
+  if (payload.kind === "product" && payload.photoAttachmentId)
+    return { ...payload, illustrationId: undefined }
+  const before = setupEntityPayloadSchema.safeParse(previous)
+  const kept =
+    before.success &&
+    (before.data.kind === "product" || before.data.kind === "service")
+      ? before.data.illustrationId
+      : undefined
+  if (kept !== undefined) return { ...payload, illustrationId: kept }
+  const recommended = recommendCatalogIllustration({
+    name: payload.name,
+    kind: payload.kind,
+    businessProfileKey,
+    categoryKey: payload.categoryKey,
+  })
+  return recommended ? { ...payload, illustrationId: recommended.id } : payload
+}
+
 const NOT_AUTHORIZED: ToolEnvelope<never> = {
   status: "failed",
   warnings: [
@@ -474,8 +505,13 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         candidate.key && current.some((entity) => entity.key === candidate.key)
           ? candidate.key
           : setupEntityKey(candidate.payload.kind, candidate.payload.name)
-      const derived = deriveSetupEntityState(
+      const payload = illustrated(
         candidate.payload,
+        current.find((entity) => entity.key === key)?.payload,
+        deps.context.businessProfile?.key ?? null,
+      )
+      const derived = deriveSetupEntityState(
+        payload,
         (candidate.followUps ?? []).map((entry) => ({
           ...entry,
           required: false,
@@ -483,9 +519,9 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
       )
       writes.push({
         key,
-        kind: setupEntityKind(candidate.payload),
+        kind: setupEntityKind(payload),
         state: derived.state,
-        payload: candidate.payload,
+        payload,
         source: {
           messageId: deps.sourceMessageId,
           quote: candidate.quote,
