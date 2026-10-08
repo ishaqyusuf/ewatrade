@@ -25,8 +25,10 @@ remains disabled. General/native assistants are outside this release.
 - Hosted QA domain loading now succeeds and lists six existing profiles. Owner
   sign-in exposed the global Preview dashboard being resolved as tenant `preview`;
   the shared domain resolver now reserves that exact dashboard host and keeps
-  other tenant suffix hosts scoped. Regression/transport tests: 7/7. Rebuild and
-  hosted sign-in/keyboard verification remain open.
+  other tenant suffix hosts scoped. Regression/transport tests: 7/7. Dashboard/API Preview release
+  `e015a3f7` is Ready. Actual QA owner sign-in, 12-step Tab wrap, keyboard Finish,
+  two consecutive reopen cycles, Escape/focus return and seven-record recovery
+  pass. Media controls are absent.
 - Fresh live DeepSeek farm fixture passed; the approved Production moderation
   provider allowed fictional catalog text with all pinned categories validated.
 - Terms guard/prerequisite tests: 7/7. Preview intentionally bypasses Terms for
@@ -41,3 +43,13 @@ remains disabled. General/native assistants are outside this release.
 Do not infer Production release from green Preview builds. The current release
 record lives in `.brain/plans/2026-10-06-ai-setup-assistant-and-assistant-platform.md`
 and `.brain/qa/2026-10-07-setup-assistant-mvp-acceptance.md`.
+
+## Review handoff
+
+Owner requested the Preview QA selector so they can select an account and review.
+It is enabled and end-to-end verified. Text-only MVP checklist is 51/53 (96.2%);
+full roadmap 51/84 (60.7%). Remaining: owner packet/Preview review and Production
+schema/release, live non-QA Terms verification and activation. Production remains
+off. Both assistant worktrees are consolidated in this PR. No QA credentials or
+session material are committed. No new domain records were created during these
+hosted tests.
