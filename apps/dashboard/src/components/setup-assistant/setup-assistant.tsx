@@ -1,9 +1,17 @@
 "use client"
 
 import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { useSetupAssistantParams } from "@/hooks/use-setup-assistant-params"
 import { useTRPC } from "@/trpc/client"
 import type { SetupAssistantDataParts } from "@ewatrade/assistant/setup/messages"
-import { Button, Sheet } from "@ewatrade/ui"
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  Sheet,
+} from "@ewatrade/ui"
 import { SparklesIcon, TaskDone01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -34,18 +42,16 @@ type SetupFollowUpState = {
 }
 
 /**
- * Post-onboarding entry. The API decides availability (flag, role, Store);
- * whenever the assistant is unavailable or skipped, the ordinary launchpad shows.
+ * Post-onboarding entry. The API decides availability (flag, role, Store). The
+ * Overview shows a banner beside the ordinary launchpad; the chat and setup list
+ * open in a modal (`?setup=assistant`, also from search and the banner).
  */
 export function SetupAssistant({
   hasCatalogItems,
-  requested,
   offerSetup,
   fallback,
 }: {
   hasCatalogItems: boolean
-  /** Explicit `?setup=assistant` entry, e.g. after adding a first item by hand. */
-  requested: boolean
   /**
    * Whether to offer a setup that has not started yet (the launchpad still has
    * steps). Setups already started always show their progress.
@@ -55,6 +61,7 @@ export function SetupAssistant({
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const { setupOpen, setSetupOpen } = useSetupAssistantParams()
   const state = useQuery(trpc.setupAssistant.state.queryOptions())
   const refresh = () =>
     queryClient.invalidateQueries({
@@ -80,26 +87,43 @@ export function SetupAssistant({
     }),
   )
   const started = useRef(false)
+  const reopened = useRef(false)
   const visited = useRef<string | null>(null)
   const data = state.data
   const conversation = data?.enabled ? data.conversation : null
-  const shouldStart =
+  // A business with nothing in its catalog is offered setup once, opened for
+  // it; the modal can start a setup any time after that.
+  const firstOffer =
     data?.enabled === true &&
     !data.conversation &&
-    ((!hasCatalogItems && offerSetup) || requested)
+    !hasCatalogItems &&
+    offerSetup
+  const shouldStart =
+    data?.enabled === true && !data.conversation && (firstOffer || setupOpen)
 
   useEffect(() => {
     if (!shouldStart || started.current) return
     started.current = true
-    start.mutate()
-  }, [shouldStart, start])
+    start.mutate(undefined, { onSuccess: () => setSetupOpen(true) })
+  }, [shouldStart, start, setSetupOpen])
+
+  // Opening a skipped or finished setup (e.g. from search) reopens it.
+  const closed =
+    conversation?.status === "SKIPPED" || conversation?.status === "COMPLETED"
+  useEffect(() => {
+    if (!setupOpen || !closed || reopened.current) return
+    reopened.current = true
+    begin.mutate()
+  }, [setupOpen, closed, begin])
 
   // Chat only: a setup still waiting on the old offer step opens straight in,
-  // and each new visit (not a reload; the server checks) gets a fresh welcome.
+  // and each new visit (not a reload; the server checks) gets a fresh welcome
+  // when the owner opens the modal.
   const conversationId = conversation?.id ?? null
   const conversationStatus = conversation?.status ?? null
   useEffect(() => {
-    if (!conversationId || visited.current === conversationId) return
+    if (!setupOpen || !conversationId || visited.current === conversationId)
+      return
     if (conversationStatus === "OFFERED") {
       visited.current = conversationId
       begin.mutate()
@@ -107,80 +131,81 @@ export function SetupAssistant({
       visited.current = conversationId
       visit.mutate({ conversationId })
     }
-  }, [conversationId, conversationStatus, begin, visit])
+  }, [setupOpen, conversationId, conversationStatus, begin, visit])
 
   // The launchpad shows while availability loads, so a disabled assistant
-  // never changes the Overview; only an explicit entry waits on a skeleton.
-  if (state.isPending) return requested ? <SetupSkeleton /> : fallback
-  if (!data?.enabled) return fallback
-  // The assistant stays reachable for every owner, not only before the
-  // first Catalog item.
+  // never changes the Overview.
+  if (state.isPending || !data?.enabled) return fallback
   // Optional so an older API without the field stays typing-only.
   const mediaEnabled = "mediaEnabled" in data && data.mediaEnabled === true
-  if (!conversation && !requested && (hasCatalogItems || !offerSetup))
-    return (
-      <>
-        <ResumeBanner
-          mediaEnabled={mediaEnabled}
-          pending={start.isPending}
-          onResume={() => start.mutate()}
-        />
-        {fallback}
-      </>
-    )
-  if (!conversation) return <SetupSkeleton />
   // Optional so an older API without the field still shows the banner.
   const followUp: SetupFollowUpState | undefined =
     "followUp" in data ? data.followUp : undefined
   const areas: SetupAreaState[] =
     "areas" in data ? (data.areas as SetupAreaState[]) : []
-  if (
-    conversation.status === "SKIPPED" ||
-    conversation.status === "COMPLETED"
-  ) {
-    return (
-      <>
-        <ResumeBanner
-          mediaEnabled={mediaEnabled}
-          followUp={followUp}
-          areas={areas}
-          pending={begin.isPending}
-          onResume={() => begin.mutate()}
-        />
-        {fallback}
-      </>
-    )
-  }
-  if (conversation.status !== "OFFERED" && conversation.status !== "ACTIVE")
-    return fallback
+  const live =
+    conversation?.status === "OFFERED" || conversation?.status === "ACTIVE"
+      ? conversation
+      : null
+  const close = () => setSetupOpen(false)
 
   return (
-    <SetupWorkspace
-      conversationId={conversation.id}
-      status={conversation.status}
-      messages={data.messages as unknown as SetupChatMessage[]}
-      entities={(data.draft?.entities ?? []) as SetupDraftEntity[]}
-      attachments={
-        // Optional so an older API without the field still renders.
-        "attachments" in data ? (data.attachments as SetupAttachmentName[]) : []
-      }
-      currencyCode={data.currencyCode}
-      prerequisites={data.prerequisites}
-      mediaEnabled={mediaEnabled}
-      hasAdded={(followUp?.committed ?? 0) > 0}
-      pending={begin.isPending || skip.isPending || finish.isPending}
-      onSkip={() => skip.mutate()}
-      onFinish={() => finish.mutate()}
-    />
+    <>
+      <ResumeBanner
+        mediaEnabled={mediaEnabled}
+        followUp={conversation ? followUp : undefined}
+        areas={conversation ? areas : []}
+        pending={start.isPending || begin.isPending}
+        onResume={() => setSetupOpen(true)}
+      />
+      {fallback}
+      <Dialog
+        open={setupOpen}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+      >
+        {setupOpen ? (
+          <DialogContent className="flex h-[min(760px,calc(100svh-4rem))] max-w-[1120px] flex-col overflow-hidden p-0">
+            {live ? (
+              <SetupWorkspace
+                conversationId={live.id}
+                status={live.status as "OFFERED" | "ACTIVE"}
+                messages={data.messages as unknown as SetupChatMessage[]}
+                entities={(data.draft?.entities ?? []) as SetupDraftEntity[]}
+                attachments={
+                  // Optional so an older API without the field still renders.
+                  "attachments" in data
+                    ? (data.attachments as SetupAttachmentName[])
+                    : []
+                }
+                currencyCode={data.currencyCode}
+                prerequisites={data.prerequisites}
+                mediaEnabled={mediaEnabled}
+                hasAdded={(followUp?.committed ?? 0) > 0}
+                pending={begin.isPending || skip.isPending || finish.isPending}
+                onSkip={() => skip.mutate(undefined, { onSuccess: close })}
+                onFinish={() => finish.mutate(undefined, { onSuccess: close })}
+              />
+            ) : (
+              <SetupSkeleton />
+            )}
+          </DialogContent>
+        ) : null}
+      </Dialog>
+    </>
   )
 }
 
 function SetupSkeleton() {
   return (
-    <output
-      aria-label="Loading the setup assistant"
-      className="block h-[min(640px,calc(100dvh-12rem))] animate-pulse rounded-xl border border-border bg-muted/30"
-    />
+    <>
+      <DialogTitle className="sr-only">Set up your business</DialogTitle>
+      <output
+        aria-label="Loading the setup assistant"
+        className="block flex-1 animate-pulse bg-muted/30"
+      />
+    </>
   )
 }
 
@@ -308,17 +333,18 @@ function SetupWorkspace({
   return (
     <section
       aria-label="Setup assistant"
-      className="flex h-[min(720px,calc(100dvh-11rem))] min-h-[480px] overflow-hidden rounded-xl border border-border bg-background"
+      className="flex min-h-0 flex-1 overflow-hidden bg-background"
     >
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:px-6">
+        {/* Room on the right for the modal's close button. */}
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border py-3 pr-14 pl-4 sm:pl-6">
           <div className="min-w-0 flex-1 basis-52">
-            <h2 className="text-sm font-semibold text-foreground">
+            <DialogTitle className="text-sm font-semibold text-foreground">
               Set up your business
-            </h2>
-            <p className="hidden text-xs text-muted-foreground sm:block">
+            </DialogTitle>
+            <DialogDescription className="hidden text-xs text-muted-foreground sm:block">
               Describe your business in your own words, in any language.
-            </p>
+            </DialogDescription>
           </div>
           <div className="flex items-center gap-2">
             {status === "ACTIVE" ? (
