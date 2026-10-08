@@ -15,7 +15,7 @@ import {
   type InventoryUnitStockBehavior,
   OfferingPricingPolicy,
   OrderStatus,
-  PaymentStatus,
+  type PaymentStatus,
   ProductReturnDisposition,
   SellableOfferingKind,
   ServiceJobLineStatus,
@@ -1111,10 +1111,86 @@ export async function lookupCommercialOrders(
   return attachOrderActors(db, input.tenantId, records.map(serializeOrder))
 }
 
+/** The most orders a dated summary reads; more than this marks it partial. */
+export const REPORT_SUMMARY_WINDOW_LIMIT = 2000
+
+type ReportWindowOrder = {
+  _count: { payments: number }
+  amountPaidMinor: number
+  lines: Array<{ quantity: Prisma.Decimal | number | string }>
+  paymentStatus: PaymentStatus
+  totalMinor: number
+}
+
+/** Totals for a dated window, using the same paid rule as serialized orders. */
+export function summarizeOrderWindow(orders: ReportWindowOrder[]) {
+  let orderValueMinor = 0
+  let paidMinor = 0
+  let outstandingMinor = 0
+  let outstandingCount = 0
+  let itemsSold = 0
+  for (const order of orders) {
+    const paid = effectiveCommercialAmountPaid({
+      amountPaidMinor: order.amountPaidMinor,
+      paymentCount: order._count.payments,
+      paymentStatus: order.paymentStatus,
+      totalMinor: order.totalMinor,
+    })
+    const outstanding = Math.max(0, order.totalMinor - paid)
+    orderValueMinor += order.totalMinor
+    paidMinor += Math.min(paid, order.totalMinor)
+    outstandingMinor += outstanding
+    if (outstanding > 0) outstandingCount += 1
+    for (const line of order.lines)
+      itemsSold += Number(line.quantity.toString())
+  }
+  return {
+    itemsSold: Math.round(itemsSold * 100) / 100,
+    orderCount: orders.length,
+    orderValueMinor,
+    outstandingCount,
+    outstandingMinor,
+    paidMinor,
+  }
+}
+
 export async function getCommercialOrderReportSummary(
   db: PrismaClient,
-  input: OrderScope,
+  input: OrderScope & {
+    createdAfter?: Date
+    createdBefore?: Date
+    statuses?: OrderStatus[]
+  },
 ) {
+  if (input.createdAfter || input.createdBefore) {
+    const orders = await db.commercialOrder.findMany({
+      select: {
+        _count: { select: { payments: true } },
+        amountPaidMinor: true,
+        lines: { select: { quantity: true } },
+        paymentStatus: true,
+        totalMinor: true,
+      },
+      take: REPORT_SUMMARY_WINDOW_LIMIT + 1,
+      where: {
+        tenantId: input.tenantId,
+        createdByUserId: input.createdByUserId,
+        ...(input.storeId ? { storeId: input.storeId } : {}),
+        ...(input.statuses?.length ? { status: { in: input.statuses } } : {}),
+        createdAt: {
+          ...(input.createdAfter ? { gte: input.createdAfter } : {}),
+          ...(input.createdBefore ? { lt: input.createdBefore } : {}),
+        },
+      },
+    })
+    const partial = orders.length > REPORT_SUMMARY_WINDOW_LIMIT
+    return {
+      ...summarizeOrderWindow(
+        partial ? orders.slice(0, REPORT_SUMMARY_WINDOW_LIMIT) : orders,
+      ),
+      partial,
+    }
+  }
   const summary = await db.commercialOrder.aggregate({
     _count: { _all: true },
     _sum: { totalMinor: true },

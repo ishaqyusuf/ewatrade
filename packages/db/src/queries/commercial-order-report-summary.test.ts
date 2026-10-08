@@ -71,3 +71,67 @@ describe("Commercial Order report summary", () => {
     ])
   })
 })
+
+describe("Commercial Order report summary for a date window", () => {
+  test("totals paid, outstanding and items with the serialized paid rule", async () => {
+    const calls: Array<{ where: Record<string, unknown> }> = []
+    const after = new Date("2026-10-08T00:00:00Z")
+    const before = new Date("2026-10-09T00:00:00Z")
+    const db = {
+      commercialOrder: {
+        findMany: async (input: { where: Record<string, unknown> }) => {
+          calls.push(input)
+          return [
+            // Fully paid through payments.
+            {
+              _count: { payments: 1 },
+              amountPaidMinor: 650_000,
+              lines: [{ quantity: "10" }],
+              paymentStatus: "PAID",
+              totalMinor: 650_000,
+            },
+            // Part paid.
+            {
+              _count: { payments: 1 },
+              amountPaidMinor: 200_000,
+              lines: [{ quantity: "50" }],
+              paymentStatus: "PARTIAL",
+              totalMinor: 425_000,
+            },
+            // Legacy PAID with no payment rows counts as paid.
+            {
+              _count: { payments: 0 },
+              amountPaidMinor: 0,
+              lines: [{ quantity: "2" }, { quantity: "0.5" }],
+              paymentStatus: "PAID",
+              totalMinor: 280_000,
+            },
+          ]
+        },
+      },
+    } as unknown as PrismaClient
+
+    await expect(
+      getCommercialOrderReportSummary(db, {
+        createdAfter: after,
+        createdBefore: before,
+        statuses: ["COMPLETED"],
+        tenantId: "tenant_123",
+      }),
+    ).resolves.toEqual({
+      itemsSold: 62.5,
+      orderCount: 3,
+      orderValueMinor: 1_355_000,
+      outstandingCount: 1,
+      outstandingMinor: 225_000,
+      paidMinor: 1_130_000,
+      partial: false,
+    })
+    expect(calls[0]?.where).toEqual({
+      createdAt: { gte: after, lt: before },
+      createdByUserId: undefined,
+      status: { in: ["COMPLETED"] },
+      tenantId: "tenant_123",
+    })
+  })
+})

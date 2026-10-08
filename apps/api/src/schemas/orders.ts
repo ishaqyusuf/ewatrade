@@ -108,10 +108,6 @@ export const commercialOrderListSchema = z
   })
   .strict()
 
-export const commercialOrderReportSummarySchema = z
-  .object({ storeId: z.string().trim().min(1).optional() })
-  .strict()
-
 const commercialOrderStatusSchema = z.enum([
   "DRAFT",
   "PENDING",
@@ -123,6 +119,16 @@ const commercialOrderStatusSchema = z.enum([
   "CANCELLED",
   "REFUNDED",
 ])
+
+/** Without a date range: all-time totals. With one: paid/outstanding too. */
+export const commercialOrderReportSummarySchema = z
+  .object({
+    createdAfter: z.coerce.date().optional(),
+    createdBefore: z.coerce.date().optional(),
+    statuses: z.array(commercialOrderStatusSchema).max(9).optional(),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
 
 export const commercialOrderListPageSchema = z
   .object({

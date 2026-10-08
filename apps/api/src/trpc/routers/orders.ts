@@ -259,10 +259,12 @@ export const ordersRouter = createTRPCRouter({
             input.storeId,
           )
         : undefined
-      const summary = await getCommercialOrderReportSummary(
-        ctx.db,
-        await orderScope(ctx, { storeId }),
-      )
+      const summary = await getCommercialOrderReportSummary(ctx.db, {
+        ...(await orderScope(ctx, { storeId })),
+        createdAfter: input?.createdAfter,
+        createdBefore: input?.createdBefore,
+        statuses: input?.statuses,
+      })
       return {
         ...summary,
         currencyCode:
