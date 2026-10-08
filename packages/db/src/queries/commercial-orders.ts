@@ -1117,6 +1117,7 @@ export const REPORT_SUMMARY_WINDOW_LIMIT = 2000
 type ReportWindowOrder = {
   _count: { payments: number }
   amountPaidMinor: number
+  payments?: Array<{ amountMinor: number; method: string; type: string }>
   lines: Array<{ quantity: Prisma.Decimal | number | string }>
   paymentStatus: PaymentStatus
   totalMinor: number
@@ -1129,13 +1130,24 @@ export function summarizeOrderWindow(orders: ReportWindowOrder[]) {
   let outstandingMinor = 0
   let outstandingCount = 0
   let itemsSold = 0
+  // Paid by method from payment rows (refunds subtract). Older orders marked
+  // paid without payment rows count as OTHER.
+  const paidByMethod: Record<string, number> = {}
   for (const order of orders) {
+    for (const payment of order.payments ?? []) {
+      const signed =
+        payment.type === "REFUND" ? -payment.amountMinor : payment.amountMinor
+      paidByMethod[payment.method] =
+        (paidByMethod[payment.method] ?? 0) + signed
+    }
     const paid = effectiveCommercialAmountPaid({
       amountPaidMinor: order.amountPaidMinor,
       paymentCount: order._count.payments,
       paymentStatus: order.paymentStatus,
       totalMinor: order.totalMinor,
     })
+    if (order._count.payments === 0 && paid > 0)
+      paidByMethod.OTHER = (paidByMethod.OTHER ?? 0) + paid
     const outstanding = Math.max(0, order.totalMinor - paid)
     orderValueMinor += order.totalMinor
     paidMinor += Math.min(paid, order.totalMinor)
@@ -1150,6 +1162,7 @@ export function summarizeOrderWindow(orders: ReportWindowOrder[]) {
     orderValueMinor,
     outstandingCount,
     outstandingMinor,
+    paidByMethod,
     paidMinor,
   }
 }
@@ -1169,6 +1182,7 @@ export async function getCommercialOrderReportSummary(
         amountPaidMinor: true,
         lines: { select: { quantity: true } },
         paymentStatus: true,
+        payments: { select: { amountMinor: true, method: true, type: true } },
         totalMinor: true,
       },
       take: REPORT_SUMMARY_WINDOW_LIMIT + 1,

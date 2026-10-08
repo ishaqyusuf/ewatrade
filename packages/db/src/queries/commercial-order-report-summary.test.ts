@@ -88,6 +88,9 @@ describe("Commercial Order report summary for a date window", () => {
               amountPaidMinor: 650_000,
               lines: [{ quantity: "10" }],
               paymentStatus: "PAID",
+              payments: [
+                { amountMinor: 650_000, method: "CASH", type: "PAYMENT" },
+              ],
               totalMinor: 650_000,
             },
             // Part paid.
@@ -96,6 +99,18 @@ describe("Commercial Order report summary for a date window", () => {
               amountPaidMinor: 200_000,
               lines: [{ quantity: "50" }],
               paymentStatus: "PARTIAL",
+              payments: [
+                {
+                  amountMinor: 250_000,
+                  method: "BANK_TRANSFER",
+                  type: "PAYMENT",
+                },
+                {
+                  amountMinor: 50_000,
+                  method: "BANK_TRANSFER",
+                  type: "REFUND",
+                },
+              ],
               totalMinor: 425_000,
             },
             // Legacy PAID with no payment rows counts as paid.
@@ -124,6 +139,7 @@ describe("Commercial Order report summary for a date window", () => {
       orderValueMinor: 1_355_000,
       outstandingCount: 1,
       outstandingMinor: 225_000,
+      paidByMethod: { BANK_TRANSFER: 200_000, CASH: 650_000, OTHER: 280_000 },
       paidMinor: 1_130_000,
       partial: false,
     })

@@ -125,6 +125,8 @@ export const commercialOrderReportSummarySchema = z
   .object({
     createdAfter: z.coerce.date().optional(),
     createdBefore: z.coerce.date().optional(),
+    /** Only the caller's own orders (a sales rep's "Your sales"). */
+    mine: z.boolean().optional(),
     statuses: z.array(commercialOrderStatusSchema).max(9).optional(),
     storeId: z.string().trim().min(1).optional(),
   })
