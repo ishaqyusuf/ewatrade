@@ -465,6 +465,7 @@ export function CatalogEssentialsFields({
         onBlur={onNameBlur}
         placeholder={guidance.name.placeholder}
         returnKeyType="next"
+        variant="green-gate"
         value={name}
       />
       {kind === "product" && showProductEssentials ? (
@@ -476,6 +477,7 @@ export function CatalogEssentialsFields({
             maxLength={80}
             onChangeText={onUnitNameChange}
             placeholder={guidance.stockUnit?.placeholder}
+            variant="green-gate"
             value={unitName}
           />
           <MoneyField
@@ -490,6 +492,7 @@ export function CatalogEssentialsFields({
             label="Selling price"
             onChangeValue={onPriceChange}
             placeholder="0.00"
+            variant="green-gate"
             value={price}
           />
         </View>
@@ -500,6 +503,7 @@ export function CatalogEssentialsFields({
           label="Fixed price"
           onChangeValue={onPriceChange}
           placeholder="0.00"
+          variant="green-gate"
           value={price}
         />
       ) : null}
