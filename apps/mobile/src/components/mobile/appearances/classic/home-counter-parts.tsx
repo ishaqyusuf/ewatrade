@@ -11,6 +11,7 @@ import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layou
 import { cn } from "@/lib/utils"
 import { Text as NativeText } from "react-native"
 
+/** Green Till Home header: avatar, greeting over the business switcher, tools. */
 export function ClassicCounterHeader(props: DashboardHeroProps) {
   const largeText = useLargeTextLayout()
   const initial =
@@ -26,22 +27,6 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
     <View className="flex-row gap-2">
       <Pressable
         accessibilityLabel={
-          props.hasNotification
-            ? "Open sync status, items need attention"
-            : "Open sync status"
-        }
-        accessibilityRole="button"
-        className="relative size-12 items-center justify-center rounded-full bg-card active:bg-accent"
-        haptic
-        onPress={props.onNotificationPress}
-      >
-        <Icon className="size-base text-foreground" name="RefreshCw" />
-        {props.hasNotification ? (
-          <View className="absolute right-1 top-1 size-2 rounded-full bg-destructive" />
-        ) : null}
-      </Pressable>
-      <Pressable
-        accessibilityLabel={
           props.onSearchPress
             ? "Open global search"
             : "Search unavailable offline"
@@ -49,19 +34,37 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
         accessibilityRole="button"
         disabled={!props.onSearchPress}
         className={cn(
-          "size-12 items-center justify-center rounded-full bg-card active:bg-accent",
+          "size-[38px] items-center justify-center rounded-full bg-card shadow-sm active:bg-accent",
           !props.onSearchPress && "opacity-50",
         )}
         haptic={!!props.onSearchPress}
+        hitSlop={4}
         onPress={props.onSearchPress}
       >
-        <Icon className="size-base text-foreground" name="Search" />
+        <Icon className="size-[19px] text-foreground" name="Search" />
+      </Pressable>
+      <Pressable
+        accessibilityLabel={
+          props.hasNotification
+            ? "Open sync status, items need attention"
+            : "Open sync status"
+        }
+        accessibilityRole="button"
+        className="relative size-[38px] items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+        haptic
+        hitSlop={4}
+        onPress={props.onNotificationPress}
+      >
+        <Icon className="size-[19px] text-foreground" name="RefreshCw" />
+        {props.hasNotification ? (
+          <View className="absolute right-[8px] top-[7px] size-2 rounded-full border-2 border-card bg-gold" />
+        ) : null}
       </Pressable>
     </View>
   )
   return (
-    <View className="gap-3">
-      <View className="flex-row items-center gap-3">
+    <View className="mb-1 mt-1.5 gap-3">
+      <View className="flex-row items-center gap-2.5">
         <Pressable
           accessibilityLabel={`${props.greetingName} account and business settings`}
           accessibilityRole="button"
@@ -69,20 +72,21 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
           style={{
             alignItems: "center",
             backgroundColor: avatarColor,
-            borderRadius: 24,
+            borderRadius: 20,
             flexShrink: 0,
-            height: 48,
+            height: 40,
             justifyContent: "center",
-            width: 48,
+            width: 40,
           }}
           haptic={!!props.onProfilePress}
+          hitSlop={4}
           onPress={props.onProfilePress}
         >
           <NativeText
             style={{
               color: MOBILE_ACCOUNT_AVATAR_TOKENS.foreground,
               fontSize: 16,
-              fontWeight: "700",
+              fontWeight: "800",
             }}
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
           >
@@ -90,21 +94,25 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
           </NativeText>
         </Pressable>
         <View className="min-w-0 flex-1">
-          <Text className="text-lg font-bold text-foreground">
-            Hello, {props.greetingName}
+          <Text className="text-xs font-semibold text-muted-foreground">
+            {homeGreeting(new Date().getHours())}, {props.greetingName}
           </Text>
           <Pressable
             accessibilityLabel={`Switch Business, ${props.businessName}`}
             accessibilityRole="button"
-            className="min-h-12 flex-row items-center gap-1 active:opacity-70"
+            className="min-h-7 flex-row items-center gap-1 active:opacity-70"
             haptic
+            hitSlop={6}
             onPress={props.onBusinessPress}
           >
-            <Text className="min-w-0 shrink text-sm text-muted-foreground">
+            <Text
+              className="min-w-0 shrink text-[17px] font-extrabold tracking-tight text-foreground"
+              numberOfLines={largeText ? undefined : 1}
+            >
               {props.businessName}
             </Text>
             <Icon
-              className="size-xs text-muted-foreground"
+              className="size-[15px] text-muted-foreground"
               name="ChevronDown"
             />
           </Pressable>
@@ -114,6 +122,12 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
       {largeText ? <View className="self-end">{tools}</View> : null}
     </View>
   )
+}
+
+export function homeGreeting(hour: number) {
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  return "Good evening"
 }
 
 export function CounterHeading({

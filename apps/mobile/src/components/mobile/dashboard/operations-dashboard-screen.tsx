@@ -10,8 +10,8 @@ import {
   ClassicSalesRepOverview,
   ClassicSalesRepSection,
 } from "@/components/mobile/appearances/classic/dashboard-screen"
+import { GreenTillOwnerHome } from "@/components/mobile/appearances/classic/green-till-home"
 import { ClassicCounterHeader } from "@/components/mobile/appearances/classic/home-counter-parts"
-import { ClassicHomeJourney } from "@/components/mobile/appearances/classic/home-journey"
 import {
   BusinessHomeMarketLedgerEmptyOrders,
   BusinessHomeMarketLedgerHero,
@@ -67,9 +67,18 @@ import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useFocusEffect, useRouter } from "expo-router"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { View } from "react-native"
-import { getHomeJourneyMetrics } from "./home-journey-metrics"
+import {
+  SALE_STATUSES,
+  greenTillHomeStage,
+  homeMoney,
+  orderPaymentPill,
+  recordAvatar,
+  salesDelta,
+  salesWindows,
+  timeLabel,
+} from "./green-till-home-model"
 import { useHomeJourney } from "./use-home-journey"
 
 export function OperationsDashboardSurface({
@@ -157,6 +166,41 @@ export function OperationsDashboardSurface({
       { enabled: !isOffline && !scopedStaff, retry: false },
     ),
   )
+  // Green Till Home: today's sales, yesterday for the change, and what needs
+  // attention. Windows are fixed per day so query keys stay stable.
+  const dayKey = new Date().toDateString()
+  // biome-ignore lint/correctness/useExhaustiveDependencies: recompute once per day
+  const windows = useMemo(() => salesWindows(new Date()), [dayKey])
+  const salesQueryEnabled = isClassicOwner && !isOffline
+  const todaySales = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...windows.today, statuses: [...SALE_STATUSES] },
+      { enabled: salesQueryEnabled, retry: false },
+    ),
+  )
+  const yesterdaySales = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...windows.yesterday, statuses: [...SALE_STATUSES] },
+      { enabled: salesQueryEnabled, retry: false },
+    ),
+  )
+  const recentUnpaid = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      {
+        createdAfter: new Date(
+          windows.today.createdAfter.getTime() - 30 * 24 * 60 * 60_000,
+        ),
+        statuses: [...SALE_STATUSES],
+      },
+      { enabled: salesQueryEnabled, retry: false },
+    ),
+  )
+  const toDeliver = useQuery(
+    trpc.orders.listPage.queryOptions(
+      { limit: 50, statuses: ["READY_FOR_PICKUP", "OUT_FOR_DELIVERY"] },
+      { enabled: salesQueryEnabled, retry: false },
+    ),
+  )
   const orderRows = orders.data ?? []
   const currency = profile?.currencyCode ?? "NGN"
   const orderValue = orderRows.reduce(
@@ -210,35 +254,6 @@ export function OperationsDashboardSurface({
     availabilityPending: isFeatureAvailabilityPending,
     isOffline,
     loadedOrderCount: orderRows.length,
-  })
-  const ownerMetrics = getHomeJourneyMetrics({
-    isOffline,
-    catalogReady: hasSellableCatalogItem,
-    hasProducts: hasProduct,
-    hasServiceWork:
-      featureAvailability.hasServiceItems || featureAvailability.hasServiceJobs,
-    orderQuery: {
-      resolved: orders.data !== undefined,
-      unavailable: orders.isError,
-      stale: orders.isError && orders.data !== undefined,
-    },
-    stockQuery: {
-      resolved: balances.data !== undefined,
-      unavailable: balances.isError,
-      stale: balances.isError && balances.data !== undefined,
-    },
-    workQuery: {
-      resolved: service.data !== undefined,
-      unavailable: service.isError,
-      stale: service.isError && service.data !== undefined,
-    },
-    loadedOrderCount: orderRows.length,
-    queuedOrders: provisional.commercialOrders,
-    loadedStockCount: balances.data?.rows.length ?? 0,
-    queuedStockOperations: provisional.inventoryOperations,
-    loadedWorkCount: service.data?.length ?? 0,
-    queuedWorkOperations: provisional.serviceOperations,
-    loadedOrderValue: formatMinorMoney(orderValue, currency),
   })
   const salesRepPresentation = getSalesRepShiftLedgerPresentation({
     hasSellableCatalogItem,
@@ -480,7 +495,7 @@ export function OperationsDashboardSurface({
       title="Today"
     >
       {!isAttendant ? <OrderVisibilityCard review /> : null}
-      {isOffline ? (
+      {isOffline && !isClassicOwner ? (
         <StatusBanner
           icon="Wind"
           message={`${commands.filter((command) => command.localStatus === "pending" || command.localStatus === "approval").length} commands waiting. Provisional: ${provisional.commercialOrders} orders, ${provisional.inventoryOperations} inventory operations, ${provisional.serviceOperations} service operations.`}
@@ -490,62 +505,162 @@ export function OperationsDashboardSurface({
       ) : null}
 
       {isClassicOwner ? (
-        <ClassicHomeJourney
-          {...ownerMetrics}
-          journey={ownerHome.journey}
+        <GreenTillOwnerHome
+          attention={[
+            ...((recentUnpaid.data?.outstandingCount ?? 0) > 0
+              ? [
+                  {
+                    icon: "Wallet" as const,
+                    key: "unpaid",
+                    onPress: () => router.push("/orders" as never),
+                    sub: `${homeMoney(recentUnpaid.data?.outstandingMinor ?? 0, currency)} to collect`,
+                    tint: "amber" as const,
+                    title: `${recentUnpaid.data?.outstandingCount} unpaid ${recentUnpaid.data?.outstandingCount === 1 ? "order" : "orders"}`,
+                  },
+                ]
+              : []),
+            ...((toDeliver.data?.items.length ?? 0) > 0
+              ? [
+                  {
+                    icon: "Truck" as const,
+                    key: "deliver",
+                    onPress: () => router.push("/orders" as never),
+                    sub: "Ready or on the way",
+                    tint: "sky" as const,
+                    title: `${toDeliver.data?.items.length}${toDeliver.data?.nextCursor ? "+" : ""} ${toDeliver.data?.items.length === 1 ? "order" : "orders"} to deliver`,
+                  },
+                ]
+              : []),
+          ]}
+          blocked={
+            ownerHome.journey.workspace === "offline-unknown"
+              ? {
+                  icon: "WifiOff",
+                  message:
+                    "Reconnect to confirm your latest catalog and Store setup.",
+                  title: "Store overview unavailable offline",
+                }
+              : {
+                  icon: "TriangleAlert",
+                  message: "Pull down or try again to load your Store.",
+                  onRetry: () => void featureAvailabilityQuery.refetch(),
+                  title: "Store overview unavailable",
+                }
+          }
+          businessName={profile?.businessName ?? "your business"}
+          canCreateSale={hasSellableCatalogItem}
           isOffline={isOffline}
-          availabilityStale={
-            featureAvailabilityQuery.isError && hasResolvedFeatureAvailability
-          }
-          syncLabel={
-            isOffline || pendingCommandCount > 0
-              ? `${pendingCommandCount} waiting to sync`
-              : "Synced now"
-          }
-          syncAttention={isOffline || pendingCommandCount > 0}
-          canManageTeam={ownerHome.canManage}
-          teamPreferenceError={ownerHome.preference.error}
-          teamPreferenceSaving={ownerHome.preference.saving}
-          onDismissTeam={() => void ownerHome.preference.dismiss()}
           onAddItem={() => router.push("/first-product-setup-modal" as never)}
-          onCatalog={() => router.push("/catalog-items-modal" as never)}
-          onCreateOrder={() => {
+          onInviteTeam={
+            ownerHome.canManage
+              ? () => router.push("/staff-invite-modal" as never)
+              : undefined
+          }
+          onNewSale={() => {
             if (hasSellableCatalogItem)
               router.push("/create-sale-modal" as never)
           }}
           onOrders={() => router.push("/orders" as never)}
-          onTeam={() => {
-            if (ownerHome.canManage) router.push("/staff-invite-modal" as never)
-          }}
+          onPayment={() => router.push("/payments-received-modal" as never)}
+          onStockIn={() => router.push("/stock-intake-modal" as never)}
           onSync={() => router.push("/sync-status-modal" as never)}
-          onRetry={() => {
-            if (isOffline) return
-            void featureAvailabilityQuery.refetch()
-            void orders.refetch()
-            void balances.refetch()
-            void service.refetch()
-          }}
-          onOperationalAction={operationalAction.onPress}
-          operationalActionLabel={operationalAction.label}
-          recentOrders={orderRows
-            .slice(0, 4)
-            .map((order) => (
-              <DashboardRecentOrderRow
-                key={order.id}
-                amount={formatMinorMoney(order.totalMinor, order.currencyCode)}
-                customer={
-                  order.customerName ||
-                  order.customerPhone ||
-                  "Walk-in customer"
+          pendingCommandCount={pendingCommandCount}
+          recentOrders={orderRows.slice(0, 4).map((order, index) => {
+            const customer =
+              order.customerName || order.customerPhone || "Walk-in customer"
+            const pill = orderPaymentPill(order)
+            return {
+              amount: homeMoney(order.totalMinor, order.currencyCode),
+              avatar: recordAvatar(customer, index),
+              customer,
+              id: order.id,
+              meta: [
+                order.orderNumber,
+                order.lines
+                  .map(
+                    (line) =>
+                      `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
+                  )
+                  .join(", "),
+                timeLabel(order.createdAt),
+              ]
+                .filter(Boolean)
+                .join(" · "),
+              onPress: () =>
+                router.push(`/order/${encodeURIComponent(order.id)}` as never),
+              pill,
+            }
+          })}
+          recentState={
+            orders.data !== undefined
+              ? orderRows.length
+                ? "loaded"
+                : "empty"
+              : orders.isError
+                ? "unavailable"
+                : isOffline
+                  ? "empty"
+                  : "loading"
+          }
+          sales={
+            todaySales.data
+              ? {
+                  amount: homeMoney(
+                    todaySales.data.orderValueMinor,
+                    todaySales.data.currencyCode,
+                  ),
+                  asOf: isOffline
+                    ? timeLabel(new Date(todaySales.dataUpdatedAt))
+                    : undefined,
+                  delta:
+                    yesterdaySales.data && "paidMinor" in todaySales.data
+                      ? salesDelta(
+                          todaySales.data.orderValueMinor,
+                          yesterdaySales.data.orderValueMinor,
+                        )
+                      : null,
+                  orderCount: todaySales.data.orderCount,
+                  partial:
+                    "partial" in todaySales.data && !!todaySales.data.partial,
+                  stats:
+                    "paidMinor" in todaySales.data
+                      ? [
+                          {
+                            label: "Paid",
+                            value: homeMoney(
+                              todaySales.data.paidMinor,
+                              todaySales.data.currencyCode,
+                            ),
+                          },
+                          {
+                            label: "Unpaid",
+                            value: homeMoney(
+                              todaySales.data.outstandingMinor,
+                              todaySales.data.currencyCode,
+                            ),
+                          },
+                          {
+                            label: "Items sold",
+                            value: String(todaySales.data.itemsSold),
+                          },
+                        ]
+                      : [],
+                  status: isOffline ? "cached" : "ready",
                 }
-                detail={`${order.orderNumber} · ${order.lines.map((line) => `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`).join(", ")}`}
-                onPress={() =>
-                  router.push(`/order/${encodeURIComponent(order.id)}` as never)
+              : todaySales.isError || isOffline
+                ? { status: "unavailable" }
+                : { status: "loading" }
+          }
+          stage={greenTillHomeStage(ownerHome.journey)}
+          team={
+            ownerHome.journey.showTeamPrompt
+              ? {
+                  error: ownerHome.preference.error,
+                  onDismiss: () => void ownerHome.preference.dismiss(),
+                  saving: ownerHome.preference.saving,
                 }
-                status={formatStatusLabel(order.status)}
-                tone={getOrderStatusTone(order.status)}
-              />
-            ))}
+              : undefined
+          }
         />
       ) : isOfflineAvailabilityUnknown ? (
         <StatusBanner
