@@ -472,10 +472,12 @@ export function GhostPreview({
   bars = [30, 45, 25, 60, 50, 70, 40],
   icon = "Sparkles",
   message,
+  variant = "chart",
 }: {
   bars?: number[]
   icon?: IconKeys
   message: string
+  variant?: "chart" | "rows"
 }) {
   const colors = useColors()
   return (
@@ -488,21 +490,43 @@ export function GhostPreview({
         <Icon className="size-[14px] text-muted-foreground" name={icon} />
         <Text className="flex-1 text-xs text-muted-foreground">{message}</Text>
       </View>
-      <View className="mt-2.5 h-[46px] flex-row items-end gap-1.5">
-        {bars.map((height, index) => (
-          <View
-            // biome-ignore lint/suspicious/noArrayIndexKey: decorative bars
-            key={index}
-            style={{
-              backgroundColor: colors.border,
-              borderRadius: 4,
-              flex: 1,
-              height: `${height}%`,
-              opacity: 0.7,
-            }}
-          />
-        ))}
-      </View>
+      {variant === "rows" ? (
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          className="mt-2.5 gap-3"
+        >
+          {["one", "two", "three"].map((key) => (
+            <View
+              key={key}
+              className="flex-row items-center gap-3 border-b border-dashed border-border py-3"
+            >
+              <View className="size-[42px] rounded-[14px] bg-border" />
+              <View className="flex-1 gap-2">
+                <View className="h-2.5 w-3/4 rounded bg-border" />
+                <View className="h-2 w-1/2 rounded bg-border" />
+              </View>
+              <View className="h-2.5 w-12 rounded bg-border" />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View className="mt-2.5 h-[46px] flex-row items-end gap-1.5">
+          {bars.map((height, index) => (
+            <View
+              // biome-ignore lint/suspicious/noArrayIndexKey: decorative bars
+              key={index}
+              style={{
+                backgroundColor: colors.border,
+                borderRadius: 4,
+                flex: 1,
+                height: `${height}%`,
+                opacity: 0.7,
+              }}
+            />
+          ))}
+        </View>
+      )}
     </View>
   )
 }

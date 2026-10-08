@@ -1,6 +1,7 @@
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { useColors } from "@/hooks/use-color"
+import { cn } from "@/lib/utils"
 import { useEffect } from "react"
 import Animated, {
   useAnimatedStyle,
@@ -19,6 +20,7 @@ type ListCreateFabProps = {
   onPress: () => void
   sitsAboveDock?: boolean
   testID?: string
+  tone?: "default" | "gold"
 }
 
 export function ListCreateFab({
@@ -29,6 +31,7 @@ export function ListCreateFab({
   onPress,
   sitsAboveDock = false,
   testID,
+  tone = "default",
 }: ListCreateFabProps) {
   const colors = useColors()
   const insets = useSafeAreaInsets()
@@ -72,18 +75,27 @@ export function ListCreateFab({
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         accessibilityState={{ disabled }}
-        className={
-          disabled
-            ? "size-14 items-center justify-center rounded-full bg-primary opacity-45"
-            : "size-14 items-center justify-center rounded-full bg-primary"
-        }
+        className={cn(
+          "size-14 items-center justify-center",
+          tone === "gold"
+            ? "rounded-[18px] bg-gold"
+            : "rounded-full bg-primary",
+          disabled && "opacity-45",
+        )}
         disabled={disabled}
         haptic={!disabled}
         onPress={onPress}
         testID={testID}
         transition
       >
-        <Icon className="size-md text-primary-foreground" name="Plus" />
+        <Icon
+          className={
+            tone === "gold"
+              ? "size-[24px] text-gold-foreground"
+              : "size-md text-primary-foreground"
+          }
+          name="Plus"
+        />
       </Pressable>
     </Animated.View>
   )
