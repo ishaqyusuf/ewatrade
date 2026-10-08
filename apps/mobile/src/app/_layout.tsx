@@ -123,7 +123,7 @@ const InitialLayout = ({
   return (
     <>
       <OfflinePolicyReconciler />
-<OrderVisibilityReconciler />
+      <OrderVisibilityReconciler />
       <StatusBar
         style={startupVisible || colorScheme === "dark" ? "light" : "dark"}
       />
