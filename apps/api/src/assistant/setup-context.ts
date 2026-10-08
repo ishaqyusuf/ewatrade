@@ -10,9 +10,14 @@ import {
 import { TRPCError } from "@trpc/server"
 import type { TRPCContext } from "../trpc/init"
 
+/**
+ * Per business, per 30 days. Measured (S06-03): a complete four-area setup is
+ * about 6 turns and 65k-105k tokens, so turns are the binding limit (about 10
+ * setups); 1M tokens costs at most about $0.30 uncached at DeepSeek peak.
+ */
 export const SETUP_BUDGET_LIMITS = {
   maxRequests: 60,
-  maxTokens: 400_000,
+  maxTokens: 1_000_000,
   windowMs: 30 * 24 * 60 * 60 * 1000,
 }
 
