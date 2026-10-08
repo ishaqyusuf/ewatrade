@@ -17,6 +17,7 @@ import {
 import type { EligibleAgeBand } from "../../lib/signup-age"
 import { getDashboardRouteUrl } from "../../lib/signup-navigation"
 import type { BusinessValues, OwnerValues } from "../../lib/signup-schemas"
+import { SignupPresentation, SignupPreviewSync } from "./signup-presentation"
 import { SignupStart } from "./signup-start"
 import { SignupStepper } from "./signup-stepper"
 import { StepBusiness } from "./step-business"
@@ -71,6 +72,14 @@ const ageChoices: Array<{
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function SignupFlow() {
+  return (
+    <SignupPresentation>
+      <SignupFlowContent />
+    </SignupPresentation>
+  )
+}
+
+function SignupFlowContent() {
   const workflow = useDashboardWorkflow()
   const [entryAgeChoice, setEntryAgeChoice] = useState<
     EligibleAgeBand | "UNDER_13" | null
@@ -445,11 +454,22 @@ export function SignupFlow() {
 
   return (
     <main className="signup-main">
+      <SignupPreviewSync
+        name={formState.business?.businessName}
+        city={formState.business?.city}
+      />
       <div>
         {/* Stepper (hidden on success step) */}
-        {step < 5 && !needsStart && (
+        {step < 5 && (
           <SignupStepper
             currentStep={step}
+            entryStage={
+              needsStart
+                ? "start"
+                : verificationEmail && !entryReady
+                  ? "verify"
+                  : undefined
+            }
             acceptanceRequired={legalPublication?.acceptanceRequired ?? true}
           />
         )}

@@ -16,15 +16,6 @@ type StepSuccessProps = {
   storefrontUrl?: string
 }
 
-function displayAddress(url: string) {
-  try {
-    const parsed = new URL(url)
-    return parsed.host + (parsed.pathname === "/" ? "" : parsed.pathname)
-  } catch {
-    return url.replace(/^https?:\/\//, "")
-  }
-}
-
 export function StepSuccess({
   businessName,
   dashboardUrl,
@@ -32,22 +23,23 @@ export function StepSuccess({
   emailDeliveryStatus = "sent",
 }: StepSuccessProps) {
   const resolvedDashboardUrl = dashboardUrl ?? getDashboardRouteUrl("")
+  const assistantUrl = new URL(resolvedDashboardUrl)
+  assistantUrl.searchParams.set("setup", "assistant")
+  const saleUrl = new URL(resolvedDashboardUrl)
+  saleUrl.pathname = `${saleUrl.pathname.replace(/\/+$/, "")}/orders`
+  saleUrl.searchParams.set("orderSheet", "create")
   const surfaces = [
     {
-      label: "Storefront",
-      description: "Coming later",
-      href: null,
+      label: "Set up what you sell",
+      description: "Open the setup assistant",
+      href: assistantUrl.toString(),
     },
     {
-      label: "POS",
-      description: "Coming later",
-      href: null,
+      label: "Make your first sale",
+      description: "Open Orders",
+      href: saleUrl.toString(),
     },
-    {
-      label: "Shared dashboard",
-      description: "Operations and settings",
-      href: resolvedDashboardUrl,
-    },
+    { label: "Mobile app", description: "Coming soon", href: null },
   ]
   return (
     <div>
@@ -76,10 +68,7 @@ export function StepSuccess({
               rel="noopener noreferrer"
             >
               <span>
-                <small>{surface.label}</small>
-                <span className="signup-address-output">
-                  {displayAddress(surface.href)}
-                </span>
+                <span className="signup-address-output">{surface.label}</span>
                 <small>{surface.description}</small>
               </span>
               <span aria-hidden="true">↗</span>
@@ -110,7 +99,7 @@ export function StepSuccess({
       )}
       <div className="signup-actions">
         <a className="signup-primary" href={resolvedDashboardUrl}>
-          Go to dashboard <span aria-hidden="true">↗</span>
+          Open your web dashboard <span aria-hidden="true">↗</span>
         </a>
         <a className="signup-secondary" href={getMarketingUrl()}>
           Back to home

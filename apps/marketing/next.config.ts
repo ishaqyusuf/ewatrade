@@ -23,6 +23,8 @@ function isInternalQaBuild(env = process.env) {
 }
 
 const nextConfig: NextConfig = {
+  // Deliver marketing styles with the document to avoid render-blocking round trips.
+  experimental: { inlineCss: true },
   logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
   async headers() {
     return [

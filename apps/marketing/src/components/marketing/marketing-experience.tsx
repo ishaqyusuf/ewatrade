@@ -5,6 +5,9 @@ import type { MarketingExperienceId } from "@/lib/marketing-experience"
 import type { MarketingExperienceProps } from "./marketing-experience-contract"
 
 const marketingExperienceRegistry = {
+  "launch-v4": dynamic(() =>
+    import("./experiences/launch-v4").then((module) => module.LaunchV4Landing),
+  ),
   "legacy-v1": dynamic(() =>
     import("./experiences/legacy-v1").then((module) => module.LegacyV1Landing),
   ),
