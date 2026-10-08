@@ -3,6 +3,15 @@ import { describe, expect, test } from "bun:test"
 import { resolveMarketingExperience } from "./marketing-experience-policy"
 
 describe("marketing experience production policy", () => {
+  for (const nodeEnvironment of ["production", "development", "test"])
+    test(`launch-v4 is approved in ${nodeEnvironment}`, () => {
+      expect(
+        resolveMarketingExperience({
+          requestedExperience: "launch-v4",
+          nodeEnvironment,
+        }),
+      ).toBe("launch-v4")
+    })
   test("keeps the selected experience outside production", () => {
     expect(
       resolveMarketingExperience({

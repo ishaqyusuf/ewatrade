@@ -7,6 +7,7 @@ export const marketingExperienceProductionReadiness = {
   "legacy-v1": true,
   "operator-v2": true,
   "shop-v3": true,
+  "launch-v4": true,
 } satisfies Record<MarketingExperienceId, boolean>
 
 type ResolveMarketingExperienceOptions = {

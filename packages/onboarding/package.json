@@ -59,7 +59,13 @@
     "./server/qa-access/select/handler": "./src/server/qa-access/select/handler.ts",
     "./lib/signup-navigation": "./src/lib/signup-navigation.ts",
     "./styles/signup.css": "./src/styles/signup.css",
-    "./server/auth/check-slug/handler": "./src/server/auth/check-slug/handler.ts"
+    "./server/auth/check-slug/handler": "./src/server/auth/check-slug/handler.ts",
+    "./components/product-preview/product-preview": "./src/components/product-preview/product-preview.tsx",
+    "./components/product-preview/platform": "./src/components/product-preview/platform.tsx",
+    "./components/product-preview/sample-data": "./src/components/product-preview/sample-data.ts",
+    "./components/product-preview/screens": "./src/components/product-preview/screens.tsx",
+    "./components/product-preview/use-preview-motion": "./src/components/product-preview/use-preview-motion.ts",
+    "./styles/product-preview.css": "./src/components/product-preview/product-preview.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
