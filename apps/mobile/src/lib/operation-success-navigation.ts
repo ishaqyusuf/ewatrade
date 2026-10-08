@@ -3,6 +3,10 @@ import { CommonActions } from "@react-navigation/native"
 export type OperationSuccessKind = "order" | "product" | "service"
 
 export type OperationSuccessParams = {
+  orderId?: string
+  paymentMethod?: string
+  unitCount?: string
+  balance?: string
   amount?: string
   customer?: string
   itemCount?: string

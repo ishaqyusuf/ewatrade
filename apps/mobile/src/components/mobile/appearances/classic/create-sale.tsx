@@ -4,6 +4,7 @@ import type {
   SaleStageHeaderProps,
   SelectedOrderLineProps,
 } from "@/components/mobile/create-sale/create-sale-presentation"
+import { stepSaleQuantity } from "@/components/mobile/create-sale/sale-unit-count"
 import { FormField } from "@/components/mobile/form-field"
 import { saleLineTotalMinor } from "@/components/mobile/sale-checkout-model"
 import {
@@ -31,21 +32,35 @@ export function ClassicSaleStageHeader({
           <Text className="text-xs font-bold uppercase tracking-[1.4px] text-primary">
             Step {current} of 3
           </Text>
-          <Text className="text-xl font-extrabold text-foreground">
+          <Text className="text-[23px] font-extrabold text-foreground">
             {title}
           </Text>
         </View>
         {onBack ? (
           <Pressable
             accessibilityLabel="Go to previous sale step"
-            className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+            className="h-11 w-11 items-center justify-center rounded-[14px] bg-tint-lilac active:bg-accent"
             haptic
             onPress={onBack}
             transition
           >
-            <Icon className="size-sm text-foreground" name="ArrowLeft" />
+            <Icon className="size-[18px] text-foreground" name="ArrowLeft" />
           </Pressable>
         ) : null}
+      </View>
+      <View
+        accessibilityLabel={`Step ${current} of 3`}
+        className="flex-row gap-2"
+      >
+        {[1, 2, 3].map((step) => (
+          <View
+            key={step}
+            className={cn(
+              "h-1.5 flex-1 rounded-full",
+              step <= current ? "bg-primary" : "bg-border",
+            )}
+          />
+        ))}
       </View>
     </View>
   )
@@ -69,7 +84,7 @@ export function ClassicSelectedOrderLine({
   })
 
   return (
-    <View className="border-b border-border py-4">
+    <View className="mb-3.5 rounded-[20px] bg-card p-3.5">
       <View className="min-h-11 flex-row items-center gap-3">
         <SaleItemAvatar choice={offering} />
         <View className="min-w-0 flex-1 gap-1">
@@ -95,12 +110,12 @@ export function ClassicSelectedOrderLine({
           accessibilityLabel={`Remove ${offering.displayName} from order`}
           disabled={disabled}
           accessibilityState={{ disabled }}
-          className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+          className="h-11 w-11 items-center justify-center rounded-[14px] bg-tint-lilac active:bg-accent"
           haptic
           onPress={onRemove}
           transition
         >
-          <Icon className="size-sm text-muted-foreground" name="X" />
+          <Icon className="size-[18px] text-muted-foreground" name="X" />
         </Pressable>
       </View>
 
@@ -151,6 +166,30 @@ export function ClassicSelectedOrderLine({
           </Text>
         </View>
       </View>
+      <View className="mt-3 flex-row items-center justify-end gap-3">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Decrease ${offering.displayName} quantity by one`}
+          disabled={disabled}
+          className="size-[44px] items-center justify-center rounded-[14px] bg-muted"
+          onPress={() => {
+            const next = stepSaleQuantity(quantity, -1)
+            if (next === "0") onRemove()
+            else onQuantityChange(next)
+          }}
+        >
+          <Icon name="Minus" className="size-[20px] text-foreground" />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Increase ${offering.displayName} quantity by one`}
+          disabled={disabled}
+          className="size-[44px] items-center justify-center rounded-[14px] bg-tint-mint"
+          onPress={() => onQuantityChange(stepSaleQuantity(quantity, 1))}
+        >
+          <Icon name="Plus" className="size-[20px] text-primary" />
+        </Pressable>
+      </View>
       {lineTotalMinor !== null ? (
         <Text className="mt-2 text-right text-xs font-bold text-muted-foreground">
           Line total {formatMinorMoney(lineTotalMinor, offering.currencyCode)}
@@ -173,13 +212,13 @@ export function ClassicCustomerActionRow({
       onPress={onPress}
       transition
     >
-      <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-        <Icon className="size-sm text-primary" name={icon} />
+      <View className="h-10 w-10 items-center justify-center rounded-[14px] bg-tint-lilac">
+        <Icon className="size-[18px] text-primary" name={icon} />
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{title}</Text>
       </View>
-      <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+      <Icon className="size-[18px] text-muted-foreground" name="ChevronRight" />
     </Pressable>
   )
 }
@@ -196,7 +235,7 @@ export function ClassicCustomerSuggestionRow({
       onPress={onPress}
       transition
     >
-      <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+      <View className="h-10 w-10 items-center justify-center rounded-[14px] bg-tint-lilac">
         <Text className="text-xs font-extrabold text-foreground">
           {customer.initials}
         </Text>
@@ -213,7 +252,7 @@ export function ClassicCustomerSuggestionRow({
             .join(" · ")}
         </Text>
       </View>
-      <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+      <Icon className="size-[18px] text-muted-foreground" name="ChevronRight" />
     </Pressable>
   )
 }

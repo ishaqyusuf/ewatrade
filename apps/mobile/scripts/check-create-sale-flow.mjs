@@ -4,7 +4,20 @@ import { join, relative, resolve } from "node:path"
 const REPO_ROOT = resolve(new URL("../../..", import.meta.url).pathname)
 const MOBILE_DIR = join(REPO_ROOT, "apps/mobile")
 const FILE = join(MOBILE_DIR, "src/components/mobile/create-sale-sheet.tsx")
-const source = readFileSync(FILE, "utf8")
+const source = [
+  "create-sale-sheet.tsx",
+  "create-sale/use-create-sale.ts",
+  "create-sale/create-sale-model.ts",
+  "create-sale/create-sale-items.tsx",
+  "create-sale/create-sale-customer.tsx",
+  "create-sale/create-sale-review.tsx",
+  "create-sale/create-sale-sheets.tsx",
+  "appearances/classic/create-sale.tsx",
+]
+  .map((file) =>
+    readFileSync(join(MOBILE_DIR, "src/components/mobile", file), "utf8"),
+  )
+  .join("\n")
 const customerSheetSource = readFileSync(
   join(MOBILE_DIR, "src/components/mobile/create-sale-customer-sheet.tsx"),
   "utf8",
@@ -48,19 +61,19 @@ const contracts = [
     markers: [
       "getCreateCustomerSheetMaxHeight(height)",
       "CREATE_CUSTOMER_SHEET_SNAP_POINTS",
-      'keyboardBehavior="extend"',
+      'keyboardBehavior="fillParent"',
       "isCreateCustomerSaveDisabled",
       "hasCreateCustomerDraft",
-      "enablePanDownToClose={!hasDraft}",
+      "enablePanDownToClose={!hasDraft && !isLoading}",
       "<AppBottomSheetBackdrop",
-      "dismissible={!hasDraft}",
+      "dismissible={!hasDraft && !isLoading}",
       "Optional contact",
       'leadingIcon="User"',
       'leadingIcon="Phone"',
       'leadingIcon="Mail"',
       "CUSTOMER_SHEET_PRESENT_DELAY_MS",
-      "createCustomerModal.present,",
-      "customerModal.present,",
+      "CUSTOMER_SHEET_PRESENT_DELAY_MS)",
+
       "fill={colors.mutedForeground}",
     ],
     reason:
@@ -108,7 +121,7 @@ const contracts = [
       'kind: "commercial_order"',
       "dependencyClientIds: []",
       "eventVersion: 1",
-      "The order will be provisional",
+      "Offline order",
       "Queue order",
     ],
     reason:
@@ -135,7 +148,6 @@ const contracts = [
       "Search product or service",
       "alwaysShowSearch",
       "focusedQuantityId",
-      'layout="inline"',
       "lineCountsByOfferingId",
       "Add another",
       "onRemove(line.id)",
@@ -145,20 +157,19 @@ const contracts = [
       "!isOffline &&",
       "recentOrders.fetchNextPage()",
       "Line total",
-      'className="w-20 gap-1"',
+      'label="Quantity"',
       'accessibilityRole="button"',
       'keyboardType="decimal-pad"',
       "Create customer",
-      "Skip · Continue as guest",
-      "paddingHorizontal: 8",
-      'className="px-2"',
+      "Continue as guest",
+
       "active:bg-accent",
       "Search customer, phone, or email",
       "Amount received",
       "All amount paid",
       "minorToMajorInput(totalMinor)",
       "Balance due",
-      '<View className="gap-5 px-4 pb-36">',
+      "--sale-actions-bottom",
       "paymentSummary.receivedMinor",
       "Select at least one item",
       "Confirm sale",
@@ -188,14 +199,14 @@ const compactPickerSource = pickerSource.slice(
   fullScreenPickerStart,
 )
 for (const marker of [
-  "<NativeModal",
-  "onRequestClose={onClose}",
-  "transparent",
-  "visible={visible}",
+  "<Modal",
+  "onDismiss={onClose}",
+  "enableDynamicSizing",
+  "if (visible) sheet.present()",
 ]) {
   if (!compactPickerSource.includes(marker)) {
     failures.push(
-      `compact item picker is missing native-overlay marker ${marker}`,
+      `compact item picker is missing compact-sheet marker ${marker}`,
     )
   }
 }
@@ -221,7 +232,15 @@ if (presentLegacyMarkers.length > 0) {
   )
 }
 
-if (source.includes("contentContainerClassName=")) {
+if (
+  readFileSync(
+    join(
+      MOBILE_DIR,
+      "src/components/mobile/create-sale/create-sale-review.tsx",
+    ),
+    "utf8",
+  ).includes("contentContainerClassName=")
+) {
   failures.push(
     "checkout spacing must use a NativeWind-interoped inner View instead of an unsupported KeyboardAwareScrollView contentContainerClassName",
   )
@@ -240,15 +259,11 @@ for (const marker of [
   }
 }
 
-for (const marker of [
-  "createCustomerModal.present()",
-  "customerModal.present()",
-]) {
-  if (completeSource.includes(marker)) {
-    failures.push(
-      `customer sheet launch must be deferred instead of calling ${marker}`,
-    )
-  }
+if (
+  !source.includes("customerPresentationTimer.current = setTimeout(() => {") ||
+  !source.includes("}, CUSTOMER_SHEET_PRESENT_DELAY_MS)")
+) {
+  failures.push("customer sheet launch must stay deferred and guarded")
 }
 
 if (failures.length > 0) {

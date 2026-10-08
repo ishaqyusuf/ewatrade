@@ -59,6 +59,7 @@ import {
   flattenSaleOfferings,
 } from "./create-sale-model"
 import { buildSaleCustomerSuggestions } from "./sale-customer-suggestions"
+import { saleUnitCount } from "./sale-unit-count"
 import { useSaleFulfillment } from "./use-sale-fulfillment"
 
 export function useCreateSale({
@@ -538,12 +539,12 @@ export function useCreateSale({
     setStep("customer")
   }
 
-  function selectCustomer(customer: SelectedCustomer | null) {
+  function selectCustomer(customer: SelectedCustomer | null, advance = true) {
     if (submissionPending.current || submitted.current) return
     Keyboard.dismiss()
     setSelectedCustomer(customer)
     setError(null)
-    setStep("review")
+    if (advance) setStep("review")
   }
 
   function presentCustomerSheet() {
@@ -729,6 +730,13 @@ export function useCreateSale({
           customer: selectedCustomer?.name ?? "Guest customer",
           itemCount: selectedRows.length,
           paymentState: paymentSummary.paymentState,
+          paymentMethod:
+            paymentSummary.receivedMinor > 0 ? paymentMethod : undefined,
+          unitCount: saleUnitCount(selectedRows.map((row) => row.quantity)),
+          balance: formatMinorMoney(
+            paymentSummary.balanceDueMinor,
+            currencyCode,
+          ),
           status: "queued",
         }
         submitted.current = true
@@ -757,7 +765,12 @@ export function useCreateSale({
         customer: selectedCustomer?.name ?? "Guest customer",
         itemCount: selectedRows.length,
         paymentState: paymentSummary.paymentState,
+        paymentMethod:
+          paymentSummary.receivedMinor > 0 ? paymentMethod : undefined,
+        unitCount: saleUnitCount(selectedRows.map((row) => row.quantity)),
+        balance: formatMinorMoney(paymentSummary.balanceDueMinor, currencyCode),
         reference: order.orderNumber,
+        orderId: order.id,
         status: "created",
       }
       submitted.current = true

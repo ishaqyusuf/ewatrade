@@ -46,6 +46,10 @@ export default function CreateSaleModalRoute() {
         onComplete={(completion) =>
           showOperationSuccess(navigation, {
             amount: completion.amount,
+            orderId: completion.orderId,
+            paymentMethod: completion.paymentMethod,
+            unitCount: completion.unitCount,
+            balance: completion.balance,
             customer: completion.customer,
             itemCount: String(completion.itemCount),
             kind: "order",

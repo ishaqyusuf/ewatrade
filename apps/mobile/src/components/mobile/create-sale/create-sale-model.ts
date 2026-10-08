@@ -25,6 +25,10 @@ export type SelectedCustomer = {
 }
 
 export type CreateSaleCompletion = {
+  orderId?: string
+  paymentMethod?: string
+  unitCount?: string
+  balance?: string
   amount: string
   customer: string
   itemCount: number
