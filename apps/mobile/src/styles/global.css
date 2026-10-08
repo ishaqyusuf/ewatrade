@@ -69,6 +69,7 @@
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --color-ink: var(--ink);
+  --color-cream: var(--cream);
   --color-tint-mint: var(--tint-mint);
   --color-tint-mint-foreground: var(--tint-mint-foreground);
   --color-tint-amber: var(--tint-amber);
@@ -127,6 +128,7 @@
     --chart-5: rgb(225, 29, 72);
 
     --gold: #F2A51A;
+    --cream: #FFF9ED;
     --gold-foreground: #1E1E1C;
     --ink: #1E1E1C;
     --tint-mint: #E4F2EA;
@@ -187,6 +189,7 @@
       --chart-5: rgb(244, 63, 94);
 
       --gold: #F5B12E;
+      --cream: #F3FBF6;
       --gold-foreground: #1E1E1C;
       --ink: #F0F3F1;
       --tint-mint: #17302A;

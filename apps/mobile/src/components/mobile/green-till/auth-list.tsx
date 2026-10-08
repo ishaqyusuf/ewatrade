@@ -294,7 +294,7 @@ export function InviteCard({
       </View>
       <NativeText
         style={{
-          backgroundColor: "rgba(91,58,168,0.14)",
+          backgroundColor: palette.lilacChip,
           borderRadius: 999,
           color: palette.lilacForeground,
           fontSize: 11,

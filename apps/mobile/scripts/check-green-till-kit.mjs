@@ -10,7 +10,7 @@ const contracts = [
     markers: [
       "export function HeroCard",
       "BrandMark",
-      "rgba(255,255,255,0.07)",
+      "palette.heroWatermark",
       'fontVariant: ["tabular-nums"]',
       'tone="cream"',
       "progress",

@@ -165,7 +165,8 @@ const CONTRACTS = [
   },
   {
     file: FILES.floatingQa,
-    markers: ['pathname.endsWith("-modal")'],
+    // QA shows only on the signed-out login screen, so never over checkout.
+    markers: ["isAuthenticated ||", 'pathname !== "/login"'],
     reason:
       "the development QA control must not overlap subscription usage or checkout actions",
   },

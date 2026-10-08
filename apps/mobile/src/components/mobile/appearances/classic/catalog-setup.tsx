@@ -5,54 +5,74 @@ import { MoneyField } from "@/components/mobile/money-field"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { getCurrencySymbol } from "@ewatrade/utils"
 import type { CatalogFormGuidance } from "@ewatrade/utils/business-catalog-guidance"
 import { Text as NativeText, View } from "react-native"
 
+/** Green Till kind card: tinted icon, title, one line, optional recommendation. */
 export function KindChoice({
   description,
   icon,
   label,
   onPress,
   recommendation,
+  tint = "mint",
 }: {
   description: string
   icon: IconKeys
   label: string
   onPress: () => void
   recommendation?: string
+  tint?: GreenTillTint
 }) {
-  const largeTextLayout = useLargeTextLayout()
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
   return (
     <Pressable
       accessibilityHint={description}
       accessibilityLabel={`Create ${label}`}
       accessibilityRole="button"
-      className={
-        largeTextLayout
-          ? "w-full gap-4 rounded-3xl border border-border bg-card p-5 active:bg-accent"
-          : "flex-1 gap-4 rounded-3xl border border-border bg-card p-5 active:bg-accent"
-      }
+      className="min-h-[76px] flex-row items-center gap-3 rounded-[18px] bg-card p-3.5 shadow-sm active:opacity-80"
       haptic
       onPress={onPress}
       transition
     >
-      <View className="h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-        <Icon className="size-base text-primary" name={icon} />
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: palette[tint],
+          borderRadius: 12,
+          height: 44,
+          justifyContent: "center",
+          width: 44,
+        }}
+      >
+        <Icon
+          className="size-[22px]"
+          color={palette[`${tint}Foreground`]}
+          name={icon}
+        />
       </View>
-      <View className="gap-1.5">
-        <Text className="text-lg font-extrabold text-foreground">{label}</Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text className="text-[15px] font-extrabold [-rn-line-height:20] text-foreground">
+          {label}
+        </Text>
+        <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
           {description}
         </Text>
         {recommendation ? (
-          <Text className="text-xs font-bold leading-5 text-primary">
-            {recommendation}
-          </Text>
+          <View className="mt-1 self-start rounded-full bg-tint-mint px-2 py-0.5">
+            <Text className="text-[10.5px] font-bold text-tint-mint-foreground">
+              {recommendation}
+            </Text>
+          </View>
         ) : null}
       </View>
+      <Icon className="size-[18px] text-muted-foreground" name="ChevronRight" />
     </Pressable>
   )
 }
@@ -588,6 +608,8 @@ export function CatalogLivePreview({
   quoteRequired?: boolean
   unitName: string
 }) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
   const trimmedName = name.trim()
   const amount = Number(price.replace(/,/g, ""))
   const priceLine =
@@ -610,7 +632,7 @@ export function CatalogLivePreview({
         <View
           style={{
             alignItems: "center",
-            backgroundColor: "rgba(255,255,255,0.14)",
+            backgroundColor: palette.heroChip,
             borderRadius: 14,
             height: 52,
             justifyContent: "center",
@@ -619,7 +641,7 @@ export function CatalogLivePreview({
         >
           <Icon
             className="size-[22px]"
-            color="#FFF9ED"
+            color={palette.heroForeground}
             name={kind === "service" ? "Wrench" : "Camera"}
           />
         </View>
@@ -627,7 +649,7 @@ export function CatalogLivePreview({
           <NativeText
             numberOfLines={2}
             style={{
-              color: "#FFF9ED",
+              color: palette.heroForeground,
               fontSize: 20,
               fontWeight: "800",
               letterSpacing: -0.4,
@@ -640,7 +662,7 @@ export function CatalogLivePreview({
           </NativeText>
           <NativeText
             style={{
-              color: "rgba(255,249,237,0.78)",
+              color: palette.heroMuted,
               fontSize: 14,
               fontVariant: ["tabular-nums"],
               fontWeight: "700",

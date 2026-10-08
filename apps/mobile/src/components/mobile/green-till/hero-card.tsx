@@ -92,7 +92,7 @@ export function HeroCard({
           <Rect fill={`url(#${gradientId})`} height="100%" width="100%" />
         </Svg>
         <View pointerEvents="none" style={styles.watermark}>
-          <BrandMark color="rgba(255,255,255,0.07)" size={170} />
+          <BrandMark color={palette.heroWatermark} size={170} />
         </View>
       </View>
 
@@ -101,7 +101,7 @@ export function HeroCard({
           <NativeText style={[styles.label, { color: muted }]}>
             {label}
           </NativeText>
-          {pill ? <HeroSyncPill pill={pill} /> : null}
+          {pill ? <HeroSyncPill palette={palette} pill={pill} /> : null}
         </View>
       ) : null}
       {done ? (
@@ -143,13 +143,20 @@ export function HeroCard({
             <View style={styles.deltaValue}>
               <Icon
                 className="size-[12px]"
-                color={delta.direction === "up" ? "#8EF0BE" : "#FFB4A8"}
+                color={
+                  delta.direction === "up" ? palette.heroUp : palette.heroDown
+                }
                 name={delta.direction === "up" ? "ArrowUp" : "ArrowDown"}
               />
               <NativeText
                 style={[
                   styles.deltaText,
-                  { color: delta.direction === "up" ? "#8EF0BE" : "#FFB4A8" },
+                  {
+                    color:
+                      delta.direction === "up"
+                        ? palette.heroUp
+                        : palette.heroDown,
+                  },
                 ]}
               >
                 {delta.value}
@@ -245,19 +252,31 @@ export function HeroCard({
   )
 }
 
-function HeroSyncPill({ pill }: { pill: HeroPill }) {
+function HeroSyncPill({
+  palette,
+  pill,
+}: {
+  palette: (typeof GREEN_TILL_THEME)["light" | "dark"]
+  pill: HeroPill
+}) {
   const dot =
     pill.tone === "offline"
-      ? "#F8C66A"
+      ? palette.dotOffline
       : pill.tone === "busy"
-        ? "#9CC3F5"
+        ? palette.dotBusy
         : pill.tone === "draft"
-          ? "#F2A51A"
-          : "#8EF0BE"
+          ? palette.gold
+          : palette.dotSynced
   return (
-    <View accessibilityLabel={pill.label} accessible style={styles.pill}>
+    <View
+      accessibilityLabel={pill.label}
+      accessible
+      style={[styles.pill, { backgroundColor: palette.heroChip }]}
+    >
       <View style={[styles.pillDot, { backgroundColor: dot }]} />
-      <NativeText style={styles.pillText}>{pill.label}</NativeText>
+      <NativeText style={[styles.pillText, { color: palette.heroForeground }]}>
+        {pill.label}
+      </NativeText>
     </View>
   )
 }
@@ -303,7 +322,6 @@ const styles = StyleSheet.create({
   label: { flexShrink: 1, fontSize: 12.5, fontWeight: "700", lineHeight: 18 },
   pill: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.13)",
     borderRadius: 999,
     flexDirection: "row",
     gap: 5,
@@ -312,7 +330,6 @@ const styles = StyleSheet.create({
   },
   pillDot: { borderRadius: 3, height: 6, width: 6 },
   pillText: {
-    color: "#FFF9ED",
     fontSize: 11,
     fontWeight: "700",
     lineHeight: 15,

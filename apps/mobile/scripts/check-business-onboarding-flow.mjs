@@ -50,7 +50,8 @@ const checks = [
   },
   {
     file: "components/mobile/floating-qa-button.tsx",
-    markers: ['pathname.endsWith("-modal")'],
+    // QA shows only on the signed-out login screen, so never over modals.
+    markers: ["isAuthenticated ||", 'pathname !== "/login"'],
   },
   {
     file: "components/mobile/new-business-onboarding-screen.tsx",

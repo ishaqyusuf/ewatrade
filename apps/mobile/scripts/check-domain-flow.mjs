@@ -72,7 +72,8 @@ if (!domainContent.includes('className="min-h-11 self-start')) {
 }
 
 const floatingQa = await readFile(path.join(root, required[4]), "utf8")
-if (!floatingQa.includes('pathname.endsWith("-modal")')) {
+// QA shows only on the signed-out login screen, so never on the domain route.
+if (!floatingQa.includes('pathname !== "/login"')) {
   throw new Error(
     "The floating development QA button must stay hidden on the domain route.",
   )
