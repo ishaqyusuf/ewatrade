@@ -1,3 +1,4 @@
+import { isDevelopmentAppVariant } from "@/lib/app-variant"
 import {
   initializeCustomerConversationStore,
   setPendingCustomerTransfer,
@@ -21,6 +22,18 @@ export async function redirectSystemPath({
   initial: boolean
   path: string
 }) {
+  if (__DEV__ && isDevelopmentAppVariant()) {
+    const fixtureUrl = URL.canParse(path, "ewatrade-dev:///")
+      ? new URL(path, "ewatrade-dev:///")
+      : null
+    if (fixtureUrl) {
+      const fixturePath =
+        `${fixtureUrl.hostname}${fixtureUrl.pathname}`.replace(/^\/+/, "")
+      if (fixturePath === "qa-startup-splash-modal") {
+        return `/qa-startup-splash-modal${fixtureUrl.search}`
+      }
+    }
+  }
   try {
     const continuation = resolveOnboardingContinuationLink(
       path,

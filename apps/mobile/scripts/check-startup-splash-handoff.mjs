@@ -103,8 +103,23 @@ for (const marker of [
   if (!marketDaySplash.includes(marker))
     failures.push(`Market Day splash is missing ${marker}`)
 }
-if (!classicSplash.includes('<BrandLogo reverse={colorScheme === "dark"}')) {
-  failures.push("Classic splash must use the theme-aware Precision Rise logo")
+for (const marker of [
+  "GREEN_TILL_THEME[colorScheme]",
+  "<BrandMark",
+  "<BrandWordmark reverse",
+  "RadialGradient",
+  'style="light"',
+  "COME. TRADE. TOGETHER.",
+  'testID="startup-access-retry"',
+]) {
+  if (!classicSplash.includes(marker))
+    failures.push(`Green Gate splash is missing ${marker}`)
+}
+if (
+  !indexRoute.includes("startupAccessFailureState(accessProfile.error)") ||
+  !indexRoute.includes("accessProfile.refetch()")
+) {
+  failures.push("startup access failures must keep a real retry action")
 }
 
 for (const marker of [
@@ -120,7 +135,6 @@ for (const marker of [
 
 for (const marker of [
   "variantConfig.icons.splashDark",
-  "variantConfig.icons.splashLight",
   "image: nativeSplashImageLight",
   "image: nativeSplashImageDark",
 ]) {

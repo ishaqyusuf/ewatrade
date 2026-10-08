@@ -48,7 +48,7 @@ import Constants from "expo-constants"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
 import { useRef } from "react"
-import { Platform, View } from "react-native"
+import { Platform, StyleSheet, View } from "react-native"
 import FlashMessage from "react-native-flash-message"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import Toast from "react-native-toast-message"
@@ -100,7 +100,9 @@ function RootLayout() {
 
   return <RootLayoutNav />
 }
-const InitialLayout = () => {
+const InitialLayout = ({
+  startupVisible = false,
+}: { startupVisible?: boolean }) => {
   const { colorScheme } = useColorScheme()
   const { isAuthenticated, profile } = useAuthContext()
   const navigationTheme =
@@ -116,10 +118,14 @@ const InitialLayout = () => {
   return (
     <>
       <OfflinePolicyReconciler />
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <StatusBar
+        style={startupVisible || colorScheme === "dark" ? "light" : "dark"}
+      />
 
       <Stack
         screenOptions={{
+          statusBarStyle:
+            startupVisible || colorScheme === "dark" ? "light" : "dark",
           headerShadowVisible: false,
           headerStyle: {
             backgroundColor: navigationTheme.colors.background,
@@ -551,20 +557,42 @@ function RootLayoutNav() {
                       <AppLockProvider>
                         <ToastProviderWithViewport>
                           <BottomSheetModalProvider>
+                            <View
+                              className="flex-1"
+                              accessibilityElementsHidden={
+                                !hasPresentedStartupSplash
+                              }
+                              importantForAccessibility={
+                                hasPresentedStartupSplash
+                                  ? "auto"
+                                  : "no-hide-descendants"
+                              }
+                              pointerEvents={
+                                hasPresentedStartupSplash ? "auto" : "none"
+                              }
+                            >
+                              <InitialLayout
+                                startupVisible={!hasPresentedStartupSplash}
+                              />
+                            </View>
                             {hasPresentedStartupSplash ? (
                               <>
                                 <FlashMessage position="top" />
-                                <InitialLayout />
                                 <AppLockGate />
                                 <AppAutoUpdateModal />
                                 <FloatingQaButton />
                               </>
                             ) : (
-                              <StartupSplashGate
-                                onComplete={() =>
-                                  setHasPresentedStartupSplash(true)
-                                }
-                              />
+                              <View
+                                style={StyleSheet.absoluteFill}
+                                accessibilityViewIsModal
+                              >
+                                <StartupSplashGate
+                                  onComplete={() =>
+                                    setHasPresentedStartupSplash(true)
+                                  }
+                                />
+                              </View>
                             )}
                           </BottomSheetModalProvider>
                         </ToastProviderWithViewport>

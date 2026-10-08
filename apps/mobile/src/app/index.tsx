@@ -6,6 +6,7 @@ import {
 } from "@/components/mobile"
 import { StartupSplash } from "@/components/mobile/startup-splash"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { getCustomerConversationSession } from "@/lib/customer-conversation-store"
 import {
   type MobileShell,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/customer-shell-preference"
 import { resolveMobileEntryDestination } from "@/lib/mobile-entry-routing"
 import { readPendingOnboarding } from "@/lib/onboarding-continuation-store"
+import { startupAccessFailureState } from "@/lib/startup-splash-state"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { Redirect } from "expo-router"
@@ -22,6 +24,7 @@ export default function StartRoute() {
   const [pendingSetup, setPendingSetup] = useState<boolean | null>(null)
   const [lastShell, setLastShell] = useState<MobileShell | null>(null)
   const auth = useAuthContext()
+  const splashDesign = useMobileDesign("startup-splash")
   const trpc = useTRPC()
   const accessProfile = useQuery(
     trpc.auth.getMobileAccessProfile.queryOptions(undefined, {
@@ -56,11 +59,24 @@ export default function StartRoute() {
   if (pendingSetup === null) return <StartupSplash />
   if (pendingSetup) return <Redirect href="/continue-onboarding" />
 
-  if (!lastShell || (auth.isAuthenticated && accessProfile.isPending)) {
-    return <StartupSplash />
+  if (
+    !lastShell ||
+    (auth.isAuthenticated &&
+      (accessProfile.isPending ||
+        (accessProfile.isError && accessProfile.isFetching)))
+  ) {
+    return <StartupSplash state="busy" />
   }
 
   if (auth.isAuthenticated && accessProfile.isError) {
+    if (splashDesign === "classic") {
+      return (
+        <StartupSplash
+          state={startupAccessFailureState(accessProfile.error)}
+          onRetry={() => void accessProfile.refetch()}
+        />
+      )
+    }
     return (
       <AccessProfileUnavailable onRetry={() => void accessProfile.refetch()} />
     )

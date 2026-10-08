@@ -21,7 +21,7 @@ const REQUIRED_MARKERS = [
   'androidPackage: "com.ewatrade.dev"',
   'androidPackage: "com.ewatrade.preview"',
   '"expo-splash-screen"',
-  "variantConfig.icons.splashLight",
+  "const nativeSplashImageLight = variantConfig.icons.splashDark",
   "variantConfig.icons.splashDark",
   "splashBackgroundColor",
   "splashDarkBackgroundColor",

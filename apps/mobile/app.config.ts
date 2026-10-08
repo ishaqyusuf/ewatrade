@@ -125,19 +125,11 @@ const variantConfig = isDevelopmentBuild
         },
       }
 
-const nativeSplashImageLight =
-  nativeSplashDesign === "market-day"
-    ? variantConfig.icons.splashDark
-    : variantConfig.icons.splashLight
+const nativeSplashImageLight = variantConfig.icons.splashDark
 const nativeSplashImageDark = variantConfig.icons.splashDark
-const nativeSplashBackgroundColor =
-  nativeSplashDesign === "market-day"
-    ? "#17684F"
-    : variantConfig.splashBackgroundColor
+const nativeSplashBackgroundColor = "#17684F"
 const nativeSplashDarkBackgroundColor =
-  nativeSplashDesign === "market-day"
-    ? "#17684F"
-    : variantConfig.splashDarkBackgroundColor
+  nativeSplashDesign === "market-day" ? "#17684F" : "#17543F"
 
 // App-owned data sent to the EwaTrade API. SDK-owned collection remains in
 // each SDK's manifest and the final Xcode privacy report.
