@@ -106,15 +106,9 @@ async function requireMobileApprovedSignup(
     businessName?: string | null
   },
 ) {
-  if (input.mode !== "sign_up") return
-  const required =
-    !["local", "dev", "development"].includes(process.env.APP_ENV ?? "") ||
-    process.env.DEV_PROFILE === "prod" ||
-    process.env.NODE_ENV === "production"
-  if (!input.accessToken) {
-    if (required) throw new OnboardingContinuationError("APPROVAL_REQUIRED")
-    return
-  }
+  // Business sign-up is open; early-access approval is no longer required.
+  // A setup-email token, when present, must still match its approval.
+  if (input.mode !== "sign_up" || !input.accessToken) return
   const { data } = await readApprovedOnboarding(db, input.accessToken)
   if (
     data.email.toLowerCase() !== input.email.trim().toLowerCase() ||

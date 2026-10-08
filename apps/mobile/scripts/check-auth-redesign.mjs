@@ -124,7 +124,7 @@ const requiredMarkers = [
   },
   {
     file: "app/sign-up.tsx",
-    markers: ["EarlyAccessRequestScreen", "<EarlyAccessRequestScreen />"],
+    markers: ["AccountAgeEntry", "<AccountAgeEntry />"],
   },
   {
     file: "components/mobile/sign-up/account-age-entry.tsx",

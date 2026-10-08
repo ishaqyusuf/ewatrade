@@ -1,4 +1,3 @@
-import { getWebUrl } from "./base-url"
 import { onboardingLinkConfiguration } from "./onboarding-continuation-store"
 
 export function onboardingDashboardUrl(path: string) {
@@ -51,24 +50,4 @@ export function requestOnboardingVerification(accessToken: string) {
     onboardingDashboardUrl("/api/early-access/verification"),
     { accessToken },
   )
-}
-
-export function requestNativeEarlyAccess(input: {
-  fullName: string
-  email: string
-  companyName: string
-  phone: string
-  businessSize: string
-  recordSystem: string
-  launchTimeline: string
-  setupNeeds: string[]
-}) {
-  const base = new URL(getWebUrl())
-  const config = onboardingLinkConfiguration()
-  if (
-    config.variant !== "production" &&
-    ["ewatrade.com", "www.ewatrade.com"].includes(base.hostname)
-  )
-    throw new Error("The request website does not match this app environment.")
-  return postOnboarding(new URL("/api/early-access", base).toString(), input)
 }
