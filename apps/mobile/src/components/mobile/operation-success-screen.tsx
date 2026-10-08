@@ -1,4 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
+import {
+  GhostPreview,
+  QuickActionRow,
+} from "@/components/mobile/green-till/kit"
 import { Icon } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
 import type {
@@ -77,6 +82,53 @@ export function OperationSuccessScreen({
   const resolvedPaymentLabel = paymentLabel(params.paymentState)
   const itemLabel =
     params.itemCount === "1" ? "1 item" : `${params.itemCount ?? "0"} items`
+
+  if (kind !== "order")
+    return (
+      <View className="flex-1 bg-background px-[18px]">
+        <View
+          style={{
+            paddingBottom: Math.max(insets.bottom, 16) + 8,
+            paddingTop: Math.max(insets.top, 20) + 20,
+          }}
+        >
+          <HeroCard
+            cta={{
+              icon: "Receipt",
+              label: "Take your first order",
+              onPress: () => router.replace("/create-sale-modal" as never),
+              testID: "item-success-first-order",
+            }}
+            label={kind === "service" ? "Service added" : "Product added"}
+            pill={{ label: "Saved", tone: "synced" }}
+            sub="Available in your catalog. You can change it any time."
+            testID="item-success-hero"
+            title={`${params.name || "Your item"} is ready to sell`}
+          />
+          <QuickActionRow
+            actions={[
+              {
+                icon: "Plus",
+                label: "Add another",
+                onPress: () =>
+                  router.replace("/first-product-setup-modal" as never),
+              },
+              {
+                icon: "Package",
+                label: "Catalog",
+                onPress: () => router.replace("/catalog-items-modal" as never),
+              },
+              {
+                icon: "House",
+                label: "Home",
+                onPress: () => router.replace("/dashboard"),
+              },
+            ]}
+          />
+          <GhostPreview message="Today’s sales appear on Home after your first order." />
+        </View>
+      </View>
+    )
 
   return (
     <View className="flex-1 bg-background">

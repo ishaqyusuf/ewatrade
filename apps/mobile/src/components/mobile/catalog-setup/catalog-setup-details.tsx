@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { CatalogLivePreview } from "@/components/mobile/appearances/classic/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
@@ -484,17 +485,24 @@ export function CatalogFocusedEditor({
     case "review":
       return (
         <>
-          <Text className="text-2xl font-bold text-foreground">
-            {model.name || "Unnamed item"}
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            {model.kind === "service" && model.defaultQuoteRequired
-              ? "Quote each job"
-              : model.price
-                ? `${model.currencyCode} ${model.price}${model.kind === "product" ? ` per ${model.unitName}` : ""}`
-                : "Price not set"}
-          </Text>
+          {model.kind ? (
+            <CatalogLivePreview
+              currencyCode={model.currencyCode}
+              kind={model.kind}
+              label="Ready to sell"
+              name={model.name}
+              pill={model.hasAttempt ? "Not confirmed" : "Draft"}
+              price={model.price}
+              quoteRequired={model.defaultQuoteRequired}
+              unitName={model.unitName}
+            />
+          ) : null}
           <CatalogSetupDetailRows model={model} open={open} />
+          <StatusBanner
+            icon="Info"
+            message="Saves to your current Store. You can change anything later in your catalog."
+            tone="primary"
+          />
           {model.submitError ? (
             <StatusBanner tone="destructive" message={model.submitError} />
           ) : null}
