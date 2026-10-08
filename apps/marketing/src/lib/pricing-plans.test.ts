@@ -76,11 +76,11 @@ test("Free lists the paid features it leaves out, with human labels", () => {
 
 test("plan CTAs: Free and Starter sign up, Growth and Pro talk to us", () => {
   Reflect.set(process.env, "NODE_ENV", "production")
-  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dashboard.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   const open = getPricingPlans(true)
   expect(open.map((plan) => [plan.id, plan.cta.label, plan.cta.href])).toEqual([
-    ["free", "Create your store", "https://dashboard.ewatrade.com/signup"],
-    ["starter", "Create your store", "https://dashboard.ewatrade.com/signup"],
+    ["free", "Create your store", "https://dash.ewatrade.com/signup"],
+    ["starter", "Create your store", "https://dash.ewatrade.com/signup"],
     ["growth", "Talk to us", "/contact"],
     ["pro", "Talk to us", "/contact"],
   ])

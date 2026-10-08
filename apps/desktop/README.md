@@ -6,7 +6,7 @@ Internal Tauri wrapper for the EwaTrade dashboard. The desktop app opens the das
 
 - Development: `http://localhost:3094`
 - Staging: `https://staging-dashboard.ewatrade.com`
-- Production: `https://dashboard.ewatrade.com`
+- Production: `https://dash.ewatrade.com`
 
 Set `DASHBOARD_URL` to override any target for local smoke checks or temporary preview deployments.
 

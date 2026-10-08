@@ -96,7 +96,7 @@ function Frame({
           <i />
           <i />
         </span>
-        <span className="shop-sim-address">dashboard.ewatrade.com/signup</span>
+        <span className="shop-sim-address">dash.ewatrade.com/signup</span>
       </div>
       {children}
     </div>

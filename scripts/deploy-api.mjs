@@ -35,7 +35,7 @@ function usage() {
 Deploys @ewatrade/api to Vercel using project-scoped Production variables.
 The local ${envFile} selects the Production deploy safeguards.
 Builds clean committed HEAD using Bun 1.3.9 in a private macOS sandbox.
-Run database push separately through local-infra-kit, or use `bun release`.
+Run database push separately through local-infra-kit, or use bun release.
 
 Required in ${envFile}:
   EWATRADE_DATABASE_URL
@@ -194,7 +194,20 @@ try {
     "--raw",
     ...vercelScopeArgs,
   ])
-  assertProductionApiProjectEnvironment(JSON.parse(inventory.stdout))
+  const sharedInventory = runStage("bunx", [
+    RELEASE_VERCEL_CLI,
+    "api",
+    "/v1/env?limit=100",
+    "--cwd",
+    apiDir,
+    "--raw",
+    ...vercelScopeArgs,
+  ])
+  assertProductionApiProjectEnvironment(
+    JSON.parse(inventory.stdout),
+    JSON.parse(sharedInventory.stdout),
+    env.VERCEL_API_PROJECT_ID,
+  )
 } catch (error) {
   console.error(
     error instanceof Error

@@ -31,7 +31,7 @@ afterEach(() => {
 function input() {
   return {
     headers: new Headers({
-      origin: "https://dashboard.ewatrade.com",
+      origin: "https://dash.ewatrade.com",
       "x-ewatrade-analytics": "allowed",
     }),
     principal: {
@@ -113,7 +113,7 @@ test("collection fails closed for privacy denial, wrong origins, QA, missing sec
       "x-ewatrade-analytics": "allowed",
     }),
     new Headers({
-      origin: "https://dashboard.ewatrade.com",
+      origin: "https://dash.ewatrade.com",
       "x-ewatrade-analytics": "denied",
     }),
     new Headers(),
@@ -151,7 +151,7 @@ test("server delivery fixes the project/key/origin, retries the same event, and 
     expect(String(url)).toBe("https://collector.example/v1/events")
     const headers = new Headers(init?.headers)
     expect(headers.get("x-logly-project-key")).toBe("dashboard-test-key")
-    expect(headers.get("x-logly-origin")).toBe("https://dashboard.ewatrade.com")
+    expect(headers.get("x-logly-origin")).toBe("https://dash.ewatrade.com")
     const body = JSON.parse(String(init?.body))
     expect(body.events[0].properties.email).toBeUndefined()
     bodies.push(body.events[0].eventId)
