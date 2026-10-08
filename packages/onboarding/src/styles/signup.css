@@ -536,3 +536,41 @@
     gap: 22px;
   }
 }
+
+/* Use my current location */
+.signup-shell .signup-location-button {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 45%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  font: 600 15px / 1.4 SignupInter, Arial, sans-serif;
+  cursor: pointer;
+}
+.signup-shell .signup-location-button:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+.signup-shell .signup-location-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fffdf9;
+}
+.signup-shell .signup-location-pin {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}

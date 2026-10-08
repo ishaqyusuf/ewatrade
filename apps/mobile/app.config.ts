@@ -201,6 +201,8 @@ const config: ExpoConfig = {
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
       "com.android.vending.BILLING",
+      // Location is only used while the app is open, to fill an address.
+      "android.permission.ACCESS_BACKGROUND_LOCATION",
       ...(!isDevelopmentBuild
         ? ["android.permission.SYSTEM_ALERT_WINDOW"]
         : []),
@@ -260,6 +262,15 @@ const config: ExpoConfig = {
       },
     ],
     "expo-router",
+    [
+      "expo-location",
+      {
+        locationWhenInUsePermission:
+          "Allow $(PRODUCT_NAME) to use your location to fill in your business address.",
+        isAndroidBackgroundLocationEnabled: false,
+        isIosBackgroundLocationEnabled: false,
+      },
+    ],
     "expo-font",
     "expo-asset",
     [

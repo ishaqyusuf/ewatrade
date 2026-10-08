@@ -28,6 +28,7 @@ import {
   listBusinessProfiles,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
+import type { ResolvedAddress } from "@ewatrade/utils/geo-address"
 import { useState } from "react"
 import { Controller } from "react-hook-form"
 import { useZodForm } from "../../hooks/use-zod-form"
@@ -42,6 +43,7 @@ import {
   businessSchema,
 } from "../../lib/signup-schemas"
 
+import { SignupUseLocation } from "./signup-location"
 import { SignupSelect } from "./signup-select"
 
 const baseInputClasses = "signup-input"
@@ -80,6 +82,33 @@ export function StepBusiness({
   const [preferencesOpen, setPreferencesOpen] = useState(false)
   const selectedCountry = form.watch("countryCode") ?? ""
   const phonePrefix = getCountryCallingCode(selectedCountry)
+  const changeCountry = (nextCountry: string) => {
+    form.setValue(
+      "phone",
+      getSignupPhoneForCountry(
+        form.getValues("phone"),
+        form.getValues("countryCode") ?? "",
+        nextCountry,
+      ),
+      { shouldDirty: true },
+    )
+    form.setValue("countryCode", nextCountry, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    form.setValue("currencyCode", suggestCurrencyForCountry(nextCountry), {
+      shouldValidate: true,
+    })
+  }
+  const fillFromLocation = (address: ResolvedAddress) => {
+    const options = { shouldDirty: true, shouldValidate: true }
+    if (address.addressLine1)
+      form.setValue("addressLine1", address.addressLine1, options)
+    if (address.city) form.setValue("city", address.city, options)
+    if (address.region) form.setValue("region", address.region, options)
+    if (COUNTRIES.some((country) => country.value === address.countryCode))
+      changeCountry(address.countryCode)
+  }
   const selectedProfileKey = form.watch("businessProfileKey")
   const selectedProfile = findBusinessProfile(selectedProfileKey)
 
@@ -302,6 +331,7 @@ export function StepBusiness({
             </FieldGroup>
           </details>
 
+          <SignupUseLocation onLocated={fillFromLocation} />
           <Field data-invalid={Boolean(form.formState.errors.addressLine1)}>
             <FieldLabel htmlFor="signup-addressLine1">
               Business address
@@ -370,24 +400,7 @@ export function StepBusiness({
                     invalid={fieldState.invalid}
                     placeholder="Select country…"
                     options={[...COUNTRIES]}
-                    onValueChange={(nextCountry) => {
-                      const currentPhone = form.getValues("phone")
-                      form.setValue(
-                        "phone",
-                        getSignupPhoneForCountry(
-                          currentPhone,
-                          selectedCountry,
-                          nextCountry,
-                        ),
-                        { shouldDirty: true },
-                      )
-                      field.onChange(nextCountry)
-                      form.setValue(
-                        "currencyCode",
-                        suggestCurrencyForCountry(nextCountry),
-                        { shouldValidate: true },
-                      )
-                    }}
+                    onValueChange={changeCountry}
                   />
                 )}
               />

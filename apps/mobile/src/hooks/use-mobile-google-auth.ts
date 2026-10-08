@@ -41,6 +41,7 @@ type UseMobileGoogleAuthInput = {
   city?: string
   countryCode?: string
   currencyCode?: OperatingCurrencyCode
+  region?: string
   legalVersion?: string
   mode: MobileGoogleAuthMode
   name?: string
@@ -123,6 +124,7 @@ export function useMobileGoogleAuth({
   city,
   countryCode,
   currencyCode,
+  region,
   legalVersion,
   mode,
   name,
@@ -202,6 +204,7 @@ export function useMobileGoogleAuth({
         city,
         countryCode,
         currencyCode,
+        region,
         idToken,
         legalVersion,
         mode,
@@ -225,6 +228,7 @@ export function useMobileGoogleAuth({
       city,
       countryCode,
       currencyCode,
+      region,
       legalVersion,
       mode,
       name,

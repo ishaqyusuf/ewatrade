@@ -83,6 +83,7 @@ export type MobileGoogleIdentityInput = {
   businessName?: string | null
   city?: string | null
   countryCode?: string | null
+  region?: string | null
   currencyCode?: OperatingCurrencyCode | null
   email: string
   idToken?: string | null
@@ -480,6 +481,7 @@ export async function createMobileOwnerOtp(
     businessName?: string | null
     city?: string | null
     countryCode?: string | null
+    region?: string | null
     currencyCode?: OperatingCurrencyCode | null
     email: string
     legalVersion?: string
@@ -522,6 +524,7 @@ export async function createMobileOwnerOtp(
         city: cleanText(input.city),
         codeHash: hashOtp(code),
         countryCode: normalizeCountryCode(input.countryCode),
+        region: cleanText(input.region),
         legalVersion: legalPublication?.version ?? null,
         legalDocumentHash: legalPublication?.documentHash ?? null,
         currencyCode:
@@ -558,6 +561,7 @@ export async function verifyMobileOwnerOtp(
     city?: string | null
     code: string
     countryCode?: string | null
+    region?: string | null
     currencyCode?: OperatingCurrencyCode | null
     email: string
     mode: MobileAuthMode
@@ -595,6 +599,7 @@ export async function verifyMobileOwnerOtp(
     city?: string | null
     codeHash?: string
     countryCode?: string | null
+    region?: string | null
     currencyCode?: OperatingCurrencyCode | null
     name?: string | null
     operatingModel?: BusinessOperatingModel | null
@@ -679,6 +684,7 @@ export async function verifyMobileOwnerOtp(
   const countryCode =
     normalizeCountryCode(input.countryCode) ??
     normalizeCountryCode(payload.countryCode)
+  const region = cleanText(input.region) ?? cleanText(payload.region)
 
   const existingUser = await db.user.findUnique({
     where: { email },
@@ -758,7 +764,7 @@ export async function verifyMobileOwnerOtp(
           businessName,
           city,
           countryCode: countryCode ?? approvedOnboarding?.draft?.countryCode,
-          region: approvedOnboarding?.draft?.region,
+          region: region ?? approvedOnboarding?.draft?.region,
           currencyCode,
           operatingModel,
           orderChannels,
@@ -964,7 +970,7 @@ export async function verifyMobileSocialIdentity(
           countryCode:
             normalizeCountryCode(input.countryCode) ??
             approvedOnboarding?.draft?.countryCode,
-          region: approvedOnboarding?.draft?.region,
+          region: cleanText(input.region) ?? approvedOnboarding?.draft?.region,
           currencyCode: normalizeOperatingCurrencyCode(input.currencyCode),
           operatingModel: input.operatingModel,
           orderChannels: input.orderChannels,

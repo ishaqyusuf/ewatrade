@@ -167,6 +167,7 @@ const mobileOwnerAuthShape = {
     .regex(/^[A-Za-z]{2}$/)
     .optional(),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
+  region: z.string().trim().max(120).optional(),
   email: emailSchema,
   mode: mobileAuthModeSchema,
   name: z.string().trim().min(1).max(120).optional(),
@@ -248,6 +249,7 @@ export const verifyMobileGoogleSchema = z
       .regex(/^[A-Za-z]{2}$/)
       .optional(),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
+    region: z.string().trim().max(120).optional(),
     idToken: z.string().trim().min(20),
     mode: mobileAuthModeSchema,
     name: z.string().trim().min(1).max(120).optional(),
@@ -638,6 +640,7 @@ export const authRouter = createTRPCRouter({
               city: input.city,
               countryCode: input.countryCode,
               currencyCode: input.currencyCode,
+              region: input.region,
               email: profile.email,
               idToken: input.idToken,
               image: profile.picture,

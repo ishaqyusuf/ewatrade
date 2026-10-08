@@ -16,6 +16,7 @@ import {
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CountrySelect } from "@/components/mobile/country-select"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
+import { CurrentLocationCard } from "@/components/mobile/current-location-card"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -24,6 +25,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
+import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
@@ -52,6 +54,7 @@ import {
 } from "@ewatrade/utils"
 import {
   currencyForCountry,
+  findCountry,
   getCountry,
   toInternationalPhone,
   toLocalPhone,
@@ -94,6 +97,7 @@ export function SignUpScreen({
     continuation?.draft.addressLine1 ?? "",
   )
   const [city, setCity] = useState(continuation?.draft.city ?? "")
+  const [region, setRegion] = useState(continuation?.draft.region ?? "")
   const [countryCode, setCountryCode] = useState(
     () => getCountry(continuation?.draft.countryCode).code,
   )
@@ -114,6 +118,15 @@ export function SignUpScreen({
     // The phone keeps its local digits; only the +code beside it changes.
     const currency = currencyForCountry(code)
     if (currency) setCurrencyCode(currency)
+  }
+  const currentAddress = useCurrentAddress()
+  const fillFromLocation = async () => {
+    const found = await currentAddress.locate()
+    if (!found) return
+    if (found.addressLine1) setAddressLine1(found.addressLine1)
+    if (found.city) setCity(found.city)
+    if (found.region) setRegion(found.region)
+    if (findCountry(found.countryCode)) changeCountry(found.countryCode)
   }
   const [operatingModel, setOperatingModel] = useState<BusinessOperatingModel>(
     BUSINESS_OPERATING_MODELS.find(
@@ -157,6 +170,7 @@ export function SignUpScreen({
     city: string
     countryCode: string
     currencyCode: OperatingCurrencyCode
+    region: string
     email: string
     name: string
     operatingModel: BusinessOperatingModel
@@ -237,6 +251,7 @@ export function SignUpScreen({
   const draftSnapshot = JSON.stringify({
     step,
     countryCode,
+    region: region.trim(),
     phone: fullPhone,
     addressLine1,
     city,
@@ -271,6 +286,7 @@ export function SignUpScreen({
     city: city.trim(),
     countryCode,
     currencyCode,
+    region: region.trim() || undefined,
     mode: "sign_up",
     name: name.trim() || undefined,
     operatingModel,
@@ -291,6 +307,7 @@ export function SignUpScreen({
     city: city.trim(),
     countryCode,
     currencyCode,
+    region: region.trim() || undefined,
     mode: "sign_up",
     name: name.trim() || undefined,
     operatingModel,
@@ -322,6 +339,7 @@ export function SignUpScreen({
             city: city.trim(),
             countryCode,
             currencyCode,
+            region: region.trim() || undefined,
             email: normalizedEmail,
             ...(legalVersion
               ? {
@@ -361,6 +379,7 @@ export function SignUpScreen({
       city: city.trim(),
       countryCode,
       currencyCode,
+      region: region.trim() || undefined,
       email: normalizedEmail,
       mode: "sign_up",
       name: name.trim(),
@@ -555,6 +574,7 @@ export function SignUpScreen({
             currencyCode,
             email,
             name,
+            region,
             operatingModel,
             orderChannels,
             otherBusinessDescription,
@@ -582,6 +602,7 @@ export function SignUpScreen({
             setAddressLine1(fixture.addressLine1)
             setCity(fixture.city)
             setCountryCode("NG")
+            setRegion("Lagos")
             setPhone(toLocalPhone("1", fixture.phone))
             setCurrencyCode(fixture.currencyCode as OperatingCurrencyCode)
           } else {
@@ -603,6 +624,7 @@ export function SignUpScreen({
           setBusinessProfileKey(snapshot.businessProfileKey)
           setCity(snapshot.city)
           setCountryCode(snapshot.countryCode)
+          setRegion(snapshot.region)
           setCurrencyCode(snapshot.currencyCode)
           setEmail(snapshot.email)
           setName(snapshot.name)
@@ -764,6 +786,13 @@ export function SignUpScreen({
             value={businessName}
             variant={appearance === "classic" ? "green-gate" : "auth"}
           />
+          <CurrentLocationCard
+            address={currentAddress.address}
+            error={currentAddress.error}
+            onClear={currentAddress.clear}
+            onLocate={() => void fillFromLocation()}
+            status={currentAddress.status}
+          />
           <FormField
             label="Business address"
             leadingIcon={appearance === "classic" ? undefined : "MapPin"}
@@ -778,13 +807,22 @@ export function SignUpScreen({
             </View>
             <FormField
               containerClassName={largeTextLayout ? undefined : "flex-1"}
-              label="City"
-              onChangeText={setCity}
-              placeholder="City"
-              value={city}
+              label="State"
+              onChangeText={setRegion}
+              placeholder="State"
+              textContentType="addressState"
+              value={region}
               variant={appearance === "classic" ? "green-gate" : "auth"}
             />
           </View>
+          <FormField
+            label="City"
+            onChangeText={setCity}
+            placeholder="City"
+            textContentType="addressCity"
+            value={city}
+            variant={appearance === "classic" ? "green-gate" : "auth"}
+          />
           <FormField
             accessibilityLabel={`Phone, plus ${dialCode}`}
             keyboardType="phone-pad"
