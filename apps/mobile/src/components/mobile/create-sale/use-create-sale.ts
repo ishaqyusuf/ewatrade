@@ -708,8 +708,9 @@ export function useCreateSale({
     }).fulfillNow
     try {
       if (isOffline) {
-        queueCommand(
-          buildOfflineOrderCommand({
+        queueCommand({
+          displayTotal: { amountMinor: totalMinor, currencyCode },
+          ...buildOfflineOrderCommand({
             clientCommandId: orderClientId.current,
             customer: selectedCustomer,
             deliveryDueAt,
@@ -724,7 +725,7 @@ export function useCreateSale({
                   }
                 : undefined,
           }),
-        )
+        })
         const result: CreateSaleCompletion = {
           amount: formatMinorMoney(totalMinor, currencyCode),
           customer: selectedCustomer?.name ?? "Guest customer",

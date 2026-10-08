@@ -19,6 +19,7 @@ export type PendingCommerceOrder = {
   customerEmail?: string
   customerName?: string
   customerPhone?: string
+  displayTotal?: { amountMinor: number; currencyCode: string }
   lineCount: number
 }
 

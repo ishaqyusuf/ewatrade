@@ -60,6 +60,7 @@ export default function AdminTabsLayout() {
                 customerName: command.payload.customerName,
                 customerPhone: command.payload.customerPhone,
                 lineCount: command.payload.lines.length,
+                displayTotal: command.displayTotal,
               },
             ]
           : [],
