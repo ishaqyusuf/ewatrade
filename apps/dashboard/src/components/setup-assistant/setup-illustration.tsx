@@ -1,8 +1,10 @@
 "use client"
 
+import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
+import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { CatalogIllustrationPicker } from "../catalog-item/catalog-illustration-picker"
 import { CatalogIllustrationPreview } from "../catalog-item/catalog-illustration-preview"
@@ -113,9 +115,8 @@ export function SetupIllustrationControl({
       </p>
       {choosing ? (
         <div className="rounded-lg border border-border p-3">
-          <CatalogIllustrationPicker
-            category={categoryLabel(payload.categoryKey)}
-            kind={payload.kind}
+          <SetupIllustrationPicker
+            payload={payload}
             selectedId={current ?? null}
             disabled={pending}
             onSelect={(id) => save(id)}
@@ -123,5 +124,33 @@ export function SetupIllustrationControl({
         </div>
       ) : null}
     </div>
+  )
+}
+
+/** Mounted only while choosing; recommends for the business type in the setup state. */
+function SetupIllustrationPicker({
+  payload,
+  selectedId,
+  disabled,
+  onSelect,
+}: {
+  payload: Illustrated
+  selectedId: string | null
+  disabled: boolean
+  onSelect: (id: string) => void
+}) {
+  const trpc = useTRPC()
+  const state = useQuery(trpc.setupAssistant.state.queryOptions())
+  const businessProfileKey =
+    state.data?.enabled === true ? state.data.businessProfileKey : null
+  return (
+    <CatalogIllustrationPicker
+      businessProfileKey={businessProfileKey}
+      category={categoryLabel(payload.categoryKey)}
+      kind={payload.kind}
+      selectedId={selectedId}
+      disabled={disabled}
+      onSelect={onSelect}
+    />
   )
 }
