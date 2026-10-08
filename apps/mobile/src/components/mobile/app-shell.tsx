@@ -231,13 +231,14 @@ export function MobileAppShell({
         ) : null}
 
         <VariableContextProvider
-          value={{ "--shell-content-top": hero ? 24 : insets.top + 24 }}
+          value={{ "--shell-content-top": hero ? 16 : insets.top + 16 }}
         >
           <RNView
             {...(contentClassName
               ? {
                   className: cn(
-                    "gap-6 px-6 pt-[var(--shell-content-top)]",
+                    // Green Till standard: 18 side gutter, 16 between blocks.
+                    "gap-4 px-[18px] pt-[var(--shell-content-top)]",
                     (!hero || statusBarFollowsHero) && "min-h-full",
                     contentClassName,
                   ),
@@ -245,11 +246,11 @@ export function MobileAppShell({
               : {
                   style: [
                     {
-                      gap: 24,
+                      gap: 16,
                       minHeight:
                         !hero || statusBarFollowsHero ? "100%" : undefined,
-                      paddingHorizontal: 24,
-                      paddingTop: hero ? 24 : insets.top + 24,
+                      paddingHorizontal: 18,
+                      paddingTop: hero ? 16 : insets.top + 16,
                     },
                     contentStyle,
                   ],

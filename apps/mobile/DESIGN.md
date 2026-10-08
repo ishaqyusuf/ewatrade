@@ -53,3 +53,16 @@ board (`.brain/tasks/green-till-batch-board.md`).
 - **Rules**: never mix `className` and inline `style` on one element; money and counts
   use tabular numbers; honest numbers (skeletons, "—" with a reason, "as of" times,
   "Waiting to sync"). Guard: `scripts/check-green-till-kit.mjs`.
+
+### Green Till standard scale (use these, nothing in between)
+
+- **Spacing:** screen gutter 18; 16 between blocks (shell gap); section header 22
+  above / 10 below; 14 between stacked cards; card padding 14 (hero 18); row
+  vertical padding 12 (min height 62 with avatar); chip gap 8.
+- **Radius:** hero 26, list cards 20, tiles and nudges 18, inputs 14, chips full.
+- **Type (size/weight):** hero amount 36/800; hero or screen title 22–23/800;
+  header business name 17/800; section header 16/800; row title 14/700; body
+  13–13.5/400; meta and labels 12; tile label 11.5/700; pill 10.5/700. Money and
+  counts use tabular numbers.
+- **Controls:** primary buttons 50 tall (64 at large text); quick tiles 54; icon
+  buttons 38 with hit slop to 44+; minimum touch target 44.
