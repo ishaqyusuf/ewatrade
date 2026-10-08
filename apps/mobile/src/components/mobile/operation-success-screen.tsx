@@ -99,8 +99,7 @@ export function OperationSuccessScreen({
               onPress: () => router.replace("/create-sale-modal" as never),
               testID: "item-success-first-order",
             }}
-            label={kind === "service" ? "Service added" : "Product added"}
-            pill={{ label: "Saved", tone: "synced" }}
+            done
             sub="Available in your catalog. You can change it any time."
             testID="item-success-hero"
             title={`${params.name || "Your item"} is ready to sell`}
