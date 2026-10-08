@@ -57,7 +57,7 @@ export async function resolveOrderScope(
 }
 
 export const openOrderWhere = {
-  status: { notIn: ["CANCELLED", "DRAFT", "PENDING", "REFUNDED"] },
+  status: { notIn: ["CANCELLED", "REFUNDED"] },
   OR: [{ paymentStatus: { not: "PAID" } }, { completedAt: null }],
 } satisfies Prisma.CommercialOrderWhereInput
 

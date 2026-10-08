@@ -29,15 +29,18 @@ type Props = {
   availability: WorkspaceFeatureAvailability
   store: TenantStore
   tenantId: string
+  createdByUserId?: string
 }
 
 export async function OverviewMetrics({
   availability,
   store,
   tenantId,
+  createdByUserId,
 }: Props) {
   const summary = await getDashboardOverviewMetrics(prisma, {
     availability,
+    createdByUserId,
     storeId: store.id,
     tenantId,
     todayStart: startOfToday(),

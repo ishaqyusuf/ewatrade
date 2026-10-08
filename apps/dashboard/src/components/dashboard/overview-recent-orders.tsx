@@ -9,8 +9,16 @@ function money(value: number, currencyCode: string) {
   }).format(value / 100)
 }
 
-export async function OverviewRecentOrders({ storeId }: { storeId: string }) {
-  const recentOrders = await getDashboardRecentOrders(prisma, { storeId })
+export async function OverviewRecentOrders({
+  storeId,
+  tenantId,
+  createdByUserId,
+}: { storeId: string; tenantId: string; createdByUserId?: string }) {
+  const recentOrders = await getDashboardRecentOrders(prisma, {
+    storeId,
+    tenantId,
+    createdByUserId,
+  })
   return (
     <>
       {recentOrders.length > 0 ? (
