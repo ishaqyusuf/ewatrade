@@ -82,6 +82,7 @@ export type MobileGoogleIdentityInput = {
   businessProfileVersion?: 1 | null
   businessName?: string | null
   city?: string | null
+  countryCode?: string | null
   currencyCode?: OperatingCurrencyCode | null
   email: string
   idToken?: string | null
@@ -118,6 +119,12 @@ async function requireMobileApprovedSignup(
     throw new OnboardingContinuationError("IDENTITY")
   if (!data.emailVerifiedAt) throw new OnboardingContinuationError("UNVERIFIED")
   return data
+}
+
+/** An ISO 3166-1 alpha-2 code such as NG, or null. */
+function normalizeCountryCode(value?: string | null) {
+  const code = value?.trim().toUpperCase()
+  return code && /^[A-Z]{2}$/.test(code) ? code : null
 }
 
 const OTP_TTL_MINUTES = 10
@@ -472,6 +479,7 @@ export async function createMobileOwnerOtp(
     businessProfileVersion?: 1 | null
     businessName?: string | null
     city?: string | null
+    countryCode?: string | null
     currencyCode?: OperatingCurrencyCode | null
     email: string
     legalVersion?: string
@@ -513,6 +521,7 @@ export async function createMobileOwnerOtp(
         businessName: cleanText(input.businessName),
         city: cleanText(input.city),
         codeHash: hashOtp(code),
+        countryCode: normalizeCountryCode(input.countryCode),
         legalVersion: legalPublication?.version ?? null,
         legalDocumentHash: legalPublication?.documentHash ?? null,
         currencyCode:
@@ -548,6 +557,7 @@ export async function verifyMobileOwnerOtp(
     businessName?: string | null
     city?: string | null
     code: string
+    countryCode?: string | null
     currencyCode?: OperatingCurrencyCode | null
     email: string
     mode: MobileAuthMode
@@ -584,6 +594,7 @@ export async function verifyMobileOwnerOtp(
     legalDocumentHash?: string | null
     city?: string | null
     codeHash?: string
+    countryCode?: string | null
     currencyCode?: OperatingCurrencyCode | null
     name?: string | null
     operatingModel?: BusinessOperatingModel | null
@@ -665,6 +676,9 @@ export async function verifyMobileOwnerOtp(
   const currencyCode = normalizeOperatingCurrencyCode(
     input.currencyCode ?? payload.currencyCode,
   )
+  const countryCode =
+    normalizeCountryCode(input.countryCode) ??
+    normalizeCountryCode(payload.countryCode)
 
   const existingUser = await db.user.findUnique({
     where: { email },
@@ -743,7 +757,7 @@ export async function verifyMobileOwnerOtp(
           businessProfileVersion,
           businessName,
           city,
-          countryCode: approvedOnboarding?.draft?.countryCode,
+          countryCode: countryCode ?? approvedOnboarding?.draft?.countryCode,
           region: approvedOnboarding?.draft?.region,
           currencyCode,
           operatingModel,
@@ -947,7 +961,9 @@ export async function verifyMobileSocialIdentity(
           businessProfileVersion: input.businessProfileVersion,
           businessName,
           city: input.city,
-          countryCode: approvedOnboarding?.draft?.countryCode,
+          countryCode:
+            normalizeCountryCode(input.countryCode) ??
+            approvedOnboarding?.draft?.countryCode,
           region: approvedOnboarding?.draft?.region,
           currencyCode: normalizeOperatingCurrencyCode(input.currencyCode),
           operatingModel: input.operatingModel,

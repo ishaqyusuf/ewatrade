@@ -39,6 +39,7 @@ type UseMobileGoogleAuthInput = {
   businessProfileVersion?: 1
   businessName?: string
   city?: string
+  countryCode?: string
   currencyCode?: OperatingCurrencyCode
   legalVersion?: string
   mode: MobileGoogleAuthMode
@@ -120,6 +121,7 @@ export function useMobileGoogleAuth({
   businessProfileVersion,
   businessName,
   city,
+  countryCode,
   currencyCode,
   legalVersion,
   mode,
@@ -198,6 +200,7 @@ export function useMobileGoogleAuth({
         businessProfileVersion,
         businessName,
         city,
+        countryCode,
         currencyCode,
         idToken,
         legalVersion,
@@ -220,6 +223,7 @@ export function useMobileGoogleAuth({
       businessProfileVersion,
       businessName,
       city,
+      countryCode,
       currencyCode,
       legalVersion,
       mode,

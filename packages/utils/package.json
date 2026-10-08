@@ -11,6 +11,7 @@
     ".": "./src/index.ts",
     "./staff-invitation-links": "./src/staff-invitation-links.ts",
     "./currency": "./src/currency.ts",
+    "./countries": "./src/countries.ts",
     "./finance-money": "./src/finance-money.ts",
     "./finance-close-checklist": "./src/finance-close-checklist.ts",
     "./finance-report-output": "./src/finance-report-output.ts",

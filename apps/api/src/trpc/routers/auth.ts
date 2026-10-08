@@ -161,6 +161,11 @@ const mobileOwnerAuthShape = {
   businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION).optional(),
   businessName: z.string().trim().min(1).max(120).optional(),
   city: z.string().trim().min(2).max(120).optional(),
+  countryCode: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/)
+    .optional(),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
   email: emailSchema,
   mode: mobileAuthModeSchema,
@@ -237,6 +242,11 @@ export const verifyMobileGoogleSchema = z
       .optional(),
     businessName: z.string().trim().min(1).max(120).optional(),
     city: z.string().trim().min(2).max(120).optional(),
+    countryCode: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{2}$/)
+      .optional(),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
     idToken: z.string().trim().min(20),
     mode: mobileAuthModeSchema,
@@ -626,6 +636,7 @@ export const authRouter = createTRPCRouter({
               businessProfileVersion: input.businessProfileVersion,
               businessName: input.businessName,
               city: input.city,
+              countryCode: input.countryCode,
               currencyCode: input.currencyCode,
               email: profile.email,
               idToken: input.idToken,

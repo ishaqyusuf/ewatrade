@@ -14,6 +14,7 @@ import {
   AuthMethodButton,
 } from "@/components/mobile/auth-header"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { CountrySelect } from "@/components/mobile/country-select"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -49,6 +50,12 @@ import {
   listBusinessProfiles,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
+import {
+  currencyForCountry,
+  getCountry,
+  toInternationalPhone,
+  toLocalPhone,
+} from "@ewatrade/utils/countries"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -87,13 +94,27 @@ export function SignUpScreen({
     continuation?.draft.addressLine1 ?? "",
   )
   const [city, setCity] = useState(continuation?.draft.city ?? "")
-  const [phone, setPhone] = useState(
-    continuation?.draft.phone ?? continuation?.phone ?? "",
+  const [countryCode, setCountryCode] = useState(
+    () => getCountry(continuation?.draft.countryCode).code,
   )
+  const dialCode = getCountry(countryCode).dialCode
+  const [phone, setPhone] = useState(() =>
+    toLocalPhone(
+      getCountry(continuation?.draft.countryCode).dialCode,
+      continuation?.draft.phone ?? continuation?.phone,
+    ),
+  )
+  const fullPhone = toInternationalPhone(dialCode, phone)
   const [email, setEmail] = useState(continuation?.email ?? "")
   const [currencyCode, setCurrencyCode] = useState<OperatingCurrencyCode>(
     normalizeOperatingCurrencyCode(continuation?.draft.currencyCode),
   )
+  const changeCountry = (code: string) => {
+    setCountryCode(code)
+    // The phone keeps its local digits; only the +code beside it changes.
+    const currency = currencyForCountry(code)
+    if (currency) setCurrencyCode(currency)
+  }
   const [operatingModel, setOperatingModel] = useState<BusinessOperatingModel>(
     BUSINESS_OPERATING_MODELS.find(
       (value) => value.key === continuation?.draft.operatingModel,
@@ -134,6 +155,7 @@ export function SignUpScreen({
     businessName: string
     businessProfileKey: string
     city: string
+    countryCode: string
     currencyCode: OperatingCurrencyCode
     email: string
     name: string
@@ -147,7 +169,9 @@ export function SignUpScreen({
   const normalizedEmail = email.trim().toLowerCase()
   const normalizedBusinessName = businessName.trim()
   const hasBusinessContact =
-    !!addressLine1.trim() && !!city.trim() && phone.trim().length >= 7
+    !!addressLine1.trim() &&
+    !!city.trim() &&
+    phone.replace(/\D/g, "").length >= 7
   const selectedBusinessProfile = findBusinessProfile(businessProfileKey)
   const visibleBusinessProfiles = useMemo(
     () => listBusinessProfiles({ query: profileQuery }),
@@ -212,7 +236,8 @@ export function SignUpScreen({
   )
   const draftSnapshot = JSON.stringify({
     step,
-    phone,
+    countryCode,
+    phone: fullPhone,
     addressLine1,
     city,
     businessProfileKey,
@@ -244,13 +269,14 @@ export function SignUpScreen({
     businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
     businessName: normalizedBusinessName,
     city: city.trim(),
+    countryCode,
     currencyCode,
     mode: "sign_up",
     name: name.trim() || undefined,
     operatingModel,
     orderChannels,
     otherBusinessDescription: otherBusinessDescription.trim() || undefined,
-    phone: phone.trim(),
+    phone: fullPhone,
     teamSize,
     onError: setError,
   })
@@ -263,13 +289,14 @@ export function SignUpScreen({
     businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
     businessName: normalizedBusinessName,
     city: city.trim(),
+    countryCode,
     currencyCode,
     mode: "sign_up",
     name: name.trim() || undefined,
     operatingModel,
     orderChannels,
     otherBusinessDescription: otherBusinessDescription.trim() || undefined,
-    phone: phone.trim(),
+    phone: fullPhone,
     teamSize,
     onError: setError,
   })
@@ -293,6 +320,7 @@ export function SignUpScreen({
             businessProfileVersion: String(BUSINESS_PROFILE_SCHEMA_VERSION),
             businessName: normalizedBusinessName,
             city: city.trim(),
+            countryCode,
             currencyCode,
             email: normalizedEmail,
             ...(legalVersion
@@ -311,7 +339,7 @@ export function SignUpScreen({
                   otherBusinessDescription: otherBusinessDescription.trim(),
                 }
               : {}),
-            phone: phone.trim(),
+            phone: fullPhone,
             teamSize,
           },
         })
@@ -331,6 +359,7 @@ export function SignUpScreen({
       businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
       businessName: normalizedBusinessName,
       city: city.trim(),
+      countryCode,
       currencyCode,
       email: normalizedEmail,
       mode: "sign_up",
@@ -338,7 +367,7 @@ export function SignUpScreen({
       operatingModel,
       orderChannels,
       otherBusinessDescription: otherBusinessDescription.trim() || undefined,
-      phone: phone.trim(),
+      phone: fullPhone,
       teamSize,
     })
   }
@@ -522,6 +551,7 @@ export function SignUpScreen({
             businessName,
             businessProfileKey,
             city,
+            countryCode,
             currencyCode,
             email,
             name,
@@ -551,7 +581,8 @@ export function SignUpScreen({
             setBusinessName(fixture.businessName)
             setAddressLine1(fixture.addressLine1)
             setCity(fixture.city)
-            setPhone(fixture.phone)
+            setCountryCode("NG")
+            setPhone(toLocalPhone("1", fixture.phone))
             setCurrencyCode(fixture.currencyCode as OperatingCurrencyCode)
           } else {
             const fixture = createFixtureIdentity(context, {
@@ -571,6 +602,7 @@ export function SignUpScreen({
           setBusinessName(snapshot.businessName)
           setBusinessProfileKey(snapshot.businessProfileKey)
           setCity(snapshot.city)
+          setCountryCode(snapshot.countryCode)
           setCurrencyCode(snapshot.currencyCode)
           setEmail(snapshot.email)
           setName(snapshot.name)
@@ -741,24 +773,29 @@ export function SignUpScreen({
             variant={appearance === "classic" ? "green-gate" : "auth"}
           />
           <View className={largeTextLayout ? "gap-3" : "flex-row gap-3"}>
+            <View className={largeTextLayout ? undefined : "flex-1"}>
+              <CountrySelect onChange={changeCountry} value={countryCode} />
+            </View>
             <FormField
-              containerClassName="flex-1"
+              containerClassName={largeTextLayout ? undefined : "flex-1"}
               label="City"
               onChangeText={setCity}
               placeholder="City"
               value={city}
               variant={appearance === "classic" ? "green-gate" : "auth"}
             />
-            <FormField
-              containerClassName="flex-1"
-              keyboardType="phone-pad"
-              label="Phone"
-              onChangeText={setPhone}
-              placeholder="Phone"
-              value={phone}
-              variant={appearance === "classic" ? "green-gate" : "auth"}
-            />
           </View>
+          <FormField
+            accessibilityLabel={`Phone, plus ${dialCode}`}
+            keyboardType="phone-pad"
+            label="Phone"
+            leadingText={`+${dialCode}`}
+            onChangeText={setPhone}
+            placeholder="803 123 4567"
+            textContentType="telephoneNumber"
+            value={phone}
+            variant={appearance === "classic" ? "green-gate" : "auth"}
+          />
           <CurrencySelector
             appearance={appearance === "classic" ? "chips" : "classic"}
             label={appearance === "classic" ? "Currency" : undefined}
