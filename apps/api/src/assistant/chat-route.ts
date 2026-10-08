@@ -318,13 +318,15 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
         model: model.modelId,
         status: "FAILED",
         errorCode: "BUDGET_EXHAUSTED",
+        // The owner's message is already stored; answer it so the history
+        // does not show it unanswered after a reload.
+        assistantMessage: {
+          id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text: BUDGET_EXHAUSTED_MESSAGE }],
+        },
       })
-      return failure(
-        context,
-        429,
-        "BUDGET_EXHAUSTED",
-        "You've used this business's setup assistant allowance. Your setup list is still here to review and finish.",
-      )
+      return failure(context, 429, "BUDGET_EXHAUSTED", BUDGET_EXHAUSTED_MESSAGE)
     }
 
     const [{ context: business }, storedHistory] = await Promise.all([
@@ -502,6 +504,9 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
     if (!streaming) lease.release()
   }
 }
+
+const BUDGET_EXHAUSTED_MESSAGE =
+  "You've used this business's setup assistant allowance. Your setup list is still here to review and finish."
 
 /** What the owner sees when a turn fails; provider details stay server-side. */
 const STREAM_FAILURE_MESSAGE =

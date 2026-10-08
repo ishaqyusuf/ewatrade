@@ -51,6 +51,7 @@ function fakeRepository(
     completed: [] as Array<{ status: string; errorCode?: string }>,
     writes: [] as SetupDraftEntityWrite[],
     persistedAssistantMessage: false,
+    assistantText: null as string | null,
   }
   const repository: AssistantChatRepository = {
     readConversation: async (conversationId) => {
@@ -93,6 +94,11 @@ function fakeRepository(
         errorCode: input.errorCode,
       })
       calls.persistedAssistantMessage = Boolean(input.assistantMessage)
+      const parts = input.assistantMessage?.parts as
+        | Array<{ type: string; text?: string }>
+        | undefined
+      const first = parts?.[0]
+      calls.assistantText = first?.type === "text" ? (first.text ?? null) : null
     },
     listMessages: async () => [
       {
@@ -268,6 +274,11 @@ describe("assistant chat admission", () => {
     expect(fake.calls.completed).toEqual([
       { status: "FAILED", errorCode: "BUDGET_EXHAUSTED" },
     ])
+    // The stored owner message gets the allowance reply in the history.
+    expect(fake.calls.persistedAssistantMessage).toBe(true)
+    expect(fake.calls.assistantText).toBe(
+      "You've used this business's setup assistant allowance. Your setup list is still here to review and finish.",
+    )
   })
 
   test("per-user rate limit answers 429 with Retry-After", async () => {
