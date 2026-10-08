@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { financeExpenseReceiptListSchema } from "../../schemas/finance-expense-receipts"
 import { createCallerFactory } from "../init"
 import { financeRouter } from "./finance"
 
@@ -325,4 +326,21 @@ test("saved command retry is read-only and changed original identity maps to CON
   await expect(
     caller(f.db).createIntent({ ...input, originalFileName: "changed.pdf" }),
   ).rejects.toMatchObject({ code: "CONFLICT" })
+})
+
+test("receipt list input accepts infinite-query page direction and stays strict", () => {
+  // tRPC infinite queries send `direction` with every page.
+  const list = { bookId: "book-1", billId: "expense-1", limit: 20 }
+  for (const direction of ["forward", "backward"] as const)
+    expect(
+      financeExpenseReceiptListSchema.safeParse({ ...list, direction }).success,
+    ).toBe(true)
+  expect(
+    financeExpenseReceiptListSchema.safeParse({ ...list, direction: "up" })
+      .success,
+  ).toBe(false)
+  expect(
+    financeExpenseReceiptListSchema.safeParse({ ...list, tenantId: "other" })
+      .success,
+  ).toBe(false)
 })

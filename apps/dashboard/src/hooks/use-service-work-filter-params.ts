@@ -5,8 +5,8 @@ export const SERVICE_PRIORITY_FILTERS = ["normal", "urgent"] as const
 
 export const serviceWorkFilterParams = {
   serviceAssignee: parseAsString,
-  serviceDue: parseAsStringEnum(SERVICE_DUE_FILTERS),
-  servicePriority: parseAsStringEnum(SERVICE_PRIORITY_FILTERS),
+  serviceDue: parseAsStringEnum([...SERVICE_DUE_FILTERS]),
+  servicePriority: parseAsStringEnum([...SERVICE_PRIORITY_FILTERS]),
   serviceQuery: parseAsString,
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { TRPCClientError } from "@trpc/client"
 
 import { shouldRetryQuery } from "./query-retry"
 
@@ -41,5 +42,16 @@ describe("Dashboard query retries", () => {
         isServer: true,
       }),
     ).toBe(false)
+  })
+
+  test("reads the status from a real TRPCClientError response", () => {
+    const error = TRPCClientError.from({
+      error: {
+        code: -32004,
+        data: { code: "NOT_FOUND", httpStatus: 404, path: "finance.cashCount" },
+        message: "The requested information could not be found.",
+      },
+    } as Parameters<typeof TRPCClientError.from>[0])
+    expect(shouldRetryQuery(0, error, client)).toBe(false)
   })
 })
