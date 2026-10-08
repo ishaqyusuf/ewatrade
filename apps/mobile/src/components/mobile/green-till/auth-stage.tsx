@@ -105,7 +105,10 @@ export function StageHeroCard({
       {chips.length ? (
         <View style={styles.chips}>
           {chips.map((chip) => (
-            <View key={chip} style={styles.chip}>
+            <View
+              key={chip}
+              style={[styles.chip, { backgroundColor: palette.heroChip }]}
+            >
               <Text
                 maxFontSizeMultiplier={1.2}
                 style={[styles.chipText, { color: palette.heroForeground }]}
@@ -148,7 +151,7 @@ export function StageCard({
         frame(box),
         dashed
           ? {
-              backgroundColor: "transparent",
+              backgroundColor: palette.clear,
               borderWidth: 1.5,
               borderStyle: "dashed",
               borderColor: palette.stageInk,
@@ -474,7 +477,6 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 6 },
   chip: {
-    backgroundColor: "rgba(255,255,255,0.14)",
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,

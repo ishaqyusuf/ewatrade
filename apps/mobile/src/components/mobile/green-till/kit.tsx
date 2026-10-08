@@ -6,7 +6,11 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
+import {
+  GREEN_TILL_THEME,
+  type GreenTillTint,
+  tintChip,
+} from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { Children, Fragment, type ReactNode } from "react"
 import { Text as NativeText, ScrollView } from "react-native"
@@ -168,7 +172,7 @@ function AttentionCard({ item }: { item: AttentionItem }) {
       <View
         style={{
           alignItems: "center",
-          backgroundColor: `${tint.fg}24`,
+          backgroundColor: tintChip(tint.fg),
           borderRadius: 10,
           height: 32,
           justifyContent: "center",
