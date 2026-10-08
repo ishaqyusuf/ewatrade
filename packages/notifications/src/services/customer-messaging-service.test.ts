@@ -1,4 +1,3 @@
-// @ts-expect-error Bun test runtime types are outside this package tsconfig.
 import { afterEach, describe, expect, mock, test } from "bun:test"
 
 import { CustomerMessagingService } from "./customer-messaging-service"
@@ -32,7 +31,7 @@ describe("CustomerMessagingService", () => {
         headers: { "content-type": "application/json" },
         status: 200,
       })
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     const result = await new CustomerMessagingService().send({
       channel: "sms",
@@ -65,7 +64,7 @@ describe("CustomerMessagingService", () => {
     globalThis.fetch = mock(async (_url: string | URL, init?: RequestInit) => {
       headers = new Headers(init?.headers)
       return new Response("{}", { status: 200 })
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     await new CustomerMessagingService().send({
       channel: "sms",
@@ -84,7 +83,7 @@ describe("CustomerMessagingService", () => {
     globalThis.fetch = mock(async () => {
       calls += 1
       return new Response("{}", { status: 200 })
-    }) as typeof fetch
+    }) as unknown as typeof fetch
 
     await expect(
       new CustomerMessagingService().send({

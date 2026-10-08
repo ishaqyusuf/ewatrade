@@ -10,6 +10,7 @@ import {
   getDashboardCommands,
 } from "@/lib/dashboard-search"
 import type { DashboardNavItem } from "@/lib/navigation"
+import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import {
   Button,
@@ -26,6 +27,7 @@ import {
   SquareArrowRight01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
@@ -54,6 +56,14 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
+  const trpc = useTRPC()
+  // Checked only once search opens; the API decides role, Store and flag.
+  const setupAssistant = useQuery(
+    trpc.setupAssistant.state.queryOptions(undefined, {
+      enabled: open,
+      staleTime: 60_000,
+    }),
+  )
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<DashboardSearchResponse["results"]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -65,10 +75,12 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
   const commands = useMemo(
     () =>
       filterDashboardCommands(
-        getDashboardCommands(navItems, commandPaths),
+        getDashboardCommands(navItems, commandPaths, {
+          setupAssistant: setupAssistant.data?.enabled === true,
+        }),
         query,
       ),
-    [commandPaths, navItems, query],
+    [commandPaths, navItems, query, setupAssistant.data?.enabled],
   )
   const groupedResults = useMemo(() => {
     const groups = new Map<string, typeof results>()

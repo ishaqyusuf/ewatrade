@@ -1,12 +1,13 @@
 import { z } from "zod"
 import {
+  type SetupEntityKind,
   type SetupOpenQuestion,
   setupEntityPayloadSchema,
   setupOpenQuestionSchema,
 } from "./contracts"
 
 export type SetupFollowUpEntity = {
-  kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
+  kind: SetupEntityKind
   state: string
   payload: unknown
   openQuestions: unknown
@@ -58,6 +59,7 @@ export function summarizeSetupFollowUp(
   }
   const required = new Map<string, Missing[]>()
   const missingStock: string[] = []
+  const missingBalance: string[] = []
 
   for (const entity of entities) {
     if (entity.state === "NEEDS_INPUT") counts.needsDetails += 1
@@ -90,6 +92,12 @@ export function summarizeSetupFollowUp(
       entity.state !== "FAILED"
     ) {
       missingStock.push(payload.name)
+    } else if (
+      payload.kind === "money_account" &&
+      payload.openingBalanceMinor === undefined &&
+      entity.state !== "FAILED"
+    ) {
+      missingBalance.push(payload.name)
     }
   }
 
@@ -113,6 +121,11 @@ export function summarizeSetupFollowUp(
       missingStock.length === 1
         ? `How many ${missingStock[0]} do you have right now?`
         : `How many of ${nameList(missingStock)} do you have right now?`,
+    )
+
+  if (questions.length < MAX_QUESTIONS && missingBalance.length > 0)
+    questions.push(
+      `How much money is in ${nameList(missingBalance)} right now?`,
     )
 
   return {

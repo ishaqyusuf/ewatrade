@@ -24,12 +24,7 @@ import { Suspense } from "react"
 
 export const metadata: Metadata = { title: "Overview | EwaTrade" }
 
-export default async function DashboardHomePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}) {
-  const setupRequested = (await searchParams).setup === "assistant"
+export default async function DashboardHomePage() {
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
   const store = ctx?.activeStore
@@ -72,7 +67,6 @@ export default async function DashboardHomePage({
       {store ? (
         <SetupAssistant
           hasCatalogItems={availability?.hasCatalogItems ?? false}
-          requested={setupRequested}
           offerSetup={actions.length > 0}
           fallback={
             actions.length === 0 ? null : (

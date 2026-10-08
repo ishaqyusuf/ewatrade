@@ -70,7 +70,7 @@ export class ExpenseReceiptReadGeneration {
 
   async read<T>(
     request: { generation: number; requestId: number },
-    fetchPage: () => Promise<T>,
+    fetchPage: () => T | Promise<T>,
     canContinue: () => boolean,
   ): Promise<T> {
     if (!this.isCurrent(request) || !canContinue())

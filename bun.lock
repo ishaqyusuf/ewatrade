@@ -357,13 +357,15 @@
       "name": "@ewatrade/assistant",
       "version": "0.1.0",
       "dependencies": {
+        "@ewatrade/ai": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "ai": "6.0.141",
+        "fflate": "0.8.3",
+        "pdfjs-dist": "5.4.296",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
-        "@ewatrade/ai": "workspace:*",
         "@ewatrade/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "typescript": "catalog:",
@@ -499,6 +501,8 @@
       "name": "@ewatrade/jobs",
       "version": "1.0.0",
       "dependencies": {
+        "@ewatrade/ai": "workspace:*",
+        "@ewatrade/assistant": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
         "@ewatrade/communications": "workspace:*",
         "@ewatrade/db": "workspace:*",
@@ -509,6 +513,7 @@
         "@ewatrade/notifications": "workspace:*",
         "@ewatrade/observability": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/private-media": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@sentry/node": "^10.72.0",

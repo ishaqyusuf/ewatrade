@@ -544,7 +544,9 @@ describe("historical Commerce COGS source", () => {
       },
     })
     const prior = priorReferences()
-    prior.journals[0].bookId = "other-book"
+    const priorJournal = prior.journals[0]
+    if (!priorJournal) throw new Error("Expected a prior journal reference")
+    priorJournal.bookId = "other-book"
     await expect(
       readReviewedCommerceCostPostingsInTransaction(
         source.tx,
@@ -618,21 +620,24 @@ describe("historical Commerce COGS source", () => {
         },
       ],
     }
+    const [line] = input.lines
+    const [order] = input.orders
+    if (!line || !order) throw new Error("Expected one order and one line")
     expect(() => assertReviewedCommerceCostReadBounds(input)).not.toThrow()
     for (const changed of [
       { ...input, lines: [] },
       { ...input, currencyCode: "USD" },
-      { ...input, lines: [input.lines[0], input.lines[0]] },
+      { ...input, lines: [line, line] },
       {
         ...input,
         lines: [
           {
-            ...input.lines[0],
+            ...line,
             _count: { productFulfillments: 4096, serviceJobLines: 1 },
           },
         ],
       },
-      { ...input, orders: [{ ...input.orders[0], _count: { lines: 129 } }] },
+      { ...input, orders: [{ ...order, _count: { lines: 129 } }] },
     ])
       expect(() => assertReviewedCommerceCostReadBounds(changed)).toThrow(
         "complete bounds",

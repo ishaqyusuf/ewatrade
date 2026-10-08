@@ -377,8 +377,7 @@ export function SignupFlow() {
               className="signup-primary"
               disabled={!entryAgeChoice}
               onClick={() => {
-                if (entryAgeChoice && entryAgeChoice !== "UNDER_13")
-                  void confirmAge(entryAgeChoice)
+                if (entryAgeChoice) void confirmAge(entryAgeChoice)
               }}
               type="button"
             >

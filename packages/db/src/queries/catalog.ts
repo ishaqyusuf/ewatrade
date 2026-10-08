@@ -275,22 +275,25 @@ export async function assertCatalogPublicationSafety(
     )
   }
 
-  for (const value of new Set(
+  // Screen distinct values together: a live provider is a network call each,
+  // and this runs inside the caller's transaction.
+  const values = new Set(
     input.texts
       .map((text) => text?.trim())
       .filter((text): text is string => Boolean(text)),
-  )) {
-    try {
-      await assertStoreConversationTextScreened(value)
-    } catch (error) {
-      if (error instanceof StoreConversationError) {
-        throw new CatalogError(
-          "INVALID_CATALOG_ITEM",
-          "Catalog text cannot be published until live safety screening is available and passes.",
-        )
-      }
-      throw error
+  )
+  try {
+    await Promise.all(
+      [...values].map((value) => assertStoreConversationTextScreened(value)),
+    )
+  } catch (error) {
+    if (error instanceof StoreConversationError) {
+      throw new CatalogError(
+        "INVALID_CATALOG_ITEM",
+        "Catalog text cannot be published until live safety screening is available and passes.",
+      )
     }
+    throw error
   }
 }
 

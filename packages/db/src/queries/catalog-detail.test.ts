@@ -47,16 +47,22 @@ describe("Catalog detail history", () => {
   })
   test("cursor constraints bound each source before database take", () => {
     const cursor = { at, key: "price:m" }
-    expect(detailCursorWhere("price", "effectiveAt", cursor)).toEqual({
+    expect<Record<string, unknown>>(
+      detailCursorWhere("price", "effectiveAt", cursor),
+    ).toEqual({
       OR: [
         { effectiveAt: { lt: new Date(at) } },
         { effectiveAt: new Date(at), id: { lt: "m" } },
       ],
     })
-    expect(detailCursorWhere("stock", "effectiveAt", cursor)).toEqual({
+    expect<Record<string, unknown>>(
+      detailCursorWhere("stock", "effectiveAt", cursor),
+    ).toEqual({
       OR: [{ effectiveAt: { lt: new Date(at) } }],
     })
-    expect(detailCursorWhere("orders", "createdAt", cursor)).toEqual({
+    expect<Record<string, unknown>>(
+      detailCursorWhere("orders", "createdAt", cursor),
+    ).toEqual({
       OR: [{ createdAt: { lt: new Date(at) } }, { createdAt: new Date(at) }],
     })
   })

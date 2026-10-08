@@ -1,4 +1,9 @@
-import { createLoader, parseAsString, parseAsStringEnum } from "nuqs/server"
+import {
+  type LoaderInput,
+  createLoader,
+  parseAsString,
+  parseAsStringEnum,
+} from "nuqs/server"
 
 export const ORDER_STATUSES = [
   "DRAFT",
@@ -25,9 +30,9 @@ export type OrderFilters = {
 const loadOrderFilterState = createLoader(orderFilterParams)
 
 export async function loadOrderFilterParams(
-  searchParams: Parameters<typeof loadOrderFilterState>[0],
+  searchParams: LoaderInput | Promise<LoaderInput>,
 ): Promise<OrderFilters> {
-  const params = await loadOrderFilterState(searchParams)
+  const params = loadOrderFilterState(await searchParams)
   return {
     query: params.orderQuery,
     status: params.orderStatus,

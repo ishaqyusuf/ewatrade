@@ -8,6 +8,27 @@ import {
 } from "./domain"
 
 describe("tenant domain resolution", () => {
+  test("uses the selected workspace on the hosted Preview dashboard", () => {
+    expect(
+      resolveTenantDomain("preview-dashboard.ewatrade.com", {
+        platformDomain: "ewatrade.com",
+      }),
+    ).toEqual({
+      kind: "tenant",
+      hostname: "preview-dashboard.ewatrade.com",
+      surface: "dashboard",
+      tenantSlug: null,
+      isCustomDomain: false,
+      isLocalhost: false,
+    })
+    expect(
+      extractTenantSlugFromPlatformHostname(
+        "preview-west-dashboard.ewatrade.com",
+        "ewatrade.com",
+      ),
+    ).toBe("preview-west")
+  })
+
   test("treats reserved platform subdomains as global app surfaces", () => {
     expect(
       inferTenantSurfaceFromHostname("dashboard.ewatrade.com", "ewatrade.com"),

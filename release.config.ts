@@ -11,13 +11,18 @@ const featuresOff = [
   "ACCOUNT_PRIVACY_NOTICE_RECIPIENT_HMAC_KEY",
   "CATALOG_PHOTO_REVIEW_OPENAI_API_KEY", // photo review is off
   "APPLE_CLIENT_IDS", // Sign in with Apple, iOS only
+  "ASSISTANT_SETUP_MEDIA_ENABLED", // setup voice/photos/files stay off until OpenAI credit
 ]
 const tooling = [
+  "APP_UPDATE_BACKEND", // local app-update publisher tooling only
+  "APP_UPDATE_PUBLISH_TOKEN", // local app-update publisher credential only
   "QA_ACCELERATOR_ENABLED", // QA only; must stay off in production
   "EMAIL_QA_DOMAIN_ROUTES",
   "SENTRY_AUTH_TOKEN", // build-time source map upload
   "DEV_PROFILE", // local env-profile selector
   "DEBUG_PERF", // local performance debugging
+  "ASSISTANT_LIVE_SMOKE", // opt-in live model tests, never set on a deployment
+  "ASSISTANT_LIVE_MEASURE", // opt-in live setup measurement, tests only
 ]
 const optional = [
   "LOGLY_COLLECTOR_URL", // Logly logging stays off without these
@@ -28,6 +33,7 @@ const optional = [
   "EARLY_ACCESS_LINK_TTL_DAYS", // has a default
   "PLATFORM_DOMAIN", // defaults to ewatrade.com
   "NEXT_PUBLIC_CHAT_URL", // falls back to CHAT_URL
+  "STORE_CONVERSATION_TEXT_SAFETY_OPENAI_API_KEY", // falls back to OPENAI_API_KEY
 ]
 const notNeeded = [...featuresOff, ...tooling, ...optional]
 // Hosted Preview runs without these test-feature flags, real email sending and

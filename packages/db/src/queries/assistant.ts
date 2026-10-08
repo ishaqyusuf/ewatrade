@@ -2,9 +2,12 @@ import { createHash, randomUUID } from "node:crypto"
 import {
   type AssistantConversationStatus,
   Prisma,
+  type PrismaClient,
   type SetupDraftEntityKind,
   type SetupDraftEntityState,
 } from "../../generated/prisma/client"
+import { claimAssistantAttachmentsForMessage } from "./assistant-attachments"
+import { type ArgsAfterClient, runInOwnTransaction } from "./own-transaction"
 import type { DbClient } from "./types"
 
 export type AssistantScope = {
@@ -43,7 +46,6 @@ export class AssistantRecordError extends Error {
   }
 }
 
-const transactionOptions = { maxWait: 10_000, timeout: 30_000 }
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 
 const conversationSelect = {
@@ -73,10 +75,13 @@ export async function findSetupConversation(
   })
 }
 
-export async function createSetupConversation(
-  db: DbClient,
+export async function createSetupConversationInTransaction(
+  db: Prisma.TransactionClient,
   scope: AssistantScope,
   initialMessages: AssistantStoredMessage[],
+  options: {
+    status?: Extract<AssistantConversationStatus, "ACTIVE" | "OFFERED">
+  } = {},
 ) {
   const create = async (tx: Prisma.TransactionClient) => {
     const existing = await findSetupConversation(tx, scope)
@@ -87,7 +92,7 @@ export async function createSetupConversation(
         storeId: scope.storeId,
         ownerUserId: scope.userId,
         purpose: "SETUP",
-        status: "OFFERED",
+        status: options.status ?? "OFFERED",
         title: "Business setup",
         lastSequence: initialMessages.length,
         setupDraft: {
@@ -106,9 +111,17 @@ export async function createSetupConversation(
     })
     return conversation
   }
-  return "$transaction" in db
-    ? db.$transaction(create, transactionOptions)
-    : create(db)
+  return create(db)
+}
+
+/** Opens its own transaction; inside one, use createSetupConversationInTransaction. */
+export async function createSetupConversation(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof createSetupConversationInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    createSetupConversationInTransaction(tx, ...args),
+  )
 }
 
 export async function readAssistantConversation(
@@ -146,8 +159,8 @@ export async function listAssistantMessages(
   return rows.reverse()
 }
 
-export async function setAssistantConversationStatus(
-  db: DbClient,
+export async function setAssistantConversationStatusInTransaction(
+  db: Prisma.TransactionClient,
   input: {
     conversationId: string
     from: AssistantConversationStatus[]
@@ -168,9 +181,17 @@ export async function setAssistantConversationStatus(
       })
     return true
   }
-  return "$transaction" in db
-    ? db.$transaction(update, transactionOptions)
-    : update(db)
+  return update(db)
+}
+
+/** Opens its own transaction; inside one, use setAssistantConversationStatusInTransaction. */
+export async function setAssistantConversationStatus(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof setAssistantConversationStatusInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    setAssistantConversationStatusInTransaction(tx, ...args),
+  )
 }
 
 /** Sequence allocation and insert share one statement order; replays are no-ops. */
@@ -210,8 +231,8 @@ export function newAssistantMessageId() {
 }
 
 /** Idempotent per actor/request: a replayed request never runs the model twice. */
-export async function beginAssistantRun(
-  db: DbClient,
+export async function beginAssistantRunInTransaction(
+  db: Prisma.TransactionClient,
   input: {
     actorUserId: string
     conversationId: string
@@ -220,6 +241,8 @@ export async function beginAssistantRun(
     provider: string
     requestId: string
     userMessage: AssistantStoredMessage
+    /** READY attachments sent with this message; bound in the same transaction. */
+    attachmentIds?: string[]
   },
 ) {
   const begin = async (tx: Prisma.TransactionClient) => {
@@ -233,6 +256,12 @@ export async function beginAssistantRun(
       select: { id: true, conversationId: true, status: true },
     })
     if (prior) return { replay: true as const, run: prior }
+    await claimAssistantAttachmentsForMessage(tx, {
+      conversationId: input.conversationId,
+      actorUserId: input.actorUserId,
+      messageId: input.userMessage.id,
+      attachmentIds: input.attachmentIds ?? [],
+    })
     await appendAssistantMessage(tx, {
       conversationId: input.conversationId,
       message: input.userMessage,
@@ -251,9 +280,73 @@ export async function beginAssistantRun(
     })
     return { replay: false as const, run }
   }
-  return "$transaction" in db
-    ? db.$transaction(begin, transactionOptions)
-    : begin(db)
+  return begin(db)
+}
+
+/** Opens its own transaction; inside one, use beginAssistantRunInTransaction. */
+export async function beginAssistantRun(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof beginAssistantRunInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    beginAssistantRunInTransaction(tx, ...args),
+  )
+}
+
+/** Run status for reconnecting after a dropped stream; only the actor's own runs. */
+export async function readAssistantRun(
+  db: DbClient,
+  scope: AssistantScope,
+  runId: string,
+) {
+  return db.assistantRun.findFirst({
+    where: {
+      id: runId,
+      actorUserId: scope.userId,
+      conversation: { tenantId: scope.tenantId, storeId: scope.storeId },
+    },
+    select: {
+      id: true,
+      conversationId: true,
+      status: true,
+      errorCode: true,
+      startedAt: true,
+      completedAt: true,
+    },
+  })
+}
+
+/**
+ * Cheap re-check before each draft write inside a turn: the actor is still an
+ * active owner/admin of the Tenant and this Store's setup is still open.
+ */
+export async function isSetupActorStillAuthorized(
+  db: DbClient,
+  scope: AssistantScope,
+  conversationId: string,
+) {
+  const [membership, conversation] = await Promise.all([
+    db.membership.findFirst({
+      where: {
+        tenantId: scope.tenantId,
+        userId: scope.userId,
+        status: "ACTIVE",
+        role: { in: ["OWNER", "ADMIN"] },
+        tenant: { isActive: true },
+      },
+      select: { id: true },
+    }),
+    db.assistantConversation.findFirst({
+      where: {
+        id: conversationId,
+        tenantId: scope.tenantId,
+        storeId: scope.storeId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
+    }),
+  ])
+  return Boolean(membership && conversation)
 }
 
 export type AssistantUsage = {
@@ -263,8 +356,8 @@ export type AssistantUsage = {
   totalTokens?: number
 }
 
-export async function completeAssistantRun(
-  db: DbClient,
+export async function completeAssistantRunInTransaction(
+  db: Prisma.TransactionClient,
   input: {
     runId: string
     tenantId: string
@@ -317,9 +410,17 @@ export async function completeAssistantRun(
         data: { tokens: { increment: input.usage.totalTokens } },
       })
   }
-  return "$transaction" in db
-    ? db.$transaction(complete, transactionOptions)
-    : complete(db)
+  return complete(db)
+}
+
+/** Opens its own transaction; inside one, use completeAssistantRunInTransaction. */
+export async function completeAssistantRun(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof completeAssistantRunInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    completeAssistantRunInTransaction(tx, ...args),
+  )
 }
 
 export type AssistantBudgetLimits = {
@@ -333,8 +434,8 @@ export function assistantBudgetScopeKey(tenantId: string, purpose: string) {
 }
 
 /** Row-locked rolling budget; exhaustion blocks new model calls, never drafts. */
-export async function reserveAssistantBudget(
-  db: DbClient,
+export async function reserveAssistantBudgetInTransaction(
+  db: Prisma.TransactionClient,
   input: { scopeKey: string; limits: AssistantBudgetLimits },
 ) {
   const reserve = async (tx: Prisma.TransactionClient) => {
@@ -363,7 +464,13 @@ export async function reserveAssistantBudget(
     await tx.assistantBudget.update({
       where: { scopeKey: input.scopeKey },
       data: reset
-        ? { windowStartedAt: now, requests: 1, tokens: 0 }
+        ? {
+            windowStartedAt: now,
+            requests: 1,
+            tokens: 0,
+            audioSeconds: 0,
+            visionImages: 0,
+          }
         : { requests: { increment: 1 } },
     })
     return {
@@ -371,9 +478,152 @@ export async function reserveAssistantBudget(
       remainingRequests: input.limits.maxRequests - requests - 1,
     }
   }
-  return "$transaction" in db
-    ? db.$transaction(reserve, transactionOptions)
-    : reserve(db)
+  return reserve(db)
+}
+
+/** Opens its own transaction; inside one, use reserveAssistantBudgetInTransaction. */
+export async function reserveAssistantBudget(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof reserveAssistantBudgetInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    reserveAssistantBudgetInTransaction(tx, ...args),
+  )
+}
+
+export type AssistantMediaBudgetLimits = {
+  maxAudioSeconds: number
+  maxVisionImages: number
+  windowMs: number
+}
+
+/**
+ * Reserves transcription seconds or vision images against the same rolling
+ * window as chat turns. Exhaustion refuses the media step, never the draft.
+ */
+export async function reserveAssistantMediaBudgetInTransaction(
+  db: Prisma.TransactionClient,
+  input: {
+    scopeKey: string
+    limits: AssistantMediaBudgetLimits
+    audioSeconds?: number
+    images?: number
+  },
+) {
+  const audioSeconds = Math.max(0, Math.ceil(input.audioSeconds ?? 0))
+  const images = Math.max(0, Math.ceil(input.images ?? 0))
+  const reserve = async (tx: Prisma.TransactionClient) => {
+    const now = new Date()
+    await tx.assistantBudget.upsert({
+      where: { scopeKey: input.scopeKey },
+      create: { scopeKey: input.scopeKey, windowStartedAt: now },
+      update: {},
+    })
+    const [budget] = await tx.$queryRaw<
+      Array<{
+        audioSeconds: number
+        visionImages: number
+        windowStartedAt: Date
+      }>
+    >(Prisma.sql`
+      SELECT "audioSeconds", "visionImages", "windowStartedAt" FROM "AssistantBudget"
+      WHERE "scopeKey" = ${input.scopeKey} FOR UPDATE
+    `)
+    if (!budget) return { allowed: false as const }
+    const reset =
+      now.getTime() - budget.windowStartedAt.getTime() >= input.limits.windowMs
+    const usedAudio = reset ? 0 : budget.audioSeconds
+    const usedImages = reset ? 0 : budget.visionImages
+    if (
+      usedAudio + audioSeconds > input.limits.maxAudioSeconds ||
+      usedImages + images > input.limits.maxVisionImages
+    )
+      return { allowed: false as const }
+    await tx.assistantBudget.update({
+      where: { scopeKey: input.scopeKey },
+      data: reset
+        ? {
+            windowStartedAt: now,
+            requests: 0,
+            tokens: 0,
+            audioSeconds,
+            visionImages: images,
+          }
+        : {
+            audioSeconds: { increment: audioSeconds },
+            visionImages: { increment: images },
+          },
+    })
+    return { allowed: true as const }
+  }
+  return reserve(db)
+}
+
+/** Opens its own transaction; inside one, use reserveAssistantMediaBudgetInTransaction. */
+export async function reserveAssistantMediaBudget(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof reserveAssistantMediaBudgetInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    reserveAssistantMediaBudgetInTransaction(tx, ...args),
+  )
+}
+
+/** Usage for attachment work (transcription, vision, parsing) outside a run. */
+export async function recordAssistantAttachmentUsageInTransaction(
+  db: Prisma.TransactionClient,
+  input: {
+    attachmentId: string
+    tenantId: string
+    actorUserId: string
+    provider: string
+    model: string
+    requestClass: "transcribe" | "vision" | "extract"
+    outcome: "success" | "failed"
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+    audioSeconds?: number
+    imageCount?: number
+    durationMs?: number
+    budgetScopeKey?: string
+  },
+) {
+  const record = async (tx: Prisma.TransactionClient) => {
+    await tx.assistantUsageEvent.create({
+      data: {
+        attachmentId: input.attachmentId,
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        provider: input.provider,
+        model: input.model,
+        requestClass: input.requestClass,
+        inputTokens: input.inputTokens,
+        outputTokens: input.outputTokens,
+        totalTokens: input.totalTokens,
+        audioSeconds: input.audioSeconds,
+        imageCount: input.imageCount,
+        durationMs: input.durationMs,
+        outcome: input.outcome,
+      },
+    })
+    if (input.budgetScopeKey && input.totalTokens)
+      await tx.assistantBudget.updateMany({
+        where: { scopeKey: input.budgetScopeKey },
+        data: { tokens: { increment: input.totalTokens } },
+      })
+  }
+  return record(db)
+}
+
+/** Opens its own transaction; inside one, use recordAssistantAttachmentUsageInTransaction. */
+export async function recordAssistantAttachmentUsage(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof recordAssistantAttachmentUsageInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    recordAssistantAttachmentUsageInTransaction(tx, ...args),
+  )
 }
 
 const entitySelect = {
@@ -396,14 +646,153 @@ export async function readSetupDraft(db: DbClient, draftId: string) {
     select: {
       id: true,
       revision: true,
+      areas: true,
       entities: { orderBy: { sortOrder: "asc" }, select: entitySelect },
     },
   })
 }
 
-/** Model and owner edits both reopen confirmation; committed records are immutable. */
-export async function upsertSetupDraftEntities(
+/**
+ * Marks one setup area DONE or SKIPPED (null reopens it). Read-modify-write in
+ * one transaction with the draft row locked, so concurrent marks never lose one.
+ */
+export async function markSetupDraftAreaInTransaction(
+  db: Prisma.TransactionClient,
+  input: { draftId: string; area: string; mark: "DONE" | "SKIPPED" | null },
+) {
+  const apply = async (tx: Prisma.TransactionClient) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${input.draftId} FOR UPDATE`,
+    )
+    const draft = await tx.setupDraft.findUniqueOrThrow({
+      where: { id: input.draftId },
+      select: { areas: true },
+    })
+    const areas =
+      draft.areas &&
+      typeof draft.areas === "object" &&
+      !Array.isArray(draft.areas)
+        ? { ...(draft.areas as Record<string, unknown>) }
+        : {}
+    if (input.mark) areas[input.area] = input.mark
+    else delete areas[input.area]
+    const updated = await tx.setupDraft.update({
+      where: { id: input.draftId },
+      data: {
+        areas: areas as Prisma.InputJsonValue,
+        revision: { increment: 1 },
+      },
+      select: { revision: true, areas: true },
+    })
+    return updated
+  }
+  return apply(db)
+}
+
+/** Opens its own transaction; inside one, use markSetupDraftAreaInTransaction. */
+export async function markSetupDraftArea(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof markSetupDraftAreaInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    markSetupDraftAreaInTransaction(tx, ...args),
+  )
+}
+
+/**
+ * Appends only if `expectedLastMessageId` is still the newest message, with the
+ * conversation row locked, so two concurrent visits greet the owner once.
+ */
+export async function appendAssistantMessageIfLatestInTransaction(
+  db: Prisma.TransactionClient,
+  input: {
+    conversationId: string
+    expectedLastMessageId: string
+    message: AssistantStoredMessage
+  },
+) {
+  const apply = async (tx: Prisma.TransactionClient) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+    )
+    const latest = await tx.assistantMessage.findFirst({
+      where: { conversationId: input.conversationId },
+      orderBy: { sequence: "desc" },
+      select: { id: true },
+    })
+    if (latest?.id !== input.expectedLastMessageId) return false
+    await appendAssistantMessage(tx, {
+      conversationId: input.conversationId,
+      message: input.message,
+    })
+    return true
+  }
+  return apply(db)
+}
+
+/** Opens its own transaction; inside one, use appendAssistantMessageIfLatestInTransaction. */
+export async function appendAssistantMessageIfLatest(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof appendAssistantMessageIfLatestInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    appendAssistantMessageIfLatestInTransaction(tx, ...args),
+  )
+}
+
+/** The newest message, to tell a new visit from a reload. */
+export async function readLastAssistantMessage(
   db: DbClient,
+  conversationId: string,
+) {
+  return db.assistantMessage.findFirst({
+    where: { conversationId },
+    orderBy: { sequence: "desc" },
+    select: { id: true, role: true, createdAt: true },
+  })
+}
+
+/** Usage for a model call that is not a chat turn or attachment (opening, welcome). */
+export async function recordAssistantMessageUsage(
+  db: DbClient,
+  input: {
+    tenantId: string
+    actorUserId: string
+    provider: string
+    model: string
+    requestClass: "opening" | "welcome"
+    outcome: "success" | "failed" | "fallback"
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+    durationMs?: number
+    budgetScopeKey?: string
+  },
+) {
+  await db.assistantUsageEvent.create({
+    data: {
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      provider: input.provider,
+      model: input.model,
+      requestClass: input.requestClass,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      totalTokens: input.totalTokens,
+      durationMs: input.durationMs,
+      outcome: input.outcome,
+    },
+  })
+  if (input.budgetScopeKey && input.totalTokens)
+    await db.assistantBudget.updateMany({
+      where: { scopeKey: input.budgetScopeKey },
+      data: { tokens: { increment: input.totalTokens } },
+    })
+}
+
+/** Model and owner edits both reopen confirmation; committed records are immutable. */
+export async function upsertSetupDraftEntitiesInTransaction(
+  db: Prisma.TransactionClient,
   input: { draftId: string; entities: SetupDraftEntityInput[] },
 ) {
   const upsert = async (tx: Prisma.TransactionClient) => {
@@ -450,13 +839,21 @@ export async function upsertSetupDraftEntities(
     }
     return { revision: draft.revision, changed, rejected }
   }
-  return "$transaction" in db
-    ? db.$transaction(upsert, transactionOptions)
-    : upsert(db)
+  return upsert(db)
 }
 
-export async function setSetupDraftEntityStates(
-  db: DbClient,
+/** Opens its own transaction; inside one, use upsertSetupDraftEntitiesInTransaction. */
+export async function upsertSetupDraftEntities(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof upsertSetupDraftEntitiesInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    upsertSetupDraftEntitiesInTransaction(tx, ...args),
+  )
+}
+
+export async function setSetupDraftEntityStatesInTransaction(
+  db: Prisma.TransactionClient,
   input: {
     draftId: string
     keys: string[]
@@ -487,13 +884,21 @@ export async function setSetupDraftEntityStates(
     })
     return { revision: draft.revision, updated: result.count }
   }
-  return "$transaction" in db
-    ? db.$transaction(apply, transactionOptions)
-    : apply(db)
+  return apply(db)
 }
 
-export async function removeSetupDraftEntities(
-  db: DbClient,
+/** Opens its own transaction; inside one, use setSetupDraftEntityStatesInTransaction. */
+export async function setSetupDraftEntityStates(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof setSetupDraftEntityStatesInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    setSetupDraftEntityStatesInTransaction(tx, ...args),
+  )
+}
+
+export async function removeSetupDraftEntitiesInTransaction(
+  db: Prisma.TransactionClient,
   input: { draftId: string; keys: string[] },
 ) {
   const remove = async (tx: Prisma.TransactionClient) => {
@@ -511,9 +916,17 @@ export async function removeSetupDraftEntities(
     })
     return { revision: draft.revision, removed: result.count }
   }
-  return "$transaction" in db
-    ? db.$transaction(remove, transactionOptions)
-    : remove(db)
+  return remove(db)
+}
+
+/** Opens its own transaction; inside one, use removeSetupDraftEntitiesInTransaction. */
+export async function removeSetupDraftEntities(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof removeSetupDraftEntitiesInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    removeSetupDraftEntitiesInTransaction(tx, ...args),
+  )
 }
 
 /** Facts the Setup Assistant may state; everything else comes from the owner. */
@@ -551,42 +964,55 @@ export async function readSetupBusinessFacts(
 }
 
 /** Records the outcome of one commit attempt; committed records stay immutable. */
-export async function recordSetupDraftCommitOutcome(
-  db: DbClient,
-  input: {
-    draftId: string
-    key: string
-    outcome:
-      | { state: "COMMITTED"; recordId: string; errorCode?: string | null }
-      | { state: "FAILED"; errorCode: string }
-  },
+type SetupDraftCommitOutcomeInput = {
+  draftId: string
+  key: string
+  outcome:
+    | { state: "COMMITTED"; recordId: string; errorCode?: string | null }
+    | { state: "FAILED"; errorCode: string }
+}
+
+/**
+ * Writes a record's add outcome inside a transaction the caller already holds.
+ * Never starts a nested transaction: Prisma's interactive-transaction client
+ * also exposes `$transaction`, and nesting one there leaves the connection in a
+ * state where every later transaction in the process fails with P2028.
+ */
+export async function recordSetupDraftCommitOutcomeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: SetupDraftCommitOutcomeInput,
 ) {
-  const apply = async (tx: Prisma.TransactionClient) => {
-    await tx.setupDraftEntity.updateMany({
-      where: {
-        draftId: input.draftId,
-        key: input.key,
-        ...(input.outcome.state === "FAILED"
-          ? { state: { not: "COMMITTED" } }
-          : {}),
-      },
-      data:
-        input.outcome.state === "COMMITTED"
-          ? {
-              state: "COMMITTED",
-              committedRecordId: input.outcome.recordId,
-              errorCode: input.outcome.errorCode ?? null,
-            }
-          : { state: "FAILED", errorCode: input.outcome.errorCode },
-    })
-    const draft = await tx.setupDraft.update({
-      where: { id: input.draftId },
-      data: { revision: { increment: 1 } },
-      select: { revision: true },
-    })
-    return draft.revision
-  }
-  return "$transaction" in db
-    ? db.$transaction(apply, transactionOptions)
-    : apply(db)
+  await tx.setupDraftEntity.updateMany({
+    where: {
+      draftId: input.draftId,
+      key: input.key,
+      ...(input.outcome.state === "FAILED"
+        ? { state: { not: "COMMITTED" } }
+        : {}),
+    },
+    data:
+      input.outcome.state === "COMMITTED"
+        ? {
+            state: "COMMITTED",
+            committedRecordId: input.outcome.recordId,
+            errorCode: input.outcome.errorCode ?? null,
+          }
+        : { state: "FAILED", errorCode: input.outcome.errorCode },
+  })
+  const draft = await tx.setupDraft.update({
+    where: { id: input.draftId },
+    data: { revision: { increment: 1 } },
+    select: { revision: true },
+  })
+  return draft.revision
+}
+
+/** Opens its own transaction; inside one, use recordSetupDraftCommitOutcomeInTransaction. */
+export async function recordSetupDraftCommitOutcome(
+  db: PrismaClient,
+  input: SetupDraftCommitOutcomeInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    recordSetupDraftCommitOutcomeInTransaction(tx, input),
+  )
 }

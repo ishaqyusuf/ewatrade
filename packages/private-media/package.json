@@ -8,7 +8,10 @@
     "./vercel-blob": "./src/vercel-blob.ts",
     "./expense-receipts": "./src/expense-receipts.ts",
     "./expense-receipt-upload": "./src/expense-receipt-upload.ts",
-    "./expense-receipt-download-token": "./src/expense-receipt-download-token.ts"
+    "./expense-receipt-download-token": "./src/expense-receipt-download-token.ts",
+    "./assistant-attachments": "./src/assistant-attachments.ts",
+    "./local-test-object-port": "./src/local-test-object-port.ts",
+    "./verified-upload": "./src/verified-upload.ts"
   },
   "scripts": {
     "lint": "biome check .",
