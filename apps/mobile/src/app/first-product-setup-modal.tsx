@@ -23,7 +23,7 @@ export default function FirstProductSetupModalRoute() {
           ? "Add product"
           : initialKind === "service"
             ? "Add service"
-            : "Set up item"
+            : "Add item"
       }
     >
       <SimpleCatalogItemScreen
