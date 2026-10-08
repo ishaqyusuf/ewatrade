@@ -1,7 +1,11 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { commercialOrderHref } from "@/components/mobile/commerce/commerce-model"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
-import { StatusPill } from "@/components/mobile/green-till/kit"
+import {
+  GhostPreview,
+  QuickActionRow,
+  StatusPill,
+} from "@/components/mobile/green-till/kit"
 import { MobileScreen } from "@/components/mobile/screen"
 import { Icon } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
@@ -85,6 +89,51 @@ export function OperationSuccessScreen({
     params.itemCount === "1" ? "1 item" : `${params.itemCount ?? "0"} items`
 
   if (kind === "order" && !market) return <SaleSuccess params={params} />
+  if (kind !== "order")
+    return (
+      <View className="flex-1 bg-background px-[18px]">
+        <View
+          style={{
+            paddingBottom: Math.max(insets.bottom, 16) + 8,
+            paddingTop: Math.max(insets.top, 20) + 20,
+          }}
+        >
+          <HeroCard
+            cta={{
+              icon: "Receipt",
+              label: "Take your first order",
+              onPress: () => router.replace("/create-sale-modal" as never),
+              testID: "item-success-first-order",
+            }}
+            done
+            sub="Available in your catalog. You can change it any time."
+            testID="item-success-hero"
+            title={`${params.name || "Your item"} is ready to sell`}
+          />
+          <QuickActionRow
+            actions={[
+              {
+                icon: "Plus",
+                label: "Add another",
+                onPress: () =>
+                  router.replace("/first-product-setup-modal" as never),
+              },
+              {
+                icon: "Package",
+                label: "Catalog",
+                onPress: () => router.replace("/catalog-items-modal" as never),
+              },
+              {
+                icon: "House",
+                label: "Home",
+                onPress: () => router.replace("/dashboard"),
+              },
+            ]}
+          />
+          <GhostPreview message="Today’s sales appear on Home after your first order." />
+        </View>
+      </View>
+    )
 
   return (
     <View className="flex-1 bg-background">
@@ -116,39 +165,25 @@ export function OperationSuccessScreen({
           ) : null}
 
           <View className="mt-8 w-full rounded-2xl bg-muted px-4">
-            {kind === "order" ? (
-              <>
-                {params.reference ? (
-                  <SuccessDetailRow label="Order" value={params.reference} />
-                ) : null}
-                {params.amount ? (
-                  <SuccessDetailRow label="Total" value={params.amount} />
-                ) : null}
-                <SuccessDetailRow label="Items" value={itemLabel} />
+            <>
+              {params.reference ? (
+                <SuccessDetailRow label="Order" value={params.reference} />
+              ) : null}
+              {params.amount ? (
+                <SuccessDetailRow label="Total" value={params.amount} />
+              ) : null}
+              <SuccessDetailRow label="Items" value={itemLabel} />
+              <SuccessDetailRow
+                label="Customer"
+                value={params.customer || "Guest customer"}
+              />
+              {resolvedPaymentLabel ? (
                 <SuccessDetailRow
-                  label="Customer"
-                  value={params.customer || "Guest customer"}
+                  label="Payment"
+                  value={resolvedPaymentLabel}
                 />
-                {resolvedPaymentLabel ? (
-                  <SuccessDetailRow
-                    label="Payment"
-                    value={resolvedPaymentLabel}
-                  />
-                ) : null}
-              </>
-            ) : (
-              <>
-                <SuccessDetailRow
-                  label={kind === "service" ? "Service" : "Product"}
-                  value={params.name || "New catalog item"}
-                />
-                <SuccessDetailRow
-                  label="Type"
-                  value={kind === "service" ? "Service" : "Product"}
-                />
-                <SuccessDetailRow label="Status" value="Available in catalog" />
-              </>
-            )}
+              ) : null}
+            </>
           </View>
         </View>
 

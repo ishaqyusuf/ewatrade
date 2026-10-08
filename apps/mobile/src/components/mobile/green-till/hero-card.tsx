@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import { type ReactNode, useId } from "react"
+import { type ReactNode, useId, useState } from "react"
 import { Text as NativeText, StyleSheet, View } from "react-native"
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
 
@@ -17,7 +17,9 @@ export type HeroPill = {
 
 type HeroCardProps = {
   /** Small label at the top left, such as "Today’s sales". */
-  label: string
+  label?: string
+  /** A gold check above the title, for a finished task. */
+  done?: boolean
   pill?: HeroPill
   /** The one big answer, such as ₦184,500. */
   amount?: string
@@ -40,6 +42,7 @@ export function HeroCard({
   children,
   cta,
   delta,
+  done,
   label,
   pill,
   progress,
@@ -52,16 +55,27 @@ export function HeroCard({
   const palette = GREEN_TILL_THEME[colorScheme]
   const largeText = useLargeTextLayout()
   const gradientId = `hero-${useId().replace(/:/g, "")}`
+  // Size the gradient from the measured card: a percentage-sized Svg keeps its
+  // first height when the card grows (seen with a CTA on Android).
+  const [size, setSize] = useState({ height: 0, width: 0 })
   const fg = palette.heroForeground
   const muted = palette.heroMuted
 
   return (
     <View
+      onLayout={(event) => {
+        const { height, width } = event.nativeEvent.layout
+        setSize((current) =>
+          current.height === height && current.width === width
+            ? current
+            : { height, width },
+        )
+      }}
       style={[styles.card, { shadowColor: palette.heroTo }]}
       testID={testID}
     >
       <View style={[StyleSheet.absoluteFill, styles.clip]}>
-        <Svg height="100%" width="100%">
+        <Svg height={size.height} width={size.width}>
           <Defs>
             <RadialGradient
               cx="100%"
@@ -82,12 +96,28 @@ export function HeroCard({
         </View>
       </View>
 
-      <View style={styles.row}>
-        <NativeText style={[styles.label, { color: muted }]}>
-          {label}
-        </NativeText>
-        {pill ? <HeroSyncPill pill={pill} /> : null}
-      </View>
+      {label || pill ? (
+        <View style={styles.row}>
+          <NativeText style={[styles.label, { color: muted }]}>
+            {label}
+          </NativeText>
+          {pill ? <HeroSyncPill pill={pill} /> : null}
+        </View>
+      ) : null}
+      {done ? (
+        <View
+          accessibilityLabel="Done"
+          accessible
+          style={[styles.done, { backgroundColor: palette.gold }]}
+        >
+          <Icon
+            className="size-[26px]"
+            color={palette.goldForeground}
+            name="Check"
+            strokeWidth={2.6}
+          />
+        </View>
+      ) : null}
 
       {amount ? (
         <NativeText
@@ -254,6 +284,14 @@ const styles = StyleSheet.create({
   },
   clip: { borderRadius: 26, overflow: "hidden" },
   cta: { marginTop: 14 },
+  done: {
+    alignItems: "center",
+    borderRadius: 26,
+    height: 52,
+    justifyContent: "center",
+    marginBottom: 2,
+    width: 52,
+  },
   deltaRow: {
     alignItems: "center",
     columnGap: 6,

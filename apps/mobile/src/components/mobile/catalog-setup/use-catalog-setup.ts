@@ -1773,17 +1773,8 @@ export function useCatalogSetup({
           })),
         },
       ])
-      setAdditionalUnits([
-        {
-          id: Crypto.randomUUID(),
-          name: "Pack",
-          price: "",
-          relationCount: "12",
-          relationDirection: "units_per_canonical",
-          stockBehavior: "alternate_transaction",
-          transactionScale: 0,
-        },
-      ])
+      // No extra selling unit: with choices it would need a price per choice,
+      // and a Quick Fill must leave a draft that saves.
     } else {
       setShowAdvanced(true)
       setTrackServiceWork(true)

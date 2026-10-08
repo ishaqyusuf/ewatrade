@@ -65,12 +65,14 @@ describe("mobile QA build aliases", () => {
       "utf8",
     )
 
-    expect(sheet).toContain("enableDismissOnClose")
-    expect(sheet).toContain("enablePanDownToClose")
-    expect(sheet).toContain("Continue without QA")
-    expect(sheet).not.toContain('pressBehavior="none"')
+    // The QA domain composer opens only when the QA button asks for it and
+    // closes with the keyboard, so ordinary login is never blocked by QA.
+    expect(sheet).toContain("<KeyboardInlineComposer")
+    expect(sheet).toContain("qa.authorizationSheetRequest")
+    expect(sheet).toContain('"keyboardDidHide"')
     expect(chooser).toContain('accessibilityLabel="Set up QA"')
     expect(chooser).toContain("qa.openAuthorizationSheet")
     expect(floatingQa).toContain("<QaAccountChooser />")
+    expect(floatingQa).toContain('pathname !== "/login"')
   })
 })
