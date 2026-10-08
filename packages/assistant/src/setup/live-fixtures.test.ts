@@ -77,6 +77,14 @@ function session(business: SetupBusinessContext) {
   >()
   const removed: string[] = []
   const messages: ModelMessage[] = []
+  /** Per owner turn: model calls (tool steps included) and token use. */
+  const turns: Array<{
+    calls: number
+    input: number
+    cached: number
+    output: number
+    ms: number
+  }> = []
   const areaMarks: Record<string, string> = {}
   let revision = 0
 
@@ -137,10 +145,18 @@ function session(business: SetupBusinessContext) {
       maxRetries: 1,
       providerOptions: liveModel.providerOptions as never,
     })
+    const startedAt = Date.now()
     const result = await agent.generate({ messages })
     messages.push(...result.response.messages)
     totals.inputTokens += result.totalUsage.inputTokens ?? 0
     totals.outputTokens += result.totalUsage.outputTokens ?? 0
+    turns.push({
+      calls: result.steps.length,
+      input: result.totalUsage.inputTokens ?? 0,
+      cached: result.totalUsage.inputTokenDetails?.cacheReadTokens ?? 0,
+      output: result.totalUsage.outputTokens ?? 0,
+      ms: Date.now() - startedAt,
+    })
     return result.text
   }
 
@@ -173,6 +189,7 @@ function session(business: SetupBusinessContext) {
 
   return {
     say,
+    turns,
     open,
     stage,
     commit,
@@ -665,4 +682,249 @@ suite("setup assistant with a live model", () => {
     console.info("[live] total usage:", totals)
     expect(totals.inputTokens).toBeGreaterThan(0)
   })
+})
+
+/**
+ * S06-03 measurement (ASSISTANT_LIVE_MEASURE=1 with ASSISTANT_LIVE_SMOKE=1):
+ * complete guided setups through all four areas, with per-turn calls and
+ * tokens, and how many staged records match what the owner described.
+ */
+type Expected = {
+  kind: SetupEntityPayload["kind"]
+  name: RegExp
+  check: (payload: SetupEntityPayload) => boolean
+}
+
+const MEASURED_SETUPS: Array<{
+  business: Partial<SetupBusinessContext> & { businessName: string }
+  profileKey: string
+  turns: string[]
+  expected: Expected[]
+}> = [
+  {
+    business: {
+      businessName: "Fixture Measure Farm",
+      operatingModel: "products",
+    },
+    profileKey: "animal-feed-agricultural-supplies",
+    turns: [
+      "We sell crates of eggs at 4,500 per crate, and single eggs at 200 each. We have 30 crates now.",
+      "Also broilers 9000 each, 45 birds; turkeys 25000 each, 4 birds; and old layers 6000 each, 20 birds. That's all we sell.",
+      "We use layer feed, 30 bags in store, and packaging nylon, 12 packs. Nothing else.",
+      "Mama Bisi owes us 12,000 and Alhaji Musa owes us 30,500. We owe our feed supplier Chika 50,000. That's all.",
+      "We have 25,000 cash in the shop and 120,000 in our GTBank account. That's everything.",
+      "Looks good, thank you.",
+    ],
+    expected: [
+      {
+        kind: "product",
+        name: /egg/i,
+        check: (p) => prices(p).includes(450_000),
+      },
+      {
+        kind: "product",
+        name: /broiler/i,
+        check: (p) => prices(p).includes(900_000) && stock(p) === "45",
+      },
+      {
+        kind: "product",
+        name: /turkey/i,
+        check: (p) => prices(p).includes(2_500_000) && stock(p) === "4",
+      },
+      {
+        kind: "product",
+        name: /^(?!.*feed).*layer/i,
+        check: (p) => prices(p).includes(600_000) && stock(p) === "20",
+      },
+      {
+        kind: "product",
+        name: /feed/i,
+        check: (p) =>
+          p.kind === "product" &&
+          p.usage === "INTERNAL_USE" &&
+          stock(p) === "30",
+      },
+      {
+        kind: "product",
+        name: /nylon|packag/i,
+        check: (p) =>
+          p.kind === "product" &&
+          p.usage === "INTERNAL_USE" &&
+          stock(p) === "12",
+      },
+      {
+        kind: "customer",
+        name: /bisi/i,
+        check: (p) =>
+          opening(p)?.direction === "owes_business" &&
+          opening(p)?.amountMinor === 1_200_000,
+      },
+      {
+        kind: "customer",
+        name: /musa/i,
+        check: (p) =>
+          opening(p)?.direction === "owes_business" &&
+          opening(p)?.amountMinor === 3_050_000,
+      },
+      {
+        kind: "customer",
+        name: /chika/i,
+        check: (p) =>
+          opening(p)?.direction === "business_owes" &&
+          opening(p)?.amountMinor === 5_000_000,
+      },
+      {
+        kind: "money_account",
+        name: /cash|shop/i,
+        check: (p) =>
+          p.kind === "money_account" &&
+          p.purpose === "CASH" &&
+          p.openingBalanceMinor === 2_500_000,
+      },
+      {
+        kind: "money_account",
+        name: /gtbank/i,
+        check: (p) =>
+          p.kind === "money_account" &&
+          p.purpose === "BANK" &&
+          p.openingBalanceMinor === 12_000_000,
+      },
+    ],
+  },
+  {
+    business: {
+      businessName: "Fixture Measure Laundry",
+      operatingModel: "services",
+    },
+    profileKey: "laundry-dry-cleaning",
+    turns: [
+      "We wash shirts for 500 each, iron trousers for 300 each, dry-clean suits for 3,500, and duvets are priced by quote.",
+      "That's all our services.",
+      "We use detergent, 6 jugs in stock, and hangers, 200 pieces. Nothing else.",
+      "Mrs Okafor owes us 4,000. That's all.",
+      "Money: 15,000 cash in the shop and 80,000 in our Opay account.",
+      "Thanks, that's everything.",
+    ],
+    expected: [
+      {
+        kind: "service",
+        name: /shirt/i,
+        check: (p) => p.kind === "service" && p.priceMinor === 50_000,
+      },
+      {
+        kind: "service",
+        name: /trouser/i,
+        check: (p) => p.kind === "service" && p.priceMinor === 30_000,
+      },
+      {
+        kind: "service",
+        name: /suit/i,
+        check: (p) => p.kind === "service" && p.priceMinor === 350_000,
+      },
+      {
+        kind: "service",
+        name: /duvet/i,
+        check: (p) => p.kind === "service" && p.pricing === "quote",
+      },
+      {
+        kind: "product",
+        name: /detergent/i,
+        check: (p) =>
+          p.kind === "product" &&
+          p.usage === "INTERNAL_USE" &&
+          stock(p) === "6",
+      },
+      {
+        kind: "product",
+        name: /hanger/i,
+        check: (p) =>
+          p.kind === "product" &&
+          p.usage === "INTERNAL_USE" &&
+          stock(p) === "200",
+      },
+      {
+        kind: "customer",
+        name: /okafor/i,
+        check: (p) =>
+          opening(p)?.direction === "owes_business" &&
+          opening(p)?.amountMinor === 400_000,
+      },
+      {
+        kind: "money_account",
+        name: /cash|shop/i,
+        check: (p) =>
+          p.kind === "money_account" &&
+          p.purpose === "CASH" &&
+          p.openingBalanceMinor === 1_500_000,
+      },
+      {
+        kind: "money_account",
+        name: /opay/i,
+        check: (p) =>
+          p.kind === "money_account" &&
+          p.purpose === "BANK" &&
+          p.openingBalanceMinor === 8_000_000,
+      },
+    ],
+  },
+]
+
+/** Precision: staged records with every field right; recall: described records staged. */
+function score(staged: SetupEntityPayload[], expected: Expected[]) {
+  const matched = new Set<number>()
+  let correct = 0
+  for (const payload of staged) {
+    const index = expected.findIndex(
+      (entry, position) =>
+        !matched.has(position) &&
+        entry.kind === payload.kind &&
+        entry.name.test(payload.name),
+    )
+    if (index < 0) continue
+    matched.add(index)
+    if (expected[index]?.check(payload)) correct += 1
+  }
+  return {
+    staged: staged.length,
+    expected: expected.length,
+    matched: matched.size,
+    correct,
+    precision: staged.length ? correct / staged.length : 0,
+    recall: matched.size / expected.length,
+  }
+}
+
+const measure =
+  live && process.env.ASSISTANT_LIVE_MEASURE === "1" ? describe : describe.skip
+
+measure("S06-03: complete setups, measured", () => {
+  for (const setup of MEASURED_SETUPS)
+    test(`complete setup: ${setup.business.businessName}`, async () => {
+      const business = context({
+        ...setup.business,
+        businessProfile: profile(setup.profileKey),
+      })
+      const chat = session(business)
+      chat.open(setupOpeningFallback(business, "Amina"))
+      for (const text of setup.turns) await chat.say(text)
+      const staged = [...chat.draft.values()].map((entity) => entity.payload)
+      const sum = (key: "calls" | "input" | "cached" | "output" | "ms") =>
+        chat.turns.reduce((total, turn) => total + turn[key], 0)
+      const result = {
+        business: setup.business.businessName,
+        turns: chat.turns.length,
+        calls: sum("calls"),
+        input: sum("input"),
+        cached: sum("cached"),
+        output: sum("output"),
+        totalTokens: sum("input") + sum("output"),
+        seconds: Math.round(sum("ms") / 1000),
+        perTurn: chat.turns,
+        areas: { ...chat.areaMarks },
+        score: score(staged, setup.expected),
+      }
+      console.info(`[measure] ${JSON.stringify(result)}`)
+      expect(result.turns).toBe(setup.turns.length)
+      expect(result.score.recall).toBeGreaterThan(0)
+    }, 600_000)
 })
