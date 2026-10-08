@@ -10,7 +10,10 @@ import { Text as NativeText, StyleSheet, View } from "react-native"
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
 
 export type HeroStat = { label: string; value: string }
-export type HeroPill = { label: string; tone?: "synced" | "offline" | "busy" }
+export type HeroPill = {
+  label: string
+  tone?: "synced" | "offline" | "busy" | "draft"
+}
 
 type HeroCardProps = {
   /** Small label at the top left, such as "Today’s sales". */
@@ -218,7 +221,9 @@ function HeroSyncPill({ pill }: { pill: HeroPill }) {
       ? "#F8C66A"
       : pill.tone === "busy"
         ? "#9CC3F5"
-        : "#8EF0BE"
+        : pill.tone === "draft"
+          ? "#F2A51A"
+          : "#8EF0BE"
   return (
     <View accessibilityLabel={pill.label} accessible style={styles.pill}>
       <View style={[styles.pillDot, { backgroundColor: dot }]} />

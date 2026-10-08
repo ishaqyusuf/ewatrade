@@ -1,12 +1,15 @@
 import type { CatalogItemKind } from "@/components/mobile/catalog-setup/catalog-setup-model"
 import { FormField } from "@/components/mobile/form-field"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { MoneyField } from "@/components/mobile/money-field"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { cn } from "@/lib/utils"
+import { getCurrencySymbol } from "@ewatrade/utils"
 import type { CatalogFormGuidance } from "@ewatrade/utils/business-catalog-guidance"
-import { View } from "react-native"
+import { Text as NativeText, View } from "react-native"
 
 export function KindChoice({
   description,
@@ -500,7 +503,151 @@ export function CatalogEssentialsFields({
           value={price}
         />
       ) : null}
+      {kind === "product" && showProductEssentials ? (
+        <UnitChips
+          onSelect={onUnitNameChange}
+          suggestions={guidance.stockUnit?.suggestions ?? []}
+          value={unitName}
+        />
+      ) : null}
     </>
+  )
+}
+
+/** One-tap units from the business type, e.g. Crate, Piece, Tray, Bag. */
+function UnitChips({
+  onSelect,
+  suggestions,
+  value,
+}: {
+  onSelect: (unit: string) => void
+  suggestions: readonly string[]
+  value: string
+}) {
+  const units = suggestions.slice(0, 5)
+  if (!units.length) return null
+  return (
+    <View
+      accessibilityLabel="Common units"
+      className="-mt-1 flex-row flex-wrap gap-2"
+    >
+      {units.map((unit) => {
+        const selected = unit.toLowerCase() === value.trim().toLowerCase()
+        return (
+          <Pressable
+            accessibilityLabel={`Sell by ${unit}`}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            className={cn(
+              "min-h-9 justify-center rounded-full border-[1.5px] px-3.5",
+              selected
+                ? "border-primary bg-accent"
+                : "border-transparent bg-muted",
+            )}
+            haptic
+            hitSlop={4}
+            key={unit}
+            onPress={() => onSelect(unit)}
+          >
+            <Text
+              className={cn(
+                "text-[12.5px] font-bold",
+                selected ? "text-primary" : "text-foreground",
+              )}
+            >
+              {unit}
+            </Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}
+
+/** 01 Live Card: the item as customers will see it, updating as you type. */
+export function CatalogLivePreview({
+  currencyCode,
+  kind,
+  label = "Customers will see",
+  name,
+  pill = "Draft",
+  price,
+  quoteRequired,
+  unitName,
+}: {
+  currencyCode: string
+  kind: CatalogItemKind
+  label?: string
+  name: string
+  pill?: string
+  price: string
+  quoteRequired?: boolean
+  unitName: string
+}) {
+  const trimmedName = name.trim()
+  const amount = Number(price.replace(/,/g, ""))
+  const priceLine =
+    kind === "service" && quoteRequired
+      ? "Quote each job"
+      : price.trim() && Number.isFinite(amount)
+        ? `${getCurrencySymbol(currencyCode)}${amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}${kind === "product" && unitName.trim() ? ` per ${unitName.trim().toLowerCase()}` : ""}`
+        : "Set a price"
+  return (
+    <HeroCard
+      label={label}
+      pill={{ label: pill, tone: "draft" }}
+      testID="catalog-live-preview"
+    >
+      <View
+        accessibilityLabel={`${trimmedName || "Unnamed item"}, ${priceLine}`}
+        accessible
+        className="mt-3 flex-row items-center gap-3"
+      >
+        <View
+          style={{
+            alignItems: "center",
+            backgroundColor: "rgba(255,255,255,0.14)",
+            borderRadius: 14,
+            height: 52,
+            justifyContent: "center",
+            width: 52,
+          }}
+        >
+          <Icon
+            className="size-[22px]"
+            color="#FFF9ED"
+            name={kind === "service" ? "Wrench" : "Camera"}
+          />
+        </View>
+        <View className="min-w-0 flex-1">
+          <NativeText
+            numberOfLines={2}
+            style={{
+              color: "#FFF9ED",
+              fontSize: 20,
+              fontWeight: "800",
+              letterSpacing: -0.4,
+              lineHeight: 25,
+              opacity: trimmedName ? 1 : 0.6,
+            }}
+          >
+            {trimmedName ||
+              (kind === "service" ? "Your service" : "Your product")}
+          </NativeText>
+          <NativeText
+            style={{
+              color: "rgba(255,249,237,0.78)",
+              fontSize: 14,
+              fontVariant: ["tabular-nums"],
+              fontWeight: "700",
+              lineHeight: 20,
+            }}
+          >
+            {priceLine}
+          </NativeText>
+        </View>
+      </View>
+    </HeroCard>
   )
 }
 

@@ -312,17 +312,15 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               market,
             )}
           >
-            {!market ? (
-              <Text
-                className={catalogSetupClassName(
-                  "text-sm [-rn-line-height:20] text-muted-foreground",
-                  market,
-                )}
-              >
-                {kind === "product"
-                  ? "Start with the essentials. Add details anytime."
-                  : "Name the work. Set a price now, or quote each order later."}
-              </Text>
+            {!market && kind ? (
+              <Classic.CatalogLivePreview
+                currencyCode={model.currencyCode}
+                kind={kind}
+                name={model.name}
+                price={model.price}
+                quoteRequired={model.defaultQuoteRequired}
+                unitName={model.unitName}
+              />
             ) : null}
             {market ? (
               <Market.MarketQuickSetup
