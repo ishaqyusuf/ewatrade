@@ -281,6 +281,43 @@ export function isHlsSource(src: string) {
   return /\.m3u8(?:$|[?#])/i.test(src)
 }
 
+type HlsMediaSourceCapabilities = {
+  mediaSource?: { isTypeSupported(type: string): boolean }
+  sourceBuffer?: {
+    prototype?: { appendBuffer?: unknown; remove?: unknown }
+  }
+}
+
+/** The published films use H264/AAC; mirror hls.js's relevant MSE checks. */
+export function supportsStoreInAMinuteMediaSource({
+  mediaSource,
+  sourceBuffer,
+}: HlsMediaSourceCapabilities) {
+  try {
+    return Boolean(
+      mediaSource?.isTypeSupported(
+        'video/mp4; codecs="avc1.42E01E,mp4a.40.2"',
+      ) &&
+        (!sourceBuffer ||
+          (typeof sourceBuffer.prototype?.appendBuffer === "function" &&
+            typeof sourceBuffer.prototype.remove === "function")),
+    )
+  } catch {
+    return false
+  }
+}
+
+/** Prefer bounded, seekable MSE playback even when native HLS is advertised. */
+export function getStoreInAMinutePlaybackEngine(
+  src: string,
+  nativeHlsSupported: boolean,
+  mediaSourceSupported: boolean,
+): "native" | "hls" | "unsupported" {
+  if (!isHlsSource(src)) return "native"
+  if (mediaSourceSupported) return "hls"
+  return nativeHlsSupported ? "native" : "unsupported"
+}
+
 function isoDuration(seconds: number) {
   const whole = Math.max(0, Math.round(seconds))
   const minutes = Math.floor(whole / 60)

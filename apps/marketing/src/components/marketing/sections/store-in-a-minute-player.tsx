@@ -3,7 +3,8 @@
 import {
   type StoreInAMinuteVariantMedia,
   formatVideoTime,
-  isHlsSource,
+  getStoreInAMinutePlaybackEngine,
+  supportsStoreInAMinuteMediaSource,
 } from "@/lib/store-in-a-minute-video"
 import {
   type CSSProperties,
@@ -67,6 +68,22 @@ function useCaptionsCrossOrigin(captions?: string) {
   return crossOrigin
 }
 
+function supportsHlsMediaSource() {
+  if (typeof window === "undefined") return false
+  const browser = window as typeof window & {
+    ManagedMediaSource?: typeof MediaSource
+    WebKitMediaSource?: typeof MediaSource
+    WebKitSourceBuffer?: typeof SourceBuffer
+  }
+  return supportsStoreInAMinuteMediaSource({
+    mediaSource:
+      browser.ManagedMediaSource ??
+      browser.MediaSource ??
+      browser.WebKitMediaSource,
+    sourceBuffer: browser.SourceBuffer ?? browser.WebKitSourceBuffer,
+  })
+}
+
 /** Starts a paused video, loading HLS segments only when playback begins. */
 export function playStoreInAMinuteVideo(video: HTMLVideoElement | null) {
   video?.play().catch(() => {
@@ -113,6 +130,7 @@ export function StoreInAMinutePlayer({
   const hlsLoading = useRef(false)
   const crossOrigin = useCaptionsCrossOrigin(media.captions)
   const src = media.src
+  const mediaSourceSupported = supportsHlsMediaSource()
 
   const play = useCallback(() => {
     setActivated(true)
@@ -121,7 +139,11 @@ export function StoreInAMinutePlayer({
       !readyToPlay.current &&
       video &&
       src &&
-      (!isHlsSource(src) || video.canPlayType("application/vnd.apple.mpegurl"))
+      getStoreInAMinutePlaybackEngine(
+        src,
+        Boolean(video.canPlayType("application/vnd.apple.mpegurl")),
+        mediaSourceSupported,
+      ) === "native"
     ) {
       // Keep native unmuted playback inside the visitor's click gesture.
       video.src = src
@@ -134,7 +156,7 @@ export function StoreInAMinutePlayer({
       hls.current.startLoad(seekTarget.current ?? -1)
     }
     playStoreInAMinuteVideo(videoRef.current)
-  }, [videoRef, src])
+  }, [videoRef, src, mediaSourceSupported])
 
   const seek = useCallback(
     (position: number) => {
@@ -174,21 +196,30 @@ export function StoreInAMinutePlayer({
       )
         play()
     }
-    if (
-      !isHlsSource(src) ||
-      video.canPlayType("application/vnd.apple.mpegurl")
-    ) {
+    const nativeHlsSupported = Boolean(
+      video.canPlayType("application/vnd.apple.mpegurl"),
+    )
+    const attachNative = () => {
       if (video.getAttribute("src") !== src) {
         video.src = src
         video.load()
       }
       resume()
-    } else {
+    }
+    const engine = getStoreInAMinutePlaybackEngine(
+      src,
+      nativeHlsSupported,
+      mediaSourceSupported,
+    )
+    if (engine === "native") attachNative()
+    else if (engine === "unsupported") setError(true)
+    else {
       void import("hls.js")
         .then(({ default: Hls }) => {
           if (disposed) return
           if (!Hls.isSupported()) {
-            setError(true)
+            if (nativeHlsSupported) attachNative()
+            else setError(true)
             return
           }
           const instance = new Hls({
@@ -208,7 +239,10 @@ export function StoreInAMinutePlayer({
           resume()
         })
         .catch(() => {
-          if (!disposed) setError(true)
+          if (!disposed) {
+            if (nativeHlsSupported) attachNative()
+            else setError(true)
+          }
         })
     }
     return () => {
@@ -221,7 +255,15 @@ export function StoreInAMinutePlayer({
       video.removeAttribute("src")
       video.load()
     }
-  }, [src, activated, attempt, videoRef, play, playbackPreferences])
+  }, [
+    src,
+    activated,
+    attempt,
+    videoRef,
+    play,
+    playbackPreferences,
+    mediaSourceSupported,
+  ])
 
   // Autoplay stays muted; an explicit pause survives scrolling and version changes.
   useEffect(() => {

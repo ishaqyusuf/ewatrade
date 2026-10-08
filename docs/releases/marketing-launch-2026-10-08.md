@@ -37,7 +37,8 @@ unrelated dirty shared checkout. Temporary local capture launcher changes were r
 
 - Integrated signup/pricing/API/navigation/error checks: 54 tests, 262 assertions.
 - Initial final pricing/player/legal-probe checks: 27 tests, 151 assertions.
-- Latest profile-default/signup regressions: 8 tests, 41 assertions.
+- Latest integrated signup/player/pricing/legal seek-fix checks: 38 tests, 204 assertions.
+- Profile-default/signup regressions: 8 tests, 41 assertions.
 - Final 146-second player/complete transcript checks: 12 tests, 51 assertions.
 - Stream review: 115 unique source tests, 484 assertions, plus one guarded Development
   concurrency test with eight assertions and exact fixture cleanup. Repeated runs
@@ -67,8 +68,15 @@ accepted. Protected Preview cannot establish ordinary Production intake acceptan
 Local development emitted no analytics POST batch. The production build passed all
 five player scenarios with five actual delivered video events in each. This isolates
 the failure to development lifecycle behavior; external collector acceptance stays open.
-Final constrained-network playback, exact hosted candidate and launch readback
-remain open. Physical iOS Safari and collector persistence are not claimed. The assistant Production release is a
+Initial final hosted160assets pass all hashes/MIME/cache andMP4Range206; five
+responsive widths pass. Five actual playback scenarios pass, including400kbps/400ms
+mobile. Native Chrome HLS backward seek failed outside its current buffer, while
+Hls.js succeeds. The player now prefers supported Hls.js/MSE with native fallback;
+this source fix has14tests/61assertions and awaits refreshed exact Preview acceptance.
+A local production build with actual media emitsvideo_progress25 after40seconds
+actualwatch. Preview503 is the existing proxy guard before analytics context/ingest,
+so no hosted batch is expected and the guard is unchanged. Production collector and
+launch readback remain open. Physical iOS Safari and collector persistence are not claimed. The assistant Production release is a
 separate completed dependency, not evidence that this marketing candidate is live.
 
 Private Brain documentation contains the canonical task ledger and evidence reports
@@ -93,6 +101,6 @@ a viewer requests its selected adaptive rendition, not the whole package. Raw
 footage, fixture identifiers, model caches and dependencies are excluded.
 
 Six public media paths and optional client analytics emission are configured only
-for this review branch. Strict analytics origin policy still refuses Preview events;
-client transport and actual watch milestones must be distinguished from Production
-collector acceptance. Production media settings and publication date remain unset.
+for this review branch. The existing Preview API guard refuses analytics context before ingest; no batch
+is expected. Client transport and actual watch milestones must be distinguished
+from Production collector acceptance. Production media settings and publication date remain unset.

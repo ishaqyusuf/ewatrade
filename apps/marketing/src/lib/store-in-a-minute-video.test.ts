@@ -11,9 +11,11 @@ import {
   getStoreInAMinuteConfig,
   getStoreInAMinuteJsonLd,
   getStoreInAMinuteMode,
+  getStoreInAMinutePlaybackEngine,
   getVariantSwitchTime,
   isHlsSource,
   isStoreInAMinuteVideoReady,
+  supportsStoreInAMinuteMediaSource,
 } from "./store-in-a-minute-video"
 
 const previous = {
@@ -100,6 +102,54 @@ test("progress milestones and HLS detection", () => {
   expect(getReachedMilestones(10, Number.NaN)).toEqual([])
   expect(isHlsSource("https://stream.mux.com/abc.m3u8?token=x")).toBe(true)
   expect(isHlsSource("https://cdn.example.com/video.mp4")).toBe(false)
+})
+
+test("HLS uses MediaSource when both engines exist and retains native fallback", () => {
+  const hls = "/media/setup-2026-10-08/web/master.m3u8"
+  expect(getStoreInAMinutePlaybackEngine(hls, true, true)).toBe("hls")
+  expect(getStoreInAMinutePlaybackEngine(hls, false, true)).toBe("hls")
+  expect(getStoreInAMinutePlaybackEngine(hls, true, false)).toBe("native")
+  expect(getStoreInAMinutePlaybackEngine(hls, false, false)).toBe("unsupported")
+  expect(getStoreInAMinutePlaybackEngine("/film.mp4", false, false)).toBe(
+    "native",
+  )
+})
+
+test("MediaSource selection requires film codec support and a valid buffer API", () => {
+  const supported = {
+    mediaSource: {
+      isTypeSupported: (type: string) => type.includes("avc1.42E01E,mp4a.40.2"),
+    },
+    sourceBuffer: { prototype: { appendBuffer() {}, remove() {} } },
+  }
+  expect(supportsStoreInAMinuteMediaSource(supported)).toBe(true)
+  expect(
+    supportsStoreInAMinuteMediaSource({
+      ...supported,
+      sourceBuffer: undefined,
+    }),
+  ).toBe(true)
+  expect(
+    supportsStoreInAMinuteMediaSource({
+      ...supported,
+      sourceBuffer: { prototype: { appendBuffer() {} } },
+    }),
+  ).toBe(false)
+  expect(
+    supportsStoreInAMinuteMediaSource({
+      ...supported,
+      mediaSource: { isTypeSupported: () => false },
+    }),
+  ).toBe(false)
+  expect(
+    supportsStoreInAMinuteMediaSource({
+      mediaSource: {
+        isTypeSupported() {
+          throw new Error("Unavailable")
+        },
+      },
+    }),
+  ).toBe(false)
 })
 
 test("VideoObject JSON-LD waits for both sources, a poster and a valid publication date", () => {
