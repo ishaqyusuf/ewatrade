@@ -12,6 +12,7 @@ import {
   entityPayload,
   entitySummary,
 } from "./setup-format"
+import { SetupRecordAvatar } from "./setup-illustration"
 
 /** Server wording is generic by design; refusals are explained here by code. */
 function addErrorCopy(cause: unknown) {
@@ -116,12 +117,11 @@ export function SetupChatItems({ keys }: { keys: string[] }) {
         return (
           <li key={entity.key} className="flex flex-col gap-2 px-3 py-2.5">
             <div className="flex items-start gap-2.5">
-              <span
-                aria-hidden
-                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-sm"
-              >
-                {emoji ?? payload.name.slice(0, 1).toUpperCase()}
-              </span>
+              <SetupRecordAvatar
+                payload={payload}
+                emoji={emoji}
+                className="size-7 text-sm"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">
                   {payload.name}

@@ -164,6 +164,9 @@ export function catalogCommandForSetupEntity(
     name: payload.name,
     storeId: scope.storeId,
     tenantId: scope.tenantId,
+    ...(payload.illustrationId
+      ? { illustrationId: payload.illustrationId }
+      : {}),
   }
   if (payload.kind === "service")
     return {
@@ -513,10 +516,13 @@ export async function commitSetupDraft(
           storeId: scope.storeId,
           tenantId: scope.tenantId,
         })
+        // A photo the owner sent replaces the library illustration.
+        const { illustrationId: _illustration, ...withoutIllustration } =
+          command
         const item = await deps.createCatalogItem(
           db,
           photo && "assetId" in photo
-            ? { ...command, photoAssetIds: [photo.assetId] }
+            ? { ...withoutIllustration, photoAssetIds: [photo.assetId] }
             : command,
         )
         if (photo && "assetId" in photo)

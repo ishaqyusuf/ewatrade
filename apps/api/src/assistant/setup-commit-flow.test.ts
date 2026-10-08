@@ -130,6 +130,18 @@ const withPhoto = (key: string): Entity => ({
   },
 })
 
+const illustrated = (key: string, photo?: string): Entity => ({
+  ...product(key),
+  payload: {
+    kind: "product",
+    name: key,
+    unitName: "Crate",
+    priceMinor: 450_000,
+    illustrationId: "ill-egg",
+    ...(photo ? { photoAttachmentId: photo } : {}),
+  },
+})
+
 describe("product photos sent in the setup chat", () => {
   test("are attached inside item creation and queued for review", async () => {
     const { deps } = harness([withPhoto("eggs")])
@@ -177,6 +189,53 @@ describe("product photos sent in the setup chat", () => {
     expect(outcomes.at(-1)).toMatchObject({
       outcome: { state: "COMMITTED", errorCode: "PHOTO_NOT_ADDED" },
     })
+  })
+})
+
+describe("recommended illustrations", () => {
+  test("are attached when the owner sent no photo", async () => {
+    const { deps } = harness([illustrated("eggs")])
+    await commitSetupDraft(db, scope, "draft", deps)
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ illustrationId: "ill-egg" }),
+    )
+  })
+
+  test("give way to a photo the owner sent", async () => {
+    const { deps } = harness([illustrated("eggs", "att_photo")])
+    await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "LIVE" },
+      "draft",
+      deps,
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ photoAssetIds: ["asset_1"] }),
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.not.objectContaining({ illustrationId: expect.anything() }),
+    )
+  })
+
+  test("stay when the photo could not be added", async () => {
+    const { deps } = harness([illustrated("eggs", "att_photo")], {
+      prepareProductPhoto: mock(async () => ({
+        skipped: "PHOTO_NOT_ADDED" as const,
+      })) as never,
+    })
+    await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "QA" },
+      "draft",
+      deps,
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ illustrationId: "ill-egg" }),
+    )
   })
 })
 

@@ -17,6 +17,10 @@ import {
   entitySource,
   entitySummary,
 } from "./setup-format"
+import {
+  SetupIllustrationControl,
+  SetupRecordAvatar,
+} from "./setup-illustration"
 
 const STATE_LABEL: Record<SetupDraftEntity["state"], string> = {
   PROPOSED: "Ready to confirm",
@@ -78,12 +82,11 @@ export function SetupDraftCard({
       className={cn("flex flex-col gap-3 px-4 py-3", skipped && "opacity-60")}
     >
       <div className="flex items-start gap-3">
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-base"
-        >
-          {emoji ?? payload.name.slice(0, 1).toUpperCase()}
-        </span>
+        <SetupRecordAvatar
+          payload={payload}
+          emoji={emoji}
+          className="size-9 text-base"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-sm font-medium text-foreground">
@@ -131,6 +134,13 @@ export function SetupDraftCard({
                   : "This photo is added with the product"}
               </span>
             </div>
+          ) : null}
+          {!locked && !skipped && !editing ? (
+            <SetupIllustrationControl
+              payload={payload}
+              pending={pending}
+              onSave={onSave}
+            />
           ) : null}
           {entity.state === "FAILED" || (locked && entity.errorCode) ? (
             <p
