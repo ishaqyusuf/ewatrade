@@ -17,7 +17,7 @@ import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { ScrollView } from "react-native"
 
 function ReminderSettingToggle({
@@ -93,7 +93,7 @@ export default function OrderReminderSettingsModalRoute() {
   const [dayBeforeEnabled, setDayBeforeEnabled] = useState(true)
   const [sameDayEnabled, setSameDayEnabled] = useState(true)
   const [saved, setSaved] = useState(false)
-  const qaSnapshot = useRef<{
+  const [qaSnapshot, setQaSnapshot] = useState<{
     dayBeforeEnabled: boolean
     enabled: boolean
     sameDayEnabled: boolean
@@ -190,23 +190,26 @@ export default function OrderReminderSettingsModalRoute() {
 
         <View className="mb-3">
           <QaQuickFillButton
-            canUndo={Boolean(qaSnapshot.current)}
+            canUndo={Boolean(qaSnapshot)}
             formId="mobile.order.reminder-settings"
             isDirty={isDirty}
             onFill={() => {
-              qaSnapshot.current = currentSettings
+              setQaSnapshot(currentSettings)
+              // A day-before-only pattern, unless that is already set, so the
+              // fill always produces a change to review and save.
+              const dayBeforeOnly =
+                enabled && dayBeforeEnabled && !sameDayEnabled
               setEnabled(true)
               setDayBeforeEnabled(true)
-              setSameDayEnabled(true)
+              setSameDayEnabled(dayBeforeOnly)
               setSaved(false)
             }}
             onUndo={() => {
-              const snapshot = qaSnapshot.current
-              if (!snapshot) return
-              setEnabled(snapshot.enabled)
-              setDayBeforeEnabled(snapshot.dayBeforeEnabled)
-              setSameDayEnabled(snapshot.sameDayEnabled)
-              qaSnapshot.current = null
+              if (!qaSnapshot) return
+              setEnabled(qaSnapshot.enabled)
+              setDayBeforeEnabled(qaSnapshot.dayBeforeEnabled)
+              setSameDayEnabled(qaSnapshot.sameDayEnabled)
+              setQaSnapshot(null)
             }}
           />
         </View>

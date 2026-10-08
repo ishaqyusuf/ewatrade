@@ -16,6 +16,14 @@ describe("Green Till native QA links", () => {
       resolveGreenTillQaPath("ewatrade-dev://qa-owner-setup-modal", true),
     ).toBe("/qa-owner-setup-modal")
   })
+  test("opens Quick Fill forms in development for QA", () => {
+    expect(resolveGreenTillQaPath("ewatrade-dev://closeout-modal", true)).toBe(
+      "/closeout-modal",
+    )
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://closeout-modal", false),
+    ).toBeNull()
+  })
   test("cannot open fixtures in a production build", () => {
     expect(
       resolveGreenTillQaPath("ewatrade-dev://qa-auth-onboarding-modal", false),

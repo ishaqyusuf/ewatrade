@@ -1,276 +1,109 @@
-import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
-import { Button } from "@/components/ui/button"
-import { Modal, useModal } from "@/components/ui/modal"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { KeyboardInlineComposer } from "@/components/mobile/keyboard-inline-composer"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
-import { getAppVariant } from "@/lib/app-variant"
-import { shouldSuggestQaAuthorization } from "@/lib/qa-authorization-state"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { normalizeQaDomain } from "@ewatrade/utils/qa-accelerator"
 import { useSegments } from "expo-router"
-import { useCallback, useLayoutEffect, useRef, useState } from "react"
-import { Keyboard, useWindowDimensions } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { FormField } from "./form-field"
-import { StatusBanner } from "./status-banner"
+import { useEffect, useRef, useState } from "react"
+import { Keyboard } from "react-native"
 
+/**
+ * QA domain entry: the input bar above the keyboard, with a send button
+ * beside it. It opens only from the QA button and closes with the keyboard
+ * or once QA connects.
+ */
 export function QaAuthorizationSheet() {
   const qa = useQaAccelerator()
-  const largeTextLayout = useLargeTextLayout()
-  const segments = useSegments()
-  const modal = useModal()
-  const { height } = useWindowDimensions()
-  const insets = useSafeAreaInsets()
-  const [qaDomain, setQaDomain] = useState(qa.authorization?.qaDomain ?? "")
-  const appVariant = getAppVariant()
-  const modeLabel =
-    appVariant === "preview"
-      ? "Preview"
-      : appVariant === "local"
-        ? "Local"
-        : "Development"
-  const modeNoun = `${modeLabel.toLowerCase()} server`
-  const isBusinessShell = !isCustomerShellPath(segments)
-  const shouldSuggest = shouldSuggestQaAuthorization({
-    authorizationPresent: Boolean(qa.authorization),
-    clientEnabled: qa.clientEnabled,
-    isBusinessShell,
-  })
-  const hasPresentedSuggestion = useRef(false)
-  const lastAuthorizationToken = useRef(qa.authorization?.token ?? null)
-  const lastSheetRequest = useRef(qa.authorizationSheetRequest)
+  const isBusinessShell = !isCustomerShellPath(useSegments())
+  const enabled = qa.clientEnabled && isBusinessShell
+  const [open, setOpen] = useState(false)
+  const [qaDomain, setQaDomain] = useState(
+    qa.authorization?.qaDomain ?? qa.rememberedDomain ?? "",
+  )
+  const [domainError, setDomainError] = useState<string | null>(null)
+  const lastRequest = useRef(qa.authorizationSheetRequest)
+  const lastToken = useRef(qa.authorization?.token ?? null)
+  const token = qa.authorization?.token ?? null
 
-  useLayoutEffect(() => {
-    if (!qa.clientEnabled || !isBusinessShell) {
-      modal.dismiss()
+  useEffect(() => {
+    if (lastRequest.current === qa.authorizationSheetRequest) return
+    lastRequest.current = qa.authorizationSheetRequest
+    if (enabled) {
+      setDomainError(null)
+      setOpen(true)
+    }
+  }, [enabled, qa.authorizationSheetRequest])
+
+  useEffect(() => {
+    if (token && lastToken.current !== token) {
+      setOpen(false)
+      Keyboard.dismiss()
+    }
+    lastToken.current = token
+  }, [token])
+
+  useEffect(() => {
+    if (!enabled) setOpen(false)
+  }, [enabled])
+
+  useEffect(() => {
+    if (!open) return
+    const hide = Keyboard.addListener("keyboardDidHide", () => setOpen(false))
+    return () => hide.remove()
+  }, [open])
+
+  if (!enabled) return null
+
+  const serverProblem = qa.isLoading
+    ? null
+    : qa.capabilityCategory === "network_unavailable"
+      ? "Can’t reach the server. Check it is running."
+      : qa.capabilityCategory === "upgrade_required"
+        ? "Install the latest build to use QA."
+        : !qa.capabilityAvailable
+          ? "QA isn’t enabled on this server."
+          : null
+  const retryServer =
+    serverProblem !== null && qa.capabilityCategory !== "upgrade_required"
+
+  const submit = () => {
+    if (retryServer) {
+      void qa.retryCapability()
       return
     }
-
-    const authorizationToken = qa.authorization?.token ?? null
-    if (authorizationToken) {
-      hasPresentedSuggestion.current = false
-      if (lastAuthorizationToken.current !== authorizationToken) {
-        modal.dismiss()
-      }
-      lastAuthorizationToken.current = authorizationToken
+    let normalizedDomain: string
+    try {
+      normalizedDomain = normalizeQaDomain(qaDomain)
+    } catch {
+      setDomainError("Enter a domain like name.qa.test")
       return
     }
-
-    lastAuthorizationToken.current = null
-    if (shouldSuggest && !hasPresentedSuggestion.current) {
-      hasPresentedSuggestion.current = true
-      modal.present()
-    }
-  }, [
-    isBusinessShell,
-    modal.dismiss,
-    modal.present,
-    qa.authorization?.token,
-    qa.clientEnabled,
-    shouldSuggest,
-  ])
-
-  useLayoutEffect(() => {
-    if (lastSheetRequest.current === qa.authorizationSheetRequest) return
-    lastSheetRequest.current = qa.authorizationSheetRequest
-    if (qa.clientEnabled && isBusinessShell) modal.present()
-  }, [
-    isBusinessShell,
-    modal.present,
-    qa.authorizationSheetRequest,
-    qa.clientEnabled,
-  ])
-
-  const submit = useCallback(() => {
-    const normalizedDomain = qaDomain.trim().toLowerCase()
-    if (!normalizedDomain || qa.isAuthorizing) return
-    Keyboard.dismiss()
+    setDomainError(null)
     qa.authorize({ qaDomain: normalizedDomain })
-  }, [qa, qaDomain])
-
-  if (!qa.clientEnabled || !isBusinessShell) return null
+  }
 
   return (
-    <Modal
-      accessibilityLabel="Connect QA workspace"
-      android_keyboardInputMode="adjustPan"
-      enableDismissOnClose
-      enableDynamicSizing
-      enablePanDownToClose
-      hideHeader
-      keyboardBehavior="interactive"
-      maxDynamicContentSize={Math.min(620, height * 0.85)}
-      onDismiss={Keyboard.dismiss}
-      ref={modal.ref}
-      snapPoints={[]}
-      topInset={insets.top + 8}
-    >
-      <BottomSheetScrollView
-        contentContainerStyle={{ paddingBottom: 24 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <BottomSheetInputProvider>
-          <View className="gap-5 px-5 pb-5">
-            {largeTextLayout ? (
-              <View className="gap-3">
-                <View className="flex-row items-center justify-between gap-3">
-                  <QaMark />
-                  <ModeBadge label={modeLabel} />
-                </View>
-                <View className="gap-1">
-                  <Text className="text-xl font-extrabold tracking-tight text-foreground">
-                    Connect QA workspace
-                  </Text>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Use the domain that receives your QA email.
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View className="flex-row items-start gap-3">
-                <QaMark />
-                <View className="min-w-0 flex-1 gap-1">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="min-w-0 flex-1 text-xl font-extrabold tracking-tight text-foreground">
-                      Connect QA workspace
-                    </Text>
-                    <ModeBadge label={modeLabel} />
-                  </View>
-                  <Text className="text-sm leading-5 text-muted-foreground">
-                    Use the domain that receives your QA email.
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {qa.isLoading ? (
-              <StatusBanner
-                icon="RefreshCw"
-                message={`Checking this ${modeLabel.toLowerCase()} build and any saved QA authorization.`}
-                title="Preparing QA access"
-                tone="primary"
-              />
-            ) : qa.capabilityCategory === "network_unavailable" ? (
-              <View className="gap-3">
-                <StatusBanner
-                  icon="WifiOff"
-                  message={`Reconnect to the ${modeNoun}, then retry when you want to use QA tools.`}
-                  title={`${modeLabel} server unavailable`}
-                  tone="warning"
-                />
-                <Button
-                  accessibilityLabel={`Retry QA ${modeLabel.toLowerCase()} connection`}
-                  className="h-12 rounded-2xl"
-                  onPress={() => void qa.retryCapability()}
-                >
-                  <Text>Retry connection</Text>
-                </Button>
-              </View>
-            ) : qa.capabilityCategory === "upgrade_required" ? (
-              <StatusBanner
-                icon="RefreshCw"
-                message={`Install the latest ${modeLabel.toLowerCase()} build, then reopen the app.`}
-                title={`${modeLabel} update required`}
-                tone="warning"
-              />
-            ) : !qa.capabilityAvailable ? (
-              <View className="gap-3">
-                <StatusBanner
-                  icon="TriangleAlert"
-                  message={`This ${modeNoun} has not enabled the QA accelerator. Update its QA configuration, then retry.`}
-                  title="QA access is not configured"
-                  tone="warning"
-                />
-                <Button
-                  accessibilityLabel="Retry QA capability check"
-                  className="h-12 rounded-2xl"
-                  onPress={() => void qa.retryCapability()}
-                >
-                  <Text>Retry configuration</Text>
-                </Button>
-              </View>
-            ) : (
-              <>
-                {qa.authorizationError ? (
-                  <StatusBanner
-                    icon="TriangleAlert"
-                    message={qa.authorizationError}
-                    title="QA access needs attention"
-                    tone="destructive"
-                  />
-                ) : null}
-                <View className="gap-4">
-                  <FormField
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="url"
-                    label="QA domain"
-                    leadingIcon="Globe"
-                    onChangeText={setQaDomain}
-                    onSubmitEditing={submit}
-                    returnKeyType="go"
-                    placeholder="Enter your QA domain"
-                    value={qaDomain}
-                  />
-                </View>
-                <View className="flex-row items-start gap-2 rounded-2xl bg-muted/70 px-3.5 py-3">
-                  <Text className="text-xs text-muted-foreground">◆</Text>
-                  <View className="min-w-0 flex-1 gap-0.5">
-                    <Text className="text-xs font-bold text-foreground">
-                      QA businesses only.
-                    </Text>
-                    <Text className="text-xs leading-5 text-muted-foreground">
-                      Choose an account from the QA businesses registered to
-                      this domain.
-                    </Text>
-                  </View>
-                </View>
-                <Button
-                  accessibilityLabel="Load QA businesses"
-                  className="h-12 rounded-2xl"
-                  disabled={!qaDomain.trim() || qa.isAuthorizing}
-                  onPress={submit}
-                >
-                  <Text>
-                    {qa.isAuthorizing
-                      ? "Authorizing QA workspace…"
-                      : "Load QA businesses"}
-                  </Text>
-                </Button>
-              </>
-            )}
-            <Button
-              accessibilityHint="Closes QA setup and keeps normal login and registration available"
-              accessibilityLabel="Continue without QA"
-              className="h-12 rounded-2xl"
-              onPress={modal.dismiss}
-              variant="outline"
-            >
-              <Text>Continue without QA</Text>
-            </Button>
-          </View>
-        </BottomSheetInputProvider>
-      </BottomSheetScrollView>
-    </Modal>
-  )
-}
-
-function QaMark() {
-  return (
-    <View className="size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
-      <Text className="text-lg font-black text-primary">QA</Text>
-    </View>
-  )
-}
-
-function ModeBadge({ label }: { label: string }) {
-  return (
-    <View className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1">
-      <Text className="text-[10px] font-black uppercase tracking-[1.2px] text-primary">
-        {label}
-      </Text>
-    </View>
+    <KeyboardInlineComposer
+      autoCapitalize="none"
+      canSubmit={retryServer || (serverProblem === null && !!qaDomain.trim())}
+      closedOffset={0}
+      errorText={serverProblem ?? domainError ?? qa.authorizationError}
+      keyboardType="url"
+      loading={qa.isLoading || qa.isAuthorizing}
+      onChangeText={(value) => {
+        setQaDomain(value)
+        setDomainError(null)
+      }}
+      onPillPress={() => undefined}
+      onSubmit={submit}
+      pills={[]}
+      placeholder="QA domain, like name.qa.test"
+      submitAccessibilityLabel={
+        retryServer ? "Retry server" : "Load QA businesses"
+      }
+      submitIconName={retryServer ? "RefreshCw" : "ArrowRight"}
+      submitLabel={retryServer ? "Retry" : "Load QA businesses"}
+      value={qaDomain}
+      visible={open}
+    />
   )
 }

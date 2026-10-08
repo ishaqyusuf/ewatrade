@@ -1,12 +1,19 @@
 import { getAppVariant } from "@/lib/app-variant"
 import {
+  classifyQaRevalidation,
+  describeQaAuthorizationError,
+} from "@/lib/qa-authorization-state"
+import {
   type StoredQaAuthorization,
   clearStoredQaAuthorization,
   clearStoredQaClientId,
+  clearStoredQaDomain,
   getStoredQaAuthorization,
   getStoredQaClientId,
+  getStoredQaDomain,
   setStoredQaAuthorization,
   setStoredQaClientId,
+  setStoredQaDomain,
 } from "@/lib/qa-authorization-store"
 import type { MobileSession } from "@/lib/session-store"
 import { clearMobileDataCache, useTRPC } from "@/trpc/client"
@@ -23,6 +30,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 import { AppState } from "react-native"
@@ -70,6 +78,8 @@ export type QaAcceleratorContextValue = {
   } | null
   profileError: string | null
   profiles: QaProfile[]
+  /** The last domain that authorized, used to prefill the domain field. */
+  rememberedDomain: string | null
   retryCapability(): Promise<void>
   refreshProfiles(): Promise<void>
   refreshFixtureContext(): Promise<QaAcceleratorContextValue["fixtureContext"]>
@@ -92,6 +102,10 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
   const [isAuthorizing, setIsAuthorizing] = useState(false)
   const [authorizationSheetRequest, setAuthorizationSheetRequest] = useState(0)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const [rememberedDomain, setRememberedDomain] = useState<string | null>(
+    () => getStoredQaDomain() ?? getStoredQaAuthorization()?.qaDomain ?? null,
+  )
+  const renewedToken = useRef<string | null>(null)
   const clientEnabled = isQaAcceleratorClientMode(getAppVariant())
 
   const capability = useQuery(
@@ -155,6 +169,54 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
     }),
   )
   const revoke = useMutation(trpc.qaAccess.revoke.mutationOptions())
+  const revalidationOutcome = classifyQaRevalidation({
+    errorCode: revalidation.error?.data?.code,
+    isError: revalidation.isError,
+  })
+
+  const exchangeDomain = useCallback(
+    async (qaDomain: string) => {
+      let clientId = getStoredQaClientId()
+      if (!clientId) {
+        clientId = `mobile_${Crypto.randomUUID()}`
+        setStoredQaClientId(clientId)
+      }
+      const result = await exchangeCredential({
+        clientId,
+        contractVersion: QA_ACCELERATOR_CONTRACT_VERSION,
+        qaDomain,
+      })
+      const nextAuthorization = {
+        expiresAt: result.authorization.expiresAt.toISOString(),
+        qaDomain: result.authorization.qaDomain,
+        testerIdentity: result.authorization.testerIdentity,
+        token: result.token,
+      }
+      setStoredQaAuthorization(nextAuthorization)
+      setStoredQaDomain(nextAuthorization.qaDomain)
+      setAuthorization(nextAuthorization)
+      setRememberedDomain(nextAuthorization.qaDomain)
+      setAuthorizationError(null)
+    },
+    [exchangeCredential],
+  )
+
+  // QA tokens expire daily. Renew once, silently, with the saved domain
+  // instead of asking the tester to set QA up again.
+  useEffect(() => {
+    if (revalidationOutcome !== "renew" || !authorization) return
+    if (renewedToken.current === authorization.token) return
+    renewedToken.current = authorization.token
+    setIsAuthorizing(true)
+    exchangeDomain(authorization.qaDomain)
+      .catch(async () => {
+        // The domain is no longer accepted: drop the token and keep the
+        // domain so the field is prefilled.
+        await clearStoredQaAuthorization()
+        setAuthorization(null)
+      })
+      .finally(() => setIsAuthorizing(false))
+  }, [authorization, exchangeDomain, revalidationOutcome])
 
   useEffect(() => {
     if (!clientEnabled || !authorization) return
@@ -174,9 +236,14 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => undefined)
     }
-    await Promise.all([clearStoredQaAuthorization(), clearStoredQaClientId()])
+    await Promise.all([
+      clearStoredQaAuthorization(),
+      clearStoredQaClientId(),
+      clearStoredQaDomain(),
+    ])
     clearMobileDataCache()
     setAuthorization(null)
+    setRememberedDomain(null)
     setAuthorizationError(null)
     setProfileError(null)
     if (auth.isAuthenticated) auth.onLogout()
@@ -184,47 +251,19 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<QaAcceleratorContextValue>(
     () => ({
-      authorization:
-        revalidation.isError && !revalidation.isFetching ? null : authorization,
-      authorizationError:
-        revalidation.isError && authorization
-          ? revalidation.error.message
-          : authorizationError,
+      authorization,
+      authorizationError,
       authorizationSheetRequest,
       authorize(input) {
-        let clientId = getStoredQaClientId()
-        if (!clientId) {
-          clientId = `mobile_${Crypto.randomUUID()}`
-          setStoredQaClientId(clientId)
-        }
         setIsAuthorizing(true)
         setAuthorizationError(null)
-        if (!exchangeCredential) {
-          setAuthorizationError("QA access could not be authorized.")
-          setIsAuthorizing(false)
-          return
-        }
-        void exchangeCredential({
-          clientId,
-          contractVersion: QA_ACCELERATOR_CONTRACT_VERSION,
-          qaDomain: input.qaDomain,
-        })
-          .then((result) => {
-            const nextAuthorization = {
-              expiresAt: result.authorization.expiresAt.toISOString(),
-              qaDomain: result.authorization.qaDomain,
-              testerIdentity: result.authorization.testerIdentity,
-              token: result.token,
-            }
-            setStoredQaAuthorization(nextAuthorization)
-            setAuthorization(nextAuthorization)
-            setAuthorizationError(null)
-          })
-          .catch((error: unknown) => {
+        exchangeDomain(input.qaDomain)
+          .catch((error: { data?: { code?: string }; message?: string }) => {
             setAuthorizationError(
-              error instanceof Error && error.message
-                ? error.message
-                : "QA access could not be authorized.",
+              describeQaAuthorizationError({
+                errorCode: error?.data?.code,
+                message: error?.message,
+              }),
             )
           })
           .finally(() => setIsAuthorizing(false))
@@ -240,7 +279,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         authenticatedTools.fixtureContext ||
           (clientEnabled &&
             authorization &&
-            !revalidation.isError &&
+            revalidationOutcome === "valid" &&
             (!auth.isAuthenticated ||
               (!fixtureContextQuery.isError && fixtureContextQuery.data))),
       ),
@@ -257,7 +296,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       selectingProfileReference: select.variables?.profileReference ?? null,
       fixtureContext:
         authenticatedTools.fixtureContext ??
-        (fixtureContextQuery.isError || revalidation.isError
+        (fixtureContextQuery.isError || revalidationOutcome !== "valid"
           ? null
           : (fixtureContextQuery.data ?? null)),
       profileError:
@@ -265,6 +304,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
           ? profilesQuery.error.message
           : profileError,
       profiles: profilesQuery.data ?? [],
+      rememberedDomain,
       async retryCapability() {
         await capability.refetch()
       },
@@ -277,7 +317,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         if (
           !authorization ||
           !capability.data?.available ||
-          revalidation.isError
+          revalidationOutcome !== "valid"
         )
           return null
         const result = await fixtureContextQuery.refetch()
@@ -302,7 +342,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       capability.isLoading,
       capability.refetch,
       clearQaData,
-      exchangeCredential,
+      exchangeDomain,
       fixtureContextQuery.data,
       fixtureContextQuery.isError,
       fixtureContextQuery.refetch,
@@ -310,7 +350,9 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       isAuthorizing,
       profileError,
       profilesQuery,
+      rememberedDomain,
       revalidation,
+      revalidationOutcome,
       select,
     ],
   )

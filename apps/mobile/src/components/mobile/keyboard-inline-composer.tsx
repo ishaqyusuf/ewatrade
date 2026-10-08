@@ -1,14 +1,22 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { Icon, type IconProps } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
+import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
 import { forwardRef } from "react"
-import { Keyboard, ScrollView, StyleSheet, TextInput, View } from "react-native"
+import {
+  ActivityIndicator,
+  Keyboard,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  type TextInputProps,
+  View,
+} from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 
 export type KeyboardInlineComposerPill = {
@@ -20,6 +28,12 @@ export type KeyboardInlineComposerPill = {
 
 type KeyboardInlineComposerProps = {
   appearance?: MobileDesign
+  autoCapitalize?: TextInputProps["autoCapitalize"]
+  /** A short problem shown above the input, such as a rejected value. */
+  errorText?: string | null
+  keyboardType?: TextInputProps["keyboardType"]
+  /** Shows a spinner in the send button while the value is processed. */
+  loading?: boolean
   onHeightChange?: (height: number) => void
   closedOffset?: number
   disabled?: boolean
@@ -48,6 +62,10 @@ export const KeyboardInlineComposer = forwardRef<
 >(function KeyboardInlineComposer(
   {
     appearance = "classic",
+    autoCapitalize = "words",
+    errorText,
+    keyboardType,
+    loading = false,
     onHeightChange,
     closedOffset = 88,
     disabled = false,
@@ -75,7 +93,8 @@ export const KeyboardInlineComposer = forwardRef<
   const palette = useMarketDayPalette()
   const market = appearance === "market-day"
   const largeTextLayout = useLargeTextLayout()
-  const canSubmit = !disabled && (canSubmitOverride ?? value.trim().length > 0)
+  const canSubmit =
+    !disabled && !loading && (canSubmitOverride ?? value.trim().length > 0)
 
   if (!visible) return null
 
@@ -128,6 +147,14 @@ export const KeyboardInlineComposer = forwardRef<
               </Text>
             ) : null}
           </View>
+        ) : null}
+        {errorText ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            className="px-1 text-xs font-medium text-destructive"
+          >
+            {errorText}
+          </Text>
         ) : null}
         {pills.length > 0 ? (
           <ScrollView
@@ -209,7 +236,8 @@ export const KeyboardInlineComposer = forwardRef<
             )}
           >
             <TextInput
-              autoCapitalize="words"
+              autoCapitalize={autoCapitalize}
+              autoCorrect={autoCapitalize === "none" ? false : undefined}
               autoFocus
               editable={!disabled}
               maxLength={1000}
@@ -228,6 +256,7 @@ export const KeyboardInlineComposer = forwardRef<
               placeholderTextColor={
                 market ? palette.mutedInk : colors.mutedForeground
               }
+              keyboardType={keyboardType}
               ref={ref}
               returnKeyType="done"
               selectionColor={market ? palette.accentInk : colors.primary}
@@ -271,23 +300,28 @@ export const KeyboardInlineComposer = forwardRef<
                     ? "bg-market-line"
                     : "bg-muted",
               )}
+              accessibilityState={{ busy: loading, disabled: !canSubmit }}
               disabled={!canSubmit}
               haptic
               onPress={submit}
             >
-              <Icon
-                className={cn(
-                  "size-sm",
-                  canSubmit
-                    ? market
-                      ? "text-market-on-palm"
-                      : "text-primary-foreground"
-                    : market
-                      ? "text-market-muted-ink"
-                      : "text-muted-foreground",
-                )}
-                name={submitIconName}
-              />
+              {loading ? (
+                <ActivityIndicator color={colors.mutedForeground} />
+              ) : (
+                <Icon
+                  className={cn(
+                    "size-sm",
+                    canSubmit
+                      ? market
+                        ? "text-market-on-palm"
+                        : "text-primary-foreground"
+                      : market
+                        ? "text-market-muted-ink"
+                        : "text-muted-foreground",
+                  )}
+                  name={submitIconName}
+                />
+              )}
             </Pressable>
           )}
         </View>

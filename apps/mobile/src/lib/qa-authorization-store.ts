@@ -2,6 +2,9 @@ import * as SecureStore from "expo-secure-store"
 
 const QA_AUTHORIZATION_KEY = "ewatrade_qa_authorization_v1"
 const QA_CLIENT_ID_KEY = "ewatrade_qa_client_id_v1"
+// The last domain that authorized, kept after its token expires so QA can
+// renew silently or prefill the domain field.
+const QA_LAST_DOMAIN_KEY = "ewatrade_qa_last_domain_v1"
 
 export type StoredQaAuthorization = {
   expiresAt: string
@@ -39,4 +42,16 @@ export function setStoredQaClientId(value: string) {
 
 export function clearStoredQaClientId() {
   return SecureStore.deleteItemAsync(QA_CLIENT_ID_KEY)
+}
+
+export function getStoredQaDomain() {
+  return SecureStore.getItem(QA_LAST_DOMAIN_KEY)
+}
+
+export function setStoredQaDomain(value: string) {
+  SecureStore.setItem(QA_LAST_DOMAIN_KEY, value)
+}
+
+export function clearStoredQaDomain() {
+  return SecureStore.deleteItemAsync(QA_LAST_DOMAIN_KEY)
 }

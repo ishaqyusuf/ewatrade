@@ -46,17 +46,7 @@ export function createQaFixtureContext(
   }
 }
 
-export function createQaFixtureEmail(
-  context: QaFixtureContext,
-  input: { formId: string; sequence?: number },
-) {
-  const run = slugPart(context.invocationId) || "run"
-  const form = slugPart(input.formId) || "form"
-  const sequence = Math.max(1, Math.trunc(input.sequence ?? 1))
-  return `qa+${run}-${form}-${sequence}@${context.domain}`
-}
-
-export function createQaFixtureIdentity(
+function fixtureName(
   context: QaFixtureContext,
   input: { formId: string; sequence?: number },
 ) {
@@ -73,6 +63,33 @@ export function createQaFixtureIdentity(
     seed,
     3,
   )
+  return { firstName, lastName, seed }
+}
+
+/**
+ * A readable QA address on the QA domain, such as chidi.williams.7k2@…: the
+ * fixture's own name plus three letters or digits so repeat fills differ.
+ * The domain alone marks it as QA.
+ */
+export function createQaFixtureEmail(
+  context: QaFixtureContext,
+  input: { formId: string; sequence?: number },
+) {
+  const { firstName, lastName } = fixtureName(context, input)
+  const suffix = (
+    hashSeed(`${context.invocationId}:${input.formId}:${input.sequence ?? 1}`) %
+    36 ** 3
+  )
+    .toString(36)
+    .padStart(3, "0")
+  return `${firstName}.${lastName}.${suffix}@${context.domain}`.toLowerCase()
+}
+
+export function createQaFixtureIdentity(
+  context: QaFixtureContext,
+  input: { formId: string; sequence?: number },
+) {
+  const { firstName, lastName, seed } = fixtureName(context, input)
   const suffix = (seed % 100).toString().padStart(2, "0")
   return {
     addressLine1: `QA ONLY — ${10 + (seed % 80)} Test Fixture Lane`,

@@ -97,7 +97,10 @@ describe("QA accelerator contract", () => {
     })
 
     expect(first).toEqual(second)
-    expect(first.email).toBe("qa+run-42-customer-create-2@ishack.qa.test")
+    expect(first.email).toMatch(/^[a-z]+\.[a-z]+\.[0-9a-z]{3}@ishack\.qa\.test$/)
+    expect(first.email).toStartWith(
+      `${first.firstName}.${first.lastName}`.toLowerCase(),
+    )
     expect(first.phone).toMatch(/^\+120255501\d{2}$/)
     expect(first.addressLine1).toContain("QA ONLY")
   })

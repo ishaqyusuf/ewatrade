@@ -1,5 +1,4 @@
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
-import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -45,41 +44,22 @@ export function QaAccountChooser() {
 
   if (!qa.capabilityAvailable || !qa.authorization) {
     return (
-      <Pressable
-        accessibilityHint="Opens optional QA domain setup"
+      <QaFab
+        accessibilityHint="Opens QA domain setup"
         accessibilityLabel="Set up QA"
-        accessibilityRole="button"
-        className="min-h-11 flex-row items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-3 active:bg-primary/20"
-        haptic
         onPress={qa.openAuthorizationSheet}
-        transition
-      >
-        <Icon className="size-sm text-primary" name="Globe" />
-        <Text className="text-xs font-black uppercase tracking-[1px] text-primary">
-          Set QA
-        </Text>
-      </Pressable>
+      />
     )
   }
 
   return (
     <>
-      <View className="items-end">
-        <Pressable
-          accessibilityHint="Shows businesses registered for the active QA Domain"
-          accessibilityLabel={`Open ${qa.profiles.length} QA businesses`}
-          accessibilityRole="button"
-          className="relative min-h-11 flex-row items-center justify-center gap-2 rounded-2xl bg-primary px-3 shadow-sm active:bg-primary/90"
-          haptic
-          onPress={() => modal.present()}
-          transition
-        >
-          <Icon className="size-sm text-primary-foreground" name="Users" />
-          <Text className="text-xs font-black uppercase tracking-[1px] text-primary-foreground">
-            QA · {qa.profiles.length}
-          </Text>
-        </Pressable>
-      </View>
+      <QaFab
+        accessibilityHint="Shows businesses registered for the active QA Domain"
+        accessibilityLabel={`Open ${qa.profiles.length} QA businesses`}
+        count={qa.profiles.length}
+        onPress={() => modal.present()}
+      />
 
       <Modal
         enableDynamicSizing
@@ -212,5 +192,47 @@ export function QaAccountChooser() {
         </BottomSheetKeyboardAwareScrollView>
       </Modal>
     </>
+  )
+}
+
+/** Round floating QA button: a "QA" mark, with the business count once set up. */
+function QaFab({
+  accessibilityHint,
+  accessibilityLabel,
+  count,
+  onPress,
+}: {
+  accessibilityHint: string
+  accessibilityLabel: string
+  count?: number
+  onPress: () => void
+}) {
+  return (
+    <View>
+      <Pressable
+        accessibilityHint={accessibilityHint}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        className="size-14 items-center justify-center rounded-full border-[1.5px] border-primary/20 bg-card shadow-md active:bg-accent"
+        haptic
+        onPress={onPress}
+        testID="qa-fab"
+      >
+        <Text className="text-[15px] font-extrabold [-rn-line-height:20] text-primary">
+          QA
+        </Text>
+      </Pressable>
+      {count === undefined ? null : (
+        // Outside the button, which clips its children.
+        <View
+          className="absolute -right-1 -top-1 min-w-[22px] items-center rounded-full border-2 border-background bg-primary px-1"
+          pointerEvents="none"
+        >
+          <Text className="text-[11px] font-bold [-rn-line-height:16] text-primary-foreground">
+            {count}
+          </Text>
+        </View>
+      )}
+    </View>
   )
 }

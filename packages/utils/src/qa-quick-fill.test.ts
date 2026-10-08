@@ -27,9 +27,9 @@ describe("QA Quick Fill", () => {
   })
 
   test("generates exact-domain customer data without submitting anything", () => {
-    expect(createQaCustomerFixture(context, 2)).toMatchObject({
-      email: "qa+run-123-customer-create-2@ishack.qa.test",
-    })
+    expect(createQaCustomerFixture(context, 2).email).toMatch(
+      /^[a-z]+\.[a-z]+\.[0-9a-z]{3}@ishack\.qa\.test$/,
+    )
     expect(createQaMessageFixture(context).message).toContain(
       "Review before sending",
     )

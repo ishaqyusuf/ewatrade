@@ -33,6 +33,8 @@ export function QaQuickFillButton({
   const auth = useAuthContext()
   const sequence = useRef(0)
   const [confirming, setConfirming] = useState(false)
+  // Signed-in fills fetch fresh fixture facts first, which can take a moment.
+  const [filling, setFilling] = useState(false)
   const fixtureFacts = qa.fixtureContext
     ? qa.fixtureContext
     : !auth.isAuthenticated && qa.authorization
@@ -55,9 +57,12 @@ export function QaQuickFillButton({
   }
 
   async function fill() {
+    if (filling) return
+    setFilling(true)
     const currentFacts = auth.isAuthenticated
-      ? await qa.refreshFixtureContext()
+      ? await qa.refreshFixtureContext().finally(() => setFilling(false))
       : fixtureFacts
+    setFilling(false)
     if (!currentFacts) return
     sequence.current += 1
     onFill(
@@ -83,30 +88,35 @@ export function QaQuickFillButton({
 
   if (confirming) {
     return (
-      <View className="gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
-        <Text className="text-sm font-bold text-foreground">
-          Replace the current draft?
-        </Text>
-        <Text className="text-xs leading-5 text-muted-foreground">
+      <View className="gap-2.5 rounded-[18px] border-[1.5px] border-primary/25 bg-accent p-3.5">
+        <View className="flex-row items-center gap-2">
+          <Icon className="size-[16px] text-primary" name="WandSparkles" />
+          <Text className="flex-1 text-sm font-extrabold [-rn-line-height:20] text-foreground">
+            Replace the current draft?
+          </Text>
+          <QaTag />
+        </View>
+        <Text className="text-[12.5px] [-rn-line-height:18] text-muted-foreground">
           Cancel keeps every manual edit. Replace applies QA fixture values but
           does not submit this form.
         </Text>
         <View className="flex-row justify-end gap-2">
           <Pressable
             accessibilityRole="button"
-            className="min-h-11 justify-center rounded-xl px-4"
+            className="min-h-10 justify-center rounded-full px-4 active:bg-card"
             onPress={() => setConfirming(false)}
           >
-            <Text className="text-sm font-bold text-muted-foreground">
+            <Text className="text-[13px] font-extrabold text-muted-foreground">
               Cancel
             </Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            className="min-h-11 justify-center rounded-xl bg-primary px-4"
+            className="min-h-10 justify-center rounded-full bg-primary px-4 active:opacity-90"
+            haptic
             onPress={fill}
           >
-            <Text className="text-sm font-bold text-primary-foreground">
+            <Text className="text-[13px] font-extrabold text-primary-foreground">
               Replace
             </Text>
           </Pressable>
@@ -115,38 +125,55 @@ export function QaQuickFillButton({
     )
   }
 
+  // A small Green Till pill: quiet enough to sit inside a real form, marked
+  // QA so it is never mistaken for a product control.
   return (
-    <View className="flex-row items-center justify-end gap-2">
+    <View className="flex-row items-center justify-end gap-1.5">
       {canUndo && onUndo ? (
         <Pressable
           accessibilityLabel="Undo QA Quick Fill"
           accessibilityRole="button"
-          className="min-h-11 flex-row items-center gap-2 rounded-xl px-3"
+          className="min-h-11 flex-row items-center gap-1.5 rounded-full px-3 active:bg-muted"
+          haptic
           onPress={onUndo}
         >
-          <Icon className="size-sm text-muted-foreground" name="Undo2" />
-          <Text className="text-xs font-bold text-muted-foreground">Undo</Text>
+          <Icon className="size-[15px] text-muted-foreground" name="Undo2" />
+          <Text className="text-[12.5px] font-bold text-muted-foreground">
+            Undo
+          </Text>
         </Pressable>
       ) : null}
       <Pressable
         accessibilityHint={`Uses ${fixtureFacts.qaDomain} and never submits the form`}
         accessibilityLabel={label}
         accessibilityRole="button"
-        className="min-h-11 flex-row items-center gap-2 rounded-xl bg-primary px-4"
+        accessibilityState={{ busy: filling }}
+        className="min-h-11 justify-center"
+        disabled={filling}
         haptic
+        hitSlop={4}
         onPress={requestFill}
+        testID="qa-quick-fill"
         transition
       >
-        <Icon className="size-sm text-primary-foreground" name="WandSparkles" />
-        <Text className="text-xs font-black text-primary-foreground">
-          {label}
-        </Text>
-        <View className="rounded bg-primary-foreground/15 px-1.5 py-0.5">
-          <Text className="text-[9px] font-black text-primary-foreground">
-            QA
+        <View className="min-h-9 flex-row items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-primary/40 bg-accent pl-3 pr-1.5">
+          <Icon className="size-[15px] text-primary" name="WandSparkles" />
+          <Text className="text-[12.5px] font-bold [-rn-line-height:18] text-primary">
+            {filling ? "Filling…" : label}
           </Text>
+          <QaTag />
         </View>
       </Pressable>
+    </View>
+  )
+}
+
+function QaTag() {
+  return (
+    <View className="rounded-full bg-primary px-1.5 py-px">
+      <Text className="text-[9.5px] font-bold [-rn-line-height:14] text-primary-foreground">
+        QA
+      </Text>
     </View>
   )
 }

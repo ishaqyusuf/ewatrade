@@ -23,7 +23,10 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly MobileSourceCoverage[] = [
     source: "apps/mobile/src/app/customer-account-login.tsx",
   },
   { formIds: ["mobile.login"], source: "apps/mobile/src/app/login.tsx" },
-  { formIds: ["mobile.signup"], source: "apps/mobile/src/app/sign-up.tsx" },
+  {
+    formIds: ["mobile.signup"],
+    source: "apps/mobile/src/components/mobile/sign-up/sign-up-screen.tsx",
+  },
   {
     formIds: ["mobile.staff.onboarding"],
     source: "apps/mobile/src/app/staff-onboarding.tsx",
@@ -219,7 +222,8 @@ const RECIPE_SOURCE_OWNERS: Record<
     "apps/mobile/src/app/order-reminder-settings-modal.tsx",
   "mobile.service.job":
     "apps/mobile/src/components/mobile/service-jobs-sheet.tsx",
-  "mobile.signup": "apps/mobile/src/app/sign-up.tsx",
+  "mobile.signup":
+    "apps/mobile/src/components/mobile/sign-up/sign-up-screen.tsx",
   "mobile.staff.invite":
     "apps/mobile/src/components/mobile/staff-invite-sheet.tsx",
   "signup.business": "apps/marketing/src/components/signup/step-business.tsx",
@@ -430,7 +434,7 @@ function discoverWebFormSources() {
 function discoverMobileFormSources() {
   const glob = new Bun.Glob("apps/mobile/src/**/*.tsx")
   const fieldPattern =
-    /<(?:FormField|Input|MoneyField|OtpInput|QuantityStepper|TextInput|Textarea)\b/
+    /<(?:FormField|Input|KeyboardInlineComposer|MoneyField|OtpInput|QuantityStepper|TextInput|Textarea)\b/
   return [...glob.scanSync({ cwd: repoRoot })]
     .filter((source) =>
       fieldPattern.test(readFileSync(resolve(repoRoot, source), "utf8")),

@@ -25,6 +25,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
     fixtureContext: tools.fixtureContext,
     profileError: null,
     profiles: [],
+    rememberedDomain: null,
     async retryCapability() {},
     async refreshProfiles() {},
     refreshFixtureContext: tools.refreshFixtureContext,

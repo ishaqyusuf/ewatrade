@@ -72,6 +72,17 @@ function mapQaAccessError(error: unknown): never {
   })
 }
 
+/** A malformed domain is a bad request, not a server error. */
+function isAcceptedQaDomain(qaDomain: string) {
+  try {
+    return isConfiguredQaDomain(qaDomain, {
+      EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+    })
+  } catch {
+    return false
+  }
+}
+
 export const qaAccessRouter = createTRPCRouter({
   capability: publicProcedure
     .input(
@@ -150,12 +161,11 @@ export const qaAccessRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       requireAvailability(input.contractVersion)
-      if (
-        !isConfiguredQaDomain(input.qaDomain, {
-          EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+      if (!isAcceptedQaDomain(input.qaDomain)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This domain isn’t set up for QA on this server.",
         })
-      ) {
-        mapQaAccessError(new QaAccessError("authorization_required"))
       }
       try {
         if (!input.credential)

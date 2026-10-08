@@ -1,28 +1,46 @@
 import { describe, expect, test } from "bun:test"
-import { shouldSuggestQaAuthorization } from "./qa-authorization-state"
+import {
+  classifyQaRevalidation,
+  describeQaAuthorizationError,
+} from "./qa-authorization-state"
 
-const base = {
-  authorizationPresent: false,
-  clientEnabled: true,
-  isBusinessShell: true,
-}
-
-describe("mobile QA authorization suggestion", () => {
-  test("suggests QA setup when an enabled business shell has no authorization", () => {
-    expect(shouldSuggestQaAuthorization(base)).toBe(true)
+describe("mobile QA revalidation", () => {
+  test("keeps a valid authorization", () => {
+    expect(classifyQaRevalidation({ isError: false })).toBe("valid")
   })
 
-  test("suggests QA setup again after a revoked authorization is removed", () => {
+  test("renews when the server rejects the saved token", () => {
     expect(
-      shouldSuggestQaAuthorization({ ...base, authorizationPresent: false }),
-    ).toBe(true)
+      classifyQaRevalidation({ errorCode: "UNAUTHORIZED", isError: true }),
+    ).toBe("renew")
   })
 
-  test.each([
-    { ...base, authorizationPresent: true },
-    { ...base, clientEnabled: false },
-    { ...base, isBusinessShell: false },
-  ])("does not suggest QA setup outside its optional entry states", (input) => {
-    expect(shouldSuggestQaAuthorization(input)).toBe(false)
+  test.each([undefined, null, "INTERNAL_SERVER_ERROR", "TOO_MANY_REQUESTS"])(
+    "keeps the authorization through %p failures",
+    (errorCode) => {
+      expect(classifyQaRevalidation({ errorCode, isError: true })).toBe(
+        "unavailable",
+      )
+    },
+  )
+})
+
+describe("mobile QA authorization errors", () => {
+  test("explains an unknown domain", () => {
+    expect(describeQaAuthorizationError({ errorCode: "BAD_REQUEST" })).toBe(
+      "This domain isn’t set up for QA on this server.",
+    )
+  })
+
+  test("explains an unreachable server", () => {
+    expect(
+      describeQaAuthorizationError({ message: "Network request failed" }),
+    ).toBe("Can’t reach the server. Check it is running.")
+  })
+
+  test("explains a lockout", () => {
+    expect(
+      describeQaAuthorizationError({ errorCode: "TOO_MANY_REQUESTS" }),
+    ).toBe("Too many tries. Wait a minute, then try again.")
   })
 })
