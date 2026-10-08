@@ -2,6 +2,20 @@ import { describe, expect, test } from "bun:test"
 import { resolveGreenTillQaPath } from "./green-till-qa-link"
 
 describe("Green Till native QA links", () => {
+  test("opens a named Catalog record only in development", () => {
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://catalog-item/item_1", true),
+    ).toBe("/catalog-item/item_1")
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://catalog-item/item_1", false),
+    ).toBeNull()
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://catalog-item/item_1/other", true),
+    ).toBeNull()
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://catalog-item/%2Fprivate", true),
+    ).toBeNull()
+  })
   test("opens only named local development fixtures, retaining state parameters", () => {
     expect(
       resolveGreenTillQaPath(

@@ -63,6 +63,7 @@ import { useSaleFulfillment } from "./use-sale-fulfillment"
 
 export function useCreateSale({
   initialCatalogItemId,
+  initialOfferingId,
   initialCustomer,
   itemKind,
   onComplete,
@@ -290,12 +291,19 @@ export function useCreateSale({
     setSelectedLines((lines) =>
       selectInitialCatalogItemLine({
         catalogItemId: initialCatalogItemId,
+        offeringId: initialOfferingId,
         choices: allRows,
         lineId,
         lines,
       }),
     )
-  }, [allRows, initialCatalogItemId, selectedLines.length, step])
+  }, [
+    allRows,
+    initialCatalogItemId,
+    initialOfferingId,
+    selectedLines.length,
+    step,
+  ])
   const selectedRows = useMemo(
     () =>
       selectedLines.flatMap(({ id, offering, quantity }) => {

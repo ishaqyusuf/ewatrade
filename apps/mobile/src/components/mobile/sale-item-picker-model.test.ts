@@ -82,6 +82,26 @@ describe("sale item picker presentation", () => {
 })
 
 describe("sale item picker lines", () => {
+  test("retains the selected Catalog option and never substitutes an unavailable one", () => {
+    const choices = [
+      { id: "first", catalogItemId: "item" },
+      { id: "chosen", catalogItemId: "item" },
+      { id: "disabled", catalogItemId: "item", disabledReason: "Out of stock" },
+      { id: "other", catalogItemId: "other-item" },
+    ]
+    const select = (offeringId: string) =>
+      selectInitialCatalogItemLine({
+        catalogItemId: "item",
+        offeringId,
+        choices,
+        lineId: "line",
+        lines: [],
+      })
+    expect(select("chosen")[0]?.offering.id).toBe("chosen")
+    expect(select("missing")).toEqual([])
+    expect(select("disabled")).toEqual([])
+    expect(select("other")).toEqual([])
+  })
   test("adds the same offering as independent quantity lines", () => {
     const offering = { id: "offering-1", name: "Rice" }
     const first = addSaleItemPickerLine({

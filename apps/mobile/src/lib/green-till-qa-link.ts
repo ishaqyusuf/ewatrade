@@ -24,17 +24,19 @@ export function resolveGreenTillQaPath(
   if (!development) return null
   try {
     const url = new URL(path)
+    const recordPath =
+      url.hostname === "catalog-item" && /^\/[A-Za-z0-9_-]+$/.test(url.pathname)
     if (
       url.protocol !== "ewatrade-dev:" ||
       url.username ||
       url.password ||
       url.port ||
       url.hash ||
-      (url.pathname !== "" && url.pathname !== "/") ||
-      !QA_ROUTES.has(url.hostname)
+      (!recordPath && url.pathname !== "" && url.pathname !== "/") ||
+      (!recordPath && !QA_ROUTES.has(url.hostname))
     )
       return null
-    return `/${url.hostname}${url.search}`
+    return `/${url.hostname}${recordPath ? url.pathname : ""}${url.search}`
   } catch {
     return null
   }

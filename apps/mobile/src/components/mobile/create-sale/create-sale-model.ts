@@ -36,6 +36,7 @@ export type CreateSaleCompletion = {
 export type CreateSaleContentProps = {
   attendantName?: string
   initialCatalogItemId?: string
+  initialOfferingId?: string
   initialCustomer?: SelectedCustomer
   itemKind?: "service"
   onComplete?: (completion: CreateSaleCompletion) => void
