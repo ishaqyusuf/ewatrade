@@ -1,0 +1,4 @@
+[install]
+# Match fresh installs on EAS and Vercel (bun.lock configVersion 0 is hoisted).
+# A local isolated layout changes Expo native fingerprints and fails EAS builds.
+linker = "hoisted"
