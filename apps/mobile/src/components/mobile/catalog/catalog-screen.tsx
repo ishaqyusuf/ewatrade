@@ -1,5 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import {
+  CatalogShelfSkeleton,
+  ClassicCatalogChoices,
   ClassicCatalogFilter,
   ClassicCatalogFirstItemGate,
   ClassicCatalogFrame,
@@ -23,6 +25,7 @@ import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal, useModal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -35,6 +38,7 @@ import {
 } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { canEditMobileCatalog } from "@/lib/mobile-roles"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
@@ -55,6 +59,11 @@ import type {
   CatalogKindFilter,
 } from "./catalog-presentation"
 import { mapCatalogItem } from "./catalog-row-model"
+import {
+  type CatalogAttention,
+  catalogShelfTitle,
+  filterCatalogShelf,
+} from "./catalog-shelf-model"
 
 export function CatalogItemsContent({
   designScreen = "catalog",
@@ -85,53 +94,89 @@ export function CatalogItemsContent({
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
+  const [attention, setAttention] = useState<CatalogAttention | null>(null)
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const [footerHeight, setFooterHeight] = useState(100)
   const deferredQuery = useDeferredValue(query)
   const addSheet = useModal()
   const pendingAdd = useRef<"product" | "service" | null>(null)
+  // The appearance change resets measurements even though only the effect's
+  // trigger depends on it.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset when appearance changes
   useEffect(() => {
     setShowCanvasStatusBar(false)
     setMastheadHeight(0)
     pendingAdd.current = null
-    if (!isMarketDay) addSheet.dismiss()
+    addSheet.dismiss()
   }, [isMarketDay, addSheet.dismiss])
-  useEffect(() => {
-    if (isOffline && query) setQuery("")
-  }, [isOffline, query])
   const availabilityQuery = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
+  )
+  // Keep the unfiltered first page available when a search loses connectivity.
+  const savedItemsQuery = useInfiniteQuery(
+    trpc.catalog.listItemsPage.infiniteQueryOptions(
+      { limit: LIST_PAGE_SIZE },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+        enabled: !isOffline,
+      },
+    ),
   )
   const itemsQuery = useInfiniteQuery(
     trpc.catalog.listItemsPage.infiniteQueryOptions(
       {
-        kind: kindFilter === "all" ? undefined : kindFilter,
+        kind: isOffline || kindFilter === "all" ? undefined : kindFilter,
         limit: LIST_PAGE_SIZE,
         query: isOffline ? undefined : deferredQuery || undefined,
       },
-      { getNextPageParam: (lastPage) => lastPage.nextCursor, retry: false },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+        enabled: !isOffline,
+      },
     ),
   )
-  const rows = useMemo(
+  const visibleQuery = isOffline ? savedItemsQuery : itemsQuery
+  const loadedRows = useMemo(
     () =>
-      (itemsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((item) =>
-        mapCatalogItem(item, availabilityQuery.data?.storeId),
+      (visibleQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
+        (item) => mapCatalogItem(item, availabilityQuery.data?.storeId),
       ),
-    [availabilityQuery.data?.storeId, itemsQuery.data?.pages],
+    [availabilityQuery.data?.storeId, visibleQuery.data?.pages],
   )
-  const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0
+  const rows = filterCatalogShelf(loadedRows, {
+    query: isOffline ? deferredQuery : "",
+    kind: isOffline ? kindFilter : "all",
+    attention: isMarketDay ? null : attention,
+  })
+  const totalCount = visibleQuery.data?.pages[0]?.totalCount ?? 0
+  const mixedCatalog =
+    availabilityQuery.data?.hasProductItems &&
+    availabilityQuery.data?.hasServiceItems
+  const catalogTitle = catalogShelfTitle(
+    availabilityQuery.data?.hasProductItems,
+    availabilityQuery.data?.hasServiceItems,
+  )
+  const savedAt = visibleQuery.dataUpdatedAt
+    ? new Date(visibleQuery.dataUpdatedAt).toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null
+  const Choices = isMarketDay ? MarketDayCatalogChoices : ClassicCatalogChoices
   const showSearch = shouldShowListSearch(totalCount) || query.length > 0
   const showFirstItemGate = shouldShowCatalogFirstItemGate({
     hasCatalogItems: availabilityQuery.data?.hasCatalogItems,
-    isError: itemsQuery.isError,
-    isPending: itemsQuery.isPending,
+    isError: visibleQuery.isError || isOffline || !canEdit,
+    isPending: visibleQuery.isPending,
     presentation,
     rowCount: rows.length,
   })
   const showBottomSearch =
     !showFirstItemGate &&
-    (isMarketDay || (presentation === "modal" && showSearch && !isOffline))
+    (isMarketDay || (presentation === "modal" && showSearch))
   const footerOffset =
     isMarketDay && presentation === "tab" && !dockHidden ? 84 : 0
   const bottomSpace = showBottomSearch
@@ -143,8 +188,7 @@ export function CatalogItemsContent({
     if (!canEdit) return
     if (isOffline) return
     Keyboard.dismiss()
-    if (isMarketDay) addSheet.present()
-    else onAddItem()
+    addSheet.present()
   }
   const chooseAdd = (kind: "product" | "service") => {
     if (!canEdit || isOffline || pendingAdd.current) return
@@ -154,7 +198,7 @@ export function CatalogItemsContent({
   const completeAddDismissal = () => {
     const kind = pendingAdd.current
     pendingAdd.current = null
-    if (isOffline || !isMarketDay || !kind) return
+    if (isOffline || !canEdit || !kind) return
     if (kind === "product") onAddProduct()
     else onAddService()
   }
@@ -185,8 +229,14 @@ export function CatalogItemsContent({
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View className="gap-5 pb-4">
+          <View className="gap-4 pb-4">
             <Masthead
+              title={catalogTitle}
+              countLabel={
+                visibleQuery.data
+                  ? `${isOffline ? loadedRows.length : totalCount} ${isOffline ? "saved items" : "items"}`
+                  : undefined
+              }
               firstItem={showFirstItemGate}
               disabled={isOffline || !canEdit}
               onAdd={openAdd}
@@ -197,12 +247,12 @@ export function CatalogItemsContent({
             {isMarketDay && rows.length > 0 ? (
               <MarketDayCatalogSummary rows={rows} />
             ) : null}
-            <View className="gap-4 px-4">
+            <View className="gap-4 px-[18px]">
               {isOffline ? (
                 <StatusBanner
                   title="Offline mode"
                   icon="Wind"
-                  message="Showing cached Catalog items. Reconnect to search or add a Product or Service."
+                  message={`Saved items${savedAt ? ` · as of ${savedAt}` : ""}. Search saved items; reconnect to add an item.`}
                   tone="warning"
                 />
               ) : null}
@@ -215,8 +265,25 @@ export function CatalogItemsContent({
                   tone="destructive"
                 />
               ) : null}
-              {availabilityQuery.data?.hasCatalogItems ? (
-                <View className="flex-row flex-wrap gap-2">
+              {!isMarketDay && presentation === "tab" && showSearch ? (
+                <FormField
+                  autoCapitalize="words"
+                  label="Find item"
+                  leadingIcon="Search"
+                  onChangeText={setQuery}
+                  placeholder="Search name, type, or unit"
+                  value={query}
+                />
+              ) : null}
+              {availabilityQuery.data?.hasCatalogItems &&
+              (isMarketDay || mixedCatalog) ? (
+                <View
+                  className={
+                    isMarketDay
+                      ? "flex-row flex-wrap gap-2"
+                      : "flex-row rounded-[14px] bg-muted p-1"
+                  }
+                >
                   <Filter
                     active={kindFilter === "all"}
                     label="All"
@@ -238,24 +305,85 @@ export function CatalogItemsContent({
                   ) : null}
                 </View>
               ) : null}
+              {!isMarketDay && !canEdit ? (
+                <Text className="text-xs text-muted-foreground">
+                  View only · Ask an owner to add or edit items.
+                </Text>
+              ) : null}
               {!isMarketDay &&
-              presentation === "tab" &&
-              showSearch &&
-              !isOffline ? (
-                <FormField
-                  autoCapitalize="words"
-                  label="Find item"
-                  leadingIcon="Search"
-                  onChangeText={setQuery}
-                  placeholder="Search name, type, or unit"
-                  value={query}
-                />
+              (attention || loadedRows.some((row) => row.problem)) ? (
+                <View className="gap-2">
+                  <Text className="text-xs text-muted-foreground">
+                    {isOffline ? "Saved items" : "Loaded items"}
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {(
+                      [
+                        ["out_of_stock", "Out of stock"],
+                        ["no_price", "No price"],
+                        ["not_counted", "Not counted"],
+                      ] as const
+                    )
+                      .filter(
+                        ([key]) =>
+                          attention === key ||
+                          loadedRows.some((row) => row.problem === key),
+                      )
+                      .map(([key, label]) => (
+                        <Pressable
+                          key={key}
+                          accessibilityLabel={label}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: attention === key }}
+                          onPress={() =>
+                            setAttention(attention === key ? null : key)
+                          }
+                          className={cn(
+                            "min-h-11 justify-center rounded-full border px-3 py-2",
+                            attention === key
+                              ? "border-primary"
+                              : "border-transparent",
+                            key === "out_of_stock"
+                              ? "bg-tint-rose"
+                              : key === "no_price"
+                                ? "bg-tint-amber"
+                                : "bg-tint-sky",
+                          )}
+                        >
+                          <Text
+                            className={
+                              key === "out_of_stock"
+                                ? "text-xs font-bold text-tint-rose-foreground"
+                                : key === "no_price"
+                                  ? "text-xs font-bold text-tint-amber-foreground"
+                                  : "text-xs font-bold text-tint-sky-foreground"
+                            }
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                  </View>
+                </View>
+              ) : null}
+              {query || attention ? (
+                <ActionButton
+                  variant="ghost"
+                  onPress={() => {
+                    setQuery("")
+                    setAttention(null)
+                  }}
+                >
+                  Clear filters
+                </ActionButton>
               ) : null}
             </View>
           </View>
         }
         ListEmptyComponent={
-          showFirstItemGate ? (
+          !isMarketDay && visibleQuery.isPending && !isOffline ? (
+            <CatalogShelfSkeleton />
+          ) : showFirstItemGate ? (
             <FirstItemGate
               disabled={isOffline || !canEdit}
               onAddProduct={() => {
@@ -265,25 +393,29 @@ export function CatalogItemsContent({
                 if (!isOffline && canEdit) onAddService()
               }}
             />
-          ) : !itemsQuery.isError ? (
+          ) : !visibleQuery.isError ? (
             <EmptyState
               className="m-4 flex-1 justify-center"
               icon="Warehouse"
               title={
                 isOffline
-                  ? "No cached items"
+                  ? loadedRows.length
+                    ? "No matching saved items"
+                    : "No cached items"
                   : itemsQuery.isPending
                     ? "Loading"
-                    : query || kindFilter !== "all"
+                    : query || attention || kindFilter !== "all"
                       ? "No matching items"
                       : "No catalog items"
               }
               message={
                 isOffline
-                  ? "Reconnect to load your Catalog."
+                  ? loadedRows.length
+                    ? "Try another search or filter."
+                    : "Reconnect to load your Catalog."
                   : itemsQuery.isPending
                     ? "Loading catalog items."
-                    : query || kindFilter !== "all"
+                    : query || attention || kindFilter !== "all"
                       ? "Try another search or item type."
                       : "Add a Product or Service to start your Catalog."
               }
@@ -292,6 +424,18 @@ export function CatalogItemsContent({
         }
         ListFooterComponent={
           <View className="gap-3 px-4 pt-4 pb-8">
+            {!isMarketDay &&
+            attention &&
+            itemsQuery.hasNextPage &&
+            !isOffline ? (
+              <ActionButton
+                variant="outline"
+                disabled={itemsQuery.isFetchingNextPage}
+                onPress={() => void itemsQuery.fetchNextPage()}
+              >
+                Search more items
+              </ActionButton>
+            ) : null}
             {itemsQuery.isFetchingNextPage ? (
               <Text className="py-2 text-center text-xs font-semibold text-muted-foreground">
                 Loading more items…
@@ -317,6 +461,7 @@ export function CatalogItemsContent({
           <Row
             item={item}
             index={index}
+            last={index === rows.length - 1}
             onPress={() =>
               router.push({
                 params: { catalogItemId: item.id },
@@ -327,6 +472,7 @@ export function CatalogItemsContent({
         )}
         onEndReached={() => {
           if (
+            !isOffline &&
             shouldFetchNextListPage({
               hasNextPage: Boolean(itemsQuery.hasNextPage),
               isFetchingNextPage: itemsQuery.isFetchingNextPage,
@@ -361,6 +507,7 @@ export function CatalogItemsContent({
       ) : null}
       {canEdit && !isMarketDay && !showFirstItemGate ? (
         <ListCreateFab
+          tone="gold"
           accessibilityLabel="Add catalog item"
           bottomOffset={showBottomSearch ? footerHeight : 0}
           dockHidden={dockHidden}
@@ -370,34 +517,38 @@ export function CatalogItemsContent({
           testID="catalog-add-fab"
         />
       ) : null}
-      {isMarketDay ? (
-        <Modal
-          ref={addSheet.ref}
-          snapPoints={[]}
-          enableDynamicSizing
-          maxDynamicContentSize={height * 0.44}
-          title="Add to Catalog"
-          onDismiss={completeAddDismissal}
-        >
-          <BottomSheetScrollView keyboardShouldPersistTaps="handled">
-            <View className="gap-3 px-5 pb-6">
-              <Text className="text-sm text-market-muted-ink">
-                Choose the kind of thing your Store sells.
+      <Modal
+        ref={addSheet.ref}
+        snapPoints={[]}
+        enableDynamicSizing
+        maxDynamicContentSize={height * 0.8}
+        title={`Add to ${catalogTitle}`}
+        onDismiss={completeAddDismissal}
+      >
+        <BottomSheetScrollView keyboardShouldPersistTaps="handled">
+          <View className="gap-3 px-5 pb-6">
+            <Text
+              className={
+                isMarketDay
+                  ? "text-sm text-market-muted-ink"
+                  : "text-[13px] text-muted-foreground"
+              }
+            >
+              What are you adding?
+            </Text>
+            <Choices
+              disabled={isOffline || !canEdit}
+              onAddProduct={() => chooseAdd("product")}
+              onAddService={() => chooseAdd("service")}
+            />
+            {isOffline ? (
+              <Text className="text-xs text-market-muted-ink">
+                Reconnect to add an item.
               </Text>
-              <MarketDayCatalogChoices
-                disabled={isOffline || !canEdit}
-                onAddProduct={() => chooseAdd("product")}
-                onAddService={() => chooseAdd("service")}
-              />
-              {isOffline ? (
-                <Text className="text-xs text-market-muted-ink">
-                  Reconnect to add an item.
-                </Text>
-              ) : null}
-            </View>
-          </BottomSheetScrollView>
-        </Modal>
-      ) : null}
+            ) : null}
+          </View>
+        </BottomSheetScrollView>
+      </Modal>
     </Frame>
   )
 }

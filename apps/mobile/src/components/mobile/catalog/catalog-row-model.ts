@@ -13,13 +13,18 @@ export function mapCatalogItem(
   const currencyCode = offering?.currencyCode ?? "NGN"
   const priceLabel =
     offering?.pricingPolicy === "fixed" && offering.fixedPriceMinor !== null
-      ? formatMinorMoney(offering.fixedPriceMinor, currencyCode)
+      ? formatMinorMoney(offering.fixedPriceMinor, currencyCode).replace(
+          /\.00(?=\D*$)/,
+          "",
+        )
       : offering?.pricingPolicy === "quote_required"
         ? "Quote"
         : "Price not set"
 
   if (item.kind === "service") {
     return {
+      imageUrl: defaultVariant?.imageUrl ?? item.imageUrl,
+      problem: priceLabel === "Price not set" ? "no_price" : undefined,
       detail: `${priceLabel} · No inventory`,
       availabilityLabel: "No inventory",
       id: item.id,
@@ -56,6 +61,15 @@ export function mapCatalogItem(
       : `${availableQuantity} ${unitName} available`
 
   return {
+    imageUrl: defaultVariant?.imageUrl ?? item.imageUrl,
+    problem:
+      priceLabel === "Price not set"
+        ? "no_price"
+        : availableQuantity === null
+          ? "not_counted"
+          : Number(availableQuantity) <= 0
+            ? "out_of_stock"
+            : undefined,
     detail: `${availabilityLabel} · ${priceLabel}`,
     availabilityLabel,
     id: item.id,

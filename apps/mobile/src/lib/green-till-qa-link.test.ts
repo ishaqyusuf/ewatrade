@@ -17,6 +17,12 @@ describe("Green Till native QA links", () => {
     ).toBe("/qa-owner-setup-modal")
   })
   test("opens Quick Fill forms in development for QA", () => {
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://catalog-items-modal", true),
+    ).toBe("/catalog-items-modal")
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://catalog-items-modal", false),
+    ).toBeNull()
     expect(resolveGreenTillQaPath("ewatrade-dev://closeout-modal", true)).toBe(
       "/closeout-modal",
     )
