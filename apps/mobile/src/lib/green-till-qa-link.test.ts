@@ -2,6 +2,17 @@ import { describe, expect, test } from "bun:test"
 import { resolveGreenTillQaPath } from "./green-till-qa-link"
 
 describe("Green Till native QA links", () => {
+  test("opens named order details only in development", () => {
+    expect(resolveGreenTillQaPath("ewatrade-dev://order/order_1", true)).toBe(
+      "/order/order_1",
+    )
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://order/order_1", false),
+    ).toBeNull()
+    expect(
+      resolveGreenTillQaPath("ewatrade-dev://order/order_1/other", true),
+    ).toBeNull()
+  })
   test("opens Orders only in development", () => {
     expect(resolveGreenTillQaPath("ewatrade-dev://orders", true)).toBe(
       "/orders",

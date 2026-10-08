@@ -14,7 +14,9 @@ export function ClassicOrderDetailScreen({
     <View className="flex-1 bg-background">
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <MobileScreen
-        contentClassName={hasBalanceDue ? "gap-7 pb-32" : "gap-7 pb-12"}
+        contentClassName={
+          hasBalanceDue ? "gap-4 px-[18px] pb-32" : "gap-4 px-[18px] pb-12"
+        }
         keyboardBottomOffset={24}
         refreshControl={<QueryRefreshControl />}
         scroll

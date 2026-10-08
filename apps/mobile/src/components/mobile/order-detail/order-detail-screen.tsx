@@ -14,8 +14,13 @@ import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { useModal } from "@/components/ui/modal"
+import { Skeleton } from "@/components/ui/skeleton"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import {
+  canRecordOrderPayment,
+  isClosedOrder,
+} from "@/lib/order-action-eligibility"
 import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -30,6 +35,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Linking } from "react-native"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import {
   OrderFulfilmentConfirmationSheet,
@@ -197,7 +203,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   function openPaymentForm() {
-    if (!order || order.balanceDueMinor <= 0) return
+    if (
+      !order ||
+      isOffline ||
+      paymentMutation.isPending ||
+      !canRecordOrderPayment(order)
+    )
+      return
     setAmountPaid(minorToMajorInput(order.balanceDueMinor))
     setPaymentMethod("cash")
     setPaymentReference("")
@@ -208,7 +220,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   function recordPayment() {
-    if (!order || isOffline) return
+    if (
+      !order ||
+      isOffline ||
+      paymentMutation.isPending ||
+      !canRecordOrderPayment(order)
+    )
+      return
     const amountMinor = majorToMinor(amountPaid)
     if (amountMinor === null || amountMinor <= 0) {
       setError("Enter a valid payment amount.")
@@ -237,6 +255,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   function openFulfilProductLine(orderLineId: string) {
     if (
       !order ||
+      isClosedOrder(order.status) ||
       isOffline ||
       fulfilmentMutation.isPending ||
       fulfilAllMutation.isPending
@@ -252,6 +271,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   function confirmFulfilProductLine() {
     if (
       !selectedFulfilmentLineId ||
+      !order ||
+      isClosedOrder(order.status) ||
       isOffline ||
       fulfilmentMutation.isPending ||
       fulfilAllMutation.isPending
@@ -267,6 +288,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   function openFulfilAllProducts() {
     if (
       !order ||
+      isClosedOrder(order.status) ||
       isOffline ||
       fulfilmentMutation.isPending ||
       fulfilAllMutation.isPending
@@ -280,6 +302,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   function confirmFulfilAllProducts() {
     if (
       !order ||
+      isClosedOrder(order.status) ||
       isOffline ||
       fulfilmentMutation.isPending ||
       fulfilAllMutation.isPending
@@ -302,11 +325,11 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         <CommercialOrderOverviewHeader onBack={goBack} title="Order overview" />
         <View className="flex-1 items-center justify-center py-16">
           {orderQuery.isPending && !isOffline ? (
-            <EmptyState
-              icon="ReceiptText"
-              message="Loading the latest Commercial Order state."
-              title="Loading order"
-            />
+            <View className="w-full gap-4">
+              <Skeleton className="h-[240px] rounded-[26px]" />
+              <Skeleton className="h-[88px] rounded-[20px]" />
+              <Skeleton className="h-[160px] rounded-[20px]" />
+            </View>
           ) : (
             <EmptyState
               icon="ReceiptText"
@@ -328,7 +351,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     )
   }
 
-  const hasBalanceDue = order.balanceDueMinor > 0
+  const hasBalanceDue = canRecordOrderPayment(order)
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const nextVisible = event.nativeEvent.contentOffset.y < mastheadHeight - 8
@@ -361,21 +384,54 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           onFulfillLine={openFulfilProductLine}
           onMastheadHeightChange={setMastheadHeight}
           onOpenCustomer={openCustomer}
-          order={order}
-        />
-        <ActionButton
-          icon="ReceiptText"
-          variant="outline"
-          disabled={isOffline || !isReceiptOrderEligible(order.status)}
-          onPress={() =>
+          cachedAt={
+            isOffline &&
+            (orderQuery.dataUpdatedAt || cachedOrders.dataUpdatedAt)
+              ? new Date(
+                  orderQuery.dataUpdatedAt || cachedOrders.dataUpdatedAt,
+                ).toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : undefined
+          }
+          onReceipt={() =>
             router.push({
               pathname: "/order-receipts-modal",
               params: { orderIds: order.id },
             })
           }
-        >
-          Generate receipt
-        </ActionButton>
+          onCall={() => {
+            const phone = order.customerPhone?.replace(/[^+0-9]/g, "")
+            if (phone)
+              void Linking.openURL(`tel:${phone}`).catch(() =>
+                setError("Calling is unavailable on this device."),
+              )
+          }}
+          onMessage={() => {
+            const phone = order.customerPhone?.replace(/[^+0-9]/g, "")
+            if (phone)
+              void Linking.openURL(`sms:${phone}`).catch(() =>
+                setError("Messaging is unavailable on this device."),
+              )
+          }}
+          order={order}
+        />
+        {isMarketDay ? (
+          <ActionButton
+            icon="ReceiptText"
+            variant="outline"
+            disabled={isOffline || !isReceiptOrderEligible(order.status)}
+            onPress={() =>
+              router.push({
+                pathname: "/order-receipts-modal",
+                params: { orderIds: order.id },
+              })
+            }
+          >
+            Generate receipt
+          </ActionButton>
+        ) : null}
       </Screen>
 
       {hasBalanceDue ? (
@@ -389,6 +445,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       <OrderPaymentSheet
         appearance={appearance}
         amountPaid={amountPaid}
+        balanceMinor={order.balanceDueMinor}
         balanceLabel={formatMinorMoney(
           order.balanceDueMinor,
           order.currencyCode,

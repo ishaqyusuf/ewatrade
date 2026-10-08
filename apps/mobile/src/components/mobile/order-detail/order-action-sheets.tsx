@@ -1,37 +1,39 @@
+import {
+  ClassicOrderActionStack,
+  ClassicOrderActionSummary,
+  ClassicOrderActionWarning,
+  ClassicOrderConfirmationDetail,
+  ClassicOrderPaymentChoice,
+} from "@/components/mobile/appearances/classic/order-action-presentation"
+import {
+  MarketDayOrderActionWarning,
+  MarketDayOrderConfirmationDetail,
+  MarketDayOrderPaymentChoice,
+  OrderQuietActionStack,
+  OrderQuietSummary,
+} from "@/components/mobile/appearances/market-day/order-action-presentation"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import type { MobileDesign } from "@/lib/mobile-design/screens"
 import {
   ORDER_PAYMENT_METHODS,
   type OrderFulfilmentConfirmation,
 } from "@/lib/order-action-sheet-model"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+import { minorToMajorInput } from "@ewatrade/utils"
 import {
   type BottomSheetModal,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet"
 import { type ReactNode, forwardRef } from "react"
 import { useWindowDimensions } from "react-native"
-import {
-  ClassicOrderActionSummary,
-  ClassicOrderActionStack,
-  ClassicOrderPaymentChoice,
-  ClassicOrderConfirmationDetail,
-  ClassicOrderActionWarning,
-} from "@/components/mobile/appearances/classic/order-action-presentation"
-import {
-  OrderQuietSummary,
-  OrderQuietActionStack,
-  MarketDayOrderPaymentChoice,
-  MarketDayOrderConfirmationDetail,
-  MarketDayOrderActionWarning,
-} from "@/components/mobile/appearances/market-day/order-action-presentation"
 
 const presentations = {
   classic: {
@@ -58,6 +60,7 @@ export const OrderPaymentSheet = forwardRef<
   {
     appearance?: MobileDesign
     amountPaid: string
+    balanceMinor?: number
     balanceLabel: string
     currencyCode: string
     error: string | null
@@ -76,6 +79,7 @@ export const OrderPaymentSheet = forwardRef<
   {
     appearance = "market-day",
     amountPaid,
+    balanceMinor,
     balanceLabel,
     currencyCode,
     error,
@@ -118,7 +122,31 @@ export const OrderPaymentSheet = forwardRef<
               />
             ) : null}
             {quickFill}
+            {appearance === "classic" && balanceMinor !== undefined ? (
+              <View className="flex-row flex-wrap gap-2">
+                {[
+                  ["Full", balanceMinor],
+                  ["Half", Math.floor(balanceMinor / 2)],
+                ].map(([label, amount]) => (
+                  <Pressable
+                    key={label}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Use ${label} balance`}
+                    disabled={isLoading || isOffline || Number(amount) <= 0}
+                    className="min-h-[44px] justify-center rounded-[14px] bg-tint-mint px-4"
+                    onPress={() =>
+                      onAmountPaidChange(minorToMajorInput(Number(amount)))
+                    }
+                  >
+                    <Text className="text-sm font-bold text-tint-mint-foreground">
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
             <MoneyField
+              editable={!isLoading && !isOffline}
               currencyCode={currencyCode}
               label="Amount received"
               onChangeValue={onAmountPaidChange}

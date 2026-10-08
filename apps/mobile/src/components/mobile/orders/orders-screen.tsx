@@ -35,7 +35,7 @@ import {
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import { useTRPC } from "@/trpc/client"
 import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import {
@@ -117,6 +117,7 @@ export function OrdersScreen() {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const {
     availability,
     availabilityResolved,
@@ -560,7 +561,14 @@ export function OrdersScreen() {
                     setReceiptIds((current) =>
                       toggleReceiptSelection(current, item.id),
                     )
-                } else router.push(commercialOrderHref(item.id))
+                } else {
+                  queryClient.setQueryData(
+                    trpc.orders.get.queryKey({ orderId: item.id }),
+                    item,
+                    { updatedAt: orders.dataUpdatedAt },
+                  )
+                  router.push(commercialOrderHref(item.id))
+                }
               }}
               order={item}
             />

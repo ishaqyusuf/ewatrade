@@ -26,7 +26,8 @@ export function resolveGreenTillQaPath(
   try {
     const url = new URL(path)
     const recordPath =
-      url.hostname === "catalog-item" && /^\/[A-Za-z0-9_-]+$/.test(url.pathname)
+      ["catalog-item", "order"].includes(url.hostname) &&
+      /^\/[A-Za-z0-9_-]+$/.test(url.pathname)
     if (
       url.protocol !== "ewatrade-dev:" ||
       url.username ||
