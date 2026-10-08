@@ -8,7 +8,15 @@ const links = [
   ["Pricing", "pricing"],
   ["FAQ", "faq"],
 ]
-export function Header({ signupEnabled }: { signupEnabled: boolean }) {
+export function Header({
+  signupEnabled,
+  dark,
+  onToggleTheme,
+}: {
+  signupEnabled: boolean
+  dark: boolean
+  onToggleTheme: () => void
+}) {
   const cta = getCreateStoreCta(signupEnabled)
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -67,33 +75,63 @@ export function Header({ signupEnabled }: { signupEnabled: boolean }) {
               ))}
             </ul>
           </nav>
-          <div className="gg-head-right">
-            <a className="gg-signin" href={getDashboardLoginUrl()}>
-              Sign in
-            </a>
-            <a className="gg-btn gg-btn--cream gg-btn--sm" href={cta.href}>
-              {cta.label}
-            </a>
-          </div>
-          <button
-            ref={button}
-            className="gg-menu-btn"
-            type="button"
-            aria-expanded={open}
-            aria-controls="launch-menu"
-            aria-label="Open menu"
-            onClick={() => setOpen(true)}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden="true"
+          <div className="gg-head-actions">
+            <div className="gg-head-right">
+              <a className="gg-signin" href={getDashboardLoginUrl()}>
+                Sign in
+              </a>
+              <a className="gg-btn gg-btn--cream gg-btn--sm" href={cta.href}>
+                {cta.label}
+              </a>
+            </div>
+            <button
+              className="gg-theme-toggle"
+              type="button"
+              onClick={onToggleTheme}
+              aria-label={
+                dark ? "Switch to light theme" : "Switch to dark theme"
+              }
+              title={dark ? "Switch to light theme" : "Switch to dark theme"}
             >
-              <path d="M4 8h16M4 16h16" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                {dark ? (
+                  <>
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+                  </>
+                ) : (
+                  <path d="M20.9 13.1A9 9 0 0 1 10.9 3.1a9 9 0 1 0 10 10Z" />
+                )}
+              </svg>
+            </button>
+            <button
+              ref={button}
+              className="gg-menu-btn"
+              type="button"
+              aria-expanded={open}
+              aria-controls="launch-menu"
+              aria-label="Open menu"
+              onClick={() => setOpen(true)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <path d="M4 8h16M4 16h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
       <dialog
