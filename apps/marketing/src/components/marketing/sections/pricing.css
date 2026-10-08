@@ -1,0 +1,196 @@
+/* Pricing — shares shop-v3 tokens (.shop-v3 ancestor). Rules, not cards. */
+.shop-pricing {
+  padding: 100px 0;
+}
+.shop-pricing .shop-section-heading {
+  max-width: 640px;
+}
+.shop-pricing ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-pricing .shop-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 55px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.shop-plan {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 30px 26px 32px;
+  border-left: 1px solid var(--line);
+}
+.shop-plan:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+.shop-plan[data-popular] {
+  margin-top: -1px;
+  border-top: 3px solid var(--accent);
+  background: #f6efe4;
+}
+.shop-plan[data-popular] + .shop-plan {
+  border-left-color: transparent;
+}
+.shop-plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.shop-plan-head h3 {
+  font-size: 34px;
+}
+.shop-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+.shop-plan-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.shop-pricing .shop-plan-price {
+  margin-top: 10px;
+  font: 400 20px / 1.2 ShopCal, Arial, sans-serif;
+  letter-spacing: -.02em;
+  color: var(--accent);
+}
+.shop-pricing .shop-plan-description {
+  min-height: 3.6em;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.shop-pricing .shop-plan-limits {
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.shop-plan-limits li {
+  display: flex;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.shop-plan-limits li span {
+  flex: none;
+  color: #688263;
+}
+.shop-plan-missing {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.shop-pricing .shop-plan-missing p {
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+.shop-plan-missing li {
+  margin-top: 3px;
+}
+.shop-plan-missing li::before {
+  content: "– ";
+}
+.shop-plan-cta {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.shop-plan > :nth-last-child(2) {
+  margin-bottom: 28px;
+}
+.shop-plan-cta-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 54px;
+  padding: 14px 21px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  font-size: 11px;
+  transition: border-color .2s, color .2s;
+}
+.shop-plan-cta-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.shop-pricing-note {
+  max-width: 640px;
+  margin-top: 28px;
+  padding-left: 16px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.shop-pricing .shop-pricing-note p + p {
+  margin-top: 6px;
+}
+@media (max-width: 1100px) {
+  .shop-pricing .shop-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .shop-plan:nth-child(odd) {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .shop-plan:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+  .shop-plan[data-popular] {
+    margin-top: 0;
+    padding-left: 26px;
+  }
+  .shop-plan[data-popular] + .shop-plan {
+    border-left-color: var(--line);
+  }
+}
+@media (max-width: 719px) {
+  .shop-pricing {
+    padding: 70px 0;
+  }
+  .shop-pricing .shop-pricing-grid {
+    grid-template-columns: 1fr;
+    margin-top: 32px;
+  }
+  .shop-plan,
+  .shop-plan:nth-child(odd) {
+    padding: 26px 0 28px;
+    border-left: 0;
+  }
+  .shop-plan + .shop-plan {
+    border-top: 1px solid var(--line);
+  }
+  .shop-plan[data-popular] {
+    padding-inline: 16px;
+    border-top: 3px solid var(--accent);
+  }
+  .shop-plan-head h3 {
+    font-size: 30px;
+  }
+  .shop-pricing .shop-plan-description {
+    min-height: 0;
+  }
+  .shop-plan-cta,
+  .shop-plan-cta-outline {
+    align-self: stretch;
+    min-height: 46px;
+  }
+}

@@ -4,7 +4,11 @@ import {
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
-import { FinanceError } from "@ewatrade/db/queries"
+import {
+  FinanceError,
+  RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+  assertRetailOpsPlanIdFeature,
+} from "@ewatrade/db/queries"
 import {
   CatalogError,
   authorizeCommercialOrderChargeOnlyServiceLine,
@@ -154,6 +158,17 @@ function orderError(error: CatalogError | FinanceError) {
   })
 }
 
+// "Invoices" in plan copy means Order receipt PDF/image generation (owner
+// clarification, 3 October 2026). Free can still read receipt settings.
+const receiptProcedure = protectedProcedure.use(({ ctx, next }) => {
+  assertRetailOpsPlanIdFeature(
+    ctx.tenantContext.tenant.retailOpsPlanId ??
+      RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+    "invoices",
+  )
+  return next()
+})
+
 export const ordersRouter = createTRPCRouter({
   receiptSettings: protectedProcedure
     .input(orderReceiptSettingsGetSchema)
@@ -174,7 +189,7 @@ export const ordersRouter = createTRPCRouter({
         throw error
       }
     }),
-  saveReceiptSettings: protectedProcedure
+  saveReceiptSettings: receiptProcedure
     .input(orderReceiptSettingsSaveSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageOrderReminders(
@@ -197,7 +212,7 @@ export const ordersRouter = createTRPCRouter({
         throw error
       }
     }),
-  prepareReceipts: protectedProcedure
+  prepareReceipts: receiptProcedure
     .input(orderReceiptPrepareSchema)
     .query(async ({ ctx, input }) => {
       assertCanOperateOrders(ctx.tenantContext.membership.role)

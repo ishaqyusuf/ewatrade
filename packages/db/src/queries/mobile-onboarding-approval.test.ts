@@ -21,7 +21,7 @@ test("hosted native signup cannot bypass approval through OTP or social auth", a
     for (const mode of ["production", "preview"]) {
       process.env.APP_ENV = mode
       await expect(createMobileOwnerOtp(db, input)).rejects.toThrow(
-        "approved setup email",
+        "Create your store",
       )
       await expect(
         verifyMobileSocialIdentity(db, {
@@ -29,7 +29,7 @@ test("hosted native signup cannot bypass approval through OTP or social auth", a
           provider: "google",
           providerAccountId: "test-provider-subject",
         }),
-      ).rejects.toThrow("approved setup email")
+      ).rejects.toThrow("Create your store")
     }
   } finally {
     // biome-ignore lint/performance/noDelete: process.env assignment coerces undefined into a string.

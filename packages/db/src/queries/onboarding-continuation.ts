@@ -53,12 +53,12 @@ export class OnboardingContinuationError extends Error {
   ) {
     super(
       {
-        APPROVAL_REQUIRED: "Open your approved setup email to continue signup.",
-        INVALID: "This setup link is invalid. Request a new setup link.",
-        EXPIRED: "This setup link has expired. Request a new setup link.",
+        APPROVAL_REQUIRED: "Start from Create your store to continue signup.",
+        INVALID: "This setup link is invalid. Start a new signup.",
+        EXPIRED: "This setup link has expired. Start a new signup.",
         USED: "This setup is already complete. Sign in to your account.",
-        IDENTITY: "Use the approved email and business name for this setup.",
-        UNVERIFIED: "Verify the approved email before completing setup.",
+        IDENTITY: "Use the email and business name you started signup with.",
+        UNVERIFIED: "Confirm your email before completing setup.",
         CONFLICT:
           "Setup changed while you were continuing. Open the link again.",
       }[code],

@@ -2,8 +2,10 @@
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import type { OnboardingDraft } from "@ewatrade/db/onboarding-continuation"
+import { isBusinessProfileKey } from "@ewatrade/utils"
 import { useEffect, useState } from "react"
 import { useSignupAge } from "../../hooks/use-signup-age"
+import type { DirectSignupStartResponse } from "../../lib/direct-signup-schema"
 import type {
   PublicLegalPublication,
   SignupLegalAcceptance,
@@ -13,8 +15,9 @@ import {
   onboardingDraftFromBusinessValues,
 } from "../../lib/onboarding-draft"
 import type { EligibleAgeBand } from "../../lib/signup-age"
-import { getMarketingUrl } from "../../lib/signup-navigation"
+import { getDashboardRouteUrl } from "../../lib/signup-navigation"
 import type { BusinessValues, OwnerValues } from "../../lib/signup-schemas"
+import { SignupStart } from "./signup-start"
 import { SignupStepper } from "./signup-stepper"
 import { StepBusiness } from "./step-business"
 import { StepLegal } from "./step-legal"
@@ -82,6 +85,12 @@ export function SignupFlow() {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [accessNotice, setAccessNotice] = useState<string | null>(null)
   const [entryReady, setEntryReady] = useState(false)
+  // No setup token in the URL: show the direct-signup start form first.
+  const [needsStart, setNeedsStart] = useState(false)
+  const [sessionVersion, setSessionVersion] = useState(0)
+  const [startProfileKey, setStartProfileKey] = useState<string>()
+  const [startPreview, setStartPreview] =
+    useState<DirectSignupStartResponse["qaPreview"]>()
   const [verificationEmail, setVerificationEmail] = useState<string | null>(
     null,
   )
@@ -128,6 +137,7 @@ export function SignupFlow() {
     }
   }, [])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sessionVersion re-reads the token after signup start or email confirmation.
   useEffect(() => {
     if (!ageBand) return
     const token = new URLSearchParams(window.location.search)
@@ -135,14 +145,21 @@ export function SignupFlow() {
       ?.trim()
 
     if (!token) {
-      window.location.assign(`${getMarketingUrl()}/#early-access`)
+      const profile = new URLSearchParams(window.location.search)
+        .get("profile")
+        ?.trim()
+      setStartProfileKey(
+        profile && isBusinessProfileKey(profile) ? profile : undefined,
+      )
+      setNeedsStart(true)
       return
     }
 
     const earlyAccessToken = token
     let cancelled = false
+    setNeedsStart(false)
     setAccessToken(earlyAccessToken)
-    setAccessNotice("Checking your early access link…")
+    setAccessNotice("Checking your setup link…")
 
     async function loadAccessSession() {
       const response = await fetch(
@@ -159,18 +176,16 @@ export function SignupFlow() {
         const message =
           body && "message" in body
             ? body.message
-            : "This early access link could not be verified."
+            : "This setup link could not be verified."
 
-        setAccessNotice(
-          message ?? "This early access link could not be verified.",
-        )
+        setAccessNotice(message ?? "This setup link could not be verified.")
         return
       }
 
       setAccessNotice(
         body.emailVerified
-          ? "Early access and email verified. Finish your workspace setup."
-          : "Early access approved. Verify your email to continue.",
+          ? "Email verified. Finish setting up your business."
+          : "Confirm your email to continue.",
       )
       setFormState((current) => ({
         ...current,
@@ -205,14 +220,53 @@ export function SignupFlow() {
 
     void loadAccessSession().catch(() => {
       if (!cancelled) {
-        setAccessNotice("This early access link could not be verified.")
+        setAccessNotice("This setup link could not be verified.")
       }
     })
 
     return () => {
       cancelled = true
     }
-  }, [ageBand])
+  }, [ageBand, sessionVersion])
+
+  // The verification link opens in a new tab; refresh this one when it lands.
+  useEffect(() => {
+    if (!verificationEmail || !accessToken) return
+    const token = accessToken
+    const controller = new AbortController()
+    let pending = false
+    let confirmed = false
+    const timer = window.setInterval(async () => {
+      if (pending || confirmed || controller.signal.aborted) return
+      pending = true
+      const response = await fetch(
+        `/api/early-access/session?token=${encodeURIComponent(token)}`,
+        { cache: "no-store", signal: controller.signal },
+      ).catch(() => null)
+      const body = (await response?.json().catch(() => null)) as {
+        emailVerified?: boolean
+      } | null
+      pending = false
+      if (!controller.signal.aborted && response?.ok && body?.emailVerified) {
+        confirmed = true
+        window.clearInterval(timer)
+        setSessionVersion((version) => version + 1)
+      }
+    }, 5000)
+    return () => {
+      controller.abort()
+      window.clearInterval(timer)
+    }
+  }, [verificationEmail, accessToken])
+
+  function handleStarted(response: DirectSignupStartResponse) {
+    const url = new URL(window.location.href)
+    url.searchParams.delete("profile")
+    url.searchParams.set("access_token", response.accessToken)
+    window.history.replaceState(null, "", url)
+    setStartPreview(response.qaPreview)
+    setSessionVersion((version) => version + 1)
+  }
 
   function goToStep(nextStep: 2 | 3 | 4 | 5) {
     setStep(nextStep)
@@ -393,7 +447,7 @@ export function SignupFlow() {
     <main className="signup-main">
       <div>
         {/* Stepper (hidden on success step) */}
-        {step < 5 && (
+        {step < 5 && !needsStart && (
           <SignupStepper
             currentStep={step}
             acceptanceRequired={legalPublication?.acceptanceRequired ?? true}
@@ -402,15 +456,20 @@ export function SignupFlow() {
 
         {/* Focused form, without a surrounding card. */}
         <div className="signup-screen" key={step}>
-          {(accessNotice || !entryReady) && step === 2 && (
+          {step === 2 && needsStart && (
+            <SignupStart
+              businessProfileKey={startProfileKey}
+              loginUrl={getDashboardRouteUrl("/login")}
+              onStarted={handleStarted}
+            />
+          )}
+
+          {!needsStart && (accessNotice || !entryReady) && step === 2 && (
             <output className="signup-entry">
               {accessNotice ?? "Preparing your setup…"}
               {!entryReady && !verificationEmail && (
-                <a
-                  href={`${getMarketingUrl()}/#early-access`}
-                  className="mt-2 block underline"
-                >
-                  Request early access
+                <a href="/signup" className="mt-2 block underline">
+                  Start a new signup
                 </a>
               )}
             </output>
@@ -420,6 +479,7 @@ export function SignupFlow() {
             <VerifyApprovedEmail
               accessToken={accessToken}
               email={verificationEmail}
+              initialPreview={startPreview}
             />
           )}
 

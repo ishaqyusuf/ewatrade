@@ -52,7 +52,7 @@ export function earlyAccessFailure(error: unknown) {
     message:
       error instanceof EarlyAccessError
         ? error.message
-        : "Early access is temporarily unavailable. Please try again.",
+        : "Setup is temporarily unavailable. Please try again.",
     status: error instanceof EarlyAccessError ? error.status : 503,
   }
 }

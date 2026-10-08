@@ -6,6 +6,8 @@ import type {
   TenantMode,
   TenantType,
 } from "../../generated/prisma/client"
+import type { RetailOpsPlanId } from "./retail-ops-subscription-plans"
+import { resolveRetailOpsPlanId } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
 export type TenantStore = {
@@ -35,6 +37,8 @@ export type TenantContext = {
     dataClassification: QaDataClassification
     timezone: string
     qaPurgeStartedAt: Date | null
+    /** Resolved for plan feature gates; absent only in hand-built contexts. */
+    retailOpsPlanId?: RetailOpsPlanId
   }
   staffAccess?: {
     businessRole: MembershipRole
@@ -91,6 +95,8 @@ export async function getActiveTenantForUser(
           dataClassification: true,
           timezone: true,
           qaPurgeStartedAt: true,
+          metadata: true,
+          subscription: { select: { plan: { select: { key: true } } } },
           stores: {
             where: { status: { not: "ARCHIVED" } },
             select: {
@@ -180,6 +186,10 @@ export async function getActiveTenantForUser(
       dataClassification: membership.tenant.dataClassification,
       timezone: membership.tenant.timezone,
       qaPurgeStartedAt: membership.tenant.qaPurgeStartedAt,
+      retailOpsPlanId: resolveRetailOpsPlanId({
+        metadata: membership.tenant.metadata,
+        subscriptionPlanKey: membership.tenant.subscription?.plan.key,
+      }),
     },
     stores,
     activeStore,

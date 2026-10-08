@@ -33,6 +33,7 @@ enum TenantHostnameSurface {
 enum LeadCaptureType {
   EARLY_ACCESS
   WAITLIST
+  SIGNUP
 }
 
 enum MembershipRole {
