@@ -1,0 +1,4 @@
+enum SalesRepOrderVisibility {
+  OWN_SALES
+  ALL_STORE_ORDERS
+}
