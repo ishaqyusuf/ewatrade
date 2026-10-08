@@ -230,6 +230,7 @@ export async function listCustomerOrderDirectory(
       FROM "CommercialOrder"
       WHERE "tenantId" = ${input.tenantId}
         AND "storeId" = ${input.storeId}
+        ${input.createdByUserId ? Prisma.sql`AND "createdByUserId" = ${input.createdByUserId}` : Prisma.empty}
         ${searchFilter}
     ), grouped_orders AS (
       SELECT
@@ -297,6 +298,7 @@ export async function listCustomersPage(
   input: {
     cursor?: string
     limit?: number
+    createdByUserId?: string
     query?: string
     tenantId: string
   },

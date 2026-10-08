@@ -10,7 +10,11 @@ import { getServerSession } from "@/lib/session"
 import { canManageStaff } from "@/lib/staff-management"
 import { getActiveTenant } from "@/lib/tenant"
 import { prisma } from "@ewatrade/db"
-import { listCommercialOrdersPage } from "@ewatrade/db/queries"
+import {
+  listCommercialOrdersPage,
+  lookupCommercialOrders,
+  resolveOrderScope,
+} from "@ewatrade/db/queries"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -66,9 +70,16 @@ export async function GET(request: NextRequest) {
   const { ctx, session, store } = searchContext
   const role = ctx.membership.role
   const tenantId = ctx.tenant.id
-  const storeScope = { storeId: store.id, tenantId }
+  const storeScope = await resolveOrderScope(prisma, {
+    storeId: store.id,
+    tenantId,
+    role,
+    userId: session.user.id,
+    allowedStoreIds: ctx.stores.map((row) => row.id),
+  })
   const canSearchProducts =
-    canManageProductCatalog(role) || canOperateInventory(role, ctx.membership.staffAccessMode)
+    canManageProductCatalog(role) ||
+    canOperateInventory(role, ctx.membership.staffAccessMode)
   const canSearchCustomers = canUseSalesOperations(role)
   const canSearchSales = canSearchCustomers
   const canSearchStaff = canManageStaff(role, ctx.membership.staffAccessMode)
@@ -135,11 +146,16 @@ export async function GET(request: NextRequest) {
         })
       : [],
     canSearchSales
-      ? listCommercialOrdersPage(prisma, {
-          limit: 8,
-          query,
-          ...storeScope,
-        })
+      ? Promise.all([
+          listCommercialOrdersPage(prisma, { limit: 8, query, ...storeScope }),
+          lookupCommercialOrders(prisma, { ...storeScope, orderNumber: query }),
+        ]).then(([page, exact]) => ({
+          items: [
+            ...new Map(
+              [...exact, ...page.items].map((order) => [order.id, order]),
+            ).values(),
+          ].slice(0, 8),
+        }))
       : { items: [] },
   ])
 
@@ -174,9 +190,9 @@ export async function GET(request: NextRequest) {
     ),
     ...sales.items.map((sale) =>
       result({
-        description: `${sale.paymentStatus.toLowerCase()} order`,
+        description: `Taken by ${sale.createdBy?.name || "a sales rep"} · ${sale.paymentStatus.toLowerCase()} order`,
         group: "sales",
-        href: getDashboardRecordHref("sales", sale.orderNumber),
+        href: `/sales?orderSheet=details&orderId=${encodeURIComponent(sale.id)}`,
         id: `sale:${sale.id}`,
         title: sale.orderNumber,
       }),

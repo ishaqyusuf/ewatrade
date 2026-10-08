@@ -1,5 +1,6 @@
 import { PageLoading } from "@/components/dashboard/page-loading"
 import { StaffContent } from "@/components/dashboard/staff-content"
+import { OrderVisibilityCard } from "@/components/staff/order-visibility-card"
 import { loadStaffDirectoryParams } from "@/hooks/staff-directory-params"
 import { getServerSession } from "@/lib/session"
 import { canManageStaff } from "@/lib/staff-management"
@@ -45,15 +46,20 @@ export default async function StaffRoutePage({
     ])
 
   return (
-    <Suspense fallback={<PageLoading />}>
-      <StaffContent
-        initialViewSettings={initialViewSettings}
-        store={store}
-        tenantId={ctx.tenant.id}
-        search={staffQuery}
-        role={staffRole}
-        status={staffStatus}
-      />
-    </Suspense>
+    <div className="grid gap-6">
+      {["OWNER", "ADMIN"].includes(ctx.membership.role) ? (
+        <OrderVisibilityCard storeId={store.id} storeName={store.name} />
+      ) : null}
+      <Suspense fallback={<PageLoading />}>
+        <StaffContent
+          initialViewSettings={initialViewSettings}
+          store={store}
+          tenantId={ctx.tenant.id}
+          search={staffQuery}
+          role={staffRole}
+          status={staffStatus}
+        />
+      </Suspense>
+    </div>
   )
 }

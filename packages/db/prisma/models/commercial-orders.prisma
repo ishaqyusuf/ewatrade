@@ -53,6 +53,7 @@ model CommercialOrder {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, deliveryDueAt, status])
   @@index([storeId, createdAt])
+  @@index([tenantId, storeId, createdByUserId, createdAt])
 }
 
 model CommercialOrderFulfillmentCommand {

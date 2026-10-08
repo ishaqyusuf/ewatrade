@@ -1,3 +1,4 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import {
   ClassicDashboardEmptyOrders,
   ClassicDashboardHero,
@@ -31,6 +32,7 @@ import {
 } from "@/components/mobile/dashboard-kit"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
+import { OrderVisibilityCard } from "@/components/mobile/staff/order-visibility-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { MobileStoresSwitcher } from "@/components/mobile/stores-switcher"
 import { Icon, type IconKeys } from "@/components/ui/icon"
@@ -441,7 +443,7 @@ export function OperationsDashboardSurface({
               router.push("/sync-status-modal" as never)
             }
             onSearchPress={
-              isOffline || scopedStaff
+              isOffline
                 ? undefined
                 : () => router.push("/global-search" as never)
             }
@@ -477,6 +479,7 @@ export function OperationsDashboardSurface({
       showBottomTabs={!embeddedInAdminTabs}
       title="Today"
     >
+      {!isAttendant ? <OrderVisibilityCard review /> : null}
       {isOffline ? (
         <StatusBanner
           icon="Wind"
@@ -687,7 +690,13 @@ export function OperationsDashboardSurface({
       ) : null}
 
       {isAttendant ? (
-        <RepSection title="Recent sales">
+        <RepSection title="Your sales">
+          <ActionButton
+            variant="outline"
+            onPress={() => router.push("/your-sales" as never)}
+          >
+            View all sales
+          </ActionButton>
           {orders.isLoading ? (
             <StatusBanner icon="Loader2" message="Loading recent sales." />
           ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (

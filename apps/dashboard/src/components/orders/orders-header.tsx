@@ -11,10 +11,12 @@ import { OrdersSearchFilter } from "./orders-search-filter"
 
 export function OrdersHeader({
   storeName,
+  salesRep = false,
   view,
   onViewChange,
 }: {
   storeName: string
+  salesRep?: boolean
   view: DirectoryView
   onViewChange: (view: DirectoryView) => void
 }) {
@@ -22,7 +24,7 @@ export function OrdersHeader({
   return (
     <PageHeader
       eyebrow={storeName}
-      title="Orders"
+      title={salesRep ? "Your sales" : "Orders"}
       description="Products and Services share one immutable order record."
     >
       <PageToolbar

@@ -19,6 +19,7 @@ import {
   listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
+  lookupCommercialOrders,
   recordCommercialOrderPayment,
   returnCommercialOrderProductLine,
   updateCommercialOrderReminderSettings,
@@ -37,6 +38,7 @@ import {
   orderReceiptSettingsSaveSchema,
 } from "../../schemas/order-receipts"
 
+import { orderLookupSchema } from "../../schemas/order-visibility"
 import {
   commercialOrderAuthorizeChargeOnlyServiceLineSchema,
   commercialOrderCreateSchema,
@@ -54,6 +56,7 @@ import {
   commercialOrderReturnLineSchema,
 } from "../../schemas/orders"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { orderScope } from "../order-scope"
 
 function assertCanOperateOrders(role: string) {
   const normalized = normalizeRole(role)
@@ -209,8 +212,8 @@ export const ordersRouter = createTRPCRouter({
       try {
         const receipts = await getOrderReceipts(ctx.db, {
           ...input,
+          ...(await orderScope(ctx, { storeId })),
           storeId,
-          tenantId: ctx.tenantContext.tenant.id,
         })
         const pdf = await renderOrderReceipts(receipts)
         const pages = input.includeImages
@@ -235,8 +238,10 @@ export const ordersRouter = createTRPCRouter({
   customerCount: protectedProcedure.query(async ({ ctx }) => {
     assertCanOperateOrders(ctx.tenantContext.membership.role)
     return countCommercialOrderCustomers(ctx.db, {
+      ...(await orderScope(ctx)),
       storeId:
-        ctx.tenantContext.staffAccess?.mode === "SCOPED"
+        ctx.tenantContext.staffAccess?.mode === "SCOPED" ||
+        ["CASHIER", "OPERATOR"].includes(ctx.tenantContext.membership.role)
           ? ctx.tenantContext.activeStore?.id
           : undefined,
       tenantId: ctx.tenantContext.tenant.id,
@@ -254,10 +259,10 @@ export const ordersRouter = createTRPCRouter({
             input.storeId,
           )
         : undefined
-      const summary = await getCommercialOrderReportSummary(ctx.db, {
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+      const summary = await getCommercialOrderReportSummary(
+        ctx.db,
+        await orderScope(ctx, { storeId }),
+      )
       return {
         ...summary,
         currencyCode:
@@ -357,6 +362,18 @@ export const ordersRouter = createTRPCRouter({
       }
     }),
 
+  lookupOpen: protectedProcedure
+    .input(orderLookupSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      return lookupCommercialOrders(ctx.db, {
+        ...input,
+        ...(await orderScope(ctx, {
+          storeId: ctx.tenantContext.activeStore?.id,
+        })),
+      })
+    }),
+
   get: protectedProcedure
     .input(commercialOrderGetSchema)
     .query(async ({ ctx, input }) => {
@@ -364,6 +381,7 @@ export const ordersRouter = createTRPCRouter({
       const order = await getCommercialOrder(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
+        storeId: (await orderScope(ctx)).storeId,
       })
       if (!order) {
         throw new TRPCError({
@@ -387,8 +405,7 @@ export const ordersRouter = createTRPCRouter({
         : undefined
       return listCommercialOrders(ctx.db, {
         ...input,
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
+        ...(await orderScope(ctx, { storeId, mine: input.mine })),
       })
     }),
 
@@ -405,8 +422,7 @@ export const ordersRouter = createTRPCRouter({
         : undefined
       return listCommercialOrdersPage(ctx.db, {
         ...input,
-        storeId,
-        tenantId: ctx.tenantContext.tenant.id,
+        ...(await orderScope(ctx, { storeId, mine: input.mine })),
       })
     }),
 
@@ -417,7 +433,7 @@ export const ordersRouter = createTRPCRouter({
       return listCommercialOrderPaymentsPage(ctx.db, {
         ...input,
         defaultCurrencyCode: ctx.tenantContext.tenant.currencyCode,
-        tenantId: ctx.tenantContext.tenant.id,
+        ...(await orderScope(ctx, input)),
       })
     }),
 
@@ -464,6 +480,18 @@ export const ordersRouter = createTRPCRouter({
     .input(commercialOrderReturnLineSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const scope = await orderScope(ctx)
+      if (scope.createdByUserId) {
+        const line = await ctx.db.commercialOrderLine.findFirst({
+          where: { id: input.orderLineId, order: scope },
+          select: { id: true },
+        })
+        if (!line)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Order item not found.",
+          })
+      }
       try {
         return await returnCommercialOrderProductLine(ctx.db, {
           ...input,

@@ -74,6 +74,9 @@ export function OrderDetails({
     <div className="grid gap-5">
       <div className="space-y-1">
         <h3 className="text-lg font-semibold">{order.orderNumber}</h3>
+        <p className="text-sm text-muted-foreground">
+          Taken by {order.createdBy?.name || "a sales rep"}
+        </p>
         <p className="text-sm">
           {order.customerName || "Walk-in customer"}
           {order.customerPhone ? ` · ${order.customerPhone}` : ""}

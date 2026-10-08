@@ -25,6 +25,7 @@ import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
 import { setupAssistantRouter } from "./setup-assistant"
 import { storeSubscriptionsRouter } from "./store-subscriptions"
+import { storesRouter } from "./stores"
 import { tenantRouter } from "./tenant"
 
 const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
@@ -58,6 +59,7 @@ export const appRouter = createTRPCRouter({
   search: searchRouter,
   setupAssistant: setupAssistantRouter,
   tenant: tenantRouter,
+  stores: storesRouter,
 })
 
 export type AppRouter = typeof appRouter

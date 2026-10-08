@@ -49,13 +49,14 @@ export function ClassicOrdersScreen({ children }: OrdersScreenProps) {
 }
 
 export function ClassicOrdersMasthead({
+  title = "Orders",
   onCustomersPress,
   onLayout,
 }: OrdersMastheadProps) {
   return (
     <View className="px-4" onLayout={onLayout}>
       <CommercePageHeader
-        title="Orders"
+        title={title}
         action={
           <Pressable
             accessibilityLabel="Open customers"

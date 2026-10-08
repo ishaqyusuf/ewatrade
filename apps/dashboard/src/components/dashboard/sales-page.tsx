@@ -20,11 +20,13 @@ export function SalesPage({
   initialSettings,
   initialViewSettings,
   customerDirectory = true,
+  salesRep = false,
 }: {
   store: StoreSummary
   initialSettings?: Partial<TableSettings>
   initialViewSettings: DirectoryViewSettings
   customerDirectory?: boolean
+  salesRep?: boolean
 }) {
   const { view, setView, persistenceError, retryPersistence } =
     useDirectoryView({
@@ -38,6 +40,7 @@ export function SalesPage({
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
           <OrdersHeader
             storeName={store.name}
+            salesRep={salesRep}
             view={view}
             onViewChange={setView}
           />

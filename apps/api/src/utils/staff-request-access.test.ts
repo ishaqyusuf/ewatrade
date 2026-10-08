@@ -121,3 +121,11 @@ test("line IDs and nested stock sources are checked through their owning Store",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
 })
+
+test("exact order-number lookup cannot bypass assigned Store boundaries", async () => {
+  await expect(
+    scopeStaffRequest(context(), "orders.get", "query", {
+      orderNumber: "ORD-123",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+})

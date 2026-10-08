@@ -30,6 +30,7 @@ import {
 } from "../appearances/market-day/customer-book-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
+import { CustomerOpenOrders } from "./customer-open-orders"
 import { type CustomerBookProps, useCustomerBook } from "./use-customer-book"
 export function CustomerBookChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="customers" />
@@ -151,6 +152,11 @@ export function CustomerBookContent(props: CustomerBookProps) {
       headerContent={
         <>
           {feedback}
+          <CustomerOpenOrders
+            customerId={selectedIsSaved ? selectedCustomer.id : undefined}
+            phone={selectedCustomer.phone}
+            onOpenOrder={(id) => router.push(commercialOrderHref(id) as never)}
+          />
           {canManageTenant && selectedIsSaved && selectedCustomer ? (
             <View className="px-4 pb-3">
               <ActionButton

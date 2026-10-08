@@ -414,6 +414,7 @@ export async function recordCommercialOrderPayment(
 export async function listCommercialOrderPaymentsPage(
   db: PrismaClient,
   input: {
+    createdByUserId?: string
     cursor?: string
     defaultCurrencyCode: string
     limit?: number
@@ -439,7 +440,13 @@ export async function listCommercialOrderPaymentsPage(
     : []
   const baseWhere: Prisma.CommercialOrderPaymentWhereInput = {
     tenantId: input.tenantId,
-    ...(input.storeId ? {order: {is: {storeId: input.storeId}}} : {}),
+    order: {
+      is: {
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+        createdByUserId: input.createdByUserId,
+      },
+    },
     type: CommercialPaymentType.PAYMENT,
     method: { not: CommercialPaymentMethod.CUSTOMER_CREDIT },
   }
@@ -530,6 +537,8 @@ export async function listCommercialOrderPaymentsPage(
       WHERE payments."tenantId" = ${input.tenantId}
         AND payments."type" = ${CommercialPaymentType.PAYMENT}
         AND payments."method" <> ${CommercialPaymentMethod.CUSTOMER_CREDIT}
+        ${input.storeId ? Prisma.sql`AND orders."storeId" = ${input.storeId}` : Prisma.empty}
+        ${input.createdByUserId ? Prisma.sql`AND orders."createdByUserId" = ${input.createdByUserId}` : Prisma.empty}
       GROUP BY orders."currencyCode"
       ORDER BY orders."currencyCode" ASC
     `),
