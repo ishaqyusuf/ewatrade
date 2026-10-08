@@ -1,9 +1,5 @@
-import {
-  AuthActionButton,
-  AuthBrandHeader,
-  MobileScreen,
-  StatusBanner,
-} from "@/components/mobile"
+import { AuthActionButton, StatusBanner } from "@/components/mobile"
+import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
 import { AccountAgeEntry } from "@/components/mobile/sign-up/account-age-entry"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
@@ -109,11 +105,13 @@ export function OnboardingContinuationScreen() {
     return <AccountAgeEntry continuation={context} />
   const busy = !loaded || lookup.isPending || verification.isPending
   return (
-    <MobileScreen contentClassName="justify-center gap-6">
-      <AuthBrandHeader
-        title="Continue your setup"
-        subtitle="Pick up where you left off from your EwaTrade email."
-      />
+    <AuthFlowScreen
+      eyebrow="Email continuation"
+      title="Continue your setup"
+      subtitle="Pick up where you left off from your ẸwáTrade email."
+      backHref="/login"
+      backLabel="Back to login"
+    >
       {params.error || message ? (
         <StatusBanner
           tone="destructive"
@@ -121,6 +119,13 @@ export function OnboardingContinuationScreen() {
             message ??
             "Your link could not be saved securely. Open it again from your email."
           }
+        />
+      ) : null}
+      {busy ? (
+        <StatusBanner
+          icon="Clock"
+          title="Checking setup"
+          message="Validating your saved email link."
         />
       ) : null}
       {!busy && !pending ? (
@@ -210,6 +215,6 @@ export function OnboardingContinuationScreen() {
       >
         Return to sign in
       </AuthActionButton>
-    </MobileScreen>
+    </AuthFlowScreen>
   )
 }

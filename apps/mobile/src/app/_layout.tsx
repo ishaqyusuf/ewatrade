@@ -32,6 +32,7 @@ import {
   isSalesRepRole,
 } from "@/lib/mobile-roles"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
+import { stackTransitions } from "@/lib/screen-transitions"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
 import { initMobileObservability } from "@/observability/sentry"
@@ -63,6 +64,9 @@ export const unstable_settings = {
 }
 
 initMobileObservability()
+
+const transitions = stackTransitions(Platform.OS)
+const gateOptions = { headerShown: false, ...transitions.gate }
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -124,6 +128,7 @@ const InitialLayout = ({
 
       <Stack
         screenOptions={{
+          ...transitions.push,
           statusBarStyle:
             startupVisible || colorScheme === "dark" ? "light" : "dark",
           headerShadowVisible: false,
@@ -136,24 +141,18 @@ const InitialLayout = ({
           },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="continue-onboarding"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="sign-up" options={{ headerShown: false }} />
-        <Stack.Screen name="verify-email" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="staff-onboarding"
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="index" options={gateOptions} />
+        <Stack.Screen name="(customer)" options={gateOptions} />
+        <Stack.Screen name="onboarding" options={gateOptions} />
+        <Stack.Screen name="continue-onboarding" options={gateOptions} />
+        <Stack.Screen name="login" options={gateOptions} />
+        <Stack.Screen name="sign-up" options={gateOptions} />
+        <Stack.Screen name="verify-email" options={gateOptions} />
+        <Stack.Screen name="staff-onboarding" options={gateOptions} />
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && canAccessAdmin}
         >
-          <Stack.Screen name="(admin-tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(admin-tabs)" options={gateOptions} />
 
           <Stack.Screen
             name="business-switch-modal"
@@ -186,7 +185,7 @@ const InitialLayout = ({
           />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated}>
-          <Stack.Screen name="no-access" options={{ headerShown: false }} />
+          <Stack.Screen name="no-access" options={gateOptions} />
           <Stack.Screen
             name="account-privacy"
             options={{ headerShown: false }}

@@ -8,7 +8,8 @@ const requiredMarkers = [
   {
     file: "components/mobile/form-field.tsx",
     markers: [
-      'variant?: "auth" | "filled" | "line"',
+      '"green-gate"',
+      "isGreenGate",
       "leadingIcon",
       "trailingIcon",
       "isMarketSearchVariant",
@@ -75,9 +76,8 @@ const requiredMarkers = [
   {
     file: "components/mobile/floating-qa-button.tsx",
     markers: [
-      'pathname === "/"',
-      'pathname === "/onboarding"',
-      'pathname === "/verify-email"',
+      'pathname !== "/login"',
+      "isAuthenticated",
     ],
   },
   {
@@ -109,7 +109,7 @@ const requiredMarkers = [
   {
     file: "app/no-access.tsx",
     markers: [
-      "No workspace available yet",
+      "ClassicNoAccessScreen",
       "Create your business account",
       "Check again",
     ],
@@ -124,15 +124,15 @@ const requiredMarkers = [
   },
   {
     file: "app/sign-up.tsx",
-    markers: ["AccountAgeEntry", "<AccountAgeEntry />"],
+    markers: ["EarlyAccessRequestScreen", "<EarlyAccessRequestScreen />"],
   },
   {
     file: "components/mobile/sign-up/account-age-entry.tsx",
     markers: [
       "SignUpScreen",
-      "if (ageBand) return <SignUpScreen ageBand={ageBand} />",
-      'selected === "UNDER_13"',
-      "disabled={!selected}",
+      "AccountAgePresentation",
+      "onContinue={setAgeBand}",
+      "continuation={continuation}",
     ],
   },
   {

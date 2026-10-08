@@ -1,35 +1,23 @@
-import { Platform } from "react-native"
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
-import { MobileScreen } from "@/components/mobile/screen"
-import {
-  SecondaryOperationalRow,
-  SecondarySheetHeader,
-} from "@/components/mobile/secondary-operations"
+import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
+import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
+import type { StaffOnboardingPresentationProps } from "@/components/mobile/staff-onboarding/staff-onboarding-presentation"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import type { StaffOnboardingPresentationProps } from "@/components/mobile/staff-onboarding/staff-onboarding-presentation"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 
 export function ClassicStaffOnboardingScreen(
   props: StaffOnboardingPresentationProps,
 ) {
-  const largeText = useLargeTextLayout()
   return (
-    <MobileScreen
-      contentClassName={
-        largeText ? "justify-start gap-6" : "justify-center gap-6"
-      }
-      keyboardAutoScrollEnabled={largeText || Platform.OS !== "android"}
-      keyboardBottomOffset={Platform.OS === "android" ? 12 : 48}
+    <GreenTillAuthScreen
+      eyebrow="Staff invitation"
+      title="Finish staff setup"
+      subtitle="Confirm the name your team will see when you record sales."
+      testID="green-gate-staff"
     >
-      <SecondarySheetHeader
-        description="Confirm the name your team will see when you record sales."
-        icon="ShieldCheck"
-        title="Finish staff setup"
-      />
       <SecondaryOperationalRow
         className="border-y"
         detail={props.email}
@@ -47,6 +35,7 @@ export function ClassicStaffOnboardingScreen(
       <View className="gap-4">
         <FormField
           autoCapitalize="words"
+          variant="green-gate"
           label="Full name"
           leadingIcon="User"
           onChangeText={props.onChangeName}
@@ -56,6 +45,7 @@ export function ClassicStaffOnboardingScreen(
         <FormField
           autoCapitalize="words"
           helper="Optional. This can be the short name shown on sales."
+          variant="green-gate"
           label="Display name"
           leadingIcon="User"
           onChangeText={props.onChangeDisplayName}
@@ -84,6 +74,6 @@ export function ClassicStaffOnboardingScreen(
           Your access stays tied to your own email account.
         </Text>
       </View>
-    </MobileScreen>
+    </GreenTillAuthScreen>
   )
 }

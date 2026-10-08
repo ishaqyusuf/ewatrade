@@ -1,125 +1,141 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { MobileScreen } from "@/components/mobile/screen"
+import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
 import {
   ONBOARDING_STEPS,
   type OnboardingPresentationProps,
 } from "@/components/mobile/onboarding/onboarding-presentation"
 import { Icon } from "@/components/ui/icon"
+import { MotionView } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useColorScheme, useColors } from "@/hooks/use-color"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 
 export function ClassicOnboardingScreen({
   stepIndex,
   onContinue,
   onFinish,
 }: OnboardingPresentationProps) {
-  const step = ONBOARDING_STEPS[stepIndex] ?? ONBOARDING_STEPS[0]
-  const last = stepIndex === ONBOARDING_STEPS.length - 1
-  const largeText = useLargeTextLayout()
+  const index = Math.max(0, Math.min(stepIndex, ONBOARDING_STEPS.length - 1))
+  const step = ONBOARDING_STEPS[index] ?? ONBOARDING_STEPS[0]
+  const last = index === ONBOARDING_STEPS.length - 1
+  const { colorScheme } = useColorScheme()
+  const colors = useColors()
+  const palette = GREEN_TILL_THEME[colorScheme]
   return (
-    <MobileScreen
-      contentClassName={
-        largeText ? "justify-start gap-8" : "justify-between gap-8"
-      }
-    >
-      <View className="gap-10">
-        <View className="flex-row flex-wrap items-center justify-between gap-2">
-          <View className="flex-row items-center gap-2 rounded-full bg-accent px-3 py-2">
-            <Icon className="size-4 text-primary" name="ShieldCheck" />
-            <Text className="text-xs font-bold uppercase text-primary">
-              Business setup
-            </Text>
-          </View>
-          {!last ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Skip onboarding"
-              className="min-h-11 items-center justify-center rounded-full px-3 active:bg-muted"
-              haptic
-              onPress={onFinish}
-            >
-              <Text className="text-sm font-bold text-muted-foreground">
-                Skip
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-        <View className="items-start gap-7">
-          <View className="h-[126px] w-[150px] justify-center">
-            <View className="absolute left-3 top-3 size-24 -rotate-[8deg] rounded-[30px] bg-accent" />
-            <View className="absolute left-[66px] top-3 h-[38px] w-[68px] -rotate-[10deg] rounded-full bg-warn opacity-20" />
-            <View className="size-24 items-center justify-center rounded-[30px] bg-primary">
-              <Icon
-                className="size-10 text-primary-foreground"
-                name={step.icon}
-              />
-            </View>
-          </View>
-          <View className="gap-4">
-            <Text className="text-5xl font-bold leading-tight text-foreground">
-              {step.title}
-            </Text>
-            <Text className="text-lg [-rn-line-height:28] text-muted-foreground">
-              {step.body}
-            </Text>
-          </View>
-        </View>
-        <View className="gap-5">
-          <Text className="text-xs font-bold uppercase text-muted-foreground">
-            What happens next
-          </Text>
-          <View className="gap-4">
-            {step.tasks.map((task, index) => (
-              <View key={task.label} className="flex-row items-center gap-4">
-                <View
-                  className={
-                    index === 0
-                      ? "size-[42px] items-center justify-center rounded-full bg-primary"
-                      : "size-[42px] items-center justify-center rounded-full bg-accent"
-                  }
+    <GreenTillAuthScreen
+      title={step.title}
+      subtitle={step.body}
+      motionKey={index}
+      testID={`green-gate-intro-${index + 1}`}
+      headerContent={
+        <MotionView key={index}>
+          <View className="mt-6 gap-4">
+            <View className="flex-row items-center justify-between gap-3">
+              <View className="size-16 items-center justify-center rounded-[20px] bg-white/15">
+                <Icon className="size-[30px] text-white" name={step.icon} />
+              </View>
+              <View className="rounded-full bg-white/15 px-3 py-1.5">
+                <Text
+                  style={{
+                    color: palette.heroForeground,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    lineHeight: 18,
+                  }}
                 >
-                  <Icon
-                    className={
-                      index === 0
-                        ? "size-4 text-primary-foreground"
-                        : "size-4 text-primary"
-                    }
-                    name={task.icon}
-                  />
-                </View>
-                <Text className="flex-1 text-xl font-semibold text-foreground">
-                  {task.label}
+                  {index + 1} of 3
                 </Text>
               </View>
-            ))}
+            </View>
+            <View className="gap-1.5">
+              <Text
+                accessibilityRole="header"
+                style={{
+                  color: palette.heroForeground,
+                  fontSize: 26,
+                  fontWeight: "800",
+                  lineHeight: 31,
+                  letterSpacing: -0.6,
+                }}
+              >
+                {step.title}
+              </Text>
+              <Text
+                style={{
+                  color: palette.heroMuted,
+                  fontSize: 14,
+                  lineHeight: 21,
+                }}
+              >
+                {step.body}
+              </Text>
+            </View>
           </View>
-        </View>
+        </MotionView>
+      }
+    >
+      <Text className="text-base font-extrabold [-rn-line-height:24] text-foreground">
+        What happens next
+      </Text>
+      <View className="rounded-[20px] bg-muted px-4 py-1">
+        {step.tasks.map((task, taskIndex) => (
+          <View
+            key={task.label}
+            className="min-h-14 flex-row items-center gap-3 py-3"
+          >
+            <View className="size-7 items-center justify-center rounded-full bg-accent">
+              <Text
+                maxFontSizeMultiplier={1.3}
+                className="text-xs font-bold [-rn-line-height:18] text-primary"
+              >
+                {taskIndex + 1}
+              </Text>
+            </View>
+            <Text className="min-w-0 flex-1 text-sm font-semibold [-rn-line-height:21] text-foreground">
+              {task.label}
+            </Text>
+          </View>
+        ))}
       </View>
-      <View className="gap-4 pb-8">
-        <View className="flex-row items-center gap-2">
-          {ONBOARDING_STEPS.map((item, index) => (
+      <View className="min-h-6 flex-1" />
+      <View className="gap-3">
+        <View
+          accessible
+          accessibilityLabel={`Introduction ${index + 1} of 3`}
+          className="flex-row justify-center gap-1.5 py-1"
+        >
+          {ONBOARDING_STEPS.map((item, itemIndex) => (
             <View
               key={item.title}
-              className={
-                index <= stepIndex
-                  ? "h-1.5 flex-1 rounded-full bg-primary"
-                  : "h-1.5 flex-1 rounded-full bg-muted"
-              }
+              style={{
+                width: itemIndex === index ? 22 : 7,
+                height: 7,
+                borderRadius: 7,
+                backgroundColor:
+                  itemIndex === index ? palette.gold : colors.border,
+              }}
             />
           ))}
         </View>
-        <ActionButton
-          onPress={onContinue}
-          trailingIcon={last ? "CircleCheck" : "ArrowRight"}
-        >
+        <ActionButton onPress={onContinue} trailingIcon="ArrowRight">
           {last ? "Get started" : "Continue"}
         </ActionButton>
-        <Text className="text-center text-xs font-semibold text-muted-foreground">
-          Step {stepIndex + 1} of {ONBOARDING_STEPS.length}
-        </Text>
+        {!last ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Skip onboarding"
+            className="min-h-11 items-center justify-center"
+            onPress={onFinish}
+            haptic
+          >
+            <Text className="text-sm font-bold [-rn-line-height:21] text-primary">
+              Skip
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
-    </MobileScreen>
+    </GreenTillAuthScreen>
   )
 }

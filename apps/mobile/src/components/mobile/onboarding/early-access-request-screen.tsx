@@ -1,13 +1,10 @@
-import {
-  AuthActionButton,
-  AuthBrandHeader,
-  MobileScreen,
-  StatusBanner,
-} from "@/components/mobile"
+import { AuthActionButton, StatusBanner } from "@/components/mobile"
 import { FormField } from "@/components/mobile/form-field"
+import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { requestNativeEarlyAccess } from "@/lib/onboarding-web-client"
 import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
@@ -44,6 +41,8 @@ const needOptions = [
 
 export function EarlyAccessRequestScreen() {
   const router = useRouter()
+  const design = useMobileDesign("sign-up")
+  const fieldVariant = design === "classic" ? "green-gate" : "filled"
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [companyName, setCompanyName] = useState("")
@@ -58,30 +57,35 @@ export function EarlyAccessRequestScreen() {
   })
   if (request.data)
     return (
-      <MobileScreen contentClassName="justify-center gap-6">
-        <AuthBrandHeader
-          title="Request received"
-          subtitle="We’ll review your business details and email your setup link after approval."
-        />
+      <AuthFlowScreen
+        eyebrow="Early access"
+        title="Request received"
+        subtitle="We’ll review your business details and email your setup link after approval."
+      >
         <StatusBanner message={request.data.message} />
         <AuthActionButton onPress={() => router.replace("/login")}>
           Return to sign in
         </AuthActionButton>
-      </MobileScreen>
+      </AuthFlowScreen>
     )
   return (
-    <MobileScreen contentClassName="gap-5">
-      <AuthBrandHeader
-        title="Request early access"
-        subtitle="Tell us about your business. Your approval email will let you continue setup in this app."
-      />
+    <AuthFlowScreen
+      eyebrow="Create a business account"
+      title="Request early access"
+      subtitle="Tell us about your business. Your approval email will let you continue setup in this app."
+      backHref="/login"
+      backLabel="Back to login"
+      compact
+    >
       <FormField
+        variant={fieldVariant}
         label="Your name"
         value={fullName}
         onChangeText={setFullName}
         autoComplete="name"
       />
       <FormField
+        variant={fieldVariant}
         label="Email"
         value={email}
         onChangeText={setEmail}
@@ -90,11 +94,13 @@ export function EarlyAccessRequestScreen() {
         autoComplete="email"
       />
       <FormField
+        variant={fieldVariant}
         label="Business name"
         value={companyName}
         onChangeText={setCompanyName}
       />
       <FormField
+        variant={fieldVariant}
         label="Phone (optional)"
         value={phone}
         onChangeText={setPhone}
@@ -173,7 +179,7 @@ export function EarlyAccessRequestScreen() {
       >
         Return to sign in
       </AuthActionButton>
-    </MobileScreen>
+    </AuthFlowScreen>
   )
 }
 
@@ -198,11 +204,17 @@ function Choices({
           <Pressable
             key={key}
             accessibilityRole={multiple ? "checkbox" : "radio"}
-            accessibilityState={{ checked: selected.includes(key) }}
-            className={`min-h-11 justify-center rounded-lg border px-3 ${selected.includes(key) ? "border-primary bg-primary/10" : "border-border"}`}
+            accessibilityState={
+              multiple
+                ? { checked: selected.includes(key) }
+                : { selected: selected.includes(key) }
+            }
+            className={`min-h-11 justify-center rounded-full border px-3 py-2 ${selected.includes(key) ? "border-primary bg-primary/10" : "border-border"}`}
             onPress={() => onSelect(key)}
           >
-            <Text className="text-foreground">{label}</Text>
+            <Text className="text-sm font-semibold [-rn-line-height:21] text-foreground">
+              {label}
+            </Text>
           </Pressable>
         ))}
       </View>

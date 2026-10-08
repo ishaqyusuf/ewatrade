@@ -1,9 +1,9 @@
-import { useState } from "react"
-import { useRouter } from "expo-router"
 import { ClassicOnboardingScreen } from "@/components/mobile/appearances/classic/onboarding-screen"
 import { MarketDayOnboardingScreen } from "@/components/mobile/appearances/market-day/onboarding-screen"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useOnboardingStore } from "@/store/onboardingStore"
+import { useRouter } from "expo-router"
+import { useState } from "react"
 import { ONBOARDING_STEPS } from "./onboarding-presentation"
 
 export function OnboardingScreen() {

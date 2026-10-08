@@ -19,6 +19,8 @@ const FILES = {
     "src/components/mobile/onboarding/onboarding-presentation.ts",
   ),
   onboardingQa: join(MOBILE_DIR, "src/lib/onboarding-market-day-qa.ts"),
+  signupAgePresentation: join(MOBILE_DIR, "src/components/mobile/green-till/age-screen.tsx"),
+  earlyAccess: join(MOBILE_DIR, "src/components/mobile/onboarding/early-access-request-screen.tsx"),
   signupRoute: join(MOBILE_DIR, "src/app/sign-up.tsx"),
   signupAgeEntry: join(
     MOBILE_DIR,
@@ -74,23 +76,32 @@ const CONTRACTS = [
   {
     file: FILES.signupRoute,
     markers: [
-      "import { AccountAgeEntry }",
+      "import { EarlyAccessRequestScreen }",
       "function SignUpRoute()",
-      "<AccountAgeEntry />",
+      "<EarlyAccessRequestScreen />",
     ],
-    reason: "signup route must enter the 13+ age step before account fields",
+    reason: "signup entry must preserve the early-access approval flow",
   },
   {
     file: FILES.signupAgeEntry,
     markers: [
       "SignUpScreen",
-      "if (ageBand) return <SignUpScreen ageBand={ageBand} />",
-      'selected === "UNDER_13"',
-      "disabled={!selected}",
-      "setAgeBand(selected as EligibleAgeBand)",
+      "continuation={continuation}",
+      "AccountAgePresentation",
+      "onContinue={setAgeBand}",
     ],
     reason:
       "the age step must block under-13 users and mount signup only after an eligible choice",
+  },
+  {
+    file: FILES.signupAgePresentation,
+    markers: ['selected === "UNDER_13"', "disabled={!selected}", 'selected !== "UNDER_13"', "onContinue(selected)"],
+    reason: "the neutral age presentation must block under-13 and only forward an eligible band",
+  },
+  {
+    file: FILES.earlyAccess,
+    markers: ["requestNativeEarlyAccess", "I already have a setup email", "Request received", "Request access"],
+    reason: "native early-access signup must retain approval and email continuation",
   },
   {
     file: FILES.layout,

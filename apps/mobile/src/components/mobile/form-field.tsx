@@ -24,7 +24,14 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   leadingText?: string
   onActionPress?: () => void
   trailingIcon?: IconKeys
-  variant?: "auth" | "filled" | "line" | "market" | "market-search" | "search"
+  variant?:
+    | "auth"
+    | "green-gate"
+    | "filled"
+    | "line"
+    | "market"
+    | "market-search"
+    | "search"
 }
 
 export function FormField({
@@ -46,6 +53,7 @@ export function FormField({
   ...inputProps
 }: FormFieldProps) {
   const isAuthVariant = variant === "auth"
+  const isGreenGate = variant === "green-gate"
   const isMarketSearchVariant = variant === "market-search"
   const isMarketVariant = variant === "market"
   const isSearchVariant = variant === "search" || isMarketSearchVariant
@@ -108,8 +116,12 @@ export function FormField({
         >
           <Text
             className={cn(
-              "min-w-0 flex-1 text-xs font-bold uppercase tracking-[1.4px]",
-              largeTextLayout ? "leading-7" : "leading-[18px]",
+              "min-w-0 flex-1 text-xs font-bold",
+              isGreenGate
+                ? "[-rn-line-height:18]"
+                : "uppercase tracking-[1.4px]",
+              !isGreenGate &&
+                (largeTextLayout ? "leading-7" : "leading-[18px]"),
               error
                 ? "text-destructive"
                 : isMarketVariant
@@ -151,7 +163,7 @@ export function FormField({
           backgroundColor:
             isMarketSearchVariant || isMarketVariant
               ? marketDay.field
-              : isSearchVariant
+              : isSearchVariant || isGreenGate
                 ? colors.muted
                 : colors.card,
           borderColor: isMarketVariant
@@ -163,7 +175,12 @@ export function FormField({
             : isMarketSearchVariant
               ? marketDay.ink
               : activeBorderColor,
-          borderRadius: isMarketSearchVariant || isMarketVariant ? 16 : 12,
+          borderRadius:
+            isMarketSearchVariant || isMarketVariant
+              ? 16
+              : isGreenGate
+                ? 14
+                : 12,
           borderWidth: isMarketSearchVariant
             ? 2
             : isSearchVariant

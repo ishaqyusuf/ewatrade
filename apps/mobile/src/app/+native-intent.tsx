@@ -7,6 +7,7 @@ import {
   resolveCustomerConversationQaPath,
   resolveCustomerDeepLink,
 } from "@/lib/customer-deep-link"
+import { resolveGreenTillQaPath } from "@/lib/green-till-qa-link"
 import { resolveOnboardingContinuationLink } from "@/lib/onboarding-continuation-link"
 import {
   onboardingLinkConfiguration,
@@ -22,18 +23,11 @@ export async function redirectSystemPath({
   initial: boolean
   path: string
 }) {
-  if (__DEV__ && isDevelopmentAppVariant()) {
-    const fixtureUrl = URL.canParse(path, "ewatrade-dev:///")
-      ? new URL(path, "ewatrade-dev:///")
-      : null
-    if (fixtureUrl) {
-      const fixturePath =
-        `${fixtureUrl.hostname}${fixtureUrl.pathname}`.replace(/^\/+/, "")
-      if (fixturePath === "qa-startup-splash-modal") {
-        return `/qa-startup-splash-modal${fixtureUrl.search}`
-      }
-    }
-  }
+  const greenTillQa = resolveGreenTillQaPath(
+    path,
+    __DEV__ && isDevelopmentAppVariant(),
+  )
+  if (greenTillQa) return greenTillQa
   try {
     const continuation = resolveOnboardingContinuationLink(
       path,

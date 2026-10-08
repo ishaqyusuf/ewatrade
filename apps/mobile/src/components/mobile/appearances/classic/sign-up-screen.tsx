@@ -1,5 +1,4 @@
-import { AuthBrandHeader } from "@/components/mobile/auth-header"
-import { MobileScreen } from "@/components/mobile/screen"
+import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
 import type {
   SignUpCategoriesProps,
   SignUpPresentationProps,
@@ -8,11 +7,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColorScheme } from "@/hooks/use-color"
-import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
-import { StatusBar } from "expo-status-bar"
-import { Platform } from "react-native"
 
 export function ClassicSignUpScreen({
   children,
@@ -21,42 +16,21 @@ export function ClassicSignUpScreen({
   onBack,
   step,
 }: SignUpPresentationProps) {
-  const largeText = useLargeTextLayout()
-  const { colorScheme } = useColorScheme()
   return (
-    <View className="flex-1 bg-background">
-      <MobileScreen
-        contentClassName={cn(
-          largeText || step === "businessType"
-            ? "justify-start gap-7"
-            : "justify-center gap-7",
-          step === "businessType" && "pb-28",
-        )}
-        keyboardAutoScrollEnabled={Platform.OS !== "android"}
-        keyboardBottomOffset={48}
-      >
-        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-        <View className="flex-row items-center justify-between gap-3">
-          <Pressable
-            accessibilityLabel={
-              header.step === 1 ? "Back to login" : "Previous step"
-            }
-            accessibilityRole="button"
-            className="size-11 items-center justify-center rounded-full active:bg-muted"
-            haptic
-            onPress={onBack}
-          >
-            <Icon className="size-base text-foreground" name="ChevronLeft" />
-          </Pressable>
-          <Text className="text-xs font-bold text-muted-foreground">
-            Step {header.step} of 4
-          </Text>
-        </View>
-        <AuthBrandHeader subtitle={header.subtitle} title={header.title} />
-        {children}
-      </MobileScreen>
-      {footer}
-    </View>
+    <GreenTillAuthScreen
+      eyebrow={`Step ${header.step} of 4`}
+      title={header.title}
+      subtitle={header.subtitle}
+      onBack={onBack}
+      backLabel={header.step === 1 ? "Back to login" : "Previous step"}
+      compact={step !== "account"}
+      progress={header.step}
+      footer={footer}
+      motionKey={step}
+      testID={`green-gate-setup-${header.step}`}
+    >
+      {children}
+    </GreenTillAuthScreen>
   )
 }
 
@@ -73,7 +47,7 @@ export function ClassicSignUpCategories({
           accessibilityRole="radio"
           accessibilityState={{ selected: selectedKey === profile.key }}
           className={cn(
-            "min-h-14 gap-1 border-b border-border px-4 py-4 active:bg-muted",
+            "min-h-14 flex-row items-center gap-3 border-b border-border px-1 py-4 active:bg-muted",
             selectedKey === profile.key && "bg-primary/10",
           )}
           haptic
@@ -81,10 +55,25 @@ export function ClassicSignUpCategories({
           onPress={() => onSelect(profile)}
           testID={`business-profile-${profile.key}`}
         >
-          <Text className="font-bold text-foreground">{profile.title}</Text>
-          <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
-            {profile.description}
-          </Text>
+          <View
+            className={cn(
+              "size-[22px] shrink-0 items-center justify-center rounded-full border-2",
+              selectedKey === profile.key ? "border-primary" : "border-border",
+            )}
+          >
+            {selectedKey === profile.key ? (
+              <View className="size-2.5 rounded-full bg-primary" />
+            ) : null}
+          </View>
+          <View className="min-w-0 flex-1 gap-1">
+            <Text className="text-sm font-bold [-rn-line-height:21] text-foreground">
+              {profile.title}
+            </Text>
+            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+              {profile.description}
+            </Text>
+          </View>
+          <Icon name="ChevronRight" className="size-sm text-muted-foreground" />
         </Pressable>
       ))}
     </View>

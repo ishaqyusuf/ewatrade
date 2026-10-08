@@ -8,8 +8,8 @@ import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { View } from "react-native"
-import { AuthActionButton, AuthBrandHeader } from "./auth-header"
-import { MobileScreen } from "./screen"
+import { AuthActionButton } from "./auth-header"
+import { AuthFlowScreen } from "./green-till/auth-screen"
 import { StatusBanner } from "./status-banner"
 
 type EligibleAgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
@@ -54,21 +54,20 @@ export function AccountAgeStartupGate({
     )
 
   return (
-    <MobileScreen contentClassName="justify-center gap-6">
+    <AuthFlowScreen
+      appearanceScreen="login"
+      eyebrow="Your account"
+      title={
+        ageStatus.isSuccess ? "Confirm your age range" : "Checking your account"
+      }
+      subtitle={
+        ageStatus.isSuccess
+          ? "ẸwáTrade is for people aged 13 or older. Choose your own age range before opening your workspace."
+          : "Checking your saved age range before opening your workspace."
+      }
+    >
       {/* Keep recovery updates available while workspace access is gated. */}
       <AppAutoUpdateModal restoreRoute={false} />
-      <AuthBrandHeader
-        subtitle={
-          ageStatus.isSuccess
-            ? "EwaTrade is for people aged 13 or older. Choose your own age range before opening your workspace."
-            : "Checking your saved age range before opening your workspace."
-        }
-        title={
-          ageStatus.isSuccess
-            ? "Confirm your age range"
-            : "Checking your account"
-        }
-      />
       {ageStatus.isPending ? (
         <Text className="text-sm text-muted-foreground">
           Checking age status…
@@ -87,7 +86,7 @@ export function AccountAgeStartupGate({
             <Pressable
               key={choice.value}
               accessibilityRole="radio"
-              accessibilityState={{ checked: ageChoice === choice.value }}
+              accessibilityState={{ selected: ageChoice === choice.value }}
               className="min-h-11 flex-row items-center gap-3 rounded-lg border border-border px-3"
               onPress={() => setAgeChoice(choice.value)}
             >
@@ -125,6 +124,6 @@ export function AccountAgeStartupGate({
         </View>
       )}
       <AuthActionButton onPress={auth.signOutLocal}>Sign out</AuthActionButton>
-    </MobileScreen>
+    </AuthFlowScreen>
   )
 }

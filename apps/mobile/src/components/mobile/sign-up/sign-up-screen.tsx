@@ -565,7 +565,7 @@ export function SignUpScreen({
               onChangeText={setOtherBusinessDescription}
               placeholder="Describe your products or services"
               value={otherBusinessDescription}
-              variant="auth"
+              variant={appearance === "classic" ? "green-gate" : "auth"}
             />
           ) : null}
 
@@ -635,7 +635,7 @@ export function SignUpScreen({
             placeholder="Enter your business name"
             editable={!continuation}
             value={businessName}
-            variant="auth"
+            variant={appearance === "classic" ? "green-gate" : "auth"}
           />
           <FormField
             label="Business address"
@@ -643,7 +643,7 @@ export function SignUpScreen({
             onChangeText={setAddressLine1}
             placeholder="Street address"
             value={addressLine1}
-            variant="auth"
+            variant={appearance === "classic" ? "green-gate" : "auth"}
           />
           <View className={largeTextLayout ? "gap-3" : "flex-row gap-3"}>
             <FormField
@@ -652,7 +652,7 @@ export function SignUpScreen({
               onChangeText={setCity}
               placeholder="City"
               value={city}
-              variant="auth"
+              variant={appearance === "classic" ? "green-gate" : "auth"}
             />
             <FormField
               containerClassName="flex-1"
@@ -661,7 +661,7 @@ export function SignUpScreen({
               onChangeText={setPhone}
               placeholder="Phone"
               value={phone}
-              variant="auth"
+              variant={appearance === "classic" ? "green-gate" : "auth"}
             />
           </View>
           <CurrencySelector onChange={setCurrencyCode} value={currencyCode} />
@@ -675,7 +675,7 @@ export function SignUpScreen({
             placeholder="Enter your full name"
             textContentType="name"
             value={name}
-            variant="auth"
+            variant={appearance === "classic" ? "green-gate" : "auth"}
           />
           <FormField
             autoCapitalize="none"
@@ -687,7 +687,7 @@ export function SignUpScreen({
             textContentType="emailAddress"
             editable={!continuation}
             value={email}
-            variant="auth"
+            variant={appearance === "classic" ? "green-gate" : "auth"}
           />
           {legalPublication.isSuccess ? (
             legalPublication.data.acceptanceRequired ? (

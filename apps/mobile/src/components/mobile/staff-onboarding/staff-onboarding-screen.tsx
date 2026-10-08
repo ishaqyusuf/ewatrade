@@ -1,13 +1,12 @@
 import {
   ActionButton,
-  MobileScreen,
   SecondaryOperationalRow,
-  SecondarySheetHeader,
   StatusBadge,
   StatusBanner,
 } from "@/components/mobile"
 import { ClassicStaffOnboardingScreen } from "@/components/mobile/appearances/classic/staff-onboarding-screen"
 import { MarketDayStaffOnboardingScreen } from "@/components/mobile/appearances/market-day/staff-onboarding-screen"
+import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -149,13 +148,12 @@ export function StaffOnboardingScreen() {
 
   if (!isAuthenticated && inviteToken) {
     return (
-      <MobileScreen contentClassName="justify-center gap-6">
-        <SecondarySheetHeader
-          description="Sign in with your invited email address to accept this staff access."
-          icon="ShieldCheck"
-          title="Staff invitation"
-        />
-
+      <AuthFlowScreen
+        appearanceScreen="staff-onboarding"
+        eyebrow="Staff invitation"
+        title="Staff invitation"
+        subtitle="Sign in with your invited email address to accept this staff access."
+      >
         {inviteQuery.isPending ? (
           <View className="border-y border-border py-5">
             <StatusBadge
@@ -202,7 +200,7 @@ export function StaffOnboardingScreen() {
         >
           Sign in to accept invite
         </ActionButton>
-      </MobileScreen>
+      </AuthFlowScreen>
     )
   }
 
@@ -213,13 +211,12 @@ export function StaffOnboardingScreen() {
   if (!isInvitedStaffProfile(profile)) {
     if (inviteToken) {
       return (
-        <MobileScreen contentClassName="justify-center gap-6">
-          <SecondarySheetHeader
-            description="This invite must be accepted with the email address that was added by the business owner."
-            icon="ShieldCheck"
-            title="Wrong account"
-          />
-
+        <AuthFlowScreen
+          appearanceScreen="staff-onboarding"
+          eyebrow="Staff invitation"
+          title="Wrong account"
+          subtitle="This invite must be accepted with the email address that was added by the business owner."
+        >
           <ActionButton onPress={() => router.replace("/login")}>
             Sign in with invited email
           </ActionButton>
@@ -229,7 +226,7 @@ export function StaffOnboardingScreen() {
             title="Wrong account"
             tone="warning"
           />
-        </MobileScreen>
+        </AuthFlowScreen>
       )
     }
 
@@ -238,12 +235,12 @@ export function StaffOnboardingScreen() {
 
   if (ageStatus.isPending || ageStatus.isError || !ageStatus.data?.eligible) {
     return (
-      <MobileScreen contentClassName="justify-center gap-5">
-        <SecondarySheetHeader
-          description="Staff access is for people aged 13 or older. Choose your own age range before entering staff details."
-          icon="ShieldCheck"
-          title="Before accepting staff access"
-        />
+      <AuthFlowScreen
+        appearanceScreen="staff-onboarding"
+        eyebrow="Staff invitation"
+        title="Before accepting staff access"
+        subtitle="Staff access is for people aged 13 or older. Choose your own age range before entering staff details."
+      >
         {ageStatus.isPending ? (
           <StatusBadge icon="Clock" label="Checking age status" tone="muted" />
         ) : ageStatus.isError ? (
@@ -256,7 +253,7 @@ export function StaffOnboardingScreen() {
               <Pressable
                 key={choice.value}
                 accessibilityRole="radio"
-                accessibilityState={{ checked: ageChoice === choice.value }}
+                accessibilityState={{ selected: ageChoice === choice.value }}
                 className="min-h-11 flex-row items-center gap-3 rounded-lg border border-border px-3"
                 onPress={() => setAgeChoice(choice.value)}
               >
@@ -302,7 +299,7 @@ export function StaffOnboardingScreen() {
             tone="destructive"
           />
         ) : null}
-      </MobileScreen>
+      </AuthFlowScreen>
     )
   }
 

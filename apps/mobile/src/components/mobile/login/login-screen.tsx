@@ -152,7 +152,7 @@ export function LoginScreen() {
           placeholder="Enter your email address"
           textContentType="emailAddress"
           value={email}
-          variant="auth"
+          variant={design === "classic" ? "green-gate" : "auth"}
         />
         {usePassword ? (
           <FormField
@@ -165,7 +165,7 @@ export function LoginScreen() {
             secureTextEntry
             textContentType="password"
             value={password}
-            variant="auth"
+            variant={design === "classic" ? "green-gate" : "auth"}
           />
         ) : null}
         <AuthActionButton
