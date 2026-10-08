@@ -131,6 +131,7 @@ export const setupAssistantRouter = createTRPCRouter({
         areas: summarizeSetupAreas(null, []),
         attachments: [],
         mediaEnabled: isSetupAssistantMediaEnabled(),
+        businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
       }
     const [messages, draft, sent] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
@@ -172,6 +173,8 @@ export const setupAssistantRouter = createTRPCRouter({
       areas: summarizeSetupAreas(draft.areas, draft.entities),
       attachments,
       mediaEnabled: isSetupAssistantMediaEnabled(),
+      /** Ranks library illustrations in the setup list's picker. */
+      businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
     }
   }),
 
