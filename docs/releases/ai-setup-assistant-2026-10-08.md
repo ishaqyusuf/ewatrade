@@ -22,7 +22,15 @@ remains disabled. General/native assistants are outside this release.
 
 - Hosted Preview QA selector requested by the owner; Preview-only configuration
   prepared with QA domain routing, server secret and exact origin allowlist.
-- Keyboard walkthrough and non-QA Terms prerequisite live check remain open.
+- Hosted QA domain loading now succeeds and lists six existing profiles. Owner
+  sign-in exposed the global Preview dashboard being resolved as tenant `preview`;
+  the shared domain resolver now reserves that exact dashboard host and keeps
+  other tenant suffix hosts scoped. Regression/transport tests: 7/7. Rebuild and
+  hosted sign-in/keyboard verification remain open.
+- Fresh live DeepSeek farm fixture passed; the approved Production moderation
+  provider allowed fictional catalog text with all pinned categories validated.
+- Terms guard/prerequisite tests: 7/7. Preview intentionally bypasses Terms for
+  all accounts; live Terms card proof requires Production, not a Preview login.
 - Development migrate refused drift from concurrent lead-signup and sales-rep
   changes (`20261007120000_lead_capture_signup`,
   `20261008091528_sales_rep_order_visibility`). No reset or destructive push ran.

@@ -313,7 +313,9 @@ export function extractTenantSlugFromPlatformHostname(
 
   if (
     subdomain === SURFACE_PREFIX_BY_KIND.pos ||
-    subdomain === SURFACE_PREFIX_BY_KIND.dashboard
+    subdomain === SURFACE_PREFIX_BY_KIND.dashboard ||
+    // Hosted Preview uses the global dashboard's account/workspace selector.
+    subdomain === `preview-${SURFACE_PREFIX_BY_KIND.dashboard}`
   ) {
     return null
   }
