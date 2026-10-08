@@ -37,6 +37,7 @@ import { useTRPC } from "@/trpc/client"
 import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
+import { VariableContextProvider } from "nativewind"
 import {
   useCallback,
   useDeferredValue,
@@ -46,14 +47,18 @@ import {
 } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { ledgerDayHeaders } from "./orders-ledger-model"
 
 import {
+  ClassicFirstOrderGate,
   ClassicOrdersFilterRow,
   ClassicOrdersMasthead,
   ClassicOrdersRow,
   ClassicOrdersScreen,
   ClassicOrdersSection,
+  ClassicOrdersSkeleton,
   ClassicOrdersSummary,
+  ClassicPendingOrderRow,
 } from "@/components/mobile/appearances/classic/orders-screen"
 import { MarketDayOrdersScreen } from "@/components/mobile/appearances/market-day/orders-screen"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
@@ -102,6 +107,9 @@ export function OrdersScreen() {
     ? OrdersDispatchFilterRow
     : ClassicOrdersFilterRow
   const Row = isMarketDay ? OrdersDispatchLedgerRow : ClassicOrdersRow
+  const FirstOrderGate = isMarketDay
+    ? CommerceFirstOrderGate
+    : ClassicFirstOrderGate
   const auth = useAuthContext()
   const visibility = useOrderVisibility()
   const rep = isSalesRepRole(auth.profile?.role)
@@ -136,18 +144,19 @@ export function OrdersScreen() {
     filter,
     query,
     isOffline,
+    salesView,
   ])
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const deferredQuery = useDeferredValue(query)
   useEffect(() => {
-    if (isOffline && query) setQuery("")
-  }, [isOffline, query])
+    if (isMarketDay && isOffline && query) setQuery("")
+  }, [isMarketDay, isOffline, query])
   const createdAfter = useMemo(
     () => createdAfterForDateFilter(dateFilter),
     [dateFilter],
   )
   const statuses = useMemo(() => statusesForOrderFilter(filter), [filter])
-  const orders = useInfiniteQuery(
+  const searchedOrders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
         mine: rep && salesView === "mine",
@@ -163,11 +172,39 @@ export function OrdersScreen() {
       },
     ),
   )
+  const savedOrders = useInfiniteQuery(
+    trpc.orders.listPage.infiniteQueryOptions(
+      {
+        mine: rep && salesView === "mine",
+        createdAfter,
+        limit: LIST_PAGE_SIZE,
+        statuses,
+      },
+      {
+        enabled: !isOffline && !isMarketDay,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        retry: false,
+      },
+    ),
+  )
+  const orders = isOffline && !isMarketDay ? savedOrders : searchedOrders
   const loadedOrders = useMemo(
     () => orders.data?.pages.flatMap((page) => page.items) ?? [],
     [orders.data?.pages],
   )
-  const visibleOrders = loadedOrders
+  const visibleOrders = useMemo(() => {
+    if (!isOffline || !query.trim()) return loadedOrders
+    const needle = query.trim().toLowerCase()
+    return loadedOrders.filter((order) =>
+      `${order.orderNumber} ${order.customerName ?? ""} ${order.customerPhone ?? ""} ${order.lines.map((line) => line.snapshot?.catalogItemName ?? "").join(" ")}`
+        .toLowerCase()
+        .includes(needle),
+    )
+  }, [loadedOrders, isOffline, query])
+  const dayHeaders = useMemo(
+    () => ledgerDayHeaders(visibleOrders),
+    [visibleOrders],
+  )
   useEffect(() => {
     const eligible = new Set(
       loadedOrders
@@ -182,18 +219,24 @@ export function OrdersScreen() {
   }, [loadedOrders])
   const visibleProvisionalOrders = useMemo(() => {
     if (filter === "completed" || filter === "cancelled") return []
-    const normalizedQuery = isOffline ? "" : query.trim().toLowerCase()
-    if (!normalizedQuery) return provisionalOrders
-    return provisionalOrders.filter((order) =>
+    const normalizedQuery = query.trim().toLowerCase()
+    const datedOrders = provisionalOrders.filter(
+      (order) =>
+        !createdAfter || new Date(order.createdAtClient) >= createdAfter,
+    )
+    if (!normalizedQuery) return datedOrders
+    return datedOrders.filter((order) =>
       `${order.customerName ?? ""} ${order.customerPhone ?? ""} queued pending sync`
         .toLowerCase()
         .includes(normalizedQuery),
     )
-  }, [filter, isOffline, provisionalOrders, query])
+  }, [filter, provisionalOrders, query, createdAfter])
   const totalCount = orders.data?.pages[0]?.totalCount ?? 0
-  const showSearch = shouldShowListSearch(
-    Math.max(totalCount, loadedOrders.length) + provisionalOrders.length,
-  )
+  const showSearch =
+    !!query ||
+    shouldShowListSearch(
+      Math.max(totalCount, loadedOrders.length) + provisionalOrders.length,
+    )
   const showFirstOrderGate =
     !isOffline &&
     availabilityResolved &&
@@ -251,34 +294,38 @@ export function OrdersScreen() {
                   {selectingReceipts ? "Cancel selection" : "Select receipts"}
                 </ActionButton>
               ) : null}
-              <EmptyState
-                actionLabel={
-                  (orders.isPending && !isOffline) || isOffline
-                    ? undefined
-                    : "Clear filters"
-                }
-                actionProps={{ onPress: resetFilters, variant: "outline" }}
-                className="mt-3"
-                icon="ReceiptText"
-                message={
-                  orders.isPending && !isOffline
-                    ? "Loading Commercial Orders."
-                    : isOffline
-                      ? "Reconnect to refresh Orders from your workspace."
-                      : query || filter !== "all" || dateFilter !== "all"
-                        ? "Try another date, search, or status filter."
-                        : "New Product and Service Orders will appear here."
-                }
-                title={
-                  orders.isPending && !isOffline
-                    ? "Loading orders"
-                    : isOffline
-                      ? "No cached orders"
-                      : query || filter !== "all" || dateFilter !== "all"
-                        ? "No matching orders"
-                        : "No orders yet"
-                }
-              />
+              {!isMarketDay && orders.isPending && !isOffline ? (
+                <ClassicOrdersSkeleton />
+              ) : (
+                <EmptyState
+                  actionLabel={
+                    (orders.isPending && !isOffline) || isOffline
+                      ? undefined
+                      : "Clear filters"
+                  }
+                  actionProps={{ onPress: resetFilters, variant: "outline" }}
+                  className="mt-3"
+                  icon="ReceiptText"
+                  message={
+                    orders.isPending && !isOffline
+                      ? "Loading Commercial Orders."
+                      : isOffline
+                        ? "Reconnect to refresh Orders from your workspace."
+                        : query || filter !== "all" || dateFilter !== "all"
+                          ? "Try another date, search, or status filter."
+                          : "New Product and Service Orders will appear here."
+                  }
+                  title={
+                    orders.isPending && !isOffline
+                      ? "Loading orders"
+                      : isOffline
+                        ? "No cached orders"
+                        : query || filter !== "all" || dateFilter !== "all"
+                          ? "No matching orders"
+                          : "No orders yet"
+                  }
+                />
+              )}
             </Section>
           ) : null
         }
@@ -288,6 +335,12 @@ export function OrdersScreen() {
               title={rep ? "Your sales" : "Orders"}
               businessName={auth.profile?.businessName ?? "Your business"}
               onCustomersPress={() => router.push("/customer-book-modal")}
+              onSelectReceipts={() => {
+                setSelectingReceipts((value) => !value)
+                setReceiptIds([])
+              }}
+              selectingReceipts={selectingReceipts}
+              selectionDisabled={isOffline || !visibleOrders.length}
               onLayout={(event) => {
                 const height = event.nativeEvent.layout.height
                 setMastheadHeight((current) =>
@@ -312,7 +365,26 @@ export function OrdersScreen() {
               </View>
             ) : null}
             {!showFirstOrderGate ? (
-              <Summary dateFilter={dateFilter} orders={visibleOrders} />
+              isMarketDay ? (
+                <Summary dateFilter={dateFilter} orders={visibleOrders} />
+              ) : (
+                <ClassicOrdersSummary
+                  dateFilter={dateFilter}
+                  orders={visibleOrders}
+                  totalCount={isOffline ? visibleOrders.length : totalCount}
+                  onDateChange={setDateFilter}
+                  isOffline={isOffline}
+                  savedAt={
+                    orders.dataUpdatedAt
+                      ? new Date(orders.dataUpdatedAt).toLocaleTimeString(
+                          undefined,
+                          { hour: "2-digit", minute: "2-digit" },
+                        )
+                      : undefined
+                  }
+                  loading={orders.isPending && !isOffline}
+                />
+              )
             ) : null}
             <Section>
               {provisionalOrders.length > 0 ? (
@@ -341,7 +413,7 @@ export function OrdersScreen() {
                 />
               ) : null}
               {showFirstOrderGate ? (
-                <CommerceFirstOrderGate
+                <FirstOrderGate
                   catalogReady={availability.hasActiveSellableItems}
                   onPrimaryPress={() => {
                     if (availability.hasActiveSellableItems) {
@@ -353,21 +425,26 @@ export function OrdersScreen() {
                 />
               ) : (
                 <>
-                  <FilterRow
-                    active={dateFilter}
-                    labels={{
-                      "30_days": "30 days",
-                      "7_days": "7 days",
-                      all: "All time",
-                      today: "Today",
-                    }}
-                    onChange={setDateFilter}
-                    values={["today", "7_days", "30_days", "all"]}
-                  />
+                  {isMarketDay ? (
+                    <FilterRow
+                      active={dateFilter}
+                      labels={{
+                        "30_days": "30 days",
+                        "7_days": "7 days",
+                        all: "All time",
+                        today: "Today",
+                      }}
+                      onChange={setDateFilter}
+                      values={["today", "7_days", "30_days", "all"]}
+                    />
+                  ) : null}
                   <FilterRow
                     active={filter}
                     labels={{
-                      all: `All ${totalCount}`,
+                      all:
+                        filter === "all" && !isOffline && orders.data
+                          ? `All ${totalCount}`
+                          : "All",
                       cancelled: "Cancelled",
                       completed: "Done",
                       open: "Open",
@@ -375,7 +452,7 @@ export function OrdersScreen() {
                     onChange={setFilter}
                     values={["all", "open", "completed", "cancelled"]}
                   />
-                  {showSearch && !isOffline ? (
+                  {showSearch && (!isMarketDay || !isOffline) ? (
                     <FormField
                       autoCapitalize="none"
                       label="Search"
@@ -387,18 +464,27 @@ export function OrdersScreen() {
                   ) : null}
                 </>
               )}
-              {visibleProvisionalOrders.map((order) => (
-                <CommercePendingOrderRow
-                  key={order.clientCommandId}
-                  order={order}
-                />
-              ))}
+              {visibleProvisionalOrders.map((order) =>
+                isMarketDay ? (
+                  <CommercePendingOrderRow
+                    key={order.clientCommandId}
+                    order={order}
+                  />
+                ) : (
+                  <ClassicPendingOrderRow
+                    key={order.clientCommandId}
+                    order={order}
+                    onPress={() => router.push("/sync-status-modal")}
+                  />
+                ),
+              )}
             </Section>
           </View>
         }
         onScroll={handleScroll}
         onEndReached={() => {
           if (
+            !isOffline &&
             shouldFetchNextListPage({
               hasNextPage: Boolean(orders.hasNextPage),
               isFetchingNextPage: orders.isFetchingNextPage,
@@ -418,7 +504,17 @@ export function OrdersScreen() {
         }
         renderItem={({ index, item }) => (
           <Section>
-            {selectingReceipts ? (
+            {!isMarketDay && dayHeaders.has(item.id) ? (
+              <View className="mt-3 mb-2 flex-row flex-wrap items-center justify-between gap-2">
+                <Text className="text-xs font-bold text-muted-foreground">
+                  {dayHeaders.get(item.id)?.label}
+                </Text>
+                <Text className="text-xs text-muted-foreground">
+                  Loaded · {dayHeaders.get(item.id)?.total}
+                </Text>
+              </View>
+            ) : null}
+            {isMarketDay && selectingReceipts ? (
               <Pressable
                 accessibilityRole="checkbox"
                 accessibilityLabel={`Select ${item.orderNumber}`}
@@ -451,6 +547,13 @@ export function OrdersScreen() {
             ) : null}
             <Row
               index={index}
+              selecting={selectingReceipts}
+              selected={receiptIds.includes(item.id)}
+              disabled={
+                selectingReceipts &&
+                (!isReceiptOrderEligible(item.status) ||
+                  (!receiptIds.includes(item.id) && receiptIds.length >= 20))
+              }
               onPress={() => {
                 if (selectingReceipts) {
                   if (isReceiptOrderEligible(item.status))
@@ -467,33 +570,35 @@ export function OrdersScreen() {
         showsVerticalScrollIndicator={false}
       />
       {selectingReceipts ? (
-        <View
-          className="gap-2 border-t border-border bg-background px-4 pt-3"
-          style={{
-            paddingBottom: isDockHidden
+        <VariableContextProvider
+          value={{
+            "--receipt-bar-bottom": isDockHidden
               ? Math.max(insets.bottom, 16)
               : Math.max(insets.bottom + 90, 106),
           }}
         >
-          <Text accessibilityLiveRegion="polite">
-            {receiptIds.length} selected · maximum 20
-          </Text>
-          <ActionButton
-            disabled={!receiptIds.length || isOffline}
-            onPress={() =>
-              router.push({
-                pathname: "/order-receipts-modal",
-                params: { orderIds: receiptIds.join(",") },
-              })
-            }
-          >
-            Generate receipts
-          </ActionButton>
-        </View>
+          <View className="gap-2 border-t border-border bg-background px-[18px] pt-3 pb-[var(--receipt-bar-bottom)]">
+            <Text accessibilityLiveRegion="polite">
+              {receiptIds.length} selected · maximum 20
+            </Text>
+            <ActionButton
+              disabled={!receiptIds.length || isOffline}
+              onPress={() =>
+                router.push({
+                  pathname: "/order-receipts-modal",
+                  params: { orderIds: receiptIds.join(",") },
+                })
+              }
+            >
+              Generate receipts
+            </ActionButton>
+          </View>
+        </VariableContextProvider>
       ) : null}
       {isDockHidden && !showFirstOrderGate && !selectingReceipts ? (
         <ListCreateFab
           accessibilityLabel="Add order"
+          tone={isMarketDay ? undefined : "gold"}
           dockHidden
           onPress={() => {
             if (availability.hasActiveSellableItems) {

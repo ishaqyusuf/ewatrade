@@ -6,6 +6,7 @@ const QA_ROUTES = new Set([
   // apply their own sign-in and role checks.
   "closeout-modal",
   "catalog-items-modal",
+  "orders",
   "create-sale-modal",
   "customer-book-modal",
   "first-product-setup-modal",
