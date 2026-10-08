@@ -290,6 +290,7 @@ export const retailOpsStaffRouter = createTRPCRouter({
           throw new TRPCError({
             code: "FORBIDDEN",
             message: error.message,
+            cause: error,
           })
         }
 

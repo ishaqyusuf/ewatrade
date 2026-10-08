@@ -24,6 +24,8 @@ export type ErrorCode =
   | "OFFLINE_REVIEW_REQUIRED"
   | "PAYMENT_PROVIDER_FAILED"
   | "PERMISSION_DENIED"
+  | "PLAN_LIMIT_REACHED"
+  | "PLAN_UPGRADE_REQUIRED"
   | "QUOTE_EXPIRED"
   | "RATE_LIMITED"
   | "REGISTRAR_PROVIDER_FAILED"
@@ -45,19 +47,19 @@ type ErrorDescriptor = {
 
 const descriptors: Record<ErrorCode, ErrorDescriptor> = {
   ONBOARDING_APPROVAL_REQUIRED: {
-    message: "Open your approved setup email to continue signup.",
+    message: "Start from Create your store to continue signup.",
     reportable: false,
     retryable: false,
     status: 403,
   },
   ONBOARDING_INVALID: {
-    message: "This setup link is invalid. Request a new setup link.",
+    message: "This setup link is invalid. Start a new signup.",
     reportable: false,
     retryable: false,
     status: 404,
   },
   ONBOARDING_EXPIRED: {
-    message: "This setup link has expired. Request a new setup link.",
+    message: "This setup link has expired. Start a new signup.",
     reportable: false,
     retryable: false,
     status: 410,
@@ -69,13 +71,13 @@ const descriptors: Record<ErrorCode, ErrorDescriptor> = {
     status: 410,
   },
   ONBOARDING_IDENTITY: {
-    message: "Use the approved email and business name for this setup.",
+    message: "Use the email and business name you started signup with.",
     reportable: false,
     retryable: false,
     status: 403,
   },
   ONBOARDING_UNVERIFIED: {
-    message: "Verify the approved email before completing setup.",
+    message: "Confirm your email before completing setup.",
     reportable: false,
     retryable: false,
     status: 412,
@@ -87,6 +89,20 @@ const descriptors: Record<ErrorCode, ErrorDescriptor> = {
     status: 409,
   },
 
+  PLAN_LIMIT_REACHED: {
+    message:
+      "You’ve reached a limit on your current plan. Upgrade your plan in Settings → Billing.",
+    reportable: false,
+    retryable: false,
+    status: 403,
+  },
+  PLAN_UPGRADE_REQUIRED: {
+    message:
+      "Your current plan doesn’t include this feature. Upgrade your plan in Settings → Billing.",
+    reportable: false,
+    retryable: false,
+    status: 403,
+  },
   STORE_LIMIT_REACHED: {
     message:
       "You’ve reached your plan’s store limit. Upgrade your plan in Settings → Subscription to add more stores.",
@@ -261,8 +277,16 @@ export type AppErrorOptions = {
   code: ErrorCode
   internalMessage?: string
   operation?: string
+  /** Plan errors only: server-authored upgrade text that replaces the fixed message. */
+  publicMessage?: string
   referenceId?: string
 }
+
+// Codes whose source error may carry its own server-authored public text.
+const CUSTOM_PUBLIC_MESSAGE_CODES = new Set<ErrorCode>([
+  "PLAN_LIMIT_REACHED",
+  "PLAN_UPGRADE_REQUIRED",
+])
 
 function createReferenceId() {
   const runtimeCrypto = globalThis.crypto
@@ -291,7 +315,10 @@ export class AppError extends Error {
     this.name = "AppError"
     this.code = options.code
     this.operation = options.operation
-    this.publicMessage = descriptor.message
+    this.publicMessage =
+      options.publicMessage && CUSTOM_PUBLIC_MESSAGE_CODES.has(options.code)
+        ? options.publicMessage
+        : descriptor.message
     this.referenceId = options.referenceId ?? createReferenceId()
     this.reportable = descriptor.reportable
     this.retryable = descriptor.retryable
@@ -316,6 +343,11 @@ function messageOf(value: unknown) {
   const message =
     value instanceof Error ? value.message : record(value)?.message
   return typeof message === "string" ? message : ""
+}
+
+function publicMessageOf(value: unknown) {
+  const publicMessage = record(value)?.publicMessage
+  return typeof publicMessage === "string" ? publicMessage : undefined
 }
 
 function statusOf(value: unknown) {
@@ -357,6 +389,8 @@ function classifyCode(error: unknown): ErrorCode {
   const code = codeOf(error)
   const externalProviderCode = providerCode(error)
   if (code === "STORE_LIMIT_REACHED") return "STORE_LIMIT_REACHED"
+  if (code === "ENTITLEMENT_LIMIT_REACHED") return "PLAN_LIMIT_REACHED"
+  if (code === "PLAN_FEATURE_UNAVAILABLE") return "PLAN_UPGRADE_REQUIRED"
   if (code === "CATALOG_TERMS_REQUIRED") return "CATALOG_TERMS_REQUIRED"
   if (externalProviderCode) return externalProviderCode
   if (errorRecord?.name === "ZodError" || Array.isArray(errorRecord?.issues))
@@ -435,6 +469,7 @@ export function classifyError(
       cause,
       code: classifyCode(cause),
       internalMessage: messageOf(cause) || undefined,
+      publicMessage: publicMessageOf(cause),
     })
     classifiedErrors.set(causeRecord, classifiedCause)
     if (errorRecord) classifiedErrors.set(errorRecord, classifiedCause)
@@ -445,6 +480,7 @@ export function classifyError(
     cause: error,
     code: classifyCode(error),
     internalMessage: messageOf(error) || undefined,
+    publicMessage: publicMessageOf(error),
   })
   if (errorRecord) classifiedErrors.set(errorRecord, classified)
   return classified

@@ -6,10 +6,16 @@ import type { TenantContext } from "@/lib/tenant"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import {
+  RETAIL_OPS_PLAN_FEATURE_LABELS,
+  type RetailOpsPaidPlanId,
+  type RetailOpsPlanFeature,
+} from "@ewatrade/db/subscription-plans"
 import { Button } from "@ewatrade/ui"
 import {
   Analytics01Icon,
   Archive01Icon,
+  Invoice01Icon,
   Package01Icon,
   Settings01Icon,
   Store04Icon,
@@ -39,6 +45,7 @@ type SettingsPanelItem = {
 const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
   businesses: "Businesses",
   offlineDevices: "Offline devices",
+  ordersPerMonth: "Orders this month",
   products: "Catalog items",
   reportsHistoryDays: "Report history",
   staff: "Staff",
@@ -47,10 +54,20 @@ const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
 const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
   businesses: Store04Icon,
   offlineDevices: Archive01Icon,
+  ordersPerMonth: Invoice01Icon,
   products: Package01Icon,
   reportsHistoryDays: Analytics01Icon,
   staff: UserCircle02Icon,
 }
+
+const PLAN_FEATURE_ORDER: RetailOpsPlanFeature[] = [
+  "invoices",
+  "finance",
+  "staff",
+  "suppliers",
+  "advancedReports",
+  "multipleBusinesses",
+]
 
 function formatDate(value: string | null) {
   if (!value) return "Not set"
@@ -60,7 +77,9 @@ function formatDate(value: string | null) {
   }).format(new Date(value))
 }
 
-function formatLimit(key: Entitlement["key"], limit: number) {
+function formatLimit(key: Entitlement["key"], limit: number | null) {
+  if (limit === null) return "Unlimited"
+
   if (key === "reportsHistoryDays") {
     return `${limit} days`
   }
@@ -71,6 +90,10 @@ function formatLimit(key: Entitlement["key"], limit: number) {
 function formatUsage(entitlement: Entitlement) {
   if (entitlement.key === "reportsHistoryDays") {
     return `${formatLimit(entitlement.key, entitlement.limit)} included`
+  }
+
+  if (entitlement.limit === null) {
+    return `${new Intl.NumberFormat("en-NG").format(entitlement.used)} used · no limit`
   }
 
   return `${new Intl.NumberFormat("en-NG").format(
@@ -246,9 +269,13 @@ function PlanCard({
 }: {
   checkoutPending: boolean
   current: boolean
-  onCheckout: (planId: Plan["id"]) => void
+  onCheckout: (planId: RetailOpsPaidPlanId) => void
   plan: Plan
 }) {
+  const excludedFeatures = PLAN_FEATURE_ORDER.filter(
+    (feature) => !plan.features.includes(feature),
+  )
+
   return (
     <div
       className={cn(
@@ -259,18 +286,18 @@ function PlanCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold">{plan.name}</h2>
+          <p className="mt-0.5 text-xs font-medium text-foreground">
+            {plan.priceLabel}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {plan.description}
           </p>
         </div>
-        <span
-          className={cn(
-            "rounded-full px-2.5 py-1 text-xs font-medium",
-            current ? "bg-primary/10 text-primary" : "bg-muted text-foreground",
-          )}
-        >
-          {current ? "Current" : plan.priceLabel}
-        </span>
+        {current ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            Current
+          </span>
+        ) : null}
       </div>
       <dl className="mt-4 grid gap-2 text-xs text-muted-foreground">
         <div className="flex justify-between gap-3">
@@ -292,27 +319,49 @@ function PlanCard({
           </dd>
         </div>
         <div className="flex justify-between gap-3">
+          <dt>Orders a month</dt>
+          <dd className="font-medium text-foreground">
+            {formatLimit("ordersPerMonth", plan.limits.ordersPerMonth)}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-3">
           <dt>Report history</dt>
           <dd className="font-medium text-foreground">
             {formatLimit("reportsHistoryDays", plan.limits.reportsHistoryDays)}
           </dd>
         </div>
       </dl>
-      <Button
-        appearance="form"
-        type="button"
-        variant={current ? "outline" : "default"}
-        size="sm"
-        disabled={current || checkoutPending}
-        onClick={() => onCheckout(plan.id)}
-        className="mt-4 w-full rounded-none"
-      >
-        {current
-          ? "Active plan"
-          : checkoutPending
-            ? "Preparing checkout"
-            : "Request upgrade"}
-      </Button>
+      {excludedFeatures.length ? (
+        <div className="mt-4 border-t border-border/70 pt-3 text-xs">
+          <p className="font-medium text-foreground">Not included</p>
+          <p className="mt-1 text-muted-foreground">
+            {excludedFeatures
+              .map((feature) => RETAIL_OPS_PLAN_FEATURE_LABELS[feature])
+              .join(", ")}
+          </p>
+        </div>
+      ) : null}
+      {plan.id === "free" ? null : (
+        <div className="mt-auto pt-4">
+          <Button
+            appearance="form"
+            type="button"
+            variant={current ? "outline" : "default"}
+            size="sm"
+            disabled={current || checkoutPending}
+            onClick={() => {
+              if (plan.id !== "free") onCheckout(plan.id)
+            }}
+            className="w-full rounded-none"
+          >
+            {current
+              ? "Active plan"
+              : checkoutPending
+                ? "Preparing checkout"
+                : "Request upgrade"}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -343,7 +392,7 @@ export function RetailOpsSubscriptionSettings({
     trpc.retailOps.createSubscriptionCheckoutIntent.mutationOptions(),
   )
   const snapshot = subscriptionQuery.data
-  const requestCheckout = (planId: Plan["id"]) => {
+  const requestCheckout = (planId: RetailOpsPaidPlanId) => {
     checkoutIntentMutation.mutate({
       planId,
       surface: "dashboard",
@@ -400,11 +449,20 @@ export function RetailOpsSubscriptionSettings({
 
           <dl className="mt-6 grid gap-3 text-sm">
             <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
-              <dt className="text-muted-foreground">Trial ends</dt>
+              <dt className="text-muted-foreground">Price</dt>
               <dd className="font-medium">
-                {formatDate(snapshot?.subscription.trialEndsAt ?? null)}
+                {snapshot?.plan.priceLabel ?? "Loading..."}
               </dd>
             </div>
+            {snapshot?.subscription.status === "trialing" &&
+            snapshot.subscription.trialEndsAt ? (
+              <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
+                <dt className="text-muted-foreground">Trial ends</dt>
+                <dd className="font-medium">
+                  {formatDate(snapshot.subscription.trialEndsAt)}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
               <dt className="text-muted-foreground">Current period ends</dt>
               <dd className="font-medium">
@@ -418,7 +476,7 @@ export function RetailOpsSubscriptionSettings({
                   ? "Billing record"
                   : snapshot?.subscription.source === "tenant_metadata"
                     ? "Production metadata"
-                    : "Starter trial fallback"}
+                    : "Launch plan"}
               </dd>
             </div>
           </dl>
@@ -443,7 +501,7 @@ export function RetailOpsSubscriptionSettings({
         </section>
       </div>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {(snapshot?.plans ?? []).map((plan) => (
           <PlanCard
             key={plan.id}
@@ -460,10 +518,10 @@ export function RetailOpsSubscriptionSettings({
       ) : null}
 
       <div className="border border-border/70 bg-background px-4 py-3 text-xs text-muted-foreground">
-        Billing checkout is provider-neutral in this phase. Plan limits are
-        enforced by production Retail Ops APIs; dedicated subscription rows,
-        checkout, webhooks, invoices, and app-store purchases remain future
-        slices.
+        Free stays free forever. Starter, Growth and Pro are free during launch
+        and paid checkout is off, so no plan charges you yet. Plan limits and
+        Free-plan features are enforced by the Retail Ops APIs; Free orders
+        reset on the first day of each month (UTC).
       </div>
     </div>
   )

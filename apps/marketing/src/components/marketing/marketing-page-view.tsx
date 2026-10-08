@@ -1,4 +1,5 @@
 import type { MarketingExperienceId } from "@/lib/marketing-experience"
+import { isMarketingSignupEnabled } from "@/lib/marketing-signup"
 import { MarketingExperience } from "./marketing-experience"
 
 type MarketingPageViewProps = {
@@ -6,5 +7,10 @@ type MarketingPageViewProps = {
 }
 
 export function MarketingPageView({ experience }: MarketingPageViewProps) {
-  return <MarketingExperience experience={experience} signupEnabled={false} />
+  return (
+    <MarketingExperience
+      experience={experience}
+      signupEnabled={isMarketingSignupEnabled()}
+    />
+  )
 }

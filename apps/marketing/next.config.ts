@@ -25,7 +25,18 @@ function isInternalQaBuild(env = process.env) {
 const nextConfig: NextConfig = {
   logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
   async headers() {
-    return [{ source: "/signup", headers: onboardingSignupResponseHeaders }]
+    return [
+      { source: "/signup", headers: onboardingSignupResponseHeaders },
+      {
+        source: "/media/setup-2026-10-08/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ]
   },
   pageExtensions: isInternalQaBuild()
     ? ["qa.ts", "tsx", "ts", "jsx", "js"]
