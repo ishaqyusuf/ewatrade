@@ -32,6 +32,7 @@ import {
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { STAFF_SEARCH_LIMIT } from "./staff-model"
+import { OrderVisibilityCard } from "./order-visibility-card"
 import { StaffInvitationSheet } from "./staff-invitation-sheet"
 import { useStaffDirectory } from "./use-staff-directory"
 
@@ -150,6 +151,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             ListHeaderComponent={
               <View className="gap-4 pb-4">
                 <Header loadedCount={rows.length} />
+                <OrderVisibilityCard />
                 <View className="gap-3 px-4">
                   {invitation.notice ? (
                     <StatusBanner icon="Check" message={invitation.notice} />

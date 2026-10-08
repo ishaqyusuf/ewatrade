@@ -73,7 +73,7 @@ export async function scopeStaffRequest(
         select: { storeId: true },
       }),
     )
-  if (typeof input.orderNumber === "string")
+  if (path === "orders.get" && typeof input.orderNumber === "string")
     checkRecord(
       await ctx.db.commercialOrder.findFirst({
         where: {

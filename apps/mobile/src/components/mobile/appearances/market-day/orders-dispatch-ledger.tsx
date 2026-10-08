@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 export type { OrderFilter as OrderDispatchFilter } from "@/components/mobile/orders/orders-presentation"
 
 export function OrdersDispatchLedgerMasthead({
+  title = "Orders",
   businessName,
   onCustomersPress,
   onLayout,
@@ -61,7 +62,7 @@ export function OrdersDispatchLedgerMasthead({
             maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
             className={cn(styles.title, "text-market-on-marigold")}
           >
-            Orders
+            {title}
           </Text>
         </View>
         <Pressable

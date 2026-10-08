@@ -9,6 +9,7 @@ export type OrdersScreenProps = {
 }
 
 export type OrdersMastheadProps = {
+  title?: string
   businessName: string
   onCustomersPress: () => void
   onLayout?: (event: LayoutChangeEvent) => void
