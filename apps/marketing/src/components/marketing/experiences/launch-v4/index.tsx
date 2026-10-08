@@ -5,6 +5,7 @@ import {
   usePlatform,
 } from "@ewatrade/onboarding/components/product-preview/platform"
 import { useEffect, useState } from "react"
+import { preload } from "react-dom"
 import type { MarketingExperienceProps } from "../../marketing-experience-contract"
 import { DayTimeline } from "./day-timeline"
 import { Header } from "./header"
@@ -85,6 +86,16 @@ function Landing({ signupEnabled }: MarketingExperienceProps) {
   )
 }
 export function LaunchV4Landing(props: MarketingExperienceProps) {
+  preload("/shop-v3/cal-sans.woff2", {
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  })
+  preload("/shop-v3/inter-regular.woff2", {
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  })
   return (
     <PlatformProvider>
       <Landing {...props} />

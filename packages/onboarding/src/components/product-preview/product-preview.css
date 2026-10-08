@@ -8,7 +8,7 @@
 }
 @font-face {
   font-family: "EwInter";
-  src: url("/shop-v3/inter-regular.ttf") format("truetype");
+  src: url("/shop-v3/inter-regular.woff2") format("woff2");
   font-display: swap;
 }
 

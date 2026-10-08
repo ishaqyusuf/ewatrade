@@ -50,7 +50,7 @@ export function ProductPreview({
     const name = view === "overview" || view === "team" ? "home" : view
     return (
       <div className="ew-phone" role="img" aria-label={label}>
-        <div className="ew-phone-screen" ref={outer}>
+        <div className="ew-phone-screen" ref={outer} aria-hidden="true">
           <div className="ew-island" />
           <div className="ew-app" ref={inner}>
             <div className="ew-status">
@@ -89,7 +89,7 @@ export function ProductPreview({
         </span>
         <span className="b-url">dashboard.ewatrade.com</span>
       </div>
-      <div className="b-view" ref={outer}>
+      <div className="b-view" ref={outer} aria-hidden="true">
         <div className="b-view-in" ref={inner}>
           <div className="b-web ew-dash ew-web">
             <div className="ew-dash-side">
