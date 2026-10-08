@@ -123,10 +123,12 @@ export function ActionButton({
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
             numberOfLines={1}
             className={cn(
-              "text-[14.5px] font-extrabold [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+              "[-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
               foregroundColorOverride || disabledForegroundColor
                 ? "text-[color:var(--action-foreground)]"
                 : foregroundClassName,
+              // After the color classes, whose text-sm/font-bold would win.
+              "text-[14.5px] font-extrabold",
               largeTextLayout ? "[-rn-line-height:28]" : "[-rn-line-height:20]",
               labelClassName,
             )}
