@@ -187,3 +187,11 @@ export const customerLedgerAllocationHistorySchema = z
     limit: z.number().int().min(1).max(50).default(20),
   })
   .strict()
+
+export const customerLedgerReceivablesSchema = z
+  .object({
+    query: z.string().trim().max(160).optional(),
+    cursor: id.optional(),
+    limit: z.number().int().min(1).max(10).default(10),
+  })
+  .strict()

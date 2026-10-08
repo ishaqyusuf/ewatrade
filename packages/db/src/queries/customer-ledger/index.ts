@@ -11,3 +11,5 @@ export * from "./refunds"
 export * from "./reversals"
 export * from "./sources"
 export * from "./allocation-history"
+
+export * from "./receivables"

@@ -7,6 +7,7 @@ import {
   getCustomerLedgerEntryDetail,
   getCustomerLedgerStatement,
   listCustomerLedgerAccounts,
+  listCustomerLedgerReceivables,
   listCustomerLedgerSources,
   recordCustomerLedgerOpening,
   recordCustomerLedgerReceipt,
@@ -24,6 +25,7 @@ import {
   customerLedgerEntryDetailSchema,
   customerLedgerOpeningSchema,
   customerLedgerReceiptSchema,
+  customerLedgerReceivablesSchema,
   customerLedgerRefundCreditSchema,
   customerLedgerReleaseAllocationSchema,
   customerLedgerReverseEntrySchema,
@@ -34,6 +36,11 @@ import { financeProcedure } from "../finance-procedure"
 import { createTRPCRouter } from "../init"
 
 export const customerLedgerRouter = createTRPCRouter({
+  receivables: financeProcedure
+    .input(customerLedgerReceivablesSchema)
+    .query(({ ctx, input }) =>
+      listCustomerLedgerReceivables(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
   allocationHistory: financeProcedure
     .input(customerLedgerAllocationHistorySchema)
     .query(({ ctx, input }) =>
