@@ -70,11 +70,47 @@ const productionSecrets = new Set([
   "PLAY_REFUND_REVIEW_DECRYPTION_KEYS",
 ])
 
-export function assertProductionApiProjectEnvironment(response) {
+export function assertProductionApiProjectEnvironment(
+  response,
+  sharedInventory,
+  projectId,
+) {
   if (!response || !Array.isArray(response.envs))
     throw new Error("API_DEPLOY_PRODUCTION_ENV_INVENTORY_UNAVAILABLE")
 
-  const productionEntries = response.envs.filter(
+  let entries = response.envs
+  if (sharedInventory !== undefined) {
+    if (
+      !projectId ||
+      !Array.isArray(sharedInventory?.data) ||
+      sharedInventory.pagination?.next
+    )
+      throw new Error("API_DEPLOY_SHARED_ENV_INVENTORY_UNAVAILABLE")
+    const shared = sharedInventory.data
+      .filter(
+        (entry) =>
+          Array.isArray(entry.projectId) && entry.projectId.includes(projectId),
+      )
+      .map((entry) => ({
+        ...entry,
+        key:
+          entry.key?.startsWith("EWATRADE_") &&
+          REQUIRED_PRODUCTION_API_ENV_KEYS.includes(entry.key.slice(9))
+            ? entry.key.slice(9)
+            : entry.key,
+      }))
+      .filter(
+        (entry) =>
+          !response.envs.some(
+            (plain) =>
+              plain.key === entry.key &&
+              plain.target?.includes("production") &&
+              !plain.gitBranch,
+          ),
+      )
+    entries = [...entries, ...shared]
+  }
+  const productionEntries = entries.filter(
     (entry) =>
       entry &&
       Array.isArray(entry.target) &&
