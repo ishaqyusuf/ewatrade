@@ -1,12 +1,12 @@
-import { PageHeader, PageToolbar } from "@/components/page-header"
-import { PrescriptionReport } from "@/components/prescriptions/prescription-report"
+import {
+  PrescriptionReport,
+  PrescriptionReportSkeleton,
+} from "@/components/prescriptions/prescription-report"
 import { loadPrescriptionReportParams } from "@/hooks/use-prescription-report-params"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
-import { Button } from "@ewatrade/ui"
 import type { Metadata } from "next"
-import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
@@ -38,24 +38,7 @@ export default async function Page({
   return (
     <HydrateClient>
       <div className="grid min-w-0 flex-1 gap-6 pt-6">
-        <PageHeader
-          eyebrow="All tenant stores · Last 30 days"
-          title="Prescription operations"
-          description="De-identified lifecycle and commercial metrics."
-        >
-          <PageToolbar
-            actions={
-              <Button
-                render={<Link href="/prescriptions" />}
-                variant="outline"
-                className="h-9 rounded-none"
-              >
-                Back to queue
-              </Button>
-            }
-          />
-        </PageHeader>
-        <Suspense fallback={<div className="h-72 animate-pulse bg-muted" />}>
+        <Suspense fallback={<PrescriptionReportSkeleton />}>
           <PrescriptionReport
             from={from}
             stores={ctx.stores.map((item) => ({

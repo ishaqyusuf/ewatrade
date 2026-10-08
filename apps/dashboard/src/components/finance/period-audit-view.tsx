@@ -1,7 +1,13 @@
 "use client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  InlineRowCheckbox,
+  InlineSelectionBar,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { Button } from "@ewatrade/ui"
+import { useMemo } from "react"
 
 export type PeriodAuditEvent = {
   id: string
@@ -39,7 +45,10 @@ export function FinancePeriodAuditView({
   hasNextPage,
   onLoadOlder,
   onRefresh,
+  scope,
 }: {
+  /** Selection resets when this changes, e.g. the Book. */
+  scope: string
   events: readonly PeriodAuditEvent[]
   pending: boolean
   error: string | null
@@ -48,6 +57,8 @@ export function FinancePeriodAuditView({
   onLoadOlder: () => void
   onRefresh: () => void
 }) {
+  const eventIds = useMemo(() => events.map((event) => event.id), [events])
+  const selection = useInlineSelection({ ids: eventIds, scope })
   if (pending) return <output>Loading close/reopen history…</output>
   if (error) {
     return (
@@ -67,29 +78,50 @@ export function FinancePeriodAuditView({
   return (
     <div className="grid gap-3 pt-3">
       {events.length ? (
-        <ol className="divide-y divide-border">
-          {events.map((event) => {
-            const audit = auditText(event.result)
-            return (
-              <li key={event.id} className="grid gap-1 py-3 text-sm">
-                <p className="font-medium">
-                  {event.kind === "PERIOD_CLOSE" ? "Closed" : "Reopened"} period
-                  through {audit?.through || "unknown date"}
-                </p>
-                <p className="break-words">
-                  {audit?.reason || "No recorded reason"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Recorded {new Date(event.createdAt).toISOString()} · Snapshot{" "}
-                  {audit?.snapshot || "unknown"}
-                </p>
-                <p className="break-all text-xs text-muted-foreground">
-                  Actor: {event.actorUserId}
-                </p>
-              </li>
-            )
-          })}
-        </ol>
+        <div className="grid gap-1">
+          <InlineSelectionBar
+            label="Select all loaded close/reopen changes"
+            selection={selection}
+          />
+          <ol className="divide-y divide-border">
+            {events.map((event) => {
+              const audit = auditText(event.result)
+              return (
+                <li
+                  key={event.id}
+                  className="flex items-start gap-3 py-3 text-sm"
+                  data-state={
+                    selection.isSelected(event.id) ? "selected" : undefined
+                  }
+                >
+                  <span className="pt-0.5">
+                    <InlineRowCheckbox
+                      selection={selection}
+                      id={event.id}
+                      label={`Select ${event.kind === "PERIOD_CLOSE" ? "close" : "reopen"} through ${audit?.through || "unknown date"}`}
+                    />
+                  </span>
+                  <div className="grid min-w-0 flex-1 gap-1">
+                    <p className="font-medium">
+                      {event.kind === "PERIOD_CLOSE" ? "Closed" : "Reopened"}{" "}
+                      period through {audit?.through || "unknown date"}
+                    </p>
+                    <p className="break-words">
+                      {audit?.reason || "No recorded reason"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Recorded {new Date(event.createdAt).toISOString()} ·
+                      Snapshot {audit?.snapshot || "unknown"}
+                    </p>
+                    <p className="break-all text-xs text-muted-foreground">
+                      Actor: {event.actorUserId}
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">
           No close/reopen changes recorded yet.
