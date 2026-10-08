@@ -77,11 +77,14 @@ create a duplicate. The connected founders inbox contains its request receipt an
 admin notification. Approval/private setup, mailbox OTP, stable password login,
 synthetic workspace contents and signed-client access remain unverified.
 
-The owner selected reuse of an existing reviewer account. The earlier selected
-address is founders@ewatrade.com; no authenticated session is established. The
-Production dashboard opens at its ordinary sign-in page. A Chrome handoff tab is
-retained for the owner. The owner must enter any new password in the private
-setup flow and save it in their password manager. Never place passwords, OTPs or
+The owner clarified that no Production account exists and will register with his
+company email. The spelling must be confirmed rather than inferred from voice.
+The retained Chrome handoff is at the public Request early access form, which
+sends an approved private setup link after approval. No new request was submitted
+and no signup, verification or authenticated session is claimed. The earlier
+founders-address request is historical, not evidence of an existing account.
+The owner must enter any new password in the private setup flow and save it in
+their password manager. Never place passwords, OTPs or
 private invitation/approval links in the repository, Brain, chat or screenshots.
 Never create a direct DB User or mark email verification manually.
 

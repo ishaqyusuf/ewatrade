@@ -130,13 +130,17 @@ command also passed before the attempt. No EAS Update was published.
 
 Draft PR [#57](https://github.com/ishaqyusuf/ewatrade/pull/57), source `c9927cbd`, is
 published and attached to this task. Vercel Preview builds were triggered by the
-branch push; Dashboard reported success, API and Marketing remained pending at
-last readback. This is not Production deployment or end-to-end acceptance.
+branch push; All three Vercel Preview checks (API, Dashboard, Marketing) succeeded for source
+commit c9927cbd. Documentation follow-up is published at8f8c623f; those earlier
+checks do not certify a later head. This is not Production deployment or end-to-end acceptance.
 
-The owner chose existing reviewer access, then requested normal registration and
-Production QA using a service named “Cairo”; the destination is awaiting clarification.
-A Production dashboard sign-in tab is retained. The selected founders address is
-entered, but no authenticated session or account access is claimed. New passwords
-must be entered by the owner in the private ordinary setup flow, never in chat.
+The owner clarified that no Production account exists and will create one with
+his company email through ordinary signup and email verification. Exact email
+spelling is not confirmed in text and must not be guessed. The browser handoff is
+now at the public Request early access form; Production registration requires an
+approved private setup link. No new request was submitted, no password/Terms step
+was completed and no account access is claimed. The earlier founders-address
+synthetic request remains historical; do not treat it as an existing account.
+New passwords must be entered by the owner in the private setup flow, never in chat.
 See the companion iOS privacy/reviewer packet for source inventory and actual
 signed-build evidence still needed.
