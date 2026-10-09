@@ -38,7 +38,7 @@ export function MarketingInfoPage({ kind }: { kind: "contact" | "support" }) {
         </p>
         <section>
           <h2>Email {support ? "support" : "the team"}</h2>
-          <a href="mailto:founders@ewatrade.com">founders@ewatrade.com ↗</a>
+          <a href="mailto:support@ewatrade.com">support@ewatrade.com ↗</a>
           <p>
             {support
               ? "Include a short description of the issue and any error reference you received. Do not send passwords, one-time codes, full payment card details or prescription documents."

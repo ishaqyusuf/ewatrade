@@ -25,10 +25,10 @@ export function SupportContactPage() {
         <section className="space-y-4 border-t border-border pt-8">
           <h2 className="text-xl font-semibold">Email support</h2>
           <a
-            href="mailto:founders@ewatrade.com"
+            href="mailto:support@ewatrade.com"
             className="inline-flex min-h-11 items-center break-all text-lg font-semibold underline underline-offset-4"
           >
-            founders@ewatrade.com
+            support@ewatrade.com
           </a>
           <p className="text-base leading-7 text-muted-foreground">
             Include a short description of the issue and any error reference you

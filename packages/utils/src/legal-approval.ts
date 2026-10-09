@@ -8,13 +8,13 @@ import {
 } from "./legal-documents"
 
 // Set these only after the owner approves the exact versioned document snapshot.
-export const LEGAL_DOCUMENT_EFFECTIVE_DATE: string | null = "2026-10-01"
+export const LEGAL_DOCUMENT_EFFECTIVE_DATE: string | null = "2026-10-09"
 export const LEGAL_DOCUMENT_APPROVED_SHA256: string | null =
-  "5ccf3c2cb8b9f3d671d9cca307beceb4df12df69fb3df746d094898fd8e1c3fa"
+  "875d66d563b3b0d4c344aa895895dbec1e12dc90553e82fdfdfc3ba4779c649a"
 export const LEGAL_DOCUMENT_APPROVED_AT: string | null =
-  "2026-10-01T09:47:26.000Z"
+  "2026-10-09T10:56:01.000Z"
 export const LEGAL_DOCUMENT_APPROVAL_REFERENCE: string | null =
-  "owner-confirmation-2026-10-01-codex-jawdah-poultry-qa"
+  "owner-approval-2026-10-09-support-email-routing"
 
 type LegalPublication = {
   status: "draft" | "approved"
