@@ -2,7 +2,6 @@ import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
-import { classifySessionError } from "@/lib/session-expiry"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { AnalyticsRuntime } from "@/runtime/analytics-runtime"
 import { useTRPC } from "@/trpc/client"
@@ -11,7 +10,6 @@ import { useState } from "react"
 import { View } from "react-native"
 import { AuthActionButton } from "./auth-header"
 import { AuthFlowScreen } from "./green-till/auth-screen"
-import { StatusBanner } from "./status-banner"
 
 type EligibleAgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
 
@@ -45,13 +43,20 @@ export function AccountAgeStartupGate({
     trpc.serviceCommerce.accountDeclareAgeBand.mutationOptions(),
   )
 
-  // The session-expiry link signs out on UNAUTHORIZED; keep "checking" until it does.
-  const sessionRejected =
-    ageStatus.isError &&
-    classifySessionError(ageStatus.error) === "unauthorized"
-
   if (!auth.isAuthenticated) return children
-  if (localQaSession || ageStatus.data?.eligible === true)
+  // Age is settled at registration, so the workspace opens straight away and
+  // shows its own loading state. The status is read quietly in the background;
+  // only an account the server says has no age range yet is asked, once.
+  // Network errors never block the app, and a rejected session is signed out
+  // by the session-expiry link.
+  const ageMissing =
+    !localQaSession && ageStatus.isSuccess && ageStatus.data.ageBand == null
+  const underage =
+    !localQaSession &&
+    ageStatus.isSuccess &&
+    ageStatus.data.ageBand != null &&
+    ageStatus.data.eligible !== true
+  if (!ageMissing && !underage)
     return (
       <>
         {!localQaSession ? <AnalyticsRuntime /> : null}
@@ -63,30 +68,16 @@ export function AccountAgeStartupGate({
     <AuthFlowScreen
       appearanceScreen="login"
       eyebrow="Your account"
-      title={
-        ageStatus.isSuccess ? "Confirm your age range" : "Checking your account"
-      }
+      title={underage ? "ẸwáTrade isn't available" : "Confirm your age range"}
       subtitle={
-        ageStatus.isSuccess
-          ? "ẸwáTrade is for people aged 13 or older. Choose your own age range before opening your workspace."
-          : "Checking your saved age range before opening your workspace."
+        underage
+          ? "ẸwáTrade is for people aged 13 or older."
+          : "ẸwáTrade is for people aged 13 or older. Choose your own age range to continue."
       }
     >
       {/* Keep recovery updates available while workspace access is gated. */}
       <AppAutoUpdateModal restoreRoute={false} />
-      {ageStatus.isPending || sessionRejected ? (
-        <Text className="text-sm text-muted-foreground">
-          Checking age status…
-        </Text>
-      ) : ageStatus.isError ? (
-        <StatusBanner
-          actionLabel="Try again"
-          message="We could not verify your age range. Your workspace will stay closed until this check succeeds."
-          onActionPress={() => void ageStatus.refetch()}
-          title="Age check unavailable"
-          tone="warning"
-        />
-      ) : (
+      {underage ? null : (
         <View className="gap-3">
           {ageChoices.map((choice) => (
             <Pressable
