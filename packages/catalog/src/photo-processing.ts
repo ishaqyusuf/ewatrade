@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { EventEmitter } from "node:events"
+import { URL } from "node:url"
 import { Worker } from "node:worker_threads"
 import sharp, { type Sharp } from "sharp"
 

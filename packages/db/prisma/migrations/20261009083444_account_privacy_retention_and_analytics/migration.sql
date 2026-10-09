@@ -1,8 +1,23 @@
--- AlterEnum
-ALTER TYPE "AssistantConversationPurpose" ADD VALUE 'PRODUCT_CREATE';
+-- CreateTable
+CREATE TABLE "AccountPrivacyRetention" (
+    "requestId" TEXT NOT NULL,
+    "subjectUserId" TEXT NOT NULL,
+    "policyVersion" TEXT NOT NULL,
+    "policyDigest" TEXT NOT NULL,
+    "completedAt" TIMESTAMP(3) NOT NULL,
+    "contactExpiresAt" TIMESTAMP(3) NOT NULL,
+    "reviewDueAt" TIMESTAMP(3) NOT NULL,
+    "evidenceExpiresAt" TIMESTAMP(3) NOT NULL,
+    "contactClearedAt" TIMESTAMP(3),
+    "reviewedAt" TIMESTAMP(3),
+    "reviewedByUserId" TEXT,
+    "holdReason" TEXT,
+    "holdOwnerUserId" TEXT,
+    "holdReviewAt" TIMESTAMP(3),
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
--- AlterTable
-ALTER TABLE "AssistantConversation" ADD COLUMN     "workflowContext" JSONB;
+    CONSTRAINT "AccountPrivacyRetention_pkey" PRIMARY KEY ("requestId")
+);
 
 -- CreateTable
 CREATE TABLE "ProductAnalyticsEvent" (
@@ -22,6 +37,15 @@ CREATE TABLE "ProductAnalyticsEvent" (
 );
 
 -- CreateIndex
+CREATE INDEX "AccountPrivacyRetention_contactClearedAt_contactExpiresAt_idx" ON "AccountPrivacyRetention"("contactClearedAt", "contactExpiresAt");
+
+-- CreateIndex
+CREATE INDEX "AccountPrivacyRetention_reviewedAt_reviewDueAt_idx" ON "AccountPrivacyRetention"("reviewedAt", "reviewDueAt");
+
+-- CreateIndex
+CREATE INDEX "AccountPrivacyRetention_evidenceExpiresAt_idx" ON "AccountPrivacyRetention"("evidenceExpiresAt");
+
+-- CreateIndex
 CREATE INDEX "ProductAnalyticsEvent_deliveredAt_availableAt_leaseUntil_idx" ON "ProductAnalyticsEvent"("deliveredAt", "availableAt", "leaseUntil");
 
 -- CreateIndex
@@ -32,6 +56,9 @@ CREATE INDEX "ProductAnalyticsEvent_userId_idx" ON "ProductAnalyticsEvent"("user
 
 -- CreateIndex
 CREATE INDEX "ProductAnalyticsEvent_tenantId_idx" ON "ProductAnalyticsEvent"("tenantId");
+
+-- AddForeignKey
+ALTER TABLE "AccountPrivacyRetention" ADD CONSTRAINT "AccountPrivacyRetention_requestId_fkey" FOREIGN KEY ("requestId") REFERENCES "AccountPrivacyRequest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProductAnalyticsEvent" ADD CONSTRAINT "ProductAnalyticsEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

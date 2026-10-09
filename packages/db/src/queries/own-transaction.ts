@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 
 /** Bounded for remote Neon latency; see the coding standards. */
 const OWN_TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 } as const
@@ -19,6 +19,29 @@ export function runInOwnTransaction<T>(
   run: (tx: Prisma.TransactionClient) => Promise<T>,
 ) {
   return db.$transaction(run, { ...OWN_TRANSACTION_OPTIONS })
+}
+
+/** Only rolled-back serialization conflicts are retried, with fresh authority reads. */
+export async function runInOwnSerializableTransaction<T>(
+  db: PrismaClient,
+  run: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await db.$transaction(run, {
+        isolationLevel: "Serializable",
+        maxWait: 10_000,
+        timeout: 30_000,
+      })
+    } catch (error) {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== "P2034" ||
+        attempt >= 2
+      )
+        throw error
+    }
+  }
 }
 
 /** The arguments after the client, for a wrapper that forwards them. */

@@ -16,7 +16,7 @@ describe("Guest Store Conversation Terms gate", () => {
       },
     }
     await expect(
-      assertGuestStoreConversationTermsAccepted(db as never, "guest-1"),
+      assertGuestStoreConversationTermsAccepted(db as never, "guest-1", null),
     ).rejects.toMatchObject({ code: "NOT_READY" })
   })
 

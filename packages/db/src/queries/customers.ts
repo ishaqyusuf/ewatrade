@@ -178,7 +178,12 @@ export type CustomerOrderDirectoryAggregate = {
  */
 export async function listCustomerOrderDirectory(
   db: PrismaClient,
-  input: { query?: string; storeId: string; tenantId: string },
+  input: {
+    createdByUserId?: string
+    query?: string
+    storeId: string
+    tenantId: string
+  },
 ): Promise<CustomerOrderDirectoryAggregate[]> {
   const query = input.query?.trim()
   const searchFilter = query

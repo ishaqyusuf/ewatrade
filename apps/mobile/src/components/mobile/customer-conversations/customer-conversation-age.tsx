@@ -3,6 +3,10 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useTRPC } from "@/trpc/client"
 import { useCustomerTRPC } from "@/trpc/customer-client"
+import {
+  STORE_CONVERSATION_CHAT_SCOPE_MESSAGE,
+  canUseStoreConversationFreeFormChat,
+} from "@ewatrade/service-commerce"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
@@ -48,58 +52,53 @@ export function CustomerConversationAge({
     null,
   )
   const [error, setError] = useState<string | null>(null)
-  const [safetyState, setSafetyState] = useState({ allowed: false, scope: "" })
   const status = accountAccess ? accountStatus : guestStatus
-  const safetyScope = `${accountAccess}:${status.data?.ageBand ?? "unknown"}`
-  const safetyAcknowledged =
-    safetyState.scope === safetyScope && safetyState.allowed
+  const chatAllowed = canUseStoreConversationFreeFormChat({
+    ageBand: status.data?.ageBand,
+    principal: accountAccess ? "account" : "guest",
+  })
 
   useEffect(() => {
     onAllowedChange(
       !status.isFetching &&
         status.data?.eligible === true &&
-        (!requireSafetyAcknowledgement ||
-          status.data.ageBand === "ADULT" ||
-          safetyAcknowledged),
+        (!requireSafetyAcknowledgement || chatAllowed),
     )
   }, [
     onAllowedChange,
     requireSafetyAcknowledgement,
-    safetyAcknowledged,
+    chatAllowed,
     status.data,
     status.isFetching,
   ])
 
-  if (!status.isFetching && status.data?.eligible) {
-    if (
-      !requireSafetyAcknowledgement ||
-      status.data.ageBand === "ADULT" ||
-      safetyAcknowledged
-    )
-      return null
+  if (
+    requireSafetyAcknowledgement &&
+    (!accountAccess ||
+      (!status.isFetching && status.data?.eligible && !chatAllowed))
+  ) {
     return (
       <View className="mx-4 my-3 gap-3 rounded-xl border border-border bg-card p-4">
         <Text className="font-semibold text-foreground">
-          Stay safe in Store chat
+          Free-form chat requires an adult account
         </Text>
         <Text className="text-sm text-muted-foreground">
-          You are talking with another person online. Do not share your home
-          address, phone number, school, passwords, payment details, or other
-          private information. You can block or report a conversation that makes
-          you uncomfortable, and ask a trusted adult for help.
+          {STORE_CONVERSATION_CHAT_SCOPE_MESSAGE}
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          className="min-h-11 items-center justify-center rounded-lg bg-primary px-4"
-          onPress={() => setSafetyState({ allowed: true, scope: safetyScope })}
-        >
-          <Text className="font-semibold text-primary-foreground">
-            I understand — continue
-          </Text>
-        </Pressable>
+        <Text className="text-sm text-muted-foreground">
+          You can still view this conversation and use its reporting and support
+          controls. Your age range is a declaration, not identity verification.
+          Contact support if a saved range needs correction.
+        </Text>
       </View>
     )
   }
+  if (
+    !status.isFetching &&
+    status.data?.eligible &&
+    (!requireSafetyAcknowledgement || chatAllowed)
+  )
+    return null
 
   const declare = async () => {
     if (!selected || selected === "UNDER_13") return
@@ -127,8 +126,9 @@ export function CustomerConversationAge({
         Choose your age range
       </Text>
       <Text className="text-sm text-muted-foreground">
-        EwaTrade Store chat is for people aged 13 or older. Choose your own age
-        range before sending a message or attachment.
+        Accounts and Store history are available from age 13. Free-form chat
+        requires a signed-in account declaring age 18 or older. Choose your own
+        age range; this is not identity verification.
       </Text>
       {status.isLoading ? (
         <Text className="text-sm text-muted-foreground">
@@ -151,7 +151,7 @@ export function CustomerConversationAge({
       )}
       {selected === "UNDER_13" ? (
         <Text className="text-sm text-muted-foreground">
-          Store chat is not available to people under 13.
+          Accounts and Store history are not available to people under 13.
         </Text>
       ) : (
         <Pressable
@@ -165,7 +165,7 @@ export function CustomerConversationAge({
           <Text className="font-semibold text-primary-foreground">
             {accountDeclare.isPending || guestDeclare.isPending
               ? "Saving…"
-              : "Continue to chat"}
+              : "Save age range"}
           </Text>
         </Pressable>
       )}

@@ -15,8 +15,11 @@ export type GuestTermsPublication = NonNullable<
 export const GUEST_TERMS_REQUIRED_MESSAGE =
   "Review and accept the current EwaTrade Terms before posting in this Store conversation."
 
-function effectiveTerms(publicationOverride?: GuestTermsPublication) {
-  const publication = publicationOverride ?? currentEffectiveLegalPublication()
+function effectiveTerms(publicationOverride?: GuestTermsPublication | null) {
+  const publication =
+    publicationOverride === undefined
+      ? currentEffectiveLegalPublication()
+      : publicationOverride
   if (!publication) {
     throw new StoreConversationError(
       "NOT_READY",
@@ -29,7 +32,7 @@ function effectiveTerms(publicationOverride?: GuestTermsPublication) {
 export async function assertGuestStoreConversationTermsAccepted(
   db: DbClient,
   guestIdentityId: string,
-  publicationOverride?: GuestTermsPublication,
+  publicationOverride?: GuestTermsPublication | null,
 ) {
   const publication = effectiveTerms(publicationOverride)
   const acceptance = await db.storeConversationGuestLegalAcceptance.findUnique({

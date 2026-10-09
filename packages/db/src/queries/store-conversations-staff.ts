@@ -28,6 +28,10 @@ import {
   storeConversationActionMessageInclude,
 } from "./store-conversation-actions"
 import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
+import {
+  assertAccountStoreConversationChatAuthority,
+  assertStoreConversationChatRecipient,
+} from "./store-conversation-chat-authority"
 import { scheduleUnreadStoreConversationNotificationInTransaction } from "./store-conversation-notifications/intents"
 import { runStoreConversationSensitiveRead } from "./store-conversation-sensitive-reads"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
@@ -100,6 +104,8 @@ export async function replyToStoreConversation(
     request: parsed.request ?? null,
     text: parsed.text,
   })
+  await assertAccountStoreConversationChatAuthority(db, input.actorUserId)
+  await assertStoreConversationChatRecipient(db, input)
   await assertStoreConversationTextScreened(parsed.text)
   return db.$transaction(async (tx) => {
     const membership = await assertStoreConversationAttendant(tx, input)
@@ -117,6 +123,8 @@ export async function replyToStoreConversation(
     if (!conversation) {
       throw new StoreConversationError("NOT_FOUND", "Conversation not found.")
     }
+    await assertAccountStoreConversationChatAuthority(tx, input.actorUserId)
+    await assertStoreConversationChatRecipient(tx, input)
     await assertAccountStoreConversationTermsAccepted(tx, input.actorUserId)
     const receipt = await tx.storeConversationCommandReceipt.findFirst({
       include: {

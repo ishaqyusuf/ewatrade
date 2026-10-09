@@ -53,9 +53,7 @@ async function dataClassification(tenantId: string) {
 
 function heicWorkerUrl() {
   const packaged = resolve(process.cwd(), "catalog/src/photo-heic-worker.mjs")
-  return existsSync(packaged)
-    ? new URL(pathToFileURL(packaged).href)
-    : undefined
+  return existsSync(packaged) ? pathToFileURL(packaged) : undefined
 }
 
 export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps {

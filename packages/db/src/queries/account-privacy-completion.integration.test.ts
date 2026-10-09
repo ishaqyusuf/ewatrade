@@ -1,5 +1,5 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test"
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { assertQaAccessAcceptanceDatabase } from "./acceptance/qa-access/database"
 import { getAccountPrivacyReview } from "./account-privacy"
 import {
@@ -48,6 +48,9 @@ describeWithDatabase(
         processing: process.env.ACCOUNT_PRIVACY_PROCESSING_ENABLED,
         completion: process.env.ACCOUNT_PRIVACY_COMPLETION_ENABLED,
         policy: process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION,
+        retentionPolicy: process.env.ACCOUNT_PRIVACY_RETENTION_POLICY_JSON,
+        retentionDigest:
+          process.env.ACCOUNT_PRIVACY_APPROVED_RETENTION_POLICY_SHA256,
         noticeSending: process.env.ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED,
         noticeDigest:
           process.env.ACCOUNT_PRIVACY_APPROVED_NOTICE_CONTENT_DIGEST,
@@ -161,6 +164,13 @@ describeWithDatabase(
         process.env.ACCOUNT_PRIVACY_PROCESSING_ENABLED = "true"
         process.env.ACCOUNT_PRIVACY_COMPLETION_ENABLED = "true"
         process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION = policyVersion
+        const retentionSource = JSON.stringify({
+          version: policyVersion,
+          approvalReference: "disposable-completion-fixture",
+        })
+        process.env.ACCOUNT_PRIVACY_RETENTION_POLICY_JSON = retentionSource
+        process.env.ACCOUNT_PRIVACY_APPROVED_RETENTION_POLICY_SHA256 =
+          createHash("sha256").update(retentionSource).digest("hex")
         const command = { requestId, operatorUserId, now }
         await expect(
           completeAccountPrivacyRequest(prisma, command),
@@ -522,6 +532,14 @@ describeWithDatabase(
         restore("ACCOUNT_PRIVACY_PROCESSING_ENABLED", previous.processing)
         restore("ACCOUNT_PRIVACY_COMPLETION_ENABLED", previous.completion)
         restore("ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION", previous.policy)
+        restore(
+          "ACCOUNT_PRIVACY_RETENTION_POLICY_JSON",
+          previous.retentionPolicy,
+        )
+        restore(
+          "ACCOUNT_PRIVACY_APPROVED_RETENTION_POLICY_SHA256",
+          previous.retentionDigest,
+        )
         restore(
           "ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED",
           previous.noticeSending,

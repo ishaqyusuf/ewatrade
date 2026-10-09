@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
+import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
@@ -10,6 +11,7 @@ import {
 } from "../../generated/prisma/enums"
 import {
   bootstrapWebStoreConversation,
+  sendAccountStoreConversationText,
   sendGuestStoreConversationText,
 } from "./store-conversations"
 import {
@@ -317,7 +319,7 @@ describe("Store Conversation repositories", () => {
     }
     const credentialToken = "guest-secret"
     const messageRows: Record<string, unknown>[] = []
-    let guestAgeBand = "ADULT"
+    let accountAgeBand = "ADULT"
     const requestLinks: Record<string, unknown>[] = []
     let inquiryCreateCount = 0
     const receipts = new Map<string, Record<string, unknown>>()
@@ -333,6 +335,22 @@ describe("Store Conversation repositories", () => {
       tenantId: "tenant-1",
     }
     const client = {
+      legalAcceptance: {
+        findUnique: async () => ({
+          documentHash: currentEffectiveLegalPublication()?.documentHash,
+        }),
+      },
+      user: {
+        findUnique: async () => ({ id: "account_1", ageBand: accountAgeBand }),
+      },
+      storeConversationAccountAccess: {
+        findFirst: async () => ({
+          id: "access_1",
+          accountUserId: "account_1",
+          conversation,
+        }),
+        update: async () => ({ id: "access_1" }),
+      },
       ...publicEntryDependencies({ pharmacyAllowed: false }),
       $queryRaw: async () => [{ id: conversation.id }],
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
@@ -422,7 +440,7 @@ describe("Store Conversation repositories", () => {
         update: async () => ({ id: "credential_1" }),
       },
       storeConversationGuestIdentity: {
-        findUnique: async () => ({ ageBand: guestAgeBand }),
+        findUnique: async () => ({ ageBand: accountAgeBand }),
         update: async () => ({ id: "guest_1" }),
       },
       storeConversationGuestLegalAcceptance: {
@@ -455,22 +473,19 @@ describe("Store Conversation repositories", () => {
     const input = {
       clientOperationId: "operation-0001",
       conversationId: conversation.id,
-      credentialToken,
+      accountUserId: "account_1",
+      channel: "web" as const,
       publicToken,
       text: "I need a small red bag",
     }
 
-    const first = await sendGuestStoreConversationText(
+    const first = await sendAccountStoreConversationText(
       dbClient(client),
       input,
-      undefined,
-      approvedTermsFixture,
     )
-    const replay = await sendGuestStoreConversationText(
+    const replay = await sendAccountStoreConversationText(
       dbClient(client),
       input,
-      undefined,
-      approvedTermsFixture,
     )
 
     expect(first).toMatchObject({
@@ -486,16 +501,11 @@ describe("Store Conversation repositories", () => {
     expect(messageRows).toHaveLength(1)
     expect(inquiryCreateCount).toBe(1)
 
-    const followUp = await sendGuestStoreConversationText(
-      dbClient(client),
-      {
-        ...input,
-        clientOperationId: "operation-0002",
-        text: "Please make it leather",
-      },
-      undefined,
-      approvedTermsFixture,
-    )
+    const followUp = await sendAccountStoreConversationText(dbClient(client), {
+      ...input,
+      clientOperationId: "operation-0002",
+      text: "Please make it leather",
+    })
     expect(followUp).toMatchObject({
       message: {
         request: { id: "inquiry_1", kind: "commerce_inquiry" },
@@ -504,23 +514,18 @@ describe("Store Conversation repositories", () => {
       source: { id: "inquiry_1" },
     })
     expect(inquiryCreateCount).toBe(1)
-    guestAgeBand = "AGE_16_TO_17"
+    accountAgeBand = "AGE_16_TO_17"
     await expect(
-      sendGuestStoreConversationText(
-        dbClient(client),
-        {
-          ...input,
-          clientOperationId: "operation-0003",
-          text: "Can you reserve the bag?",
-        },
-        undefined,
-        approvedTermsFixture,
-      ),
-    ).resolves.toMatchObject({ message: { sequence: 3 } })
-    expect(messageRows).toHaveLength(3)
+      sendAccountStoreConversationText(dbClient(client), {
+        ...input,
+        clientOperationId: "operation-0003",
+        text: "Can you reserve the bag?",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    expect(messageRows).toHaveLength(2)
   })
 
-  test("rejects an expired guest credential before any message write", async () => {
+  test("rejects guest free-form text before credential lookup or message write", async () => {
     let wroteMessage = false
     const client = {
       ...publicEntryDependencies(),
@@ -541,7 +546,7 @@ describe("Store Conversation repositories", () => {
         publicToken,
         text: "Red bag",
       }),
-    ).rejects.toMatchObject({ code: "GUEST_CREDENTIAL_EXPIRED" })
+    ).rejects.toMatchObject({ code: "NOT_READY" })
     expect(wroteMessage).toBe(false)
   })
 

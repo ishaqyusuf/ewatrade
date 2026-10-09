@@ -3,7 +3,10 @@ import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 
 /** Counts residual account-profile material without returning personal values. */
 export async function getAccountPrivacyProfileInventory(
-  db: PrismaClient,
+  db: Pick<
+    PrismaClient,
+    "user" | "account" | "session" | "legalAcceptance" | "verification"
+  >,
   subjectId: string,
   verifiedContactEmail: string,
 ) {

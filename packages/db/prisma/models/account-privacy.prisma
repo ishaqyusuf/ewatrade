@@ -61,9 +61,35 @@ model AccountPrivacyRequest {
   accessRevocation      AccountPrivacyAccessRevocation?
   domainOutcomes        AccountPrivacyDomainOutcome[]
   noticeAttempts        AccountPrivacyNoticeAttempt[]
+  retention             AccountPrivacyRetention?
 
   @@index([userId, requestedAt])
   @@index([status, requestedAt])
+}
+
+// Per-completion deadlines; business/clinical records have separate policies.
+// The entire row expires with the request evidence. A hold is bounded and named.
+model AccountPrivacyRetention {
+  requestId             String   @id
+  subjectUserId         String
+  policyVersion         String
+  policyDigest          String
+  completedAt           DateTime
+  contactExpiresAt      DateTime
+  reviewDueAt           DateTime
+  evidenceExpiresAt     DateTime
+  contactClearedAt      DateTime?
+  reviewedAt            DateTime?
+  reviewedByUserId      String?
+  holdReason            String?
+  holdOwnerUserId       String?
+  holdReviewAt          DateTime?
+  updatedAt             DateTime @updatedAt
+  request               AccountPrivacyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([contactClearedAt, contactExpiresAt])
+  @@index([reviewedAt, reviewDueAt])
+  @@index([evidenceExpiresAt])
 }
 
 // A provider send is not delivery. Only a recipient-matched provider event

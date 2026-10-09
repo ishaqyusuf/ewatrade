@@ -14,6 +14,10 @@ describe("Store Conversation text ingress", () => {
   test("screens Guest, linked Customer and staff text before any write transaction", async () => {
     let transactions = 0
     const db = {
+      user: { findUnique: async () => ({ ageBand: "ADULT" }) },
+      storeConversationAccountAccess: {
+        findFirst: async () => ({ accountUserId: "account_1" }),
+      },
       $transaction: async () => {
         transactions++
         throw new Error("unexpected transaction")
@@ -57,13 +61,17 @@ describe("Store Conversation text ingress", () => {
   test("screens WhatsApp text after replay check and before a message write", async () => {
     let writes = 0
     const tx = {
+      user: { findUnique: async () => ({ ageBand: "ADULT" }) },
+      storeConversationAccountAccess: {
+        findFirst: async () => ({ accountUserId: "account_1" }),
+      },
       $queryRaw: async () => [{ id: "conversation_1" }],
       storeConversationCommandReceipt: { findUnique: async () => null },
       storeConversationMessage: { create: async () => writes++ },
     }
     await expect(
       appendStoreConversationWhatsAppCustomerTextInTransaction(tx as never, {
-        auditReasonCode: "whatsapp_bridge_guest_message",
+        auditReasonCode: "whatsapp_bridge_account_message",
         now: new Date("2026-09-28T10:00:00.000Z"),
         providerEventDigest: "digest_1",
         route: {
@@ -110,7 +118,7 @@ describe("Store Conversation text ingress", () => {
         },
         text: "An ordinary direct inbound message",
       }),
-    ).rejects.toThrow("WHATSAPP_TERMS_ACCEPTANCE_REQUIRED")
+    ).rejects.toMatchObject({ code: "NOT_READY" })
     expect(writes).toBe(0)
   })
 

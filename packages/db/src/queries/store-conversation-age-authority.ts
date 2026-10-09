@@ -1,3 +1,4 @@
+import { canUseStoreConversationFreeFormChat } from "@ewatrade/service-commerce"
 import type { Prisma } from "../../generated/prisma/client"
 import {
   AccountAgeBand,
@@ -100,7 +101,14 @@ export async function getCustomerAccountAgeStatus(
       "This account is unavailable.",
     )
   }
-  return { ageBand: user.ageBand, eligible: isEligibleAge(user.ageBand) }
+  return {
+    ageBand: user.ageBand,
+    eligible: isEligibleAge(user.ageBand),
+    freeFormChatEligible: canUseStoreConversationFreeFormChat({
+      ageBand: user.ageBand,
+      principal: "account",
+    }),
+  }
 }
 
 export async function getGuestAgeStatusForCredential(
@@ -122,7 +130,11 @@ export async function getGuestAgeStatusForCredential(
   if (!guest) {
     throw new StoreConversationError("NOT_FOUND", "This Guest is unavailable.")
   }
-  return { ageBand: guest.ageBand, eligible: isEligibleAge(guest.ageBand) }
+  return {
+    ageBand: guest.ageBand,
+    eligible: isEligibleAge(guest.ageBand),
+    freeFormChatEligible: false,
+  }
 }
 
 function assertEligibleAge(band: AccountAgeBand | null | undefined) {

@@ -3,6 +3,47 @@ import { renderAccountPrivacyOutcomeTemplate } from "@ewatrade/email"
 import { createCallerFactory } from "../init"
 import { accountPrivacyRouter } from "./account-privacy"
 
+test("profile processing is platform-admin only and cannot accept a client retention policy", async () => {
+  const previous = process.env.ACCOUNT_PRIVACY_PROFILE_PROCESSING_ENABLED
+  process.env.ACCOUNT_PRIVACY_PROFILE_PROCESSING_ENABLED = "false"
+  try {
+    const caller = (isPlatformAdmin: boolean) =>
+      createCallerFactory(accountPrivacyRouter)({
+        db: {
+          $transaction: () => {
+            throw new Error("Database must not be touched")
+          },
+        },
+        session: {
+          session: { id: "session-1", token: "ordinary-session" },
+          user: { id: "operator-1", isPlatformAdmin },
+        },
+      } as never)
+    await expect(
+      caller(false).processProfile({ requestId: "request-1" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(
+      caller(true).processProfile({ requestId: "request-1" }),
+    ).rejects.toMatchObject({
+      code: "PRECONDITION_FAILED",
+      message: "DISABLED",
+    })
+    await expect(
+      caller(true).processProfile({
+        requestId: "request-1",
+        policy: "erase",
+      } as never),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  } finally {
+    if (previous === undefined)
+      Reflect.deleteProperty(
+        process.env,
+        "ACCOUNT_PRIVACY_PROFILE_PROCESSING_ENABLED",
+      )
+    else process.env.ACCOUNT_PRIVACY_PROFILE_PROCESSING_ENABLED = previous
+  }
+})
+
 test("maximum escaped outcome content reaches the disabled notice gate without database access", async () => {
   const previous = process.env.ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED
   process.env.ACCOUNT_PRIVACY_NOTICE_SENDING_ENABLED = "false"
@@ -439,4 +480,46 @@ test("tenant managers cannot certify a no-prescription deletion outcome", async 
   await expect(
     caller.confirmNoPrescriptions({ requestId: "request-1" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
+})
+
+test("retention review is platform-admin only and cannot accept client deadlines or an operator", async () => {
+  const old = process.env.ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED
+  process.env.ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED = "false"
+  const caller = (isPlatformAdmin: boolean) =>
+    createCallerFactory(accountPrivacyRouter)({
+      db: {
+        $transaction: () => {
+          throw new Error("Database must not be touched")
+        },
+      },
+      session: {
+        session: { id: "session-1", token: "session" },
+        user: { id: "operator-1", isPlatformAdmin },
+      },
+    } as never)
+  try {
+    await expect(caller(false).retentionReviews()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    })
+    await expect(
+      caller(false).reviewRetention({ requestId: "request-1", hold: null }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(
+      caller(true).reviewRetention({ requestId: "request-1", hold: null }),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
+    await expect(
+      caller(true).reviewRetention({
+        requestId: "request-1",
+        hold: null,
+        operatorUserId: "other",
+      } as never),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  } finally {
+    if (old === undefined)
+      Reflect.deleteProperty(
+        process.env,
+        "ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED",
+      )
+    else process.env.ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED = old
+  }
 })

@@ -8,6 +8,8 @@ import {
   AccountPrivacyMembershipError,
   AccountPrivacyNoticePreparationError,
   AccountPrivacyPrescriptionOutcomeError,
+  AccountPrivacyProfileError,
+  AccountPrivacyRetentionError,
   AccountPrivacySubscriptionError,
   beginAccountPrivacyReview,
   completeAccountPrivacyRequest,
@@ -22,8 +24,11 @@ import {
   getAccountLegalStatus,
   getAccountPrivacyReview,
   listAccountPrivacyRequests,
+  listAccountPrivacyRetentionReviews,
+  processAccountPrivacyProfile,
   recordLegalAcceptance,
   requestAccountDeletion,
+  reviewAccountPrivacyRetention,
   revokeAccountPrivacyAccess,
   revokeAccountPrivacyConversationAccess,
   revokeAccountPrivacyMembershipAccess,
@@ -73,6 +78,42 @@ function assertExternalIntakeReady() {
 }
 
 export const accountPrivacyRouter = createTRPCRouter({
+  retentionReviews: platformAdminProcedure.query(({ ctx }) =>
+    listAccountPrivacyRetentionReviews(ctx.db),
+  ),
+  reviewRetention: platformAdminProcedure
+    .input(
+      z
+        .object({
+          requestId: z.string().min(1),
+          hold: z
+            .object({
+              reason: z.string().trim().min(1).max(1000),
+              reviewAt: z.coerce.date(),
+            })
+            .strict()
+            .nullable(),
+        })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reviewAccountPrivacyRetention(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        if (error instanceof AccountPrivacyRetentionError)
+          throw new TRPCError({
+            code:
+              error.code === "OPERATOR_REQUIRED"
+                ? "FORBIDDEN"
+                : "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
   externalIntakeAvailability: publicProcedure.query(({ ctx }) => ({
     available: isExternalIntakeConfigured() && Boolean(ctx.privacyClientIp),
   })),
@@ -270,6 +311,24 @@ export const accountPrivacyRouter = createTRPCRouter({
         })
       } catch (error) {
         if (error instanceof AccountPrivacyPrescriptionOutcomeError)
+          throw new TRPCError({
+            code:
+              error.code === "NOT_FOUND" ? "NOT_FOUND" : "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
+  processProfile: platformAdminProcedure
+    .input(z.object({ requestId: z.string().min(1) }).strict())
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await processAccountPrivacyProfile(ctx.db, {
+          requestId: input.requestId,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        if (error instanceof AccountPrivacyProfileError)
           throw new TRPCError({
             code:
               error.code === "NOT_FOUND" ? "NOT_FOUND" : "PRECONDITION_FAILED",

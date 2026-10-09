@@ -1,8 +1,19 @@
 import type { PrismaClient } from "../../generated/prisma/client"
+import { getAccountPrivacyAdditionalInventory } from "./account-privacy-additional-inventory"
 import { getAccountPrivacyCommercialInventory } from "./account-privacy-commercial-inventory"
 import { getAccountPrivacyConversationInventory } from "./account-privacy-conversation-inventory"
 import { getAccountPrivacyPrescriptionInventory } from "./account-privacy-prescription-inventory"
+import { getAccountPrivacyProfileInventory } from "./account-privacy-profile-inventory"
+import {
+  getApprovedAccountPrivacyProfilePolicy,
+  isAccountPrivacyProfileMinimizationConfirmed,
+} from "./account-privacy-profile-policy"
+import {
+  accountPrivacyRetentionDeadlines,
+  getApprovedAccountPrivacyRetentionPolicy,
+} from "./account-privacy-retention-policy"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
+import { runInOwnSerializableTransaction } from "./own-transaction"
 
 export type AccountPrivacyCompletionCode =
   | "DISABLED"
@@ -90,6 +101,14 @@ export async function assessAccountPrivacyCompletion(
     PrismaClient,
     | "assistantActionProposal"
     | "accountPrivacyRequest"
+    | "legalAcceptance"
+    | "assistantConversation"
+    | "assistantRun"
+    | "assistantAttachment"
+    | "assistantUsageEvent"
+    | "message"
+    | "automationEvent"
+    | "productAnalyticsEvent"
     | "user"
     | "membership"
     | "session"
@@ -242,6 +261,9 @@ export async function assessAccountPrivacyCompletion(
   const now = input.now ?? new Date()
   if (request.verifiedSubjectUserId) {
     const subjectId = request.verifiedSubjectUserId
+    const additional = await getAccountPrivacyAdditionalInventory(db, subjectId)
+    if (Object.values(additional).some((count) => count > 0))
+      blockers.push("ADDITIONAL_PERSONAL_DATA_REVIEW_REQUIRED")
     const profileOutcome = request.domainOutcomes.find(
       (outcome) => outcome.domain === "ACCOUNT_PROFILE",
     )
@@ -262,9 +284,35 @@ export async function assessAccountPrivacyCompletion(
       profileOutcome.policyVersion === input.approvedPolicyVersion &&
       !!request.verifiedAt &&
       profileOutcome.processedAt >= request.verifiedAt
+    let profileMinimized = false
+    if (profileOutcome?.processor === "account-privacy-profile-v1") {
+      const policy = getApprovedAccountPrivacyProfilePolicy(process.env, now)
+      const inventory = matchedRequestContact
+        ? await getAccountPrivacyProfileInventory(
+            db,
+            subjectId,
+            matchedRequestContact,
+          )
+        : null
+      profileMinimized = Boolean(
+        policy &&
+          policy.version === input.approvedPolicyVersion &&
+          inventory &&
+          isAccountPrivacyProfileMinimizationConfirmed({
+            request,
+            outcome: profileOutcome,
+            inventory,
+            policy,
+            now,
+          }),
+      )
+      if (!profileMinimized)
+        blockers.push("ACCOUNT_PROFILE_MINIMIZATION_UNCONFIRMED")
+    }
+    const profileContactReplaced = profileAnonymized || profileMinimized
     if (
-      (!profileAnonymized && request.user?.emailVerified === false) ||
-      (!profileAnonymized &&
+      (!profileContactReplaced && request.user?.emailVerified === false) ||
+      (!profileContactReplaced &&
         request.contactEmail &&
         request.user?.email &&
         request.contactEmail.trim().toLowerCase() !==
@@ -274,7 +322,7 @@ export async function assessAccountPrivacyCompletion(
     // The User relation is cleared by physical deletion. A matched account
     // request can still use its email-verified intake contact for invitation
     // review; an unmatched/external request cannot establish that scope.
-    const verifiedEmail = profileAnonymized
+    const verifiedEmail = profileContactReplaced
       ? matchedRequestContact
       : request.user?.emailVerified
         ? request.user.email.trim().toLowerCase()
@@ -297,9 +345,10 @@ export async function assessAccountPrivacyCompletion(
       if (liveMobileOtp > 0) blockers.push("IDENTITY_VERIFICATION_REMAINS")
       if (
         profileOutcome &&
-        ["ERASURE_CONFIRMED", "ANONYMIZATION_CONFIRMED"].includes(
-          profileOutcome.disposition,
-        )
+        (profileMinimized ||
+          ["ERASURE_CONFIRMED", "ANONYMIZATION_CONFIRMED"].includes(
+            profileOutcome.disposition,
+          ))
       ) {
         const storedMobileOtp = await db.verification.count({
           where: { identifier: { in: otpIdentifiers } },
@@ -692,64 +741,75 @@ export async function completeAccountPrivacyRequest(
   if (!approvedPolicyVersion)
     throw new AccountPrivacyCompletionError("POLICY_NOT_APPROVED")
   const now = input.now ?? new Date()
-  return db.$transaction(
-    async (tx) => {
-      const operator = await tx.user.findUnique({
-        where: { id: input.operatorUserId },
-        select: { isPlatformAdmin: true },
-      })
-      if (!operator?.isPlatformAdmin)
-        throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
-      const request = await tx.accountPrivacyRequest.findUnique({
-        where: { id: input.requestId },
-        select: {
-          status: true,
-          verifiedSubjectUserId: true,
-          completedAt: true,
-        },
-      })
-      if (!request) throw new AccountPrivacyCompletionError("NOT_FOUND")
-      if (request.verifiedSubjectUserId === input.operatorUserId)
-        throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
-      const assessment = await assessAccountPrivacyCompletion(
-        tx,
-        input.requestId,
-        { approvedPolicyVersion, now },
-      )
-      const blockers = assessment.blockers.filter(
-        (blocker) =>
-          blocker !== "REQUEST_NOT_PROCESSING" ||
-          request.status !== "COMPLETED",
-      )
-      if (blockers.length || assessment.missingDomains.length)
+  const retentionPolicy = getApprovedAccountPrivacyRetentionPolicy()
+  if (!retentionPolicy)
+    throw new AccountPrivacyCompletionError("POLICY_NOT_APPROVED")
+  return runInOwnSerializableTransaction(db, async (tx) => {
+    const operator = await tx.user.findUnique({
+      where: { id: input.operatorUserId },
+      select: { isPlatformAdmin: true },
+    })
+    if (!operator?.isPlatformAdmin)
+      throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
+    const request = await tx.accountPrivacyRequest.findUnique({
+      where: { id: input.requestId },
+      select: {
+        status: true,
+        verifiedSubjectUserId: true,
+        completedAt: true,
+      },
+    })
+    if (!request) throw new AccountPrivacyCompletionError("NOT_FOUND")
+    if (request.verifiedSubjectUserId === input.operatorUserId)
+      throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
+    const assessment = await assessAccountPrivacyCompletion(
+      tx,
+      input.requestId,
+      { approvedPolicyVersion, now },
+    )
+    const blockers = assessment.blockers.filter(
+      (blocker) =>
+        blocker !== "REQUEST_NOT_PROCESSING" || request.status !== "COMPLETED",
+    )
+    if (blockers.length || assessment.missingDomains.length)
+      throw new AccountPrivacyCompletionError("NOT_READY")
+    if (request.status === "COMPLETED") {
+      if (!request.completedAt)
         throw new AccountPrivacyCompletionError("NOT_READY")
-      if (request.status === "COMPLETED") {
-        if (!request.completedAt)
-          throw new AccountPrivacyCompletionError("NOT_READY")
-        return {
-          requestId: input.requestId,
-          status: "COMPLETED" as const,
-          completedAt: request.completedAt,
-          replay: true,
-        }
-      }
-      const completed = await tx.accountPrivacyRequest.updateMany({
-        where: {
-          id: input.requestId,
-          status: "PROCESSING",
-          verifiedSubjectUserId: request.verifiedSubjectUserId,
-        },
-        data: { status: "COMPLETED", completedAt: now },
-      })
-      if (completed.count !== 1)
-        throw new AccountPrivacyCompletionError("CLAIM_CONFLICT")
       return {
         requestId: input.requestId,
         status: "COMPLETED" as const,
-        completedAt: now,
-        replay: false,
+        completedAt: request.completedAt,
+        replay: true,
       }
-    },
-    { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
-  )
+    }
+    if (!request.verifiedSubjectUserId)
+      throw new AccountPrivacyCompletionError("NOT_READY")
+    await tx.accountPrivacyRetention.create({
+      data: {
+        requestId: input.requestId,
+        subjectUserId: request.verifiedSubjectUserId,
+        policyVersion: retentionPolicy.version,
+        policyDigest: retentionPolicy.digest,
+        completedAt: now,
+        ...accountPrivacyRetentionDeadlines(now),
+      },
+    })
+    const completed = await tx.accountPrivacyRequest.updateMany({
+      where: {
+        id: input.requestId,
+        status: "PROCESSING",
+        verifiedSubjectUserId: request.verifiedSubjectUserId,
+      },
+      data: { status: "COMPLETED", completedAt: now },
+    })
+    if (completed.count !== 1)
+      throw new AccountPrivacyCompletionError("CLAIM_CONFLICT")
+    return {
+      requestId: input.requestId,
+      status: "COMPLETED" as const,
+      completedAt: now,
+      replay: false,
+    }
+  })
 }

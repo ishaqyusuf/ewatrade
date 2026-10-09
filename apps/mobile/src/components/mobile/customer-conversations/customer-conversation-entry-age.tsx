@@ -85,8 +85,9 @@ export function CustomerConversationEntryAge({
           Before entering Store chat
         </Text>
         <Text className="text-sm text-muted-foreground">
-          EwaTrade Store chat is for people aged 13 or older. Choose your age
-          range before opening a conversation.
+          Store requests and history are available from age 13. Free-form chat
+          requires a signed-in account declaring age 18 or older. Choose your
+          age range before opening a conversation.
         </Text>
         {hasSession && status.isLoading ? (
           <Text className="text-sm text-muted-foreground">

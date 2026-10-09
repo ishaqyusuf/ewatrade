@@ -77,7 +77,7 @@ describe("shared database command contract", () => {
       "utf8",
     )
     expect(deploySource).toContain(
-      "Run database push separately through local-infra-kit, or use `bun release`.",
+      "Run database push separately through local-infra-kit, or use bun release.",
     )
     expect(deploySource).toContain("env.DATABASE_URL = undefined")
     expect(deploySource).toContain('"EWATRADE_DATABASE_URL"')

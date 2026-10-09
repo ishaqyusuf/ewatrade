@@ -28,6 +28,7 @@ describe("scheduled cadences", () => {
         byTask.set(task.id, cadence.cron)
       }
     expect(Object.fromEntries([...byTask].sort())).toEqual({
+      "account-privacy.retention": "15 2 * * *",
       "account-privacy.notice-alert": "*/15 * * * *",
       "account-privacy.verification-expiry": "0 * * * *",
       "analytics.dashboard.recovery": "* * * * *",

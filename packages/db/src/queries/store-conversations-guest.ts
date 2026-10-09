@@ -39,6 +39,10 @@ import {
 } from "./store-conversation-age-authority"
 import { projectStoreConversationMessageAttachments } from "./store-conversation-attachments"
 import {
+  assertAccountStoreConversationChatAuthority,
+  rejectGuestStoreConversationFreeFormChat,
+} from "./store-conversation-chat-authority"
+import {
   type GuestTermsPublication,
   assertGuestStoreConversationTermsAccepted,
 } from "./store-conversation-guest-terms"
@@ -271,7 +275,7 @@ export async function bootstrapWebStoreConversation(
   })
 }
 
-async function sendStoreConversationTextForCustomer(
+async function sendStoreConversationTextForAccount(
   db: PrismaClient,
   input: {
     clientOperationId: string
@@ -280,8 +284,7 @@ async function sendStoreConversationTextForCustomer(
     requestIntent?: "choose_request" | "continue_current"
     text: string
   },
-  principal: CustomerConversationPrincipal,
-  dependencies: { guestTermsPublication?: GuestTermsPublication } = {},
+  principal: Extract<CustomerConversationPrincipal, { kind: "account" }>,
 ) {
   const parsed = storeConversationSendTextInputSchema.parse({
     clientOperationId: input.clientOperationId,
@@ -297,57 +300,28 @@ async function sendStoreConversationTextForCustomer(
     ...(parsed.requestIntent ? { requestIntent: parsed.requestIntent } : {}),
     text: parsed.text,
   })
+  await assertAccountStoreConversationChatAuthority(db, principal.accountUserId)
   await assertStoreConversationTextScreened(parsed.text)
   return db.$transaction(async (tx) => {
+    await assertAccountStoreConversationChatAuthority(
+      tx,
+      principal.accountUserId,
+    )
     const entry = await resolveStoreConversationEntry(tx, {
       publicToken: parsed.publicToken,
     })
-    const guestCustomer =
-      principal.kind === "guest"
-        ? await loadStoreConversationForGuest(tx, {
-            conversationId: parsed.conversationId,
-            credentialToken: principal.credentialToken,
-            installationToken: principal.device.installationToken,
-            now,
-            purpose: principal.device.purpose,
-            storeId: entry.storeId,
-            tenantId: entry.tenantId,
-          })
-        : null
-    const accountCustomer =
-      principal.kind === "account"
-        ? await loadStoreConversationForAccount(tx, {
-            accountUserId: principal.accountUserId,
-            conversationId: parsed.conversationId,
-            now,
-            storeId: entry.storeId,
-            tenantId: entry.tenantId,
-          })
-        : null
-    const conversation = (guestCustomer ?? accountCustomer)?.conversation
-    if (!conversation) {
-      throw new StoreConversationError(
-        "NOT_FOUND",
-        "This Store conversation is unavailable.",
-      )
-    }
-    if (guestCustomer) {
-      await assertGuestStoreConversationTermsAccepted(
-        tx,
-        conversation.guestIdentityId,
-        dependencies.guestTermsPublication,
-      )
-      await assertGuestAgeAuthority(
-        tx,
-        guestCustomer.credential.guestIdentityId,
-      )
-    } else if (principal.kind === "account") {
-      await assertAccountStoreConversationTermsAccepted(
-        tx,
-        principal.accountUserId,
-      )
-      await assertCustomerAccountAgeAuthority(tx, principal.accountUserId)
-    }
+    const accountCustomer = await loadStoreConversationForAccount(tx, {
+      accountUserId: principal.accountUserId,
+      conversationId: parsed.conversationId,
+      now,
+      storeId: entry.storeId,
+      tenantId: entry.tenantId,
+    })
+    const conversation = accountCustomer.conversation
+    await assertAccountStoreConversationTermsAccepted(
+      tx,
+      principal.accountUserId,
+    )
     assertStoreConversationAvailable(entry.availability)
     assertStoreConversationComposerEnabled(entry.channelMode)
     if (entry.requestKinds.length === 0) {
@@ -549,10 +523,7 @@ async function sendStoreConversationTextForCustomer(
       data: {
         authorKind: StoreConversationMessageAuthorKind.CUSTOMER,
         body: parsed.text,
-        channel:
-          principal.kind === "guest"
-            ? principal.device.channel
-            : principal.channel,
+        channel: principal.channel,
         conversationId: conversation.id,
         kind: StoreConversationMessageKind.CUSTOMER_TEXT,
         occurredAt: now,
@@ -614,20 +585,6 @@ async function sendStoreConversationTextForCustomer(
           type: StoreConversationAuditEventType.CUSTOMER_MESSAGE_APPENDED,
         },
       }),
-      ...(principal.kind === "guest" &&
-      principal.device.purpose ===
-        StoreConversationGuestCredentialPurpose.MOBILE_DEVICE
-        ? [
-            tx.storeConversationGuestAccess.updateMany({
-              data: { lastOpenedAt: now },
-              where: {
-                conversationId: conversation.id,
-                guestIdentityId: guestCustomer?.credential.guestIdentityId,
-                status: StoreConversationGuestAccessStatus.ACTIVE,
-              },
-            }),
-          ]
-        : []),
     ])
 
     return {
@@ -653,8 +610,8 @@ async function sendStoreConversationTextForCustomer(
   })
 }
 
-export function sendGuestStoreConversationText(
-  db: PrismaClient,
+export async function sendGuestStoreConversationText(
+  _db: PrismaClient,
   input: {
     clientOperationId: string
     conversationId: string
@@ -663,20 +620,17 @@ export function sendGuestStoreConversationText(
     requestIntent?: "choose_request" | "continue_current"
     text: string
   },
-  device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
-  dependencies: { guestTermsPublication?: GuestTermsPublication } = {},
-) {
-  const { credentialToken, ...messageInput } = input
-  return sendStoreConversationTextForCustomer(
-    db,
-    messageInput,
-    {
-      credentialToken,
-      device,
-      kind: "guest",
-    },
-    dependencies,
-  )
+  _device: GuestConversationDeviceContext = WEB_DEVICE_CONTEXT,
+  _dependencies: { guestTermsPublication?: GuestTermsPublication } = {},
+): ReturnType<typeof sendStoreConversationTextForAccount> {
+  storeConversationSendTextInputSchema.parse({
+    clientOperationId: input.clientOperationId,
+    conversationId: input.conversationId,
+    publicToken: input.publicToken,
+    requestIntent: input.requestIntent,
+    text: input.text,
+  })
+  rejectGuestStoreConversationFreeFormChat()
 }
 
 export function sendAccountStoreConversationText(
@@ -692,7 +646,7 @@ export function sendAccountStoreConversationText(
   },
 ) {
   const { accountUserId, channel, ...messageInput } = input
-  return sendStoreConversationTextForCustomer(db, messageInput, {
+  return sendStoreConversationTextForAccount(db, messageInput, {
     accountUserId,
     channel:
       channel === "mobile"

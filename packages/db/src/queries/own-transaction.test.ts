@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import type { Prisma } from "../../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import { markSetupDraftArea } from "./assistant"
-import { runInOwnTransaction } from "./own-transaction"
+import {
+  runInOwnSerializableTransaction,
+  runInOwnTransaction,
+} from "./own-transaction"
 
 describe("own transactions", () => {
   test("every call gets fresh options, so a nested call cannot poison later ones", async () => {
@@ -37,4 +40,68 @@ describe("own transactions", () => {
       markSetupDraftArea(tx, { draftId: "draft", area: "sell", mark: "DONE" })
     expect(typeof nested).toBe("function")
   })
+})
+
+test("serialization retry repeats reads with fresh options and stops after three attempts", async () => {
+  let calls = 0
+  let reads = 0
+  const optionsSeen: object[] = []
+  const conflict = () =>
+    new Prisma.PrismaClientKnownRequestError("write conflict", {
+      code: "P2034",
+      clientVersion: "7.6.0",
+    })
+  const db = {
+    $transaction: async (
+      run: (tx: unknown) => Promise<unknown>,
+      options: object,
+    ) => {
+      optionsSeen.push(options)
+      calls++
+      await run({})
+      if (calls < 3) throw conflict()
+      return "done"
+    },
+  }
+  expect(
+    await runInOwnSerializableTransaction(db as never, async () => {
+      reads++
+      return "read"
+    }),
+  ).toBe("done")
+  expect(calls).toBe(3)
+  expect(reads).toBe(3)
+  expect(new Set(optionsSeen).size).toBe(3)
+  calls = 0
+  const alwaysFails = {
+    $transaction: async () => {
+      calls++
+      throw conflict()
+    },
+  }
+  await expect(
+    runInOwnSerializableTransaction(alwaysFails as never, async () => null),
+  ).rejects.toMatchObject({ code: "P2034" })
+  expect(calls).toBe(3)
+})
+test("business refusals and non-serialization errors are never retried", async () => {
+  for (const error of [
+    new Error("OPERATOR_REQUIRED"),
+    new Prisma.PrismaClientKnownRequestError("expired", {
+      code: "P2028",
+      clientVersion: "7.6.0",
+    }),
+  ]) {
+    let calls = 0
+    const db = {
+      $transaction: async () => {
+        calls++
+        throw error
+      },
+    }
+    await expect(
+      runInOwnSerializableTransaction(db as never, async () => null),
+    ).rejects.toBe(error)
+    expect(calls).toBe(1)
+  }
 })

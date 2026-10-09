@@ -107,6 +107,9 @@ export * from "./catalog-detail"
 export * from "./staff-store-access"
 export { setCatalogProductUsage } from "./product-usage"
 
+export * from "./account-privacy-profile"
+
+export * from "./account-privacy-retention"
 export * from "./order-visibility"
 
 export * from "./oversight"

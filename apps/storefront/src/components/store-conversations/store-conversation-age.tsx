@@ -1,5 +1,10 @@
 "use client"
 
+import {
+  STORE_CONVERSATION_CHAT_SCOPE_MESSAGE,
+  canUseStoreConversationFreeFormChat,
+} from "@ewatrade/service-commerce"
+import { Button } from "@ewatrade/ui"
 import { useEffect, useState } from "react"
 
 type AgeBand = "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
@@ -23,7 +28,6 @@ export function StoreConversationAge({
   const [selected, setSelected] = useState<AgeBand | "UNDER_13" | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [safetyAcknowledged, setSafetyAcknowledged] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -31,7 +35,6 @@ export function StoreConversationAge({
     setStatus(null)
     setSelected(null)
     setError(null)
-    setSafetyAcknowledged(false)
     void fetch(`/api/store-conversations/age?access=${access}`, {
       cache: "no-store",
       signal: controller.signal,
@@ -43,7 +46,13 @@ export function StoreConversationAge({
       .then((next) => {
         if (controller.signal.aborted) return
         setStatus(next)
-        onAllowedChange(next.eligible && next.ageBand === "ADULT")
+        onAllowedChange(
+          next.eligible &&
+            canUseStoreConversationFreeFormChat({
+              ageBand: next.ageBand,
+              principal: access,
+            }),
+        )
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted) return
@@ -68,7 +77,12 @@ export function StoreConversationAge({
       if (!response.ok)
         throw new Error(body.message ?? "Age range could not be saved.")
       setStatus({ ageBand: selected, eligible: true })
-      onAllowedChange(selected === "ADULT")
+      onAllowedChange(
+        canUseStoreConversationFreeFormChat({
+          ageBand: selected,
+          principal: access,
+        }),
+      )
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -80,30 +94,31 @@ export function StoreConversationAge({
     }
   }
 
-  if (status?.eligible) {
-    if (status.ageBand === "ADULT" || safetyAcknowledged) return null
+  if (access === "guest" || status?.eligible) {
+    if (
+      status?.eligible &&
+      canUseStoreConversationFreeFormChat({
+        ageBand: status.ageBand,
+        principal: access,
+      })
+    )
+      return null
     return (
       <section
-        aria-label="Online safety reminder"
+        aria-label="Free-form chat eligibility"
         className="mx-auto mb-3 grid max-w-3xl gap-3 rounded-2xl border border-border bg-card p-4 text-sm"
       >
-        <h2 className="font-semibold">Stay safe in Store chat</h2>
+        <h2 className="font-semibold">
+          Free-form chat requires an adult account
+        </h2>
         <p className="text-muted-foreground">
-          You are talking with another person online. Do not share your home
-          address, phone number, school, passwords, payment details, or other
-          private information. You can block or report a conversation that makes
-          you uncomfortable, and ask a trusted adult for help.
+          {STORE_CONVERSATION_CHAT_SCOPE_MESSAGE}
         </p>
-        <button
-          className="min-h-11 rounded-xl bg-primary px-4 py-2 font-semibold text-primary-foreground"
-          onClick={() => {
-            setSafetyAcknowledged(true)
-            onAllowedChange(true)
-          }}
-          type="button"
-        >
-          I understand — continue
-        </button>
+        <p className="text-muted-foreground">
+          You can still view this conversation and use its reporting and support
+          controls. Your age range is a declaration, not identity verification.
+          Contact support if a saved range needs correction.
+        </p>
       </section>
     )
   }
@@ -114,8 +129,9 @@ export function StoreConversationAge({
     >
       <h2 className="font-semibold">Choose your age range</h2>
       <p className="text-muted-foreground">
-        EwaTrade Store chat is for people aged 13 or older. Choose your own age
-        range before sending a message or attachment.
+        Accounts and Store history are available from age 13. Free-form chat
+        requires a signed-in account declaring age 18 or older. Choose your own
+        age range; this is not identity verification.
       </p>
       {status ? (
         <>
@@ -137,17 +153,17 @@ export function StoreConversationAge({
           </div>
           {selected === "UNDER_13" ? (
             <output className="text-muted-foreground">
-              Store chat is not available to people under 13.
+              Accounts and Store history are not available to people under 13.
             </output>
           ) : (
-            <button
+            <Button
               className="min-h-11 rounded-xl bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
               disabled={!selected || busy}
               onClick={() => void declare()}
               type="button"
             >
-              {busy ? "Saving…" : "Continue to chat"}
-            </button>
+              {busy ? "Saving…" : "Save age range"}
+            </Button>
           )}
         </>
       ) : (
