@@ -24,6 +24,33 @@ describe("Green Till native QA links", () => {
       resolveGreenTillQaPath("ewatrade-dev://closeout-modal", false),
     ).toBeNull()
   })
+  test("batch 5 routes retain review state only in development", () => {
+    for (const route of [
+      "account",
+      "business-switch-modal",
+      "sync-status-modal",
+      "payments-received-modal",
+      "reports-modal",
+      "finance-modal",
+      "finance-accounts-modal",
+      "finance-counts-modal",
+      "finance-reports-modal",
+      "finance-periods-modal",
+      "finance-bank-modal",
+      "app-lock-modal",
+      "updates",
+      "subscription-modal",
+      "domain-management-modal",
+      "account-privacy",
+    ]) {
+      expect(
+        resolveGreenTillQaPath(`ewatrade-dev://${route}?qaState=offline`, true),
+      ).toBe(`/${route}?qaState=offline`)
+      expect(
+        resolveGreenTillQaPath(`ewatrade-dev://${route}`, false),
+      ).toBeNull()
+    }
+  })
   test("cannot open fixtures in a production build", () => {
     expect(
       resolveGreenTillQaPath("ewatrade-dev://qa-auth-onboarding-modal", false),

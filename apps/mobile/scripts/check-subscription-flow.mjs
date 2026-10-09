@@ -82,7 +82,7 @@ const CONTRACTS = [
     file: FILES.subscriptionSheet,
     markers: [
       "BottomSheetKeyboardAwareScrollView",
-      "StatusBadge",
+      "subscriptionStatusLabel(verified.subscription.status)",
       "StatusBanner",
       "trpc.retailOps.subscription",
       "verified = productionSnapshot",
