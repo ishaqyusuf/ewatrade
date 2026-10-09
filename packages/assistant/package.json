@@ -22,7 +22,10 @@
     "./setup/vision": "./src/setup/vision.ts",
     "./general/contracts": "./src/general/contracts.ts",
     "./general/prompt": "./src/general/prompt.ts",
-    "./general/rehearsal": "./src/general/rehearsal.ts"
+    "./general/rehearsal": "./src/general/rehearsal.ts",
+    "./capabilities/manifest": "./src/capabilities/manifest.ts",
+    "./capabilities/coverage": "./src/capabilities/coverage.ts",
+    "./capabilities/types": "./src/capabilities/types.ts"
   },
   "scripts": {
     "lint": "biome check .",
