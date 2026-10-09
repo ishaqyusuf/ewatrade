@@ -750,7 +750,7 @@ export function useCustomerConversationDetail(input: {
         clearCustomerConversationSession()
       }
       setNotice(
-        `${errorMessage(error, "Message not sent")} Your draft is still here.`,
+        `${errorMessage(error, "Message not sent.")} Your draft is still here.`,
       )
     }
   }

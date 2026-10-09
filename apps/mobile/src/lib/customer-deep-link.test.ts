@@ -203,3 +203,16 @@ describe("resolveCustomerSystemPath", () => {
     expect(resolveCustomerSystemPath("not a valid link")).toBe("/")
   })
 })
+
+test("malformed store tokens show a recovery page without creating transfer state", () => {
+  expect(resolveCustomerDeepLink("ewatrade://r/short")).toEqual({
+    path: "/(customer)/invalid-store-link",
+    pendingTransfer: null,
+  })
+  expect(resolveCustomerSystemPath("https://chat.ewatrade.com/r/short")).toBe(
+    "/(customer)/invalid-store-link",
+  )
+  expect(resolveCustomerSystemPath("https://untrusted.example/r/short")).toBe(
+    "/",
+  )
+})

@@ -103,6 +103,13 @@ function WorkspaceBody({
             message="Wait while the selected membership is verified. Other selections are temporarily disabled."
           />
         ) : null}
+        {vm.businessLimitReached ? (
+          <StatusBanner
+            title="Business limit reached"
+            message="Open Plan & billing from More to review your plan usage before adding another business."
+            tone="warning"
+          />
+        ) : null}
         {vm.error || (!vm.local && vm.memberships.isError) ? (
           <StatusBanner
             icon="AlertCircle"
@@ -177,7 +184,7 @@ function WorkspaceBody({
         {...listProps}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: market ? 0 : 20,
+          paddingHorizontal: market ? 0 : 18,
           paddingBottom: footerSpace,
         }}
       />
@@ -193,7 +200,7 @@ function WorkspaceBody({
         contentContainerClassName={
           market
             ? "grow pb-[var(--workspace-list-bottom)]"
-            : "grow px-4 pb-[var(--workspace-list-bottom)]"
+            : "grow gap-3 px-[18px] pb-[var(--workspace-list-bottom)]"
         }
       />
     </VariableContextProvider>

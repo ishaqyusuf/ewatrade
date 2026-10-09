@@ -1,15 +1,25 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon, type IconKeys } from "@/components/ui/icon"
-import { Text } from "@/components/ui/text"
+import type { IconKeys } from "@/components/ui/icon"
+import { Skeleton } from "@/components/ui/skeleton"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useColors } from "@/hooks/use-color"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
+import { type Href, useRouter } from "expo-router"
 import { RefreshControl, ScrollView } from "react-native"
+import { HeroCard } from "./green-till/hero-card"
+import {
+  type AttentionItem,
+  AttentionRail,
+  ListCard,
+  RecordRow,
+  SectionHeader,
+} from "./green-till/kit"
 import { REPORTS_COPY, buildReportsPresentation } from "./reports-presentation"
 
 const OPERATION_ICONS = {
@@ -18,29 +28,58 @@ const OPERATION_ICONS = {
   service: "Wrench",
 } as const satisfies Record<string, IconKeys>
 
-export function ReportsContent({
+export function ReportsContent(props: {
+  onComplete?: () => void
+  presentation?: "screen" | "sheet"
+}) {
+  const { profile } = useAuthContext()
+  if (
+    profile?.staffAccessMode === "SCOPED" &&
+    profile.role?.toUpperCase() === "MANAGER"
+  )
+    return (
+      <StatusBanner
+        title="Reports access required"
+        message="Your Store role includes Payments received. Ask the owner about report access."
+        tone="warning"
+      />
+    )
+  return <OperationalReportsContent {...props} />
+}
+function OperationalReportsContent({
   onComplete,
   presentation = "sheet",
 }: {
   onComplete?: () => void
   presentation?: "screen" | "sheet"
 }) {
+  const router = useRouter()
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const colors = useColors()
   const trpc = useTRPC()
   const balances = useQuery(
     trpc.inventory.balanceReport.queryOptions(
       { includeCompatibleTotals: true },
-      { retry: false },
+      { retry: false, enabled: !offline },
     ),
   )
   const reconciliation = useQuery(
-    trpc.inventory.reconciliationReport.queryOptions({}, { retry: false }),
+    trpc.inventory.reconciliationReport.queryOptions(
+      {},
+      { retry: false, enabled: !offline },
+    ),
   )
   const services = useQuery(
-    trpc.serviceReporting.summary.queryOptions({}, { retry: false }),
+    trpc.serviceReporting.summary.queryOptions(
+      {},
+      { retry: false, enabled: !offline },
+    ),
   )
   const orders = useQuery(
-    trpc.orders.reportSummary.queryOptions(undefined, { retry: false }),
+    trpc.orders.reportSummary.queryOptions(undefined, {
+      retry: false,
+      enabled: !offline,
+    }),
   )
   const reportQueries = [balances, reconciliation, services, orders] as const
   const failedQueries = reportQueries.filter((query) => query.isError)
@@ -65,129 +104,164 @@ export function ReportsContent({
   })
 
   async function refreshReports() {
+    if (offline) return
     await Promise.all(reportQueries.map((query) => query.refetch()))
   }
 
   async function retryFailedReports() {
+    if (offline) return
     await Promise.all(failedQueries.map((query) => query.refetch()))
   }
 
+  const attention: AttentionItem[] = []
+  if (reconciliation.data?.provisionalCommands)
+    attention.push({
+      key: "sync",
+      icon: "RefreshCw",
+      tint: "amber",
+      title: `${reconciliation.data.provisionalCommands} pending records`,
+      sub: "Review sync activity",
+      onPress: () => router.push("/sync-status-modal"),
+    })
+  if (services.data?.work.overdueJobs)
+    attention.push({
+      key: "service",
+      icon: "Wrench",
+      tint: "rose",
+      title: `${services.data.work.overdueJobs} overdue jobs`,
+      sub: "Open service work",
+      onPress: () => router.push("/service-jobs-modal" as Href),
+    })
+  const operationSources = {
+    inventory: balances,
+    pending: reconciliation,
+    service: services,
+  }
+  const operationRoutes = {
+    inventory: "/stock-intake-modal",
+    pending: "/sync-status-modal",
+    service: "/service-jobs-modal",
+  } as const
+  const oldestUpdate = Math.min(
+    ...reportQueries.filter((q) => q.data).map((q) => q.dataUpdatedAt),
+  )
   return (
     <ScrollView
       className="flex-1"
       contentContainerStyle={{
-        gap: 20,
+        gap: 16,
+        paddingHorizontal: 18,
         paddingBottom: 48,
-        paddingHorizontal: 20,
       }}
       refreshControl={
-        <RefreshControl
-          colors={[colors.primary]}
-          onRefresh={() => void refreshReports()}
-          progressBackgroundColor={colors.card}
-          refreshing={isRefreshing}
-          tintColor={colors.primary}
-        />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      <Text className="text-sm leading-5 text-muted-foreground">
-        {REPORTS_COPY.purpose}
-      </Text>
-
-      {isInitialLoading ? (
-        <DetailSkeleton label="Loading reports" rows={4} />
-      ) : (
-        <>
-          {failedQueries.length > 0 ? (
-            <StatusBanner
-              actionLabel="Try again"
-              icon="AlertCircle"
-              message="Some report sources could not be loaded. Available values remain visible below."
-              onActionPress={() => void retryFailedReports()}
-              title="Reports incomplete"
-              tone="destructive"
-            />
-          ) : null}
-
-          <View className="gap-2">
-            <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
-              Store snapshot
-            </Text>
-            <View className="flex-row border-y border-border">
-              <View className="min-w-0 flex-[1.5] py-4 pr-4">
-                <Text className="text-xs text-muted-foreground">
-                  Order value
-                </Text>
-                <Text
-                  className="mt-1 text-3xl font-extrabold tracking-tight text-foreground"
-                  numberOfLines={1}
-                >
-                  {formatMinorMoney(orderValueMinor, currency)}
-                </Text>
-              </View>
-              <View className="min-w-0 flex-1 border-l border-border py-4 pl-4">
-                <Text className="text-xs text-muted-foreground">Orders</Text>
-                <Text className="mt-1 text-2xl font-extrabold text-foreground">
-                  {orderCount}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="gap-2">
-            <Text className="text-lg font-extrabold text-foreground">
-              Operations
-            </Text>
-            <View>
-              {report.operations.map((item) => (
-                <View
-                  className="min-h-16 flex-row items-center gap-3 border-t border-border py-3 last:border-b"
-                  key={item.id}
-                >
-                  <View className="size-10 items-center justify-center rounded-full bg-muted">
-                    <Icon
-                      className="size-sm text-primary"
-                      name={OPERATION_ICONS[item.id]}
-                    />
-                  </View>
-                  <View className="min-w-0 flex-1 gap-1">
-                    <Text className="font-extrabold text-foreground">
-                      {item.label}
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">
-                      {item.detail}
-                    </Text>
-                  </View>
-                  <Text className="text-sm font-extrabold text-foreground">
-                    {item.value}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {report.isEmpty && failedQueries.length === 0 ? (
-            <EmptyState
-              className="border-y border-border px-0 py-6"
-              icon="analytics"
-              message={REPORTS_COPY.emptyMessage}
-              title={REPORTS_COPY.emptyTitle}
-              variant="flat"
-            />
-          ) : null}
-
-          <StatusBanner
-            icon="Info"
-            message={REPORTS_COPY.boundaryMessage}
-            title={REPORTS_COPY.boundaryTitle}
-            tone="muted"
+        offline ? undefined : (
+          <RefreshControl
+            colors={[colors.primary]}
+            onRefresh={() => void refreshReports()}
+            refreshing={isRefreshing}
+            tintColor={colors.primary}
           />
-        </>
+        )
+      }
+    >
+      {offline ? (
+        <StatusBanner
+          tone="warning"
+          title="Offline reports"
+          message={
+            Number.isFinite(oldestUpdate)
+              ? `Saved figures · as of ${new Date(oldestUpdate).toLocaleString()}`
+              : "Reconnect to load reports."
+          }
+        />
+      ) : null}
+      {failedQueries.length ? (
+        <StatusBanner
+          actionLabel={offline ? undefined : "Try again"}
+          title="Reports incomplete"
+          message="Available values remain visible. Unavailable sources show —."
+          tone="destructive"
+          onActionPress={() => void retryFailedReports()}
+        />
+      ) : null}
+      {orders.isPending && !offline ? (
+        <Skeleton className="h-48 rounded-[22px]" />
+      ) : (
+        <HeroCard
+          label="Order value · all time"
+          amount={
+            orders.data ? formatMinorMoney(orderValueMinor, currency) : "—"
+          }
+          sub={
+            orders.data
+              ? "All recorded orders in this store"
+              : "Order summary unavailable"
+          }
+          stats={[
+            { label: "Orders", value: orders.data ? String(orderCount) : "—" },
+            {
+              label: "Average order",
+              value: orders.data
+                ? formatMinorMoney(
+                    orderCount ? Math.round(orderValueMinor / orderCount) : 0,
+                    currency,
+                  )
+                : "—",
+            },
+          ]}
+        />
       )}
-
+      {attention.length ? (
+        <View>
+          <SectionHeader title="Needs attention" />
+          <AttentionRail items={attention} />
+        </View>
+      ) : null}
+      <View>
+        <SectionHeader title="Operations" />
+        <ListCard>
+          {report.operations.map((item) => (
+            <RecordRow
+              stackDetails
+              key={item.id}
+              title={item.label}
+              meta={
+                operationSources[item.id].data
+                  ? item.detail
+                  : operationSources[item.id].isFetching
+                    ? "Loading…"
+                    : "Source unavailable"
+              }
+              amount={operationSources[item.id].data ? item.value : "—"}
+              avatar={{
+                icon: OPERATION_ICONS[item.id],
+                tint:
+                  item.id === "pending"
+                    ? "amber"
+                    : item.id === "service"
+                      ? "lilac"
+                      : "mint",
+              }}
+              onPress={() => router.push(operationRoutes[item.id] as Href)}
+            />
+          ))}
+        </ListCard>
+      </View>
+      {report.isEmpty && reportQueries.every((q) => q.data !== undefined) ? (
+        <EmptyState
+          icon="analytics"
+          title={REPORTS_COPY.emptyTitle}
+          message={REPORTS_COPY.emptyMessage}
+        />
+      ) : null}
+      <StatusBanner
+        icon="Info"
+        message={REPORTS_COPY.boundaryMessage}
+        title={REPORTS_COPY.boundaryTitle}
+        tone="muted"
+      />
       {presentation === "sheet" && onComplete ? (
-        <ActionButton onPress={onComplete} variant="outline">
+        <ActionButton variant="outline" onPress={onComplete}>
           Done
         </ActionButton>
       ) : null}

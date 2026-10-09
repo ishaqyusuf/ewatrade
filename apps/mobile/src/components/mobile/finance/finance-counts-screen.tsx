@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -12,6 +13,8 @@ import { useState } from "react"
 import { FlatList, View } from "react-native"
 import { FinanceCashCountForm } from "./finance-cash-count-form"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
+import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -20,7 +23,7 @@ import { useMobileFinanceCommand } from "./use-mobile-finance-command"
 
 export function FinanceCountsScreen() {
   return (
-    <FinanceWorkspaceGate>
+    <FinanceWorkspaceGate requireOnline>
       {(workspace) => (
         <CountsWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}`}
@@ -85,7 +88,7 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
     <FlatList
-      className="flex-1 px-4"
+      className="flex-1 px-[18px]"
       data={
         counts.isError
           ? []
@@ -116,20 +119,17 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
               onActionPress={() => void balances.refetch()}
             />
           ) : balances.data ? (
-            <View className="gap-3 border-y border-border py-4">
-              <Text className="text-sm text-muted-foreground">
-                Recorded cash balance · Includes archived accounts
-              </Text>
-              <Text className="text-3xl font-bold">
-                {money(
+            <View className="gap-4">
+              <FinanceDetailScaffold
+                title="Cash counts"
+                label="Recorded cash balance"
+                amount={money(
                   accounts
-                    .reduce(
-                      (sum, account) => sum + BigInt(account.balanceMinor),
-                      0n,
-                    )
+                    .reduce((sum, a) => sum + BigInt(a.balanceMinor), 0n)
                     .toString(),
                 )}
-              </Text>
+                sub="Posted activity only · includes archived accounts"
+              />
               {accounts.map((account) => (
                 <Text key={account.id}>
                   {account.name}
@@ -139,7 +139,7 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
               ))}
             </View>
           ) : (
-            <Text>Loading recorded cash…</Text>
+            <Skeleton className="h-48 rounded-[22px]" />
           )}
           <ActionButton
             disabled={!canSubmit || active.length === 0}
@@ -205,7 +205,7 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
         >
           <Text className="font-bold">{item.reference}</Text>
           <Text className="text-sm text-muted-foreground">
-            {item.accountName} · {new Date(item.asOf).toISOString()} UTC
+            {item.accountName} · {financeDisplayDate(item.asOf, true)} UTC
           </Text>
           <Text>Observed: {money(item.observedBalanceMinor)}</Text>
           <Text>

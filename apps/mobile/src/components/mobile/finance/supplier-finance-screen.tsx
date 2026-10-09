@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -15,6 +16,7 @@ import {
 import { Suspense, lazy } from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlatList, View } from "react-native"
+import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 
 import {
@@ -270,7 +272,7 @@ function SupplierDirectory({
     : []
   return (
     <FlatList
-      className="flex-1 px-4"
+      className="flex-1 px-[18px]"
       data={suppliers}
       keyExtractor={(supplier) => supplier.id}
       refreshing={query.isRefetching}
@@ -446,7 +448,7 @@ export function SupplierFinanceDetail({
       </Suspense>
     )
   return (
-    <View className="flex-1 px-4">
+    <View className="flex-1 px-[18px]">
       <View className="gap-3 pb-4">
         <ActionButton variant="ghost" onPress={onBack}>
           ‹ Suppliers
@@ -461,28 +463,36 @@ export function SupplierFinanceDetail({
         <ActionButton variant="outline" onPress={() => setRecording(true)}>
           Record entry
         </ActionButton>
-        <View className="flex-row gap-2">
-          <ActionButton
-            variant={view === "statement" ? "secondary" : "outline"}
-            className="flex-1"
-            onPress={() => setView("statement")}
-          >
-            Statement
-          </ActionButton>
-          <ActionButton
-            variant={view === "aging" ? "secondary" : "outline"}
-            className="flex-1"
-            onPress={() => setView("aging")}
-          >
-            Payable aging
-          </ActionButton>
-          <ActionButton
-            variant={view === "purchases" ? "secondary" : "outline"}
-            className="flex-1"
-            onPress={() => setView("purchases")}
-          >
-            Purchases
-          </ActionButton>
+        <View className="flex-row flex-wrap gap-2 rounded-[16px] bg-muted p-1">
+          {(
+            [
+              { value: "statement", label: "Statement" },
+              { value: "aging", label: "Aging" },
+              { value: "purchases", label: "Purchases" },
+            ] as const
+          ).map((tab) => (
+            <Pressable
+              key={tab.value}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: view === tab.value }}
+              onPress={() => setView(tab.value)}
+              className={
+                view === tab.value
+                  ? "min-h-11 grow items-center justify-center rounded-xl bg-primary px-3"
+                  : "min-h-11 grow items-center justify-center rounded-xl px-3"
+              }
+            >
+              <Text
+                className={
+                  view === tab.value
+                    ? "text-sm font-bold text-primary-foreground"
+                    : "text-sm font-bold text-muted-foreground"
+                }
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </View>
       {view === "statement" ? (
@@ -684,7 +694,7 @@ function SupplierStatement({
             />
           ) : null}
           {query.isPending && !offline ? (
-            <Text>Loading supplier statement…</Text>
+            <Skeleton className="h-48 rounded-[22px]" />
           ) : null}
           {query.isError ? (
             <StatusBanner
@@ -707,18 +717,12 @@ function SupplierStatement({
             />
           ) : null}
           {visible && query.data ? (
-            <View className="flex-row gap-3 rounded-2xl bg-muted/60 p-4">
-              <Amount
-                label="Payable"
-                amount={query.data.payableMinor}
-                currencyCode={currencyCode}
-              />
-              <Amount
-                label="Supplier advance"
-                amount={query.data.advanceMinor}
-                currencyCode={currencyCode}
-              />
-            </View>
+            <FinanceDetailScaffold
+              title="Supplier statement"
+              label="Still payable"
+              amount={formatFinanceMoney(query.data.payableMinor, currencyCode)}
+              sub={`Supplier advance ${formatFinanceMoney(query.data.advanceMinor, currencyCode)} · separate from payable`}
+            />
           ) : null}
           {visible && query.data ? (
             <Text className="text-xs text-muted-foreground">

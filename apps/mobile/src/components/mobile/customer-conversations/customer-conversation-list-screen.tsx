@@ -13,7 +13,7 @@ import { useCustomerTRPC } from "@/trpc/customer-client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { useLocalSearchParams, useRouter } from "expo-router"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { CustomerAccountSecurityControl } from "./customer-account-security-control"
@@ -81,7 +81,9 @@ export function CustomerConversationListScreen({
       },
     ),
   )
-  const credentialRejected = isCustomerCredentialError(guestQuery.error)
+  const [expiredCredential, setExpiredCredential] = useState(false)
+  const credentialRejected =
+    expiredCredential || isCustomerCredentialError(guestQuery.error)
   const accountConversations = useMemo(
     () =>
       accountQuery.data?.pages.reduce(
@@ -148,11 +150,16 @@ export function CustomerConversationListScreen({
   useEffect(() => {
     if (qaIsolated) return
     if (!isCustomerCredentialError(guestQuery.error)) return
+    setExpiredCredential(true)
     clearCustomerConversationSession()
     queryClient.removeQueries({
       queryKey: trpc.serviceCommerce.mobileStoreConversations.queryKey(),
     })
   }, [guestQuery.error, qaIsolated, queryClient, trpc])
+
+  useEffect(() => {
+    if (hasCredential && guestQuery.isSuccess) setExpiredCredential(false)
+  }, [hasCredential, guestQuery.isSuccess])
 
   useEffect(() => {
     if (qaIsolated) return

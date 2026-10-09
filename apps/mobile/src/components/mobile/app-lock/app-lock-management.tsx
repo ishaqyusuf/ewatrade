@@ -1,5 +1,3 @@
-import type { ReactNode } from "react"
-import type { AppLockManagementProps } from "./app-lock-presentation"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Switch } from "@/components/ui/switch"
@@ -7,6 +5,8 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { cn } from "@/lib/utils"
+import type { ReactNode } from "react"
+import type { AppLockManagementProps } from "./app-lock-presentation"
 
 export function AppLockManagement(props: AppLockManagementProps) {
   const market = useMobileDesign("app-lock") === "market-day"
@@ -19,13 +19,13 @@ export function AppLockManagement(props: AppLockManagementProps) {
           detail={
             props.hasLock
               ? "Change the 6 digit PIN used to unlock this app."
-              : "Create a 6 digit PIN before turning on fingerprint unlock."
+              : "Create a 6 digit PIN before turning on biometric unlock."
           }
           onPress={props.hasLock ? props.onChangePin : props.onCreatePin}
         />
         <ManagementRow
           icon="FingerPrintScan"
-          title="Fingerprint unlock"
+          title={`${props.biometricLabel} unlock`}
           detail={props.biometricDetail}
           disabled={!props.hasLock || !props.biometricsAvailable}
           trailing={
@@ -40,7 +40,7 @@ export function AppLockManagement(props: AppLockManagementProps) {
           <ManagementRow
             icon="XCircle"
             title="Turn off app lock"
-            detail="Turn off PIN and fingerprint unlock on this phone."
+            detail="Turn off PIN and biometric unlock on this phone."
             danger
             onPress={props.onDisable}
           />

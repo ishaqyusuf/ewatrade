@@ -157,7 +157,6 @@ const InitialLayout = ({
         >
           <Stack.Screen name="(admin-tabs)" options={gateOptions} />
 
-          <Stack.Screen name="business-switch-modal" options={modalOptions} />
           <Stack.Screen
             name="new-business-onboarding-modal"
             options={modalOptions}
@@ -171,6 +170,7 @@ const InitialLayout = ({
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="no-access" options={gateOptions} />
+          <Stack.Screen name="account" options={{ headerShown: false }} />
           <Stack.Screen
             name="account-privacy"
             options={{ headerShown: false }}
@@ -259,6 +259,7 @@ const InitialLayout = ({
           <Stack.Screen name="your-sales" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
+          <Stack.Screen name="business-switch-modal" options={modalOptions} />
           <Stack.Screen name="order-receipts-modal" options={modalOptions} />
           <Stack.Screen name="app-lock-modal" options={modalOptions} />
           <Stack.Screen name="updates" options={{ headerShown: false }} />

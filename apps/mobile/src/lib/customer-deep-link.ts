@@ -72,7 +72,16 @@ export function resolveCustomerDeepLink(path: string): {
     const url = new URL(path, `https://${customerChatHost()}`)
     const publicToken = storeTokenFromUrl(url)
     if (!publicToken || !TOKEN_PATTERN.test(publicToken)) {
-      return { path: "/", pendingTransfer: null }
+      const isStoreEntry =
+        (url.protocol === "https:" &&
+          url.hostname.toLowerCase() === customerChatHost() &&
+          url.pathname.startsWith("/r/")) ||
+        (["ewatrade:", "ewatrade-dev:"].includes(url.protocol) &&
+          url.hostname === "r")
+      return {
+        path: isStoreEntry ? "/(customer)/invalid-store-link" : "/",
+        pendingTransfer: null,
+      }
     }
 
     const storePath = `/r/${encodeURIComponent(publicToken)}`

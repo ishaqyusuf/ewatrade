@@ -1,5 +1,6 @@
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { getBaseUrl } from "@/lib/base-url"
 import { useCustomerTRPC } from "@/trpc/customer-client"
@@ -87,8 +88,8 @@ export function CustomerAttachment({
       accessibilityLabel={`${attachment.label}. ${STATUS_COPY[attachment.state]}`}
       className={
         customer
-          ? "flex-row items-center gap-1 self-end rounded-full border border-primary-foreground/25 bg-primary-foreground/10 p-1"
-          : "flex-row items-center gap-1 self-start rounded-full border border-border bg-muted/40 p-1"
+          ? "flex-row items-center gap-1 self-end rounded-[18px] border border-primary-foreground/25 bg-primary-foreground/10 p-1"
+          : "flex-row items-center gap-1 self-start rounded-[18px] border border-border bg-muted/40 p-1"
       }
     >
       <View
@@ -129,6 +130,26 @@ export function CustomerAttachment({
             name={attachment.kind === "image" ? "Camera" : "FileText"}
           />
         )}
+      </View>
+      <View className="min-w-0 flex-1 gap-1 px-2">
+        <Text
+          className={
+            customer
+              ? "text-sm font-bold text-primary-foreground"
+              : "text-sm font-bold text-foreground"
+          }
+        >
+          {attachment.label}
+        </Text>
+        <Text
+          className={
+            customer
+              ? "text-xs text-primary-foreground/80"
+              : "text-xs text-muted-foreground"
+          }
+        >
+          {STATUS_COPY[attachment.state]}
+        </Text>
       </View>
       {attachment.recovery && onRecover ? (
         <Pressable

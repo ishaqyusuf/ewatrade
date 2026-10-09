@@ -1,15 +1,17 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { FormField } from "@/components/mobile/form-field"
 import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { prepareFinanceStatementRange } from "@/lib/finance-money-input"
 import { useTRPC } from "@/trpc/client"
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import { ScrollView, View } from "react-native"
+import { FinanceBankDateField } from "../finance/finance-bank-date-field"
 import { FinanceFormBody } from "../finance/finance-form-body"
+import { FinanceDetailScaffold } from "../finance/finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -21,7 +23,7 @@ import { ReportAmount, ReportSection } from "./report-section"
 type ReportWindow = { from: Date; through: Date; revision: number }
 export function FinanceReportsScreen() {
   return (
-    <FinanceWorkspaceGate>
+    <FinanceWorkspaceGate requireOnline>
       {(workspace) => (
         <ReportsWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}`}
@@ -91,17 +93,19 @@ function ReportWindowView({
           UTC dates on or after bookkeeping began. Applying dates starts a new
           snapshot.
         </Text>
-        <FormField
-          label="From (YYYY-MM-DD, UTC)"
+        <FinanceBankDateField
+          label="From"
           value={from}
-          onChangeText={setFrom}
-          maxLength={10}
+          onChange={setFrom}
+          minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
+          maximum={new Date().toISOString().slice(0, 10)}
         />
-        <FormField
-          label="Through (YYYY-MM-DD, UTC)"
+        <FinanceBankDateField
+          label="Through"
           value={through}
-          onChangeText={setThrough}
-          maxLength={10}
+          onChange={setThrough}
+          minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
+          maximum={new Date().toISOString().slice(0, 10)}
         />
         {error ? <StatusBanner message={error} tone="destructive" /> : null}
         <ActionButton
@@ -131,9 +135,9 @@ function ReportWindowView({
     <ScrollView
       className="flex-1"
       contentContainerStyle={{
-        paddingHorizontal: 16,
+        paddingHorizontal: 18,
         paddingBottom: 48,
-        gap: 20,
+        gap: 16,
       }}
     >
       <Text className="text-xl font-bold">Recorded financial reports</Text>
@@ -223,6 +227,22 @@ function ReportContents({ report }: { report: FinanceReport }) {
         {report.coverage}
         {"\n"}Missing coverage: {report.coverageGaps.join(", ")}
       </Text>
+      <FinanceDetailScaffold
+        title="Recorded entries"
+        label="Net recorded · selected dates"
+        amount={formatFinanceMoney(p.netProfitMinor, report.currencyCode)}
+        sub="Partial records · not complete business profit"
+        stats={[
+          {
+            label: "Revenue",
+            value: formatFinanceMoney(p.revenueMinor, report.currencyCode),
+          },
+          {
+            label: "Expenses",
+            value: formatFinanceMoney(p.expensesMinor, report.currencyCode),
+          },
+        ]}
+      />
       <ReportExportActions
         filename={`finance-report-${report.through.toISOString().slice(0, 10)}-snapshot-${report.snapshotSequence}.csv`}
         build={async () => buildFinanceReportCsv(report)}

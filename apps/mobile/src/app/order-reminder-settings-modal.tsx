@@ -3,6 +3,7 @@ import {
   StatusBanner,
   WorkflowModalScreen,
 } from "@/components/mobile"
+import { ToggleRow } from "@/components/mobile/green-till/kit"
 import {
   REMINDER_SETTINGS_COPY,
   canEditReminderSettings,
@@ -10,11 +11,12 @@ import {
   toReminderSettingsValue,
 } from "@/components/mobile/order-reminder-settings-presentation"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { SettingsScreen } from "@/components/mobile/settings-screen"
 import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColors } from "@/hooks/use-color"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
@@ -35,63 +37,34 @@ function ReminderSettingToggle({
   label: string
   onCheckedChange: (checked: boolean) => void
 }) {
-  const colors = useColors()
-  const trackStyle = {
-    backgroundColor: checked ? colors.primary : colors.input,
-    borderRadius: 999,
-    height: 28,
-    padding: 3,
-    width: 48,
-  }
-
   return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="switch"
-      accessibilityState={{ checked, disabled: !!disabled }}
-      className="min-h-[88px] flex-row items-center gap-3 border-t border-border py-3 disabled:opacity-50"
+    <ToggleRow
+      title={label}
+      sub={description}
+      value={checked}
       disabled={disabled}
-      haptic
-      onPress={() => onCheckedChange(!checked)}
-      transition
-    >
-      {badge ? (
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-accent">
-          <Text className="text-sm font-extrabold text-primary">{badge}</Text>
-        </View>
-      ) : null}
-      <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-extrabold text-foreground">{label}</Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
-          {description}
-        </Text>
-      </View>
-      <View pointerEvents="none" style={trackStyle}>
-        <View
-          style={{
-            backgroundColor: checked
-              ? colors.primaryForeground
-              : colors.background,
-            borderRadius: 999,
-            height: 22,
-            transform: [{ translateX: checked ? 20 : 0 }],
-            width: 22,
-          }}
-        />
-      </View>
-    </Pressable>
+      onValueChange={onCheckedChange}
+    />
   )
 }
 
 export default function OrderReminderSettingsModalRoute() {
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const settings = useQuery(
-    trpc.orders.reminderSettings.queryOptions({}, { retry: false }),
+    trpc.orders.reminderSettings.queryOptions(
+      {},
+      { retry: false, enabled: !offline },
+    ),
   )
-  const [enabled, setEnabled] = useState(true)
-  const [dayBeforeEnabled, setDayBeforeEnabled] = useState(true)
-  const [sameDayEnabled, setSameDayEnabled] = useState(true)
+  const [enabled, setEnabled] = useState(() => settings.data?.enabled ?? false)
+  const [dayBeforeEnabled, setDayBeforeEnabled] = useState(
+    () => settings.data?.dayBeforeEnabled ?? false,
+  )
+  const [sameDayEnabled, setSameDayEnabled] = useState(
+    () => settings.data?.sameDayEnabled ?? false,
+  )
   const [saved, setSaved] = useState(false)
   const [qaSnapshot, setQaSnapshot] = useState<{
     dayBeforeEnabled: boolean
@@ -131,11 +104,13 @@ export default function OrderReminderSettingsModalRoute() {
       },
     }),
   )
-  const canEditSettings = canEditReminderSettings({
-    hasData: !!settings.data,
-    queryError: settings.isError,
-    savePending: updateSettings.isPending,
-  })
+  const canEditSettings =
+    !offline &&
+    canEditReminderSettings({
+      hasData: !!settings.data,
+      queryError: settings.isError,
+      savePending: updateSettings.isPending,
+    })
 
   function markChanged(action: () => void) {
     if (updateSettings.isPending) return
@@ -151,16 +126,28 @@ export default function OrderReminderSettingsModalRoute() {
       title="Order reminders"
     >
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 20 }}
+        contentContainerClassName="gap-4 px-[18px] pb-10"
         showsVerticalScrollIndicator={false}
       >
-        <Text className="mb-5 text-sm leading-6 text-muted-foreground">
-          Keep the team ahead of scheduled product deliveries.
-        </Text>
-
+        <SettingsScreen
+          loading={settings.isPending && !offline}
+          title={
+            settings.data
+              ? enabled
+                ? "Reminders are on"
+                : "Reminders are off"
+              : "Reminders unavailable"
+          }
+          sub={
+            offline
+              ? "Reconnect to change reminder settings."
+              : "Keep the team ahead of scheduled deliveries."
+          }
+        />
         {settings.isError ? (
           <StatusBanner
             icon="AlertCircle"
+            actionLabel={offline ? undefined : "Try again"}
             message={REMINDER_SETTINGS_COPY.loadError}
             onActionPress={() => void settings.refetch()}
             title="Could not load reminder settings"
@@ -188,73 +175,78 @@ export default function OrderReminderSettingsModalRoute() {
           </View>
         ) : null}
 
-        <View className="mb-3">
-          <QaQuickFillButton
-            canUndo={Boolean(qaSnapshot)}
-            formId="mobile.order.reminder-settings"
-            isDirty={isDirty}
-            onFill={() => {
-              setQaSnapshot(currentSettings)
-              // A day-before-only pattern, unless that is already set, so the
-              // fill always produces a change to review and save.
-              const dayBeforeOnly =
-                enabled && dayBeforeEnabled && !sameDayEnabled
-              setEnabled(true)
-              setDayBeforeEnabled(true)
-              setSameDayEnabled(dayBeforeOnly)
-              setSaved(false)
-            }}
-            onUndo={() => {
-              if (!qaSnapshot) return
-              setEnabled(qaSnapshot.enabled)
-              setDayBeforeEnabled(qaSnapshot.dayBeforeEnabled)
-              setSameDayEnabled(qaSnapshot.sameDayEnabled)
-              setQaSnapshot(null)
-            }}
-          />
-        </View>
+        {settings.data ? (
+          <>
+            <View className="mb-3">
+              <QaQuickFillButton
+                canUndo={Boolean(qaSnapshot)}
+                formId="mobile.order.reminder-settings"
+                isDirty={isDirty}
+                onFill={() => {
+                  setQaSnapshot(currentSettings)
+                  // A day-before-only pattern, unless that is already set, so the
+                  // fill always produces a change to review and save.
+                  const dayBeforeOnly =
+                    enabled && dayBeforeEnabled && !sameDayEnabled
+                  setEnabled(true)
+                  setDayBeforeEnabled(true)
+                  setSameDayEnabled(dayBeforeOnly)
+                  setSaved(false)
+                }}
+                onUndo={() => {
+                  if (!qaSnapshot) return
+                  setEnabled(qaSnapshot.enabled)
+                  setDayBeforeEnabled(qaSnapshot.dayBeforeEnabled)
+                  setSameDayEnabled(qaSnapshot.sameDayEnabled)
+                  setQaSnapshot(null)
+                }}
+              />
+            </View>
 
-        <Text className="mb-2 mt-1 text-xs font-extrabold tracking-[1.4px] text-muted-foreground">
-          REMINDER DELIVERY
-        </Text>
-        <View className="border-b border-border">
-          <ReminderSettingToggle
-            checked={enabled}
-            description="Notify Owners, Admins, and Managers."
-            disabled={!canEditSettings}
-            label="Email reminders"
-            onCheckedChange={(value) => {
-              markChanged(() => setEnabled(value))
-            }}
-          />
-        </View>
+            <Text className="mb-2 mt-1 text-xs font-extrabold tracking-[1.4px] text-muted-foreground">
+              REMINDER DELIVERY
+            </Text>
+            <View className="border-b border-border">
+              <ReminderSettingToggle
+                checked={enabled}
+                description="Notify Owners, Admins, and Managers."
+                disabled={!canEditSettings}
+                label="Email reminders"
+                onCheckedChange={(value) => {
+                  markChanged(() => setEnabled(value))
+                }}
+              />
+            </View>
 
-        <Text className="mb-2 mt-6 text-xs font-extrabold tracking-[1.4px] text-muted-foreground">
-          SEND BEFORE DELIVERY
-        </Text>
-        <View className="border-b border-border">
-          <ReminderSettingToggle
-            badge="−1"
-            checked={dayBeforeEnabled}
-            description="On the previous calendar day."
-            disabled={!canEditSettings || !enabled}
-            label="One day before"
-            onCheckedChange={(value) => {
-              markChanged(() => setDayBeforeEnabled(value))
-            }}
-          />
-          <ReminderSettingToggle
-            badge="0"
-            checked={sameDayEnabled}
-            description="On the scheduled delivery day."
-            disabled={!canEditSettings || !enabled}
-            label="Same day"
-            onCheckedChange={(value) => {
-              markChanged(() => setSameDayEnabled(value))
-            }}
-          />
-        </View>
-
+            <Text className="mb-2 mt-6 text-xs font-extrabold tracking-[1.4px] text-muted-foreground">
+              SEND BEFORE DELIVERY
+            </Text>
+            <View className="border-b border-border">
+              <ReminderSettingToggle
+                badge="−1"
+                checked={dayBeforeEnabled}
+                description="On the previous calendar day."
+                disabled={!canEditSettings || !enabled}
+                label="One day before"
+                onCheckedChange={(value) => {
+                  markChanged(() => setDayBeforeEnabled(value))
+                }}
+              />
+              <ReminderSettingToggle
+                badge="0"
+                checked={sameDayEnabled}
+                description="On the scheduled delivery day."
+                disabled={!canEditSettings || !enabled}
+                label="Same day"
+                onCheckedChange={(value) => {
+                  markChanged(() => setSameDayEnabled(value))
+                }}
+              />
+            </View>
+          </>
+        ) : settings.isFetching ? (
+          <Skeleton className="h-40 rounded-[20px]" />
+        ) : null}
         <View className="mt-4 flex-row items-start gap-2">
           <Icon className="mt-0.5 size-sm text-primary" name="Info" />
           <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
@@ -266,6 +258,7 @@ export default function OrderReminderSettingsModalRoute() {
         <View className="mt-5">
           <ActionButton
             disabled={
+              offline ||
               settings.isPending ||
               settings.isError ||
               updateSettings.isPending ||
@@ -274,7 +267,7 @@ export default function OrderReminderSettingsModalRoute() {
             isLoading={updateSettings.isPending}
             loadingLabel="Saving settings"
             onPress={() => {
-              if (!isDirty) return
+              if (!canEditSettings || !isDirty) return
               updateSettings.mutate(currentSettings)
             }}
           >

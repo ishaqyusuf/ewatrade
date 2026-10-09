@@ -2,7 +2,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { canManageMobileOperations } from "@/lib/mobile-roles"
 import { getSession, isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
-import { useBusinessStore, type RetailOpsBusiness } from "@/store/businessStore"
+import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
@@ -42,7 +42,10 @@ export function useBusinessSwitch({
     canManageMobileOperations(auth.profile?.role) &&
     (auth.profile?.status?.toUpperCase() ?? "ACTIVE") === "ACTIVE"
   const scopeChanged = !identity || identity !== origin.current
-  const blocked = scopeChanged || !canManage || !auth.session
+  const blocked =
+    scopeChanged ||
+    !auth.session ||
+    (auth.profile?.status?.toUpperCase() ?? "ACTIVE") !== "ACTIVE"
   const [search, updateSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -67,6 +70,19 @@ export function useBusinessSwitch({
       networkMode: "always",
     }),
   )
+  const plan = useQuery(
+    trpc.retailOps.subscription.queryOptions(undefined, {
+      enabled:
+        !blocked &&
+        !local &&
+        !isOffline &&
+        ["OWNER", "ADMIN"].includes(auth.profile?.role?.toUpperCase() ?? ""),
+      retry: false,
+    }),
+  )
+  const businessLimitReached = !!plan.data?.entitlements.find(
+    (item) => item.key === "businesses",
+  )?.isAtLimit
   const businesses = useMemo<RetailOpsBusiness[]>(
     () =>
       blocked
@@ -119,7 +135,6 @@ export function useBusinessSwitch({
     ])
     if (
       key !== origin.current ||
-      !canManageMobileOperations(session.profile.role) ||
       (session.profile.status?.toUpperCase() ?? "ACTIVE") !== "ACTIVE"
     )
       return null
@@ -242,6 +257,13 @@ export function useBusinessSwitch({
   }, [currentSession, memberships.refetch])
 
   function openCreate() {
+    if (!canManageMobileOperations(currentSession()?.profile.role)) return
+    if (businessLimitReached) {
+      setError(
+        "Your plan’s business limit is reached. Open Plan & billing to review your usage.",
+      )
+      return
+    }
     if (
       !currentSession() ||
       busy.current ||
@@ -250,6 +272,7 @@ export function useBusinessSwitch({
     )
       return
     const navigate = () => {
+      if (!canManageMobileOperations(currentSession()?.profile.role)) return
       if (
         !currentSession() ||
         (!latest.current.local &&
@@ -295,7 +318,10 @@ export function useBusinessSwitch({
       !accepted &&
       !selectingId &&
       (local ? localHydrated : !isOffline && !memberships.isPending),
+    businessLimitReached,
     canCreate:
+      canManage &&
+      !businessLimitReached &&
       !blocked &&
       !accepted &&
       !selectingId &&

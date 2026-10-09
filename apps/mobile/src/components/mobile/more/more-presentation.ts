@@ -1,10 +1,10 @@
+import type { AdminMoreItem } from "@/lib/admin-navigation"
 import type { ReactNode } from "react"
 import type {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native"
-import type { AdminMoreItem } from "@/lib/admin-navigation"
 export type MoreHeaderProps = {
   onSyncPress: () => void
   syncAlertCount: number

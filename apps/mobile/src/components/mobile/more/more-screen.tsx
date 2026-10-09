@@ -29,21 +29,54 @@ import { useMobileDesign } from "@/hooks/use-mobile-design"
 import {
   type AdminManagementRole,
   type AdminMoreItem,
+  buildAccountSections,
   buildAdminMoreSections,
   canAccessAdminTabs,
 } from "@/lib/admin-navigation"
 import { getMobileRoleLabel, normalizeMobileRole } from "@/lib/mobile-roles"
 import { getPlan } from "@/lib/retail-ops-subscription"
 import { type ThemeOverride, setThemeOverride } from "@/lib/theme-preference"
+import type { MobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
+import {
+  activeBusinessOfflineCommands,
+  useOfflineCommandStore,
+} from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useEffect, useRef, useState } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { ActionButton } from "../action-button"
+import { HeroCard } from "../green-till/hero-card"
+import { QuickActionRow, SectionHeader } from "../green-till/kit"
 import { MoreApprovalCard } from "./more-approval-card"
 import { MoreSignOutSheet, MoreThemeSheet } from "./more-sheets"
 export function MoreScreen() {
+  const { availability, syncAlertCount } = useAdminTabs()
+  useResetAdminDock()
+  return (
+    <MoreContent availability={availability} syncAlertCount={syncAlertCount} />
+  )
+}
+export function AccountScreen() {
+  const { profile } = useAuthContext()
+  const commands = useOfflineCommandStore((s) => s.commands)
+  const syncAlertCount = activeBusinessOfflineCommands(
+    commands,
+    profile?.businessId,
+  ).filter((c) => !["applied", "discarded"].includes(c.localStatus)).length
+  return <MoreContent account syncAlertCount={syncAlertCount} />
+}
+function MoreContent({
+  account = false,
+  availability,
+  syncAlertCount,
+}: {
+  account?: boolean
+  availability?: MobileWorkspaceFeatureAvailability
+  syncAlertCount: number
+}) {
   const insets = useSafeAreaInsets()
   const appearance = useMobileDesign("more")
   const market = appearance === "market-day"
@@ -54,6 +87,7 @@ export function MoreScreen() {
   const Section = market ? MarketDayMoreSection : ClassicMoreSection
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: appearance changes invalidate header measurements
   useEffect(() => {
     setHeaderHeight(0)
     setShowCanvasStatusBar(false)
@@ -65,8 +99,6 @@ export function MoreScreen() {
   const queryClient = useQueryClient()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const { colorScheme, setColorScheme, themeOverride } = useColorScheme()
-  const { availability, syncAlertCount } = useAdminTabs()
-  useResetAdminDock()
   const themeModal = useModal()
   const signOutModal = useModal()
   const confirmSignOut = useRef(false)
@@ -80,7 +112,7 @@ export function MoreScreen() {
       : "OWNER"
   const subscription = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
-      enabled: !isOffline && (role === "OWNER" || role === "ADMIN"),
+      enabled: !account && !isOffline && (role === "OWNER" || role === "ADMIN"),
       retry: false,
       staleTime: 60_000,
     }),
@@ -89,17 +121,24 @@ export function MoreScreen() {
     subscription.data?.tenant.id === auth.profile?.businessId
       ? subscription.data
       : undefined
-  const sections = buildAdminMoreSections({
-    availability,
-    planFeatures: planSnapshot
-      ? getPlan(planSnapshot.subscription.planId).features
-      : undefined,
-    role,
-    staffAccessMode: auth.profile?.staffAccessMode,
-  })
+  const sections = account
+    ? buildAccountSections()
+    : availability
+      ? buildAdminMoreSections({
+          availability,
+          planFeatures: planSnapshot
+            ? getPlan(planSnapshot.subscription.planId).features
+            : undefined,
+          role,
+          staffAccessMode: auth.profile?.staffAccessMode,
+        })
+      : []
   const offlineSettings = useQuery(
     trpc.offline.settings.queryOptions(undefined, {
-      enabled: auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER",
+      enabled:
+        !account &&
+        !isOffline &&
+        (auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER"),
       retry: false,
       staleTime: 30_000,
     }),
@@ -109,6 +148,7 @@ export function MoreScreen() {
       {},
       {
         enabled:
+          !account &&
           !isOffline &&
           (auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER"),
         retry: false,
@@ -185,7 +225,11 @@ export function MoreScreen() {
     signOutModal.present()
   }
 
-  if (!canAccessAdminTabs(auth.profile?.role)) return null
+  if (
+    !auth.isAuthenticated ||
+    (!account && !canAccessAdminTabs(auth.profile?.role))
+  )
+    return null
 
   return (
     <>
@@ -201,62 +245,163 @@ export function MoreScreen() {
           )
         }}
       >
-        <Header
-          onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
-          onSyncPress={() => router.push("/sync-status-modal")}
-          syncAlertCount={syncAlertCount}
-        />
+        {account ? (
+          <ActionButton
+            variant="ghost"
+            icon="ArrowLeft"
+            onPress={() => router.back()}
+          >
+            Account
+          </ActionButton>
+        ) : (
+          <Header
+            onLayout={(event) =>
+              setHeaderHeight(event.nativeEvent.layout.height)
+            }
+            onSyncPress={() => router.push("/sync-status-modal")}
+            syncAlertCount={syncAlertCount}
+          />
+        )}
+        {isOffline ? (
+          <StatusBanner
+            tone="warning"
+            message={`${syncAlertCount} changes waiting on this device. Reconnect to refresh and review orders.`}
+          />
+        ) : null}
 
-        <Workspace
-          businessName={auth.profile?.businessName ?? "Current business"}
-          onPress={() => router.push("/business-switch-modal")}
-          roleLabel={getMobileRoleLabel(auth.profile?.role)}
-        />
+        {account && !canAccessAdminTabs(auth.profile?.role) ? (
+          <HeroCard
+            label="Signed in"
+            title={auth.profile?.name ?? "Your account"}
+            sub={`${auth.profile?.businessName ?? "Current business"} · ${getMobileRoleLabel(auth.profile?.role)}`}
+          >
+            <ActionButton
+              tone="cream"
+              icon="RefreshCw"
+              onPress={() => router.push("/business-switch-modal")}
+            >
+              Switch business
+            </ActionButton>
+          </HeroCard>
+        ) : (
+          <Workspace
+            businessName={auth.profile?.businessName ?? "Current business"}
+            onPress={() => router.push("/business-switch-modal")}
+            roleLabel={getMobileRoleLabel(auth.profile?.role)}
+          />
+        )}
 
-        {sections.map((section) => (
-          <Section key={section.id} title={section.title}>
-            {section.items.map((item) => (
-              <Row
-                detail={
-                  item.id === "inventory" && item.disabled
-                    ? "Add a Product to enable inventory"
-                    : item.id === "sync-offline"
-                      ? `${offlineSettings.data ? (offlineSettings.data.approvalRequired ? "Staff approval on" : "Staff approval off") : "Approval settings unavailable"} · ${offlineRecords.data ? `${stagedRecords.length} waiting` : "Review count unavailable"}`
-                      : undefined
+        {!account && !market && stagedRecords.length > 0 ? (
+          <View className="gap-3">
+            <SectionHeader
+              title="Needs your review"
+              actionLabel="See all"
+              onAction={() => router.push("/sync-status-modal")}
+            />
+            {reviewOfflineRecord.isError ? (
+              <StatusBanner
+                tone="destructive"
+                title="Review not saved"
+                message={reviewOfflineRecord.error.message}
+              />
+            ) : null}
+            {stagedRecords.slice(0, 3).map((record) => (
+              <MoreApprovalCard
+                key={record.id}
+                appearance={appearance}
+                actorName={
+                  record.actor?.displayName ||
+                  record.actor?.name ||
+                  record.actor?.email ||
+                  "Staff member"
                 }
-                item={item}
-                key={item.id}
-                onPress={() => handleItem(item)}
+                disabled={isOffline || reviewOfflineRecord.isPending}
+                onApprove={() => reviewOrder(record.id, "approve")}
+                onReject={() => reviewOrder(record.id, "reject")}
               />
             ))}
-            {section.id === "offline" && stagedRecords.length > 0 ? (
-              <View className="mt-2 border-y border-border">
-                {reviewOfflineRecord.isError ? (
-                  <StatusBanner
-                    tone="destructive"
-                    title="Review not saved"
-                    message={reviewOfflineRecord.error.message}
+          </View>
+        ) : null}
+        {sections.map((section) =>
+          !market && section.id === "store-tools" ? (
+            <View key={section.id}>
+              <SectionHeader title="Store tools" />
+              {Array.from(
+                { length: Math.ceil(section.items.length / 4) },
+                (_, group) => (
+                  <QuickActionRow
+                    key={section.items[group * 4]?.id}
+                    actions={section.items
+                      .slice(group * 4, group * 4 + 4)
+                      .map((item) => ({
+                        label: item.label,
+                        icon: item.icon,
+                        disabled: item.disabled,
+                        onPress: () => handleItem(item),
+                      }))}
                   />
-                ) : null}
-                {stagedRecords.slice(0, 3).map((record) => (
-                  <MoreApprovalCard
-                    key={record.id}
-                    appearance={appearance}
-                    actorName={
-                      record.actor?.displayName ||
-                      record.actor?.name ||
-                      record.actor?.email ||
-                      "Staff member"
-                    }
-                    disabled={isOffline || reviewOfflineRecord.isPending}
-                    onApprove={() => reviewOrder(record.id, "approve")}
-                    onReject={() => reviewOrder(record.id, "reject")}
-                  />
-                ))}
-              </View>
-            ) : null}
-          </Section>
-        ))}
+                ),
+              )}
+            </View>
+          ) : (
+            <Section key={section.id} title={section.title}>
+              {section.items.map((item) => (
+                <Row
+                  detail={
+                    item.id === "app-theme"
+                      ? themeOverride.charAt(0).toUpperCase() +
+                        themeOverride.slice(1)
+                      : item.id === "inventory" && item.disabled
+                        ? "Add a Product to enable inventory"
+                        : item.id === "sync-offline"
+                          ? `${offlineSettings.data ? (offlineSettings.data.approvalRequired ? "Staff approval on" : "Staff approval off") : "Approval settings unavailable"} · ${offlineRecords.data ? `${stagedRecords.length} waiting` : "Review count unavailable"}`
+                          : undefined
+                  }
+                  item={item}
+                  key={item.id}
+                  onPress={() => handleItem(item)}
+                />
+              ))}
+              {market &&
+              section.id === "offline" &&
+              stagedRecords.length > 0 ? (
+                <View className="mt-2 border-y border-border">
+                  {reviewOfflineRecord.isError ? (
+                    <StatusBanner
+                      tone="destructive"
+                      title="Review not saved"
+                      message={reviewOfflineRecord.error.message}
+                    />
+                  ) : null}
+                  {stagedRecords.slice(0, 3).map((record) => (
+                    <MoreApprovalCard
+                      key={record.id}
+                      appearance={appearance}
+                      actorName={
+                        record.actor?.displayName ||
+                        record.actor?.name ||
+                        record.actor?.email ||
+                        "Staff member"
+                      }
+                      disabled={isOffline || reviewOfflineRecord.isPending}
+                      onApprove={() => reviewOrder(record.id, "approve")}
+                      onReject={() => reviewOrder(record.id, "reject")}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </Section>
+          ),
+        )}
+        {account ? (
+          <ActionButton
+            variant="outline"
+            icon="RefreshCw"
+            onPress={() => router.push("/sync-status-modal")}
+          >
+            Sync status · {syncAlertCount} waiting
+          </ActionButton>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           className="min-h-12 justify-center px-5"

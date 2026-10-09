@@ -39,7 +39,20 @@ export function CustomerConversationListEmpty({
       </View>
     )
   }
-  if (presentation.mode === "hidden") return <View className="flex-1" />
+  if (presentation.mode === "expired")
+    return (
+      <View className="gap-3 px-[18px] py-12">
+        <Text
+          accessibilityRole="header"
+          className="text-xl font-extrabold text-foreground"
+        >
+          {presentation.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground">
+          {presentation.message}
+        </Text>
+      </View>
+    )
 
   if (presentation.mode === "empty") {
     return (

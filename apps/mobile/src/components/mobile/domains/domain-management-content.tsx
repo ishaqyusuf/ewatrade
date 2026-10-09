@@ -9,6 +9,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBusinessStore } from "@/store/businessStore"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Clipboard from "expo-clipboard"
@@ -16,6 +17,7 @@ import * as Linking from "expo-linking"
 import { useRef, useState } from "react"
 import { RefreshControl } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { SettingsScreen } from "../settings-screen"
 import {
   DOMAIN_MANAGEMENT_COPY,
   type DomainManagementStep,
@@ -41,6 +43,7 @@ export function DomainManagementContent({
 }: {
   initialOrderId?: string | null
 }) {
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const auth = useAuthContext()
@@ -79,20 +82,20 @@ export function DomainManagementContent({
     trpc.domains.list.queryOptions(
       {},
       {
-        enabled: shouldLoadDomainList(domainBusinessId),
+        enabled: !offline && shouldLoadDomainList(domainBusinessId),
         retry: false,
       },
     ),
   )
   const profile = useQuery(
     trpc.domains.registrantProfile.queryOptions(undefined, {
-      enabled: shouldLoadRegistrantProfile(domainBusinessId, step),
+      enabled: !offline && shouldLoadRegistrantProfile(domainBusinessId, step),
       retry: false,
     }),
   )
   const order = useQuery({
     ...trpc.domains.order.queryOptions({ orderId: orderId ?? "" }),
-    enabled: shouldLoadDomainOrder(domainBusinessId, step, orderId),
+    enabled: !offline && shouldLoadDomainOrder(domainBusinessId, step, orderId),
     refetchInterval: (query) => {
       const current = query.state.data
       if (
@@ -188,6 +191,15 @@ export function DomainManagementContent({
     setStep("list")
   }
 
+  if (offline)
+    return (
+      <View className="px-[18px]">
+        <SettingsScreen
+          title="Domain status unavailable"
+          sub="Reconnect to load or change your website address."
+        />
+      </View>
+    )
   if (!domainBusinessId) {
     return (
       <View className="flex-1 items-center justify-center px-6">
@@ -206,9 +218,9 @@ export function DomainManagementContent({
       bottomOffset={140}
       className="flex-1"
       contentContainerStyle={{
-        gap: 20,
+        gap: 16,
         paddingBottom: 128,
-        paddingHorizontal: 20,
+        paddingHorizontal: 18,
       }}
       disableScrollOnKeyboardHide
       keyboardDismissMode="interactive"
@@ -223,6 +235,13 @@ export function DomainManagementContent({
       }
       showsVerticalScrollIndicator={false}
     >
+      {error ? (
+        <StatusBanner
+          title="Domain change not completed"
+          message={error}
+          tone="destructive"
+        />
+      ) : null}
       {step !== "list" ? (
         <Pressable
           accessibilityRole="button"
@@ -236,12 +255,11 @@ export function DomainManagementContent({
 
       {step === "list" ? (
         <>
-          <View className="gap-1">
-            <Text className="text-sm leading-5 text-muted-foreground">
-              {DOMAIN_MANAGEMENT_COPY.purpose}
-            </Text>
-          </View>
-
+          <SettingsScreen
+            title="Website and domain"
+            sub={DOMAIN_MANAGEMENT_COPY.purpose}
+            loading={domains.isPending}
+          />
           <View className="gap-2">
             <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
               Storefront address
@@ -303,7 +321,14 @@ export function DomainManagementContent({
                     </Text>
                   </View>
                   <StatusBadge
-                    label={item.status.toLowerCase().replaceAll("_", " ")}
+                    label={
+                      item.status === "ACTIVE"
+                        ? "Live"
+                        : item.status
+                            .toLowerCase()
+                            .replaceAll("_", " ")
+                            .replace(/^./, (letter) => letter.toUpperCase())
+                    }
                     tone={item.status === "ACTIVE" ? "primary" : "muted"}
                   />
                 </Pressable>

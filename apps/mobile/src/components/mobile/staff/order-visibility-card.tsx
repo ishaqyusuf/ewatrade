@@ -3,7 +3,6 @@ import { NudgeCard } from "@/components/mobile/nudge-card"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
 import { useOrderVisibility } from "@/hooks/use-order-visibility"
 import { BottomSheetView } from "@gorhom/bottom-sheet"
 
@@ -42,7 +41,7 @@ export function OrderVisibilityCard({ review = false }: { review?: boolean }) {
         ) : (
           <ActionButton
             variant="outline"
-            onPress={modal.present}
+            onPress={() => modal.present()}
             disabled={vm.query.isPending || vm.isOffline}
           >
             {review ? "Review Staff rules" : (label ?? "Loading Staff rules…")}

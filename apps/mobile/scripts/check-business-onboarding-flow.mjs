@@ -123,6 +123,57 @@ for (const check of checks) {
   }
 }
 
+// Membership switching is personal; creating a business retains management authority.
+const layout = readFileSync(join(SOURCE_DIR, "app/_layout.tsx"), "utf8")
+const authenticatedGroup =
+  layout
+    .split("<Stack.Protected guard={isAuthenticated && !isInvitedStaff}>")[1]
+    ?.split("</Stack.Protected>")[0] ?? ""
+const managementGroup =
+  layout
+    .split("guard={isAuthenticated && !isInvitedStaff && canAccessAdmin}")[1]
+    ?.split("</Stack.Protected>")[0] ?? ""
+if (
+  !authenticatedGroup.includes('name="business-switch-modal"') ||
+  managementGroup.includes('name="business-switch-modal"')
+)
+  failures.push(
+    "Business switching must be reachable from authenticated Account, including reps",
+  )
+if (
+  !managementGroup.includes('name="new-business-onboarding-modal"') ||
+  authenticatedGroup.includes('name="new-business-onboarding-modal"')
+)
+  failures.push("Business creation must stay management-gated")
+const switching = readFileSync(
+  join(SOURCE_DIR, "components/mobile/business-switch/use-business-switch.ts"),
+  "utf8",
+)
+if (switching.includes("scopeChanged || !canManage"))
+  failures.push(
+    "Rep membership switching must not inherit the create-business role gate",
+  )
+for (const marker of [
+  'auth.profile?.status?.toUpperCase() ?? "ACTIVE"',
+  'session.profile.status?.toUpperCase() ?? "ACTIVE"',
+  "key !== origin.current",
+  "const member = refreshed.data?.find((business) => business.id === id)",
+  "epoch !== activationEpoch.current",
+  "canCreate:\n      canManage &&",
+])
+  if (!switching.includes(marker))
+    failures.push(`Business switching lost boundary: ${marker}`)
+if (
+  (
+    switching.match(
+      /if \(!canManageMobileOperations\(currentSession\(\)\?\.profile.role\)\) return/g,
+    ) ?? []
+  ).length !== 2
+)
+  failures.push(
+    "Business creation must recheck management authority both before and after deferred navigation",
+  )
+
 if (failures.length > 0) {
   console.error("Mobile business onboarding flow check failed.")
   for (const failure of failures) console.error(`- ${failure}`)

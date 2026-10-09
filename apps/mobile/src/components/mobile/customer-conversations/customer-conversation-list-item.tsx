@@ -41,8 +41,8 @@ export function CustomerConversationListItem({
         accessibilityRole="button"
         className={
           unread
-            ? "relative min-h-[112px] flex-row items-start gap-3.5 border-b border-border bg-primary/5 px-5 py-4 active:bg-accent"
-            : "relative min-h-[112px] flex-row items-start gap-3.5 border-b border-border px-5 py-4 active:bg-accent"
+            ? "relative min-h-[112px] flex-row items-start gap-3.5 border-b border-border bg-primary/5 px-[18px] py-4 active:bg-accent"
+            : "relative min-h-[112px] flex-row items-start gap-3.5 border-b border-border px-[18px] py-4 active:bg-accent"
         }
         haptic
         onPress={onPress}
@@ -50,7 +50,7 @@ export function CustomerConversationListItem({
         {unread ? (
           <View className="absolute bottom-4 left-0 top-4 w-1 rounded-r-full bg-primary" />
         ) : null}
-        <View className="size-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+        <View className="size-12 shrink-0 items-center justify-center rounded-full bg-tint-mint">
           <Text className="font-extrabold text-primary">
             {storeAvatar.label}
           </Text>
@@ -105,10 +105,10 @@ export function CustomerConversationListItem({
             )}
             {presentation.unreadLabel ? (
               <View
-                className="mt-0.5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 py-0.5"
+                className="mt-0.5 min-w-5 shrink-0 items-center justify-center rounded-full bg-gold px-1.5 py-0.5"
                 importantForAccessibility="no-hide-descendants"
               >
-                <Text className="text-[11px] font-extrabold text-primary-foreground">
+                <Text className="text-[11px] font-extrabold text-gold-foreground">
                   {presentation.unreadLabel}
                 </Text>
               </View>
@@ -126,8 +126,8 @@ export function CustomerConversationListItem({
       accessibilityRole="button"
       className={
         unread
-          ? "relative min-h-[82px] flex-row items-center gap-3.5 border-b border-border bg-primary/5 px-5 py-4 active:bg-accent"
-          : "relative min-h-[82px] flex-row items-center gap-3.5 border-b border-border px-5 py-4 active:bg-accent"
+          ? "relative min-h-[82px] flex-row items-center gap-3.5 border-b border-border bg-primary/5 px-[18px] py-4 active:bg-accent"
+          : "relative min-h-[82px] flex-row items-center gap-3.5 border-b border-border px-[18px] py-4 active:bg-accent"
       }
       haptic
       onPress={onPress}
@@ -135,7 +135,7 @@ export function CustomerConversationListItem({
       {unread ? (
         <View className="absolute bottom-4 left-0 top-4 w-1 rounded-r-full bg-primary" />
       ) : null}
-      <View className="size-12 items-center justify-center rounded-full bg-primary/10">
+      <View className="size-12 items-center justify-center rounded-full bg-tint-mint">
         <Text className="font-extrabold text-primary">{storeAvatar.label}</Text>
       </View>
       <View className="min-w-0 flex-1 gap-1">
@@ -190,10 +190,10 @@ export function CustomerConversationListItem({
           )}
           {presentation.unreadLabel ? (
             <View
-              className="min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5"
+              className="min-w-5 items-center justify-center rounded-full bg-gold px-1.5 py-0.5"
               importantForAccessibility="no-hide-descendants"
             >
-              <Text className="text-[11px] font-extrabold text-primary-foreground">
+              <Text className="text-[11px] font-extrabold text-gold-foreground">
                 {presentation.unreadLabel}
               </Text>
             </View>

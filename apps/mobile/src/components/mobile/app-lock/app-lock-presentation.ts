@@ -16,6 +16,7 @@ export type AppLockManagementProps = {
   hasLock: boolean
   biometricsEnabled: boolean
   biometricsAvailable: boolean
+  biometricLabel: string
   biometricDetail: string
   message: string | null
   onChangePin: () => void

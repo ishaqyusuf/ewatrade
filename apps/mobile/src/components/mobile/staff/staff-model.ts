@@ -44,7 +44,7 @@ export function mapStaffMember(staff: StaffMember): StaffRow {
     staff.user.name?.trim() ||
     staff.user.email
   const roles: Record<string, string> = {
-    cashier: "Attendant",
+    cashier: "Sales rep",
     operator: "Operator",
     manager: "Manager",
     owner: "Owner",
@@ -61,7 +61,7 @@ export function mapStaffMember(staff: StaffMember): StaffRow {
       .toUpperCase(),
     email: staff.user.email,
     statusLabel: staffStatusLabel(staff.status),
-    detail: `${roles[staff.role.toLowerCase()] ?? staff.role} · invited ${formatStaffDate(staff.invitedAt ?? staff.createdAt)}`,
+    detail: `${roles[staff.role.toLowerCase()] ?? staff.role} · ${["pending", "invited"].includes(staff.status.toLowerCase()) ? `invited ${formatStaffDate(staff.invitedAt ?? staff.createdAt)}` : `member since ${formatStaffDate(staff.createdAt)}`}`,
   }
 }
 

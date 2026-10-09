@@ -6,7 +6,11 @@ export type CustomerConversationListEmptyPresentation =
       sourceLabel: "Chats start from a store link"
       title: "No conversations yet"
     }
-  | { mode: "hidden" }
+  | {
+      mode: "expired"
+      title: "Guest access ended"
+      message: "Open the store’s latest chat link to continue. Sign in to see conversations linked to your account."
+    }
   | { mode: "loading" }
   | {
       actionLabel: "Try again" | "Trying again…"
@@ -30,7 +34,13 @@ export function resolveCustomerConversationListEmptyPresentation(input: {
   retrying?: boolean
 }): CustomerConversationListEmptyPresentation {
   if (input.loading) return { mode: "loading" }
-  if (input.credentialRejected) return { mode: "hidden" }
+  if (input.credentialRejected)
+    return {
+      mode: "expired",
+      title: "Guest access ended",
+      message:
+        "Open the store’s latest chat link to continue. Sign in to see conversations linked to your account.",
+    }
   if (!input.error) {
     return {
       icon: "MessageCircle",

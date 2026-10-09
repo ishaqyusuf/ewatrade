@@ -9,7 +9,7 @@ import type {
   StoreConversationAttachmentKind,
 } from "@ewatrade/utils"
 import { ArrowUp, Mic } from "lucide-react-native"
-import { useEffect, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 import {
   ActivityIndicator,
   ScrollView,
@@ -32,6 +32,7 @@ const VOICE_WAVE_BAR_IDS = Array.from(
 )
 
 export function CustomerConversationComposer({
+  requestControl,
   disabled,
   disabledMessage = "Messaging is unavailable",
   draft,
@@ -69,6 +70,7 @@ export function CustomerConversationComposer({
   voicePreviewPlaybackEnabled = true,
   onHeightChange,
 }: {
+  requestControl?: ReactNode
   attachment: StoreConversationAttachmentDraft | null
   attachmentKinds: StoreConversationAttachmentKind[]
   attachmentNotice: string | null
@@ -170,6 +172,7 @@ export function CustomerConversationComposer({
             }
             style={{ maxHeight: composerContentMaxHeight }}
           >
+            {requestControl}
             {draftPreservation ? (
               <View
                 accessible

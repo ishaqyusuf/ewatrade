@@ -1,10 +1,15 @@
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Text } from "@/components/ui/text"
+import { Skeleton } from "@/components/ui/skeleton"
+import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "expo-router"
 import type { ReactNode } from "react"
+import { ActionButton } from "../action-button"
+import { HeroCard } from "../green-till/hero-card"
 
 export type FinanceWorkspace = {
   book: NonNullable<RouterOutputs["finance"]["book"]>
@@ -14,8 +19,23 @@ export type FinanceWorkspace = {
 
 export function FinanceWorkspaceGate({
   children,
-}: { children: (workspace: FinanceWorkspace) => ReactNode }) {
+  requireOnline = false,
+}: {
+  children: (workspace: FinanceWorkspace) => ReactNode
+  requireOnline?: boolean
+}) {
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const { profile } = useAuthContext()
+  if (requireOnline && offline)
+    return (
+      <View className="gap-4 px-[18px]">
+        <HeroCard
+          title="Reconnect to review"
+          amount="—"
+          sub="Financial balances, history and actions require a fresh online read."
+        />
+      </View>
+    )
   if (
     !profile?.businessId ||
     !["OWNER", "ADMIN"].includes(profile.role?.trim().toUpperCase() ?? "")
@@ -45,12 +65,27 @@ function AuthorizedBook({
 }: Omit<FinanceWorkspace, "book"> & {
   children: (workspace: FinanceWorkspace) => ReactNode
 }) {
+  const router = useRouter()
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const trpc = useTRPC()
   const book = useQuery(
-    trpc.finance.book.queryOptions(undefined, { retry: false }),
+    trpc.finance.book.queryOptions(undefined, {
+      retry: false,
+      enabled: !offline,
+    }),
   )
   if (book.isPending)
-    return <Text className="px-4">Loading financial book…</Text>
+    return offline ? (
+      <StatusBanner
+        title="Reconnect to load Finance"
+        message="No saved financial book is available."
+        tone="warning"
+      />
+    ) : (
+      <View className="px-[18px]">
+        <Skeleton className="h-48 rounded-[22px]" />
+      </View>
+    )
   if (book.isError)
     return (
       <StatusBanner
@@ -63,10 +98,15 @@ function AuthorizedBook({
     )
   if (!book.data)
     return (
-      <StatusBanner
-        title="Start your financial records"
-        message="Choose your bookkeeping start date in Finance on the dashboard before recording spending."
-      />
+      <View className="gap-4 px-[18px]">
+        <HeroCard
+          title="Start your financial records"
+          sub="Choose your bookkeeping start date in Finance on the dashboard before recording spending."
+        />
+        <ActionButton variant="outline" onPress={() => router.back()}>
+          Go back
+        </ActionButton>
+      </View>
     )
   return children({ book: book.data, actorUserId, tenantId })
 }

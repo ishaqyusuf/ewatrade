@@ -13,9 +13,9 @@ import type { ThemeOverride } from "@/lib/theme-preference"
 import { cn } from "@/lib/utils"
 import {
   BottomSheetFooter,
-  BottomSheetScrollView,
   type BottomSheetFooterProps,
   type BottomSheetModal,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { forwardRef, useCallback, useState } from "react"
@@ -94,7 +94,7 @@ export const MoreThemeSheet = forwardRef<
               <Pressable
                 key={option.value}
                 accessibilityHint={option.detail}
-                accessibilityLabel={option.label + " app theme"}
+                accessibilityLabel={`${option.label} app theme`}
                 accessibilityRole="radio"
                 accessibilityState={{
                   checked: option.selected,

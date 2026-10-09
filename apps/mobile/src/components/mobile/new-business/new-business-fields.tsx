@@ -1,15 +1,23 @@
+import * as Classic from "@/components/mobile/appearances/classic/new-business"
+import * as Market from "@/components/mobile/appearances/market-day/new-business"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
 import { Text } from "@/components/ui/text"
-import { View } from "react-native"
+import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import {
   BUSINESS_OPERATING_MODELS,
   BUSINESS_ORDER_CHANNELS,
   BUSINESS_TEAM_SIZES,
 } from "@ewatrade/utils"
-import * as Classic from "@/components/mobile/appearances/classic/new-business"
-import * as Market from "@/components/mobile/appearances/market-day/new-business"
+import {
+  getCountry,
+  toInternationalPhone,
+  toLocalPhone,
+} from "@ewatrade/utils/countries"
+import { View } from "react-native"
+import { CountrySelect } from "../country-select"
+import { CurrentLocationCard } from "../current-location-card"
 import type { NewBusinessModel } from "./use-new-business"
 
 type FieldsProps = { model: NewBusinessModel; market: boolean }
@@ -94,12 +102,36 @@ export function NewBusinessProfile({ model, market }: FieldsProps) {
   )
 }
 export function NewBusinessDetails({ model, market }: FieldsProps) {
+  const location = useCurrentAddress()
   const { BusinessSection: Section } = market ? Market : Classic
   const { draft, updateDraft, locked } = model
   const large = useLargeTextLayout()
   const inputClassName = market ? "bg-market-field text-market-ink" : undefined
   return (
     <Section title="Identity and location">
+      <CountrySelect
+        value={draft.countryCode ?? "NG"}
+        disabled={locked}
+        onChange={(countryCode) => updateDraft({ countryCode })}
+      />
+      {!locked ? (
+        <CurrentLocationCard
+          address={location.address}
+          error={location.error}
+          status={location.status}
+          onClear={location.clear}
+          onLocate={() => {
+            void location.locate().then((address) => {
+              if (address)
+                updateDraft({
+                  addressLine1: address.addressLine1,
+                  city: address.city,
+                  countryCode: address.countryCode,
+                })
+            })
+          }}
+        />
+      ) : null}
       <FormField
         variant={market ? "filled" : "auth"}
         label="Business name"
@@ -135,9 +167,14 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
           variant={market ? "filled" : "auth"}
           containerClassName={large ? undefined : "min-w-0 flex-1"}
           label="Phone"
+          editable={!locked}
+          leadingText={`+${getCountry(draft.countryCode).dialCode}`}
           keyboardType="phone-pad"
           maxLength={40}
-          value={draft.phone}
+          value={toLocalPhone(
+            getCountry(draft.countryCode).dialCode,
+            draft.phone,
+          )}
           onChangeText={(phone) => updateDraft({ phone })}
           placeholder="Enter phone"
           inputClassName={inputClassName}
@@ -173,7 +210,14 @@ export function NewBusinessReview({ model, market }: FieldsProps) {
             label="Location"
             value={`${draft.addressLine1.trim()}, ${draft.city.trim()}`}
           />
-          <Summary label="Phone" value={draft.phone.trim()} />
+          <Summary
+            label="Phone"
+            value={toInternationalPhone(
+              getCountry(draft.countryCode).dialCode,
+              draft.phone,
+            )}
+          />
+          <Summary label="Country" value={getCountry(draft.countryCode).name} />
           <Summary label="Currency" value={draft.currencyCode} />
           <Summary
             label="Category"

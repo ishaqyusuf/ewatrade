@@ -1,3 +1,5 @@
+import { Modal, useModal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
@@ -7,6 +9,7 @@ import {
   resolveCustomerConversationRetryTarget,
 } from "@/lib/customer-conversation-state"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { router } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { FlatList, RefreshControl } from "react-native"
@@ -106,6 +109,8 @@ function CustomerConversationDetailLiveScreen({
 }) {
   const listRef = useRef<FlatList<CustomerConversationTimelineItem>>(null)
   const largeTextLayout = useLargeTextLayout()
+  const toolsSheet = useModal()
+  const [chooseRequest, setChooseRequest] = useState(false)
   const [composerHeight, setComposerHeight] = useState(190)
   const [guestTermsState, setGuestTermsState] = useState({
     allowed: false,
@@ -217,10 +222,14 @@ function CustomerConversationDetailLiveScreen({
     }
   }, [composerHeight, newestSequence])
 
+  const unassignedMessage = [...messages]
+    .reverse()
+    .find((message) => message.author.kind === "customer" && !message.request)
   return (
     <View className="flex-1 bg-background">
       <CustomerShellHeader
         backToList
+        onOpenTools={timeline ? () => toolsSheet.present() : undefined}
         onToggleSound={() =>
           void detail.setSoundAlerts(!detail.soundAlertsEnabled)
         }
@@ -272,7 +281,7 @@ function CustomerConversationDetailLiveScreen({
               gap: 12,
               paddingBottom:
                 composerHeight + keyboardInset + (largeTextLayout ? 40 : 16),
-              paddingHorizontal: 16,
+              paddingHorizontal: 18,
               paddingTop: 16,
             }}
             data={timelineItems}
@@ -300,38 +309,6 @@ function CustomerConversationDetailLiveScreen({
                   }
                   requests={timeline.requests}
                 />
-                {!customerBlocked ? (
-                  <CustomerConversationChannelMode
-                    channelMode={timeline.channelMode}
-                    onOpen={() => void detail.openWhatsAppBridge()}
-                    opening={detail.openingWhatsApp}
-                  />
-                ) : null}
-                <CustomerNotificationControls
-                  accountAccess={accountAccess}
-                  available={timeline.availability.available}
-                  blocked={customerBlocked}
-                  conversationId={timeline.conversation.id}
-                  onNotice={detail.setNotice}
-                  publicToken={publicToken ?? ""}
-                />
-                <CustomerConversationSafetyControl
-                  accountAccess={accountAccess}
-                  blocked={customerBlocked}
-                  conversationId={timeline.conversation.id}
-                  key={`${accountAccess}:${timeline.conversation.id}`}
-                  onBlockedChange={(blocked) => {
-                    setBlockedState({ scope: blockScope, value: blocked })
-                    void detail.timeline.refetch()
-                  }}
-                  publicToken={publicToken ?? ""}
-                />
-                {accountAccess ? (
-                  <CustomerConversationPrivacyControl
-                    conversationId={timeline.conversation.id}
-                    publicToken={publicToken ?? ""}
-                  />
-                ) : null}
               </View>
             }
             refreshControl={
@@ -412,25 +389,6 @@ function CustomerConversationDetailLiveScreen({
                     }
                     storeName={timeline.conversation.storeName}
                   />
-                  {message.author.kind === "customer" && !message.request ? (
-                    <CustomerRequestChoice
-                      disabled={
-                        (accountAccess
-                          ? !accountTermsAllowed
-                          : !guestTermsAllowed) ||
-                        customerBlocked ||
-                        detail.selecting ||
-                        timeline.conversation.state !== "active" ||
-                        !timeline.channelMode.composerEnabled
-                      }
-                      onSelect={(target) =>
-                        void detail.selectRequest(message.id, target)
-                      }
-                      requestKinds={timeline.availableRequestKinds}
-                      requests={timeline.requests}
-                      selecting={detail.selecting}
-                    />
-                  ) : null}
                 </View>
               )
             }}
@@ -448,7 +406,86 @@ function CustomerConversationDetailLiveScreen({
               onAllowedChange={setGuestTermsAllowed}
             />
           )}
+          <Modal ref={toolsSheet.ref} title="Store tools" snapPoints={["85%"]}>
+            <BottomSheetScrollView
+              contentContainerStyle={{
+                gap: 16,
+                paddingHorizontal: 18,
+                paddingBottom: 32,
+              }}
+            >
+              {" "}
+              {!customerBlocked ? (
+                <CustomerConversationChannelMode
+                  channelMode={timeline.channelMode}
+                  onOpen={() => void detail.openWhatsAppBridge()}
+                  opening={detail.openingWhatsApp}
+                />
+              ) : null}
+              <CustomerNotificationControls
+                accountAccess={accountAccess}
+                available={timeline.availability.available}
+                blocked={customerBlocked}
+                conversationId={timeline.conversation.id}
+                onNotice={detail.setNotice}
+                publicToken={publicToken ?? ""}
+              />
+              <CustomerConversationSafetyControl
+                accountAccess={accountAccess}
+                blocked={customerBlocked}
+                conversationId={timeline.conversation.id}
+                key={`${accountAccess}:${timeline.conversation.id}`}
+                onBlockedChange={(blocked) => {
+                  setBlockedState({ scope: blockScope, value: blocked })
+                  void detail.timeline.refetch()
+                }}
+                publicToken={publicToken ?? ""}
+              />
+              {accountAccess ? (
+                <CustomerConversationPrivacyControl
+                  conversationId={timeline.conversation.id}
+                  publicToken={publicToken ?? ""}
+                />
+              ) : null}
+            </BottomSheetScrollView>
+          </Modal>
           <CustomerConversationComposer
+            requestControl={
+              !accountAccess && unassignedMessage ? (
+                <View className="border-t border-border bg-card px-[18px] py-2">
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: chooseRequest }}
+                    onPress={() => setChooseRequest((value) => !value)}
+                    className="min-h-11 justify-center"
+                  >
+                    <Text className="text-sm font-bold text-primary">
+                      Choose request for your latest message
+                    </Text>
+                  </Pressable>{" "}
+                  {!accountAccess && unassignedMessage && chooseRequest ? (
+                    <CustomerRequestChoice
+                      disabled={
+                        (accountAccess
+                          ? !accountTermsAllowed
+                          : !guestTermsAllowed) ||
+                        customerBlocked ||
+                        !ageAllowed ||
+                        detail.selecting ||
+                        timeline.conversation.state !== "active" ||
+                        !timeline.channelMode.composerEnabled
+                      }
+                      onSelect={(target) =>
+                        void detail.selectRequest(unassignedMessage.id, target)
+                      }
+                      requestKinds={timeline.availableRequestKinds}
+                      requests={timeline.requests}
+                      selecting={detail.selecting}
+                    />
+                  ) : null}
+                </View>
+              ) : null
+            }
             attachment={detail.attachmentDraft.draft}
             attachmentKinds={
               detail.attachmentCapabilityAvailable &&

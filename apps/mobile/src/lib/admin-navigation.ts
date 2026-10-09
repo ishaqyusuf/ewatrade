@@ -155,7 +155,7 @@ export function buildAdminMoreSections({
       action: { href: "/reports-modal", kind: "route" },
       icon: "analytics",
       id: "analytics",
-      label: "Analytics",
+      label: "Reports",
     },
     {
       action: {
@@ -276,6 +276,17 @@ export function buildAdminMoreSections({
       ],
       title: "Offline & sync",
     },
+    ...buildAccountSections(),
+  )
+
+  return staffAccessMode === "SCOPED" && role === "MANAGER"
+    ? sections.filter((section) => section.id !== "offline")
+    : sections
+}
+
+/** Device/account actions are also available outside the management tabs. */
+export function buildAccountSections(): AdminMoreSection[] {
+  return [
     {
       id: "account-settings",
       items: [
@@ -306,9 +317,5 @@ export function buildAdminMoreSections({
       ],
       title: "Account settings",
     },
-  )
-
-  return staffAccessMode === "SCOPED" && role === "MANAGER"
-    ? sections.filter((section) => section.id !== "offline")
-    : sections
+  ]
 }

@@ -12,10 +12,10 @@ const contracts = [
       "queryClient.setQueryData",
       "REMINDER_SETTINGS_COPY.loadError",
       "REMINDER_SETTINGS_COPY.saveError",
-      "trackStyle",
-      "height: 28",
+      "ToggleRow",
+      "settings.data ?",
       "savePending: updateSettings.isPending",
-      "width: 48",
+      "!canEditSettings || !isDirty",
     ],
     forbidden: [
       'from "@/components/ui/switch"',

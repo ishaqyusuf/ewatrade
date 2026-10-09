@@ -39,7 +39,7 @@ describe("Customer Conversation list empty presentation", () => {
         error: true,
         loading: false,
       }),
-    ).toEqual({ mode: "hidden" })
+    ).toMatchObject({ mode: "expired", title: "Guest access ended" })
   })
 
   test("keeps a successful empty list visually quiet", () => {
