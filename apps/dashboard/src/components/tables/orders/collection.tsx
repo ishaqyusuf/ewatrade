@@ -1,5 +1,6 @@
 "use client"
 
+import { OrderStatusDot } from "@/components/orders/order-status"
 import {
   type CollectionView,
   DirectoryCollection,
@@ -7,7 +8,6 @@ import {
 } from "@/components/tables/core"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
-import { Badge } from "@ewatrade/ui"
 import type { Row } from "@tanstack/react-table"
 import { OrderActionsMenu } from "./action-menu"
 import { type OrderRow, formatOrderMoney, getOrderCustomer } from "./columns"
@@ -35,11 +35,7 @@ export function OrdersCollection({
               void setParams({ orderSheet: "details", orderId: order.id })
             }
             description={getOrderCustomer(order)}
-            badges={
-              <Badge className="rounded-full capitalize">
-                {order.status.toLowerCase()}
-              </Badge>
-            }
+            badges={<OrderStatusDot status={order.status} />}
             details={[
               {
                 label: "Items",

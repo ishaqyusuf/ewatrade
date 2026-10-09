@@ -52,7 +52,7 @@ export function QuoteApprovalForm({
   return (
     <form>
       <FieldGroup className="min-w-0 grid gap-5">
-        <section className="grid gap-3 rounded-none border border-border bg-card p-5">
+        <section className="grid gap-3 rounded-xl border border-border bg-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -70,7 +70,7 @@ export function QuoteApprovalForm({
           </div>
           {approval.options.map((option) => (
             <div
-              className="rounded-none border border-border p-4"
+              className="rounded-lg border border-border p-4"
               key={option.id}
             >
               <div className="flex justify-between gap-3 text-sm font-medium">

@@ -53,7 +53,7 @@ export function MobileMenu({ navItems, ctx, user }: Props) {
         title="Dashboard navigation"
         className="flex flex-col gap-0 overflow-hidden border-0 bg-sidebar p-0"
       >
-        <div className="flex h-[70px] shrink-0 items-center border-b border-sidebar-border px-[22px]">
+        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border pr-3 pl-5">
           <DashboardLogo />
           <SheetClose
             render={

@@ -232,7 +232,7 @@ export function CustomerChannelsWorkspace({
           <div className="grid gap-3 lg:grid-cols-2">
             {approvals.data.map((approval) => (
               <article
-                className="flex flex-col gap-4 rounded-none border border-border bg-card p-5"
+                className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
                 key={approval.id}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -272,7 +272,7 @@ export function CustomerChannelsWorkspace({
             ))}
           </div>
         ) : (
-          <p className="rounded-none border border-dashed border-border p-5 text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
             No quotations are waiting for approval.
           </p>
         )}
@@ -307,7 +307,7 @@ function ChannelTaskCard({
   title: string
 }) {
   return (
-    <article className="grid gap-4 rounded-none border border-border bg-card p-5">
+    <article className="grid gap-4 rounded-xl border border-border bg-card p-5">
       <div>
         <h2 className="font-semibold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
@@ -327,11 +327,11 @@ function ChannelTaskCard({
 export function CustomerChannelsSkeleton() {
   return (
     <div className="grid min-w-0 flex-1 gap-6">
-      <div className="h-24 animate-pulse rounded-none bg-muted" />
-      <div className="h-72 animate-pulse rounded-none bg-muted" />
+      <div className="h-24 animate-pulse rounded-xl bg-muted" />
+      <div className="h-72 animate-pulse rounded-xl bg-muted" />
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-48 animate-pulse rounded-none bg-muted" />
-        <div className="h-48 animate-pulse rounded-none bg-muted" />
+        <div className="h-48 animate-pulse rounded-xl bg-muted" />
+        <div className="h-48 animate-pulse rounded-xl bg-muted" />
       </div>
     </div>
   )

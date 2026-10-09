@@ -103,7 +103,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
   }
   if (connections.error) {
     return (
-      <div className="grid gap-3 rounded-none border border-destructive/30 p-5">
+      <div className="grid gap-3 rounded-xl border border-destructive/30 p-5">
         <FormFeedback appearance="dashboard">
           {connections.error.message}
         </FormFeedback>
@@ -120,7 +120,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
   }
 
   return (
-    <section className="grid gap-5 rounded-none border border-border bg-card p-5">
+    <section className="grid gap-5 rounded-xl border border-border bg-card p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="font-semibold">Pharmacy WhatsApp connection</h2>
@@ -136,7 +136,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           </Button>
         ) : embedded.data?.available && embedded.data.url ? (
           <a
-            className="inline-flex h-10 items-center justify-center rounded-none bg-primary px-4 text-sm font-medium text-primary-foreground"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
             href={embedded.data.url}
           >
             Connect with Meta
@@ -165,7 +165,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
       ) : null}
       {message ? <p className="bg-muted px-4 py-3 text-sm">{message}</p> : null}
       {selectionToken ? (
-        <section className="grid gap-3 border border-primary/30 bg-primary/5 p-4">
+        <section className="grid gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
           <div>
             <h3 className="font-medium">Choose the number for this Store</h3>
             <p className="text-sm text-muted-foreground">
@@ -201,7 +201,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
               <div className="grid gap-2 sm:grid-cols-2">
                 {selection.data.numbers.map((number) => (
                   <button
-                    className="border border-border bg-background p-3 text-left hover:border-primary disabled:opacity-60"
+                    className="rounded-lg border border-border bg-background p-3 text-left hover:border-primary disabled:opacity-60"
                     disabled={
                       selectNumber.isPending || testRecipient.trim().length < 7
                     }
@@ -238,7 +238,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
         {connections.data?.length ? (
           connections.data.map((connection) => (
             <article
-              className="grid gap-3 border border-border p-4"
+              className="grid gap-3 rounded-lg border border-border p-4"
               key={connection.id}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -310,7 +310,10 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                   ["Outbound", connection.outboundVerified],
                   ["Templates", connection.templatesReady],
                 ].map(([label, ready]) => (
-                  <div className="border border-border p-2" key={String(label)}>
+                  <div
+                    className="rounded-md border border-border p-2"
+                    key={String(label)}
+                  >
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd
                       className={ready ? "text-emerald-700" : "text-amber-700"}

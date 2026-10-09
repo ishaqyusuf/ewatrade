@@ -290,11 +290,11 @@ export function StoreConversationSheetContent({
   return (
     <>
       {!hydrated || timeline.isLoading ? (
-        <div className="h-80 animate-pulse rounded-none bg-muted" />
+        <div className="h-80 animate-pulse rounded-lg bg-muted" />
       ) : null}
       {hydrated && timeline.isError ? (
         <div
-          className="rounded-none border border-destructive/30 p-4"
+          className="rounded-lg border border-destructive/30 p-4"
           role="alert"
         >
           <p className="font-medium">This conversation is unavailable.</p>

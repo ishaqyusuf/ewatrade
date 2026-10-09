@@ -66,7 +66,7 @@ export function StoreBindingForm({
   const selected = form.watch("storeIds") ?? []
 
   return (
-    <section className="grid gap-4 rounded-none border border-primary/30 bg-primary/5 p-5">
+    <section className="grid gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-primary">
           Store assignments

@@ -3,6 +3,7 @@
 import {
   DirectoryToolbar,
   HorizontalPagination,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
 } from "@/components/tables/core"
 import type { orderSortFields } from "@/hooks/sort-params"
@@ -22,7 +23,7 @@ import type { OrderRow } from "./columns"
 import { OrdersEmptyState } from "./empty-states"
 import { OrdersTableHeader, OrdersTableSettings } from "./table-header"
 
-const ROW_HEIGHT = 57
+const ROW_HEIGHT = 48
 const STICKY_COLUMNS = [
   { id: "select", width: 50 },
   { id: "orderNumber", width: 200 },
@@ -160,7 +161,7 @@ export function OrdersTableView({
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
           aria-label="Commercial orders"
         >
           <DndTable

@@ -72,7 +72,7 @@ export function DomainSearchFilter() {
           <DropdownMenuSubTrigger>Connection status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
             sideOffset={14}
             alignOffset={-4}
           >

@@ -234,7 +234,7 @@ export function ConversationAvailabilityForm({
 
   return (
     <FieldGroup className="grid gap-6">
-      <section className="grid gap-2 rounded-none border border-border bg-card p-5">
+      <section className="grid gap-2 rounded-xl border border-border bg-card p-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Current intake state
         </p>
@@ -273,7 +273,7 @@ export function ConversationAvailabilityForm({
               const intervals = hoursByDay[dayOfWeek] ?? []
               return (
                 <FieldGroup
-                  className="grid gap-3 rounded-none border border-border p-4"
+                  className="grid gap-3 rounded-lg border border-border p-4"
                   key={day}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -402,7 +402,7 @@ export function ConversationAvailabilityForm({
         </FieldGroup>
       </form>
 
-      <section className="grid gap-4 rounded-none border border-border bg-card p-5">
+      <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
         <div>
           <h2 className="font-semibold">Manual pause</h2>
           <p className="mt-1 text-sm text-muted-foreground">

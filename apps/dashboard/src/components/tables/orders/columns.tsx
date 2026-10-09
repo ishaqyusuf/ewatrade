@@ -1,7 +1,7 @@
+import { OrderStatusDot } from "@/components/orders/order-status"
 import { selectColumn } from "@/components/tables/core"
 import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Badge } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
 import { OrderActionsMenu } from "./action-menu"
 
@@ -34,12 +34,12 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
         sticky: true,
         reorderable: false,
         className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
+          "z-20 bg-background group-hover:bg-muted/40 group-focus-visible:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "text" as const, width: "w-36" },
       },
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="truncate font-medium">{row.original.orderNumber}</p>
+          <p className="truncate font-semibold">{row.original.orderNumber}</p>
           <p className="truncate text-xs text-muted-foreground">
             {getOrderCustomer(row.original)}
           </p>
@@ -76,6 +76,7 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
       meta: {
         headerLabel: "Total",
         sortField: "total",
+        align: "end",
         skeleton: { type: "text" as const, width: "w-24" },
       },
       cell: ({ row }) =>
@@ -90,13 +91,9 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
       meta: {
         headerLabel: "Status",
         sortField: "status",
-        skeleton: { type: "badge" as const, width: "w-24" },
+        skeleton: { type: "icon-text" as const, width: "w-20" },
       },
-      cell: ({ row }) => (
-        <Badge className="rounded-full capitalize">
-          {row.original.status.toLowerCase()}
-        </Badge>
-      ),
+      cell: ({ row }) => <OrderStatusDot status={row.original.status} />,
     },
     {
       id: "actions",

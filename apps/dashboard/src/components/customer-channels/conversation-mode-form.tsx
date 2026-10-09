@@ -164,7 +164,7 @@ export function ConversationModeForm({
   return (
     <form onSubmit={submit}>
       <FieldGroup className="min-w-0 grid gap-5">
-        <section className="grid gap-2 rounded-none border border-border bg-card p-5">
+        <section className="grid gap-2 rounded-xl border border-border bg-card p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Current customer experience
           </p>
@@ -203,7 +203,7 @@ export function ConversationModeForm({
           >
             {OPTIONS.map((option) => (
               <ToggleGroupItem
-                className="rounded-none"
+                className="rounded-md"
                 key={option.value}
                 value={option.value}
                 aria-describedby={`conversation-mode-${option.value}`}

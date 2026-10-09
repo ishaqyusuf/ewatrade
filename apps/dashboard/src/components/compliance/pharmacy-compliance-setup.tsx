@@ -185,7 +185,7 @@ export function PharmacyComplianceSetup({
   if (setupQuery.error || !setupQuery.data) {
     return (
       <div className="grid min-w-0 gap-3">
-        <p className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {setupQuery.error?.message ?? "Pharmacy compliance is unavailable."}
         </p>
         <Button
@@ -223,7 +223,7 @@ export function PharmacyComplianceSetup({
               </span>
               <Button
                 appearance="form"
-                className="h-9 rounded-none"
+                className="h-9 rounded-md"
                 disabled={
                   activationMutation.isPending ||
                   (!active && !setup.readiness.ready)
@@ -249,7 +249,7 @@ export function PharmacyComplianceSetup({
       ) : null}
 
       {!setup.readiness.ready ? (
-        <section className="rounded-none border border-amber-200 bg-amber-50 p-5 text-amber-950">
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
           <h2 className="font-medium">Activation requirements</h2>
           <ul className="mt-2 grid gap-1 text-sm">
             {setup.readiness.missing.map((requirement) => (
@@ -263,7 +263,7 @@ export function PharmacyComplianceSetup({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
         <form
-          className="rounded-none border border-border bg-card p-5"
+          className="rounded-xl border border-border bg-card p-5"
           onSubmit={settingsForm.handleSubmit((values) =>
             settingsMutation.mutate({
               ...values,
@@ -380,7 +380,7 @@ export function PharmacyComplianceSetup({
 
         <div className="grid content-start gap-6">
           <form
-            className="rounded-none border border-border bg-card p-5"
+            className="rounded-xl border border-border bg-card p-5"
             onSubmit={roleForm.handleSubmit((values) =>
               roleMutation.mutate({
                 ...values,
@@ -465,7 +465,7 @@ export function PharmacyComplianceSetup({
             </FieldGroup>
           </form>
 
-          <section className="grid gap-3 rounded-none border border-border bg-card p-5">
+          <section className="grid gap-3 rounded-xl border border-border bg-card p-5">
             <h2 className="font-semibold">Assigned roles</h2>
             {setup.roles.filter((role) => role.status === "active").length ===
             0 ? (

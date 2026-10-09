@@ -70,7 +70,7 @@ export function PrescriptionWorkspaceGate({
           title="Pharmacy compliance setup"
           description="Complete the pharmacy policy and professional role checks before opening the private prescription queue."
         />
-        <section className="max-w-2xl rounded-none border border-amber-200 bg-amber-50 p-6 text-amber-950">
+        <section className="max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-amber-950">
           <h2 className="font-semibold">Professional access is not ready</h2>
           <p className="mt-2 text-sm leading-6">
             Assign a verified pharmacist and an attendant, configure pickup or
@@ -92,7 +92,7 @@ export function PrescriptionWorkspaceGate({
   if (accessState !== "ready") {
     return (
       <div className="flex min-h-[60vh] min-w-0 items-center justify-center pt-6">
-        <section className="w-full max-w-md rounded-none border bg-background p-6 text-center">
+        <section className="w-full max-w-md rounded-xl border bg-background p-6 text-center">
           <p className="text-sm font-medium text-muted-foreground">
             Prescription workspace unavailable
           </p>

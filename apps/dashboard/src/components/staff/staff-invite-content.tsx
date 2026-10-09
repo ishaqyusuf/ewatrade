@@ -347,7 +347,6 @@ export function StaffInviteContent({
           appearance="form"
           type="button"
           variant="outline"
-          className="rounded-none"
           disabled={isSaving}
           onClick={() => void onClose().catch(handleCloseError)}
         >

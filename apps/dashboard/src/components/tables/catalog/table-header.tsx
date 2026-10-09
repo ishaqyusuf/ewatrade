@@ -6,6 +6,7 @@ import {
   HorizontalPagination,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -116,7 +117,7 @@ export function CatalogTableHeader({
                     }
                 const className = getStickyClassName(
                   id,
-                  "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                  TABLE_HEADER_CELL_CLASS,
                 )
                 const sortButton = field ? (
                   <Button
@@ -233,7 +234,7 @@ export function CatalogTableSettings({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button type="button" variant="outline" className="rounded-none">
+            <Button type="button" variant="outline">
               Sort by update
             </Button>
           }
@@ -261,7 +262,7 @@ export function CatalogTableSettings({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button type="button" variant="outline" className="rounded-none">
+              <Button type="button" variant="outline">
                 Columns
               </Button>
             }

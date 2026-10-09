@@ -4,6 +4,7 @@ import {
   DirectoryCollectionSkeleton,
   DirectoryToolbar,
   SelectionBar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
   useLoadedRowSelection,
 } from "@/components/tables/core"
@@ -160,7 +161,7 @@ export function CustomerDataTable({
       ) : (
         <div
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
           aria-label="Customer directory"
         >
           <DndContext

@@ -52,11 +52,15 @@ export function DateRangeFilter({
           <SelectTrigger
             aria-label="Date preset"
             size="sm"
-            className="h-8 w-full rounded-none border-border bg-transparent text-xs"
+            className="h-8 w-full rounded-md border-border bg-transparent text-xs"
           >
             <SelectValue placeholder="Select preset" />
           </SelectTrigger>
-          <SelectContent appearance="dashboard" alignItemWithTrigger={false}>
+          <SelectContent
+            appearance="dashboard"
+            alignItemWithTrigger={false}
+            className="rounded-lg"
+          >
             {presets.map((preset) => (
               <SelectItem
                 key={preset.label}

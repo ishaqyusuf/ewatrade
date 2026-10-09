@@ -1,4 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard/header"
+import { DashboardShell } from "@/components/dashboard/shell/dashboard-shell"
+import { RAIL_LABELS_COOKIE } from "@/components/dashboard/shell/rail-model"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider"
 import {
@@ -11,7 +13,7 @@ import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { prisma } from "@ewatrade/db"
 import { getRetailOpsTenantPlan } from "@ewatrade/db/queries"
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 export default async function ShellLayout({
@@ -78,16 +80,18 @@ export default async function ShellLayout({
     ctx.membership.staffAccessMode === "SCOPED" &&
     !["OWNER", "ADMIN"].includes(ctx.membership.role)
 
+  const railLabels = (await cookies()).get(RAIL_LABELS_COOKIE)?.value === "1"
+
   return (
-    <div className="relative min-h-screen bg-background">
-      <DashboardSidebar user={session.user} ctx={ctx} navItems={navItems} />
-      <div className="min-h-screen pb-4 md:ml-[70px]">
-        <DashboardHeader
-          commandPaths={commandPaths}
-          user={session.user}
-          ctx={ctx}
-          navItems={navItems}
-        />
+    <DashboardShell initialRailLabels={railLabels}>
+      <DashboardHeader
+        commandPaths={commandPaths}
+        user={session.user}
+        ctx={ctx}
+        navItems={navItems}
+      />
+      <DashboardSidebar navItems={navItems} />
+      <div className="pb-4 transition-[margin-left] duration-200 ease-out motion-reduce:transition-none md:ml-(--dashboard-rail-width)">
         <GlobalSheetsProvider
           access={{
             catalog: canAccessDashboardPath(
@@ -116,11 +120,11 @@ export default async function ShellLayout({
           storeIds={ctx.stores.map((item) => item.id)}
           tenantId={ctx.tenant.id}
         >
-          <main className="flex min-h-[calc(100vh-70px)] min-w-0 flex-col px-4 md:px-8">
+          <main className="flex min-h-[calc(100vh-56px)] min-w-0 flex-col px-4 md:px-8">
             {children}
           </main>
         </GlobalSheetsProvider>
       </div>
-    </div>
+    </DashboardShell>
   )
 }

@@ -52,7 +52,7 @@ export function SignOut() {
       <DropdownMenuItem
         closeOnClick={false}
         disabled={isSigningOut}
-        className="rounded-none px-2 py-1.5 font-normal"
+        className="px-2 py-1.5 font-normal"
         onClick={handleSignOut}
       >
         <HugeiconsIcon icon={Logout01Icon} className="size-4" />

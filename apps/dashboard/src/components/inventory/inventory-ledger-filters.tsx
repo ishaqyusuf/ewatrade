@@ -23,7 +23,6 @@ export function InventoryLedgerFilters({
               (params.filter ?? "all") === filter.id ? "secondary" : "ghost"
             }
             size="sm"
-            className="rounded-none"
             aria-pressed={(params.filter ?? "all") === filter.id}
             onClick={() =>
               void setParams({ filter: filter.id === "all" ? null : filter.id })

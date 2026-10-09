@@ -4,6 +4,7 @@ import {
   HorizontalPagination,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -94,7 +95,7 @@ export function CustomerTableHeader({
                 }
                 const className = getStickyClassName(
                   id,
-                  "group/header relative flex h-full shrink-0 items-center border-t border-border bg-background px-4 text-sm font-normal text-muted-foreground",
+                  `${TABLE_HEADER_CELL_CLASS} bg-background`,
                 )
                 const sortButton = field ? (
                   <Button
@@ -196,11 +197,7 @@ export function CustomerTableSettings({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button variant="outline" className="rounded-none">
-            Columns
-          </Button>
-        }
+        render={<Button variant="outline">Columns</Button>}
       />
       <DropdownMenuContent
         appearance="dashboard"

@@ -5,6 +5,7 @@ import {
   ACTIONS_STICKY_HEADER_CLASS,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   getHeaderLabel,
 } from "@/components/tables/core"
@@ -113,10 +114,7 @@ export function PrescriptionTableHeader({
                     ? actionsFullWidth
                       ? ACTIONS_FULL_WIDTH_HEADER_CLASS
                       : ACTIONS_STICKY_HEADER_CLASS
-                    : getStickyClassName(
-                        id,
-                        "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
-                      )
+                    : getStickyClassName(id, TABLE_HEADER_CELL_CLASS)
                 const sortControl = field ? (
                   <Button
                     type="button"
@@ -221,7 +219,7 @@ export function PrescriptionTableSettings({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="rounded-none">
+          <Button type="button" variant="outline">
             Columns
           </Button>
         }

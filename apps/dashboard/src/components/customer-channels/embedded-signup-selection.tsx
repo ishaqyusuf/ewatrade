@@ -44,7 +44,7 @@ export function EmbeddedSignupSelection({
   )
 
   return (
-    <section className="grid gap-4 rounded-none border border-primary/30 bg-primary/5 p-5">
+    <section className="grid gap-4 rounded-xl border border-primary/30 bg-primary/5 p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-primary">
           Authorized numbers
@@ -56,7 +56,7 @@ export function EmbeddedSignupSelection({
         </p>
       </div>
       {isLoading ? (
-        <div className="h-28 animate-pulse rounded-none bg-muted" />
+        <div className="h-28 animate-pulse rounded-lg bg-muted" />
       ) : error ? (
         <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : numbers.length === 0 ? (

@@ -6,6 +6,7 @@ import {
   DirectoryToolbar,
   HorizontalPagination,
   SelectionBar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
   useLoadedRowSelection,
 } from "@/components/tables/core"
@@ -210,7 +211,7 @@ export function StoreConversationDataTable({
       ) : (
         <section
           ref={scroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border bg-background"
+          className={`${TABLE_SCROLL_CONTAINER_CLASS} bg-background`}
           aria-label="Store conversations"
         >
           <DndContext

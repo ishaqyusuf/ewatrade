@@ -5,7 +5,10 @@ import {
   OverviewMetrics,
   OverviewMetricsSkeleton,
 } from "@/components/dashboard/overview-metrics"
-import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
+import {
+  OverviewRecentOrders,
+  OverviewRecentOrdersSkeleton,
+} from "@/components/dashboard/overview-recent-orders"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { PageHeader } from "@/components/page-header"
 import { AssistantProductEntry } from "@/components/product-assistant/assistant-home"
@@ -19,6 +22,7 @@ import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { getDashboardFeatureAvailability } from "@/lib/workspace-feature-availability"
+import { cn } from "@/utils"
 import type { Metadata } from "next"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { Suspense } from "react"
@@ -69,11 +73,47 @@ export default async function DashboardHomePage() {
         ) : null}
       </div>
       {store ? (
+        // The setup checklist now lives in the overview grid below; the
+        // assistant keeps its banner and modal here.
         <SetupAssistant
           hasCatalogItems={availability?.hasCatalogItems ?? false}
           offerSetup={actions.length > 0}
-          fallback={
-            actions.length === 0 ? null : (
+          fallback={null}
+        />
+      ) : null}
+      {availability && store && tenant ? (
+        <CollapsibleSummary>
+          <div
+            className={cn(
+              "grid min-w-0 items-start gap-4 lg:gap-5",
+              (availability.hasOrders || actions.length > 0) &&
+                "lg:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)]",
+            )}
+          >
+            <ErrorBoundary errorComponent={WorkspaceError}>
+              <Suspense
+                fallback={
+                  <OverviewMetricsSkeleton availability={availability} />
+                }
+              >
+                <OverviewMetrics
+                  availability={availability}
+                  store={store}
+                  tenantId={tenant.id}
+                  actions={{ orders: canCreateOrder, stock: canUpdateStock }}
+                />
+              </Suspense>
+            </ErrorBoundary>
+            {availability.hasOrders ? (
+              <ErrorBoundary errorComponent={WorkspaceError}>
+                <Suspense fallback={<OverviewRecentOrdersSkeleton />}>
+                  <OverviewRecentOrders
+                    storeId={store.id}
+                    viewAll={canCreateOrder}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            ) : actions.length > 0 ? (
               <GettingStarted
                 actions={actions}
                 store={{
@@ -83,36 +123,9 @@ export default async function DashboardHomePage() {
                   currencyCode: store.currencyCode,
                 }}
               />
-            )
-          }
-        />
-      ) : null}
-      {availability && store && tenant ? (
-        <CollapsibleSummary>
-          <ErrorBoundary errorComponent={WorkspaceError}>
-            <Suspense
-              fallback={<OverviewMetricsSkeleton availability={availability} />}
-            >
-              <OverviewMetrics
-                availability={availability}
-                store={store}
-                tenantId={tenant.id}
-              />
-            </Suspense>
-          </ErrorBoundary>
+            ) : null}
+          </div>
         </CollapsibleSummary>
-      ) : null}
-      {availability?.hasOrders && store ? (
-        <section className="flex min-w-0 flex-1 flex-col gap-3">
-          <h2 className="text-sm font-semibold">Recent orders</h2>
-          <ErrorBoundary errorComponent={WorkspaceError}>
-            <Suspense
-              fallback={<div className="h-64 animate-pulse bg-muted" />}
-            >
-              <OverviewRecentOrders storeId={store.id} />
-            </Suspense>
-          </ErrorBoundary>
-        </section>
       ) : null}
       {store && canCreateOrder ? (
         <OrderCreateSheet

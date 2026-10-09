@@ -38,7 +38,6 @@ export function InventoryOperationMenu({
             type="button"
             variant={balance ? "ghost" : "default"}
             size={balance ? "icon-sm" : "default"}
-            className="rounded-none"
             data-row-interactive="true"
             aria-label={
               balance

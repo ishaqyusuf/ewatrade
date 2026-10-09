@@ -45,7 +45,7 @@ export function ChannelsHeader({
             <Button
               disabled={!canManage}
               onClick={onConnect}
-              className="h-9 rounded-none"
+              className="h-9 rounded-md"
               appearance="form"
             >
               Connect WhatsApp

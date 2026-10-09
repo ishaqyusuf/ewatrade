@@ -19,7 +19,7 @@ export function getServiceWorkAssignment(job: WorkJob) {
 
 export function ServiceWorkStatusBadge({ job }: { job: WorkJob }) {
   return (
-    <Badge className={`rounded-none capitalize ${tone(job.summary)}`}>
+    <Badge className={`capitalize ${tone(job.summary)}`}>
       {label(job.summary)}
     </Badge>
   )
@@ -41,7 +41,7 @@ export function createServiceWorkColumns(
         headerLabel: "Order",
         sticky: true,
         className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+          "z-20 bg-background group-hover:bg-muted/40 group-focus-visible:bg-muted/40 group-aria-selected:bg-muted/60",
         reorderable: false,
         skeleton: { type: "text" },
       },
@@ -125,7 +125,6 @@ export function createServiceWorkColumns(
       },
       cell: ({ row }) => (
         <Button
-          className="rounded-none"
           size="sm"
           variant="ghost"
           aria-label={`Open job ${row.original.orderNumber}`}

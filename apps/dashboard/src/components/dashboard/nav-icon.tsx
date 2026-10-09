@@ -10,14 +10,19 @@ import {
   SparklesIcon,
   Store04Icon,
   UserCircle02Icon,
+  UserGroupIcon,
+  Wallet01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+
+type NavIconName = DashboardNavItem["icon"]
 
 const NAV_ICONS = {
   assistant: SparklesIcon,
   analytics: Analytics01Icon,
   customers: UserCircle02Icon,
   conversations: BubbleChatIcon,
+  finance: Wallet01Icon,
   home: Home01Icon,
   inventory: Archive01Icon,
   products: Package01Icon,
@@ -25,14 +30,14 @@ const NAV_ICONS = {
   sales: ShoppingCart01Icon,
   services: Store04Icon,
   settings: Settings01Icon,
-  staff: UserCircle02Icon,
-} satisfies Record<DashboardNavItem["icon"], typeof Home01Icon>
+  staff: UserGroupIcon,
+} satisfies Record<NavIconName, typeof Home01Icon>
 
 export function NavIcon({
   name,
   className,
 }: {
-  name: DashboardNavItem["icon"]
+  name: NavIconName
   className?: string
 }) {
   return (

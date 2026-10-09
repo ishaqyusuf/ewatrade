@@ -4,6 +4,7 @@ import type { WorkJob } from "@/components/service-work/service-utils"
 import {
   DirectoryToolbar,
   SelectionBar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
 } from "@/components/tables/core"
 import type { serviceWorkSortFields } from "@/hooks/sort-params"
@@ -110,7 +111,6 @@ export function ServiceWorkTableView({
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{errorMessage}</p>
           <Button
-            className="rounded-none"
             variant="outline"
             onClick={() => (isFetchNextPageError ? retry() : void refetch())}
           >
@@ -121,11 +121,7 @@ export function ServiceWorkTableView({
       {persistenceError ? (
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button
-            className="rounded-none"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </div>
@@ -147,7 +143,7 @@ export function ServiceWorkTableView({
         <section
           ref={scroll.setContainerRef}
           aria-label="Service work records"
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
         >
           <DndContext
             id="service-work-table-dnd"
@@ -197,7 +193,7 @@ export function ServiceWorkTableView({
       )}
       {hasNextPage && !isFetchNextPageError ? (
         <Button
-          className="w-fit rounded-none"
+          className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}
           onClick={() => void fetchNextPage()}

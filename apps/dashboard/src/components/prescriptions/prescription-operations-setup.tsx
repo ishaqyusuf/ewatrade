@@ -145,7 +145,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   const queryError = requiredQueries.find((query) => query.error)?.error
   if (queryError) {
     return (
-      <div className="grid gap-3 rounded-none border border-destructive/30 p-5">
+      <div className="grid gap-3 rounded-xl border border-destructive/30 p-5">
         <FormFeedback appearance="dashboard">{queryError.message}</FormFeedback>
         <Button
           appearance="form"
@@ -167,7 +167,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
       {message ? (
         <p className="xl:col-span-2 bg-muted px-4 py-3 text-sm">{message}</p>
       ) : null}
-      <section className="grid content-start gap-4 rounded-none border border-border bg-card p-5">
+      <section className="grid content-start gap-4 rounded-xl border border-border bg-card p-5">
         <div>
           <h2 className="font-semibold">Delivery zones</h2>
           <p className="text-sm text-muted-foreground">
@@ -176,7 +176,10 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
           </p>
         </div>
         {zones.data?.map((zone) => (
-          <div className="border border-border p-3 text-sm" key={zone.id}>
+          <div
+            className="rounded-lg border border-border p-3 text-sm"
+            key={zone.id}
+          >
             <p className="font-medium">{zone.name}</p>
             <p className="text-muted-foreground">
               {zone.feePolicy.toLowerCase().replaceAll("_", " ")} ·{" "}
@@ -253,7 +256,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             <h3 className="text-sm font-medium">Manual delivery fee reviews</h3>
             {manualReviews.data.map((review) => (
               <form
-                className="border border-border p-3"
+                className="rounded-lg border border-border p-3"
                 key={review.id}
                 onSubmit={(event) => {
                   event.preventDefault()
@@ -310,7 +313,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
         ) : null}
       </section>
 
-      <section className="grid content-start gap-4 rounded-none border border-border bg-card p-5">
+      <section className="grid content-start gap-4 rounded-xl border border-border bg-card p-5">
         <div>
           <h2 className="font-semibold">Privacy and retention</h2>
           <p className="text-sm text-muted-foreground">
@@ -454,7 +457,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             <h3 className="text-sm font-medium">Privacy request queue</h3>
             {compliance.data.privacyRequests.map((request) => (
               <div
-                className="flex flex-wrap items-center justify-between gap-2 border border-border p-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm"
                 key={request.id}
               >
                 <span>
@@ -600,7 +603,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
               .filter((control) => control.status === "ACTIVE")
               .map((control) => (
                 <form
-                  className="border border-border p-3 text-sm"
+                  className="rounded-lg border border-border p-3 text-sm"
                   key={control.id}
                   onSubmit={(event) => {
                     event.preventDefault()
@@ -645,7 +648,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             <div className="mt-3 grid gap-2">
               {compliance.data.sensitiveAccess.map((access) => (
                 <div
-                  className="border border-border p-3 text-xs"
+                  className="rounded-lg border border-border p-3 text-xs"
                   key={access.id}
                 >
                   <p className="font-medium">

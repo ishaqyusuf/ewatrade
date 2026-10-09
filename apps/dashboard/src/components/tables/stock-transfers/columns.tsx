@@ -26,7 +26,7 @@ export function transferColumns(
         sortField: "identity",
         sticky: true,
         className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+          "z-20 bg-background group-hover:bg-muted/40 group-focus-visible:bg-muted/40 group-aria-selected:bg-muted/60",
       },
       cell: ({ row }) => (
         <div className="min-w-0">

@@ -69,7 +69,7 @@ export function SheetFrame({
           render={
             <Button
               aria-label="Close"
-              className="m-0 size-auto rounded-none p-0 hover:bg-transparent"
+              className="m-0 size-auto p-0 hover:bg-transparent"
               size="icon"
               type="button"
               variant="ghost"

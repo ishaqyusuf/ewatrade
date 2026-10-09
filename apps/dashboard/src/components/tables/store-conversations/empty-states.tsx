@@ -16,7 +16,7 @@ export function StoreConversationEmptyState({
 }) {
   useDashboardEmptyState("conversations")
   return (
-    <section className="grid justify-items-center gap-2 rounded-none border border-dashed border-border bg-background p-10 text-center">
+    <section className="grid justify-items-center gap-2 rounded-xl border border-dashed border-border bg-background p-10 text-center">
       <h2 className="font-semibold">
         {filtered
           ? "No conversations match these filters"
@@ -45,7 +45,7 @@ export function StoreConversationEmptyState({
 export function StoreConversationAccessState() {
   return (
     <section
-      className="grid justify-items-center gap-3 rounded-none border border-border bg-background p-8 text-center"
+      className="grid justify-items-center gap-3 rounded-xl border border-border bg-background p-8 text-center"
       role="alert"
     >
       <h2 className="font-semibold">Active Store attendant access required</h2>
@@ -68,7 +68,7 @@ export function StoreConversationErrorState({ retry }: { retry: () => void }) {
   const workflow = useDashboardWorkflow()
   return (
     <div
-      className="rounded-none border border-destructive/30 bg-destructive/5 p-5"
+      className="rounded-lg border border-destructive/30 bg-destructive/5 p-5"
       role="alert"
     >
       <p className="font-medium">Conversations are temporarily unavailable.</p>

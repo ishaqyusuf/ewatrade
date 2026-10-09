@@ -137,6 +137,34 @@ describe("dashboard navigation policy", () => {
     ).toBe(false)
   })
 
+  test("gives Finance its own icon key, separate from Reports", () => {
+    const items = getDashboardNavigation(
+      "OWNER",
+      context({ businessProfileKey: "pharmacy-health-retail" }),
+    )
+    const reports = items.find((item) => item.href === "/analytics")
+
+    expect(
+      flatten(items)
+        .filter((item) => item.icon === "finance")
+        .map((item) => item.href),
+    ).toEqual([
+      "/finance",
+      "/finance",
+      "/finance/spending",
+      "/finance/accounts",
+      "/finance/suppliers",
+      "/customer-ledger",
+      "/finance/reports",
+    ])
+    expect(reports?.icon).toBe("analytics")
+    expect(reports?.children?.map((item) => item.icon)).toEqual([
+      "analytics",
+      "analytics",
+      "prescriptions",
+    ])
+  })
+
   test("keeps child route permissions aligned with their specific pages", () => {
     const managerItems = getDashboardNavigation("MANAGER")
     const managerReports = managerItems.find(

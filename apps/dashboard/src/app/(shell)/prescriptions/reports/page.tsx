@@ -48,7 +48,7 @@ export default async function Page({
               <Button
                 render={<Link href="/prescriptions" />}
                 variant="outline"
-                className="h-9 rounded-none"
+                className="h-9"
               >
                 Back to queue
               </Button>

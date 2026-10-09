@@ -8,6 +8,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useId, useState } from "react"
 import { NavIcon } from "./nav-icon"
+import { isNavItemActive } from "./shell/rail-model"
 
 type Props = {
   navItems: DashboardNavItem[]
@@ -15,13 +16,7 @@ type Props = {
   onNavigate?: () => void
 }
 
-function matchesPath(pathname: string, item: DashboardNavItem) {
-  return (
-    pathname === item.href ||
-    (!item.end && pathname.startsWith(`${item.href}/`))
-  )
-}
-
+/** Vertical nav list used by the small-screen navigation sheet. */
 export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
   const pathname = usePathname()
   const id = useId()
@@ -33,15 +28,11 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
   return (
     <nav
       aria-label="Main navigation"
-      className="min-h-0 flex-1 overflow-y-auto py-4"
+      className="min-h-0 flex-1 overflow-y-auto py-3"
     >
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-1">
         {navItems.map((item) => {
-          const isActive =
-            matchesPath(pathname, item) ||
-            Boolean(
-              item.children?.some((child) => matchesPath(pathname, child)),
-            )
+          const isActive = isNavItemActive(pathname, item)
           const hasChildren = Boolean(item.children?.length)
           const showChildren = isExpanded && expandedItem === item.href
           const childrenId = `${id}-${item.href.replaceAll("/", "-")}`
@@ -55,10 +46,10 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                   aria-label={item.label}
                   aria-current={pathname === item.href ? "page" : undefined}
                   className={cn(
-                    "group/nav-item relative mx-[15px] flex h-10 items-center overflow-hidden border border-transparent outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "group/nav-item relative mx-3 flex h-10 items-center overflow-hidden rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     isActive
-                      ? "border-[#e6e6e6] bg-[#f7f7f7] text-foreground dark:border-[#1d1d1d] dark:bg-[#131313] dark:text-foreground"
-                      : "text-sidebar-foreground hover:border-sidebar-border hover:bg-sidebar-accent",
+                      ? "bg-primary/10 text-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <span className="flex size-10 shrink-0 items-center justify-center">
@@ -66,19 +57,15 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                       name={item.icon}
                       className={cn(
                         "size-5 transition-colors",
-                        isActive
-                          ? "text-foreground dark:text-white"
-                          : "text-foreground dark:text-[#666666]",
+                        isActive && "text-primary",
                       )}
                     />
                   </span>
                   <span
                     className={cn(
-                      "min-w-0 truncate text-sm font-medium transition-[opacity,width] duration-150",
+                      "min-w-0 truncate text-sm transition-[opacity,width] duration-150",
                       hasChildren ? "pr-10" : "pr-2",
-                      isActive
-                        ? "text-primary"
-                        : "text-[#666666] group-hover/nav-item:text-primary",
+                      isActive ? "font-semibold" : "font-medium",
                       isExpanded ? "w-auto opacity-100" : "w-0 opacity-0",
                     )}
                     aria-hidden={!isExpanded}
@@ -96,7 +83,7 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                     onClick={() =>
                       setExpandedItem(showChildren ? null : item.href)
                     }
-                    className="absolute right-5 top-1 flex size-8 items-center justify-center text-[#888] outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+                    className="absolute top-1 right-4 flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <HugeiconsIcon
                       icon={ArrowDown01Icon}
@@ -111,7 +98,7 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
               {showChildren ? (
                 <ul
                   id={childrenId}
-                  className="mt-1 ml-[35px] mr-[15px] border-l border-[#e6e6e6] dark:border-[#1d1d1d]"
+                  className="mt-1 mr-3 ml-[31px] border-l border-border"
                 >
                   {item.children?.map((child) => (
                     <li key={child.href}>
@@ -123,8 +110,10 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                           pathname === child.href ? "page" : undefined
                         }
                         className={cn(
-                          "flex h-8 items-center overflow-hidden whitespace-nowrap pl-3 text-xs font-medium text-[#888] outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring",
-                          pathname === child.href && "text-primary",
+                          "flex h-8 items-center overflow-hidden whitespace-nowrap pl-3 text-xs font-medium outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                          pathname === child.href
+                            ? "text-primary"
+                            : "text-muted-foreground",
                         )}
                       >
                         {child.label}

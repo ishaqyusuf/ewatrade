@@ -28,7 +28,6 @@ export function InventoryFilters() {
             key={filter.id}
             variant={stockFilter === filter.id ? "secondary" : "ghost"}
             size="sm"
-            className="rounded-none"
             aria-pressed={stockFilter === filter.id}
             onClick={() =>
               void setParams({

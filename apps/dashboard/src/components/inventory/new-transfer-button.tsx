@@ -5,7 +5,6 @@ export function NewTransferButton() {
   const { setParams } = useInventoryParams()
   return (
     <Button
-      className="rounded-none"
       onClick={() =>
         void setParams({
           inventoryOperation: "transfer",

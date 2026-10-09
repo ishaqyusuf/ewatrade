@@ -34,7 +34,7 @@ export function DomainHeader({
             />
             <OpenDomainSheet
               mode="connect"
-              className="h-9 rounded-none"
+              className="h-9 rounded-md"
               variant="outline"
             >
               <HugeiconsIcon icon={Link01Icon} className="mr-2 size-4" />
@@ -44,7 +44,7 @@ export function DomainHeader({
               mode="buy"
               aria-label="Buy domain"
               variant="outline"
-              className="size-9 rounded-none"
+              className="size-9 rounded-md"
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
             </OpenDomainSheet>

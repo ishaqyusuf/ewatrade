@@ -283,7 +283,7 @@ export function CustomerChannelSheetContent({
     (mode === "quote_policy" && releaseSettings.isLoading) ||
     (mode === "quote_approval" && approvalDetail.isLoading)
   ) {
-    return <div className="h-72 animate-pulse rounded-none bg-muted" />
+    return <div className="h-72 animate-pulse rounded-xl bg-muted" />
   }
   const error =
     workspace.error ??
@@ -602,7 +602,7 @@ function SetupProgress({
     >
       {steps.map((step, index) => (
         <li
-          className={`rounded-none border px-3 py-2 ${step.active ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}
+          className={`rounded-md border px-3 py-2 ${step.active ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"}`}
           key={step.label}
         >
           {index + 1}. {step.label}

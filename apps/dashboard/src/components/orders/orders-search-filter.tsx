@@ -1,5 +1,6 @@
 "use client"
 
+import { orderStatusLabels } from "@/components/orders/order-status"
 import { SearchFilter } from "@/components/search-filter"
 import { ORDER_STATUSES } from "@/hooks/use-order-filter-params"
 import { useOrderParams } from "@/hooks/use-order-params"
@@ -10,18 +11,6 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@ewatrade/ui"
-
-const labels: Record<(typeof ORDER_STATUSES)[number], string> = {
-  CANCELLED: "Cancelled",
-  COMPLETED: "Completed",
-  CONFIRMED: "Confirmed",
-  DRAFT: "Draft",
-  FULFILLING: "Fulfilling",
-  OUT_FOR_DELIVERY: "Out for delivery",
-  PENDING: "Pending",
-  READY_FOR_PICKUP: "Ready for pickup",
-  REFUNDED: "Refunded",
-}
 
 export function OrdersSearchFilter() {
   const { filter, setFilter } = useOrderParams()
@@ -35,7 +24,7 @@ export function OrdersSearchFilter() {
             allLabel: "All statuses",
             options: ORDER_STATUSES.map((value) => ({
               value,
-              label: labels[value],
+              label: orderStatusLabels[value],
             })),
           },
         ],
@@ -56,7 +45,7 @@ export function OrdersSearchFilter() {
           ? [
               {
                 id: "status",
-                label: labels[filter.status],
+                label: orderStatusLabels[filter.status],
                 onRemove: () => void setFilter({ status: null }),
               },
             ]
@@ -68,7 +57,7 @@ export function OrdersSearchFilter() {
           <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-40 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
             sideOffset={14}
             alignOffset={-4}
           >
@@ -81,7 +70,7 @@ export function OrdersSearchFilter() {
                   void setFilter({ status: checked ? status : null })
                 }
               >
-                {labels[status]}
+                {orderStatusLabels[status]}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuSubContent>

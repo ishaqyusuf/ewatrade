@@ -98,7 +98,7 @@ export function createInventoryColumns(
         reorderable: false,
         sortField: "productName",
         className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
+          "z-20 bg-background group-hover:bg-muted/40 group-focus-visible:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
         skeleton: { type: "avatar-text", width: "w-32" },
       }),
       cell: ({ row }) => (

@@ -20,6 +20,8 @@ export interface SkeletonConfig {
 
 /** Metadata shared by dashboard table headers, cells, and skeletons. */
 export interface TableColumnMeta {
+  /** `end` right-aligns header, cells and skeleton, e.g. for money totals. */
+  align?: "start" | "end"
   className?: string
   headerLabel?: string
   reorderable?: boolean
@@ -75,11 +77,32 @@ export function getHeaderLabel<TData>(column: ColumnDef<TData>): string {
     .trim()
 }
 
+/**
+ * Quiet table chrome shared by every dashboard directory table: no outer box,
+ * a full-strength rule under the header, hairline rules between rows.
+ */
+export const TABLE_SCROLL_CONTAINER_CLASS =
+  "max-h-[560px] overflow-auto overscroll-contain"
+
+/** Muted, small header labels; sort buttons inside inherit the same size. */
+export const TABLE_HEADER_CELL_CLASS =
+  "group/header relative flex h-full shrink-0 items-center border-r-0 border-b border-border px-4 text-xs font-normal text-muted-foreground [&_[data-slot=button]]:text-xs"
+
+/** Hairline separator under body rows and skeleton rows. */
+export const TABLE_ROW_RULE_CLASS = "border-b border-border/70"
+
+/**
+ * Left accent bar for the first cell of a row (`group` on the row): shown on
+ * hover, keyboard focus and selection. The checkbox stays the selection signal.
+ */
+export const TABLE_ROW_ACCENT_CLASS =
+  "shadow-[inset_3px_0_0_transparent] transition-shadow group-hover:shadow-[inset_3px_0_0_var(--primary)] group-focus-visible:shadow-[inset_3px_0_0_var(--primary)] group-aria-selected:shadow-[inset_3px_0_0_var(--primary)] group-data-[state=selected]:shadow-[inset_3px_0_0_var(--primary)] motion-reduce:transition-none"
+
 export const ACTIONS_FULL_WIDTH_HEADER_CLASS =
-  "group/header relative flex h-full items-center justify-center border-t border-border bg-background px-4"
+  "group/header relative flex h-full items-center justify-center border-r-0 border-b border-border bg-background px-4"
 
 export const ACTIONS_STICKY_HEADER_CLASS =
-  "group/header relative flex h-full items-center justify-center border-l border-t border-border bg-background px-4 md:sticky md:right-0"
+  "group/header relative flex h-full items-center justify-center border-r-0 border-b border-l border-border bg-background px-4 md:sticky md:right-0"
 
 export const ACTIONS_FULL_WIDTH_CELL_CLASS =
   "bg-background group-hover:bg-muted/50"

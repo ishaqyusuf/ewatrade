@@ -4,7 +4,11 @@ import {
   DirectoryCollection,
   DirectoryRecord,
   DirectoryToolbar,
+  SELECT_COLUMN_ID,
   SelectionBar,
+  TABLE_ROW_ACCENT_CLASS,
+  TABLE_ROW_RULE_CLASS,
+  type TableColumnMeta,
   useLoadedRowSelection,
 } from "@/components/tables/core"
 import { domainSortFields } from "@/components/tables/domains/sort"
@@ -12,6 +16,7 @@ import { useDomainFilterParams } from "@/hooks/use-domain-filter-params"
 import { useDomainParams } from "@/hooks/use-domain-params"
 import { useSortParams } from "@/hooks/use-sort-params"
 import { useTRPC } from "@/trpc/client"
+import { cn } from "@/utils"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import {
   Button,
@@ -33,7 +38,7 @@ import { useMemo } from "react"
 import { DomainActionsMenu } from "./actions-menu"
 import {
   type DomainRow,
-  DomainStatusBadge,
+  DomainStatusDot,
   domainColumns,
   formatDomainExpiry,
   readableDomainValue,
@@ -41,6 +46,9 @@ import {
 import { DomainsEmptyState } from "./empty-states"
 
 const getDomainId = (domain: DomainRow) => domain.id
+/** Same header chrome as SimpleDirectoryTable: muted, small, no dividers. */
+const QUIET_HEADER_CELL_CLASS =
+  "h-9 border-r-0 text-xs font-normal [&_[data-slot=button]]:text-xs"
 const INTERACTIVE_TARGET =
   "a, button, input, [role='checkbox'], [role='menuitem']"
 
@@ -120,7 +128,7 @@ export function DomainDataTable({ view }: { view: DirectoryView }) {
                 title={domain.hostname}
                 onOpen={() => openDetails(domain)}
                 description={`${domain.store.name}${domain.isPrimary ? " · Primary" : ""}`}
-                badges={<DomainStatusBadge domain={domain} />}
+                badges={<DomainStatusDot domain={domain} />}
                 details={[
                   {
                     label: "Registrar",
@@ -139,16 +147,19 @@ export function DomainDataTable({ view }: { view: DirectoryView }) {
           })}
         </DirectoryCollection>
       ) : (
-        <div
-          className="overflow-x-auto border border-border"
-          aria-label="Domain directory"
-        >
-          <Table className="min-w-[760px]">
-            <TableHeader>
+        <div className="overflow-x-auto">
+          <Table aria-label="Domain directory" className="min-w-[760px]">
+            <TableHeader className="border-0">
               {table.getHeaderGroups().map((group) => (
-                <TableRow key={group.id}>
+                <TableRow
+                  key={group.id}
+                  className="border-b border-border hover:bg-transparent"
+                >
                   {group.headers.map((header) => {
                     const id = header.column.id
+                    const meta = header.column.columnDef.meta as
+                      | TableColumnMeta
+                      | undefined
                     const field = domainSortFields.find(
                       (candidate) => candidate === id,
                     )
@@ -170,21 +181,28 @@ export function DomainDataTable({ view }: { view: DirectoryView }) {
                                 : "none"
                             : undefined
                         }
+                        className={cn(
+                          QUIET_HEADER_CELL_CLASS,
+                          id === SELECT_COLUMN_ID && "w-12",
+                          meta?.align === "end" && "text-right",
+                        )}
                       >
                         {field ? (
                           <Button
                             type="button"
                             variant="ghost"
-                            className="h-auto rounded-none p-0 font-normal hover:bg-transparent"
+                            className="h-auto p-0 font-normal hover:bg-transparent"
                             aria-label={`Sort by ${label}${direction ? `, currently ${direction}` : ""}`}
                             onClick={() => void toggleSort(field)}
                           >
                             {label}
-                            {direction === "asc"
-                              ? " ↑"
-                              : direction === "desc"
-                                ? " ↓"
-                                : ""}
+                            <span aria-hidden="true">
+                              {direction === "asc"
+                                ? " ↑"
+                                : direction === "desc"
+                                  ? " ↓"
+                                  : ""}
+                            </span>
                           </Button>
                         ) : (
                           flexRender(
@@ -198,12 +216,15 @@ export function DomainDataTable({ view }: { view: DirectoryView }) {
                 </TableRow>
               ))}
             </TableHeader>
-            <TableBody>
+            <TableBody className="border-0">
               {table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   tabIndex={0}
-                  className="cursor-pointer"
+                  className={cn(
+                    "group cursor-pointer outline-none hover:bg-muted/40 focus-visible:bg-muted/40 data-[state=selected]:bg-muted/60",
+                    TABLE_ROW_RULE_CLASS,
+                  )}
                   data-state={row.getIsSelected() ? "selected" : undefined}
                   onClick={(event) => {
                     // Checkbox and menu clicks keep their own behaviour.
@@ -227,14 +248,26 @@ export function DomainDataTable({ view }: { view: DirectoryView }) {
                     }
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell, index) => {
+                    const meta = cell.column.columnDef.meta as
+                      | TableColumnMeta
+                      | undefined
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          "border-r-0 py-3",
+                          index === 0 && TABLE_ROW_ACCENT_CLASS,
+                          meta?.align === "end" && "text-right tabular-nums",
+                        )}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))}
             </TableBody>

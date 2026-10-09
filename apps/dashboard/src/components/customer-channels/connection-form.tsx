@@ -58,7 +58,7 @@ export function ConnectionForm({
   )
 
   return (
-    <section className="grid gap-5 rounded-none border border-border bg-card p-5">
+    <section className="grid gap-5 rounded-xl border border-border bg-card p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -73,7 +73,7 @@ export function ConnectionForm({
         </div>
         {embeddedSignupUrl ? (
           <a
-            className="inline-flex h-10 items-center justify-center rounded-none border border-transparent bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-transparent bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/80"
             href={embeddedSignupUrl}
           >
             Continue with Meta
@@ -111,7 +111,7 @@ export function ConnectionForm({
         )}
       </div>
 
-      <details className="rounded-none border border-border p-4">
+      <details className="rounded-lg border border-border p-4">
         <summary className="cursor-pointer text-sm font-medium">
           Manual setup for an approved onboarding session
         </summary>

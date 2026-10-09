@@ -47,7 +47,7 @@ export function QuoteReleasePolicyForm({
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldGroup className="min-w-0 grid gap-5">
-        <section className="grid gap-4 rounded-none border border-border bg-card p-5">
+        <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Quotation approval
@@ -101,7 +101,7 @@ export function QuoteReleasePolicyForm({
                   </CheckboxField>
                 ))
               ) : (
-                <p className="rounded-none border border-dashed border-border p-4 text-sm text-muted-foreground">
+                <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
                   Add and accept a team member before requiring approval.
                 </p>
               )}

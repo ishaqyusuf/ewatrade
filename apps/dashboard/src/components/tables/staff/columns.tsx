@@ -1,13 +1,13 @@
 "use client"
+import { selectColumn } from "@/components/tables/core"
 import {
   type StaffMemberRow,
   getStaffDisplayName,
   getStaffRoleLabel,
-  getStaffStatusLabel,
 } from "@/lib/staff-management"
-import { Badge, Checkbox } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
 import { StaffActions, type StaffActionsProps } from "./actions"
+import { StaffRoleBadge, StaffStatusBadge } from "./badges"
 import { formatStaffDate as formatDate } from "./format"
 
 export function staffColumns({
@@ -15,28 +15,7 @@ export function staffColumns({
   onUpdateStatus,
 }: Omit<StaffActionsProps, "member">): ColumnDef<StaffMemberRow>[] {
   return [
-    {
-      id: "select",
-      enableSorting: false,
-      enableHiding: false,
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all staff"
-          checked={table.getIsAllRowsSelected()}
-          indeterminate={table.getIsSomeRowsSelected()}
-          disabled={!table.getRowModel().rows.some((row) => row.getCanSelect())}
-          onCheckedChange={(checked) => table.toggleAllRowsSelected(checked)}
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          aria-label={`Select ${getStaffDisplayName(row.original)}`}
-          checked={row.getIsSelected()}
-          disabled={!row.getCanSelect()}
-          onCheckedChange={(checked) => row.toggleSelected(checked)}
-        />
-      ),
-    },
+    selectColumn(getStaffDisplayName, "Select all staff"),
     {
       id: "name",
       accessorFn: getStaffDisplayName,
@@ -54,32 +33,20 @@ export function staffColumns({
       id: "role",
       accessorFn: (row) => getStaffRoleLabel(row.role),
       header: "Role",
-      cell: ({ row }) => (
-        <Badge variant="secondary">
-          {getStaffRoleLabel(row.original.role)}
-        </Badge>
-      ),
+      cell: ({ row }) => <StaffRoleBadge member={row.original} />,
     },
     {
       id: "status",
       accessorFn: (row) => row.status,
       header: "Status",
-      cell: ({ row }) => (
-        <Badge
-          variant={
-            row.original.status === "SUSPENDED" ? "destructive" : "outline"
-          }
-        >
-          {getStaffStatusLabel(row.original.status)}
-        </Badge>
-      ),
+      cell: ({ row }) => <StaffStatusBadge member={row.original} />,
     },
     {
       id: "invitedAt",
       accessorKey: "invitedAt",
       header: "Invited",
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-muted-foreground">
+        <span className="whitespace-nowrap text-muted-foreground tabular-nums">
           {formatDate(row.original.invitedAt)}
         </span>
       ),
@@ -89,7 +56,7 @@ export function staffColumns({
       accessorKey: "acceptedAt",
       header: "Accepted",
       cell: ({ row }) => (
-        <span className="whitespace-nowrap text-muted-foreground">
+        <span className="whitespace-nowrap text-muted-foreground tabular-nums">
           {formatDate(row.original.acceptedAt)}
         </span>
       ),
@@ -98,12 +65,15 @@ export function staffColumns({
       id: "actions",
       enableSorting: false,
       header: "Actions",
+      meta: { align: "end" },
       cell: ({ row }) => (
-        <StaffActions
-          member={row.original}
-          updatingId={updatingId}
-          onUpdateStatus={onUpdateStatus}
-        />
+        <div className="flex justify-end">
+          <StaffActions
+            member={row.original}
+            updatingId={updatingId}
+            onUpdateStatus={onUpdateStatus}
+          />
+        </div>
       ),
     },
   ]

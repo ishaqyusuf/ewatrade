@@ -5,6 +5,7 @@ import {
   ACTIONS_STICKY_HEADER_CLASS,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   getHeaderLabel,
 } from "@/components/tables/core"
@@ -141,7 +142,7 @@ export function StoreConversationRichTableHeader({
                   )
                 const className = getStickyClassName(
                   id,
-                  "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                  TABLE_HEADER_CELL_CLASS,
                 )
                 const resize = header.column.getCanResize() ? (
                   <ResizeHandle header={header} />
@@ -212,12 +213,7 @@ export function StoreConversationColumnSettings({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-none"
-            appearance="form"
-          >
+          <Button type="button" variant="outline">
             Columns
           </Button>
         }

@@ -96,7 +96,7 @@ export function QaDashboardQuickFill({
         <Button
           variant="ghost"
           size="sm"
-          className="rounded-none"
+          className="rounded-md"
           onClick={onUndo}
           type="button"
         >
@@ -105,7 +105,7 @@ export function QaDashboardQuickFill({
       ) : null}
       <Button
         aria-label={`${label} using ${qa.qaDomain}`}
-        className="rounded-none"
+        className="rounded-md"
         size="sm"
         onClick={() => (isDirty ? setConfirmOpen(true) : fill())}
         type="button"

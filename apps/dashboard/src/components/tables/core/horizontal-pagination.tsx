@@ -23,7 +23,6 @@ export function HorizontalPagination({
         type="button"
         variant="outline"
         size="icon-xs"
-        className="rounded-none"
         aria-label="Scroll table left"
         disabled={!canScrollLeft}
         onClick={() => onScrollLeft()}
@@ -34,7 +33,6 @@ export function HorizontalPagination({
         type="button"
         variant="outline"
         size="icon-xs"
-        className="rounded-none"
         aria-label="Scroll table right"
         disabled={!canScrollRight}
         onClick={() => onScrollRight()}

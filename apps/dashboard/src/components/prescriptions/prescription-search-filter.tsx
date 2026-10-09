@@ -160,7 +160,7 @@ export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
           <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-52 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-52 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
           >
             {PRESCRIPTION_STATUSES.map((status) => (
               <DropdownMenuCheckboxItem
@@ -182,7 +182,7 @@ export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
           <DropdownMenuSubTrigger>Assignee</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
           >
             {assignees.map((assignee) => (
               <DropdownMenuCheckboxItem
@@ -208,7 +208,7 @@ export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
           <DropdownMenuSubTrigger>Date range</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="w-[min(680px,calc(100vw-32px))] max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="w-[min(680px,calc(100vw-32px))] max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden [&_[data-slot$=-trigger]]:rounded-md"
             sideOffset={14}
             alignOffset={-4}
           >
@@ -226,7 +226,7 @@ export function PrescriptionSearchFilter({ storeId }: { storeId: string }) {
           <DropdownMenuSubTrigger>Source</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
           >
             {PRESCRIPTION_SOURCES.map((source) => (
               <DropdownMenuCheckboxItem

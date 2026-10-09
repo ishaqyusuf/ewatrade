@@ -58,7 +58,7 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
   }, [url])
 
   return (
-    <section className="grid gap-4 rounded-none border border-border bg-card p-5">
+    <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
       <div>
         <h2 className="font-semibold">Public intake link and QR</h2>
         <p className="text-sm text-muted-foreground">
@@ -100,7 +100,7 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-[220px_1fr] md:items-center">
-          <div className="flex size-[220px] items-center justify-center border border-border bg-white p-3">
+          <div className="flex size-[220px] items-center justify-center rounded-lg border border-border bg-white p-3">
             {qrCode ? (
               <img
                 alt="Prescription intake QR code"

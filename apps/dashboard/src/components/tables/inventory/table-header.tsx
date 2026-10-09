@@ -4,6 +4,7 @@ import {
   HorizontalPagination,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -90,7 +91,7 @@ export function InventoryTableHeader({
               const className = getStickyClassName(
                 id,
                 cn(
-                  "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                  TABLE_HEADER_CELL_CLASS,
                   ["onHand", "reserved", "available"].includes(id) &&
                     "justify-end",
                 ),
@@ -190,7 +191,7 @@ export function InventoryTableSettings({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="rounded-none">
+          <Button type="button" variant="outline">
             Columns
           </Button>
         }
