@@ -4,8 +4,7 @@ import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { SyncReliabilityToggle } from "@/components/mobile/sync-flow"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
@@ -26,6 +25,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Constants from "expo-constants"
 import { useEffect } from "react"
 import { Platform, ScrollView, View } from "react-native"
+import { HeroCard } from "./green-till/hero-card"
+import { ToggleRow } from "./green-till/kit"
+import {
+  queueCreatedAt,
+  queueItemTitle,
+  queueStatusLabel,
+} from "./queue-display"
 import {
   SYNC_STATUS_COPY,
   buildSyncStatusPresentation,
@@ -62,6 +68,7 @@ export function SyncStatusContent({
   const setOfflineMode = useOperationalModeStore((mode) => mode.setOfflineMode)
   const settings = useQuery(
     trpc.offline.settings.queryOptions(undefined, {
+      enabled: !isOfflineMode,
       retry: false,
       staleTime: 30_000,
     }),
@@ -227,19 +234,71 @@ export function SyncStatusContent({
     <ScrollView
       className="flex-1"
       contentContainerStyle={{
-        gap: 0,
+        gap: 16,
         paddingBottom: 48,
-        paddingHorizontal: 20,
+        paddingHorizontal: 18,
       }}
       refreshControl={<QueryRefreshControl />}
     >
-      <StatusBanner
-        className="mt-1 rounded-none"
-        icon={presentation.tone === "success" ? "CircleCheck" : "Lock"}
-        message={presentation.statusMessage}
-        title={presentation.statusTitle}
-        tone={presentation.tone}
+      <HeroCard
+        label="Sync & offline"
+        title={
+          !state.hasHydrated
+            ? "Checking this device"
+            : isOfflineMode
+              ? "Working offline"
+              : reviewing.length + staged.length
+                ? `${reviewing.length + staged.length} need review`
+                : pending.length
+                  ? `${pending.length} waiting to sync`
+                  : "All synced on this device"
+        }
+        sub={presentation.statusMessage}
+        pill={{
+          label: isOfflineMode ? "Offline" : "This device",
+          tone: isOfflineMode ? "offline" : "synced",
+        }}
+        stats={
+          state.hasHydrated
+            ? [
+                { label: "Waiting", value: String(pending.length) },
+                {
+                  label: "Review",
+                  value: String(staged.length + reviewing.length),
+                },
+                { label: "Synced", value: String(applied.length) },
+              ]
+            : undefined
+        }
+      >
+        {!state.hasHydrated ? <Skeleton className="mt-4 h-12 w-full" /> : null}
+      </HeroCard>
+      <ToggleRow
+        title="Work offline"
+        sub={
+          !offlineAllowed
+            ? "Offline work is disabled for this business."
+            : "New sales stay on this device until you reconnect."
+        }
+        value={isOfflineMode}
+        disabled={(!offlineAllowed && !isOfflineMode) || operationPending}
+        onValueChange={(value) => {
+          if (
+            profile?.businessId &&
+            !operationPending &&
+            (offlineAllowed || !value)
+          )
+            setOfflineMode(profile.businessId, value)
+        }}
       />
+      <ActionButton
+        disabled={!canReplay}
+        isLoading={operationPending}
+        loadingLabel="Syncing"
+        onPress={replayNow}
+      >
+        {presentation.syncLabel}
+      </ActionButton>
       {settings.isError ? (
         <StatusBanner
           actionLabel="Try again"
@@ -278,152 +337,6 @@ export function SyncStatusContent({
           tone="destructive"
         />
       ) : null}
-
-      <View className="mt-4 flex-row border-y border-border py-4">
-        <Summary label="Pending" value={pending.length} />
-        <Divider />
-        <Summary label="Review" value={reviewCount} />
-        <Divider />
-        <Summary label="Applied" value={applied.length} />
-      </View>
-
-      {canManageSettings ? (
-        <View>
-          <SectionLabel>Business policy</SectionLabel>
-          <View className="border-t border-border">
-            <SyncReliabilityToggle
-              active={policyEnabled}
-              className="rounded-none border-b border-border bg-transparent px-0"
-              description="Orders and checkout only."
-              disabled={!canChangePolicy}
-              label="Allow staff to work offline"
-              onPress={() => {
-                if (!canChangePolicy || !settings.data) return
-                updateSettings.mutate({
-                  approvalRequired: settings.data.approvalRequired,
-                  enabled: !settings.data.enabled,
-                })
-              }}
-              testID="offline-policy-enabled-toggle"
-            />
-            <SyncReliabilityToggle
-              active={settings.data?.approvalRequired ?? false}
-              className="rounded-none border-b border-border bg-transparent px-0"
-              description="Review staff Orders before they are applied."
-              disabled={!canChangePolicy || !policyEnabled}
-              label="Require staff record approval"
-              onPress={() => {
-                if (!canChangePolicy || !policyEnabled || !settings.data) return
-                updateSettings.mutate({
-                  approvalRequired: !settings.data.approvalRequired,
-                  enabled: settings.data.enabled,
-                })
-              }}
-              testID="offline-policy-approval-toggle"
-            />
-          </View>
-        </View>
-      ) : null}
-
-      <SectionLabel>This device</SectionLabel>
-      <View className="min-h-20 flex-row items-center gap-3 border-y border-border py-3">
-        <View className="size-10 items-center justify-center rounded-full bg-muted">
-          <Icon
-            className="size-sm text-primary"
-            name={isOfflineMode ? "Wind" : "Zap"}
-          />
-        </View>
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-extrabold text-foreground">
-            {isOfflineMode ? "Offline work" : "Online work"}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            {isOfflineMode
-              ? "Supported changes wait on this device."
-              : "Changes apply immediately."}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityLabel={
-            isOfflineMode ? "Return to online work" : "Switch to offline work"
-          }
-          accessibilityRole="button"
-          className="min-h-11 justify-center px-2"
-          disabled={!offlineAllowed || operationPending}
-          haptic={offlineAllowed && !operationPending}
-          onPress={() => {
-            if (offlineAllowed && profile?.businessId && !operationPending) {
-              setOfflineMode(profile.businessId, !isOfflineMode)
-            }
-          }}
-        >
-          <Text className="text-xs font-extrabold text-primary">
-            {!offlineAllowed
-              ? "Unavailable"
-              : isOfflineMode
-                ? "Go online"
-                : "Go offline"}
-          </Text>
-        </Pressable>
-      </View>
-      <ActionButton
-        className="mt-3"
-        disabled={!canReplay}
-        isLoading={operationPending}
-        loadingLabel="Syncing"
-        onPress={replayNow}
-      >
-        {presentation.syncLabel}
-      </ActionButton>
-
-      <View>
-        <SectionLabel>Activity</SectionLabel>
-        {commands.length === 0 ? (
-          <EmptyState
-            className="border-y border-border px-0 py-4"
-            icon="Wind"
-            message={presentation.activityMessage}
-            title={presentation.activityTitle}
-            variant="flat"
-          />
-        ) : (
-          <View className="border-y border-border">
-            {commands
-              .slice()
-              .reverse()
-              .map((command, index) => (
-                <View
-                  className={`gap-2 py-4 ${
-                    index < commands.length - 1 ? "border-b border-border" : ""
-                  }`}
-                  key={command.clientCommandId}
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="min-w-0 flex-1 font-bold text-foreground">
-                      {command.payload.kind.replaceAll("_", " ")}
-                    </Text>
-                    <StatusBadge
-                      label={command.localStatus}
-                      tone={
-                        command.localStatus === "applied"
-                          ? "success"
-                          : command.localStatus === "review" ||
-                              command.localStatus === "approval"
-                            ? "warning"
-                            : "muted"
-                      }
-                    />
-                  </View>
-                  {command.conflictMessage ? (
-                    <Text className="text-xs text-destructive">
-                      {SYNC_STATUS_COPY.localConflict}
-                    </Text>
-                  ) : null}
-                </View>
-              ))}
-          </View>
-        )}
-      </View>
 
       {canManageReviews ? (
         (conflicts.data?.length ?? 0) > 0 ? (
@@ -510,6 +423,104 @@ export function SyncStatusContent({
         <ActionButton onPress={onComplete} variant="outline">
           Done
         </ActionButton>
+      ) : null}
+      <View>
+        <SectionLabel>Activity</SectionLabel>
+        {commands.length === 0 ? (
+          <EmptyState
+            className="border-y border-border px-0 py-4"
+            icon="Wind"
+            message={presentation.activityMessage}
+            title={presentation.activityTitle}
+            variant="flat"
+          />
+        ) : (
+          <View className="border-y border-border">
+            {commands
+              .slice()
+              .reverse()
+              .map((command, index) => (
+                <View
+                  className={`gap-2 py-4 ${
+                    index < commands.length - 1 ? "border-b border-border" : ""
+                  }`}
+                  key={command.clientCommandId}
+                >
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="min-w-0 flex-1 font-bold text-foreground">
+                      {queueItemTitle(command.payload)}
+                    </Text>
+                    <StatusBadge
+                      label={queueStatusLabel(command.localStatus)}
+                      tone={
+                        command.localStatus === "applied"
+                          ? "success"
+                          : command.localStatus === "review" ||
+                              command.localStatus === "approval"
+                            ? "warning"
+                            : "muted"
+                      }
+                    />
+                  </View>
+                  <Text className="text-xs text-muted-foreground">
+                    {queueCreatedAt(command.createdAtClient)}
+                  </Text>
+                  {command.conflictMessage ? (
+                    <Text className="text-xs text-destructive">
+                      {SYNC_STATUS_COPY.localConflict}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+          </View>
+        )}
+      </View>
+
+      {canManageSettings ? (
+        <View>
+          <SectionLabel>Business policy</SectionLabel>
+          <View className="border-t border-border">
+            {!settings.data ? (
+              <Text className="py-4 text-muted-foreground">
+                Policy unavailable. Reconnect to load settings.
+              </Text>
+            ) : (
+              <>
+                <SyncReliabilityToggle
+                  active={policyEnabled}
+                  className="rounded-2xl bg-card px-4"
+                  description="Orders and checkout only."
+                  disabled={!canChangePolicy}
+                  label="Allow staff to work offline"
+                  onPress={() => {
+                    if (!canChangePolicy || !settings.data) return
+                    updateSettings.mutate({
+                      approvalRequired: settings.data.approvalRequired,
+                      enabled: !settings.data.enabled,
+                    })
+                  }}
+                  testID="offline-policy-enabled-toggle"
+                />
+                <SyncReliabilityToggle
+                  active={settings.data?.approvalRequired ?? false}
+                  className="rounded-2xl bg-card px-4"
+                  description="Review staff Orders before they are applied."
+                  disabled={!canChangePolicy || !policyEnabled}
+                  label="Require staff record approval"
+                  onPress={() => {
+                    if (!canChangePolicy || !policyEnabled || !settings.data)
+                      return
+                    updateSettings.mutate({
+                      approvalRequired: !settings.data.approvalRequired,
+                      enabled: settings.data.enabled,
+                    })
+                  }}
+                  testID="offline-policy-approval-toggle"
+                />
+              </>
+            )}
+          </View>
+        </View>
       ) : null}
     </ScrollView>
   )
