@@ -1,6 +1,7 @@
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import type { IconKeys } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { publicLegalUrl } from "@/lib/public-legal-url"
@@ -69,6 +70,26 @@ function subscriptionStatusLabel(status: RetailOpsSubscription["status"]) {
   return "Active"
 }
 
+const ENTITLEMENT_COPY: Record<string, { icon: IconKeys; title: string }> = {
+  businesses: { icon: "Building2", title: "Businesses" },
+  offlineDevices: { icon: "WifiOff", title: "Offline devices" },
+  ordersPerMonth: { icon: "ReceiptText", title: "Orders this month" },
+  products: { icon: "Package", title: "Products" },
+  reportsHistoryDays: { icon: "Clock", title: "Report history" },
+  staff: { icon: "Users", title: "Staff" },
+}
+
+/** Readable name for a plan limit; unknown keys become "Some limit". */
+function entitlementCopy(key: string) {
+  const known = ENTITLEMENT_COPY[key]
+  if (known) return known
+  const words = key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()
+  return {
+    icon: "Building2" as IconKeys,
+    title: words.charAt(0).toUpperCase() + words.slice(1),
+  }
+}
+
 export function SubscriptionPlanContent({
   presentation = "sheet",
 }: SubscriptionPlanContentProps) {
@@ -115,29 +136,31 @@ export function SubscriptionPlanContent({
               <RecordRow
                 stackDetails
                 key={entitlement.key}
-                title={
-                  entitlement.key === "offlineDevices"
-                    ? "Offline devices"
-                    : entitlement.key[0].toUpperCase() +
-                      entitlement.key.slice(1)
-                }
+                title={entitlementCopy(entitlement.key).title}
                 meta={
-                  entitlement.isAtLimit ? "Plan limit reached" : "Current usage"
+                  entitlement.key === "reportsHistoryDays"
+                    ? "How far back reports go"
+                    : entitlement.isAtLimit
+                      ? "Plan limit reached"
+                      : "Current usage"
                 }
                 amount={
-                  getSubscriptionUsagePresentation(
-                    entitlement.used,
-                    entitlement.limit,
-                  ).valueLabel
+                  entitlement.key === "reportsHistoryDays"
+                    ? entitlement.limit === null
+                      ? "No limit"
+                      : `${entitlement.limit} days`
+                    : getSubscriptionUsagePresentation(
+                        entitlement.used,
+                        entitlement.limit,
+                      ).valueLabel
                 }
                 avatar={{
-                  icon:
-                    entitlement.key === "staff"
-                      ? "Users"
-                      : entitlement.key === "products"
-                        ? "Package"
-                        : "Building2",
-                  tint: entitlement.isAtLimit ? "amber" : "mint",
+                  icon: entitlementCopy(entitlement.key).icon,
+                  tint:
+                    entitlement.isAtLimit &&
+                    entitlement.key !== "reportsHistoryDays"
+                      ? "amber"
+                      : "mint",
                 }}
               />
             ))}
@@ -153,11 +176,7 @@ export function SubscriptionPlanContent({
           >
             Contact support
           </ActionButton>
-        ) : (
-          <Text className="text-xs text-muted-foreground">
-            Support contact is unavailable in this build.
-          </Text>
-        )}
+        ) : null}
       </SettingsScreen>
     </View>
   )

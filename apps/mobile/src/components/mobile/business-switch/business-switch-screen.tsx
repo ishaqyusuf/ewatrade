@@ -115,7 +115,9 @@ function WorkspaceBody({
             icon="AlertCircle"
             title="Workspaces unavailable"
             message={
-              vm.error ?? "Reconnect and refresh before switching workspaces."
+              vm.error ??
+              vm.memberships.error?.message ??
+              "Reconnect and refresh before switching workspaces."
             }
             actionLabel={
               !vm.local && !vm.isOffline && !vm.selectingId
