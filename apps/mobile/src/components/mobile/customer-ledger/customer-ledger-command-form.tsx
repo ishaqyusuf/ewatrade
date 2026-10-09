@@ -368,15 +368,13 @@ export function CustomerLedgerCommandForm({
       )}
       {mode === "receipt" ? null : (
         <Text className="text-sm text-muted-foreground">
-          {mode === "receipt"
-            ? "Record actual money already received. Apply it separately to outstanding debt. Recording does not send money."
-            : mode === "apply" || mode === "release"
-              ? "Settlement only. Cash and net customer balance stay unchanged."
-              : mode === "refund"
-                ? "Record a completed real-world return of unused credit. This does not execute a payout."
-                : mode === "reverse"
-                  ? "Append a bookkeeping correction; the original entry remains. This does not execute a refund."
-                  : "Debt or credit held at the book start date. No cash is collected."}
+          {mode === "apply" || mode === "release"
+            ? "Settlement only. Cash and net customer balance stay unchanged."
+            : mode === "refund"
+              ? "Record a completed real-world return of unused credit. This does not execute a payout."
+              : mode === "reverse"
+                ? "Append a bookkeeping correction; the original entry remains. This does not execute a refund."
+                : "Debt or credit held at the book start date. No cash is collected."}
         </Text>
       )}
       {offline ? (
