@@ -35,7 +35,13 @@ import type {
 } from "@gorhom/bottom-sheet"
 import { BottomSheetModal } from "@gorhom/bottom-sheet"
 import * as React from "react"
-import { Platform, StyleSheet, View, useWindowDimensions } from "react-native"
+import {
+  BackHandler,
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from "react-native"
 import { Path, Svg } from "react-native-svg"
 
 import {
@@ -121,6 +127,35 @@ export const Modal = React.forwardRef(
     )
     const modal = useModal()
     const snapPoints = React.useMemo(() => _snapPoints, [_snapPoints])
+    // Android Back closes the top open sheet before it leaves the screen.
+    // Without this, Back pops the route and a sheet presented from it (for
+    // example the country list) stays on screen with no owner to close it.
+    const [open, setOpen] = React.useState(false)
+    const { onChange, onDismiss } = props
+    React.useEffect(() => {
+      if (!open || Platform.OS !== "android") return
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          modal.dismiss()
+          return true
+        },
+      )
+      return () => subscription.remove()
+    }, [modal.dismiss, open])
+    const handleChange = React.useCallback<
+      NonNullable<BottomSheetModalProps["onChange"]>
+    >(
+      (index, position, type) => {
+        setOpen(index >= 0)
+        onChange?.(index, position, type)
+      },
+      [onChange],
+    )
+    const handleDismiss = React.useCallback(() => {
+      setOpen(false)
+      onDismiss?.()
+    }, [onDismiss])
 
     React.useImperativeHandle(
       ref,
@@ -183,6 +218,8 @@ export const Modal = React.forwardRef(
         {...detachedProps}
         ref={modal.ref}
         index={0}
+        onChange={handleChange}
+        onDismiss={handleDismiss}
         snapPoints={snapPoints}
         backdropComponent={props.backdropComponent || renderBackdrop}
         android_keyboardInputMode={
@@ -265,11 +302,22 @@ const getDetachedProps = (
     } as Partial<BottomSheetModalProps>
   }
 
+  // Full-width sheets still sit above the app backdrop (elevation 3999);
+  // without this, Android draws the backdrop's dim over the sheet.
+  const raised = {
+    containerStyle: [
+      {
+        elevation: APP_BOTTOM_SHEET_ELEVATION,
+        zIndex: APP_BOTTOM_SHEET_ELEVATION,
+      },
+      containerStyle,
+    ],
+  }
   if (bottomInset === undefined) {
-    return {} as Partial<BottomSheetModalProps>
+    return raised as Partial<BottomSheetModalProps>
   }
 
-  return { bottomInset } as Partial<BottomSheetModalProps>
+  return { ...raised, bottomInset } as Partial<BottomSheetModalProps>
 }
 
 /**

@@ -97,6 +97,9 @@ export function CountrySelect({
         onDismiss={() => setSearch("")}
         ref={modal.ref}
         snapPoints={["75%"]}
+        // Opened from inside other sheets (Add customer): stack on top so the
+        // parent sheet, and this picker inside it, stay mounted.
+        stackBehavior="push"
         title="Country"
       >
         <BottomSheetFlatList<Country>
