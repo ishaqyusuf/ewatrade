@@ -1,19 +1,23 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { StatusPill } from "@/components/mobile/green-till/kit"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { getBaseUrl } from "@/lib/base-url"
 import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { Image } from "expo-image"
 import { useEffect, useRef, useState } from "react"
-import { View } from "react-native"
+import { Text as NativeText, View } from "react-native"
 import {
   CatalogIllustrationLibrary,
   CatalogIllustrationPreview,
@@ -35,64 +39,191 @@ export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
   )
   const storeId = availability.data?.storeId
   const [editing, setEditing] = useState(false)
+  const { colorScheme } = useColorScheme()
+  const colors = useColors()
+  const palette = GREEN_TILL_THEME[colorScheme]
   if (!storeId || offline) return null
   const photos = item.photos.filter((photo) => photo.storeId === storeId)
   const illustration = item.illustrations.find(
     (entry) => entry.storeId === storeId,
   )
-  return (
-    <View className="gap-4">
-      <Text className="text-lg font-bold text-foreground">Images</Text>
-      {editing ? (
+  if (editing)
+    return (
+      <View className="gap-4">
+        <Text className="text-base font-extrabold text-foreground">Images</Text>
         <SavedPhotoEditor
           key={`${profile?.id}:${profile?.businessId}:${item.id}:${storeId}`}
           item={item}
           storeId={storeId}
           close={() => setEditing(false)}
         />
-      ) : (
-        <>
-          {illustration ? (
-            <View className="items-center gap-2">
-              <CatalogIllustrationPreview
-                id={illustration.illustrationId}
-                size={220}
-              />
-              <Text className="text-muted-foreground">
-                {findCatalogIllustration(illustration.illustrationId)?.label}
-              </Text>
-            </View>
-          ) : null}
-          {photos.map((photo) => (
-            <View className="gap-2" key={photo.assetId}>
-              <SavedPhotoPreview
-                assetId={photo.assetId}
-                storeId={storeId}
-                name={item.name}
-              />
-              <Text className="text-sm text-muted-foreground">
-                {photo.state === "APPROVED"
-                  ? "Image check passed"
-                  : "Private · image check pending"}
-              </Text>
-            </View>
-          ))}
-          {!photos.length && !illustration ? (
-            <Text className="text-sm text-muted-foreground">
-              No image yet. You can add one later.
-            </Text>
-          ) : null}
+      </View>
+    )
+  const service = item.kind === "service"
+  const pending = photos.some((photo) => photo.state !== "APPROVED")
+  if (!photos.length && !illustration)
+    return (
+      <View
+        style={{
+          alignItems: "center",
+          borderColor: colors.border,
+          borderRadius: 22,
+          borderStyle: "dashed",
+          borderWidth: 1.5,
+          gap: 8,
+          height: 132,
+          justifyContent: "center",
+        }}
+      >
+        <View
+          style={{
+            alignItems: "center",
+            backgroundColor: service ? palette.lilac : palette.amber,
+            borderRadius: 16,
+            height: 52,
+            justifyContent: "center",
+            width: 52,
+          }}
+        >
+          <Icon
+            className="size-[24px]"
+            color={service ? palette.lilacForeground : palette.amberForeground}
+            name={service ? "Wrench" : "Package"}
+          />
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-[12.5px] text-muted-foreground">
+            No image yet
+          </Text>
           {canManage ? (
-            <ActionButton
-              variant="outline"
-              icon="Camera"
+            <Pressable
+              accessibilityLabel="Add an image"
+              accessibilityRole="button"
+              className="min-h-11 justify-center"
+              hitSlop={8}
               onPress={() => setEditing(true)}
             >
-              {photos.length || illustration ? "Edit images" : "Add an image"}
-            </ActionButton>
+              <Text className="text-[12.5px] font-bold text-primary">
+                {" · Add an image"}
+              </Text>
+            </Pressable>
           ) : null}
-        </>
-      )}
+        </View>
+      </View>
+    )
+  const firstPhoto = photos[0]
+  return (
+    <View
+      style={{
+        backgroundColor: photos.length ? colors.muted : palette.amber,
+        borderRadius: 22,
+        height: 176,
+        overflow: "hidden",
+      }}
+    >
+      {firstPhoto ? (
+        <SavedPhotoPreview
+          assetId={firstPhoto.assetId}
+          storeId={storeId}
+          name={item.name}
+        />
+      ) : illustration ? (
+        <View className="flex-1 items-center justify-center">
+          <CatalogIllustrationPreview
+            id={illustration.illustrationId}
+            size={150}
+          />
+        </View>
+      ) : null}
+      <View
+        style={{
+          flexDirection: "row",
+          gap: 6,
+          left: 12,
+          position: "absolute",
+          top: 12,
+        }}
+      >
+        <View
+          style={{
+            alignItems: "center",
+            backgroundColor: service ? palette.lilac : palette.sky,
+            borderRadius: 999,
+            flexDirection: "row",
+            gap: 4,
+            height: 22,
+            paddingHorizontal: 8,
+          }}
+        >
+          <Icon
+            className="size-[12px]"
+            color={service ? palette.lilacForeground : palette.skyForeground}
+            name={service ? "Wrench" : "Package"}
+          />
+          <NativeText
+            style={{
+              color: service ? palette.lilacForeground : palette.skyForeground,
+              fontSize: 10.5,
+              fontWeight: "700",
+              includeFontPadding: false,
+            }}
+          >
+            {service ? "Service" : "Product"}
+          </NativeText>
+        </View>
+        {pending ? (
+          <StatusPill label="Image check pending" tone="warn" />
+        ) : null}
+      </View>
+      {photos.length > 1 ? (
+        <View
+          style={{
+            alignSelf: "center",
+            bottom: 10,
+            flexDirection: "row",
+            gap: 5,
+            position: "absolute",
+          }}
+        >
+          {photos.map((photo, index) => (
+            <View
+              key={photo.assetId}
+              style={{
+                backgroundColor: index ? "rgba(255,255,255,0.55)" : "#FFFFFF",
+                borderRadius: 6,
+                height: 6,
+                width: index ? 6 : 16,
+              }}
+            />
+          ))}
+        </View>
+      ) : null}
+      {canManage ? (
+        <Pressable
+          accessibilityLabel="Edit images"
+          accessibilityRole="button"
+          onPress={() => setEditing(true)}
+          style={{
+            alignItems: "center",
+            backgroundColor: "rgba(20,24,22,0.62)",
+            borderRadius: 12,
+            bottom: 10,
+            flexDirection: "row",
+            gap: 6,
+            height: 34,
+            paddingHorizontal: 12,
+            position: "absolute",
+            right: 10,
+          }}
+        >
+          <Icon className="size-[15px]" color="#FFFFFF" name="Camera" />
+          <NativeText
+            style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "800" }}
+          >
+            Edit images
+          </NativeText>
+        </Pressable>
+      ) : null}
     </View>
   )
 }
@@ -105,30 +236,31 @@ function SavedPhotoPreview({
   const session = getSession()
   const [failed, setFailed] = useState(false)
   if (!session?.token || !session.profile.businessSlug) return null
+  if (failed)
+    return (
+      <View className="flex-1 items-center justify-center gap-1.5">
+        <Icon className="size-[22px] text-muted-foreground" name="Camera" />
+        <Text className="text-xs text-muted-foreground">
+          This image could not load. Refresh to try again.
+        </Text>
+      </View>
+    )
   return (
-    <View className="gap-2 overflow-hidden rounded-2xl border border-border bg-card">
-      <Image
-        source={{
-          uri: `${getBaseUrl()}/api/catalog/photos/${encodeURIComponent(assetId)}/preview?storeId=${encodeURIComponent(storeId)}`,
-          headers: {
-            "x-app-authorization": `Bearer ${session.token}`,
-            "x-tenant-slug": session.profile.businessSlug,
-            "x-store-id": storeId,
-          },
-        }}
-        style={{ width: "100%", height: 220 }}
-        contentFit="contain"
-        cachePolicy="none"
-        accessibilityLabel={name}
-        onError={() => setFailed(true)}
-      />
-      {failed ? (
-        <StatusBanner
-          tone="warning"
-          message="This image could not load. Refresh to try again."
-        />
-      ) : null}
-    </View>
+    <Image
+      source={{
+        uri: `${getBaseUrl()}/api/catalog/photos/${encodeURIComponent(assetId)}/preview?storeId=${encodeURIComponent(storeId)}`,
+        headers: {
+          "x-app-authorization": `Bearer ${session.token}`,
+          "x-tenant-slug": session.profile.businessSlug,
+          "x-store-id": storeId,
+        },
+      }}
+      style={{ height: "100%", width: "100%" }}
+      contentFit="cover"
+      cachePolicy="none"
+      accessibilityLabel={name}
+      onError={() => setFailed(true)}
+    />
   )
 }
 
@@ -281,7 +413,13 @@ function SavedPhotoEditor({
       ) : null}
       {ids.map((id) => (
         <View key={id} className="gap-2">
-          <SavedPhotoPreview assetId={id} storeId={storeId} name={item.name} />
+          <View className="h-[176px] overflow-hidden rounded-[22px] bg-muted">
+            <SavedPhotoPreview
+              assetId={id}
+              storeId={storeId}
+              name={item.name}
+            />
+          </View>
           <ActionButton
             variant="outline"
             disabled={locked || draft.selecting || offline || !canManage}

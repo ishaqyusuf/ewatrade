@@ -8,33 +8,25 @@ import type {
   CatalogItemScreenProps,
 } from "@/components/mobile/catalog-item/catalog-item-presentation"
 import { CatalogSavedPhotos } from "@/components/mobile/catalog-item/catalog-saved-photos"
-import {
-  CATALOG_AVATAR_TINT,
-  CatalogAvatar,
-} from "@/components/mobile/catalog/catalog-avatar"
-import { selectCatalogAvatar } from "@/components/mobile/catalog/catalog-avatar-model"
-import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { flattenSaleOfferings } from "@/components/mobile/create-sale/create-sale-model"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
-import {
-  ListCard,
-  SectionHeader,
-  StatusPill,
-} from "@/components/mobile/green-till/kit"
+import { SectionHeader, StatusPill } from "@/components/mobile/green-till/kit"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon } from "@/components/ui/icon"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { StatusBar } from "expo-status-bar"
 import { useState } from "react"
+import { Text as NativeText, Share } from "react-native"
 
 export function ClassicCatalogItemOverview({
   item,
@@ -46,7 +38,6 @@ export function ClassicCatalogItemOverview({
 }: CatalogItemOverviewProps) {
   const [selectedId, setSelectedId] = useState<string>()
   const largeText = useLargeTextLayout()
-  const tint = catalogAvatarTint(item.name, item.kind)
   const offerings = catalogItemOfferings(item).filter(
     ({ offering, variant }) =>
       offering.status === "active" &&
@@ -95,6 +86,34 @@ export function ClassicCatalogItemOverview({
     : selected?.offering.pricingPolicy === "quote_required"
       ? "This option needs a quote before it can be sold."
       : "Add an active option with a price and available stock to sell this item."
+  const pricedOptions = offerings.filter(
+    (entry) => entry.offering.pricingPolicy !== "quote_required",
+  )
+  const priceValues = pricedOptions
+    .map((entry) => entry.offering.fixedPriceMinor)
+    .filter((value): value is number => typeof value === "number")
+  const lowest = pricedOptions.find(
+    (entry) => entry.offering.fixedPriceMinor === Math.min(...priceValues),
+  )
+  const highest = pricedOptions.find(
+    (entry) => entry.offering.fixedPriceMinor === Math.max(...priceValues),
+  )
+  const priceSummary =
+    priceValues.length > 1 && lowest && highest && lowest !== highest
+      ? `Options from ${wholeMoney(lowest.price)} to ${wholeMoney(highest.price)}`
+      : offerings.some(
+            (entry) => entry.offering.pricingPolicy === "quote_required",
+          )
+        ? "Some options are priced by quote"
+        : "One price"
+  const kindLabel = item.kind === "service" ? "Service" : "Product"
+  const share = () => {
+    void Share.share({
+      message: selected
+        ? `${item.name} · ${selected.offering.name}: ${wholeMoney(selected.price)}`
+        : item.name,
+    })
+  }
   return (
     <MobileScreen
       contentClassName="gap-4 px-[18px] pb-12"
@@ -103,19 +122,39 @@ export function ClassicCatalogItemOverview({
       keyboardAutoScrollEnabled={false}
       testID="catalog-item-overview"
     >
-      <View className="min-h-11 flex-row items-center gap-3">
+      <View className="min-h-11 flex-row items-center gap-2.5">
         <Pressable
           accessibilityLabel="Back to catalog"
           accessibilityRole="button"
-          className="size-11 items-center justify-center rounded-full bg-card"
+          className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
           haptic
           onPress={onBack}
         >
           <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
         </Pressable>
-        <Text className="flex-1 text-[13px] text-muted-foreground">
-          {item.kind === "service" ? "Service" : "Product"}
-        </Text>
+        <View className="min-w-0 flex-1">
+          <Text
+            numberOfLines={1}
+            className="text-xs font-bold text-muted-foreground"
+          >
+            {item.category ? `Catalog · ${item.category}` : "Catalog"}
+          </Text>
+          <Text
+            numberOfLines={1}
+            className="text-[17px] font-extrabold tracking-tight text-foreground"
+          >
+            {kindLabel}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityLabel="Share price"
+          accessibilityRole="button"
+          className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+          haptic
+          onPress={share}
+        >
+          <Icon className="size-[20px] text-foreground" name="Share" />
+        </Pressable>
       </View>
       {cachedAt ? (
         <StatusBanner
@@ -125,69 +164,61 @@ export function ClassicCatalogItemOverview({
           message={`As of ${cachedAt}. Stock and prices may have changed.`}
         />
       ) : null}
-      <View className="flex-row items-center gap-3">
-        <View
-          className={`size-[42px] items-center justify-center overflow-hidden rounded-[13px] ${CATALOG_AVATAR_TINT[tint].bg}`}
-        >
-          <CatalogAvatar
-            media={selectCatalogAvatar(item, storeId, item.imageUrl)}
-            name={item.name}
-            service={item.kind === "service"}
-            tint={tint}
-          />
-        </View>
+      <CatalogSavedPhotos item={item} />
+      <View className="gap-1.5">
         <Text
           accessibilityRole="header"
-          className="min-w-0 flex-1 text-[23px] font-extrabold text-foreground"
+          className="text-[23px] font-extrabold tracking-tight text-foreground"
         >
           {item.name}
         </Text>
+        <View className="flex-row flex-wrap items-center gap-1.5">
+          <StatusPill
+            tone={item.status === "active" ? "ok" : "muted"}
+            label={
+              item.status === "active"
+                ? "Active"
+                : item.status === "draft"
+                  ? "Draft"
+                  : "Archived"
+            }
+          />
+          {item.category ? (
+            <Text className="text-xs text-muted-foreground">
+              {item.category}
+            </Text>
+          ) : null}
+          {item.kind === "service" ? (
+            <Text className="text-xs text-muted-foreground">
+              · Runs in Service jobs
+            </Text>
+          ) : null}
+        </View>
       </View>
-      <View className="flex-row flex-wrap items-center gap-2">
-        <StatusPill
-          tone={item.status === "active" ? "ok" : "muted"}
-          label={
-            item.status === "active"
-              ? "Active"
-              : item.status === "draft"
-                ? "Draft"
-                : "Archived"
-          }
-        />
-        <Text className="text-xs text-muted-foreground">{item.category}</Text>
-      </View>
-      <CatalogSavedPhotos item={item} />
       <HeroCard
         label={
           selected
             ? `${selected.variant.name} · ${selected.offering.name}`
             : "Price"
         }
-        amount={selected?.price.replace(/\.00(?=\D*$)/, "") ?? "No price set"}
+        amount={selected ? wholeMoney(selected.price) : "No price set"}
         pill={{
-          label: `${offerings.length} options`,
+          label: offerings.length
+            ? `${offerings.length} option${offerings.length === 1 ? "" : "s"}`
+            : "Not for sale yet",
           tone: cachedAt ? "offline" : "synced",
         }}
-        sub={
-          reason ??
-          (item.kind === "product" && !stock
-            ? "Stock not counted for this option."
-            : "Tap an option to choose what to sell.")
-        }
+        sub={reason ?? priceSummary}
         stats={
           item.kind === "product"
             ? [
                 {
                   label: "On hand",
-                  value: stock
-                    ? `${stock.onHandQuantity} ${stock.inventoryUnitName}`
-                    : "—",
+                  value: stock ? stock.onHandQuantity : "—",
                 },
                 {
                   label: "Reserved",
-                  value: stock
-                    ? `${stock.reservedQuantity} ${stock.inventoryUnitName}`
-                    : "—",
+                  value: stock ? stock.reservedQuantity : "—",
                 },
               ]
             : [
@@ -216,7 +247,18 @@ export function ClassicCatalogItemOverview({
               else onCreateOrder()
             }}
           >
-            Create order{selected ? ` · ${selected.offering.name}` : ""}
+            {selected ? (
+              <>
+                Create order
+                <NativeText
+                  style={{ fontSize: 13, fontWeight: "700", opacity: 0.75 }}
+                >
+                  {` · ${selected.offering.name}`}
+                </NativeText>
+              </>
+            ) : (
+              "Create order"
+            )}
           </ActionButton>
         </View>
       </HeroCard>
@@ -224,88 +266,180 @@ export function ClassicCatalogItemOverview({
         <SectionHeader
           title="Sellable options"
           trailing={
-            <Text className="text-xs text-muted-foreground">Tap to choose</Text>
+            offerings.length ? (
+              <Text className="text-xs font-semibold text-muted-foreground">
+                Tap to choose
+              </Text>
+            ) : undefined
           }
         />
         {offerings.length ? (
-          item.variants.map((variant) => {
-            const options = offerings.filter(
-              (entry) => entry.variant.id === variant.id,
-            )
-            if (!options.length) return null
-            return (
-              <View key={variant.id} className="mb-3.5 gap-2">
-                <Text className="text-xs font-bold text-muted-foreground">
-                  {variant.name}
-                </Text>
-                <ListCard>
-                  {options.map(({ offering, price }) => (
-                    <Pressable
-                      key={offering.id}
-                      accessibilityRole="radio"
-                      accessibilityLabel={`${offering.name}, ${price}`}
-                      accessibilityState={{
-                        selected: selected?.offering.id === offering.id,
-                      }}
-                      onPress={() => setSelectedId(offering.id)}
-                      className={cn(
-                        "min-h-[62px] gap-3 py-3",
-                        !largeText && "flex-row items-center",
-                      )}
-                    >
-                      {selected?.offering.id === offering.id ? (
-                        <Icon
-                          className="size-[20px] text-primary"
-                          name="CheckCircle2"
-                        />
-                      ) : (
-                        <View className="size-[20px] rounded-full border-2 border-border" />
-                      )}
-                      <View className="min-w-0 flex-1">
-                        <Text className="text-sm font-bold text-foreground">
-                          {offering.name}
-                        </Text>
-                        <Text className="text-xs text-muted-foreground">
-                          {offering.productUnit?.sku
-                            ? `SKU ${offering.productUnit.sku}`
-                            : variant.name}
-                        </Text>
-                      </View>
-                      <Text className="text-sm font-bold tabular-nums text-foreground">
-                        {price.replace(/\.00(?=\D*$)/, "")}
+          <View className="overflow-hidden rounded-[20px] bg-card px-3.5 shadow-sm">
+            {item.variants.map((variant) => {
+              const options = offerings.filter(
+                (entry) => entry.variant.id === variant.id,
+              )
+              if (!options.length) return null
+              const variantStock = item.product?.stockBalances.find(
+                (balance) =>
+                  balance.storeId === storeId &&
+                  balance.variantId === variant.id &&
+                  balance.kind === "shared_pool",
+              )
+              const showHeader = item.variants.length > 1 || variantStock
+              return (
+                <View key={variant.id}>
+                  {showHeader ? (
+                    <View className="flex-row flex-wrap justify-between gap-x-3 pt-3 pb-0.5">
+                      <Text className="text-[11px] font-extrabold uppercase tracking-[1.1px] text-muted-foreground">
+                        {variant.name}
                       </Text>
-                    </Pressable>
-                  ))}
-                </ListCard>
-              </View>
-            )
-          })
+                      {variantStock ? (
+                        <Text className="text-[11px] font-extrabold uppercase tracking-[1.1px] tabular-nums text-muted-foreground">
+                          {`${variantStock.onHandQuantity} ${variantStock.inventoryUnitName} · ${variantStock.reservedQuantity} reserved`}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
+                  {options.map(({ offering, price }, index) => {
+                    const isSelected = selected?.offering.id === offering.id
+                    return (
+                      <Pressable
+                        key={offering.id}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`${offering.name}, ${price}`}
+                        accessibilityState={{ selected: isSelected }}
+                        onPress={() => setSelectedId(offering.id)}
+                        className={cn(
+                          "-mx-3.5 min-h-[62px] gap-3 px-3.5 py-3",
+                          !largeText && "flex-row items-center",
+                          isSelected && "bg-accent",
+                          index > 0 && !isSelected && "border-t border-border",
+                        )}
+                      >
+                        <View
+                          className={cn(
+                            "size-[22px] items-center justify-center rounded-full border-2",
+                            isSelected ? "border-primary" : "border-border",
+                            offering.pricingPolicy === "quote_required" &&
+                              "border-dashed",
+                          )}
+                        >
+                          {isSelected ? (
+                            <View className="size-2.5 rounded-full bg-primary" />
+                          ) : null}
+                        </View>
+                        <View className="min-w-0 flex-1">
+                          <Text className="text-sm font-bold text-foreground">
+                            {offering.name}
+                          </Text>
+                          <Text className="text-xs text-muted-foreground">
+                            {offering.productUnit?.sku
+                              ? `SKU ${offering.productUnit.sku}`
+                              : item.kind === "service"
+                                ? "Opens a Service job"
+                                : variant.name}
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-bold tabular-nums text-foreground">
+                          {wholeMoney(price)}
+                        </Text>
+                      </Pressable>
+                    )
+                  })}
+                </View>
+              )
+            })}
+          </View>
         ) : (
           <EmptyState
             title="No sellable options"
-            icon="Package"
+            icon="Tag"
             message="This item has no active option with a price, so it cannot be added to an order yet."
           />
         )}
       </View>
       <View>
         <SectionHeader title="About" />
-        <ListCard>
-          <View className="gap-3 py-3">
-            <Text className="text-[13px] text-foreground">
-              {item.description ||
-                (item.kind === "service"
-                  ? "Work is tracked in Service jobs."
-                  : "Stock moves when orders are fulfilled.")}
+        <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
+          {item.description ? (
+            <Text className="py-3 text-[13.5px] leading-5 text-muted-foreground">
+              {item.description}
             </Text>
-            <Text className="text-xs text-muted-foreground">
-              {item.category ||
-                (item.kind === "service" ? "Service" : "Stock-tracked product")}
-            </Text>
-          </View>
-        </ListCard>
+          ) : null}
+          {item.category ? (
+            <AboutRow
+              border={Boolean(item.description)}
+              icon="LayoutGrid"
+              tint="mint"
+              title={item.category}
+              sub="Category"
+            />
+          ) : null}
+          <AboutRow
+            border={Boolean(item.description || item.category)}
+            icon={item.kind === "service" ? "Wrench" : "Package"}
+            tint={item.kind === "service" ? "lilac" : "sky"}
+            title={
+              item.kind === "service" ? "Service" : "Stock-tracked product"
+            }
+            sub={
+              item.kind === "service"
+                ? "Work is tracked in Service jobs"
+                : "Stock moves when orders are fulfilled"
+            }
+          />
+        </View>
       </View>
     </MobileScreen>
+  )
+}
+
+const wholeMoney = (value: string) => value.replace(/\.00(?=\D*$)/, "")
+
+function AboutRow({
+  border,
+  icon,
+  sub,
+  tint,
+  title,
+}: {
+  border: boolean
+  icon: IconKeys
+  sub: string
+  tint: GreenTillTint
+  title: string
+}) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  return (
+    <View
+      className={cn(
+        "flex-row items-center gap-3 py-3",
+        border && "border-t border-border",
+      )}
+    >
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: palette[tint],
+          borderRadius: 11,
+          height: 36,
+          justifyContent: "center",
+          width: 36,
+        }}
+      >
+        <Icon
+          className="size-[17px]"
+          color={palette[`${tint}Foreground`]}
+          name={icon}
+        />
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text className="text-sm font-bold text-foreground">{title}</Text>
+        <Text className="text-xs text-muted-foreground">{sub}</Text>
+      </View>
+    </View>
   )
 }
 
