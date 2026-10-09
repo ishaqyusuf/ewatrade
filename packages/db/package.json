@@ -36,7 +36,9 @@
     "./assistant-operations": "./src/queries/assistant-operations.ts",
     "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts",
     "./product-analytics": "./src/queries/product-analytics.ts",
-    "./assistant-general": "./src/queries/assistant-general.ts"
+    "./assistant-general": "./src/queries/assistant-general.ts",
+    "./oversight": "./src/queries/oversight.ts",
+    "./oversight-client": "./src/oversight-client.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

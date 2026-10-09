@@ -108,3 +108,5 @@ export * from "./staff-store-access"
 export { setCatalogProductUsage } from "./product-usage"
 
 export * from "./order-visibility"
+
+export * from "./oversight"

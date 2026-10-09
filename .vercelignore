@@ -14,6 +14,7 @@
 tmp/
 output/
 outputs/
+artifacts/
 dist/
 apps/mobile/
 # Shared by Marketing and Dashboard; keep both project build roots present.

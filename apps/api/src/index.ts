@@ -2,6 +2,7 @@ import "./shared-env"
 import "./instrument"
 import { appUpdateDependencies } from "./app-update/context"
 import { registerAppUpdateRoutes } from "./app-update/routes"
+import { oversightRoutes } from "./oversight/routes"
 
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
@@ -114,6 +115,8 @@ app.use(
     maxAge: 86400,
   }),
 )
+
+app.route("/api/oversight/v1", oversightRoutes)
 
 const debugPerf = process.env.DEBUG_PERF === "true"
 
