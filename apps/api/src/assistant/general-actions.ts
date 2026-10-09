@@ -40,6 +40,8 @@ type Action<Name extends GeneralActionName> = Extract<
  * execute through the same transaction commands as the forms.
  */
 type GeneralActionAdapter<A extends GeneralAction> = {
+  /** Server-owned completion of a draft before it is bound and signed. */
+  prepare?(ctx: GeneralTransactionContext, payload: A): Promise<A>
   /** Check targets and references. `lock` is set while confirming. */
   validate(
     ctx: GeneralTransactionContext,
@@ -176,6 +178,32 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
 }
 
 const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
+  // Bind each product unit's current configuration version, so a conversion
+  // change after review still rejects Confirm. Catalog reads do not expose it.
+  async prepare(ctx, payload) {
+    const scope = requireGeneralScope(ctx)
+    const lines = await Promise.all(
+      payload.lines.map(async (line) => {
+        if (line.expectedConfigurationVersionId) return line
+        const offering = await ctx.db.sellableOffering.findFirst({
+          where: { id: line.offeringId, tenantId: scope.tenantId },
+          select: {
+            productUnitOffering: {
+              select: {
+                inventoryUnit: { select: { configurationVersionId: true } },
+              },
+            },
+          },
+        })
+        const version =
+          offering?.productUnitOffering?.inventoryUnit.configurationVersionId
+        return version
+          ? { ...line, expectedConfigurationVersionId: version }
+          : line
+      }),
+    )
+    return { ...payload, lines }
+  },
   async validate(ctx, payload) {
     const scope = requireGeneralScope(ctx)
     if (

@@ -138,6 +138,13 @@ async function inFreshGeneralTransaction<T>(
     }
   }
 }
+async function prepareDraft<A extends GeneralAction>(
+  ctx: GeneralTransactionContext,
+  action: A,
+) {
+  const adapter = generalActionAdapter(action)
+  return adapter.prepare ? adapter.prepare(ctx, action) : action
+}
 async function validateDraft(
   ctx: GeneralTransactionContext,
   action: GeneralAction,
@@ -151,9 +158,10 @@ export async function draftGeneralProposal(
   conversationId: string,
   raw: unknown,
 ) {
-  const payload = generalActionSchema.parse(raw)
+  const parsed = generalActionSchema.parse(raw)
   return inFreshGeneralTransaction(ctx, async (fresh) => {
-    const scope = assertGeneralAction(fresh, payload.action)
+    const scope = assertGeneralAction(fresh, parsed.action)
+    const payload = await prepareDraft(fresh, parsed)
     if (!(await readGeneralConversation(fresh.db, scope, conversationId)))
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -285,11 +293,12 @@ export async function editGeneralProposal(
       row.action !== input.payload.action
     )
       throw conflict("Draft changed. Refresh before editing.")
-    const target = await validateDraft(fresh, input.payload)
+    const payload = await prepareDraft(fresh, input.payload)
+    const target = await validateDraft(fresh, payload)
     const binding = {
       ...row,
-      payload: input.payload,
-      payloadHash: proposalDigest(input.payload),
+      payload,
+      payloadHash: proposalDigest(payload),
       revision: row.revision + 1,
       expiresAt: new Date(Date.now() + 15 * 60_000),
     }
