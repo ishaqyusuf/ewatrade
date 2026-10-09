@@ -2,7 +2,7 @@
 
 Prepared 9 October 2026 for a new immutable legal publication. The owner approved
 18+ chat scope, but these words are a draft and are not effective policy. Do not
-mutate approved version2026-10-01-approved-1 or imply this draft was published.
+mutate approved version 2026-10-09-support-contact-1 or imply this draft was published. The prior 2026-10-01 snapshot also remains immutable.
 
 ## Terms — addition to Accounts and access
 

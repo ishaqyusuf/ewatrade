@@ -315,3 +315,45 @@ Production flag enabled. Native UI, adult/teen/unknown/Guest flows and actual OT
 receipt/recovery still require acceptance. No stage receives release credit from
 these source checks. Preparation3/6(50%); release acceptance0/4, steps1–2 in progress
 and3–4 pending. GitHub push/PR edit still needs destination approval.
+
+
+### Main merge and migration reconciliation — 9 October 2026
+
+Merged main c940f811c839c06a2b0785790e6a9e1bce31f7c7, preserving the product
+creation assistant and approved support-contact legal version
+2026-10-09-support-contact-1 (support@ewatrade.com). The 18+ amendment remains a
+separate draft based on that version; neither approved snapshot was rewritten.
+
+The incoming unapplied 20261009092723_product_creation_assistant migration duplicated
+ProductAnalyticsEvent, already created by the applied retention migration.
+Read-only ledgers for configured Development, Preview and Production show that
+incoming migration absent. Preserved applied retention migration/checksum
+abf15c682bbe9f1b02d3e586601a2fc317685c8b7ccd9ff72e43b6d5fd42babd. Archived the
+unapplied incoming SQL, then used the normal root db:migrate --local workflow with
+the existing sales-rep preservation overlay to generate/apply
+20261009153955_product_creation_assistant_after_retention_merge. It adds only
+PRODUCT_CREATE and nullable AssistantConversation.workflowContext. Root db:push
+--local passed, already in sync. No handwritten migration, reset or data-loss flag.
+
+Post-repair Development read confirms workflowContext, ProductAnalyticsEvent and
+AccountPrivacyRetention exist; ledger checksum for the new migration is
+9b8ba3a9db71c914418387f28077382e68db124d155aa0dd03ac2441a6328eb5. Concurrent
+sales-rep schema/history remains preserved in the overlay, not silently removed.
+Canonical history still lacks that unmerged sales-rep migration; do not run a direct
+canonical schema push against shared Development.
+
+Read-only Prisma diffs: Preview needs PRODUCT_CREATE, LeadCaptureType.SIGNUP,
+workflowContext and AccountPrivacyRetention with its indexes/foreign key.
+Production needs only AccountPrivacyRetention and its indexes/foreign key.
+Neither diff contains DROP statements. These are schema comparisons, not proof
+that the historical migration chain can safely deploy to either target; their
+pre-existing analytics/assistant state needs explicit reconciliation. No Preview
+or Production DDL, legal activation or configuration change was performed.
+
+After the main merge and actual Prisma client regeneration, 234 chat/logger/photo
+checks pass with 754 assertions across 40 files; scoped mobile TypeScript passes.
+The post-repair guarded retention lifecycle passes again: 1 check/19 assertions,
+owned disposable fixture cleanup included. Initial sandbox network attempts could
+not connect; approved network access completed the same guarded checks. No
+end-to-end deletion result-email or updated native UI acceptance is implied.
+Preparation 3/6 (50%); release acceptance 0/4, steps 1–2 in progress and 3–4 pending.
