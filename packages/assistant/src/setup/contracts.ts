@@ -3,8 +3,9 @@ import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
+import { setupProductQuestions } from "./variants"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v10"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v11"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */
@@ -104,6 +105,31 @@ export const setupProductPayloadSchema = z
         }),
       )
       .max(3)
+      .optional(),
+    variants: z
+      .array(
+        z.object({
+          selections: z
+            .array(z.object({ optionName: name, value: name }))
+            .max(3),
+          priceMinor: z.number().int().min(0).max(100_000_000).optional(),
+          sellingUnitPrices: z
+            .array(
+              z.object({
+                unitName: name,
+                priceMinor: z.number().int().min(0).max(100_000_000),
+              }),
+            )
+            .max(5)
+            .optional(),
+          openingStock: z.string().optional(),
+          stockByUnit: z
+            .array(z.object({ unitName: name, quantity: z.string() }))
+            .max(6)
+            .optional(),
+        }),
+      )
+      .max(36)
       .optional(),
     usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
     /** A product photo the owner sent in this setup; attached only on add. */
@@ -215,16 +241,8 @@ export function deriveSetupEntityState(
 ): { state: "NEEDS_INPUT" | "PROPOSED"; questions: SetupOpenQuestion[] } {
   const derived: SetupOpenQuestion[] = []
   // Items the business only uses (feed, packaging) are never sold: no price.
-  if (
-    payload.kind === "product" &&
-    payload.usage !== "INTERNAL_USE" &&
-    payload.priceMinor === undefined
-  )
-    derived.push({
-      field: "price",
-      question: `What is your selling price for one ${payload.unitName.toLowerCase()} of ${payload.name}?`,
-      required: true,
-    })
+  if (payload.kind === "product")
+    derived.push(...setupProductQuestions(payload))
   if (
     payload.kind === "service" &&
     payload.pricing === "fixed" &&
@@ -242,7 +260,7 @@ export function deriveSetupEntityState(
   )
     derived.push({
       field: "stock",
-      question: `Stock for ${payload.name} is counted per option (${payload.options.map((option) => option.name).join(", ")}). Remove the total here and add each option's stock in Inventory after adding.`,
+      question: `How much stock of ${payload.name} belongs to each option (${payload.options.map((option) => option.name).join(", ")})? Replace the shared total with stock per option.`,
       required: true,
     })
   const merged = [
@@ -268,11 +286,26 @@ function answered(payload: SetupEntityPayload, field: SetupFollowUpField) {
     case "price":
       return (
         (payload.kind === "product" || payload.kind === "service") &&
-        (payload.priceMinor !== undefined ||
+        ((payload.kind === "product"
+          ? !setupProductQuestions(payload).some(
+              (question) => question.field === "price",
+            )
+          : payload.priceMinor !== undefined) ||
           (payload.kind === "product" && payload.usage === "INTERNAL_USE"))
       )
     case "stock":
-      return payload.kind === "product" && payload.openingStock !== undefined
+      return (
+        payload.kind === "product" &&
+        (payload.openingStock !== undefined ||
+          Boolean(
+            payload.variants?.length &&
+              payload.variants.every(
+                (variant) =>
+                  variant.openingStock !== undefined ||
+                  variant.stockByUnit?.length,
+              ),
+          ))
+      )
     case "category":
       return (
         (payload.kind === "product" || payload.kind === "service") &&

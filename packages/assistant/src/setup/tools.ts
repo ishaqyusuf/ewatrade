@@ -30,6 +30,12 @@ import {
   setupProductPayloadSchema,
   setupServicePayloadSchema,
 } from "./contracts"
+import {
+  setupNameEqual,
+  setupSelectionsEqual,
+  setupProductVariants,
+  type SetupVariant,
+} from "./variants"
 
 export type SetupBusinessContext = {
   businessName: string
@@ -176,9 +182,10 @@ const itemInputSchema = z.object({
   openingStock: z
     .string()
     .max(32)
+    .nullable()
     .optional()
     .describe(
-      "Products only: quantity on hand now, in unitName units. Leave it out for products with options: stock is counted per option in Inventory.",
+      "Products only: quantity in unitName units for a product without options. With options use variants stockByUnit/openingStock instead. Send null to clear a previous shared total. Omitted fields retain existing facts.",
     ),
   categoryKey: z.string().max(120).optional(),
   quickSetupKey: z.string().max(120).optional(),
@@ -189,6 +196,7 @@ const itemInputSchema = z.object({
         containsQuantity: z
           .string()
           .max(32)
+          .optional()
           .describe("How many unitName units are in one of this selling unit."),
         price: z.string().max(32).optional(),
       }),
@@ -205,7 +213,60 @@ const itemInputSchema = z.object({
     .max(3)
     .optional()
     .describe(
-      "Products only: choices the customer picks, e.g. Size: Small, Large. Every combination becomes its own variant at the same price (at most 36).",
+      "Products only: choices the customer picks, e.g. Size: Small, Large. Every combination becomes its own variant (at most 36). Use variants for different prices and stock.",
+    ),
+  variants: z
+    .array(
+      z.object({
+        selections: z
+          .array(
+            z.object({
+              optionName: z.string().min(1).max(160),
+              value: z.string().min(1).max(160),
+            }),
+          )
+          .max(3),
+        price: z
+          .string()
+          .max(32)
+          .optional()
+          .describe(
+            "Price per stock counting unit for this variant only, in major currency units.",
+          ),
+        sellingUnitPrices: z
+          .array(
+            z.object({
+              unitName: z.string().min(1).max(160),
+              price: z.string().max(32),
+            }),
+          )
+          .max(5)
+          .optional(),
+        openingStock: z
+          .string()
+          .max(32)
+          .optional()
+          .describe(
+            "Stock for this variant in the base counting unit, only if the owner supplied it directly.",
+          ),
+        stockByUnit: z
+          .array(
+            z.object({
+              unitName: z.string().min(1).max(160),
+              quantity: z.string().max(32),
+            }),
+          )
+          .max(6)
+          .optional()
+          .describe(
+            "Owner's counts per selling unit for this variant, e.g. Big has 10 Crate and 20 Piece. Server converts only using confirmed pack sizes. Omit unknown counts; do not guess.",
+          ),
+      }),
+    )
+    .max(36)
+    .optional()
+    .describe(
+      "Per-option facts, matched by selections e.g. [{optionName: 'Size', value: 'Big'}]. Updates retain other variants and omitted prices/counts.",
     ),
   photoAttachmentId: z
     .string()
@@ -288,6 +349,7 @@ type Provenance = {
 function itemPayload(
   input: z.infer<typeof itemInputSchema>,
   warnings: string[],
+  previous?: SetupEntityPayload,
 ): SetupEntityPayload | null {
   const priceMinor = majorAmountToMinor(input.price) ?? undefined
   if (input.price && priceMinor === undefined)
@@ -303,7 +365,15 @@ function itemPayload(
       quickSetupKey: input.quickSetupKey,
     })
     warnings.push(...vocabulary)
-    const parsed = setupServicePayloadSchema.safeParse(payload)
+    const parsed = setupServicePayloadSchema.safeParse({
+      ...(previous?.kind === "service" ? previous : {}),
+      ...Object.fromEntries(
+        Object.entries(payload).filter(([, value]) => value !== undefined),
+      ),
+      pricing:
+        input.pricing ??
+        (previous?.kind === "service" ? previous.pricing : "fixed"),
+    })
     return parsed.success ? parsed.data : null
   }
   const openingStock = normalizeQuantity(input.openingStock) ?? undefined
@@ -311,11 +381,12 @@ function itemPayload(
     warnings.push(
       `Stock "${input.openingStock}" for ${input.name} was not a quantity.`,
     )
+  const prior = previous?.kind === "product" ? previous : undefined
   const { payload, warnings: vocabulary } = sanitizeVocabulary({
     kind: "product" as const,
     name: input.name,
     description: input.description,
-    unitName: input.unitName?.trim() || "Piece",
+    unitName: input.unitName?.trim() || prior?.unitName || "Piece",
     priceMinor,
     openingStock,
     categoryKey: input.categoryKey,
@@ -330,7 +401,11 @@ function itemPayload(
         {
           name: unit.name,
           containsQuantity,
-          priceMinor: majorAmountToMinor(unit.price) ?? undefined,
+          priceMinor:
+            majorAmountToMinor(unit.price) ??
+            prior?.sellingUnits?.find((old) =>
+              setupNameEqual(old.name, unit.name),
+            )?.priceMinor,
         },
       ]
     }),
@@ -341,10 +416,95 @@ function itemPayload(
         ? ("INTERNAL_USE" as const)
         : input.usage === "both"
           ? ("BOTH" as const)
-          : undefined,
+          : input.usage === "sell"
+            ? ("FOR_SALE" as const)
+            : undefined,
   })
   warnings.push(...vocabulary)
-  const parsed = setupProductPayloadSchema.safeParse(payload)
+  const sellingUnits = [...(prior?.sellingUnits ?? [])]
+  for (const unit of payload.sellingUnits ?? []) {
+    const index = sellingUnits.findIndex((old) =>
+      setupNameEqual(old.name, unit.name),
+    )
+    if (index < 0) sellingUnits.push(unit)
+    else sellingUnits[index] = unit
+  }
+  const variants = [...(prior?.variants ?? [])]
+  for (const variant of input.variants ?? []) {
+    const index = variants.findIndex((old) =>
+      setupSelectionsEqual(old.selections, variant.selections),
+    )
+    const old = index >= 0 ? variants[index] : undefined
+    const prices = [...(old?.sellingUnitPrices ?? [])]
+    for (const price of variant.sellingUnitPrices ?? []) {
+      const amount = majorAmountToMinor(price.price)
+      if (amount === null) {
+        warnings.push(
+          `Price for ${price.unitName} of ${input.name} was invalid.`,
+        )
+        continue
+      }
+      const existing = prices.findIndex((entry) =>
+        setupNameEqual(entry.unitName, price.unitName),
+      )
+      const next = { unitName: price.unitName, priceMinor: amount }
+      if (existing < 0) prices.push(next)
+      else prices[existing] = next
+    }
+    const counts = [...(old?.stockByUnit ?? [])]
+    for (const count of variant.stockByUnit ?? []) {
+      const existing = counts.findIndex((entry) =>
+        setupNameEqual(entry.unitName, count.unitName),
+      )
+      const next = {
+        unitName: count.unitName,
+        quantity: normalizeQuantity(count.quantity) ?? count.quantity,
+      }
+      if (existing < 0) counts.push(next)
+      else counts[existing] = next
+    }
+    const next: SetupVariant = {
+      ...old,
+      selections: variant.selections,
+      priceMinor: majorAmountToMinor(variant.price) ?? old?.priceMinor,
+      sellingUnitPrices: prices.length ? prices : undefined,
+      openingStock:
+        variant.openingStock === undefined
+          ? old?.openingStock
+          : variant.openingStock,
+      stockByUnit:
+        variant.openingStock !== undefined
+          ? undefined
+          : counts.length
+            ? counts
+            : undefined,
+    }
+    if (index < 0) variants.push(next)
+    else variants[index] = next
+  }
+  const parsed = setupProductPayloadSchema.safeParse({
+    ...prior,
+    ...Object.fromEntries(
+      Object.entries(payload).filter(([, value]) => value !== undefined),
+    ),
+    ...(input.sellingUnits !== undefined
+      ? { sellingUnits: input.sellingUnits.length ? sellingUnits : [] }
+      : {}),
+    ...(input.openingStock === null ? { openingStock: undefined } : {}),
+    ...(input.variants !== undefined || prior?.variants
+      ? { variants: input.variants?.length === 0 ? [] : variants }
+      : {}),
+  })
+  if (
+    parsed.success &&
+    input.variants?.length &&
+    parsed.data.options?.length &&
+    input.openingStock === undefined
+  ) {
+    const rows = setupProductVariants(parsed.data)
+    if (rows.length && rows.every((row) => row.openingStock !== undefined))
+      parsed.data.openingStock = undefined
+  }
   return parsed.success ? parsed.data : null
 }
 
@@ -565,6 +725,7 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
             key: write.key,
             name: write.payload.name,
             state: write.state,
+            payload: write.payload,
             stillToAsk: write.openQuestions.map(
               (question) => question.question,
             ),
@@ -731,7 +892,8 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           (items.length !== 1 ||
             items[0]?.kind !== "product" ||
             !items[0]?.unitName?.trim() ||
-            items[0]?.options?.length)
+            items[0]?.options?.length ||
+            items[0]?.variants?.length)
         )
           return {
             status: "failed" as const,
@@ -742,11 +904,26 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         if (deps.productOnly)
           items = items.map((item) => ({ ...item, key: "product" }))
         const warnings: string[] = []
+        const current = await deps.readDraft()
         const result = await stage(
           items.map((item) => ({
             key: item.key,
             name: item.name,
-            payload: itemPayload(item, warnings),
+            payload: itemPayload(
+              item,
+              warnings,
+              (() => {
+                const existing = current.find(
+                  (entry) =>
+                    entry.key ===
+                    (item.key ?? setupEntityKey(item.kind, item.name)),
+                )
+                const parsed = setupEntityPayloadSchema.safeParse(
+                  existing?.payload,
+                )
+                return parsed.success ? parsed.data : undefined
+              })(),
+            ),
             quote: item.quote,
             followUps: item.followUps,
             sourceAttachmentId: item.sourceAttachmentId,

@@ -221,6 +221,7 @@ export function productCreationReady(
     parsed.success &&
     !productRequiresForm(snapshot) &&
     !parsed.data.options?.length &&
+    !parsed.data.variants?.length &&
     deriveSetupEntityState(parsed.data, []).state === "PROPOSED" &&
     (parsed.data.usage === "INTERNAL_USE" ||
       !parsed.data.sellingUnits?.some((unit) => unit.priceMinor === undefined))

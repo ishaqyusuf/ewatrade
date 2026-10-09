@@ -3,6 +3,7 @@ import type {
   SetupMoneyAccountPayload,
   SetupOpenQuestion,
 } from "@ewatrade/assistant/setup/contracts"
+import { setupProductVariants } from "@ewatrade/assistant/setup/variants"
 import { catalogCategoryEmoji } from "@ewatrade/utils/catalog-category-emojis"
 import { formatMinorMoney } from "@ewatrade/utils/currency"
 
@@ -157,6 +158,37 @@ export function entitySummary(payload: SetupCardPayload, currencyCode: string) {
     payload.usage && payload.usage !== "FOR_SALE"
       ? USAGE_LABEL[payload.usage]
       : null
+  if (payload.options?.length || payload.variants?.length) {
+    const rows = setupProductVariants(payload).map((variant) => {
+      const prices =
+        payload.usage === "INTERNAL_USE"
+          ? []
+          : [
+              variant.priceMinor === undefined
+                ? `Price needed per ${payload.unitName.toLowerCase()}`
+                : `${formatMinorMoney(variant.priceMinor, currencyCode)}/${payload.unitName.toLowerCase()}`,
+              ...variant.sellingUnits.map((unit) =>
+                unit.priceMinor === undefined
+                  ? `Price needed per ${unit.name.toLowerCase()}`
+                  : `${formatMinorMoney(unit.priceMinor, currencyCode)}/${unit.name.toLowerCase()}`,
+              ),
+              ...variant.pendingUnitPrices.map(
+                (unit) =>
+                  `${formatMinorMoney(unit.priceMinor, currencyCode)}/${unit.unitName.toLowerCase()} (pack size needed)`,
+              ),
+            ]
+      return [
+        variant.label,
+        ...prices,
+        variant.openingStock === undefined
+          ? null
+          : `${variant.openingStock} ${payload.unitName.toLowerCase()} in stock`,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    })
+    return [usage, ...rows].filter(Boolean).join("; ")
+  }
   // Items the business only uses have no selling price.
   const price =
     payload.priceMinor !== undefined

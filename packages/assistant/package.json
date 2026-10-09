@@ -18,6 +18,7 @@
     "./setup/prompt": "./src/setup/prompt.ts",
     "./setup/rehearsal": "./src/setup/rehearsal.ts",
     "./setup/tools": "./src/setup/tools.ts",
+    "./setup/variants": "./src/setup/variants.ts",
     "./setup/vision": "./src/setup/vision.ts"
   },
   "scripts": {

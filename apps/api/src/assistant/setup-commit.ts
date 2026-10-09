@@ -5,6 +5,11 @@ import {
   type SetupServicePayload,
   setupEntityPayloadSchema,
 } from "@ewatrade/assistant/setup/contracts"
+import {
+  setupProductQuestions,
+  setupProductVariants,
+  setupSelectionsEqual,
+} from "@ewatrade/assistant/setup/variants"
 import type { prisma } from "@ewatrade/db"
 import {
   type AssistantScope,
@@ -90,6 +95,9 @@ type OptionGroup = {
 
 /** Option Groups and every value combination, first combination as the default. */
 export function setupProductOptionGrid(payload: SetupProductPayload) {
+  const questions = setupProductQuestions(payload)
+  if (questions.length)
+    throw new CatalogError("INVALID_CATALOG_ITEM", questions[0]!.question)
   const groupKeys = new Set<string>()
   const optionGroups: OptionGroup[] = (payload.options ?? []).map((group) => {
     const valueKeys = new Set<string>()
@@ -123,7 +131,7 @@ export function setupProductOptionGrid(payload: SetupProductPayload) {
   if (optionGroups.length > 0 && payload.openingStock !== undefined)
     throw new CatalogError(
       "INVALID_STOCK_OPERATION",
-      `Stock for ${payload.name} is counted per option. Remove the total here and add each option's stock in Inventory.`,
+      `Stock for ${payload.name} is counted per option. Replace the shared total with stock per option.`,
     )
   return { optionGroups, combinations }
 }
@@ -196,6 +204,7 @@ export function catalogCommandForSetupEntity(
     }
 
   const { optionGroups, combinations } = setupProductOptionGrid(payload)
+  const variantRows = setupProductVariants(payload)
   const variantKeys = new Set<string>()
   const used = new Set<string>()
   const canonicalKey = unitKey(payload.unitName, used)
@@ -231,6 +240,15 @@ export function catalogCommandForSetupEntity(
     },
     ...(optionGroups.length > 0 ? { optionGroups } : {}),
     variants: combinations.map((combination, index) => {
+      const row = variantRows.find((row) =>
+        setupSelectionsEqual(
+          row.selections,
+          combination.map((value) => ({
+            optionName: value.group.name,
+            value: value.label,
+          })),
+        ),
+      )!
       // Offering keys are unique across the item, so option variants prefix them.
       const variantKey =
         combination.length === 0
@@ -244,6 +262,7 @@ export function catalogCommandForSetupEntity(
       return {
         isDefault: index === 0,
         key: variantKey,
+        openingStockQuantity: row.openingStock,
         name:
           combination.length === 0
             ? payload.name
@@ -258,14 +277,16 @@ export function catalogCommandForSetupEntity(
           : {}),
         offerings: [
           {
-            fixedPriceMinor: payload.priceMinor,
+            fixedPriceMinor: row.priceMinor,
             inventoryUnitKey: canonicalKey,
             key: offeringKey(canonicalKey),
             name: payload.unitName,
             pricingPolicy: "fixed" as const,
           },
           ...sellingUnits.map((unit) => ({
-            fixedPriceMinor: unit.priceMinor,
+            fixedPriceMinor: row.sellingUnits.find(
+              (entry) => entry.name === unit.name,
+            )?.priceMinor,
             inventoryUnitKey: unit.key,
             key: offeringKey(unit.key),
             name: unit.name,
