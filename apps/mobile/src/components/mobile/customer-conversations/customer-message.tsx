@@ -80,7 +80,6 @@ export function CustomerMessage({
   }
 
   const isCustomer = message.author.kind === "customer"
-  const attachmentOnly = message.attachments.length > 0
   const messageMeta = resolveCustomerMessageMeta({
     authorKind: message.author.kind,
     channel: message.channel,
@@ -92,11 +91,9 @@ export function CustomerMessage({
     <View className={isCustomer ? "items-end" : "items-start"}>
       <View
         className={
-          attachmentOnly
-            ? "max-w-[82%]"
-            : isCustomer
-              ? "max-w-[82%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5"
-              : "max-w-[82%] rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5"
+          isCustomer
+            ? "max-w-[82%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5"
+            : "max-w-[82%] rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5"
         }
       >
         {message.attachments.map((attachment) => {
@@ -116,7 +113,7 @@ export function CustomerMessage({
             />
           )
         })}
-        {!attachmentOnly ? (
+        {message.text?.trim() ? (
           <>
             <Text
               className={
@@ -130,11 +127,9 @@ export function CustomerMessage({
           </>
         ) : null}
       </View>
-      {!attachmentOnly ? (
-        <Text className="mt-1 px-1 text-[10px] text-muted-foreground">
-          {messageMeta}
-        </Text>
-      ) : null}
+      <Text className="mt-1 px-1 text-[10px] text-muted-foreground">
+        {messageMeta}
+      </Text>
     </View>
   )
 }

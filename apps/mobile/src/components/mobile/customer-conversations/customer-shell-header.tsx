@@ -14,6 +14,7 @@ export function CustomerShellHeader({
   backToList = false,
   onBack,
   onToggleSound,
+  onOpenTools,
   showAccountPrivacy = false,
   soundEnabled = false,
   storeName,
@@ -23,6 +24,7 @@ export function CustomerShellHeader({
   backToList?: boolean
   onBack?: () => void
   onToggleSound?: () => void
+  onOpenTools?: () => void
   showAccountPrivacy?: boolean
   soundEnabled?: boolean
   storeName?: string
@@ -46,7 +48,7 @@ export function CustomerShellHeader({
               onBack ?? (() => router.replace("/(customer)/conversations"))
             }
           >
-            <Icon className="size-base text-foreground" name="ArrowLeft" />
+            <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
           </Pressable>
           <View className="min-w-0 flex-1">
             <Text
@@ -65,6 +67,16 @@ export function CustomerShellHeader({
               </Text>
             ) : null}
           </View>
+          {onOpenTools ? (
+            <Pressable
+              accessibilityLabel="Open store tools"
+              accessibilityRole="button"
+              onPress={onOpenTools}
+              className="size-11 items-center justify-center rounded-full"
+            >
+              <Icon name="more" className="size-[20px] text-foreground" />
+            </Pressable>
+          ) : null}
           {onToggleSound ? (
             <Pressable
               accessibilityLabel={
@@ -81,8 +93,8 @@ export function CustomerShellHeader({
               <Icon
                 className={
                   soundEnabled
-                    ? "size-sm text-primary"
-                    : "size-sm text-muted-foreground"
+                    ? "size-[20px] text-primary"
+                    : "size-[20px] text-muted-foreground"
                 }
                 name="Bell"
               />
@@ -115,7 +127,7 @@ export function CustomerShellHeader({
         }}
         transition
       >
-        <Icon className="size-sm text-foreground" name="Building2" />
+        <Icon className="size-[20px] text-foreground" name="Building2" />
         <Text
           className={
             largeTextLayout
@@ -141,7 +153,7 @@ export function CustomerShellHeader({
             haptic
             onPress={() => router.push("/account-privacy")}
           >
-            <Icon className="size-sm text-foreground" name="User" />
+            <Icon className="size-[20px] text-foreground" name="User" />
           </Pressable>
         ) : null}
       </View>

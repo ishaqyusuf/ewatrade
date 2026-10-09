@@ -1,3 +1,4 @@
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -127,12 +128,18 @@ export function CustomerConversationEntryAge({
               key={choice.value}
               accessibilityRole="radio"
               accessibilityState={{ checked: selected === choice.value }}
-              className="min-h-11 flex-row items-center gap-3 rounded-lg border border-border px-3"
+              className={
+                selected === choice.value
+                  ? "min-h-12 flex-row items-center gap-3 rounded-[14px] border border-primary bg-tint-mint px-3"
+                  : "min-h-12 flex-row items-center gap-3 rounded-[14px] border border-border px-3"
+              }
               onPress={() => setSelected(choice.value)}
             >
-              <Text className="text-foreground">
-                {selected === choice.value ? "◉" : "○"} {choice.label}
-              </Text>
+              <Icon
+                name={selected === choice.value ? "CircleCheck" : "Square"}
+                className="size-[20px] text-primary"
+              />
+              <Text className="text-foreground">{choice.label}</Text>
             </Pressable>
           ))
         )}

@@ -7,6 +7,7 @@ import {
 } from "@/lib/customer-conversation-transfer-signal"
 import { useLocalSearchParams } from "expo-router"
 import { useSyncExternalStore } from "react"
+import InvalidStoreLink from "../invalid-store-link"
 
 export default function CustomerStoreEntryRoute() {
   const { token } = useLocalSearchParams<{ token?: string | string[] }>()
@@ -16,9 +17,10 @@ export default function CustomerStoreEntryRoute() {
     getPendingCustomerTransferRevision,
     getPendingCustomerTransferRevision,
   )
-  const transfer = publicToken
-    ? getOrCreatePendingCustomerTransfer(publicToken)
-    : null
+  if (!publicToken || !/^[A-Za-z0-9_-]{32,200}$/.test(publicToken))
+    return <InvalidStoreLink />
+
+  const transfer = getOrCreatePendingCustomerTransfer(publicToken)
 
   return (
     <CustomerConversationEntryAge
