@@ -189,7 +189,8 @@ export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
             <View
               key={photo.assetId}
               style={{
-                backgroundColor: index ? "rgba(255,255,255,0.55)" : "#FFFFFF",
+                backgroundColor: palette.overlayForeground,
+                opacity: index ? 0.55 : 1,
                 borderRadius: 6,
                 height: 6,
                 width: index ? 6 : 16,
@@ -205,7 +206,7 @@ export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
           onPress={() => setEditing(true)}
           style={{
             alignItems: "center",
-            backgroundColor: "rgba(20,24,22,0.62)",
+            backgroundColor: palette.overlayChip,
             borderRadius: 12,
             bottom: 10,
             flexDirection: "row",
@@ -216,9 +217,17 @@ export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
             right: 10,
           }}
         >
-          <Icon className="size-[15px]" color="#FFFFFF" name="Camera" />
+          <Icon
+            className="size-[15px]"
+            color={palette.overlayForeground}
+            name="Camera"
+          />
           <NativeText
-            style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "800" }}
+            style={{
+              color: palette.overlayForeground,
+              fontSize: 12,
+              fontWeight: "800",
+            }}
           >
             Edit images
           </NativeText>

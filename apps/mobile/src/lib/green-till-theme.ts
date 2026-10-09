@@ -47,6 +47,16 @@ export const GREEN_TILL_THEME = {
     // Switch: the off track keeps 3:1 contrast on white cards.
     switchOff: "#9AA5A0",
     switchThumb: "#FFFFFF",
+    // Receipt paper stays white in both schemes, like the printed document.
+    paper: "#FFFFFF",
+    paperInk: "#1E1E1C",
+    paperMuted: "#6B716E",
+    paperFaint: "#8B918E",
+    paperLine: "#ECEEED",
+    paperBand: "#F3F6F4",
+    paperAccent: "#17684F",
+    paperOk: "#E4F2EA",
+    paperOkInk: "#135C45",
   },
   dark: {
     heroFrom: "#17543F",
@@ -91,6 +101,16 @@ export const GREEN_TILL_THEME = {
     overlayForeground: "#FFFFFF",
     switchOff: "#3E4A45",
     switchThumb: "#F3FBF6",
+    // Receipt paper stays white in both schemes, like the printed document.
+    paper: "#FFFFFF",
+    paperInk: "#1E1E1C",
+    paperMuted: "#6B716E",
+    paperFaint: "#8B918E",
+    paperLine: "#ECEEED",
+    paperBand: "#F3F6F4",
+    paperAccent: "#17684F",
+    paperOk: "#E4F2EA",
+    paperOkInk: "#135C45",
   },
 } as const
 

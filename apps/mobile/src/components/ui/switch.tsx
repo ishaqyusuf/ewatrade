@@ -1,7 +1,8 @@
+import { Pressable } from "@/components/ui/pressable"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { useEffect } from "react"
-import { Pressable, type PressableProps } from "react-native"
+import type { PressableProps } from "react-native"
 import Animated, {
   ReduceMotion,
   useAnimatedStyle,
@@ -48,6 +49,9 @@ function Switch({
   }))
   return (
     <Pressable
+      allowOverflow
+      haptic="selection"
+      noRipple
       accessibilityRole="switch"
       accessibilityState={{ checked, disabled: Boolean(disabled) }}
       disabled={disabled}
