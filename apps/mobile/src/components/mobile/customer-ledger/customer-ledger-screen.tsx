@@ -10,8 +10,8 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { type Href, useRouter } from "expo-router"
-import { useEffect, useState } from "react"
+import { type Href, useFocusEffect, useRouter } from "expo-router"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { FlatList, Text as NativeText, View } from "react-native"
 import { HeroCard } from "../green-till/hero-card"
 import {
@@ -250,6 +250,16 @@ function Statement({
       setRefreshing(false)
     }
   }
+  // Coming back from a payment or correction: show it without a manual Refresh.
+  const refreshRef = useRef(refresh)
+  refreshRef.current = refresh
+  const focusedBefore = useRef(false)
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedBefore.current) void refreshRef.current()
+      focusedBefore.current = true
+    }, []),
+  )
   const open = (mode: string, entryId?: string) =>
     router.push({
       pathname: "/customer-ledger-action/[accountId]",

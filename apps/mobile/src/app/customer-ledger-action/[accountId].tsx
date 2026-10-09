@@ -9,10 +9,21 @@ export default function CustomerLedgerActionRoute() {
     allocationId?: string
     allocationAfter?: string
   }>()
+  const titles: Record<string, string> = {
+    apply: "Apply credit",
+    entry: "Entry",
+    opening: "Opening balance",
+    receipt: "Record payment",
+    refund: "Return credit",
+    release: "Release allocation",
+    reverse: "Correct entry",
+  }
+  const title = titles[params.mode] ?? "Customer record"
   return (
     <WorkflowModalScreen
-      title="Customer record"
-      closeLabel="Close customer record"
+      title={title}
+      back
+      closeLabel="Back to statement"
       closeHref="/finance-modal"
     >
       <CustomerLedgerActionScreen {...params} />

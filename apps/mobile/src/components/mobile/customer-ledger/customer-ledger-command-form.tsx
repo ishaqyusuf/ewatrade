@@ -4,6 +4,7 @@ import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import {
@@ -19,7 +20,9 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import { View } from "react-native"
+import { BigAmountField } from "../green-till/big-amount-field"
 import { HeroCard } from "../green-till/hero-card"
+import { ListCard, SectionHeader } from "../green-till/kit"
 import { LedgerEffectiveTimeField } from "./ledger-effective-time-field"
 import {
   type CustomerLedgerMode,
@@ -199,6 +202,43 @@ export function CustomerLedgerCommandForm({
     )
       setSaved(true)
   }
+  // Apply credit with one credit and one charge: pick both and fill the
+  // amount that settles as much as possible. Everything stays editable.
+  const onlyCredit =
+    credits.data?.sources.length === 1 ? credits.data.sources[0] : undefined
+  const onlyCharge =
+    debits.data?.sources.length === 1 ? debits.data.sources[0] : undefined
+  useEffect(() => {
+    if (mode !== "apply" || !onlyCredit || !onlyCharge) return
+    setFields((f) => {
+      if (f.creditEntryId || f.chargeEntryId || f.amount) return f
+      const settle =
+        BigInt(onlyCredit.remainingAmountMinor) <
+        BigInt(onlyCharge.remainingAmountMinor)
+          ? BigInt(onlyCredit.remainingAmountMinor)
+          : BigInt(onlyCharge.remainingAmountMinor)
+      return {
+        ...f,
+        amount:
+          settle % 100n === 0n
+            ? (settle / 100n).toString()
+            : `${settle / 100n}.${(settle % 100n).toString().padStart(2, "0")}`,
+        chargeEntryId: onlyCharge.id,
+        creditEntryId: onlyCredit.id,
+      }
+    })
+  }, [mode, onlyCredit, onlyCharge])
+  // One account fits the method: choose it, as the cashier would.
+  const eligibleMoney = eligibleLedgerMoneyAccounts(
+    money.data?.accounts ?? [],
+    fields.method,
+  )
+  const onlyMoneyId =
+    eligibleMoney.length === 1 ? eligibleMoney[0]?.id : undefined
+  useEffect(() => {
+    if (needsMoney && onlyMoneyId && !fields.moneyAccountId)
+      setFields((f) => ({ ...f, moneyAccountId: onlyMoneyId }))
+  }, [needsMoney, onlyMoneyId, fields.moneyAccountId])
   useEffect(() => {
     const metadata = command.retained?.command.recoveryMetadata
     if (metadata)
@@ -227,55 +267,118 @@ export function CustomerLedgerCommandForm({
       : undefined
   const creditSource = credits.data?.sources.find((s) => s.id === creditId)
   const chargeSource = debits.data?.sources.find((s) => s.id === chargeId)
+  // Whole naira wherever kobo are zero; exact entries keep their kobo.
+  const whole = (minor: string) =>
+    formatFinanceMoney(minor, account.currencyCode).replace(/\.00$/, "")
+  const receiptEntry = mode === "receipt" && !review && !saved
+  const debtMinor = BigInt(account.totals.outstandingDebtMinor)
+  const toMajorInput = (minor: bigint) =>
+    minor % 100n === 0n
+      ? (minor / 100n).toString()
+      : `${minor / 100n}.${(minor % 100n).toString().padStart(2, "0")}`
+  const amountMinorOf = (input: string) => {
+    const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(input.replace(/,/g, ""))
+    if (!match?.[1]) return null
+    return BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0"))
+  }
+  const enteredMinor = amountMinorOf(fields.amount)
+  const reviewMinor =
+    review && "amountMinor" in review.payload
+      ? review.payload.amountMinor
+      : (detail.data?.entry.amountMinor ?? "0")
+  const methodLabel: Record<LedgerFields["method"], string> = {
+    CASH: "Cash",
+    BANK_TRANSFER: "Bank transfer",
+    CARD: "Card",
+    POS: "POS",
+    OTHER: "Other",
+  }
+  const methodIcon: Record<LedgerFields["method"], IconKeys> = {
+    CASH: "Wallet",
+    BANK_TRANSFER: "Building2",
+    CARD: "CreditCard",
+    POS: "CreditCard",
+    OTHER: "more",
+  }
   return (
     <FinanceFormBody>
-      <Text className="text-xl font-bold">
-        {review
-          ? "Review customer record"
-          : {
-              opening: "Opening balance",
-              receipt: "Receive payment",
-              apply: "Apply existing credit",
-              release: "Release allocation",
-              refund: "Return unused credit",
-              reverse: "Correct entry",
-            }[mode]}
-      </Text>
-      <HeroCard
-        label={account.customer.name}
-        amount={formatFinanceMoney(
-          account.totals.outstandingDebtMinor,
-          account.currencyCode,
-        )}
-        sub="Recorded amount owed"
-        stats={[
-          {
-            label: "Credit",
-            value: formatFinanceMoney(
-              account.totals.availableCreditMinor,
-              account.currencyCode,
-            ),
-          },
-          {
-            label: "Net",
-            value: formatFinanceMoney(
-              account.totals.netBalanceMinor,
-              account.currencyCode,
-            ),
-          },
-        ]}
-      />
-      <Text className="text-sm text-muted-foreground">
-        {mode === "receipt"
-          ? "Record actual money already received. Apply it separately to outstanding debt. Recording does not send money."
-          : mode === "apply" || mode === "release"
-            ? "Settlement only. Cash and net customer balance stay unchanged."
-            : mode === "refund"
-              ? "Record a completed real-world return of unused credit. This does not execute a payout."
-              : mode === "reverse"
-                ? "Append a bookkeeping correction; the original entry remains. This does not execute a refund."
-                : "Debt or credit held at the book start date. No cash is collected."}
-      </Text>
+      {receiptEntry ? (
+        <BigAmountField
+          currencyCode={account.currencyCode}
+          editable={canSubmit}
+          label="Amount received"
+          onChangeValue={(v) => change("amount", v)}
+          suggestions={
+            debtMinor > 0n
+              ? [
+                  {
+                    label: `${whole(account.totals.outstandingDebtMinor)} · net owed`,
+                    tint: "amber",
+                    value: toMajorInput(debtMinor),
+                  },
+                ]
+              : [
+                  {
+                    label: "Held as credit",
+                    tint: "sky",
+                    value: fields.amount,
+                  },
+                ]
+          }
+          value={fields.amount}
+        />
+      ) : review ? (
+        <HeroCard
+          label={
+            mode === "receipt"
+              ? `${account.customer.name} pays`
+              : `${
+                  {
+                    apply: "Apply credit",
+                    opening: "Opening balance",
+                    refund: "Return credit",
+                    release: "Release allocation",
+                    reverse: "Correct entry",
+                  }[mode]
+                } · ${account.customer.name}`
+          }
+          amount={whole(reviewMinor)}
+          sub={
+            mode === "receipt"
+              ? "Held as credit until you apply it to a charge"
+              : undefined
+          }
+        />
+      ) : (
+        <HeroCard
+          label={account.customer.name}
+          amount={whole(account.totals.outstandingDebtMinor)}
+          sub="Recorded amount owed"
+          stats={[
+            {
+              label: "Credit",
+              value: whole(account.totals.availableCreditMinor),
+            },
+            {
+              label: "Net",
+              value: whole(account.totals.netBalanceMinor),
+            },
+          ]}
+        />
+      )}
+      {mode === "receipt" ? null : (
+        <Text className="text-sm text-muted-foreground">
+          {mode === "receipt"
+            ? "Record actual money already received. Apply it separately to outstanding debt. Recording does not send money."
+            : mode === "apply" || mode === "release"
+              ? "Settlement only. Cash and net customer balance stay unchanged."
+              : mode === "refund"
+                ? "Record a completed real-world return of unused credit. This does not execute a payout."
+                : mode === "reverse"
+                  ? "Append a bookkeeping correction; the original entry remains. This does not execute a refund."
+                  : "Debt or credit held at the book start date. No cash is collected."}
+        </Text>
+      )}
       {offline ? (
         <StatusBanner
           message="Reconnect before recording or checking a financial submission."
@@ -288,7 +391,9 @@ export function CustomerLedgerCommandForm({
           tone="destructive"
         />
       ) : null}
-      {command.notice ? <StatusBanner message={command.notice} /> : null}
+      {command.notice && !saved ? (
+        <StatusBanner message={command.notice} />
+      ) : null}
       {command.retained ? (
         <StatusBanner
           title="Earlier submission needs confirmation"
@@ -339,105 +444,83 @@ export function CustomerLedgerCommandForm({
         </View>
       ) : review ? (
         <>
-          <Text className="text-2xl font-bold">
-            {formatFinanceMoney(
-              "amountMinor" in review.payload
-                ? review.payload.amountMinor
-                : (detail.data?.entry.amountMinor ?? "0"),
-              account.currencyCode,
-            )}
+          <SectionHeader title="Before and after" />
+          <ListCard>
+            {[
+              <ReviewRow
+                key="amount"
+                label="Amount"
+                value={whole(reviewMinor)}
+              />,
+              moneyId ? (
+                <ReviewRow
+                  key="method"
+                  label="Method"
+                  value={`${methodLabel[fields.method]} · ${money.data?.accounts.find((a) => a.id === moneyId)?.name ?? "Money account"}`}
+                />
+              ) : null,
+              creditId ? (
+                <ReviewRow
+                  key="credit-used"
+                  label="Credit used"
+                  value={
+                    creditSource ? sourceLabel(creditSource) : "Reviewed source"
+                  }
+                />
+              ) : null,
+              chargeId ? (
+                <ReviewRow
+                  key="charge"
+                  label="Charge"
+                  value={
+                    chargeSource ? sourceLabel(chargeSource) : "Reviewed debt"
+                  }
+                />
+              ) : null,
+              after ? (
+                <ReviewRow
+                  key="owed"
+                  label="Owed"
+                  before={whole(account.totals.outstandingDebtMinor)}
+                  value={whole(after.outstandingDebtMinor)}
+                />
+              ) : null,
+              after ? (
+                <ReviewRow
+                  key="credit"
+                  label="Credit"
+                  before={whole(account.totals.availableCreditMinor)}
+                  value={whole(after.availableCreditMinor)}
+                />
+              ) : null,
+              after ? (
+                <ReviewRow
+                  key="net"
+                  label="Net balance"
+                  value={whole(after.netBalanceMinor)}
+                />
+              ) : null,
+              "reason" in review.payload && review.payload.reason ? (
+                <ReviewRow
+                  key="reason"
+                  label="Reason"
+                  value={review.payload.reason}
+                />
+              ) : "description" in review.payload &&
+                review.payload.description ? (
+                <ReviewRow
+                  key="note"
+                  label="Note"
+                  value={review.payload.description}
+                />
+              ) : null,
+            ]}
+          </ListCard>
+          <Text className="mx-0.5 text-xs text-muted-foreground">
+            {mode === "reverse"
+              ? "Bookkeeping reverses the original effects; no payout is made."
+              : "Recording does not move money. The server checks current records."}
           </Text>
-          <View className="gap-3 border-y border-border py-4">
-            {creditId ? (
-              <Text>
-                Credit:{" "}
-                {creditSource ? sourceLabel(creditSource) : "Reviewed source"}
-              </Text>
-            ) : null}
-            {chargeId ? (
-              <Text>
-                Charge:{" "}
-                {chargeSource ? sourceLabel(chargeSource) : "Reviewed debt"}
-              </Text>
-            ) : null}
-            {moneyId ? (
-              <Text>
-                Money account:{" "}
-                {money.data?.accounts.find((a) => a.id === moneyId)?.name}
-              </Text>
-            ) : (
-              <Text>
-                {mode === "reverse"
-                  ? "Bookkeeping reverses original effects; no payout is executed."
-                  : `Cash effect: ${formatFinanceMoney("0", account.currencyCode)}`}
-              </Text>
-            )}
-            {"reason" in review.payload ? (
-              <Text>{review.payload.reason}</Text>
-            ) : "description" in review.payload ? (
-              <Text>{review.payload.description}</Text>
-            ) : null}
-            {"effectiveAt" in review.payload &&
-            review.payload.effectiveAt instanceof Date ? (
-              <Text>{review.payload.effectiveAt.toLocaleString()}</Text>
-            ) : null}
-          </View>
-          {after ? (
-            <View className="gap-2 rounded-[20px] bg-tint-mint p-4">
-              <Text className="font-bold text-tint-mint-foreground">
-                Before → After
-              </Text>
-              <Text className="text-tint-mint-foreground">
-                Owed:{" "}
-                {formatFinanceMoney(
-                  account.totals.outstandingDebtMinor,
-                  account.currencyCode,
-                )}{" "}
-                →{" "}
-                {formatFinanceMoney(
-                  after.outstandingDebtMinor,
-                  account.currencyCode,
-                )}
-              </Text>
-              <Text className="text-tint-mint-foreground">
-                Credit:{" "}
-                {formatFinanceMoney(
-                  account.totals.availableCreditMinor,
-                  account.currencyCode,
-                )}{" "}
-                →{" "}
-                {formatFinanceMoney(
-                  after.availableCreditMinor,
-                  account.currencyCode,
-                )}
-              </Text>
-              <Text>
-                Amount owed after:{" "}
-                {formatFinanceMoney(
-                  after.outstandingDebtMinor,
-                  account.currencyCode,
-                )}
-              </Text>
-              <Text>
-                Credit available after:{" "}
-                {formatFinanceMoney(
-                  after.availableCreditMinor,
-                  account.currencyCode,
-                )}
-              </Text>
-              <Text>
-                Net balance after:{" "}
-                {formatFinanceMoney(
-                  after.netBalanceMinor,
-                  account.currencyCode,
-                )}
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                Based on the reviewed account; the server checks current
-                records.
-              </Text>
-            </View>
-          ) : null}
           <ActionButton
             disabled={!canSubmit}
             isLoading={command.pending}
@@ -509,29 +592,33 @@ export function CustomerLedgerCommandForm({
               {credits.data && !credits.data.sources.length ? (
                 <Text>No available credit on this source page.</Text>
               ) : null}
-              <ActionButton
-                variant="outline"
-                disabled={creditCursors.length === 1 || credits.isFetching}
-                onPress={() => {
-                  setCreditCursors((v) => v.slice(0, -1))
-                  change("creditEntryId", "")
-                }}
-              >
-                Previous credits
-              </ActionButton>
-              <ActionButton
-                variant="outline"
-                disabled={!credits.data?.nextCursor || credits.isFetching}
-                onPress={() => {
-                  setCreditCursors((v) => [
-                    ...v,
-                    credits.data?.nextCursor ?? undefined,
-                  ])
-                  change("creditEntryId", "")
-                }}
-              >
-                More credits
-              </ActionButton>
+              {creditCursors.length > 1 || credits.data?.nextCursor ? (
+                <>
+                  <ActionButton
+                    variant="outline"
+                    disabled={creditCursors.length === 1 || credits.isFetching}
+                    onPress={() => {
+                      setCreditCursors((v) => v.slice(0, -1))
+                      change("creditEntryId", "")
+                    }}
+                  >
+                    Previous credits
+                  </ActionButton>
+                  <ActionButton
+                    variant="outline"
+                    disabled={!credits.data?.nextCursor || credits.isFetching}
+                    onPress={() => {
+                      setCreditCursors((v) => [
+                        ...v,
+                        credits.data?.nextCursor ?? undefined,
+                      ])
+                      change("creditEntryId", "")
+                    }}
+                  >
+                    More credits
+                  </ActionButton>
+                </>
+              ) : null}
             </>
           ) : null}
           {mode === "apply" ? (
@@ -548,29 +635,33 @@ export function CustomerLedgerCommandForm({
               {debits.data && !debits.data.sources.length ? (
                 <Text>No outstanding charge on this source page.</Text>
               ) : null}
-              <ActionButton
-                variant="outline"
-                disabled={debitCursors.length === 1 || debits.isFetching}
-                onPress={() => {
-                  setDebitCursors((v) => v.slice(0, -1))
-                  change("chargeEntryId", "")
-                }}
-              >
-                Previous charges
-              </ActionButton>
-              <ActionButton
-                variant="outline"
-                disabled={!debits.data?.nextCursor || debits.isFetching}
-                onPress={() => {
-                  setDebitCursors((v) => [
-                    ...v,
-                    debits.data?.nextCursor ?? undefined,
-                  ])
-                  change("chargeEntryId", "")
-                }}
-              >
-                More charges
-              </ActionButton>
+              {debitCursors.length > 1 || debits.data?.nextCursor ? (
+                <>
+                  <ActionButton
+                    variant="outline"
+                    disabled={debitCursors.length === 1 || debits.isFetching}
+                    onPress={() => {
+                      setDebitCursors((v) => v.slice(0, -1))
+                      change("chargeEntryId", "")
+                    }}
+                  >
+                    Previous charges
+                  </ActionButton>
+                  <ActionButton
+                    variant="outline"
+                    disabled={!debits.data?.nextCursor || debits.isFetching}
+                    onPress={() => {
+                      setDebitCursors((v) => [
+                        ...v,
+                        debits.data?.nextCursor ?? undefined,
+                      ])
+                      change("chargeEntryId", "")
+                    }}
+                  >
+                    More charges
+                  </ActionButton>
+                </>
+              ) : null}
             </>
           ) : null}
           {mode === "release" ? (
@@ -583,7 +674,7 @@ export function CustomerLedgerCommandForm({
               )}
             </Text>
           ) : null}
-          {mode !== "reverse" ? (
+          {mode !== "reverse" && mode !== "receipt" ? (
             <MoneyField
               label="Amount"
               currencyCode={account.currencyCode}
@@ -593,46 +684,44 @@ export function CustomerLedgerCommandForm({
           ) : null}
           {needsMoney ? (
             <>
-              <Text className="font-semibold">Payment method</Text>
-              {(["CASH", "BANK_TRANSFER", "CARD", "POS", "OTHER"] as const).map(
-                (m) => (
-                  <Choice
+              <FieldLabel>Payment method</FieldLabel>
+              <View className="-mt-2 flex-row flex-wrap gap-2">
+                {(
+                  ["CASH", "BANK_TRANSFER", "CARD", "POS", "OTHER"] as const
+                ).map((m) => (
+                  <ChoiceChip
                     key={m}
+                    icon={methodIcon[m]}
+                    label={methodLabel[m]}
                     selected={fields.method === m}
-                    label={
-                      {
-                        CASH: "Cash",
-                        BANK_TRANSFER: "Bank transfer",
-                        CARD: "Card",
-                        POS: "POS",
-                        OTHER: "Other",
-                      }[m]
-                    }
                     onPress={() => {
                       change("method", m)
                       change("moneyAccountId", "")
                     }}
                   />
-                ),
-              )}
-              <Text className="font-semibold">
-                {mode === "receipt"
-                  ? "Money received into"
-                  : "Money returned from"}
-              </Text>
-              {eligibleLedgerMoneyAccounts(
-                money.data?.accounts ?? [],
-                fields.method,
-              ).map((a) => (
-                <Choice
-                  key={a.id}
-                  label={a.name}
-                  selected={fields.moneyAccountId === a.id}
-                  onPress={() => change("moneyAccountId", a.id)}
-                />
-              ))}
+                ))}
+              </View>
+              <FieldLabel>
+                {mode === "receipt" ? "Received into" : "Returned from"}
+              </FieldLabel>
+              <View className="-mt-2 flex-row flex-wrap gap-2">
+                {eligibleLedgerMoneyAccounts(
+                  money.data?.accounts ?? [],
+                  fields.method,
+                ).map((a) => (
+                  <ChoiceChip
+                    key={a.id}
+                    icon={fields.method === "CASH" ? "Wallet" : "Building2"}
+                    label={a.name}
+                    selected={fields.moneyAccountId === a.id}
+                    onPress={() => change("moneyAccountId", a.id)}
+                  />
+                ))}
+              </View>
               <FormField
-                label="Reference (optional)"
+                variant="green-gate"
+                placeholder="Transfer ref or receipt no."
+                label="Reference · optional"
                 value={fields.reference}
                 onChangeText={(v) => change("reference", v)}
                 maxLength={160}
@@ -641,7 +730,8 @@ export function CustomerLedgerCommandForm({
           ) : null}
           {mode !== "apply" ? (
             <FormField
-              label={mode === "receipt" ? "Description" : "Reason"}
+              variant={mode === "receipt" ? "green-gate" : undefined}
+              label={mode === "receipt" ? "Note · required" : "Reason"}
               value={fields.reason}
               onChangeText={(v) => change("reason", v)}
               maxLength={400}
@@ -667,7 +757,9 @@ export function CustomerLedgerCommandForm({
             />
           ) : null}
           <ActionButton disabled={!canSubmit || loading} onPress={prepare}>
-            Review
+            {mode === "receipt" && enteredMinor && enteredMinor > 0n
+              ? `Review ${whole(enteredMinor.toString())}`
+              : "Review"}
           </ActionButton>
           {dataError ? (
             <ActionButton
@@ -696,10 +788,102 @@ function Choice({
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
-      className={`rounded-xl border px-4 py-3 ${selected ? "border-primary bg-accent" : "border-border"}`}
+      className={
+        selected
+          ? "min-h-12 justify-center rounded-[14px] border-[1.5px] border-primary bg-accent px-4 py-3"
+          : "min-h-12 justify-center rounded-[14px] border-[1.5px] border-transparent bg-card px-4 py-3 shadow-sm"
+      }
+      haptic
       onPress={onPress}
     >
-      <Text>{label}</Text>
+      <Text className="text-sm font-semibold text-foreground">{label}</Text>
     </Pressable>
+  )
+}
+
+function FieldLabel({ children }: { children: string }) {
+  return (
+    <Text className="mx-0.5 mt-1 text-xs font-extrabold text-muted-foreground">
+      {children}
+    </Text>
+  )
+}
+
+function ChoiceChip({
+  icon,
+  label,
+  onPress,
+  selected,
+}: {
+  icon: IconKeys
+  label: string
+  onPress: () => void
+  selected: boolean
+}) {
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      className={
+        selected
+          ? "min-h-10 flex-row items-center gap-1.5 rounded-xl border-[1.5px] border-primary bg-accent px-3.5"
+          : "min-h-10 flex-row items-center gap-1.5 rounded-xl border-[1.5px] border-transparent bg-card px-3.5 shadow-sm"
+      }
+      haptic
+      onPress={onPress}
+    >
+      <Icon
+        className={
+          selected
+            ? "size-[15px] text-accent-foreground"
+            : "size-[15px] text-foreground"
+        }
+        name={icon}
+      />
+      <Text
+        className={
+          selected
+            ? "text-[13px] font-bold text-accent-foreground"
+            : "text-[13px] font-bold text-foreground"
+        }
+      >
+        {label}
+      </Text>
+    </Pressable>
+  )
+}
+
+function ReviewRow({
+  before,
+  label,
+  value,
+}: {
+  before?: string
+  label: string
+  value: string
+}) {
+  return (
+    <View className="min-h-11 flex-row items-center justify-between gap-2.5 py-2.5">
+      <Text className="text-[13.5px] text-muted-foreground">{label}</Text>
+      <View className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
+        {before !== undefined && before !== value ? (
+          <>
+            <Text className="text-[13.5px] text-muted-foreground line-through">
+              {before}
+            </Text>
+            <Icon
+              className="size-[13px] text-muted-foreground"
+              name="ArrowRight"
+            />
+          </>
+        ) : null}
+        <Text
+          numberOfLines={2}
+          className="shrink text-right text-[13.5px] font-bold tabular-nums text-foreground"
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
   )
 }
