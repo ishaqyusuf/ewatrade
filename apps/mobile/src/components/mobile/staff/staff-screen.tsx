@@ -14,26 +14,28 @@ import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
+import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import { forwardRef, useRef, useState } from "react"
-import { RefreshControl, useWindowDimensions } from "react-native"
+import { Alert, RefreshControl, useWindowDimensions } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { ScrollView } from "react-native-css/components/ScrollView"
 import {
+  ClassicStaffEmpty,
   ClassicStaffHeader,
   ClassicStaffRow,
-  ClassicStaffEmpty,
 } from "../appearances/classic/staff-screen"
 import {
+  MarketDayStaffEmpty,
   MarketDayStaffHeader,
   MarketDayStaffRow,
-  MarketDayStaffEmpty,
 } from "../appearances/market-day/staff-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
+import { NudgeCard, SectionHeader } from "../green-till/kit"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
-import { STAFF_SEARCH_LIMIT } from "./staff-model"
 import { OrderVisibilityCard } from "./order-visibility-card"
 import { StaffInvitationSheet } from "./staff-invitation-sheet"
+import { STAFF_SEARCH_LIMIT } from "./staff-model"
 import { useStaffDirectory } from "./use-staff-directory"
 
 type StaffInviteProps = { onComplete?: () => void }
@@ -42,6 +44,7 @@ export function StaffChrome(props: WorkflowModalChromeProps) {
 }
 
 export function StaffInviteContent({ onComplete }: StaffInviteProps) {
+  const router = useRouter()
   const appearance = useMobileDesign("staff")
   const market = appearance === "market-day"
   const Header = market ? MarketDayStaffHeader : ClassicStaffHeader
@@ -51,6 +54,21 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
   const palette = useMarketDayPalette()
   const vm = useStaffDirectory(onComplete)
   const { invitation, rows } = vm
+  const ordered = market
+    ? rows
+    : [...rows].sort(
+        (a, b) =>
+          (a.statusLabel === "Pending"
+            ? 0
+            : a.statusLabel === "Active"
+              ? 1
+              : 2) -
+          (b.statusLabel === "Pending"
+            ? 0
+            : b.statusLabel === "Active"
+              ? 1
+              : 2),
+      )
   const [footerHeight, setFooterHeight] = useState(88)
   const discoveredSearch = useRef(false)
   if (shouldShowListSearch(rows.length) || vm.search)
@@ -62,7 +80,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
     !vm.search &&
     vm.canOpenInvite &&
     !invitation.recoveryEmail
-  const showFab = !market && !showInitialInvite && !recovery
+  const showFab = false
   const bottomSpace = (showSearch ? footerHeight : 0) + (showFab ? 100 : 24)
   const emptyTitle = vm.isLoading
     ? "Loading staff"
@@ -71,17 +89,17 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
       : vm.directory.isError
         ? "Staff unavailable"
         : vm.search
-          ? "No matching attendants"
+          ? "No matching sales reps"
           : "Your crew starts here."
   const emptyMessage = vm.isLoading
-    ? "Waiting for the shared attendant directory."
+    ? "Waiting for the shared sales rep directory."
     : vm.isOffline
       ? "Reconnect to load current staff membership."
       : vm.directory.isError
         ? "Try again to load the shared directory."
         : vm.search
           ? "Change or clear your search. No match here does not prove that an uncertain invitation was not saved."
-          : "Invite an attendant using their own email address."
+          : "Invite a sales rep using their own email address."
 
   if (vm.blocked) {
     return (
@@ -102,9 +120,9 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             vm.scopeChanged
               ? "Return to the original account, business and Store to continue this invitation, or close and reopen Staff. Pending recovery is kept only while this workflow remains open."
               : !vm.canManage
-                ? "An Owner, Admin or Manager manages attendants."
+                ? "An Owner, Admin or Manager manages sales reps."
                 : vm.isOffline
-                  ? "Reconnect to resolve the Store before managing attendants."
+                  ? "Reconnect to resolve the Store before managing sales reps."
                   : "A Store is required before opening the staff directory."
           }
         />
@@ -141,16 +159,36 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             contentContainerClassName={
               market
                 ? "grow pb-[var(--staff-list-bottom)]"
-                : "grow px-2 pb-[var(--staff-list-bottom)]"
+                : "grow gap-3 px-[18px] pb-[var(--staff-list-bottom)]"
             }
-            data={rows}
+            data={ordered}
             keyExtractor={(row) => row.id}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={
               <View className="gap-4 pb-4">
-                <Header loadedCount={rows.length} />
+                <Header
+                  loadedCount={rows.length}
+                  used={vm.entitlement?.used}
+                  limit={vm.entitlement?.limit}
+                  planName={vm.planName}
+                  loading={vm.quotaLoading}
+                  offline={vm.isOffline}
+                  updatedAt={vm.quotaUpdatedAt}
+                  onInvite={invitation.present}
+                  inviteDisabled={!vm.canOpenInvite}
+                />
+                {!market && vm.entitlement?.isAtLimit ? (
+                  <NudgeCard
+                    icon="Users"
+                    tint="lilac"
+                    title="Your team is growing"
+                    sub="Your plan is full. Existing invitations may already be counted."
+                    actionLabel="See plans"
+                    onAction={() => router.push("/subscription-modal")}
+                  />
+                ) : null}
                 <OrderVisibilityCard />
                 <View className="gap-3 px-4">
                   {invitation.notice ? (
@@ -160,11 +198,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     <StatusBanner
                       icon="TriangleAlert"
                       title="Invitation not confirmed"
-                      message={
-                        "Check the loaded directory for " +
-                        invitation.recoveryEmail +
-                        ". A matching record does not confirm this request or email delivery. No second invite will be sent from this workflow. Recovery is memory-only."
-                      }
+                      message={`Check the loaded directory for ${invitation.recoveryEmail}. A matching record does not confirm this request or email delivery. No second invite will be sent from this workflow. Recovery is memory-only.`}
                       actionLabel="Review invitation"
                       onActionPress={invitation.present}
                       tone="warning"
@@ -174,7 +208,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     <StatusBanner
                       icon="Wind"
                       title="Cached directory"
-                      message="Membership is managed online. Reconnect to search, refresh or invite. Cached status may be out of date."
+                      message={`Reconnect to search, refresh or invite.${vm.directory.dataUpdatedAt ? ` Saved copy as of ${new Date(vm.directory.dataUpdatedAt).toLocaleString()}.` : " No saved directory is available."}`}
                       tone="warning"
                     />
                   ) : null}
@@ -201,7 +235,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     <StatusBanner
                       icon="Search"
                       title="Showing up to 100 matches"
-                      message="Narrow the search by name or email to find another attendant. This API does not provide a full directory count."
+                      message="Narrow the search by name or email to find another sales rep. This API does not provide a full directory count."
                     />
                   ) : null}
                   {vm.searchPending ? (
@@ -237,11 +271,40 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                 />
               ) : undefined
             }
-            renderItem={({ item }) => <Row staff={item} />}
+            renderItem={({ item, index }) => {
+              return (
+                <View>
+                  {!market &&
+                  (index === 0 ||
+                    ordered[index - 1]?.statusLabel !== item.statusLabel) ? (
+                    <SectionHeader
+                      title={
+                        item.statusLabel === "Pending"
+                          ? "Waiting to accept"
+                          : item.statusLabel
+                      }
+                    />
+                  ) : null}
+                  {market ? (
+                    <Row staff={item} />
+                  ) : (
+                    <ClassicStaffRow
+                      staff={item}
+                      onPress={() =>
+                        Alert.alert(
+                          item.name,
+                          `${item.email}\n${item.statusLabel}\n${item.detail}`,
+                        )
+                      }
+                    />
+                  )}
+                </View>
+              )
+            }}
           />
           {showSearch ? (
             <BottomSearchFooter
-              accessibilityLabel="Search attendants"
+              accessibilityLabel="Search sales reps"
               alwaysShowSearch
               maxLength={STAFF_SEARCH_LIMIT}
               onHeightChange={setFooterHeight}
@@ -260,7 +323,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     recovery ? invitation.checkDirectory : invitation.present
                   }
                 >
-                  {recovery ? "Check directory" : "Invite attendant"}
+                  {recovery ? "Check directory" : "Invite sales rep"}
                 </MarketDayActionButton>
               ) : !market && recovery ? (
                 <ActionButton icon="Search" onPress={invitation.checkDirectory}>

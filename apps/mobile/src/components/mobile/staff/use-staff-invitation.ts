@@ -7,9 +7,9 @@ import * as Crypto from "expo-crypto"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
+  type StaffDraft,
   emptyStaffDraft,
   prepareStaffInvite,
-  type StaffDraft,
 } from "./staff-model"
 
 type InvitationInput = RouterInputs["retailOps"]["inviteStaff"]

@@ -1,8 +1,8 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import {
   ActionButton,
-  MarketDayActionButton,
   type ActionButtonProps,
+  MarketDayActionButton,
 } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -17,8 +17,8 @@ import { createStaffFixture } from "@/internal-tooling/fixture-recipes"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
 import {
-  BottomSheetFooter,
   type BottomSheetBackdropProps,
+  BottomSheetFooter,
   type BottomSheetFooterProps,
   type BottomSheetModal,
 } from "@gorhom/bottom-sheet"
@@ -26,8 +26,8 @@ import { VariableContextProvider } from "nativewind"
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import {
-  getStaffInviteSheetMaxHeight,
   STAFF_INVITE_SHEET_SNAP_POINTS,
+  getStaffInviteSheetMaxHeight,
   hasStaffInviteDraft,
 } from "../staff-invite-sheet-model"
 import type { StaffDraft } from "./staff-model"
@@ -208,7 +208,7 @@ export const StaffInvitationSheet = forwardRef<
                   : "text-sm leading-5 text-muted-foreground"
               }
             >
-              An account of their own, with Attendant access to orders and stock
+              An account of their own, with Sales rep access to orders and stock
               work.
             </Text>
             {error ? (
