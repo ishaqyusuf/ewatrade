@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { ClassicSaleItems } from "@/components/mobile/appearances/classic/create-sale-items"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
@@ -54,6 +55,15 @@ export function CreateSaleItems({
     choicesError,
     retryChoices,
   } = model
+  if (!market)
+    return (
+      <ClassicSaleItems
+        model={model}
+        appearance={appearance}
+        actionsHeight={actionsHeight}
+        onActionsHeightChange={setActionsHeight}
+      />
+    )
   const itemsHeader = (
     <View>
       <SaleStageHeader

@@ -130,7 +130,7 @@ const contracts = [
   {
     markers: [
       'type SaleStep = "customer" | "items" | "review"',
-      "Step {current} of 3",
+      "of 3",
       "FlatList",
       "BottomSearchFooter",
       "No items added yet",
@@ -156,8 +156,8 @@ const contracts = [
       "catalog.fetchNextPage()",
       "!isOffline &&",
       "recentOrders.fetchNextPage()",
-      "Line total",
-      'label="Quantity"',
+      "saleLineTotalMinor(offering.fixedPriceMinor, quantity)",
+      "Quantity for ${offering.displayName}",
       'accessibilityRole="button"',
       'keyboardType="decimal-pad"',
       "Create customer",

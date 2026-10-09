@@ -4,10 +4,17 @@ import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
+import { useColorScheme } from "@/hooks/use-color"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { View } from "react-native"
+import { Text as NativeText } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
+import {
+  ClassicBuyerRail,
+  ClassicSelectedBuyer,
+} from "../appearances/classic/create-sale-buyer"
 import { customerFromSuggestion } from "./create-sale-model"
 import type { SaleStepViewProps } from "./create-sale-presentation"
 import { useSalePresentation } from "./use-sale-presentation"
@@ -42,12 +49,13 @@ export function CreateSaleCustomerStep({
     customerCount,
     directoryCustomerCount,
   } = model
+  const heroPalette = GREEN_TILL_THEME[useColorScheme().colorScheme]
 
   return (
     <View className={tone("flex-1")}>
       <FlatList
         contentContainerClassName="grow px-2 pb-[var(--sale-customer-bottom)]"
-        data={customers}
+        data={market || customerSearch ? customers : []}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         keyExtractor={(customer) => customer.id}
@@ -92,10 +100,30 @@ export function CreateSaleCustomerStep({
                     model.currencyCode,
                   ).replace(/\.00(?=\D*$)/, "")}
                   pill={{
-                    label: `${model.selectedRows.length} items`,
-                    tone: "draft",
+                    label: `${model.selectedRows.length} ${model.selectedRows.length === 1 ? "item" : "items"}`,
+                    tone: isOffline ? "offline" : "synced",
                   }}
-                  sub={`Buyer: ${model.selectedCustomer?.name ?? "Walk-in"}`}
+                  sub={
+                    <NativeText
+                      numberOfLines={1}
+                      style={{
+                        color: heroPalette.heroMuted,
+                        flexShrink: 1,
+                        fontSize: 13,
+                        lineHeight: 18,
+                      }}
+                    >
+                      {"Buyer: "}
+                      <NativeText
+                        style={{
+                          color: heroPalette.heroForeground,
+                          fontWeight: "800",
+                        }}
+                      >
+                        {model.selectedCustomer?.name ?? "Walk-in"}
+                      </NativeText>
+                    </NativeText>
+                  }
                 />
               </View>
             ) : null}
@@ -121,37 +149,60 @@ export function CreateSaleCustomerStep({
               />
             ) : null}
             {!market ? (
-              <View className="gap-3 pb-4">
+              <View className="gap-3 pb-2">
+                <Text className="text-xs font-extrabold tracking-[0.3px] text-muted-foreground">
+                  WHO IS BUYING?
+                </Text>
+                <ClassicBuyerRail
+                  customers={customers}
+                  onNew={presentCustomerSheet}
+                  onSelect={(customer) => selectCustomer(customer, false)}
+                  selectedId={model.selectedCustomer?.id ?? null}
+                />
                 <FormField
-                  label="Search customers"
+                  accessibilityLabel="Search all customers"
+                  label="Search all customers"
                   leadingIcon="Search"
-                  placeholder="Search customer, phone, or email"
+                  placeholder="Search all customers"
                   value={customerSearch}
                   onChangeText={setCustomerSearch}
                   maxLength={160}
+                  variant="till-search"
                 />
-                <Text className="text-xs text-muted-foreground">
-                  Selected: {model.selectedCustomer?.name ?? "Walk-in"}
-                </Text>
+                {customerSearch ? (
+                  <Text className="pt-2 text-xs font-extrabold tracking-[0.3px] text-muted-foreground">
+                    SEARCH RESULTS
+                  </Text>
+                ) : (
+                  <>
+                    <Text className="pt-2 text-xs font-extrabold tracking-[0.3px] text-muted-foreground">
+                      SELECTED
+                    </Text>
+                    <ClassicSelectedBuyer customer={model.selectedCustomer} />
+                  </>
+                )}
               </View>
-            ) : null}
-            <CustomerActionRow
-              icon="UserPlus"
-              onPress={presentCustomerSheet}
-              title="Create customer"
-            />
-            <CustomerActionRow
-              icon="UserX"
-              onPress={() => selectCustomer(null, market)}
-              title={market ? "Continue as guest" : "Walk-in"}
-            />
-            <Text
-              className={tone(
-                "pb-2 pt-6 text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-              )}
-            >
-              {customerSearch ? "Search results" : "Recent customers"}
-            </Text>
+            ) : (
+              <>
+                <CustomerActionRow
+                  icon="UserPlus"
+                  onPress={presentCustomerSheet}
+                  title="Create customer"
+                />
+                <CustomerActionRow
+                  icon="UserX"
+                  onPress={() => selectCustomer(null, market)}
+                  title="Continue as guest"
+                />
+                <Text
+                  className={tone(
+                    "pb-2 pt-6 text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
+                  )}
+                >
+                  {customerSearch ? "Search results" : "Recent customers"}
+                </Text>
+              </>
+            )}
           </View>
         }
         renderItem={({ item }) => (
@@ -220,9 +271,9 @@ export function CreateSaleCustomerStep({
           searchVisible={false}
           totalCount={0}
           value=""
+          variant="action-bar"
         >
           <ActionButton
-            tone="gold"
             disabled={model.actionsLocked}
             onPress={() => selectCustomer(model.selectedCustomer)}
             trailingIcon="ArrowRight"

@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { ClassicSaleCheckout } from "@/components/mobile/appearances/classic/create-sale-checkout"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { MoneyField } from "@/components/mobile/money-field"
@@ -62,6 +63,15 @@ export function CreateSaleReview({
   } = model
 
   const [enteringPartPayment, setEnteringPartPayment] = useState(false)
+  if (!market)
+    return (
+      <ClassicSaleCheckout
+        model={model}
+        appearance={appearance}
+        actionsHeight={actionsHeight}
+        onActionsHeightChange={setActionsHeight}
+      />
+    )
   const paymentChoice =
     paymentSummary.receivedMinor === totalMinor && totalMinor > 0
       ? "paid"

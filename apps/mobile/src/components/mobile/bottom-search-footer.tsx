@@ -26,7 +26,8 @@ type BottomSearchFooterProps = {
   searchVisible?: boolean
   totalCount: number
   value: string
-  variant?: "default" | "market-day"
+  /** action-bar: Green Till card bar with a rounded top for step actions. */
+  variant?: "default" | "market-day" | "action-bar"
 }
 
 export function BottomSearchFooter({
@@ -84,13 +85,30 @@ export function BottomSearchFooter({
             ? (event) => onHeightChange(event.nativeEvent.layout.height)
             : undefined
         }
-        style={{
-          backgroundColor:
-            variant === "market-day" ? marketDay.canvas : colors.background,
-        }}
+        style={
+          variant === "action-bar"
+            ? {
+                backgroundColor: colors.card,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                boxShadow: "0 -10px 30px rgba(24, 36, 32, 0.10)",
+              }
+            : {
+                backgroundColor:
+                  variant === "market-day"
+                    ? marketDay.canvas
+                    : colors.background,
+              }
+        }
       >
         <View style={{ paddingBottom }}>
-          <View className="gap-3 px-4 pb-2 pt-2">
+          <View
+            className={
+              variant === "action-bar"
+                ? "gap-3 px-4 pb-2 pt-3"
+                : "gap-3 px-4 pb-2 pt-2"
+            }
+          >
             <View
               className={
                 layout === "inline" ? "flex-row items-center gap-3" : "gap-3"

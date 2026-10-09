@@ -1,11 +1,12 @@
+import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import type {
   CustomerActionRowProps,
   CustomerSuggestionRowProps,
   SaleStageHeaderProps,
+  SaleTopBarProps,
   SelectedOrderLineProps,
 } from "@/components/mobile/create-sale/create-sale-presentation"
 import { stepSaleQuantity } from "@/components/mobile/create-sale/sale-unit-count"
-import { FormField } from "@/components/mobile/form-field"
 import { saleLineTotalMinor } from "@/components/mobile/sale-checkout-model"
 import {
   SaleItemAvatar,
@@ -16,52 +17,65 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { Text as NativeText, TextInput } from "react-native"
 
-export function ClassicSaleStageHeader({
-  current,
+/** Classic renders the step title in its fixed top bar instead. */
+export function ClassicSaleStageHeader(_props: SaleStageHeaderProps) {
+  return null
+}
+
+export function ClassicSaleTopBar({
   onBack,
+  onClose,
+  step,
+  subtitle,
   title,
-}: SaleStageHeaderProps) {
+}: SaleTopBarProps) {
   return (
-    <View className="gap-3 pb-5 pt-1">
-      <View className="flex-row items-center justify-between gap-3">
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="text-xs font-bold uppercase tracking-[1.4px] text-primary">
-            Step {current} of 3
-          </Text>
-          <Text className="text-[23px] font-extrabold text-foreground">
-            {title}
-          </Text>
-        </View>
-        {onBack ? (
-          <Pressable
-            accessibilityLabel="Go to previous sale step"
-            className="h-11 w-11 items-center justify-center rounded-[14px] bg-tint-lilac active:bg-accent"
-            haptic
-            onPress={onBack}
-            transition
-          >
-            <Icon className="size-[18px] text-foreground" name="ArrowLeft" />
-          </Pressable>
-        ) : null}
+    <View className="min-h-11 flex-row items-center gap-2.5 px-4 pt-1 pb-2.5">
+      {onBack ? (
+        <Pressable
+          accessibilityLabel="Go to previous sale step"
+          accessibilityRole="button"
+          className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+          haptic
+          onPress={onBack}
+          transition
+        >
+          <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
+        </Pressable>
+      ) : null}
+      <View className="min-w-0 flex-1">
+        <Text
+          accessibilityRole="header"
+          numberOfLines={1}
+          className="text-[17px] font-extrabold tracking-tight text-foreground"
+        >
+          {title}
+        </Text>
+        <Text
+          accessibilityLabel={`Step ${step} of 3`}
+          numberOfLines={1}
+          className="text-xs font-semibold text-muted-foreground"
+        >
+          {`Step ${step} of 3${subtitle ? ` · ${subtitle}` : ""}`}
+        </Text>
       </View>
-      <View
-        accessibilityLabel={`Step ${current} of 3`}
-        className="flex-row gap-2"
+      <Pressable
+        accessibilityLabel="Close create sale"
+        accessibilityRole="button"
+        className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+        haptic
+        onPress={onClose}
+        transition
       >
-        {[1, 2, 3].map((step) => (
-          <View
-            key={step}
-            className={cn(
-              "h-1.5 flex-1 rounded-full",
-              step <= current ? "bg-primary" : "bg-border",
-            )}
-          />
-        ))}
-      </View>
+        <Icon className="size-[20px] text-foreground" name="X" />
+      </Pressable>
     </View>
   )
 }
@@ -73,131 +87,169 @@ export function ClassicSelectedOrderLine({
   onQuantityBlur,
   onQuantityFocus,
   onRemove,
+  position = { first: true, last: true },
   quantity,
 }: SelectedOrderLineProps) {
   const largeText = useLargeTextLayout()
+  const { colorScheme } = useColorScheme()
+  const colors = useColors()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  const tint = catalogAvatarTint(
+    offering.itemName,
+    offering.kind === "service" ? "service" : "product",
+  )
   const lineTotalMinor = saleLineTotalMinor(offering.fixedPriceMinor, quantity)
-  const stockLabel = getSaleOfferingStockLabel({
-    availableQuantity: offering.availableQuantity,
-    kind: offering.kind,
-    unitName: offering.unitName ?? offering.offeringName,
-  })
-
+  const single = !quantity || stepSaleQuantity(quantity, -1) === "0"
   return (
-    <View className="mb-3.5 rounded-[20px] bg-card p-3.5">
-      <View className="min-h-11 flex-row items-center gap-3">
-        <SaleItemAvatar choice={offering} />
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-extrabold text-foreground">
-            {saleOfferingTitle(offering)}
-          </Text>
-          {stockLabel ? (
-            <Text className="text-xs font-semibold text-primary">
-              {stockLabel}
-            </Text>
-          ) : null}
-          <Text className="text-xs [-rn-line-height:16] text-muted-foreground">
-            {offering.offeringName} ·{" "}
-            {offering.fixedPriceMinor === null
-              ? "Price not set"
-              : formatMinorMoney(
-                  offering.fixedPriceMinor,
-                  offering.currencyCode,
-                )}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityLabel={`Remove ${offering.displayName} from order`}
-          disabled={disabled}
-          accessibilityState={{ disabled }}
-          className="h-11 w-11 items-center justify-center rounded-[14px] bg-tint-lilac active:bg-accent"
-          haptic
-          onPress={onRemove}
-          transition
-        >
-          <Icon className="size-[18px] text-muted-foreground" name="X" />
-        </Pressable>
-      </View>
-
+    <View
+      className={cn(
+        "bg-card px-3.5",
+        position.first && "rounded-t-[20px]",
+        position.last && "rounded-b-[20px]",
+      )}
+    >
       <View
         className={cn(
-          "mt-3 gap-3",
-          largeText ? "flex-col" : "flex-row items-start pl-[56px]",
+          "min-h-[66px] gap-2.5 py-3",
+          !largeText && "flex-row items-center",
+          !position.last && "border-b border-border",
         )}
       >
-        <View className={cn("min-w-0 gap-1", !largeText && "flex-1")}>
-          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-            Unit
-          </Text>
-          <Text className="min-h-12 py-3 text-sm font-extrabold text-foreground">
-            {offering.unitName ?? offering.offeringName}
-          </Text>
+        <View
+          style={{
+            alignItems: "center",
+            backgroundColor: palette[tint],
+            borderRadius: 13,
+            height: 42,
+            justifyContent: "center",
+            overflow: "hidden",
+            width: 42,
+          }}
+        >
+          {offering.imageUrl ? (
+            <SaleItemAvatar choice={offering} />
+          ) : (
+            <NativeText
+              maxFontSizeMultiplier={1.3}
+              style={{
+                color: palette[`${tint}Foreground`],
+                fontSize: 16,
+                fontWeight: "800",
+              }}
+            >
+              {Array.from(offering.itemName.trim())[0]?.toUpperCase() ?? "?"}
+            </NativeText>
+          )}
         </View>
-        <View className={cn("gap-1", largeText ? "w-full" : "w-20")}>
-          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-            Qty
+        <View className="min-w-0 flex-1">
+          <Text
+            numberOfLines={largeText ? undefined : 1}
+            className="text-sm font-bold text-foreground"
+          >
+            {saleOfferingTitle(offering)}
           </Text>
-          <FormField
-            editable={!disabled}
+          <Text className="text-xs text-muted-foreground">
+            {[
+              offering.fixedPriceMinor === null
+                ? "Price not set"
+                : wholeMoney(
+                    formatMinorMoney(
+                      offering.fixedPriceMinor,
+                      offering.currencyCode,
+                    ),
+                  ),
+              getSaleOfferingStockLabel({
+                availableQuantity: offering.availableQuantity,
+                kind: offering.kind,
+                unitName: offering.unitName ?? offering.offeringName,
+              }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </Text>
+          {lineTotalMinor !== null ? (
+            <Text className="text-xs font-bold tabular-nums text-foreground">
+              {wholeMoney(
+                formatMinorMoney(lineTotalMinor, offering.currencyCode),
+              )}
+            </Text>
+          ) : null}
+        </View>
+        <View
+          style={{
+            alignItems: "center",
+            backgroundColor: colors.accent,
+            borderRadius: 13,
+            flexDirection: "row",
+            height: 44,
+            justifyContent: "space-between",
+            width: 120,
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              single
+                ? `Remove ${offering.displayName} from order`
+                : `Decrease ${offering.displayName} quantity by one`
+            }
+            disabled={disabled}
+            className="size-11 items-center justify-center"
+            haptic
+            onPress={() => {
+              const next = stepSaleQuantity(quantity, -1)
+              if (next === "0") onRemove()
+              else onQuantityChange(next)
+            }}
+          >
+            <Icon
+              className="size-[17px]"
+              color={colors.accentForeground}
+              name={single ? "X" : "Minus"}
+            />
+          </Pressable>
+          <TextInput
             accessibilityLabel={`Quantity for ${offering.displayName}`}
-            inputClassName="text-center font-extrabold"
-            inputTextAlign="center"
+            editable={!disabled}
             keyboardType="decimal-pad"
-            label="Quantity"
+            maxFontSizeMultiplier={1.3}
             onBlur={onQuantityBlur}
             onChangeText={onQuantityChange}
             onFocus={onQuantityFocus}
             selectTextOnFocus
+            selectionColor={colors.primary}
+            style={{
+              color: colors.foreground,
+              fontSize: 15,
+              fontVariant: ["tabular-nums"],
+              fontWeight: "700",
+              minWidth: 26,
+              padding: 0,
+              textAlign: "center",
+            }}
             value={quantity}
-            variant="auth"
           />
-        </View>
-        <View className="min-w-[104px] items-end gap-1">
-          <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground">
-            Price
-          </Text>
-          <Text className="min-h-12 py-3 text-right text-sm font-extrabold text-foreground">
-            {offering.fixedPriceMinor === null
-              ? "—"
-              : formatMinorMoney(
-                  offering.fixedPriceMinor,
-                  offering.currencyCode,
-                )}
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Increase ${offering.displayName} quantity by one`}
+            disabled={disabled}
+            className="size-11 items-center justify-center"
+            haptic
+            onPress={() => onQuantityChange(stepSaleQuantity(quantity, 1))}
+          >
+            <Icon
+              className="size-[17px]"
+              color={colors.accentForeground}
+              name="Plus"
+            />
+          </Pressable>
         </View>
       </View>
-      <View className="mt-3 flex-row items-center justify-end gap-3">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Decrease ${offering.displayName} quantity by one`}
-          disabled={disabled}
-          className="size-[44px] items-center justify-center rounded-[14px] bg-muted"
-          onPress={() => {
-            const next = stepSaleQuantity(quantity, -1)
-            if (next === "0") onRemove()
-            else onQuantityChange(next)
-          }}
-        >
-          <Icon name="Minus" className="size-[20px] text-foreground" />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Increase ${offering.displayName} quantity by one`}
-          disabled={disabled}
-          className="size-[44px] items-center justify-center rounded-[14px] bg-tint-mint"
-          onPress={() => onQuantityChange(stepSaleQuantity(quantity, 1))}
-        >
-          <Icon name="Plus" className="size-[20px] text-primary" />
-        </Pressable>
-      </View>
-      {lineTotalMinor !== null ? (
-        <Text className="mt-2 text-right text-xs font-bold text-muted-foreground">
-          Line total {formatMinorMoney(lineTotalMinor, offering.currencyCode)}
-        </Text>
-      ) : null}
     </View>
   )
 }
+
+const wholeMoney = (value: string) => value.replace(/\.00(?=\D*$)/, "")
 
 export function ClassicCustomerActionRow({
   icon,

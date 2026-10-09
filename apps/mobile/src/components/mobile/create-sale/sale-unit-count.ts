@@ -13,6 +13,12 @@ export function saleUnitCount(quantities: readonly (string | undefined)[]) {
   }
 }
 
+/** "1 item · 1 unit", "3 items · 7 units"; units may be "—" when unknown. */
+export function saleItemsLabel(lines: number, units: string) {
+  const unitWord = units === "1" ? "unit" : "units"
+  return `${lines} ${lines === 1 ? "item" : "items"} · ${units} ${unitWord}`
+}
+
 export function stepSaleQuantity(
   quantity: string | undefined,
   direction: 1 | -1,

@@ -31,6 +31,7 @@ import {
 } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { rankBySearch } from "@ewatrade/utils/search-rank"
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker"
 import {
   useInfiniteQuery,
@@ -172,6 +173,8 @@ export function useCreateSale({
         kind: itemKind,
         limit: LIST_PAGE_SIZE,
         query: isOffline ? undefined : deferredProductSearch || undefined,
+        // A to Z, like the Catalog.
+        sort: { field: "name", direction: "asc" },
         status: "active",
       },
       {
@@ -261,11 +264,13 @@ export function useCreateSale({
     )
       return []
     if (!isOffline || !normalizedSearch) return loadedRows
-    return loadedRows.filter((row) =>
-      `${row.displayName} ${row.offeringName}`
-        .toLowerCase()
-        .includes(normalizedSearch),
-    )
+    // Offline: deep search over saved items, best match first.
+    return rankBySearch(loadedRows, normalizedSearch, (row) => [
+      { text: row.itemName },
+      { text: row.displayName, weight: 0.9 },
+      { text: row.offeringName, weight: 0.9 },
+      { text: row.unitName, weight: 0.8 },
+    ])
   }, [
     isOffline,
     loadedRows,
