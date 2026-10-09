@@ -8,18 +8,28 @@ import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
+import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
+import { useColorScheme } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
-import type { FlatList as NativeFlatList, ScrollViewProps } from "react-native"
+import {
+  type FlatList as NativeFlatList,
+  Text as NativeText,
+  View as NativeView,
+  type ScrollViewProps,
+} from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { FormField } from "../form-field"
@@ -41,6 +51,7 @@ export function StockIntakeChrome(props: WorkflowModalChromeProps) {
 
 export function StockIntakeContent(props: StockIntakeProps) {
   const model = useStockIntake(props)
+  const router = useRouter()
   const market = useMobileDesign("stock-intake") === "market-day"
   const {
     StockHeader: Header,
@@ -62,6 +73,27 @@ export function StockIntakeContent(props: StockIntakeProps) {
         model.draft.direction,
       )
     : null
+  const firstBalanceId = model.rows[0]?.balanceSourceId
+  useEffect(() => {
+    if (
+      market ||
+      completed ||
+      model.locked ||
+      model.selected ||
+      model.query ||
+      !firstBalanceId
+    )
+      return
+    model.edit({ balanceId: firstBalanceId })
+  }, [
+    market,
+    completed,
+    model.locked,
+    model.selected,
+    model.query,
+    firstBalanceId,
+    model.edit,
+  ])
   useEffect(() => {
     if (model.error && !model.review)
       list.current?.scrollToOffset({ offset: 0, animated: true })
@@ -99,40 +131,26 @@ export function StockIntakeContent(props: StockIntakeProps) {
                   description="Choose an operation, select the exact balance, then review the quantity and reason."
                 />
               ) : (
-                <HeroCard
-                  label={model.selected?.productName ?? "Record stock"}
-                  title={
-                    model.selected
-                      ? `${model.selected.onHandQuantity} → ${after ?? "—"} ${model.selected.inventoryUnitName}`
-                      : "Choose a stock balance"
+                <ClassicStockHero
+                  after={after}
+                  loading={model.loading}
+                  locked={model.locked}
+                  modeKey={model.draft.mode}
+                  noBalances={
+                    !model.loading &&
+                    model.hasBalanceData &&
+                    model.totalRows === 0
                   }
-                  sub={
-                    model.selected
-                      ? `${model.selected.variantName} · ${stockCustodyLabel(model.selected, model.people)}`
-                      : "See what changes before you record it."
+                  offline={model.offline}
+                  onAddProduct={() =>
+                    router.push(
+                      "/first-product-setup-modal?kind=product" as never,
+                    )
                   }
-                  pill={{
-                    label: model.offline ? "Saved copy" : "Draft",
-                    tone: model.offline ? "offline" : "draft",
-                  }}
-                >
-                  {model.loading ? (
-                    <View className="mt-4">
-                      <SkeletonGroup accessibilityLabel="Loading stock balance">
-                        <Skeleton height={40} />
-                      </SkeletonGroup>
-                    </View>
-                  ) : null}
-                  <View className="mt-4">
-                    <ActionButton
-                      tone="cream"
-                      disabled={model.locked || model.loading}
-                      onPress={() => chooser.present()}
-                    >
-                      {model.selected ? "Change balance" : "Choose balance"}
-                    </ActionButton>
-                  </View>
-                </HeroCard>
+                  onChange={() => chooser.present()}
+                  people={model.people}
+                  selected={model.selected}
+                />
               )}
               {model.offline ? (
                 <StatusBanner
@@ -192,35 +210,85 @@ export function StockIntakeContent(props: StockIntakeProps) {
                     onFill={model.fill}
                     onUndo={model.undo}
                   />
-                  <Section title="Operation">
-                    <View
-                      accessibilityRole="radiogroup"
-                      className="flex-row flex-wrap gap-2"
-                    >
-                      {STOCK_MODES.map((mode) => (
-                        <Choice
-                          key={mode.key}
-                          label={mode.label}
-                          disabled={model.locked}
-                          selected={model.draft.mode === mode.key}
-                          onPress={() => model.edit({ mode: mode.key })}
-                        />
-                      ))}
+                  {!market ? (
+                    <View className="gap-2">
+                      <View
+                        accessibilityLabel="Operation"
+                        accessibilityRole="radiogroup"
+                        className="flex-row gap-0.5 rounded-[13px] bg-muted p-[3px]"
+                      >
+                        {STOCK_MODES.map((mode) => {
+                          const on = model.draft.mode === mode.key
+                          return (
+                            <Pressable
+                              accessibilityRole="radio"
+                              accessibilityState={{
+                                checked: on,
+                                disabled: model.locked,
+                              }}
+                              className={cn(
+                                "min-h-[38px] flex-1 items-center justify-center rounded-[10px] px-1",
+                                on && "bg-card shadow-sm",
+                              )}
+                              disabled={model.locked}
+                              haptic="selection"
+                              key={mode.key}
+                              onPress={() => model.edit({ mode: mode.key })}
+                            >
+                              <Text
+                                className={cn(
+                                  "text-[13px] font-extrabold",
+                                  on
+                                    ? "text-foreground"
+                                    : "text-muted-foreground",
+                                )}
+                                numberOfLines={1}
+                              >
+                                {mode.label}
+                              </Text>
+                            </Pressable>
+                          )
+                        })}
+                      </View>
+                      <Text className="text-center text-xs text-muted-foreground">
+                        {
+                          STOCK_MODES.find(
+                            (mode) => mode.key === model.draft.mode,
+                          )?.description
+                        }
+                      </Text>
                     </View>
-                    <Text
-                      className={
-                        market
-                          ? "text-sm text-market-muted-ink"
-                          : "text-sm text-muted-foreground"
-                      }
-                    >
-                      {
-                        STOCK_MODES.find(
-                          (mode) => mode.key === model.draft.mode,
-                        )?.description
-                      }
-                    </Text>
-                  </Section>
+                  ) : (
+                    <Section title="Operation">
+                      <View
+                        accessibilityRole="radiogroup"
+                        className="flex-row flex-wrap gap-2"
+                      >
+                        {STOCK_MODES.map((mode) => (
+                          <Choice
+                            key={mode.key}
+                            label={mode.label}
+                            disabled={model.locked}
+                            selected={model.draft.mode === mode.key}
+                            onPress={() => model.edit({ mode: mode.key })}
+                          />
+                        ))}
+                      </View>
+                      <Text
+                        className={
+                          market
+                            ? "text-sm text-market-muted-ink"
+                            : "text-sm text-muted-foreground"
+                        }
+                      >
+                        {
+                          STOCK_MODES.find(
+                            (mode) => mode.key === model.draft.mode,
+                          )?.description
+                        }
+                      </Text>
+                    </Section>
+                  )}
                   {market ? (
                     <Section
                       title="Select stock balance"
@@ -262,7 +330,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
           )}
           ListEmptyComponent={
             !completed &&
-            (market || !model.selected) &&
+            market &&
             model.canManage &&
             !model.scopeChanged &&
             !model.loadError ? (
@@ -383,5 +451,178 @@ export function StockIntakeContent(props: StockIntakeProps) {
         <StockIntakeReview model={model} market={market} />
       </View>
     </VariableContextProvider>
+  )
+}
+
+/**
+ * Green Till Balance Hero: the chosen balance with a live "50 → 60 bag" line,
+ * or the empty state when the Store has no stock-tracked balances yet.
+ */
+function ClassicStockHero({
+  after,
+  loading,
+  locked,
+  modeKey,
+  noBalances,
+  offline,
+  onAddProduct,
+  onChange,
+  people,
+  selected,
+}: {
+  after: string | null
+  loading: boolean
+  locked: boolean
+  modeKey: string
+  noBalances: boolean
+  offline: boolean
+  onAddProduct: () => void
+  onChange: () => void
+  people: Parameters<typeof stockCustodyLabel>[1]
+  selected: StockBalance | null | undefined
+}) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  if (noBalances)
+    return (
+      <HeroCard
+        label="No balances yet"
+        pill={{
+          label: offline ? "Saved copy" : "Online",
+          tone: offline ? "offline" : "synced",
+        }}
+        title="Nothing to record yet"
+        sub="Add a product that tracks stock. Its balance will show here with what you hold and what is available."
+        cta={{ icon: "Plus", label: "Add a product", onPress: onAddProduct }}
+      />
+    )
+  if (!selected)
+    return (
+      <HeroCard
+        label="Record stock"
+        pill={{
+          label: offline ? "Saved copy" : "Draft",
+          tone: offline ? "offline" : "draft",
+        }}
+        title={loading ? "Finding balances…" : "Choose a stock balance"}
+        sub="See what changes before you record it."
+        cta={
+          loading
+            ? undefined
+            : { icon: "Search", label: "Choose balance", onPress: onChange }
+        }
+      >
+        {loading ? (
+          <View className="mt-4">
+            <SkeletonGroup accessibilityLabel="Loading stock balance">
+              <Skeleton height={40} />
+            </SkeletonGroup>
+          </View>
+        ) : null}
+      </HeroCard>
+    )
+  const verb =
+    STOCK_MODES.find((mode) => mode.key === modeKey)?.label ?? "Record"
+  return (
+    <HeroCard
+      label={
+        selected.variantName && selected.variantName !== selected.productName
+          ? `${selected.productName} · ${selected.variantName}`
+          : selected.productName
+      }
+      labelAction={
+        <Pressable
+          accessibilityLabel="Change stock balance"
+          accessibilityRole="button"
+          className="rounded-full active:opacity-80"
+          disabled={locked}
+          haptic
+          onPress={onChange}
+          transition
+        >
+          <NativeView
+            style={{
+              alignItems: "center",
+              backgroundColor: palette.heroLine,
+              borderRadius: 999,
+              flexDirection: "row",
+              gap: 6,
+              minHeight: 36,
+              paddingHorizontal: 12,
+            }}
+          >
+            <Icon
+              className="size-[14px]"
+              color={palette.heroForeground}
+              name="Search"
+            />
+            <NativeText
+              style={{
+                color: palette.heroForeground,
+                fontSize: 12.5,
+                fontWeight: "800",
+              }}
+            >
+              Change
+            </NativeText>
+          </NativeView>
+        </Pressable>
+      }
+      amountContent={
+        <NativeView
+          accessibilityLabel={`${selected.onHandQuantity} to ${after ?? "not set"} ${selected.inventoryUnitName}`}
+          style={{
+            alignItems: "baseline",
+            flexDirection: "row",
+            gap: 10,
+            marginTop: 8,
+          }}
+        >
+          <NativeText
+            style={{
+              color: palette.heroMuted,
+              fontSize: 24,
+              fontVariant: ["tabular-nums"],
+              fontWeight: "800",
+            }}
+          >
+            {selected.onHandQuantity}
+          </NativeText>
+          <NativeView style={{ alignSelf: "center" }}>
+            <Icon
+              className="size-[20px]"
+              color={palette.gold}
+              name="ArrowRight"
+            />
+          </NativeView>
+          <NativeText
+            style={{
+              color: palette.heroForeground,
+              fontSize: 36,
+              fontVariant: ["tabular-nums"],
+              fontWeight: "800",
+              letterSpacing: -1.2,
+            }}
+          >
+            {after ?? "—"}
+          </NativeText>
+          <NativeText
+            style={{
+              color: palette.heroMuted,
+              fontSize: 14,
+              fontWeight: "700",
+            }}
+          >
+            {selected.inventoryUnitName}
+          </NativeText>
+        </NativeView>
+      }
+      sub={`${verb} · ${stockCustodyLabel(selected, people)}`}
+      stats={[
+        { label: "On hand", value: String(selected.onHandQuantity) },
+        { label: "Available", value: String(selected.availableQuantity) },
+        { label: "After", value: after ?? "—" },
+      ]}
+    />
   )
 }

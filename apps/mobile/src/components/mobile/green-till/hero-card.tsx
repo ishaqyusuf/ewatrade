@@ -28,6 +28,8 @@ type HeroCardProps = {
   pill?: HeroPill
   /** The one big answer, such as ₦184,500. */
   amount?: string
+  /** Custom headline content in the amount slot (e.g. "50 → 60 bag"). */
+  amountContent?: ReactNode
   /** A sentence-style headline used instead of an amount (setup states). */
   title?: string
   /** Muted line under the amount or title. */
@@ -42,12 +44,15 @@ type HeroCardProps = {
   children?: ReactNode
   /** Rendered above the label row, e.g. a customer's avatar and name. */
   top?: ReactNode
+  /** A small control at the end of the label row (in place of the pill). */
+  labelAction?: ReactNode
   testID?: string
 }
 
 /** The Green Till hero: gradient surface, brand watermark, one answer. */
 export function HeroCard({
   amount,
+  amountContent,
   children,
   cta,
   delta,
@@ -61,6 +66,7 @@ export function HeroCard({
   testID,
   title,
   top,
+  labelAction,
 }: HeroCardProps) {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
@@ -108,12 +114,13 @@ export function HeroCard({
       </View>
 
       {top ? <View style={styles.top}>{top}</View> : null}
-      {label || pill ? (
+      {label || pill || labelAction ? (
         <View style={styles.row}>
           <NativeText style={[styles.label, { color: muted }]}>
             {label}
           </NativeText>
-          {pill ? <HeroSyncPill palette={palette} pill={pill} /> : null}
+          {labelAction ??
+            (pill ? <HeroSyncPill palette={palette} pill={pill} /> : null)}
         </View>
       ) : null}
       {done ? (
@@ -131,6 +138,7 @@ export function HeroCard({
         </View>
       ) : null}
 
+      {amountContent ?? null}
       {amount ? (
         <NativeText
           accessibilityRole="header"

@@ -25,7 +25,7 @@ export function StockIntakeFields({
   const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   return (
     <View className="gap-6 pt-6">
-      {selected ? (
+      {selected && market ? (
         <Section
           title="Selected balance"
           description={`${selected.productName} · ${selected.variantName}`}
@@ -169,12 +169,27 @@ export function StockIntakeFields({
         }
       >
         {!market ? (
-          <ExactQuantityStepper
-            label={draft.mode === "count" ? "Observed quantity" : "Quantity"}
-            value={draft.quantity}
-            onChange={(quantity) => model.edit({ quantity })}
-            disabled={model.locked || !selected}
-          />
+          <View className="gap-2 rounded-[20px] bg-card p-4 shadow-sm">
+            <ExactQuantityStepper
+              label={
+                draft.mode === "count"
+                  ? "Counted on hand"
+                  : draft.mode === "receipt"
+                    ? "Quantity received"
+                    : draft.mode === "adjustment"
+                      ? "Quantity to adjust"
+                      : "Quantity to move"
+              }
+              value={draft.quantity}
+              onChange={(quantity) => model.edit({ quantity })}
+              disabled={model.locked || !selected}
+            />
+            {selected ? (
+              <Text className="text-center text-xs text-muted-foreground">
+                In {selected.inventoryUnitName}
+              </Text>
+            ) : null}
+          </View>
         ) : (
           <FormField
             label={draft.mode === "count" ? "Observed quantity" : "Quantity"}
