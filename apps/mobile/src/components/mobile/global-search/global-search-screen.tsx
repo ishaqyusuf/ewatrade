@@ -1,8 +1,14 @@
 import {
+  ClassicSearchActionChips,
   ClassicSearchActionRow,
   ClassicSearchFrame,
   ClassicSearchHeader,
+  ClassicSearchHint,
+  ClassicSearchNoResults,
+  ClassicSearchOffline,
+  ClassicSearchResults,
   ClassicSearchRow,
+  ClassicSearchScopes,
   ClassicSearchSection,
 } from "@/components/mobile/appearances/classic/global-search-screen"
 import {
@@ -31,7 +37,6 @@ import { useEffect, useMemo, useState } from "react"
 import { Keyboard } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { AssistantEntry } from "../assistant/assistant-entry"
-import { CommerceFilterChip } from "../commerce"
 import { QuickActionRow } from "../green-till/kit"
 import { availableSearchActions } from "./search-display"
 import {
@@ -39,6 +44,7 @@ import {
   type SearchAction,
   type SearchResult,
   resultGroupLabel,
+  resultScopeLabel,
 } from "./search-presentation"
 
 export function GlobalSearchScreen() {
@@ -86,22 +92,24 @@ export function GlobalSearchScreen() {
       },
     ),
   )
-  const actions = useMemo<SearchAction[]>(
+  const actions = useMemo<(SearchAction & { short: string })[]>(
     () => [
       {
         detail: "Start an order and select sellable items.",
         icon: "PlusCircle",
         id: "create-order",
         label: "Create order",
+        short: "New order",
         onPress: () => router.push("/create-sale-modal"),
       },
-      ...(canManage && !isOffline
+      ...(canManage
         ? [
             {
               detail: "Add a stock-tracked catalog item.",
               icon: "Warehouse" as const,
               id: "create-product",
               label: "Create product",
+              short: "Product",
               onPress: () =>
                 router.push("/first-product-setup-modal?kind=product"),
             },
@@ -110,6 +118,7 @@ export function GlobalSearchScreen() {
               icon: "Wrench" as const,
               id: "create-service",
               label: "Create service",
+              short: "Service",
               onPress: () =>
                 router.push("/first-product-setup-modal?kind=service"),
             },
@@ -120,6 +129,7 @@ export function GlobalSearchScreen() {
         icon: "UserPlus",
         id: "create-customer",
         label: "Create customer",
+        short: "Customer",
         onPress: () =>
           router.push({
             params: { create: "true" },
@@ -133,6 +143,7 @@ export function GlobalSearchScreen() {
               icon: "Users" as const,
               id: "invite-staff",
               label: "Invite staff",
+              short: "Invite staff",
               onPress: () => router.push("/staff-invite-modal"),
             },
             {
@@ -140,12 +151,13 @@ export function GlobalSearchScreen() {
               icon: "CreditCard" as const,
               id: "payments-received",
               label: "Payments received",
+              short: "Payments",
               onPress: () => router.push("/payments-received-modal"),
             },
           ]
         : []),
     ],
-    [canManage, isOffline, router],
+    [canManage, router],
   )
   const filteredActions = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -207,6 +219,32 @@ export function GlobalSearchScreen() {
     router.push("/staff-invite-modal")
   }
 
+  function closeSearch() {
+    Keyboard.dismiss()
+    if (router.canGoBack()) router.back()
+    else router.replace("/dashboard")
+  }
+  // Classic keeps every tile; the ones that need a connection dim offline.
+  const classicActions = actions
+    .filter((action) =>
+      normalizedQuery
+        ? `${action.label} ${action.detail}`
+            .toLowerCase()
+            .includes(normalizedQuery.toLowerCase())
+        : true,
+    )
+    .map((action) => ({
+      disabled: isOffline && action.id !== "create-order",
+      gold: action.id === "create-order",
+      icon: action.icon,
+      id: action.id,
+      label: action.short,
+      onPress: () => {
+        Keyboard.dismiss()
+        action.onPress()
+      },
+    }))
+
   const noMatches =
     canSearch &&
     querySettled &&
@@ -235,148 +273,225 @@ export function GlobalSearchScreen() {
           scrollHide.onScroll(event)
         }}
       >
-        <Header
-          onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}
-          onClose={() => {
-            Keyboard.dismiss()
-            if (router.canGoBack()) router.back()
-            else router.replace("/dashboard")
-          }}
-        />
-        {isOffline ? (
-          <StatusBanner
-            icon="Wind"
-            message="Global search and Product or Service creation are unavailable until you reconnect."
-            title="Search unavailable offline"
-            tone="warning"
-          />
-        ) : null}
-        {search.isError && canSearch && querySettled ? (
-          <StatusBanner
-            actionLabel="Try again"
-            icon="AlertCircle"
-            message={search.error.message}
-            onActionPress={() => {
-              if (canSearch && querySettled) void search.refetch()
-            }}
-            tone="destructive"
-          />
-        ) : null}
-        {!market && filteredActions.length > 0 && !normalizedQuery ? (
-          <View>
-            <QuickActionRow
-              actions={filteredActions
-                .slice(0, 3)
-                .map((a) => ({ ...a, gold: a.id === "create-order" }))}
+        {market ? (
+          <>
+            <Header
+              onLayout={(event) =>
+                setHeaderHeight(event.nativeEvent.layout.height)
+              }
+              onClose={closeSearch}
             />
-            <QuickActionRow
-              actions={filteredActions
-                .slice(3)
-                .map((a) => ({ ...a, gold: false }))}
-            />
-          </View>
-        ) : filteredActions.length > 0 ? (
-          <Section title="Quick actions">
-            {filteredActions.map((action) => (
-              <ActionRow
-                key={action.id}
-                action={{
-                  ...action,
-                  onPress: () => {
-                    Keyboard.dismiss()
-                    action.onPress()
-                  },
+            {isOffline ? (
+              <StatusBanner
+                icon="Wind"
+                message="Global search and Product or Service creation are unavailable until you reconnect."
+                title="Search unavailable offline"
+                tone="warning"
+              />
+            ) : null}
+            {search.isError && canSearch && querySettled ? (
+              <StatusBanner
+                actionLabel="Try again"
+                icon="AlertCircle"
+                message={search.error.message}
+                onActionPress={() => {
+                  if (canSearch && querySettled) void search.refetch()
                 }}
+                tone="destructive"
               />
-            ))}
-          </Section>
-        ) : null}
-        {!market && searching ? (
-          <View className="gap-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </View>
-        ) : searching ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            className={
-              market
-                ? "py-2 text-sm font-semibold text-market-muted-ink"
-                : "py-2 text-sm font-semibold text-muted-foreground"
-            }
-          >
-            Searching workspace…
-          </Text>
-        ) : null}
-        {!isOffline && normalizedQuery.length < 2 ? (
-          <Text
-            className={
-              market
-                ? "text-sm text-market-muted-ink"
-                : "text-sm text-muted-foreground"
-            }
-          >
-            Type at least two characters to find workspace records.
-          </Text>
-        ) : null}
-        {!market && groupedResults.length ? (
-          <View className="gap-2">
-            <Text className="text-xs text-muted-foreground">
-              Top 6 matches · filters apply to these results
-            </Text>
-            <View className="flex-row flex-wrap gap-2">
-              <CommerceFilterChip
-                active={resultType === "all"}
-                label="All"
-                onPress={() => setResultType("all")}
-              />
-              {groupedResults.map((group) => (
-                <CommerceFilterChip
-                  key={group.type}
-                  active={resultType === group.type}
-                  label={resultGroupLabel(group.type)}
-                  onPress={() => setResultType(group.type)}
-                />
-              ))}
-            </View>
-          </View>
-        ) : null}
-        {groupedResults
-          .filter(
-            (group) =>
-              market || resultType === "all" || group.type === resultType,
-          )
-          .map((group) => (
-            <Section key={group.type} title={resultGroupLabel(group.type)}>
-              {group.items.map((item) =>
-                !market ? (
-                  <ClassicSearchRow
-                    key={item.id}
-                    item={item}
-                    query={normalizedQuery}
-                    sell={isSalesRep && item.type === "catalog_item"}
-                    onPress={() => openResult(item)}
+            ) : null}
+            {filteredActions.length > 0 ? (
+              <Section title="Quick actions">
+                {filteredActions.map((action) => (
+                  <ActionRow
+                    key={action.id}
+                    action={{
+                      ...action,
+                      onPress: () => {
+                        Keyboard.dismiss()
+                        action.onPress()
+                      },
+                    }}
                   />
-                ) : (
+                ))}
+              </Section>
+            ) : null}
+            {searching ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                className={
+                  market
+                    ? "py-2 text-sm font-semibold text-market-muted-ink"
+                    : "py-2 text-sm font-semibold text-muted-foreground"
+                }
+              >
+                Searching workspace…
+              </Text>
+            ) : null}
+            {!isOffline && normalizedQuery.length < 2 ? (
+              <Text
+                className={
+                  market
+                    ? "text-sm text-market-muted-ink"
+                    : "text-sm text-muted-foreground"
+                }
+              >
+                Type at least two characters to find workspace records.
+              </Text>
+            ) : null}
+            {groupedResults.map((group) => (
+              <Section key={group.type} title={resultGroupLabel(group.type)}>
+                {group.items.map((item) => (
                   <ResultRow
                     item={item}
                     key={item.id}
                     onPress={() => openResult(item)}
                   />
-                ),
-              )}
-            </Section>
-          ))}
-        {noMatches ? (
-          <EmptyState
-            icon="Search"
-            message="Try an order number, customer contact, product, service, or team member."
-            title="No results"
-          />
-        ) : null}
-        {normalizedQuery.length >= 2 ? (
-          <AssistantEntry query={normalizedQuery} />
-        ) : null}
+                ))}
+              </Section>
+            ))}
+            {noMatches ? (
+              <EmptyState
+                icon="Search"
+                message="Try an order number, customer contact, product, service, or team member."
+                title="No results"
+              />
+            ) : null}
+            {normalizedQuery.length >= 2 ? (
+              <AssistantEntry query={normalizedQuery} />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <ClassicSearchHeader
+              salesRep={isSalesRep}
+              onLayout={(event) =>
+                setHeaderHeight(event.nativeEvent.layout.height)
+              }
+              onClose={closeSearch}
+            />
+            {isOffline ? <ClassicSearchOffline /> : null}
+            {search.isError && canSearch && querySettled ? (
+              <StatusBanner
+                actionLabel="Try again"
+                icon="AlertCircle"
+                message={search.error.message}
+                onActionPress={() => {
+                  if (canSearch && querySettled) void search.refetch()
+                }}
+                tone="destructive"
+              />
+            ) : null}
+            {isOffline || normalizedQuery.length < 2 ? (
+              <>
+                <View>
+                  <Text
+                    accessibilityRole="header"
+                    className="text-base font-extrabold tracking-tight text-foreground"
+                  >
+                    Quick actions
+                  </Text>
+                  {[classicActions.slice(0, 3), classicActions.slice(3)].map(
+                    (row) =>
+                      row.length ? (
+                        <QuickActionRow key={row[0].id} actions={row} />
+                      ) : null,
+                  )}
+                </View>
+                <ClassicSearchHint icon={isOffline ? "Lock" : "Search"}>
+                  {isOffline
+                    ? "Other actions need a connection."
+                    : `Type 2 or more letters to search orders, customers, items${isSalesRep ? " and service work" : ", service work and staff"}.`}
+                </ClassicSearchHint>
+              </>
+            ) : (
+              <>
+                {searching && !groupedResults.length ? (
+                  <View accessibilityLabel="Searching" className="gap-3">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </View>
+                ) : null}
+                {groupedResults.length > 1 ? (
+                  <ClassicSearchScopes
+                    active={resultType}
+                    groups={groupedResults.map((group) => ({
+                      count: group.items.length,
+                      label: resultScopeLabel(group.type),
+                      type: group.type,
+                    }))}
+                    onChange={setResultType}
+                  />
+                ) : null}
+                {groupedResults
+                  .filter(
+                    (group) =>
+                      resultType === "all" || group.type === resultType,
+                  )
+                  .map((group) => (
+                    <ClassicSearchSection
+                      key={group.type}
+                      count={group.items.length}
+                      title={resultGroupLabel(group.type)}
+                    >
+                      <ClassicSearchResults>
+                        {group.items.map((item) => (
+                          <ClassicSearchRow
+                            key={item.id}
+                            item={item}
+                            query={normalizedQuery}
+                            sell={isSalesRep && item.type === "catalog_item"}
+                            onPress={() => openResult(item)}
+                          />
+                        ))}
+                      </ClassicSearchResults>
+                    </ClassicSearchSection>
+                  ))}
+                {filteredActions.length ? (
+                  <ClassicSearchSection title="Actions">
+                    <ClassicSearchActionChips
+                      actions={filteredActions.map((action) => ({
+                        ...action,
+                        gold: action.id === "create-order",
+                        onPress: () => {
+                          Keyboard.dismiss()
+                          action.onPress()
+                        },
+                      }))}
+                    />
+                  </ClassicSearchSection>
+                ) : null}
+                {noMatches && !filteredActions.length ? (
+                  <ClassicSearchNoResults
+                    query={normalizedQuery}
+                    salesRep={isSalesRep}
+                    onNewOrder={() => {
+                      Keyboard.dismiss()
+                      router.push("/create-sale-modal")
+                    }}
+                    onAddCustomer={() => {
+                      Keyboard.dismiss()
+                      router.push({
+                        params: { create: "true" },
+                        pathname: "/customer-book-modal",
+                      })
+                    }}
+                  />
+                ) : noMatches ? (
+                  <ClassicSearchHint icon="Search">
+                    No records match. Showing actions only.
+                  </ClassicSearchHint>
+                ) : null}
+                {groupedResults.some((group) => group.items.length >= 6) ? (
+                  <Text className="text-center text-xs text-muted-foreground">
+                    Showing the top 6 of each type. Keep typing to narrow.
+                  </Text>
+                ) : null}
+                <AssistantEntry query={normalizedQuery} />
+              </>
+            )}
+          </>
+        )}
       </Frame>
       <BottomSearchFooter
         accessibilityLabel="Search the workspace"
@@ -390,7 +505,15 @@ export function GlobalSearchScreen() {
           setResultType("all")
         }}
         showDisabledOfflineSearch={!market}
-        placeholder={isOffline ? "Reconnect to search" : "Search anything..."}
+        placeholder={
+          market
+            ? isOffline
+              ? "Reconnect to search"
+              : "Search anything..."
+            : isOffline
+              ? "Search needs a connection"
+              : "Search anything"
+        }
         totalCount={search.data?.length ?? 0}
         value={query}
         variant={market ? "market-day" : "default"}

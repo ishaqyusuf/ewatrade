@@ -1,5 +1,5 @@
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { IconKeys } from "@/components/ui/icon"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { ReactNode } from "react"
 import type {
   LayoutChangeEvent,
@@ -35,7 +35,8 @@ export const SEARCH_GROUP_ORDER: SearchResult["type"][] = [
 export function resultGroupLabel(type: SearchResult["type"]) {
   if (type === "catalog_item") return "Products & services"
   if (type === "service_job") return "Service work"
-  return type.charAt(0).toUpperCase() + type.slice(1) + "s"
+  if (type === "staff") return "Staff"
+  return `${type.charAt(0).toUpperCase()}${type.slice(1)}s`
 }
 export function searchResultIcon(type: SearchResult["type"]): IconKeys {
   if (type === "order") return "ReceiptText"
@@ -43,4 +44,9 @@ export function searchResultIcon(type: SearchResult["type"]): IconKeys {
   if (type === "service_job") return "Wrench"
   if (type === "staff") return "Users"
   return "Warehouse"
+}
+/** Short scope chip label, e.g. "Items" for Products & services. */
+export function resultScopeLabel(type: SearchResult["type"]) {
+  if (type === "catalog_item") return "Items"
+  return resultGroupLabel(type)
 }
