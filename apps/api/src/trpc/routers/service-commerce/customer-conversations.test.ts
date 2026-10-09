@@ -51,6 +51,7 @@ describe("mobile customer conversation transport", () => {
       await expect(client.accountAgeStatus()).resolves.toEqual({
         ageBand,
         eligible: ageBand === "ADULT",
+        freeFormChatEligible: ageBand === "ADULT",
       })
       expect(reads).toEqual([
         { select: { ageBand: true }, where: { id: "qa-admin" } },
@@ -88,6 +89,7 @@ describe("mobile customer conversation transport", () => {
     await expect(client.accountAgeStatus()).resolves.toEqual({
       ageBand: "UNDECLARED",
       eligible: false,
+      freeFormChatEligible: false,
     })
     await expect(
       client.accountDeclareAgeBand({ ageBand: "ADULT" }),
@@ -95,6 +97,7 @@ describe("mobile customer conversation transport", () => {
     await expect(client.accountAgeStatus()).resolves.toEqual({
       ageBand: "ADULT",
       eligible: true,
+      freeFormChatEligible: true,
     })
   })
 

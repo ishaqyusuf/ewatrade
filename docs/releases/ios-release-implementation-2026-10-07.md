@@ -231,3 +231,87 @@ publication authority for ishaqyusuf/ewatrade and draftPR57. The action never ra
 remote head remains9423fcc3. Concrete approval question is pending. Work is saved
 locally; Production processing/configuration remains disabled. Preparation3/6;
 release0/4, steps1–2in progress and3–4pending.
+
+
+## Approved 18+ chat implementation and native checkpoint — 9 October 2026
+
+The owner approved free-form Store chat for signed-in accounts declaring age 18+
+while keeping existing account/catalog access and reporting/support. Shared source
+now gates customer text, staff sender and recipient, and WhatsApp message ingress.
+Age/account authority is checked before moderation and again in the write
+transaction. Guests, undeclared accounts and teen accounts cannot send free-form
+chat; new direct WhatsApp chat bindings and candidate continuation are refused.
+Historical reads, reporting/blocking and permitted structured intake remain.
+Guest voice upload/append is refused; this does not certify image/document safety
+or remove all free-text fields from structured service requests.
+
+The age-status API adds `freeFormChatEligible`; its existing `eligible` field still
+covers the 13+ account/history path. Mobile composer copy uses the shared 18+
+rule and removes the teen click-through acknowledgment. Age range is self-declared,
+not identity verification. The saved age correction route remains Support.
+Storefront copy, published disclosures, media/provider eligibility and native
+acceptance remain open. The Production release guard still fails closed.
+
+Validation:225 chat tests pass,717 assertions across37 files; scoped generated-client
+DB TypeScript and Biome on28 changed source files pass. EAS/artifact guards:64 tests
+pass,325 assertions. Mobile focused TypeScript is being checked separately. These
+are source checks, not native acceptance or live Production activation.
+
+Preview Simulator build80a51723-a13f-47f9-ab93-1700b1421517 finished from
+commit962efaccee318fe554283300ad83578bf07050e1. Its embedded fingerprint matches
+runtime418fb2c8cb8a17496545a61dc4976c2eaf69d04c. The exact downloaded artifact was
+installed and launched on the EwaTrade QA iPhone15 Pro simulator, reaching sign-in
+after Continue without a QA workspace. EAS reports build2; the actual bundle says
+CFBundleVersion1. This earlier binary does not contain the approved18+ changes.
+No authenticated native flow, actual EAS Update, device/TestFlight build, screenshot
+set or review submission is accepted. The20 bundled privacy manifests are an
+inventory, not a final aggregated privacy report.
+
+Preparation remains3/6(50%); release acceptance0/4. Steps1–2 are in progress,
+steps3–4 remain pending. Deletion domain dispositions, delivered result emails,
+ordinary/staff/sole-owner/Apple-linked acceptance, moderation provider/territory
+facts, matching published notices, reviewer access and final native QA are open.
+GitHub publication remains pending explicit destination approval after automatic
+approval review rejected push/PR edit; no rejected action ran.
+
+
+### Storefront and mobile transport validation follow-up
+
+Storefront now applies the same shared18+ account predicate and removes the teen
+click-through acknowledgment; Guests receive the same readable-history/report/
+Support explanation. Existing shared shadcn Button is reused. Midday OAuth-consent
+analogue and repository API boundary were inspected; no route or DB layer was
+moved. Six existing Storefront age/report/block checks pass with19 assertions under
+the guarded local profile. Initial bare test run lacked the database environment;
+this was corrected using the existing root profile loader, with no database writes.
+
+Focused mobile TypeScript exposed an inherited tRPC logger runtime defect:
+loggerLink passes direct operation fields rather than opts.op. A small guard now
+uses the actual path and fails closed for missing paths; auth.* stays excluded.
+Four real transport/privacy checks pass with10 assertions. The initial focused
+TypeScript config omitted the existing React Query ambient declaration and also
+found the inherited catalog worker DOM/Node URL type conflict. After including
+ambient types and fixing the logger, the bounded180-second recheck timed out.
+No mobile typecheck pass or native UI acceptance is claimed. Storefront focused
+TypeScript is checked separately. Preparation3/6; release acceptance0/4.
+
+
+### Resume validation — 9 October 2026
+
+This supersedes the earlier mobile/Storefront typecheck limitations above.
+Scoped mobile TypeScript now passes with the existing ambient declarations included.
+Scoped Storefront TypeScript passes. The inherited server photo worker URL conflict
+was repaired by using node:url URL types and returning pathToFileURL directly at
+both job boundaries. Five existing photo-processing/review tests pass with27
+assertions, including the owned HEIC fixture. No moderation decision or storage
+permission was changed. The mobile authentication logger fix remains covered by
+4 transport checks/10 assertions. The225 chat checks/717 assertions,64 EAS/artifact
+checks/325 assertions and6 Storefront age/report/block checks/19 assertions remain
+valid; the type-only photo boundary change requires no repeated unrelated suites.
+
+18+ server, mobile and Storefront gates are implemented locally. The exact legal
+amendment remains a draft; no approved immutable legal version was edited or
+Production flag enabled. Native UI, adult/teen/unknown/Guest flows and actual OTA
+receipt/recovery still require acceptance. No stage receives release credit from
+these source checks. Preparation3/6(50%); release acceptance0/4, steps1–2 in progress
+and3–4 pending. GitHub push/PR edit still needs destination approval.

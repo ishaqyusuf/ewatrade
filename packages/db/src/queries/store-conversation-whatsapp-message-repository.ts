@@ -7,6 +7,10 @@ import {
   StoreConversationModerationState,
   type StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
+import {
+  assertStoreConversationChatRecipient,
+  rejectGuestStoreConversationFreeFormChat,
+} from "./store-conversation-chat-authority"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import {
   lockStoreConversation,
@@ -40,6 +44,9 @@ export async function appendStoreConversationWhatsAppCustomerTextInTransaction(
     text: string
   },
 ) {
+  if (input.auditReasonCode !== "whatsapp_bridge_account_message")
+    rejectGuestStoreConversationFreeFormChat()
+  await assertStoreConversationChatRecipient(tx, input.route)
   await lockStoreConversation(tx, input.route)
   const clientOperationId = `wa:${input.providerEventDigest}`
   const payloadHash = storeConversationPayloadHash({

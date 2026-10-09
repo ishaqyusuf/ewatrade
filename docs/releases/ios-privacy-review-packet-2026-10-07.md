@@ -108,3 +108,18 @@ primary workspace, using only synthetic records. Check exact device-size/image
 requirements in the store console at upload time; no screenshots have been
 fabricated or uploaded here. Privacy/age/content-rights answers, final reviewer
 credentials, TestFlight upload and review submission remain pending.
+
+
+## 9 October audience amendment pending publication
+
+Owner approved18+ signed-in, self-declared adult accounts for free-form Store chat;
+13+ account/catalog eligibility remains. Guest/teen/unknown free-form chat refuses.
+This is a product restriction, not proof of identity, a selected store age rating,
+regional consent compliance or a completed safety review. Matching legal amendments
+are staged in the chat disclosure draft; current effective legal content is unchanged.
+
+Structured requests still accept some text/media, so OpenAI retention and
+age/geographic eligibility must be assessed for every actual provider input before
+activation. No claim of org-specific Zero Data Retention, global eligibility or
+clinical/media clearance is made. Native moderation/report/block, result emails,
+reviewer access and actual OTA remain unaccepted. Preparation3/6; release0/4.

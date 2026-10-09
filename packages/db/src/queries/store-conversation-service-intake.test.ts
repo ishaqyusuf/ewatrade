@@ -35,9 +35,10 @@ describe("Store Conversation Service intake safety", () => {
     },
   )
 
-  it("rejects draft Terms before writing a Store-visible request", async () => {
+  it("rejects a missing current Terms acceptance before writing a Store-visible request", async () => {
     let writes = 0
     const tx = {
+      storeConversationGuestLegalAcceptance: { findUnique: async () => null },
       storeConversationGuestCredential: {
         findFirst: async () => ({
           guestIdentity: { id: "guest_1", status: "ACTIVE" },

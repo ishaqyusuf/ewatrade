@@ -470,7 +470,7 @@ function CustomerConversationDetailLiveScreen({
             }
             disabledMessage={
               (!ageAllowed
-                ? "Choose an eligible age range before posting."
+                ? "Free-form chat requires a signed-in account declaring age 18 or older."
                 : null) ??
               ((accountAccess ? !accountTermsAllowed : !guestTermsAllowed)
                 ? "Accept the current Terms before posting."

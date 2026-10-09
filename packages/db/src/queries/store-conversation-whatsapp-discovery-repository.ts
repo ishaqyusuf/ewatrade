@@ -1,3 +1,4 @@
+import { STORE_CONVERSATION_CHAT_SCOPE_MESSAGE } from "@ewatrade/service-commerce"
 import type {
   StoreConversationWhatsAppCandidateAction as SharedCandidateAction,
   StoreConversationWhatsAppObservationProvenance as SharedObservationProvenance,
@@ -820,6 +821,13 @@ export async function selectStoreConversationWhatsAppCandidateAction(
       )
     }
 
+    if (current.action === StoreConversationWhatsAppCandidateAction.CONTINUE) {
+      throw new StoreConversationWhatsAppDiscoveryError(
+        "NOT_READY",
+        STORE_CONVERSATION_CHAT_SCOPE_MESSAGE,
+      )
+    }
+
     if (current.action === StoreConversationWhatsAppCandidateAction.NOT_MINE) {
       await tx.storeConversationWhatsAppCandidateSuppression.upsert({
         create: {
@@ -1144,211 +1152,11 @@ export async function bindStoreConversationWhatsAppDirectSession(
         replayed: true,
       }
     }
-    await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-      SELECT "id"
-      FROM "WhatsAppInboundEvent"
-      WHERE "id" = ${input.inboundEventId}
-      FOR UPDATE
-    `)
-    const event = await tx.whatsAppInboundEvent.findUnique({
-      select: {
-        connectionId: true,
-        id: true,
-        status: true,
-        storeId: true,
-        tenantId: true,
-      },
-      where: { id: input.inboundEventId },
-    })
-    if (
-      !event ||
-      event.connectionId !== input.connectionId ||
-      event.storeId !== input.storeId ||
-      event.tenantId !== input.tenantId
-    ) {
-      throw new StoreConversationWhatsAppDiscoveryError(
-        "FORBIDDEN",
-        "This WhatsApp request is unavailable.",
-      )
-    }
-    if (event.status !== WhatsAppInboundEventStatus.PROCESSING) {
-      throw new StoreConversationWhatsAppDiscoveryError(
-        "CONFLICT",
-        "This WhatsApp request is not ready to be connected.",
-      )
-    }
-    const connection = await resolveCurrentWhatsAppBinding(tx, input)
-    if (connection.id !== input.connectionId) {
-      throw new StoreConversationWhatsAppDiscoveryError(
-        "NOT_READY",
-        "WhatsApp routing changed. Start again from the Store link.",
-      )
-    }
-    const currentRevision =
-      await resolveCurrentStoreConversationRequestRevision(tx, {
-        kind: input.sourceKind,
-        sourceId: input.sourceId,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      })
-    if (
-      input.sourceRevision !== undefined &&
-      currentRevision !== input.sourceRevision
-    ) {
-      throw new StoreConversationWhatsAppDiscoveryError(
-        "CONFLICT",
-        "That request changed before WhatsApp could be connected.",
-      )
-    }
-    const sourceRevision = currentRevision
-    const existing = await tx.storeConversationWhatsAppDirectSession.findUnique(
-      {
-        where: {
-          storeId_connectionId_externalCustomerIdDigest: {
-            connectionId: input.connectionId,
-            externalCustomerIdDigest: input.externalCustomerIdDigest,
-            storeId: input.storeId,
-          },
-        },
-      },
+    // A phone/contact match is not an authenticated adult Account declaration.
+    throw new StoreConversationWhatsAppDiscoveryError(
+      "NOT_READY",
+      STORE_CONVERSATION_CHAT_SCOPE_MESSAGE,
     )
-    if (
-      existing &&
-      input.conversationId &&
-      existing.conversationId !== input.conversationId
-    ) {
-      throw new StoreConversationWhatsAppDiscoveryError(
-        "CONFLICT",
-        "Another current WhatsApp conversation already owns this Store route.",
-      )
-    }
-    let conversationId = input.conversationId ?? existing?.conversationId
-    if (!conversationId) {
-      const guestIdentity = await tx.storeConversationGuestIdentity.create({
-        data: { lastSeenAt: now },
-      })
-      const conversation = await tx.storeConversation.create({
-        data: {
-          guestIdentityId: guestIdentity.id,
-          lastActivityAt: now,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-        select: { id: true },
-      })
-      conversationId = conversation.id
-    }
-    const directSession =
-      await tx.storeConversationWhatsAppDirectSession.upsert({
-        create: {
-          connectionId: input.connectionId,
-          conversationId,
-          externalCustomerIdCiphertext: input.externalCustomerIdCiphertext,
-          externalCustomerIdDigest: input.externalCustomerIdDigest,
-          sourceId: input.sourceId,
-          sourceKind: input.sourceKind,
-          sourceRevision,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-        },
-        update: {
-          externalCustomerIdCiphertext: input.externalCustomerIdCiphertext,
-          conversationId,
-          linkedAt: now,
-          revokedAt: null,
-          sourceId: input.sourceId,
-          sourceKind: input.sourceKind,
-          sourceRevision,
-          status: StoreConversationWhatsAppDirectSessionStatus.ACTIVE,
-        },
-        where: {
-          storeId_connectionId_externalCustomerIdDigest: {
-            connectionId: input.connectionId,
-            externalCustomerIdDigest: input.externalCustomerIdDigest,
-            storeId: input.storeId,
-          },
-        },
-      })
-    let appended: Awaited<
-      ReturnType<
-        typeof appendStoreConversationWhatsAppCustomerTextInTransaction
-      >
-    >
-    try {
-      appended = await appendStoreConversationWhatsAppCustomerTextInTransaction(
-        tx,
-        {
-          auditReasonCode: "whatsapp_direct_message",
-          now,
-          providerEventDigest: input.providerEventDigest,
-          route: directSession,
-          source: {
-            sourceId: input.sourceId,
-            sourceKind: input.sourceKind,
-            sourceRevision,
-          },
-          text,
-        },
-      )
-    } catch (error) {
-      translateMessageError(error)
-    }
-    const observation = await tx.storeConversationWhatsAppObservation.create({
-      data: {
-        connectionId: input.connectionId,
-        conversationId,
-        directSessionId: directSession.id,
-        direction: StoreConversationWhatsAppObservationDirection.INBOUND,
-        inboundEventId: event.id,
-        messageId: appended.message.id,
-        provenance:
-          StoreConversationWhatsAppObservationProvenance.CLOUD_API_INBOUND,
-        providerMessageDigest: input.providerMessageDigest,
-        status: StoreConversationWhatsAppObservationStatus.RECEIVED,
-        statusOccurredAt: now,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    await tx.storeConversationWhatsAppObservationEvent.create({
-      data: {
-        eventDigest: storeConversationPayloadHash({
-          occurredAt: now.toISOString(),
-          providerEventDigest: input.providerEventDigest,
-          status: "received",
-        }),
-        observationId: observation.id,
-        occurredAt: now,
-        status: StoreConversationWhatsAppObservationStatus.RECEIVED,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    const processed = await tx.whatsAppInboundEvent.updateMany({
-      data: {
-        processedAt: now,
-        requestId: input.sourceId,
-        status: WhatsAppInboundEventStatus.PROCESSED,
-      },
-      where: {
-        connectionId: input.connectionId,
-        id: event.id,
-        status: WhatsAppInboundEventStatus.PROCESSING,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    if (processed.count !== 1) {
-      throw new StoreConversationWhatsAppDiscoveryError(
-        "CONFLICT",
-        "This WhatsApp request changed while it was being connected.",
-      )
-    }
-    return {
-      conversationId,
-      directSessionId: directSession.id,
-      replayed: appended.replayed,
-    }
   })
 }
 

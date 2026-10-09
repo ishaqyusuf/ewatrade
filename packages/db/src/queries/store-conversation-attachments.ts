@@ -14,6 +14,7 @@ import {
   storeConversationAttachmentCommitInputSchema,
   storeConversationAttachmentTargetSchema,
 } from "@ewatrade/service-commerce"
+import { rejectGuestStoreConversationFreeFormChat } from "./store-conversation-chat-authority"
 
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
@@ -282,6 +283,9 @@ export async function resolveGuestStoreConversationAttachmentUpload(
   } = {},
 ): Promise<GuestStoreConversationAttachmentUploadProjection> {
   const target = storeConversationAttachmentTargetSchema.parse(input.target)
+  // Request-bound images/documents retain their structured intake path.
+  // Voice notes are free-form chat and have no accepted Guest launch path.
+  if (input.file.kind === "audio") rejectGuestStoreConversationFreeFormChat()
   const resolveEntry =
     dependencies.resolveEntry ?? resolveStoreConversationEntry
   return db.$transaction(async (tx) => {
@@ -1021,6 +1025,7 @@ export async function appendGuestStoreConversationAttachment(
       storeId: entry.storeId,
       tenantId: entry.tenantId,
     })
+    if (owner.body === "Voice note") rejectGuestStoreConversationFreeFormChat()
     const sequence = current.lastMessageSequence + 1
     const message = await tx.storeConversationMessage.create({
       data: {

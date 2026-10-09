@@ -108,7 +108,10 @@ function createChoiceDb(
         prescriptionRoles: [],
         prescriptionSettings: null,
         storeConversationAvailabilityConfiguration: null,
-        storeConversationChannelConfiguration: { desiredMode: "BOTH", revision: 1 },
+        storeConversationChannelConfiguration: {
+          desiredMode: "BOTH",
+          revision: 1,
+        },
         tenant: { timezone: "Africa/Lagos" },
       }),
     },
@@ -162,7 +165,10 @@ function createChoiceDb(
         replayed && action === "CONTINUE"
           ? { conversationId: "conversation_1", id: "bridge_1" }
           : null,
-      upsert: async ({ create, update }: Record<string, Record<string, unknown>>) => {
+      upsert: async ({
+        create,
+        update,
+      }: Record<string, Record<string, unknown>>) => {
         writes.push({ data: { create, update }, model: "bridge" })
         return {
           ...create,
@@ -172,8 +178,12 @@ function createChoiceDb(
         }
       },
     },
-    storeConversationWhatsAppBridgeAttempt: { updateMany: async () => ({ count: 0 }) },
-    storeConversationWhatsAppBridgeChoiceCapability: { updateMany: async () => ({ count: 0 }) },
+    storeConversationWhatsAppBridgeAttempt: {
+      updateMany: async () => ({ count: 0 }),
+    },
+    storeConversationWhatsAppBridgeChoiceCapability: {
+      updateMany: async () => ({ count: 0 }),
+    },
     storeConversationWhatsAppCandidate: {
       update: async ({ data }: { data: Record<string, unknown> }) => {
         writes.push({ data, model: "candidate" })
@@ -198,7 +208,10 @@ function createChoiceDb(
       },
     },
     storeConversationWhatsAppCandidateSuppression: {
-      upsert: async ({ create, update }: Record<string, Record<string, unknown>>) => {
+      upsert: async ({
+        create,
+        update,
+      }: Record<string, Record<string, unknown>>) => {
         writes.push({ data: { create, update }, model: "suppression" })
         return { ...create, id: "suppression_1" }
       },
@@ -257,41 +270,12 @@ const baseInput = {
 }
 
 describe("Store Conversation direct WhatsApp candidate choices", () => {
-  test("continues only after current evidence and source checks, then records one observed message", async () => {
+  test("refuses candidate free-form continuation without changing routing or observations", async () => {
     const db = createChoiceDb("CONTINUE")
-    const result = await selectStoreConversationWhatsAppCandidateAction(
-      db.client,
-      baseInput,
-    )
-
-    expect(result).toMatchObject({
-      bridgeId: "bridge_1",
-      conversationId: "conversation_1",
-      state: "continued",
-    })
-    expect(db.writes).toContainEqual({
-      data: expect.objectContaining({
-        create: expect.objectContaining({
-          capabilityId: null,
-          candidateId: "candidate_1",
-        }),
-      }),
-      model: "bridge",
-    })
-    expect(db.writes).toContainEqual({
-      data: expect.objectContaining({ status: "CONTINUED" }),
-      model: "candidate",
-    })
-    expect(db.writes).toContainEqual({
-      data: expect.objectContaining({
-        direction: "INBOUND",
-        provenance: "CLOUD_API_INBOUND",
-        status: "RECEIVED",
-      }),
-      model: "observation",
-    })
-    expect(JSON.stringify(db.writes)).not.toContain("+2348000000000")
-    expect(JSON.stringify(db.writes)).not.toMatch(/watermark/i)
+    await expect(
+      selectStoreConversationWhatsAppCandidateAction(db.client, baseInput),
+    ).rejects.toMatchObject({ code: "NOT_READY" })
+    expect(db.writes).toHaveLength(0)
   })
 
   test("releases Start new for typed intake without creating a bridge", async () => {
@@ -301,12 +285,18 @@ describe("Store Conversation direct WhatsApp candidate choices", () => {
       baseInput,
     )
 
-    expect(result).toMatchObject({ inboundEventId: "event_1", state: "start_new" })
+    expect(result).toMatchObject({
+      inboundEventId: "event_1",
+      state: "start_new",
+    })
     expect(db.writes).toContainEqual({
       data: expect.objectContaining({ status: "STARTED_NEW" }),
       model: "candidate",
     })
-    expect(db.writes).toContainEqual({ data: { status: "RECEIVED" }, model: "inbound_event" })
+    expect(db.writes).toContainEqual({
+      data: { status: "RECEIVED" },
+      model: "inbound_event",
+    })
     expect(db.writes.some((write) => write.model === "bridge")).toBe(false)
   })
 
@@ -319,7 +309,10 @@ describe("Store Conversation direct WhatsApp candidate choices", () => {
 
     expect(result.state).toBe("rejected")
     expect(db.writes.some((write) => write.model === "suppression")).toBe(true)
-    expect(db.writes).toContainEqual({ data: { status: "IGNORED" }, model: "inbound_event" })
+    expect(db.writes).toContainEqual({
+      data: { status: "IGNORED" },
+      model: "inbound_event",
+    })
     expect(db.writes.some((write) => write.model === "message")).toBe(false)
   })
 

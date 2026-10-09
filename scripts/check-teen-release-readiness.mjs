@@ -1,4 +1,4 @@
 console.error(
-  "EwaTrade Production store release is blocked: worldwide 13+ freeform Store chat has no verified Play Families social-feature classification or required adult management/action path. Effective legal notices, child/unknown-age data practices, and exact signed-path review also remain unverified.",
+  "EwaTrade Production store release is blocked: the approved initial scope limits free-form Store chat to signed-in accounts declaring age 18+, but server rollout, effective legal notices, media safeguards, platform-specific classifications and exact signed-path acceptance are not yet verified. Account/catalog access and reporting/support keep their existing eligibility rules.",
 )
 process.exitCode = 1

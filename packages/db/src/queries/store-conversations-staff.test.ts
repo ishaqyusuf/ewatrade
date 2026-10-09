@@ -29,6 +29,10 @@ describe("Store Conversation staff timeline", () => {
       },
     }
     const client = dbClient({
+      user: { findUnique: async () => ({ ageBand: "ADULT" }) },
+      storeConversationAccountAccess: {
+        findFirst: async () => ({ accountUserId: "customer" }),
+      },
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
         callback(transaction),
     })

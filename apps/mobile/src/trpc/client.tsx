@@ -16,6 +16,7 @@ import {
 import { createTRPCContext } from "@trpc/tanstack-react-query"
 import { useState } from "react"
 import superjson from "superjson"
+import { shouldLogMobileTrpcOperation } from "./log-operation"
 import { makeQueryClient } from "./query-client"
 import { searchPostLink } from "./search-post-link"
 
@@ -110,9 +111,7 @@ export function TRPCReactProvider(
         }),
         loggerLink({
           enabled: (opts) =>
-            !opts.op.path.startsWith("auth.") &&
-            (process.env.NODE_ENV === "development" ||
-              (opts.direction === "down" && opts.result instanceof Error)),
+            shouldLogMobileTrpcOperation(opts, process.env.NODE_ENV),
         }),
       ],
     }),

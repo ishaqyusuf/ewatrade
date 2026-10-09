@@ -35,7 +35,10 @@ function routingDependencies() {
         prescriptionRoles: [],
         prescriptionSettings: null,
         storeConversationAvailabilityConfiguration: null,
-        storeConversationChannelConfiguration: { desiredMode: "BOTH", revision: 1 },
+        storeConversationChannelConfiguration: {
+          desiredMode: "BOTH",
+          revision: 1,
+        },
         tenant: { timezone: "Africa/Lagos" },
       }),
     },
@@ -159,65 +162,31 @@ function createDirectDb() {
 }
 
 describe("Store Conversation direct WhatsApp sessions", () => {
-  test("binds typed intake and one observed inbound message to an exact direct session", async () => {
-    const db = createDirectDb()
-    const result = await bindStoreConversationWhatsAppDirectSession(db.client, {
-      connectionId: "connection_1",
-      conversationId: "conversation_new",
-      externalCustomerIdCiphertext: "recipient_ciphertext",
-      externalCustomerIdDigest: recipientDigest,
-      inboundEventId: "event_1",
-      now: new Date("2026-08-16T13:00:00.000Z"),
-      providerEventDigest: eventDigest,
-      providerMessageDigest: messageDigest,
-      sourceId: "inquiry_new",
-      sourceKind: "COMMERCE_INQUIRY",
-      sourceRevision: 1,
-      storeId: "store_1",
-      tenantId: "tenant_1",
-      text: "I need a red bag",
-    })
-
-    expect(result).toMatchObject({ directSessionId: "direct_1", replayed: false })
-    expect(db.writes).toContainEqual({
-      data: expect.objectContaining({
-        conversationId: "conversation_new",
-        sourceId: "inquiry_new",
-      }),
-      model: "direct_session",
-    })
-    expect(db.writes).toContainEqual({
-      data: expect.objectContaining({ directSessionId: "direct_1" }),
-      model: "observation",
-    })
-  })
-
-  test("creates a direct-only customer conversation after typed intake succeeds", async () => {
-    const db = createDirectDb()
-    const result = await bindStoreConversationWhatsAppDirectSession(db.client, {
-      connectionId: "connection_1",
-      externalCustomerIdCiphertext: "recipient_ciphertext",
-      externalCustomerIdDigest: recipientDigest,
-      inboundEventId: "event_1",
-      now: new Date("2026-08-16T13:00:00.000Z"),
-      providerEventDigest: eventDigest,
-      providerMessageDigest: messageDigest,
-      sourceId: "inquiry_new",
-      sourceKind: "COMMERCE_INQUIRY",
-      storeId: "store_1",
-      tenantId: "tenant_1",
-      text: "I need a red bag",
-    })
-
-    expect(result).toMatchObject({
-      conversationId: "conversation_new",
-      directSessionId: "direct_1",
-    })
-    expect(db.writes).toContainEqual({
-      data: expect.objectContaining({ guestIdentityId: "guest_1" }),
-      model: "conversation_created",
-    })
-  })
+  test.each(["conversation_new", undefined])(
+    "refuses unclassified text for direct session %s before writes",
+    async (conversationId) => {
+      const db = createDirectDb()
+      await expect(
+        bindStoreConversationWhatsAppDirectSession(db.client, {
+          connectionId: "connection_1",
+          conversationId,
+          externalCustomerIdCiphertext: "recipient_ciphertext",
+          externalCustomerIdDigest: recipientDigest,
+          inboundEventId: "event_1",
+          now: new Date("2026-08-16T13:00:00.000Z"),
+          providerEventDigest: eventDigest,
+          providerMessageDigest: messageDigest,
+          sourceId: "inquiry_new",
+          sourceKind: "COMMERCE_INQUIRY",
+          sourceRevision: 1,
+          storeId: "store_1",
+          tenantId: "tenant_1",
+          text: "I need a red bag",
+        }),
+      ).rejects.toMatchObject({ code: "NOT_READY" })
+      expect(db.writes).toHaveLength(0)
+    },
+  )
 })
 
 function createStatusDb() {
@@ -251,7 +220,11 @@ function createStatusDb() {
       findUnique: async () => null,
     },
   }
-  return { client: client as unknown as PrismaClient, getObservation: () => observation, writes }
+  return {
+    client: client as unknown as PrismaClient,
+    getObservation: () => observation,
+    writes,
+  }
 }
 
 describe("Store Conversation observed WhatsApp status", () => {
