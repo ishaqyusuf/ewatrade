@@ -23,10 +23,12 @@ import { useWindowDimensions } from "react-native"
  * floating sheet of countries with flags, dialling codes and search.
  */
 export function CountrySelect({
+  disabled = false,
   label = "Country",
   onChange,
   value,
 }: {
+  disabled?: boolean
   label?: string
   onChange: (code: string) => void
   value: string
@@ -40,6 +42,7 @@ export function CountrySelect({
   const countries = useMemo(() => searchCountries(search), [search])
 
   const choose = (next: Country) => {
+    if (disabled) return
     onChange(next.code)
     modal.dismiss()
   }
@@ -50,6 +53,8 @@ export function CountrySelect({
         {label}
       </Text>
       <Pressable
+        disabled={disabled}
+        accessibilityState={{ disabled }}
         accessibilityHint="Opens the country list"
         accessibilityLabel={`${label}: ${country.name}`}
         accessibilityRole="button"

@@ -234,6 +234,7 @@ export function RecordRow({
   status,
   testID,
   title,
+  stackDetails = false,
 }: {
   accessibilityLabel?: string
   amount?: string
@@ -243,6 +244,8 @@ export function RecordRow({
   status?: ReactNode
   testID?: string
   title: string
+  /** Opt in to a vertical record layout at large accessibility text sizes. */
+  stackDetails?: boolean
 }) {
   const tint = useTint(avatar.tint)
   const largeText = useLargeTextLayout()
@@ -251,7 +254,10 @@ export function RecordRow({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={onPress ? "button" : undefined}
-      className="min-h-[62px] flex-row items-center gap-3 py-3 active:opacity-70"
+      className={cn(
+        "min-h-[62px] gap-3 py-3 active:opacity-70",
+        stackDetails && largeText ? "items-start" : "flex-row items-center",
+      )}
       disabled={!onPress}
       haptic
       onPress={onPress}
@@ -278,7 +284,7 @@ export function RecordRow({
           </NativeText>
         )}
       </View>
-      <View className="min-w-0 flex-1">
+      <View className={stackDetails && largeText ? "w-full" : "min-w-0 flex-1"}>
         <Text
           className="text-sm font-bold [-rn-line-height:19] text-foreground"
           numberOfLines={lines}
@@ -295,7 +301,9 @@ export function RecordRow({
         ) : null}
       </View>
       {amount || status ? (
-        <View className="items-end">
+        <View
+          className={stackDetails && largeText ? "items-start" : "items-end"}
+        >
           {amount ? (
             <Text className="text-sm font-bold tabular-nums text-foreground">
               {amount}
