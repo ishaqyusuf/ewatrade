@@ -1,6 +1,7 @@
 {
   "extends": "../../packages/tsconfig/base.json",
   "compilerOptions": {
+    "target": "ES2022",
     "types": ["bun", "node"]
   },
   "include": ["scripts/**/*.ts", "src/**/*.ts", "trigger.config.ts"],

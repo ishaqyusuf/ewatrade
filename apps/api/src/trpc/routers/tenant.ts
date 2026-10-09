@@ -60,6 +60,7 @@ export const tenantRouter = createTRPCRouter({
           throw new TRPCError({
             code: "FORBIDDEN",
             message: error.message,
+            cause: error,
           })
         }
 

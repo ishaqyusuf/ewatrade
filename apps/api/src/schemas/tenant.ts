@@ -22,6 +22,7 @@ const optionalEmailSchema = z
   .toLowerCase()
   .transform((value) => value || undefined)
   .pipe(z.email().optional())
+  .optional()
 
 const operatingCurrencySchema = z.preprocess(
   (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),

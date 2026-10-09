@@ -14,7 +14,7 @@ describe("customer capability crash redaction", () => {
         },
       ],
       request: {
-        url: `https://dashboard.ewatrade.com/signup?access_token=${secret}`,
+        url: `https://dash.ewatrade.com/signup?access_token=${secret}`,
       },
     })
     expect(JSON.stringify(event)).not.toContain(secret)

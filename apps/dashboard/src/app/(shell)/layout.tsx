@@ -9,6 +9,8 @@ import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
+import { prisma } from "@ewatrade/db"
+import { getRetailOpsTenantPlan } from "@ewatrade/db/queries"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -41,12 +43,20 @@ export default async function ShellLayout({
   if (!store) {
     redirect("/setup")
   }
+  // A failed plan read leaves navigation ungated; the API still enforces.
+  const planFeatures = await getRetailOpsTenantPlan(prisma, {
+    tenantId: ctx.tenant.id,
+  }).then(
+    ({ plan }) => plan.features,
+    () => undefined,
+  )
   const navigationContext = {
     staffAccessMode: ctx.membership.staffAccessMode,
     catalogEditor: ctx.membership.catalogEditor,
     isPlatformAdmin: session.user.isPlatformAdmin,
     operatingModel: store.businessOnboarding?.operatingModel,
     businessProfileKey: store.businessOnboarding?.businessProfileKey,
+    planFeatures,
   }
 
   if (
@@ -80,9 +90,9 @@ export default async function ShellLayout({
         <GlobalSheetsProvider
           access={{
             scopedStaff,
-            finance: ["OWNER", "ADMIN"].includes(
-              ctx.membership.role.toUpperCase(),
-            ),
+            finance:
+              ["OWNER", "ADMIN"].includes(ctx.membership.role.toUpperCase()) &&
+              (planFeatures?.includes("finance") ?? true),
             prescriptions:
               !scopedStaff && canUseSalesOperations(ctx.membership.role),
             managePrescriptionSetup: Boolean(

@@ -341,3 +341,32 @@ test("scoped roles expose orders and stock without catalog or staff administrati
   ).toBe(true)
   expect(canAccessDashboardPath("/finance", "MANAGER", scope)).toBe(false)
 })
+
+test("Free plan hides and blocks finance, staff, suppliers and receipt settings", () => {
+  const free = context({ planFeatures: [] })
+  const hrefs = flatten(getDashboardNavigation("OWNER", free)).map(
+    (item) => item.href,
+  )
+  for (const href of [
+    "/finance",
+    "/finance/suppliers",
+    "/customer-ledger",
+    "/staff",
+    "/settings/receipts",
+  ]) {
+    expect(hrefs).not.toContain(href)
+    expect(canAccessDashboardPath(href, "OWNER", free)).toBe(false)
+  }
+  // Unlisted pages under a gated section stay blocked too.
+  expect(canAccessDashboardPath("/finance/bank", "OWNER", free)).toBe(false)
+  expect(canAccessDashboardPath("/settings/billing", "OWNER", free)).toBe(true)
+  expect(hrefs).toContain("/settings/billing")
+
+  const paid = context({
+    planFeatures: ["finance", "invoices", "staff", "suppliers"],
+  })
+  expect(canAccessDashboardPath("/finance/bank", "OWNER", paid)).toBe(true)
+  expect(canAccessDashboardPath("/settings/receipts", "OWNER", paid)).toBe(true)
+  // An unknown plan (read failed) leaves navigation to the API's enforcement.
+  expect(canAccessDashboardPath("/finance", "OWNER", context())).toBe(true)
+})

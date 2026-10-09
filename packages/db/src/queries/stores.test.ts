@@ -65,6 +65,9 @@ function createMockStoreDb(input?: {
         return { id: "onboarding_session_123" }
       },
     },
+    commercialOrder: {
+      count: async () => 0,
+    },
     catalogItem: {
       count: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "catalogItem.count", where })

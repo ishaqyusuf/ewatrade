@@ -1,0 +1,10 @@
+node_modules/
+public/captures/*
+!public/captures/.gitkeep
+public/narration/*
+!public/narration/.gitkeep
+output/*
+!output/.gitkeep
+.bundle*/
+.cache/
+*.log

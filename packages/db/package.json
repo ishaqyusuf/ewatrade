@@ -7,6 +7,7 @@
   "exports": {
     "./performance-tracing": "./src/performance-tracing.ts",
     "./onboarding-continuation": "./src/queries/onboarding-continuation.ts",
+    "./subscription-plans": "./src/queries/retail-ops-subscription-plans.ts",
     "./catalog-category-suggestions": "./src/queries/catalog-category-suggestions.ts",
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
@@ -31,6 +32,8 @@
     "./tenant-context": "./src/queries/tenants.ts",
     "./types": "./src/types.ts",
     "./assistant": "./src/queries/assistant.ts",
+    "./assistant-attachments": "./src/queries/assistant-attachments.ts",
+    "./assistant-operations": "./src/queries/assistant-operations.ts",
     "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts",
     "./product-analytics": "./src/queries/product-analytics.ts"
   },
@@ -46,7 +49,7 @@
     "db:push": "prisma db push",
     "lint": "biome check .",
     "typecheck": "bun run db:generate && tsc --noEmit",
-    "db:generate": "prisma generate --config prisma.generate.config.ts",
+    "db:generate": "prisma generate --config prisma.generate.config.ts && bun scripts/align-prisma-client-types.ts",
     "db:format": "prisma format",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",

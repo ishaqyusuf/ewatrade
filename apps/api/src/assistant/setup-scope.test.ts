@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { TRPCError } from "@trpc/server"
 import { assertSetupConversationCurrent } from "../trpc/routers/setup-assistant"
-import { requireSetupAssistantScope } from "./setup-context"
+import {
+  isSetupAssistantMediaEnabled,
+  requireSetupAssistantMedia,
+  requireSetupAssistantScope,
+} from "./setup-context"
 
 const previousFlag = process.env.ASSISTANT_SETUP_ENABLED
 beforeEach(() => {
@@ -73,5 +77,33 @@ describe("setup scope is re-checked on every request", () => {
     expect(
       code(() => assertSetupConversationCurrent(null, "conv_store_a")),
     ).toBe("OK")
+  })
+})
+
+describe("photos, files and voice notes", () => {
+  test("are off unless their own flag is on", () => {
+    expect(isSetupAssistantMediaEnabled({})).toBe(false)
+    expect(
+      isSetupAssistantMediaEnabled({ ASSISTANT_SETUP_ENABLED: "true" }),
+    ).toBe(false)
+    expect(
+      isSetupAssistantMediaEnabled({ ASSISTANT_SETUP_MEDIA_ENABLED: "true" }),
+    ).toBe(true)
+  })
+
+  test("upload intents are refused while they are off", () => {
+    const previous = process.env.ASSISTANT_SETUP_MEDIA_ENABLED
+    try {
+      process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "false"
+      expect(code(() => requireSetupAssistantMedia())).toBe(
+        "PRECONDITION_FAILED",
+      )
+      process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "true"
+      expect(code(() => requireSetupAssistantMedia())).toBe("OK")
+    } finally {
+      if (previous === undefined)
+        Reflect.deleteProperty(process.env, "ASSISTANT_SETUP_MEDIA_ENABLED")
+      else process.env.ASSISTANT_SETUP_MEDIA_ENABLED = previous
+    }
   })
 })

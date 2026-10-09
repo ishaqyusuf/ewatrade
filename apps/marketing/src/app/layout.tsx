@@ -12,11 +12,13 @@ import { Providers } from "./providers"
 assertQaAcceleratorStartupSafety(process.env)
 
 const geist = Geist({
+  preload: false,
   subsets: ["latin"],
   variable: "--font-sans",
 })
 
 const fraunces = Fraunces({
+  preload: false,
   subsets: ["latin"],
   variable: "--font-display",
   axes: ["SOFT", "WONK"],

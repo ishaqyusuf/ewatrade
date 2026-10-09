@@ -2,12 +2,20 @@
 
 import { getDashboardSignupUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 
-import { LeadCaptureForm } from "@/components/lead-capture-form"
-import { LeadCaptureQuickFillProvider } from "@/components/qa/lead-capture-quick-fill"
 import { getDashboardLoginUrl } from "@/lib/auth-navigation"
 import { useEffect, useRef, useState } from "react"
 import type { MarketingExperienceProps } from "../marketing-experience-contract"
+import { Pricing } from "../sections/pricing"
+import { StoreInAMinute } from "../sections/store-in-a-minute"
 import "./shop-v3.css"
+
+// Signup is direct (early access and the waitlist were retired on
+// 7 October 2026). While signup is switched off, CTAs point to contact.
+function primaryCta(signupEnabled: boolean) {
+  return signupEnabled
+    ? { href: getDashboardSignupUrl(), label: "Create your store" }
+    : { href: "/contact", label: "Talk to us" }
+}
 
 type Product = {
   name: string
@@ -75,7 +83,7 @@ const questions = [
   ],
   [
     "How can I get started?",
-    "Request early access to discuss the workflows your business needs. We will reach out when the next onboarding window opens.",
+    "Create your store, tell the setup assistant what you sell, and start trading. The Free plan is free forever, and Starter, Growth and Pro are free during launch.",
   ],
 ]
 function Arrow() {
@@ -217,26 +225,19 @@ function Header({ signupEnabled }: MarketingExperienceProps) {
       >
         <a href="#story">How it connects</a>
         <a href="#explore">Explore the product</a>
+        <a href="#pricing">Pricing</a>
         <a href="#questions">Questions</a>
         <a href="/contact">Contact</a>
-        <a
-          className="shop-mobile-cta"
-          href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
-        >
-          {signupEnabled ? "Create your workspace" : "Request early access"}{" "}
-          <Arrow />
+        <a className="shop-mobile-cta" href={primaryCta(signupEnabled).href}>
+          {primaryCta(signupEnabled).label} <Arrow />
         </a>
       </nav>
       <div className="shop-header-actions">
         <a className="shop-sign-in" href={getDashboardLoginUrl()}>
           Sign in
         </a>
-        <a
-          className="shop-header-cta"
-          href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
-        >
-          {signupEnabled ? "Create your workspace" : "Get early access"}{" "}
-          <Arrow />
+        <a className="shop-header-cta" href={primaryCta(signupEnabled).href}>
+          {primaryCta(signupEnabled).label} <Arrow />
         </a>
         <button
           type="button"
@@ -300,12 +301,8 @@ function Hero({ signupEnabled }: MarketingExperienceProps) {
             One connected place to keep your business moving.
           </p>
           <div className="shop-hero-actions">
-            <a
-              className="shop-button"
-              href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
-            >
-              {signupEnabled ? "Create your workspace" : "Request early access"}{" "}
-              <Arrow />
+            <a className="shop-button" href={primaryCta(signupEnabled).href}>
+              {primaryCta(signupEnabled).label} <Arrow />
             </a>
             <a href="#story">
               See how it connects <Arrow />
@@ -748,14 +745,10 @@ function Closing({ signupEnabled }: MarketingExperienceProps) {
         <em>good trade.</em>
       </h2>
       <p>A connected place for the work behind every order.</p>
-      <a
-        className="shop-button"
-        href={signupEnabled ? getDashboardSignupUrl() : "#early-access"}
-      >
-        {signupEnabled ? "Create your workspace" : "Request early access"}{" "}
-        <Arrow />
+      <a className="shop-button" href={primaryCta(signupEnabled).href}>
+        {primaryCta(signupEnabled).label} <Arrow />
       </a>
-      <small>Explore EwaTrade for your business</small>
+      <small>Free forever plan · no card needed</small>
       <div className="shop-closing-art">
         <Art kind="basket" />
       </div>
@@ -771,6 +764,7 @@ function Footer() {
       <nav aria-label="Footer navigation">
         <a href="#story">How it connects</a>
         <a href="#explore">Explore</a>
+        <a href="#pricing">Pricing</a>
         <a href="/contact">Contact</a>
         <a href="/support">Support</a>
       </nav>
@@ -789,39 +783,11 @@ export function ShopV3Landing({ signupEnabled }: MarketingExperienceProps) {
       <Header signupEnabled={signupEnabled} />
       <main id="main">
         <Hero signupEnabled={signupEnabled} />
+        <StoreInAMinute signupEnabled={signupEnabled} />
         <Story />
         <Explorer />
         <BusinessAndFaq />
-        <section className="shop-access shop-wrap" id="early-access">
-          <div className="shop-section-heading">
-            <Eyebrow>Start with your business</Eyebrow>
-            <h2>Let’s connect the moving parts.</h2>
-            <p>
-              Tell us what you are building and we will follow up when the next
-              early access window opens.
-            </p>
-          </div>
-          <div className="shop-access-grid">
-            <LeadCaptureQuickFillProvider>
-              <LeadCaptureForm
-                appearance="shop"
-                type="early-access"
-                title="Request early access"
-                description="Share your merchant, operations or service use case."
-                submitLabel="Request early access"
-              />
-              <div id="waitlist">
-                <LeadCaptureForm
-                  appearance="shop"
-                  type="waitlist"
-                  title="Join the waitlist"
-                  description="Get an update when EwaTrade opens wider access."
-                  submitLabel="Join the waitlist"
-                />
-              </div>
-            </LeadCaptureQuickFillProvider>
-          </div>
-        </section>
+        <Pricing signupEnabled={signupEnabled} />
         <Closing signupEnabled={signupEnabled} />
       </main>
       <Footer />

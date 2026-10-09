@@ -14,7 +14,7 @@ fn dashboard_url() -> String {
     match env_name.as_str() {
         "development" | "dev" => "http://localhost:3094".to_string(),
         "staging" => "https://staging-dashboard.ewatrade.com".to_string(),
-        "production" | "prod" => "https://dashboard.ewatrade.com".to_string(),
+        "production" | "prod" => "https://dash.ewatrade.com".to_string(),
         _ => "http://localhost:3094".to_string(),
     }
 }

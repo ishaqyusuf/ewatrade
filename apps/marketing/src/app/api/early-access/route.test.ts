@@ -48,7 +48,9 @@ const db = {
       return lead
     },
   },
+  $executeRaw: async () => 1,
   onboardingSession: {
+    count: async () => 0,
     create: async ({ data }: { data: Omit<Session, "id" | "completed"> }) => {
       writes++
       const value = {
@@ -151,8 +153,29 @@ function request(path: string, body?: unknown) {
         },
   )
 }
+// New early-access intake is retired; seed a legacy request so previously
+// sent approval and verification links stay covered.
 async function submit(email = input.email) {
-  return POST(request("/api/early-access", { ...input, email }))
+  lead = {
+    id: "synthetic-lead",
+    type: "EARLY_ACCESS",
+    email,
+    fullName: input.fullName,
+    companyName: input.companyName,
+    metadata: {},
+  }
+  const token = `ear_${crypto.randomUUID().replaceAll("-", "")}`
+  sessions.set(token, {
+    id: `session-${sessions.size}`,
+    token,
+    completed: false,
+    expiresAt: new Date(Date.now() + 30 * 86400000),
+    formData: {
+      kind: "early_access_request",
+      leadId: lead.id,
+      requestedAt: new Date().toISOString(),
+    },
+  })
 }
 function sessionOfKind(kind: string) {
   const value = [...sessions.values()].find(
@@ -171,51 +194,12 @@ async function approvePending() {
   return approve(request(`/api/early-access/approve?token=${pending().token}`))
 }
 
-test("ordinary request sends reviewer and applicant emails without granting signup", async () => {
-  const response = await submit()
-  const body = await response.json()
-  expect(response.status).toBe(200)
-  expect(body.message).toContain("after approval")
-  expect(body.qaPreview).toBeUndefined()
-  expect(sessions.size).toBe(1)
-  expect(dispatch.mock.calls[0]?.[0].map((message) => message.to)).toEqual([
-    "review@example.com",
-  ])
-  expect(dispatch.mock.calls[0]?.[0][0]?.text).toContain("Approve early access")
-  expect(dispatch).toHaveBeenCalledTimes(2)
-  const confirmation = dispatch.mock.lastCall?.[0][0]
-  expect(confirmation?.to).toBe(input.email)
-  expect(confirmation?.subject).toBe(
-    "We received your EwaTrade early access request",
-  )
-  expect(confirmation?.text).toContain("Hi QA.")
-  expect(confirmation?.text).toContain(input.companyName)
-  expect(confirmation?.html).toContain("Awaiting review")
-  expect(confirmation?.text).toContain("If approved")
-  for (const content of [confirmation?.html, confirmation?.text]) {
-    expect(content).not.toContain(pending().token)
-    expect(content).not.toContain("Approve early access")
-    expect(content).not.toContain("Create your workspace")
-    expect(content).not.toContain("Link expires")
-  }
-  expect(lead.metadata.requestDelivery).toMatchObject({ sent: 1, failed: 0 })
-  expect(lead.metadata.requestConfirmationDelivery).toMatchObject({
-    sent: 1,
-    failed: 0,
-  })
-  expect(lead.metadata.intake).toMatchObject({
-    setupNeeds: ["inventory", "sales"],
-  })
-  expect(
-    (
-      await lookup(
-        request(`/api/early-access/session?token=${pending().token}`),
-      )
-    ).status,
-  ).toBe(404)
-  const days = (pending().expiresAt.getTime() - Date.now()) / 86400000
-  expect(days).toBeGreaterThan(29.99)
-  expect(days).toBeLessThanOrEqual(30)
+test("new early access requests are retired without writes or email", async () => {
+  const response = await POST()
+  expect(response.status).toBe(410)
+  expect((await response.json()).signupUrl).toContain("/signup")
+  expect(writes).toBe(0)
+  expect(dispatch).not.toHaveBeenCalled()
 })
 test("approval issues a recipient-bound setup link; retry reuses it without renewing expiry", async () => {
   await submit()
@@ -241,6 +225,7 @@ test("approval issues a recipient-bound setup link; retry reuses it without rene
   ).json()
   expect(body.emailVerified).toBe(false)
 })
+
 test("verification links are bound to the approved session and unlock email verification", async () => {
   await submit()
   await approvePending()
@@ -259,7 +244,9 @@ test("verification links are bound to the approved session and unlock email veri
     request(`/api/early-access/verify?token=${verificationSession.token}`),
   )
   expect(confirmed.status).toBe(303)
-  expect(confirmed.headers.get("location")).toBe(approved().formData.accessUrl)
+  expect<unknown>(confirmed.headers.get("location")).toBe(
+    approved().formData.accessUrl,
+  )
   expect(confirmed.headers.get("cache-control")).toBe("no-store")
   expect(verificationSession.completed).toBe(true)
   const body = await (
@@ -267,12 +254,9 @@ test("verification links are bound to the approved session and unlock email veri
   ).json()
   expect(body.emailVerified).toBe(true)
 })
-test("production QA walks request, approval and verification inline and delivers every handoff to its tester inbox", async () => {
-  const response = await submit("owner@ishaq.qa.test")
-  const body = await response.json()
-  expect(body.qaPreview.stage).toBe("approval")
-  expect(body.qaPreview.accessUrl).toContain("/approve?token=ear_")
-  expect(body.qaPreview.emailHtml).toContain("Approve early access")
+
+test("production QA approval and verification deliver every handoff to the tester inbox", async () => {
+  await submit("owner@ishaq.qa.test")
   expect((await approvePending()).status).toBe(200)
   const confirmation = await verification(
     request("/api/early-access/verification", {
@@ -285,20 +269,14 @@ test("production QA walks request, approval and verification inline and delivers
     (await verify(new NextRequest(verificationBody.qaPreview.accessUrl)))
       .status,
   ).toBe(303)
-  expect(dispatch).toHaveBeenCalledTimes(4)
+  expect(dispatch).toHaveBeenCalledTimes(2)
   expect(
     dispatch.mock.calls.flatMap(([messages]) =>
       messages.map((message) => message.to),
     ),
-  ).toEqual([
-    "tester@example.com",
-    "tester@example.com",
-    "tester@example.com",
-    "tester@example.com",
-  ])
-  expect(dispatch.mock.calls[0]?.[0][0]?.text).toContain("Approve early access")
-  expect(dispatch.mock.calls[1]?.[0][0]?.html).toContain("Awaiting review")
+  ).toEqual(["tester@example.com", "tester@example.com"])
 })
+
 test("invalid, expired and consumed approvals cannot grant setup", async () => {
   expect(
     (await approve(request("/api/early-access/approve?token=invalid"))).status,
@@ -312,12 +290,14 @@ test("invalid, expired and consumed approvals cannot grant setup", async () => {
   approved().completed = true
   expect((await approvePending()).status).toBe(410)
 })
+
 test("concurrent request claim failure does not create a second setup session", async () => {
   await submit()
   refuseClaim = true
   expect((await approvePending()).status).toBe(409)
   expect(sessions.size).toBe(1)
 })
+
 test("delivery failure is surfaced and approval delivery can retry the same setup link", async () => {
   await submit()
   dispatch.mockImplementation(async (messages) =>
@@ -339,41 +319,9 @@ test("delivery failure is surfaced and approval delivery can retry the same setu
   expect((await approvePending()).status).toBe(200)
   expect(approved().token).toBe(token)
 })
-test("unconfigured admin recipients do not falsely acknowledge an ordinary request", async () => {
-  Reflect.deleteProperty(process.env, "MARKETING_INBOX_EMAILS")
-  Reflect.deleteProperty(process.env, "EMAIL_REPLY_TO")
-  expect((await submit()).status).toBe(503)
-  expect(dispatch).not.toHaveBeenCalled()
-})
-test("review delivery failure does not send an applicant confirmation", async () => {
-  dispatch.mockImplementation(async (messages) =>
-    messages.map((message) => ({ message, status: "failed" })),
-  )
-  expect((await submit()).status).toBe(502)
-  expect(dispatch).toHaveBeenCalledTimes(1)
-  expect(lead.metadata.requestDelivery).toMatchObject({ sent: 0, failed: 1 })
-  expect(lead.metadata.requestConfirmationDelivery).toBeUndefined()
-})
-test("applicant delivery failure is surfaced separately from successful review delivery", async () => {
-  dispatch.mockImplementation(async (messages) =>
-    messages.map((message) => ({
-      message,
-      status: message.to === input.email ? "failed" : "sent",
-    })),
-  )
-  expect((await submit()).status).toBe(502)
-  expect(dispatch).toHaveBeenCalledTimes(2)
-  expect(lead.metadata.requestDelivery).toMatchObject({ sent: 1, failed: 0 })
-  expect(lead.metadata.requestConfirmationDelivery).toMatchObject({
-    sent: 0,
-    failed: 1,
-  })
-  expect(sessions.size).toBe(1)
-  expect(pending().completed).toBe(false)
-})
+
 test("Preview rejects request, approval, verification and verify before any writes", async () => {
   process.env.VERCEL_ENV = "preview"
-  expect((await submit()).status).toBe(503)
   expect(
     (await approve(request("/api/early-access/approve?token=x"))).status,
   ).toBe(503)
@@ -390,13 +338,7 @@ test("Preview rejects request, approval, verification and verify before any writ
   expect(writes).toBe(0)
   expect(dispatch).not.toHaveBeenCalled()
 })
-test("hosted missing or HTTP marketing origin rejects before persistence", async () => {
-  Reflect.deleteProperty(process.env, "NEXT_PUBLIC_MARKETING_URL")
-  expect((await submit()).status).toBe(503)
-  process.env.NEXT_PUBLIC_MARKETING_URL = "http://attacker.example"
-  expect((await submit()).status).toBe(503)
-  expect(writes).toBe(0)
-})
+
 test("expired verification and mismatched contact do not verify the approved email", async () => {
   await submit()
   await approvePending()
@@ -419,23 +361,11 @@ test("expired verification and mismatched contact do not verify the approved ema
   ).toBe(410)
   expect(approved().formData.emailVerifiedAt).toBeUndefined()
 })
+
 test("HEAD cannot approve a request", async () => {
   await submit()
   expect(approvalHead().status).toBe(405)
   expect(sessions.size).toBe(1)
-})
-test("incomplete business context is rejected before persistence", async () => {
-  expect(
-    (
-      await POST(
-        request("/api/early-access", {
-          fullName: input.fullName,
-          email: input.email,
-        }),
-      )
-    ).status,
-  ).toBe(400)
-  expect(writes).toBe(0)
 })
 
 test("old marketing invitations verify into dashboard and approval retries email dashboard links", async () => {

@@ -143,14 +143,15 @@ describe("resolveNextFinanceFiscalPeriod", () => {
   })
 
   test("rejects invalid recurring month/day values, including February 29", () => {
-    for (const [startMonth, startDay] of [
+    const invalidMonthDays: ReadonlyArray<readonly [number, number]> = [
       [0, 1],
       [13, 1],
       [4, 0],
       [4, 31],
       [2, 29],
       [2, 30],
-    ]) {
+    ]
+    for (const [startMonth, startDay] of invalidMonthDays) {
       expectFinanceError(
         () =>
           resolve({

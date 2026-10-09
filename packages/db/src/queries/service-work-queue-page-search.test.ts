@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { PrismaClient } from "../generated/prisma/client"
+import type { PrismaClient } from "../../generated/prisma/client"
 import { listServiceWorkQueuePage } from "./service-work"
 
 describe("service work queue page search", () => {

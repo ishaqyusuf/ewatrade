@@ -1,0 +1,21 @@
+{
+  "name": "ewatrade-marketing-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node scripts/capture.mjs",
+    "narration": "node scripts/narration.mjs",
+    "render": "node scripts/render.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.8.1",
+    "@remotion/bundler": "4.0.534",
+    "@remotion/renderer": "4.0.534",
+    "kokoro-js": "1.2.1",
+    "playwright": "1.62.1",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.534"
+  }
+}

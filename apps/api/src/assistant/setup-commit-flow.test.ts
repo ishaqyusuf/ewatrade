@@ -1,18 +1,21 @@
 import { describe, expect, mock, test } from "bun:test"
+import { recordSetupDraftCommitOutcomeInTransaction } from "@ewatrade/db/assistant"
 import { CatalogError } from "@ewatrade/db/queries"
 import {
+  MONEY_ACCOUNT_NEEDS_FINANCE,
   OPENING_BALANCE_NEEDS_FINANCE,
   OPENING_BALANCE_PENDING,
   type SetupCommitDeps,
   commitSetupDraft,
 } from "./setup-commit"
+import { setupMoneyAccountCode } from "./setup-money-account"
 
 const scope = { tenantId: "tenant_1", storeId: "store_1", userId: "user_1" }
 
 type Entity = {
   id: string
   key: string
-  kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
+  kind: "PRODUCT" | "SERVICE" | "CUSTOMER" | "MONEY_ACCOUNT"
   state: string
   payload: unknown
   errorCode: string | null
@@ -48,28 +51,44 @@ const customer: Entity = {
   committedRecordId: null,
 }
 
+const money = (
+  key: string,
+  purpose: "CASH" | "BANK",
+  openingBalanceMinor?: number,
+): Entity => ({
+  id: `ent_${key}`,
+  key: `money:${key}`,
+  kind: "MONEY_ACCOUNT",
+  state: "CONFIRMED",
+  payload: { kind: "money_account", name: key, purpose, openingBalanceMinor },
+  errorCode: null,
+  committedRecordId: null,
+})
+
 const db = {
   $transaction: (fn: (tx: unknown) => unknown) => fn({ tx: true }),
 } as never
 
 function harness(entities: Entity[], overrides: Partial<SetupCommitDeps> = {}) {
   const outcomes: Array<{ key: string; outcome: unknown; inTx: boolean }> = []
+  const record = mock(
+    async (client: unknown, input: { key: string; outcome: unknown }) => {
+      outcomes.push({
+        key: input.key,
+        outcome: input.outcome,
+        inTx: (client as { tx?: boolean }).tx === true,
+      })
+      return 1
+    },
+  )
   const deps: SetupCommitDeps = {
     readSetupDraft: mock(async () => ({
       id: "draft",
       revision: 1,
       entities,
     })) as never,
-    recordOutcome: mock(
-      async (client: unknown, input: { key: string; outcome: unknown }) => {
-        outcomes.push({
-          key: input.key,
-          outcome: input.outcome,
-          inTx: (client as { tx?: boolean }).tx === true,
-        })
-        return 1
-      },
-    ) as never,
+    recordOutcome: record as never,
+    recordOutcomeInTransaction: record as never,
     createCatalogItem: mock(async (_db: unknown, input: { name: string }) => ({
       id: `item_${input.name}`,
     })) as never,
@@ -77,14 +96,148 @@ function harness(entities: Entity[], overrides: Partial<SetupCommitDeps> = {}) {
     getFinanceBook: mock(async () => ({
       id: "book_1",
       currencyCode: "NGN",
+      startsAt: new Date("2026-10-01T00:00:00.000Z"),
+      accounts: [
+        { id: "acct_cash", code: "1000", purpose: "CASH", archivedAt: null },
+      ],
     })) as never,
     ensureCustomerLedgerAccount: mock(async () => ({ id: "acct_1" })) as never,
     recordCustomerLedgerOpening: mock(async () => ({ id: "entry_1" })) as never,
+    createFinanceMoneyAccount: mock(
+      async (_db: unknown, input: { code: string }) => ({
+        id: `acct_${input.code}`,
+      }),
+    ) as never,
+    recordFinanceMoneyMovement: mock(async () => ({
+      id: "journal_1",
+    })) as never,
+    prepareProductPhoto: mock(async () => ({ assetId: "asset_1" })) as never,
+    enqueuePhotoReview: mock(async () => undefined),
     now: () => 0,
     ...overrides,
   }
   return { deps, outcomes }
 }
+
+const withPhoto = (key: string): Entity => ({
+  ...product(key),
+  payload: {
+    kind: "product",
+    name: key,
+    unitName: "Crate",
+    priceMinor: 450_000,
+    photoAttachmentId: "att_photo",
+  },
+})
+
+const illustrated = (key: string, photo?: string): Entity => ({
+  ...product(key),
+  payload: {
+    kind: "product",
+    name: key,
+    unitName: "Crate",
+    priceMinor: 450_000,
+    illustrationId: "ill-egg",
+    ...(photo ? { photoAttachmentId: photo } : {}),
+  },
+})
+
+describe("product photos sent in the setup chat", () => {
+  test("are attached inside item creation and queued for review", async () => {
+    const { deps } = harness([withPhoto("eggs")])
+    const result = await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "LIVE" },
+      "draft",
+      deps,
+    )
+    expect(result.results[0]).toMatchObject({ state: "COMMITTED" })
+    expect(deps.prepareProductPhoto).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ dataClassification: "LIVE" }),
+      {
+        entityId: "ent_eggs",
+        conversationId: "conv_1",
+        attachmentId: "att_photo",
+      },
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ photoAssetIds: ["asset_1"] }),
+    )
+    expect(deps.enqueuePhotoReview).toHaveBeenCalledWith("asset_1")
+  })
+
+  test("a photo that cannot be added never blocks the product", async () => {
+    const { deps, outcomes } = harness([withPhoto("eggs")], {
+      prepareProductPhoto: mock(async () => ({
+        skipped: "PHOTO_NOT_ADDED" as const,
+      })) as never,
+    })
+    const result = await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "QA" },
+      "draft",
+      deps,
+    )
+    expect(result.results[0]).toMatchObject({ state: "COMMITTED" })
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.not.objectContaining({ photoAssetIds: expect.anything() }),
+    )
+    expect(deps.enqueuePhotoReview).not.toHaveBeenCalled()
+    expect(outcomes.at(-1)).toMatchObject({
+      outcome: { state: "COMMITTED", errorCode: "PHOTO_NOT_ADDED" },
+    })
+  })
+})
+
+describe("recommended illustrations", () => {
+  test("are attached when the owner sent no photo", async () => {
+    const { deps } = harness([illustrated("eggs")])
+    await commitSetupDraft(db, scope, "draft", deps)
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ illustrationId: "ill-egg" }),
+    )
+  })
+
+  test("give way to a photo the owner sent", async () => {
+    const { deps } = harness([illustrated("eggs", "att_photo")])
+    await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "LIVE" },
+      "draft",
+      deps,
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ photoAssetIds: ["asset_1"] }),
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.not.objectContaining({ illustrationId: expect.anything() }),
+    )
+  })
+
+  test("stay when the photo could not be added", async () => {
+    const { deps } = harness([illustrated("eggs", "att_photo")], {
+      prepareProductPhoto: mock(async () => ({
+        skipped: "PHOTO_NOT_ADDED" as const,
+      })) as never,
+    })
+    await commitSetupDraft(
+      db,
+      { ...scope, conversationId: "conv_1", dataClassification: "QA" },
+      "draft",
+      deps,
+    )
+    expect(deps.createCatalogItem).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ illustrationId: "ill-egg" }),
+    )
+  })
+})
 
 describe("setup commit flow", () => {
   test("commits products and a customer with a stable ledger command", async () => {
@@ -189,6 +342,91 @@ describe("setup commit flow", () => {
       errorCode: OPENING_BALANCE_NEEDS_FINANCE,
     })
     expect(deps.recordCustomerLedgerOpening).not.toHaveBeenCalled()
+  })
+
+  test("cash and bank accounts are added with balances; the first cash pocket reuses Shop cash", async () => {
+    const { deps, outcomes } = harness([
+      product("eggs"),
+      money("Cash at hand", "CASH", 5_000_000),
+      money("GTBank", "BANK", 25_000_000),
+      money("Home safe", "CASH"),
+    ])
+    const result = await commitSetupDraft(db, scope, "draft", deps)
+    expect(result).toMatchObject({ remaining: 0, interrupted: false })
+    expect(result.results.map((r) => [r.name, r.state, r.recordId])).toEqual([
+      ["eggs", "COMMITTED", "item_eggs"],
+      ["Cash at hand", "COMMITTED", "acct_cash"],
+      ["GTBank", "COMMITTED", `acct_${setupMoneyAccountCode("ent_GTBank")}`],
+      [
+        "Home safe",
+        "COMMITTED",
+        `acct_${setupMoneyAccountCode("ent_Home safe")}`,
+      ],
+    ])
+    expect(deps.createFinanceMoneyAccount).toHaveBeenCalledTimes(2)
+    // Only the two pockets with a balance post an opening entry.
+    expect(deps.recordFinanceMoneyMovement).toHaveBeenCalledTimes(2)
+    expect(outcomes.at(-1)).toMatchObject({
+      key: "money:Home safe",
+      outcome: { state: "COMMITTED", errorCode: null },
+    })
+    expect(
+      outcomes.find((entry) => entry.key === "money:Cash at hand"),
+    ).toMatchObject({
+      outcome: { state: "COMMITTED", errorCode: "MONEY_ACCOUNT_SHOP_CASH" },
+    })
+  })
+
+  test("without a Finance book cash and bank accounts fail with a Finance prompt", async () => {
+    const { deps } = harness([money("GTBank", "BANK", 25_000_000)], {
+      getFinanceBook: mock(async () => null) as never,
+    })
+    const result = await commitSetupDraft(db, scope, "draft", deps)
+    expect(result.results[0]).toMatchObject({
+      state: "FAILED",
+      errorCode: MONEY_ACCOUNT_NEEDS_FINANCE,
+    })
+    expect(deps.createFinanceMoneyAccount).not.toHaveBeenCalled()
+  })
+
+  test("an add from the chat commits only the named records", async () => {
+    const { deps } = harness([product("eggs"), product("broiler"), customer])
+    const result = await commitSetupDraft(db, scope, "draft", deps, {
+      keys: ["broiler"],
+    })
+    expect(result).toMatchObject({ remaining: 0, interrupted: false })
+    expect(result.results.map((r) => r.key)).toEqual(["broiler"])
+    expect(deps.createCatalogItem).toHaveBeenCalledTimes(1)
+    expect(deps.createCustomer).not.toHaveBeenCalled()
+  })
+
+  test("a new customer's outcome is written in its transaction without nesting another (P2028)", async () => {
+    const nested = mock(() => {
+      throw new Error("A nested $transaction must never start here.")
+    })
+    const tx = {
+      $transaction: nested,
+      setupDraftEntity: { updateMany: mock(async () => ({ count: 1 })) },
+      setupDraft: { update: mock(async () => ({ revision: 2 })) },
+    }
+    const txDb = {
+      $transaction: (fn: (client: unknown) => unknown) => fn(tx),
+    } as never
+    const { deps } = harness([customer], {
+      recordOutcomeInTransaction: recordSetupDraftCommitOutcomeInTransaction,
+    })
+    const result = await commitSetupDraft(txDb, scope, "draft", deps)
+    expect(result.interrupted).toBe(false)
+    expect(result.results[0]).toMatchObject({ state: "COMMITTED" })
+    expect(nested).not.toHaveBeenCalled()
+    expect(tx.setupDraftEntity.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          state: "COMMITTED",
+          errorCode: OPENING_BALANCE_PENDING,
+        }),
+      }),
+    )
   })
 
   test("the time budget stops starting new records", async () => {

@@ -1,54 +1,41 @@
 export function SignupStepper({
   currentStep,
   acceptanceRequired = true,
-}: { currentStep: number; acceptanceRequired?: boolean }) {
-  const STEPS = [
-    "Address",
+  entryStage,
+}: {
+  currentStep: number
+  acceptanceRequired?: boolean
+  entryStage?: "start" | "verify"
+}) {
+  const steps = [
+    "Start",
+    "Verify",
     "Business",
     "Account",
     ...(acceptanceRequired ? ["Terms & Privacy"] : []),
   ]
+  const active =
+    entryStage === "start" ? 0 : entryStage === "verify" ? 1 : currentStep
   return (
     <nav className="signup-progress" aria-label="Setup progress">
       <ol>
-        {STEPS.map((label, index) => (
+        {steps.map((label, index) => (
           <li
             key={label}
-            aria-current={
-              index > 0 && currentStep === index + 1 ? "step" : undefined
-            }
-            className={
-              index > 0 && currentStep > index + 1 ? "complete" : undefined
-            }
+            aria-current={active === index ? "step" : undefined}
+            className={active > index ? "complete" : undefined}
           >
-            {index === 0 ? (
-              <button
-                type="button"
-                disabled
-                className="signup-step-pending"
-                aria-label="Address setup pending, coming later"
-              >
-                <span className="signup-pending-icon" aria-hidden="true">
-                  ◷
-                </span>
-                <span>
-                  Address<small>Coming later</small>
-                </span>
-              </button>
-            ) : (
-              <>
-                <span aria-hidden="true">
-                  {currentStep > index + 1 ? "✓" : index}
-                </span>{" "}
-                {label}
-              </>
-            )}
+            <span aria-hidden="true">{active > index ? "✓" : index + 1}</span>
+            <b>{label}</b>
           </li>
         ))}
       </ol>
-      <p className="signup-progress-note">
-        Storefront and POS setup are coming later.
-      </p>
+      <progress
+        className="signup-mobile-progress"
+        value={active + 1}
+        max={steps.length}
+        aria-label={`Step ${active + 1} of ${steps.length}: ${steps[active]}`}
+      />
     </nav>
   )
 }

@@ -127,13 +127,12 @@ export function LeadCaptureForm({
     if (!qa?.authorization) return
     setUndoDraft(draft)
     setPhoneInvalid(false)
-    setDraft({
-      countryCode: "NG",
-      ...createLeadDraft({
-        domain: qa.authorization.qaDomain,
-        testerIdentity: qa.authorization.testerIdentity,
-      }),
+    const fill = createLeadDraft({
+      domain: qa.authorization.qaDomain,
+      testerIdentity: qa.authorization.testerIdentity,
     })
+    // Production builds swap in a stub that fills no country.
+    setDraft({ ...fill, countryCode: fill.countryCode ?? "NG" })
   }, [draft, qa?.authorization])
 
   const undoQuickFill = useCallback(() => {

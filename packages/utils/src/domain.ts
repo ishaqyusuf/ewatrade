@@ -43,7 +43,7 @@ const SURFACE_PREFIX_BY_KIND: Record<
   string
 > = {
   pos: "pos",
-  dashboard: "dashboard",
+  dashboard: "dash",
 }
 
 const SURFACE_SUFFIX_BY_KIND: Record<
@@ -313,7 +313,10 @@ export function extractTenantSlugFromPlatformHostname(
 
   if (
     subdomain === SURFACE_PREFIX_BY_KIND.pos ||
-    subdomain === SURFACE_PREFIX_BY_KIND.dashboard
+    subdomain === SURFACE_PREFIX_BY_KIND.dashboard ||
+    subdomain === "dashboard" ||
+    // Hosted Preview uses the global dashboard's account/workspace selector.
+    subdomain === "preview-dashboard"
   ) {
     return null
   }
@@ -391,7 +394,10 @@ export function inferTenantSurfaceFromHostname(
       return "pos"
     }
 
-    if (subdomain === SURFACE_PREFIX_BY_KIND.dashboard) {
+    if (
+      subdomain === SURFACE_PREFIX_BY_KIND.dashboard ||
+      subdomain === "dashboard"
+    ) {
       return "dashboard"
     }
 
@@ -412,7 +418,10 @@ export function inferTenantSurfaceFromHostname(
     return "pos"
   }
 
-  if (labels[0] === SURFACE_PREFIX_BY_KIND.dashboard) {
+  if (
+    labels[0] === SURFACE_PREFIX_BY_KIND.dashboard ||
+    labels[0] === "dashboard"
+  ) {
     return "dashboard"
   }
 

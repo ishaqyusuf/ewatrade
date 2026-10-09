@@ -38,7 +38,7 @@ describe("shared database command contract", () => {
     const packageScripts = scripts("packages/db/package.json")
 
     expect(packageScripts["db:generate"]).toBe(
-      "prisma generate --config prisma.generate.config.ts",
+      "prisma generate --config prisma.generate.config.ts && bun scripts/align-prisma-client-types.ts",
     )
     expect(packageScripts["db:migrate"]).toBe("prisma migrate dev")
     expect(packageScripts["db:migrate:deploy"]).toBe("prisma migrate deploy")
@@ -77,7 +77,7 @@ describe("shared database command contract", () => {
       "utf8",
     )
     expect(deploySource).toContain(
-      "Run database push separately through local-infra-kit, or use `bun release`.",
+      "Run database push separately through local-infra-kit, or use bun release.",
     )
     expect(deploySource).toContain("env.DATABASE_URL = undefined")
     expect(deploySource).toContain('"EWATRADE_DATABASE_URL"')

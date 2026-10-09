@@ -1,6 +1,7 @@
 {
   "extends": "../../packages/tsconfig/nextjs.json",
   "compilerOptions": {
+    "target": "ES2022",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

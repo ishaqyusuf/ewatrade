@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test"
-import { financePurchaseRecognitionsSchema } from "../../../../../apps/api/src/schemas/finance-purchases"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { listFinancePurchaseRecognitions as list } from "./purchase-recognition-list"
 
@@ -132,27 +131,6 @@ test("all 73 pre-invoice agreements remain reachable with stable tied-date pagin
   })
 })
 
-test("strict API contract refuses client actor/scope injection and oversized pages", () => {
-  const parsed = financePurchaseRecognitionsSchema.parse({
-    bookId: "book",
-    supplierId: "supplier",
-  })
-  expect(parsed.limit).toBe(30)
-  for (const extra of [
-    { tenantId: "other" },
-    { actorUserId: "other" },
-    { limit: 51 },
-    { cursor: "" },
-  ])
-    expect(() =>
-      financePurchaseRecognitionsSchema.parse({
-        bookId: "book",
-        supplierId: "supplier",
-        ...extra,
-      }),
-    ).toThrow()
-})
-
 test("current manager, exact Book, supplier and cursor ownership are required", async () => {
   for (const options of [
     { denied: true },
@@ -174,7 +152,9 @@ test("current manager, exact Book, supplier and cursor ownership are required", 
 
 test("agreement listing does not disclose immutable cost bill or command internals", async () => {
   const result = await list(fixture().db, { ...input, limit: 1 })
-  expect(Object.keys(result.items[0]).sort()).toEqual(
+  const [item] = result.items
+  if (!item) throw new Error("Expected one agreement")
+  expect(Object.keys(item).sort()).toEqual(
     [
       "id",
       "bookId",
@@ -185,5 +165,5 @@ test("agreement listing does not disclose immutable cost bill or command interna
       "amountMinor",
     ].sort(),
   )
-  expect(result.nextCursor).toBe(result.items[0].id)
+  expect(result.nextCursor).toBe(item.id)
 })

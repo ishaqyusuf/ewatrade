@@ -6,6 +6,6 @@ export function resolveDashboardUrl(params: {
   const configuredUrl = params.configuredUrl?.trim()
   if (configuredUrl) return configuredUrl.replace(/\/+$/, "")
   return params.isProduction
-    ? `https://dashboard.${params.platformDomain}`
+    ? `https://dash.${params.platformDomain}`
     : `http://${params.platformDomain}/dashboard`
 }

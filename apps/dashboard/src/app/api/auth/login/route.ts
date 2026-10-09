@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Your account does not have an active workspace. Contact your workspace owner or request early access.",
+          "Your account does not have an active workspace. Contact your workspace owner or create your own store.",
       },
       { status: 403 },
     )
