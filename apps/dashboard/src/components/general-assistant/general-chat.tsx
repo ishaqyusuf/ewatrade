@@ -72,8 +72,11 @@ export function GeneralChat() {
       vm.data.allowance.remainingTokens <= 0)
   const currencyCode = vm.data?.currencyCode ?? ""
   const openReceipt = (receipt: GeneralReceipt) => {
+    // The directory has no detail route; filter it to the saved customer.
     if (receipt.kind === "customer")
-      router.push(`/customers/${encodeURIComponent(receipt.recordId)}`)
+      router.push(
+        `/customers?customerQuery=${encodeURIComponent(receipt.detail)}`,
+      )
     else if (receipt.kind === "product")
       router.push(
         `/catalog?catalogDetail=${encodeURIComponent(receipt.recordId)}`,
