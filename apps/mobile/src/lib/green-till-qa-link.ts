@@ -4,6 +4,8 @@ const QA_ROUTES = new Set([
   "qa-owner-setup-modal",
   // Quick Fill forms, so QA can open each one directly. The screens still
   // apply their own sign-in and role checks.
+  "customer-ledger-modal",
+  "global-search",
   "closeout-modal",
   "create-sale-modal",
   "customer-book-modal",
