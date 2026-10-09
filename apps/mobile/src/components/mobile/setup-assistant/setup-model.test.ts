@@ -6,8 +6,10 @@ import {
   setupAreas,
   setupCommitKeys,
   setupCounts,
+  setupErrorSummary,
   setupPlainText,
   setupRecordRoute,
+  setupSummary,
 } from "./setup-model"
 const entity = {
   key: "eggs",
@@ -108,4 +110,84 @@ test("malformed or foreign run replies cannot unlock sending", () => {
     readSetupRun({ conversationId: "current", status: "RUNNING" }, "current")
       ?.status,
   ).toBe("RUNNING")
+})
+
+test("review shows every variant/unit price and exact converted stock from main's contract", () => {
+  const product = {
+    ...entity,
+    payload: {
+      ...entity.payload,
+      unitName: "Piece",
+      priceMinor: undefined,
+      options: [{ name: "Size", values: ["Big", "Small"] }],
+      sellingUnits: [{ name: "Crate", containsQuantity: "30" }],
+      variants: [
+        {
+          selections: [{ optionName: "Size", value: "Big" }],
+          priceMinor: 20000,
+          sellingUnitPrices: [{ unitName: "Crate", priceMinor: 550000 }],
+          stockByUnit: [{ unitName: "Crate", quantity: "2" }],
+        },
+        {
+          selections: [{ optionName: "Size", value: "Small" }],
+          priceMinor: 15000,
+          sellingUnitPrices: [{ unitName: "Crate", priceMinor: 400000 }],
+          openingStock: "0",
+        },
+      ],
+    },
+  }
+  const review = setupSummary(product, "NGN")
+  expect(review).toContain(
+    "Big · ₦200.00 per Piece · ₦5,500.00 per Crate (30 Piece) · 60 Piece in stock",
+  )
+  expect(review).toContain(
+    "Small · ₦150.00 per Piece · ₦4,000.00 per Crate (30 Piece) · 0 Piece in stock",
+  )
+  expect(review).not.toContain("Price needed")
+  expect(
+    setupSummary(
+      { ...product, payload: { ...product.payload, usage: "INTERNAL_USE" } },
+      "NGN",
+    ),
+  ).not.toContain("₦")
+})
+
+test("a single product with multiple selling units retains its shared stock", () => {
+  expect(
+    setupSummary(
+      {
+        ...entity,
+        payload: {
+          ...entity.payload,
+          openingStock: "40",
+          sellingUnits: [
+            { name: "Box", containsQuantity: "2", priceMinor: 850000 },
+          ],
+        },
+      },
+      "NGN",
+    ),
+  ).toContain("40 Crate in stock")
+})
+
+test("Finance recovery distinguishes an existing cash account from an add failure", () => {
+  expect(
+    setupErrorSummary({
+      ...entity,
+      kind: "MONEY_ACCOUNT",
+      errorCode: "MONEY_ACCOUNT_SHOP_CASH",
+    }),
+  ).toContain("Added to Shop cash")
+  expect(
+    setupErrorSummary({
+      ...entity,
+      kind: "MONEY_ACCOUNT",
+      errorCode: "OPENING_BALANCE_FAILED",
+    }),
+  ).toStartWith("Account added")
+  expect(
+    setupErrorSummary({ ...entity, errorCode: "OPENING_BALANCE_FAILED" }),
+  ).toStartWith("Customer added")
+  expect(setupErrorSummary(entity)).toBeNull()
 })

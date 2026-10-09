@@ -6,6 +6,7 @@ import { ListCard, StatusPill } from "../green-till/kit"
 import {
   type SetupEntity,
   setupEntityPayload,
+  setupErrorSummary,
   setupRecordRoute,
   setupSource,
   setupSummary,
@@ -78,9 +79,7 @@ export function SetupRecordCard({
         ))}
         {entity.errorCode ? (
           <Text className="text-xs text-tint-amber-foreground">
-            {entity.errorCode.startsWith("OPENING_BALANCE")
-              ? "Customer added. Their opening balance still needs attention in Finance."
-              : "This record could not be added. Check its details and try again."}
+            {setupErrorSummary(entity)}
           </Text>
         ) : null}
         <View className="flex-row flex-wrap gap-2">

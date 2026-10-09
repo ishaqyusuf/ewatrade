@@ -3,6 +3,7 @@ import {
   summarizeSetupAreas,
 } from "@ewatrade/assistant/setup/areas"
 import { setupEntityPayloadSchema } from "@ewatrade/assistant/setup/contracts"
+import { setupProductVariants } from "@ewatrade/assistant/setup/variants"
 import { formatMinorMoney } from "@ewatrade/utils/currency"
 import { z } from "zod"
 const entity = z.object({
@@ -141,14 +142,60 @@ export function setupSummary(e: SetupEntity, currency: string) {
       : p.priceMinor === undefined
         ? "Price needed"
         : formatMinorMoney(p.priceMinor, currency)
+  if (p.options?.length || p.variants?.length || p.sellingUnits?.length)
+    return (
+      setupProductVariants(p)
+        .map((variant) => {
+          const stock =
+            variant.openingStock ??
+            (!p.options?.length ? p.openingStock : undefined)
+          return [
+            variant.label,
+            ...(p.usage === "INTERNAL_USE"
+              ? []
+              : [
+                  variant.priceMinor === undefined
+                    ? `Price needed per ${p.unitName}`
+                    : `${formatMinorMoney(variant.priceMinor, currency)} per ${p.unitName}`,
+                  ...variant.sellingUnits.map((unit) =>
+                    unit.priceMinor === undefined
+                      ? `Price needed per ${unit.name}`
+                      : `${formatMinorMoney(unit.priceMinor, currency)} per ${unit.name} (${unit.containsQuantity} ${p.unitName})`,
+                  ),
+                  ...variant.pendingUnitPrices.map(
+                    (unit) =>
+                      `${formatMinorMoney(unit.priceMinor, currency)} per ${unit.unitName} · pack size needed`,
+                  ),
+                ]),
+            stock === undefined ? null : `${stock} ${p.unitName} in stock`,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        })
+        .join("\n") || "Check the options and units before adding."
+    )
   return [
-    p.priceMinor === undefined
-      ? "Price needed"
-      : `${formatMinorMoney(p.priceMinor, currency)} per ${p.unitName.toLowerCase()}`,
+    p.usage === "INTERNAL_USE"
+      ? "For business use"
+      : p.priceMinor === undefined
+        ? "Price needed"
+        : `${formatMinorMoney(p.priceMinor, currency)} per ${p.unitName.toLowerCase()}`,
     p.openingStock === undefined ? null : `${p.openingStock} in stock`,
   ]
     .filter(Boolean)
     .join(" · ")
+}
+export function setupErrorSummary(e: SetupEntity) {
+  if (!e.errorCode) return null
+  if (e.errorCode === "MONEY_ACCOUNT_SHOP_CASH")
+    return "Added to Shop cash, the cash account Finance already keeps for your business."
+  if (e.errorCode === "MONEY_ACCOUNT_NEEDS_FINANCE")
+    return "Set up your Finance book, then confirm and add this account again."
+  if (e.errorCode === "PHOTO_NOT_ADDED")
+    return "Added without its photo. You can add the photo from Catalog."
+  if (e.errorCode.startsWith("OPENING_BALANCE"))
+    return `${e.kind === "MONEY_ACCOUNT" ? "Account" : "Customer"} added. The opening balance still needs attention in Finance.`
+  return "This record could not be added. Check its details and try again."
 }
 export function setupSource(e: SetupEntity) {
   if (!e.source || typeof e.source !== "object") return null
