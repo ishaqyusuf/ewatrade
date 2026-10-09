@@ -5,11 +5,13 @@ import { View } from "@/components/ui/view"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { useEffect, useRef } from "react"
 import { Text as NativeText } from "react-native"
 import { ActionButton } from "../action-button"
 import { workDueLabel } from "../appearances/classic/service-jobs"
 import { HeroCard } from "../green-till/hero-card"
 import { StatusBanner } from "../status-banner"
+import { useSetServiceChromeHeader } from "./service-chrome-context"
 import { textLabel } from "./service-jobs-model"
 import { ServiceWorkLines } from "./service-work-lines"
 import { overdueWork } from "./service-work-summary"
@@ -45,6 +47,30 @@ export function ClassicServiceJobWorkspace({
   const colors = useColors()
   const palette = GREEN_TILL_THEME[colorScheme]
   const job = model.selectedJob
+  const setHeader = useSetServiceChromeHeader()
+  const latest = useRef({
+    back: () => {},
+    history: () => {},
+  })
+  latest.current = {
+    back: () => {
+      model.setAmountPaid("")
+      model.setPaymentReference("")
+      model.setSelectedJobId(null)
+    },
+    history: () => model.openHistory("notes"),
+  }
+  const title = job?.orderNumber
+  // The modal bar becomes "‹ ORD-013 🕘" while a job is open.
+  useEffect(() => {
+    if (!title) return
+    setHeader({
+      onBack: () => latest.current.back(),
+      onHistory: () => latest.current.history(),
+      title,
+    })
+    return () => setHeader(null)
+  }, [setHeader, title])
   if (!job) return null
   const canAct = model.command.canAct()
   const late = overdueWork(job, Date.now())
@@ -55,31 +81,8 @@ export function ClassicServiceJobWorkspace({
   const mine = model.profile?.id
     ? job.currentAssigneeUserId === model.profile.id
     : false
-  const back = () => {
-    model.setAmountPaid("")
-    model.setPaymentReference("")
-    model.setSelectedJobId(null)
-  }
   return (
     <View className="gap-4">
-      <View className="flex-row items-center justify-between">
-        <RoundButton
-          icon="ChevronLeft"
-          label="Back to work queue"
-          onPress={back}
-        />
-        <Text
-          accessibilityRole="header"
-          className="text-[17px] font-extrabold text-foreground"
-        >
-          {job.orderNumber}
-        </Text>
-        <RoundButton
-          icon="Clock"
-          label="Job history"
-          onPress={() => model.openHistory("notes")}
-        />
-      </View>
       <HeroCard
         label={job.customerName || "Walk-in customer"}
         pill={{
@@ -306,32 +309,6 @@ export function ClassicServiceJobWorkspace({
           evidence.
         </Text>
       </View>
-    </View>
-  )
-}
-
-function RoundButton({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: IconKeys
-  label: string
-  onPress: () => void
-}) {
-  const colors = useColors()
-  return (
-    <View className="rounded-full bg-card shadow-sm">
-      <Pressable
-        accessibilityLabel={label}
-        accessibilityRole="button"
-        className="size-10 items-center justify-center rounded-full active:opacity-80"
-        haptic
-        onPress={onPress}
-        transition
-      >
-        <Icon className="size-[18px]" color={colors.foreground} name={icon} />
-      </Pressable>
     </View>
   )
 }

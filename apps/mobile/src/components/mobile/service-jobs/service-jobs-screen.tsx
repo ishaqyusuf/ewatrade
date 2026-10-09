@@ -3,6 +3,8 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { VariableContextProvider } from "nativewind"
@@ -12,6 +14,10 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ListCreateFab } from "../list-create-fab"
 import { ServiceAction } from "./service-action"
+import {
+  ServiceChromeContext,
+  type ServiceChromeHeader,
+} from "./service-chrome-context"
 import { ServiceCommandReview } from "./service-command-review"
 import { ServiceEvidenceSheet } from "./service-evidence-sheet"
 import { ServiceHistorySheet } from "./service-history-sheet"
@@ -26,7 +32,31 @@ import { useServiceAppearance } from "./use-service-appearance"
 import { useServiceJobs } from "./use-service-jobs"
 
 export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="service-jobs" />
+  const [header, setHeader] = useState<ServiceChromeHeader | null>(null)
+  return (
+    <ServiceChromeContext.Provider value={setHeader}>
+      <MobileWorkflowChrome
+        {...props}
+        screen="service-jobs"
+        title={header?.title ?? props.title}
+        onBack={header?.onBack}
+        backLabel="Back to work queue"
+        trailing={
+          header ? (
+            <Pressable
+              accessibilityLabel="Job history"
+              accessibilityRole="button"
+              className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+              haptic
+              onPress={header.onHistory}
+            >
+              <Icon className="size-[18px] text-foreground" name="Clock" />
+            </Pressable>
+          ) : undefined
+        }
+      />
+    </ServiceChromeContext.Provider>
+  )
 }
 
 export function ServiceJobsContent(_props: ServiceJobsProps = {}) {

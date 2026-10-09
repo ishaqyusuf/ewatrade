@@ -10,6 +10,7 @@ import type { MobileDesignScreen } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
+import type { ReactNode } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 // One stable shell type keeps the feature controller mounted on appearance changes.
@@ -21,7 +22,17 @@ export function MobileWorkflowChrome({
   hideHeader,
   title,
   onClose,
-}: WorkflowModalChromeProps & { screen: MobileDesignScreen }) {
+  onBack,
+  backLabel,
+  trailing,
+}: WorkflowModalChromeProps & {
+  screen: MobileDesignScreen
+  /** Replaces the X with a back chevron for a nested view (Green Till). */
+  onBack?: () => void
+  backLabel?: string
+  /** A 44pt control in the right slot, balancing the left button. */
+  trailing?: ReactNode
+}) {
   const market = useMobileDesign(screen) === "market-day"
   const insets = useSafeAreaInsets()
   const palette = useMarketDayPalette()
@@ -45,12 +56,19 @@ export function MobileWorkflowChrome({
           <View className="flex-row items-center gap-2.5 px-4 pb-3.5 pt-2">
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={closeLabel}
-              onPress={onClose}
+              accessibilityLabel={onBack ? (backLabel ?? "Back") : closeLabel}
+              onPress={onBack ?? onClose}
               haptic
               className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
             >
-              <Icon name="X" className="size-[18px] text-foreground" />
+              <Icon
+                name={onBack ? "ChevronLeft" : "X"}
+                className={
+                  onBack
+                    ? "size-[20px] text-foreground"
+                    : "size-[18px] text-foreground"
+                }
+              />
             </Pressable>
             <Text
               accessibilityRole="header"
@@ -59,7 +77,7 @@ export function MobileWorkflowChrome({
             >
               {title}
             </Text>
-            <View className="size-11" />
+            {trailing ?? <View className="size-11" />}
           </View>
         ) : null}
         {!hideHeader && market ? (
