@@ -90,7 +90,7 @@ export function SellingUnitEditor({
                   </View>
                 </KeyboardAwareScrollView>
                 <BottomSearchFooter
-                  variant={market ? "market-day" : "default"}
+                  variant={market ? "market-day" : "action-bar"}
                   accessibilityLabel="Selling unit actions"
                   onHeightChange={setFooterHeight}
                   searchVisible={false}
@@ -100,6 +100,7 @@ export function SellingUnitEditor({
                   value=""
                 >
                   <ActionButton
+                    icon={market ? undefined : "Check"}
                     onPress={onSave}
                     foregroundColor={market ? palette.onPalm : undefined}
                     className={
@@ -108,9 +109,11 @@ export function SellingUnitEditor({
                         : undefined
                     }
                   >
-                    {fields.isEditingUnit
-                      ? "Save unit changes"
-                      : "Add selling unit"}
+                    {market
+                      ? fields.isEditingUnit
+                        ? "Save unit changes"
+                        : "Add selling unit"
+                      : `${fields.isEditingUnit ? "Save" : "Add"} ${fields.unitEditorDraft.name.trim().toLowerCase() || "selling unit"}`}
                   </ActionButton>
                 </BottomSearchFooter>
               </View>

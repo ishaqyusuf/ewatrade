@@ -3,11 +3,27 @@ import { SellingUnitReferenceSelector } from "@/components/mobile/catalog-setup/
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { View } from "react-native"
+import { cn } from "@/lib/utils"
+import { addExactDecimals, compareExactDecimals } from "@ewatrade/utils"
+import { Text as NativeText, TextInput, View } from "react-native"
 
+const UNIT_SUGGESTIONS = ["Carton", "Pack", "Tray", "Half bag", "Dozen"]
+
+function stepCount(value: string, direction: 1 | -1) {
+  try {
+    const next = addExactDecimals(value.trim() || "0", String(direction))
+    return compareExactDecimals(next, "1") < 0 ? "1" : next
+  } catch {
+    return direction === 1 ? "2" : "1"
+  }
+}
+
+/** Sell another way (01 Live Card): relation card, unit, price, stock. */
 export function ClassicSellingUnitFields({
   referenceUnits,
   currencyCode,
@@ -19,17 +35,80 @@ export function ClassicSellingUnitFields({
   unitName,
 }: SellingUnitEditorFieldsProps) {
   const largeTextLayout = useLargeTextLayout()
+  const colors = useColors()
   const referenceName =
     referenceUnits?.find((unit) => unit.id === unitEditorDraft.referenceUnitId)
-      ?.name ?? unitName
+      ?.name ??
+    (unitName.trim() || "main unit")
+  const name = unitEditorDraft.name.trim() || "Carton"
+  const contains = unitEditorDraft.relationDirection === "canonical_per_unit"
+  const [left, right] = contains ? [name, referenceName] : [referenceName, name]
+  const stepButton = (direction: 1 | -1) => (
+    <Pressable
+      accessibilityLabel={direction === 1 ? "One more" : "One less"}
+      accessibilityRole="button"
+      haptic
+      onPress={() =>
+        onChangeDraft({
+          relationCount: stepCount(unitEditorDraft.relationCount, direction),
+        })
+      }
+      style={{
+        alignItems: "center",
+        backgroundColor: colors.muted,
+        borderRadius: 9,
+        height: 36,
+        justifyContent: "center",
+        width: 36,
+      }}
+    >
+      <Icon
+        className="size-[15px] text-foreground"
+        name={direction === 1 ? "Plus" : "Minus"}
+      />
+    </Pressable>
+  )
+  const stepper = (
+    <View
+      style={{
+        alignItems: "center",
+        backgroundColor: colors.card,
+        borderRadius: 13,
+        flexDirection: "row",
+        gap: 2,
+        padding: 4,
+      }}
+    >
+      {stepButton(-1)}
+      <TextInput
+        accessibilityLabel={`How many ${right} in 1 ${left}`}
+        keyboardType="decimal-pad"
+        maxFontSizeMultiplier={1.3}
+        onChangeText={(value) => onChangeDraft({ relationCount: value })}
+        placeholder="12"
+        placeholderTextColor={colors.mutedForeground}
+        selectTextOnFocus
+        style={{
+          color: colors.foreground,
+          fontSize: 18,
+          fontVariant: ["tabular-nums"],
+          fontWeight: "800",
+          minWidth: 40,
+          padding: 0,
+          textAlign: "center",
+        }}
+        value={unitEditorDraft.relationCount}
+      />
+      {stepButton(1)}
+    </View>
+  )
 
   return (
-    <View className={largeTextLayout ? "gap-4 px-4 pb-6" : "gap-4 px-5 pb-6"}>
-      <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
-        Add another way customers buy this Product, then connect it to the unit
-        you count in stock.
+    <View className="gap-3.5 px-[18px] pb-6">
+      <Text className="text-[13px] text-muted-foreground">
+        Packs, trays and cartons are amounts customers buy. A size customers
+        choose goes in Customer choices.
       </Text>
-
       {unitEditorError ? (
         <StatusBanner
           icon="AlertCircle"
@@ -37,189 +116,206 @@ export function ClassicSellingUnitFields({
           tone="destructive"
         />
       ) : null}
-
-      <FormField
-        autoCapitalize="words"
-        label="Unit name"
-        onChangeText={(value) => onChangeDraft({ name: value })}
-        placeholder={
-          largeTextLayout
-            ? "e.g. Carton or Pack"
-            : "e.g. Half bag, Carton, Pack"
-        }
-        value={unitEditorDraft.name}
-      />
-      <SellingUnitReferenceSelector
-        fields={{ referenceUnits, unitEditorDraft, onChangeDraft, unitName }}
-        market={false}
-      />
-      <View className="gap-2">
-        <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-          Relationship
-        </Text>
-        <View className={largeTextLayout ? "gap-2" : "flex-row gap-2"}>
-          {(
-            [
-              [
-                "units_per_canonical",
-                "Inside selected unit",
-                "A smaller unit taken from one selected unit.",
-              ],
-              [
-                "canonical_per_unit",
-                "Contains selected units",
-                "A larger pack made from selected units.",
-              ],
-            ] as const
-          ).map(([value, label, description]) => (
+      <View
+        accessibilityLabel={`1 ${left} equals ${unitEditorDraft.relationCount || "…"} ${right}`}
+        style={{
+          alignItems: "center",
+          backgroundColor: colors.accent,
+          borderRadius: 18,
+          flexDirection: largeTextLayout ? "column" : "row",
+          gap: 10,
+          justifyContent: "center",
+          paddingHorizontal: 8,
+          paddingVertical: 16,
+        }}
+      >
+        <NativeText
+          style={{
+            color: colors.accentForeground,
+            fontSize: 16,
+            fontWeight: "800",
+          }}
+        >
+          {`1 ${left}`}
+        </NativeText>
+        <NativeText
+          style={{
+            color: colors.accentForeground,
+            fontSize: 16,
+            fontWeight: "800",
+          }}
+        >
+          =
+        </NativeText>
+        {stepper}
+        <NativeText
+          numberOfLines={1}
+          style={{
+            color: colors.accentForeground,
+            flexShrink: 1,
+            fontSize: 16,
+            fontWeight: "800",
+          }}
+        >
+          {right}
+        </NativeText>
+      </View>
+      <View className="flex-row gap-2">
+        {(
+          [
+            ["canonical_per_unit", `Bigger pack of ${referenceName}`],
+            ["units_per_canonical", `Smaller part of ${referenceName}`],
+          ] as const
+        ).map(([value, label]) => {
+          const on = unitEditorDraft.relationDirection === value
+          return (
             <Pressable
-              accessibilityLabel={`${label}. ${description}`}
-              accessibilityRole="radio"
-              accessibilityState={{
-                selected: unitEditorDraft.relationDirection === value,
-              }}
-              className={
-                unitEditorDraft.relationDirection === value
-                  ? largeTextLayout
-                    ? "min-h-20 w-full justify-center rounded-2xl border border-primary bg-primary/10 px-4 py-3"
-                    : "min-h-[76px] flex-1 justify-center rounded-2xl border border-primary bg-primary/10 px-3 py-3"
-                  : largeTextLayout
-                    ? "min-h-20 w-full justify-center rounded-2xl border border-border px-4 py-3 active:bg-muted"
-                    : "min-h-[76px] flex-1 justify-center rounded-2xl border border-border px-3 py-3 active:bg-muted"
-              }
-              haptic
               key={value}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              className={cn(
+                "min-h-9 flex-1 items-center justify-center rounded-full border-[1.5px] px-3",
+                on
+                  ? "border-primary/40 bg-accent"
+                  : "border-transparent bg-muted",
+              )}
+              haptic
               onPress={() => onChangeDirection(value)}
             >
               <Text
-                className={
-                  unitEditorDraft.relationDirection === value
-                    ? "text-xs font-extrabold text-primary"
-                    : "text-xs font-extrabold text-foreground"
-                }
+                numberOfLines={1}
+                className={cn(
+                  "text-xs font-bold",
+                  on ? "text-accent-foreground" : "text-muted-foreground",
+                )}
               >
                 {label}
               </Text>
-              <Text
-                className={
-                  largeTextLayout
-                    ? "mt-1 text-[11px] [-rn-line-height:20] text-muted-foreground"
-                    : "mt-1 text-[11px] [-rn-line-height:16] text-muted-foreground"
-                }
-              >
-                {description}
-              </Text>
             </Pressable>
-          ))}
-        </View>
+          )
+        })}
       </View>
-
-      <View className="border-l-2 border-primary bg-muted px-3 py-3">
-        <Text className="text-xs [-rn-line-height:20] text-foreground">
-          {unitEditorDraft.relationDirection === "units_per_canonical"
-            ? `1 ${referenceName.trim() || "main unit"} contains ${unitEditorDraft.relationCount.trim() || "…"} ${unitEditorDraft.name.trim() || "of this unit"}`
-            : `1 ${unitEditorDraft.name.trim() || "selling unit"} contains ${unitEditorDraft.relationCount.trim() || "…"} ${referenceName.trim() || "main units"}`}
-        </Text>
-      </View>
-
-      <View className={largeTextLayout ? "gap-3" : "flex-row gap-3"}>
-        <View className={largeTextLayout ? undefined : "min-w-0 flex-1"}>
-          <FormField
-            helper="Use a positive number."
-            keyboardType="decimal-pad"
-            label={
-              unitEditorDraft.relationDirection === "units_per_canonical"
-                ? `Units in 1 ${referenceName.trim() || "main unit"}`
-                : `Reference units in 1 ${unitEditorDraft.name.trim() || "selling unit"}`
-            }
-            onChangeText={(value) => onChangeDraft({ relationCount: value })}
-            placeholder="e.g. 50"
-            value={unitEditorDraft.relationCount}
-          />
+      <View className="gap-3 rounded-[20px] bg-card p-3.5 shadow-sm">
+        <FormField
+          autoCapitalize="words"
+          label="Unit name"
+          onChangeText={(value) => onChangeDraft({ name: value })}
+          placeholder="e.g. Carton"
+          value={unitEditorDraft.name}
+          variant="green-gate"
+        />
+        <View className="-mt-1 flex-row flex-wrap gap-1.5">
+          {UNIT_SUGGESTIONS.map((suggestion) => {
+            const on =
+              suggestion.toLowerCase() ===
+              unitEditorDraft.name.trim().toLowerCase()
+            return (
+              <Pressable
+                key={suggestion}
+                accessibilityLabel={`Use ${suggestion}`}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                className={cn(
+                  "min-h-9 justify-center rounded-full border-[1.5px] px-3",
+                  on
+                    ? "border-primary/40 bg-accent"
+                    : "border-transparent bg-muted",
+                )}
+                haptic
+                onPress={() => onChangeDraft({ name: suggestion })}
+              >
+                <Text
+                  className={cn(
+                    "text-[12.5px] font-bold",
+                    on ? "text-accent-foreground" : "text-foreground",
+                  )}
+                >
+                  {suggestion}
+                </Text>
+              </Pressable>
+            )
+          })}
         </View>
-        <View className={largeTextLayout ? undefined : "min-w-0 flex-1"}>
-          <MoneyField
-            currencyCode={currencyCode}
-            editable={!multiplePriceOptions}
-            helper={
-              multiplePriceOptions
-                ? "Set per option later."
-                : "Options may override it."
-            }
-            label="Default price"
-            onChangeValue={(value) => onChangeDraft({ price: value })}
-            placeholder="e.g. 25000"
-            value={unitEditorDraft.price}
-          />
-        </View>
+        <SellingUnitReferenceSelector
+          fields={{ referenceUnits, unitEditorDraft, onChangeDraft, unitName }}
+          market={false}
+        />
+        <MoneyField
+          currencyCode={currencyCode}
+          editable={!multiplePriceOptions}
+          helper={multiplePriceOptions ? "Set per option later." : undefined}
+          label={`Price for 1 ${name.toLowerCase()}`}
+          onChangeValue={(value) => onChangeDraft({ price: value })}
+          placeholder="0.00"
+          value={unitEditorDraft.price}
+          variant="green-gate"
+        />
       </View>
-
-      <View className="gap-2">
-        <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-          Stock source
-        </Text>
-        <View className="gap-2">
-          {(
+      <Text className="mt-2 text-base font-extrabold text-foreground">
+        Stock
+      </Text>
+      <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
+        {(
+          [
             [
-              [
-                "alternate_transaction",
-                "Share main stock",
-                "Sales deduct from the main-unit balance.",
-              ],
-              [
-                "packaged_stock",
-                "Track prepared stock",
-                "Keep a separate balance for units already packed.",
-              ],
-            ] as const
-          ).map(([value, label, description]) => (
+              "alternate_transaction",
+              "Share main stock",
+              `Selling 1 ${name.toLowerCase()} takes ${unitEditorDraft.relationCount.trim() || "…"} ${referenceName.toLowerCase()} from stock.`,
+            ],
+            [
+              "packaged_stock",
+              "Track prepared stock",
+              `Count packed ${name.toLowerCase()}s separately.`,
+            ],
+          ] as const
+        ).map(([value, label, description], index) => {
+          const on = unitEditorDraft.stockBehavior === value
+          return (
             <Pressable
+              key={value}
               accessibilityLabel={`${label}. ${description}`}
               accessibilityRole="radio"
-              accessibilityState={{
-                selected: unitEditorDraft.stockBehavior === value,
-              }}
-              className={
-                unitEditorDraft.stockBehavior === value
-                  ? largeTextLayout
-                    ? "min-h-20 flex-row items-start gap-3 rounded-2xl border border-primary bg-primary/10 px-3 py-3"
-                    : "min-h-16 flex-row items-center gap-3 rounded-2xl border border-primary bg-primary/10 px-3 py-3"
-                  : largeTextLayout
-                    ? "min-h-20 flex-row items-start gap-3 rounded-2xl border border-border px-3 py-3 active:bg-muted"
-                    : "min-h-16 flex-row items-center gap-3 rounded-2xl border border-border px-3 py-3 active:bg-muted"
-              }
+              accessibilityState={{ selected: on }}
+              className={cn(
+                "min-h-[62px] flex-row items-center gap-3 py-3",
+                index > 0 && "border-t border-border",
+              )}
               haptic
-              key={value}
               onPress={() => onChangeDraft({ stockBehavior: value })}
             >
               <View
-                className={
-                  unitEditorDraft.stockBehavior === value
-                    ? largeTextLayout
-                      ? "mt-1 h-5 w-5 items-center justify-center rounded-full border-[5px] border-primary"
-                      : "h-5 w-5 items-center justify-center rounded-full border-[5px] border-primary"
-                    : largeTextLayout
-                      ? "mt-1 h-5 w-5 rounded-full border border-border"
-                      : "h-5 w-5 rounded-full border border-border"
-                }
-              />
+                style={{
+                  alignItems: "center",
+                  borderColor: on ? colors.primary : colors.border,
+                  borderRadius: 999,
+                  borderWidth: 2,
+                  height: 22,
+                  justifyContent: "center",
+                  width: 22,
+                }}
+              >
+                {on ? (
+                  <View
+                    style={{
+                      backgroundColor: colors.primary,
+                      borderRadius: 999,
+                      height: 11,
+                      width: 11,
+                    }}
+                  />
+                ) : null}
+              </View>
               <View className="min-w-0 flex-1">
-                <Text className="text-xs font-extrabold text-foreground">
+                <Text className="text-sm font-bold text-foreground">
                   {label}
                 </Text>
-                <Text
-                  className={
-                    largeTextLayout
-                      ? "mt-1 text-[11px] [-rn-line-height:20] text-muted-foreground"
-                      : "mt-1 text-[11px] [-rn-line-height:16] text-muted-foreground"
-                  }
-                >
+                <Text className="text-xs text-muted-foreground">
                   {description}
                 </Text>
               </View>
             </Pressable>
-          ))}
-        </View>
+          )
+        })}
       </View>
     </View>
   )
