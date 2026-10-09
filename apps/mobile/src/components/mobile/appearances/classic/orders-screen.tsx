@@ -191,7 +191,9 @@ export function ClassicOrdersSummary({
                   label: "Avg order",
                   value: report?.orderCount
                     ? wholeMoney(
-                        Math.round(report.orderValueMinor / report.orderCount),
+                        Math.round(
+                          report.orderValueMinor / report.orderCount / 100,
+                        ) * 100,
                         report.currencyCode,
                       )
                     : "—",
