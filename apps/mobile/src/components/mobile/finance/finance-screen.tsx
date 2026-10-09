@@ -4,11 +4,13 @@ import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
+import { Icon } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { useColors } from "@/hooks/use-color"
 import { createExpenseFixture } from "@/internal-tooling/fixture-recipes"
 import { financeUtcDate } from "@/lib/finance-expense-input"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
@@ -19,14 +21,16 @@ import {
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useRef, useState } from "react"
-import { FlatList, View } from "react-native"
+import { FlatList, ScrollView, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
 import { HeroCard } from "../green-till/hero-card"
 import {
-  ListCard,
   NudgeCard,
   QuickActionRow,
   RecordRow,
+  RowDivider,
+  SectionHeader,
   StatusPill,
 } from "../green-till/kit"
 import { FinanceBankDateField } from "./finance-bank-date-field"
@@ -81,6 +85,7 @@ function SpendingWorkspace({
 }: FinanceWorkspace & { onSuppliersPress: () => void }) {
   const trpc = useTRPC()
   const router = useRouter()
+  const colors = useColors()
   const [status, setStatus] = useState<
     "UNPAID" | "PARTIAL" | "PAID" | "VOID" | undefined
   >()
@@ -128,6 +133,15 @@ function SpendingWorkspace({
     ) ?? []
   const categoryId = category || categories[0]?.id || ""
   const summary = bills.data?.pages[0]?.summary
+  const recordCount = bills.data?.pages[0]?.count
+  const loadedBills = bills.data?.pages.flatMap((page) => page.items) ?? []
+  // Exact only once every page is loaded; otherwise the hero leaves it out.
+  const notFullyPaid =
+    bills.data && !bills.hasNextPage
+      ? loadedBills.filter(
+          (bill) => bill.status === "UNPAID" || bill.status === "PARTIAL",
+        ).length
+      : undefined
   const money = (v: string) => formatFinanceMoney(v, book.currencyCode)
   function prepare() {
     try {
@@ -183,13 +197,18 @@ function SpendingWorkspace({
               label={
                 status
                   ? `${status === "PARTIAL" ? "Part paid" : status.toLowerCase()} expenses · still owed`
-                  : "Still owed · current expenses"
+                  : "Still owed"
               }
               amount={summary ? money(summary.outstandingMinor) : "—"}
+              pill={{ label: "Recorded entries", tone: "synced" }}
               sub={
-                summary
-                  ? "Recorded finance entries only"
-                  : "Spending summary unavailable"
+                !summary
+                  ? "Spending summary unavailable"
+                  : notFullyPaid === undefined || status
+                    ? undefined
+                    : notFullyPaid
+                      ? `${notFullyPaid} expense${notFullyPaid === 1 ? "" : "s"} not fully paid`
+                      : "Everything recorded is paid"
               }
               stats={[
                 {
@@ -200,19 +219,25 @@ function SpendingWorkspace({
                   label: "Paid",
                   value: summary ? money(summary.paidAgainstBillsMinor) : "—",
                 },
+                {
+                  label: "Records",
+                  value: recordCount === undefined ? "—" : String(recordCount),
+                },
               ]}
             >
-              <ActionButton
-                tone="cream"
-                icon="Plus"
-                disabled={!canSubmit}
-                onPress={() => {
-                  setCreating(true)
-                  setFormError(null)
-                }}
-              >
-                Record expense
-              </ActionButton>
+              <View className="mt-4">
+                <ActionButton
+                  tone="cream"
+                  icon="Plus"
+                  disabled={!canSubmit}
+                  onPress={() => {
+                    setCreating(true)
+                    setFormError(null)
+                  }}
+                >
+                  Record expense
+                </ActionButton>
+              </View>
             </HeroCard>
           )}
           {offline ? (
@@ -229,7 +254,7 @@ function SpendingWorkspace({
           <QuickActionRow
             actions={[
               {
-                label: "Money accounts",
+                label: "Accounts",
                 icon: "Wallet",
                 onPress: () => router.push("/finance-accounts-modal" as Href),
               },
@@ -245,14 +270,6 @@ function SpendingWorkspace({
                 onPress: () => router.push("/finance-reports-modal" as Href),
               },
             ]}
-          />
-          <NudgeCard
-            icon="Calendar"
-            tint="lilac"
-            title="Posting periods"
-            sub="Date locks and audit history"
-            actionLabel="Open"
-            onAction={() => router.push("/finance-periods-modal" as Href)}
           />
         </>
       ) : null}
@@ -386,7 +403,24 @@ function SpendingWorkspace({
       ) : null}
       {!creating ? (
         <>
-          <View className="flex-row flex-wrap gap-2">
+          <SectionHeader
+            title={
+              status === "VOID" ? "Cancelled expenses" : "Spending records"
+            }
+            trailing={
+              recordCount === undefined ? undefined : (
+                <Text className="text-xs font-bold text-muted-foreground">
+                  {recordCount}
+                </Text>
+              )
+            }
+          />
+          <ScrollView
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 18 }}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flexGrow: 0, marginHorizontal: -18, marginTop: -8 }}
+          >
             {[
               { label: "Current", value: undefined },
               { label: "Unpaid", value: "UNPAID" as const },
@@ -394,32 +428,14 @@ function SpendingWorkspace({
               { label: "Paid", value: "PAID" as const },
               { label: "Cancelled", value: "VOID" as const },
             ].map(({ label, value }) => (
-              <Pressable
+              <ClassicCustomerBookFilter
                 key={label}
-                accessibilityRole="button"
-                accessibilityState={{ selected: status === value }}
-                className={
-                  status === value
-                    ? "min-h-11 rounded-full bg-primary justify-center px-4"
-                    : "min-h-11 rounded-full bg-card justify-center px-4"
-                }
+                active={status === value}
+                label={label}
                 onPress={() => setStatus(value)}
-              >
-                <Text
-                  className={
-                    status === value
-                      ? "font-bold text-primary-foreground"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {label}
-                </Text>
-              </Pressable>
+              />
             ))}
-          </View>
-          <Text className="text-lg font-bold">
-            {status === "VOID" ? "Cancelled expenses" : "Spending records"}
-          </Text>
+          </ScrollView>
           {status === "VOID" ? (
             <Text className="text-sm text-muted-foreground">
               Original amounts remain in history. Cancelled expenses contribute
@@ -453,9 +469,9 @@ function SpendingWorkspace({
     )
   return (
     <FlatList
-      contentContainerClassName="gap-3 px-[18px] pb-12"
+      contentContainerClassName="px-[18px] pb-12"
       keyboardShouldPersistTaps="handled"
-      data={bills.data?.pages.flatMap((p) => p.items) ?? []}
+      data={loadedBills}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={header}
       refreshing={bills.isRefetching}
@@ -476,8 +492,14 @@ function SpendingWorkspace({
           </Text>
         )
       }
-      renderItem={({ item }) => (
-        <ListCard>
+      renderItem={({ item, index }) => (
+        <View
+          className={cn(
+            "overflow-hidden bg-card px-3.5",
+            index === 0 && "rounded-t-[20px]",
+            index === loadedBills.length - 1 && "rounded-b-[20px]",
+          )}
+        >
           <RecordRow
             stackDetails
             title={item.description}
@@ -512,12 +534,36 @@ function SpendingWorkspace({
                     } as Href)
             }
           />
-        </ListCard>
+          {index === loadedBills.length - 1 ? null : <RowDivider />}
+        </View>
       )}
       ListFooterComponent={
-        bills.isFetchingNextPage ? (
-          <Text className="py-4">Loading more expenses…</Text>
-        ) : null
+        <View className="gap-3 pt-3">
+          {bills.isFetchingNextPage ? (
+            <Text className="py-2 text-muted-foreground">
+              Loading more expenses…
+            </Text>
+          ) : null}
+          <NudgeCard
+            icon="Lock"
+            tint="sky"
+            title="Posting periods"
+            sub="Lock dates after you close a month"
+            actionLabel="Open"
+            onAction={() => router.push("/finance-periods-modal" as Href)}
+          />
+          <View className="flex-row gap-2 px-0.5">
+            <Icon
+              className="mt-0.5 size-[14px]"
+              color={colors.mutedForeground}
+              name="Info"
+            />
+            <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+              Recorded finance entries only. Sales and customer payments are not
+              posted here yet.
+            </Text>
+          </View>
+        </View>
       }
     />
   )
