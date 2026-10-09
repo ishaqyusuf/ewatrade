@@ -116,6 +116,25 @@ function ClassicDetailRows({
   open,
 }: { model: CatalogSetupModel; open: (editor: CatalogEditorKey) => void }) {
   const product = model.kind === "product"
+  // With choices, stock is counted per choice; otherwise the single quantity.
+  const choiceKeys = model.showAdvanced
+    ? model.combinations.map((combination) => combination.key)
+    : ["default"]
+  const choiceDraft = (key: string) =>
+    model.variantDrafts[key] ?? model.makeDefaultVariantDraft()
+  const counted = model.showAdvanced
+    ? choiceKeys.filter((key) => choiceDraft(key).quantity.trim())
+    : []
+  const stockSummary = model.showAdvanced
+    ? counted.length
+      ? `${counted.reduce((sum, key) => sum + (Number(choiceDraft(key).quantity) || 0), 0)} ${model.unitName || "units"} · ${counted.length} of ${choiceKeys.length} choices`
+      : null
+    : model.openingStock
+      ? `${model.openingStock} ${model.unitName || "main units"}`
+      : null
+  const soldInCount = model.stores.filter((store) =>
+    choiceKeys.some((key) => choiceDraft(key).storeIds.includes(store.id)),
+  ).length
   const hasImage = Boolean(
     model.imageDraft.illustrationId || model.imageDraft.image || model.imageUrl,
   )
@@ -192,10 +211,8 @@ function ClassicDetailRows({
           {
             key: "stock" as const,
             label: "Opening stock",
-            value: model.openingStock
-              ? `${model.openingStock} ${model.unitName || "main units"}`
-              : "Blank means not counted yet",
-            set: Boolean(model.openingStock),
+            value: stockSummary ?? "Blank means not counted yet",
+            set: Boolean(stockSummary),
             icon: "Package" as IconKeys,
             tint: "mint" as const,
           },
@@ -220,9 +237,9 @@ function ClassicDetailRows({
     },
     {
       key: "pricing",
-      label: product ? "Prices & availability" : "Price each choice",
+      label: product ? "Prices and availability" : "Price each choice",
       value: product
-        ? "Per choice and per Store"
+        ? `Sold in ${soldInCount} of ${model.stores.length || 1} ${(model.stores.length || 1) === 1 ? "Store" : "Stores"}`
         : "Fixed price or quote for each choice",
       set: false,
       icon: "Settings",
