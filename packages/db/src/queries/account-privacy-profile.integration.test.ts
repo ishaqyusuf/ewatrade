@@ -27,7 +27,9 @@ describeDatabase(
             to_regclass('public."AssistantRun"')::text AS assistant_run,
             to_regclass('public."Message"')::text AS message,
             to_regclass('public."AutomationEvent"')::text AS automation_event,
-            to_regclass('public."ProductAnalyticsEvent"')::text AS product_analytics_event
+            to_regclass('public."ProductAnalyticsEvent"')::text AS product_analytics_event,
+            to_regclass('public."AssistantAttachment"')::text AS assistant_attachment,
+            to_regclass('public."AssistantUsageEvent"')::text AS assistant_usage_event
         `
         if (!schema || Object.values(schema).some((table) => !table))
           throw new Error(

@@ -107,6 +107,8 @@ function fixture(
       [
         "assistantConversation",
         "assistantRun",
+        "assistantAttachment",
+        "assistantUsageEvent",
         "message",
         "automationEvent",
         "productAnalyticsEvent",
@@ -283,6 +285,8 @@ test.each([
   { providerTokens: 1 },
   { additional: "assistantConversation" },
   { additional: "assistantRun" },
+  { additional: "assistantAttachment" },
+  { additional: "assistantUsageEvent" },
   { additional: "message" },
   { additional: "automationEvent" },
   { additional: "productAnalyticsEvent" },

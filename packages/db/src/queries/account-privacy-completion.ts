@@ -103,6 +103,8 @@ export async function assessAccountPrivacyCompletion(
     | "legalAcceptance"
     | "assistantConversation"
     | "assistantRun"
+    | "assistantAttachment"
+    | "assistantUsageEvent"
     | "message"
     | "automationEvent"
     | "productAnalyticsEvent"

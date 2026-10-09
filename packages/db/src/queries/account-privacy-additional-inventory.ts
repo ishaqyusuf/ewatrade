@@ -4,6 +4,8 @@ export type AccountPrivacyAdditionalInventoryClient = Pick<
   PrismaClient,
   | "assistantConversation"
   | "assistantRun"
+  | "assistantAttachment"
+  | "assistantUsageEvent"
   | "message"
   | "automationEvent"
   | "productAnalyticsEvent"
@@ -21,6 +23,13 @@ export async function getAccountPrivacyAdditionalInventory(
   const assistantRuns = await db.assistantRun.count({
     where: { actorUserId: subjectId },
   })
+  // Attachment/usage rows can retain an actor without a linked run.
+  const assistantAttachments = await db.assistantAttachment.count({
+    where: { actorUserId: subjectId },
+  })
+  const assistantUsageEvents = await db.assistantUsageEvent.count({
+    where: { actorUserId: subjectId },
+  })
   const legacyMessages = await db.message.count({
     where: { senderUserId: subjectId },
   })
@@ -33,6 +42,8 @@ export async function getAccountPrivacyAdditionalInventory(
   return {
     assistantConversations,
     assistantRuns,
+    assistantAttachments,
+    assistantUsageEvents,
     legacyMessages,
     automationEvents,
     analyticsEvents,

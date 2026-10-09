@@ -208,3 +208,26 @@ sole-owner/Apple-linked end-to-end acceptance; positive assistant/chat/analytics
 business/clinical dispositions; provider/age safeguards; signed native flows and
 real EAS Update; screenshots/privacy report/restricted reviewer access; submission.
 Ishaq Yusuf remains the approved privacy/abuse lead; a named backup is still pending.
+
+### Assistant inventory and native build follow-up — 9 October 2026
+
+The merged assistant schema includes actor-attributed attachments and usage events,
+including usage without a run. Both now join the direct-attribution blockers for
+profile processing and completion. Seven additional inventory categories are
+checked; generated-client TypeScript and scoped checks pass. Latest combined unit/
+API/job run:338 pass/9 integration skips/0 fail,1,032 assertions. Fresh guarded
+Development readback confirms all seven tables and AccountPrivacyRetention exist.
+The earlier live fixtures validate commit962efacc; this counts-only extension is
+covered by four new refusal regressions and schema/type verification.
+
+EAS queued iOS Preview Simulator build80a51723-a13f-47f9-ab93-1700b1421517 from
+exact clean commit962efaccee318fe554283300ad83578bf07050e1, buildNumber2,
+runtime418fb2c8cb8a17496545a61dc4976c2eaf69d04c. Current statusIN_PROGRESS;
+no successful binary/native-flow/OTA/TestFlight claim. Existing EwaTrade QA iPhone
+15 Pro simulator051FAF63-6FB2-4C12-B0DB-45832083C5F4 remains shut down.
+
+Automatic approval review rejected GitHub push/edit because it required explicit
+publication authority for ishaqyusuf/ewatrade and draftPR57. The action never ran;
+remote head remains9423fcc3. Concrete approval question is pending. Work is saved
+locally; Production processing/configuration remains disabled. Preparation3/6;
+release0/4, steps1–2in progress and3–4pending.

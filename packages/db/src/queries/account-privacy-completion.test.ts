@@ -192,6 +192,8 @@ function fixture(
       [
         "assistantConversation",
         "assistantRun",
+        "assistantAttachment",
+        "assistantUsageEvent",
         "message",
         "automationEvent",
         "productAnalyticsEvent",
@@ -1625,6 +1627,8 @@ describe("account privacy completion assessment", () => {
 test.each([
   "assistantConversation",
   "assistantRun",
+  "assistantAttachment",
+  "assistantUsageEvent",
   "message",
   "automationEvent",
   "productAnalyticsEvent",
