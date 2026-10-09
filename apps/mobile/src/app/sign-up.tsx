@@ -1,5 +1,5 @@
-import { EarlyAccessRequestScreen } from "@/components/mobile/onboarding/early-access-request-screen"
+import { SignupStartScreen } from "@/components/mobile/onboarding/signup-start-screen"
 
 export default function SignUpRoute() {
-  return <EarlyAccessRequestScreen />
+  return <SignupStartScreen />
 }

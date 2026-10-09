@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -8,10 +9,10 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { FlatList } from "react-native-css/components/FlatList"
 import { View } from "react-native"
 import type { ScrollViewProps } from "react-native"
+import { FlatList } from "react-native-css/components/FlatList"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import type { SaleStepViewProps } from "./create-sale-presentation"
 import { useSalePresentation } from "./use-sale-presentation"
 
@@ -122,20 +123,22 @@ export function CreateSaleItems({
         keyboardShouldPersistTaps="handled"
         keyExtractor={(line) => line.id}
         ListEmptyComponent={
-          <View className={tone("flex-1 justify-center pb-24")}>
-            <EmptyState
-              className={tone("bg-transparent")}
-              icon="ReceiptText"
-              message={
-                choicesLoading
-                  ? "Loading available products and services."
-                  : itemKind === "service"
+          choicesLoading ? (
+            <ListSkeleton count={3} label="Loading Catalog" variant="item" />
+          ) : (
+            <View className={tone("flex-1 justify-center pb-24")}>
+              <EmptyState
+                className={tone("bg-transparent")}
+                icon="ReceiptText"
+                message={
+                  itemKind === "service"
                     ? "Tap the + button to add a service."
                     : "Tap the + button to add a product or service."
-              }
-              title={choicesLoading ? "Loading Catalog" : "No items added yet"}
-            />
-          </View>
+                }
+                title="No items added yet"
+              />
+            </View>
+          )
         }
         ListHeaderComponent={itemsHeader}
         renderItem={({ item }) => (

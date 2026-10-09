@@ -1,9 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
-import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
-import { StatusBanner } from "@/components/mobile/status-banner"
 import {
   ClassicCloseoutHeader,
   ClassicCloseoutRow,
@@ -13,6 +8,12 @@ import {
   MarketDayCloseoutRow,
 } from "@/components/mobile/appearances/market-day/closeout-screen"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { FormField } from "@/components/mobile/form-field"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
+import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -24,8 +25,8 @@ import { useState } from "react"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { CloseoutReviewSheet } from "./closeout-review-sheet"
 import type { CloseoutContentProps } from "./closeout-model"
+import { CloseoutReviewSheet } from "./closeout-review-sheet"
 import { useCloseout } from "./use-closeout"
 
 export function CloseoutWorkflowChrome(props: WorkflowModalChromeProps) {
@@ -142,23 +143,25 @@ export function CloseoutContent(props: CloseoutContentProps) {
                   model.notice ?? "The reviewed declarations were finalized."
                 }
               />
+            ) : model.canManage && !model.loadError && model.loading ? (
+              <View className="px-4">
+                <ListSkeleton
+                  count={4}
+                  label="Loading custody balances"
+                  variant="ledger"
+                />
+              </View>
             ) : model.canManage && !model.loadError ? (
               <EmptyState
                 icon="Warehouse"
                 title={
-                  model.loading
-                    ? "Loading custody balances"
-                    : model.missingStore
-                      ? "Store unavailable"
-                      : model.offline
-                        ? "No cached custody balances"
-                        : "No assigned balances"
+                  model.missingStore
+                    ? "Store unavailable"
+                    : model.offline
+                      ? "No cached custody balances"
+                      : "No assigned balances"
                 }
-                message={
-                  model.loading
-                    ? "Fetching the current Store report."
-                    : "Only stock held by this staff member in the current Store belongs here. Store stock is not a staff closeout balance."
-                }
+                message="Only stock held by this staff member in the current Store belongs here. Store stock is not a staff closeout balance."
               />
             ) : null
           }

@@ -1,6 +1,5 @@
-import { useServiceAppearance } from "./use-service-appearance"
-import { ServiceAction as ActionButton } from "./service-action"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
@@ -8,6 +7,8 @@ import { View } from "@/components/ui/view"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import type { ReactNode } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
+import { ServiceAction as ActionButton } from "./service-action"
+import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
 export function ServiceJobsQueue({
@@ -92,11 +93,7 @@ export function ServiceJobsQueue({
       }
       ListEmptyComponent={
         jobsQuery.isLoading && !isOfflineMode ? (
-          <StatusBanner
-            icon="Loader2"
-            message="Loading current service work."
-            title="Work queue"
-          />
+          <ListSkeleton count={4} label="Loading service work" />
         ) : jobsQuery.isError && !isOfflineMode ? null : (
           <EmptyState
             icon="ClipboardList"

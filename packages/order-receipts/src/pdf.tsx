@@ -17,67 +17,122 @@ Font.register({
 })
 Font.registerHyphenationCallback((word) => [word])
 
+const INK = "#13201b"
+const MUTED = "#66736e"
+const LINE = "#e3e8e5"
+const BRAND = "#17684f"
+const TINT = "#f1f6f3"
+
 const styles = StyleSheet.create({
   page: {
     fontFamily: "ReceiptInter",
-    fontSize: 10,
-    color: "#182420",
+    fontSize: 9.5,
+    color: INK,
     backgroundColor: "#ffffff",
-    padding: 40,
-    paddingBottom: 55,
+    paddingTop: 44,
+    paddingHorizontal: 44,
+    paddingBottom: 64,
   },
   header: {
-    borderTopWidth: 4,
-    borderTopColor: "#17684f",
-    paddingTop: 18,
-    marginBottom: 22,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 18,
+    marginBottom: 20,
   },
-  title: { fontSize: 23, marginBottom: 6 },
-  muted: { fontSize: 9, color: "#626d69", lineHeight: 1.5 },
+  business: { fontSize: 20, color: INK, marginBottom: 6 },
+  muted: { fontSize: 8.5, color: MUTED, lineHeight: 1.5 },
+  label: { fontSize: 7.5, color: MUTED, letterSpacing: 0.8 },
+  docTitle: { fontSize: 11, color: BRAND, letterSpacing: 2, marginBottom: 6 },
+  pill: {
+    marginTop: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 4,
+    fontSize: 7.5,
+    letterSpacing: 0.8,
+  },
+  amountBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: TINT,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 18,
+  },
+  amount: { fontSize: 22, color: INK },
+  parties: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 18,
+    marginBottom: 20,
+  },
+  party: { maxWidth: "48%", gap: 3 },
   row: { flexDirection: "row", justifyContent: "space-between", gap: 15 },
-  meta: { padding: 15, backgroundColor: "#f3f6f4", marginBottom: 20, gap: 5 },
   tableHead: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderColor: "#dce2df",
-    paddingBottom: 9,
-    fontSize: 8,
-    color: "#626d69",
+    borderColor: LINE,
+    paddingBottom: 7,
   },
   line: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderColor: "#edf0ee",
-    paddingVertical: 10,
+    borderColor: "#eef1ef",
+    paddingVertical: 9,
   },
-  item: { width: "44%", paddingRight: 12, lineHeight: 1.5 },
-  qty: { width: "12%", textAlign: "right", paddingRight: 10 },
+  item: { width: "46%", paddingRight: 12, lineHeight: 1.5 },
+  qty: { width: "10%", textAlign: "right", paddingRight: 10 },
   price: { width: "22%", textAlign: "right", paddingRight: 10 },
-  amount: { width: "22%", textAlign: "right" },
-  summary: { marginTop: 18, marginLeft: "38%", gap: 8 },
-  total: {
-    fontSize: 13,
-    paddingTop: 12,
+  lineAmount: { width: "22%", textAlign: "right" },
+  summary: { marginTop: 16, marginLeft: "46%", gap: 7 },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 9,
     borderTopWidth: 1,
-    borderColor: "#dce2df",
+    borderColor: LINE,
+    fontSize: 11.5,
   },
-  payment: { marginTop: 24, gap: 8 },
+  balanceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: TINT,
+    borderRadius: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 9,
+    marginHorizontal: -9,
+    fontSize: 11,
+  },
+  payment: { marginTop: 22, gap: 7 },
   note: {
-    marginTop: 24,
-    paddingTop: 15,
+    marginTop: 22,
+    paddingTop: 14,
     borderTopWidth: 1,
-    borderColor: "#dce2df",
+    borderColor: LINE,
     lineHeight: 1.6,
   },
   footer: {
     position: "absolute",
-    bottom: 25,
-    left: 40,
-    right: 40,
-    fontSize: 8,
-    color: "#626d69",
+    bottom: 26,
+    left: 44,
+    right: 44,
+    paddingTop: 9,
+    borderTopWidth: 1,
+    borderColor: LINE,
+    fontSize: 7.5,
+    color: MUTED,
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+  },
+  made: { flexDirection: "row", alignItems: "center", gap: 5 },
+  mark: {
+    width: 9,
+    height: 9,
+    borderRadius: 2.5,
+    backgroundColor: BRAND,
   },
 })
 
@@ -89,10 +144,19 @@ function date(value: string, timezone: string) {
   }).format(new Date(value))
 }
 
+// Settled receipts read green; anything still owed reads amber.
+function statusTone(label: string) {
+  if (label === "Paid" || label === "No payment due")
+    return { backgroundColor: "#ddf1e6", color: "#13603f" }
+  if (label === "Refunded" || label.startsWith("Historical"))
+    return { backgroundColor: "#eceff0", color: "#4a5652" }
+  return { backgroundColor: "#fdebdd", color: "#a4410c" }
+}
+
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.row}>
-      <Text>{label}</Text>
+      <Text style={{ color: MUTED }}>{label}</Text>
       <Text>{value}</Text>
     </View>
   )
@@ -111,51 +175,56 @@ export function ReceiptDocument({ receipts }: { receipts: OrderReceipt[] }) {
       {receipts.map((receipt) => {
         const money = (minor: number) =>
           receiptMoney(minor, receipt.currencyCode)
+        const owing = receipt.balanceMinor > 0
         return (
           <Page key={receipt.id} size="A4" wrap style={styles.page}>
             <View style={styles.header} fixed>
-              <View style={styles.row}>
-                <View style={{ maxWidth: "65%" }}>
-                  <Text style={styles.title}>{receipt.businessName}</Text>
+              <View style={{ maxWidth: "62%" }}>
+                <Text style={styles.business}>{receipt.businessName}</Text>
+                {receipt.storeName !== receipt.businessName ? (
                   <Text style={styles.muted}>{receipt.storeName}</Text>
-                  {receipt.address ? (
-                    <Text style={styles.muted}>{receipt.address}</Text>
-                  ) : null}
-                  {receipt.supportPhone ? (
-                    <Text style={styles.muted}>{receipt.supportPhone}</Text>
-                  ) : null}
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={{ fontSize: 15, marginBottom: 7 }}>
-                    Order receipt
-                  </Text>
-                  <Text>{receipt.orderNumber}</Text>
-                </View>
+                ) : null}
+                {receipt.address ? (
+                  <Text style={styles.muted}>{receipt.address}</Text>
+                ) : null}
+                {receipt.supportPhone ? (
+                  <Text style={styles.muted}>{receipt.supportPhone}</Text>
+                ) : null}
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={styles.docTitle}>RECEIPT</Text>
+                <Text>{receipt.orderNumber}</Text>
+                <Text style={styles.muted}>
+                  {date(receipt.createdAt, receipt.timezone)}
+                </Text>
+                <Text style={[styles.pill, statusTone(receipt.paymentLabel)]}>
+                  {receipt.paymentLabel.toUpperCase()}
+                </Text>
               </View>
             </View>
-            <View style={styles.meta} wrap={false}>
-              <View style={styles.row}>
-                <Text style={styles.muted}>Order date</Text>
-                <Text>{date(receipt.createdAt, receipt.timezone)}</Text>
+            <View style={styles.amountBox} wrap={false}>
+              <Text style={{ color: MUTED }}>
+                {owing ? "Amount due" : "Order total"}
+              </Text>
+              <Text style={styles.amount}>
+                {money(owing ? receipt.balanceMinor : receipt.totalMinor)}
+              </Text>
+            </View>
+            <View style={styles.parties} wrap={false}>
+              <View style={styles.party}>
+                <Text style={styles.label}>BILLED TO</Text>
+                <Text>{receipt.customerName || "Walk-in customer"}</Text>
               </View>
-              {receipt.customerName ? (
-                <View style={styles.row}>
-                  <Text style={styles.muted}>Customer</Text>
-                  <Text style={{ maxWidth: "70%", textAlign: "right" }}>
-                    {receipt.customerName}
-                  </Text>
-                </View>
-              ) : null}
-              <View style={styles.row}>
-                <Text style={styles.muted}>Payment status</Text>
+              <View style={[styles.party, { alignItems: "flex-end" }]}>
+                <Text style={styles.label}>PAYMENT</Text>
                 <Text>{receipt.paymentLabel}</Text>
               </View>
             </View>
             <View style={styles.tableHead} wrap={false}>
-              <Text style={styles.item}>ITEM</Text>
-              <Text style={styles.qty}>QTY</Text>
-              <Text style={styles.price}>UNIT PRICE</Text>
-              <Text style={styles.amount}>AMOUNT</Text>
+              <Text style={[styles.item, styles.label]}>ITEM</Text>
+              <Text style={[styles.qty, styles.label]}>QTY</Text>
+              <Text style={[styles.price, styles.label]}>UNIT PRICE</Text>
+              <Text style={[styles.lineAmount, styles.label]}>AMOUNT</Text>
             </View>
             {receipt.lines.map((line) => (
               <View key={line.id} style={styles.line} wrap={false}>
@@ -174,7 +243,7 @@ export function ReceiptDocument({ receipts }: { receipts: OrderReceipt[] }) {
                     ? "Item total"
                     : money(line.unitPriceMinor)}
                 </Text>
-                <Text style={styles.amount}>{money(line.totalMinor)}</Text>
+                <Text style={styles.lineAmount}>{money(line.totalMinor)}</Text>
               </View>
             ))}
             <View style={styles.summary} wrap={false}>
@@ -197,11 +266,9 @@ export function ReceiptDocument({ receipts }: { receipts: OrderReceipt[] }) {
                   value={money(receipt.serviceChargeMinor)}
                 />
               ) : null}
-              <View style={styles.total}>
-                <SummaryLine
-                  label="Order total"
-                  value={money(receipt.totalMinor)}
-                />
+              <View style={styles.totalRow}>
+                <Text>Order total</Text>
+                <Text>{money(receipt.totalMinor)}</Text>
               </View>
               {receipt.settings.showPaymentBreakdown ? (
                 <>
@@ -215,16 +282,16 @@ export function ReceiptDocument({ receipts }: { receipts: OrderReceipt[] }) {
                       value={money(receipt.refundedMinor)}
                     />
                   ) : null}
-                  <SummaryLine
-                    label="Balance due"
-                    value={money(receipt.balanceMinor)}
-                  />
+                  <View style={styles.balanceRow}>
+                    <Text>Balance due</Text>
+                    <Text>{money(receipt.balanceMinor)}</Text>
+                  </View>
                 </>
               ) : null}
             </View>
             {receipt.payments.length ? (
               <View style={styles.payment}>
-                <Text style={styles.muted}>PAYMENT BREAKDOWN</Text>
+                <Text style={styles.label}>PAYMENT BREAKDOWN</Text>
                 {receipt.payments.map((payment) => (
                   <View key={payment.id} style={styles.row} wrap={false}>
                     <View style={{ maxWidth: "65%" }}>
@@ -250,19 +317,19 @@ export function ReceiptDocument({ receipts }: { receipts: OrderReceipt[] }) {
             {receipt.paymentLabel !== "Paid" &&
             receipt.paymentLabel !== "No payment due" ? (
               <Text style={{ ...styles.muted, marginTop: 12 }}>
-                This Order receipt reflects the payment status shown above.
+                This receipt reflects the payment status shown above.
               </Text>
             ) : null}
             <View style={styles.footer} fixed>
-              <Text>
-                {receipt.orderNumber} · Exported{" "}
-                {date(receipt.generatedAt, receipt.timezone)}
-              </Text>
               <Text
                 render={({ pageNumber, totalPages }) =>
-                  `${pageNumber} / ${totalPages}`
+                  `${receipt.orderNumber} · Exported ${date(receipt.generatedAt, receipt.timezone)} · Page ${pageNumber} of ${totalPages}`
                 }
               />
+              <View style={styles.made}>
+                <View style={styles.mark} />
+                <Text>Made with ẸwáTrade</Text>
+              </View>
             </View>
           </Page>
         )

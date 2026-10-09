@@ -6,6 +6,7 @@ import {
   getAdminCatalogTabLabel,
   getAdminDockLabels,
 } from "./admin-navigation"
+import { getPlan } from "./retail-ops-subscription"
 import type { MobileWorkspaceFeatureAvailability } from "./workspace-feature-availability"
 
 const availability: MobileWorkspaceFeatureAvailability = {
@@ -119,5 +120,27 @@ describe("admin mobile navigation", () => {
       false,
     )
     expect(managerItems.some((item) => item.id === "plan-billing")).toBe(false)
+  })
+
+  test("hides Free plan exclusions while keeping unknown plans ungated", () => {
+    const ids = (
+      planFeatures?: Parameters<
+        typeof buildAdminMoreSections
+      >[0]["planFeatures"],
+    ) =>
+      buildAdminMoreSections({ availability, planFeatures, role: "OWNER" })
+        .flatMap((section) => section.items)
+        .map((item) => item.id)
+    const free = ids(getPlan("free").features)
+    expect(free).not.toContain("finance")
+    expect(free).not.toContain("receipt-settings")
+    expect(free).not.toContain("team")
+    expect(free).toContain("customers")
+    expect(free).toContain("plan-billing")
+    for (const unrestricted of [ids(getPlan("starter").features), ids()]) {
+      expect(unrestricted).toContain("finance")
+      expect(unrestricted).toContain("receipt-settings")
+      expect(unrestricted).toContain("team")
+    }
   })
 })

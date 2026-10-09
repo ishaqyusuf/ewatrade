@@ -20,9 +20,11 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal, useModal } from "@/components/ui/modal"
+import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -120,6 +122,7 @@ export function CatalogItemsContent({
       ),
     [availabilityQuery.data?.storeId, itemsQuery.data?.pages],
   )
+  const revealRows = useFirstReveal(rows.length > 0)
   const totalCount = itemsQuery.data?.pages[0]?.totalCount ?? 0
   const showSearch = shouldShowListSearch(totalCount) || query.length > 0
   const showFirstItemGate = shouldShowCatalogFirstItemGate({
@@ -265,6 +268,14 @@ export function CatalogItemsContent({
                 if (!isOffline && canEdit) onAddService()
               }}
             />
+          ) : !itemsQuery.isError && itemsQuery.isPending && !isOffline ? (
+            <View className="px-4">
+              <ListSkeleton
+                count={7}
+                label="Loading catalog items"
+                variant="item"
+              />
+            </View>
           ) : !itemsQuery.isError ? (
             <EmptyState
               className="m-4 flex-1 justify-center"
@@ -272,20 +283,16 @@ export function CatalogItemsContent({
               title={
                 isOffline
                   ? "No cached items"
-                  : itemsQuery.isPending
-                    ? "Loading"
-                    : query || kindFilter !== "all"
-                      ? "No matching items"
-                      : "No catalog items"
+                  : query || kindFilter !== "all"
+                    ? "No matching items"
+                    : "No catalog items"
               }
               message={
                 isOffline
                   ? "Reconnect to load your Catalog."
-                  : itemsQuery.isPending
-                    ? "Loading catalog items."
-                    : query || kindFilter !== "all"
-                      ? "Try another search or item type."
-                      : "Add a Product or Service to start your Catalog."
+                  : query || kindFilter !== "all"
+                    ? "Try another search or item type."
+                    : "Add a Product or Service to start your Catalog."
               }
             />
           ) : null
@@ -314,16 +321,18 @@ export function CatalogItemsContent({
           </View>
         }
         renderItem={({ item, index }) => (
-          <Row
-            item={item}
-            index={index}
-            onPress={() =>
-              router.push({
-                params: { catalogItemId: item.id },
-                pathname: "/catalog-item/[catalogItemId]",
-              })
-            }
-          />
+          <RevealItem active={revealRows} index={index}>
+            <Row
+              item={item}
+              index={index}
+              onPress={() =>
+                router.push({
+                  params: { catalogItemId: item.id },
+                  pathname: "/catalog-item/[catalogItemId]",
+                })
+              }
+            />
+          </RevealItem>
         )}
         onEndReached={() => {
           if (

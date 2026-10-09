@@ -42,7 +42,7 @@ export function OrderVisibilityCard({ review = false }: { review?: boolean }) {
         ) : (
           <ActionButton
             variant="outline"
-            onPress={modal.present}
+            onPress={() => modal.present()}
             disabled={vm.query.isPending || vm.isOffline}
           >
             {review ? "Review Staff rules" : (label ?? "Loading Staff rules…")}

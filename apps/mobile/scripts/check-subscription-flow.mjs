@@ -34,23 +34,26 @@ const CONTRACTS = [
   {
     file: FILES.subscriptionLib,
     markers: [
-      'export type RetailOpsPlanId = "starter" | "growth" | "pro"',
+      'export type RetailOpsPlanId = "free" | "starter" | "growth" | "pro"',
       "RETAIL_OPS_PLANS",
+      'id: "free"',
       'id: "starter"',
       'id: "growth"',
       'id: "pro"',
+      'name: "Free"',
       'name: "Starter"',
       'name: "Growth"',
       'name: "Pro"',
       "offlineDevices",
+      "ordersPerMonth",
       "reportsHistoryDays",
       "getDefaultSubscription",
-      'planId: "starter"',
-      'status: "trialing"',
+      'RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID: RetailOpsPlanId = "starter"',
       "getUsageLimitState",
     ],
+    forbiddenMarkers: ['status: "trialing",'],
     reason:
-      "subscription model must keep the three MVP tiers, business limits, default starter trial, and usage-limit labels",
+      "subscription model must mirror the shared Free/Starter/Growth/Pro catalogue, default to the launch Starter plan without a trial, and keep usage-limit labels",
   },
   {
     file: FILES.subscriptionStore,
@@ -165,7 +168,7 @@ const CONTRACTS = [
   },
   {
     file: FILES.floatingQa,
-    markers: ['pathname.endsWith("-modal")'],
+    markers: ['pathname !== "/login"', "isAuthenticated ||"],
     reason:
       "the development QA control must not overlap subscription usage or checkout actions",
   },
@@ -229,7 +232,7 @@ for (const contract of CONTRACTS) {
 
 if (failures.length > 0) {
   console.error(
-    "Subscription flow check failed. Restore the three-tier model, mobile plan surface, dashboard entry point, or billing API boundary.",
+    "Subscription flow check failed. Restore the four-plan model, mobile plan surface, dashboard entry point, or billing API boundary.",
   )
 
   for (const failure of failures) {

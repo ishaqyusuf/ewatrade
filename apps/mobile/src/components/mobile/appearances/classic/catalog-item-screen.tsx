@@ -9,15 +9,18 @@ import type {
 } from "@/components/mobile/catalog-item/catalog-item-presentation"
 import { CatalogSavedPhotos } from "@/components/mobile/catalog-item/catalog-saved-photos"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { Icon } from "@/components/ui/icon"
+import { MotionView } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { StatusBar } from "expo-status-bar"
+import { useState } from "react"
 
 export function ClassicCatalogItemOverview({
   item,
@@ -127,15 +130,18 @@ export function ClassicCatalogItemOverview({
 export function ClassicCatalogItemScreen(props: CatalogItemScreenProps) {
   const { colorScheme } = useColorScheme()
   const unavailable = catalogItemUnavailable(props)
+  const [itemReadyOnOpen] = useState(() => Boolean(props.item))
   return (
     <View className="flex-1 bg-background">
       <StatusBar animated style={colorScheme === "dark" ? "light" : "dark"} />
       {props.item ? (
-        <ClassicCatalogItemOverview
-          item={props.item}
-          onBack={props.onBack}
-          onCreateOrder={props.onCreateOrder}
-        />
+        <MotionView animate={!itemReadyOnOpen} fill>
+          <ClassicCatalogItemOverview
+            item={props.item}
+            onBack={props.onBack}
+            onCreateOrder={props.onCreateOrder}
+          />
+        </MotionView>
       ) : (
         <MobileScreen
           contentClassName="gap-6 px-4 pb-12"
@@ -157,13 +163,17 @@ export function ClassicCatalogItemScreen(props: CatalogItemScreenProps) {
               Catalog overview
             </Text>
           </View>
-          <View className="flex-1 items-center justify-center py-16">
-            <EmptyState
-              icon="Warehouse"
-              title={unavailable.title}
-              message={unavailable.message}
-            />
-          </View>
+          {props.isPending ? (
+            <DetailSkeleton label="Loading catalog item" rows={3} />
+          ) : (
+            <View className="flex-1 items-center justify-center py-16">
+              <EmptyState
+                icon="Warehouse"
+                title={unavailable.title}
+                message={unavailable.message}
+              />
+            </View>
+          )}
           {!props.isPending && !props.isOffline && props.onRetry ? (
             <ActionButton variant="outline" onPress={props.onRetry}>
               Try again

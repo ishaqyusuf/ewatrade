@@ -3,7 +3,22 @@ import { expect, mock, test } from "bun:test"
 let allowed = true
 let failWrite = false
 const events: string[] = []
+let saverAvailable = false
 mock.module("react-native", () => ({ Platform: { OS: "android" } }))
+mock.module("expo", () => ({
+  requireOptionalNativeModule: () => ({
+    isSupported: () => saverAvailable,
+    saveToDownloads: async (
+      _uri: string,
+      name: string,
+      _mime: string,
+      folder: string,
+    ) => {
+      events.push(`downloads:${folder}/${name}`)
+      return { folder: `Download/${folder}`, name, uri: "content://dl/1" }
+    },
+  }),
+}))
 mock.module("expo-file-system/legacy", () => ({
   cacheDirectory: "file:///receipt-test/",
   EncodingType: { Base64: "base64" },
@@ -59,4 +74,18 @@ test("sharing receives a real file and cleans the temporary directory afterward"
   events.length = 0
   await deliverReceiptFile(file, "share")
   expect(events).toEqual(["directory", "write", "share", "cleanup"])
+})
+test("Android 10+ saves straight to Downloads without a folder prompt", async () => {
+  events.length = 0
+  saverAvailable = true
+  expect(await deliverReceiptFile(file, "save")).toBe(
+    "Saved to Download/EwaTrade as receipt.pdf",
+  )
+  expect(events).toEqual([
+    "directory",
+    "write",
+    "downloads:EwaTrade/receipt.pdf",
+    "cleanup",
+  ])
+  saverAvailable = false
 })

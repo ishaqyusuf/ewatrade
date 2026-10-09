@@ -1,27 +1,27 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { StatusBanner } from "@/components/mobile/status-banner"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import {
   type SaleItemPickerLine,
   getSaleItemPickerLineCounts,
   getSaleOfferingStockLabel,
 } from "@/components/mobile/sale-item-picker-model"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { cn } from "@/lib/utils"
-import { formatMinorMoney } from "@ewatrade/utils"
-import { StatusBar } from "expo-status-bar"
-import { useEffect, useMemo, useState } from "react"
-import { Modal, useModal } from "@/components/ui/modal"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
-import { VariableContextProvider } from "nativewind"
-import { FlatList } from "react-native-css/components/FlatList"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
+import { cn } from "@/lib/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { StatusBar } from "expo-status-bar"
+import { VariableContextProvider } from "nativewind"
+import { useEffect, useMemo, useState } from "react"
 import {
   Image,
   Modal as NativeModal,
@@ -29,6 +29,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native"
+import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export type SaleOfferingChoice = {
@@ -471,26 +472,26 @@ export function FullScreenSaleItemPicker({
               ) : null
             }
             ListEmptyComponent={
-              !error ? (
+              error ? null : isLoading ? (
+                <ListSkeleton
+                  count={5}
+                  label="Loading Catalog"
+                  variant="item"
+                />
+              ) : (
                 <EmptyState
                   className="my-8"
                   icon={query ? "Search" : "FolderPlus"}
                   message={
-                    isLoading
-                      ? "Loading available products and services."
-                      : query
-                        ? "Try another product, service, unit, or variant name."
-                        : "Add an active offering with a price and store availability before creating this order."
+                    query
+                      ? "Try another product, service, unit, or variant name."
+                      : "Add an active offering with a price and store availability before creating this order."
                   }
                   title={
-                    isLoading
-                      ? "Loading Catalog"
-                      : query
-                        ? "No matching items"
-                        : "No sellable items available"
+                    query ? "No matching items" : "No sellable items available"
                   }
                 />
-              ) : null
+              )
             }
             ListFooterComponent={
               isFetchingNextPage ? (

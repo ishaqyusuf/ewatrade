@@ -3,8 +3,8 @@ import {
   CommerceMetricTile,
   CommerceOrderRow,
   CommercePageHeader,
-  commerceOrderItemCount,
   type CommercialOrder,
+  commerceOrderItemCount,
 } from "@/components/mobile/commerce"
 import type {
   OrdersFilterProps,
@@ -84,7 +84,10 @@ function currencyMetric(orders: CommercialOrder[], average = false) {
   )
 }
 
-export function ClassicOrdersSummary({ orders }: OrdersSummaryProps) {
+export function ClassicOrdersSummary({
+  loading = false,
+  orders,
+}: OrdersSummaryProps) {
   const largeText = useLargeTextLayout()
   const itemCount = orders.reduce(
     (sum, order) => sum + commerceOrderItemCount(order),
@@ -96,11 +99,13 @@ export function ClassicOrdersSummary({ orders }: OrdersSummaryProps) {
         <CommerceMetricTile
           icon="ReceiptText"
           label="Loaded orders"
+          loading={loading}
           value={String(orders.length)}
         />
         <CommerceMetricTile
           icon="ListChecks"
           label="Loaded items"
+          loading={loading}
           value={itemCount.toLocaleString(undefined, {
             maximumFractionDigits: 6,
           })}
@@ -110,11 +115,13 @@ export function ClassicOrdersSummary({ orders }: OrdersSummaryProps) {
         <CommerceMetricTile
           icon="Calculator"
           label="Average value"
+          loading={loading}
           value={currencyMetric(orders, true)}
         />
         <CommerceMetricTile
           icon="Wallet"
           label="Loaded value"
+          loading={loading}
           value={currencyMetric(orders)}
         />
       </View>

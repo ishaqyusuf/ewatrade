@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -149,13 +150,15 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
         </View>
       }
       ListEmptyComponent={
-        <Text className="py-5 text-muted-foreground">
-          {balances.isPending
-            ? "Loading accounts…"
-            : balances.isError
+        balances.isPending ? (
+          <ListSkeleton count={4} label="Loading accounts" variant="ledger" />
+        ) : (
+          <Text className="py-5 text-muted-foreground">
+            {balances.isError
               ? "Refresh to load the current balances."
               : "Create a money account in Finance on the dashboard to get started."}
-        </Text>
+          </Text>
+        )
       }
       ListFooterComponent={
         <Text className="py-6 text-sm text-muted-foreground">

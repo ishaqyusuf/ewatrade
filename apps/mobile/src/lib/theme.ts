@@ -14,6 +14,9 @@ export const THEME = {
 
     overlay: "rgba(0, 0, 0, 0.48)",
 
+    skeleton: "rgb(226, 232, 229)",
+    skeletonHighlight: "rgba(255, 255, 255, 0.75)",
+
     radius: "0.65rem",
 
     chart2: "rgb(13, 148, 136)",
@@ -34,6 +37,9 @@ export const THEME = {
     destructiveForeground: "rgb(254, 242, 242)",
 
     overlay: "rgba(0, 0, 0, 0.68)",
+
+    skeleton: "rgb(40, 51, 46)",
+    skeletonHighlight: "rgba(255, 255, 255, 0.08)",
 
     radius: "0.65rem",
 

@@ -1,3 +1,4 @@
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -29,8 +30,12 @@ export function CustomerConversationListEmpty({
 
   if (presentation.mode === "loading") {
     return (
-      <View className="flex-1 items-center justify-center p-8">
-        <ActivityIndicator accessibilityLabel="Loading conversations" />
+      <View className="flex-1 px-4 pt-2">
+        <ListSkeleton
+          count={6}
+          label="Loading conversations"
+          variant="person"
+        />
       </View>
     )
   }

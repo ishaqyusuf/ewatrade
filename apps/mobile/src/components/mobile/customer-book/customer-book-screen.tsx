@@ -7,6 +7,7 @@ import { CreateSaleCustomerSheet } from "@/components/mobile/create-sale-custome
 import type { CustomerBookFilter } from "@/components/mobile/customer-book-presentation-model"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
@@ -228,44 +229,50 @@ export function CustomerBookContent(props: CustomerBookProps) {
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
-            <EmptyState
-              actionLabel={
-                presentation.showInitialCreateAction
-                  ? "Add first customer"
-                  : undefined
-              }
-              actionProps={{
-                accessibilityLabel: "Add first customer",
-                icon: "Plus",
-                onPress: creation.present,
-                testID: "customer-add-first-action",
-              }}
-              className="flex-1 justify-center px-6 pb-16"
-              icon="Users"
-              message={
-                isLoading
-                  ? "Loading customers."
-                  : search || filter !== "all"
+            isLoading ? (
+              <View className="px-4">
+                <ListSkeleton
+                  count={7}
+                  label="Loading customers"
+                  variant="person"
+                />
+              </View>
+            ) : (
+              <EmptyState
+                actionLabel={
+                  presentation.showInitialCreateAction
+                    ? "Add first customer"
+                    : undefined
+                }
+                actionProps={{
+                  accessibilityLabel: "Add first customer",
+                  icon: "Plus",
+                  onPress: creation.present,
+                  testID: "customer-add-first-action",
+                }}
+                className="flex-1 justify-center px-6 pb-16"
+                icon="Users"
+                message={
+                  search || filter !== "all"
                     ? "Try another search or customer state."
                     : hasError
                       ? "Try again to load the customer directory."
                       : isOffline
                         ? "Reconnect to load the shared customer directory."
                         : "Your saved customers and their order activity will appear here."
-              }
-              title={
-                isLoading
-                  ? "Loading customers"
-                  : search || filter !== "all"
+                }
+                title={
+                  search || filter !== "all"
                     ? "No matching customers"
                     : hasError
                       ? "Customers unavailable"
                       : isOffline
                         ? "No cached customers"
                         : "No customers yet"
-              }
-              variant="flat"
-            />
+                }
+                variant="flat"
+              />
+            )
           }
           ListHeaderComponent={
             <View className="gap-4 px-2 pb-3">

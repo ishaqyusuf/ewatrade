@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
@@ -95,12 +96,7 @@ export function ReportsContent({
       </Text>
 
       {isInitialLoading ? (
-        <StatusBanner
-          icon="RefreshCw"
-          message="Reading current orders and operational records."
-          title="Loading reports"
-          tone="muted"
-        />
+        <DetailSkeleton label="Loading reports" rows={4} />
       ) : (
         <>
           {failedQueries.length > 0 ? (

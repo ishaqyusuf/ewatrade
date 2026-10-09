@@ -17,6 +17,7 @@ export type OrdersMastheadProps = {
 
 export type OrdersSummaryProps = {
   dateFilter: OrderDispatchDateFilter
+  loading?: boolean
   orders: CommercialOrder[]
 }
 

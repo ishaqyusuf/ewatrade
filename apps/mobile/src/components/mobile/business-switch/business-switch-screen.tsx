@@ -1,30 +1,32 @@
-import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
+import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Modal, useModal } from "@/components/ui/modal"
-import { Text } from "@/components/ui/text"
 import { Icon } from "@/components/ui/icon"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
-  BottomSheetFlatList,
   type BottomSheetBackdropProps,
+  BottomSheetFlatList,
   type BottomSheetModal,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import {
+  type ReactNode,
   forwardRef,
   useCallback,
   useRef,
   useState,
-  type ReactNode,
 } from "react"
 import { RefreshControl, useWindowDimensions } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -40,12 +42,11 @@ import {
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { BUSINESS_SWITCH_COPY } from "../business-switch-presentation"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
-import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
-import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
   BusinessSwitchSheetFooter,
   WorkspaceFooterContext,
 } from "./business-switch-sheet-footer"
+import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
 
 type WorkspaceController = ReturnType<typeof useBusinessSwitch>
 type SwitchProps = { onComplete?: () => void }
@@ -113,27 +114,25 @@ function WorkspaceBody({
       </View>
     </View>
   )
-  const empty = (
+  const empty = vm.isLoading ? (
+    <ListSkeleton count={4} label="Loading workspaces" variant="person" />
+  ) : (
     <EmptyState
       variant="flat"
       icon="Building2"
       title={
-        vm.isLoading
-          ? "Loading workspaces"
-          : vm.isOffline && !vm.local
-            ? "No cached workspaces"
-            : vm.memberships.isError && !vm.local
-              ? "Workspaces unavailable"
-              : vm.search
-                ? "No matching businesses"
-                : "No business yet"
+        vm.isOffline && !vm.local
+          ? "No cached workspaces"
+          : vm.memberships.isError && !vm.local
+            ? "Workspaces unavailable"
+            : vm.search
+              ? "No matching businesses"
+              : "No business yet"
       }
       message={
-        vm.isLoading
-          ? "Reading the businesses available to this account."
-          : vm.search
-            ? "Try another name, role, currency or category."
-            : "Your businesses will appear here. Add a business to set up a new workspace."
+        vm.search
+          ? "Try another name, role, currency or category."
+          : "Your businesses will appear here. Add a business to set up a new workspace."
       }
     />
   )
