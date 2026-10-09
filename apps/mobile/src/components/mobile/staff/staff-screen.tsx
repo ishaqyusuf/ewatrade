@@ -174,7 +174,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             contentContainerClassName={
               market
                 ? "grow pb-[var(--staff-list-bottom)]"
-                : "grow gap-3 px-[18px] pb-[var(--staff-list-bottom)]"
+                : "grow px-[18px] pb-[var(--staff-list-bottom)]"
             }
             data={ordered}
             keyExtractor={(row) => row.id}
@@ -187,6 +187,13 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               <View className="gap-4 pb-4">
                 <Header
                   loadedCount={rows.length}
+                  activeCount={
+                    rows.filter((row) => row.statusLabel === "Active").length
+                  }
+                  pendingCount={
+                    rows.filter((row) => row.statusLabel === "Pending").length
+                  }
+                  onSeePlans={() => router.push("/subscription-modal")}
                   used={vm.entitlement?.used}
                   limit={vm.entitlement?.limit}
                   planName={vm.planName}
@@ -198,12 +205,12 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                 />
                 {!market && vm.entitlement?.isAtLimit ? (
                   <NudgeCard
-                    icon="Users"
-                    tint="lilac"
-                    title="Your team is growing"
-                    sub="Your plan is full. Existing invitations may already be counted."
-                    actionLabel="See plans"
-                    onAction={() => router.push("/subscription-modal")}
+                    icon="UserPlus"
+                    tint="amber"
+                    title="Invite anyway"
+                    sub="Your plan decides when you send."
+                    actionLabel={vm.canOpenInvite ? "Invite" : undefined}
+                    onAction={invitation.present}
                   />
                 ) : null}
                 <OrderVisibilityCard />
@@ -239,15 +246,11 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                       tone="destructive"
                     />
                   ) : null}
-                  <Text
-                    className={
-                      market
-                        ? "text-xs leading-5 text-market-muted-ink"
-                        : "text-xs leading-5 text-muted-foreground"
-                    }
-                  >
-                    {vm.quotaMessage}
-                  </Text>
+                  {market ? (
+                    <Text className="text-xs leading-5 text-market-muted-ink">
+                      {vm.quotaMessage}
+                    </Text>
+                  ) : null}
                   {vm.atResultLimit ? (
                     <StatusBanner
                       icon="Search"
@@ -299,16 +302,29 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               ) : undefined
             }
             renderItem={({ item, index }) => {
+              const first =
+                index === 0 ||
+                ordered[index - 1]?.statusLabel !== item.statusLabel
+              const last =
+                index === ordered.length - 1 ||
+                ordered[index + 1]?.statusLabel !== item.statusLabel
               return (
                 <View>
-                  {!market &&
-                  (index === 0 ||
-                    ordered[index - 1]?.statusLabel !== item.statusLabel) ? (
+                  {!market && first ? (
                     <SectionHeader
                       title={
                         item.statusLabel === "Pending"
                           ? "Waiting to accept"
                           : item.statusLabel
+                      }
+                      trailing={
+                        <Text className="text-xs font-bold text-muted-foreground">
+                          {
+                            ordered.filter(
+                              (row) => row.statusLabel === item.statusLabel,
+                            ).length
+                          }
+                        </Text>
                       }
                     />
                   ) : null}
@@ -316,6 +332,8 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                     <Row staff={item} />
                   ) : (
                     <ClassicStaffRow
+                      first={first}
+                      last={last}
                       staff={item}
                       onPress={() =>
                         Alert.alert(

@@ -1,13 +1,15 @@
 import { Skeleton } from "@/components/ui/skeleton"
 import { View } from "@/components/ui/view"
+import { cn } from "@/lib/utils"
 import { ActionButton } from "../../action-button"
 import { EmptyState } from "../../empty-state"
 import { HeroCard } from "../../green-till/hero-card"
-import { ListCard, RecordRow, StatusPill } from "../../green-till/kit"
+import { RecordRow, RowDivider, StatusPill } from "../../green-till/kit"
 import type { StaffRow } from "../../staff/staff-model"
 
 export function ClassicStaffHeader({
-  loadedCount,
+  activeCount = 0,
+  pendingCount = 0,
   used,
   limit,
   planName,
@@ -16,8 +18,14 @@ export function ClassicStaffHeader({
   updatedAt,
   onInvite,
   inviteDisabled,
+  onSeePlans,
 }: {
-  loadedCount: number
+  activeCount?: number
+  pendingCount?: number
+  /** Market Day shows it; Classic counts active and pending instead. */
+  loadedCount?: number
+  /** At the limit the hero button becomes See plans. */
+  onSeePlans?: () => void
   used?: number
   /** `null` means the plan has no staff limit. */
   limit?: number | null
@@ -28,35 +36,53 @@ export function ClassicStaffHeader({
   onInvite?: () => void
   inviteDisabled?: boolean
 }) {
+  const full = used !== undefined && typeof limit === "number" && used >= limit
+  const team = [
+    `${activeCount} active`,
+    ...(pendingCount ? [`${pendingCount} waiting to accept`] : []),
+  ].join(" · ")
   return (
     <HeroCard
-      label="Your team"
+      label={
+        used === undefined
+          ? "Your team"
+          : `${planName ?? "Your plan"} · staff places`
+      }
       amount={
         loading
           ? undefined
           : used === undefined || limit === undefined
-            ? "—"
+            ? `${activeCount + pendingCount} staff`
             : limit === null
-              ? `${used} · no limit`
-              : `${used} of ${limit}`
+              ? `${used} staff · no limit`
+              : `${used} of ${limit} used`
       }
       sub={
-        used === undefined
-          ? "Staff allowance is checked when you invite. Only the Owner or Admin can view billing usage."
-          : `${planName ?? "Current plan"} · staff places used${offline && updatedAt ? ` · as of ${new Date(updatedAt).toLocaleString()}` : ""}`
+        offline && updatedAt
+          ? `${team} · as of ${new Date(updatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+          : team
       }
       progress={
         used !== undefined && typeof limit === "number" && limit > 0
           ? { done: used, total: limit }
           : undefined
       }
-      pill={{
-        label: offline ? "Saved copy" : `${loadedCount} loaded`,
-        tone: offline ? "offline" : "synced",
-      }}
+      pill={
+        offline
+          ? { label: "Offline", tone: "offline" }
+          : full
+            ? { label: "Full", tone: "draft" }
+            : undefined
+      }
     >
       {loading ? <Skeleton className="mt-4 h-10 w-full" /> : null}
-      {onInvite ? (
+      {full && onSeePlans ? (
+        <View className="mt-4">
+          <ActionButton tone="cream" icon="Sparkles" onPress={onSeePlans}>
+            See plans for more places
+          </ActionButton>
+        </View>
+      ) : onInvite ? (
         <View className="mt-4">
           <ActionButton
             tone="cream"
@@ -74,15 +100,36 @@ export function ClassicStaffHeader({
 export function ClassicStaffRow({
   staff,
   onPress,
-}: { staff: StaffRow; onPress?: () => void }) {
+  first = true,
+  last = true,
+}: {
+  staff: StaffRow
+  onPress?: () => void
+  /** Rows of one group share a card: first rounds the top, last the bottom. */
+  first?: boolean
+  last?: boolean
+}) {
   return (
-    <ListCard>
+    <View
+      className={cn(
+        "overflow-hidden bg-card px-3.5",
+        first && "rounded-t-[20px]",
+        last && "rounded-b-[20px]",
+      )}
+    >
       <RecordRow
         stackDetails
         onPress={onPress}
         title={staff.name}
-        meta={`${staff.email} · ${staff.detail}`}
-        avatar={{ initials: staff.initials, tint: "lilac" }}
+        meta={
+          staff.email && staff.email !== staff.name
+            ? [staff.email, staff.detail]
+            : staff.detail
+        }
+        avatar={{
+          initials: staff.initials,
+          tint: staff.statusLabel === "Pending" ? "amber" : "lilac",
+        }}
         status={
           <StatusPill
             label={staff.statusLabel}
@@ -96,7 +143,8 @@ export function ClassicStaffRow({
           />
         }
       />
-    </ListCard>
+      {last ? null : <RowDivider />}
+    </View>
   )
 }
 

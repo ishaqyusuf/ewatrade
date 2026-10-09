@@ -3,11 +3,14 @@ import { NudgeCard } from "@/components/mobile/nudge-card"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useOrderVisibility } from "@/hooks/use-order-visibility"
 import { BottomSheetView } from "@gorhom/bottom-sheet"
+import { NudgeCard as TillNudgeCard } from "../green-till/kit"
 
 export function OrderVisibilityCard({ review = false }: { review?: boolean }) {
   const vm = useOrderVisibility()
+  const market = useMobileDesign("staff") === "market-day"
   const modal = useModal()
   if (!vm.canManage || !vm.storeId) return null
   if (
@@ -23,50 +26,84 @@ export function OrderVisibilityCard({ review = false }: { review?: boolean }) {
     (choice) => choice.value === vm.query.data?.salesRepOrderVisibility,
   )?.label
   const keep = () => vm.update.mutate({ storeId: vm.storeId })
+  // Green Till: one row with the current rule and a Change link.
+  const tillRow = !review && !market
   return (
     <>
-      <NudgeCard
-        title={review ? "Choose what your sales reps can see" : "Staff rules"}
-      >
-        <Text className="text-sm text-muted-foreground">
-          {vm.query.data?.name} · What sales reps can see
-        </Text>
-        {vm.query.isError ? (
-          <ActionButton
-            variant="outline"
-            onPress={() => void vm.query.refetch()}
-          >
-            Try loading Staff rules again
-          </ActionButton>
-        ) : (
-          <ActionButton
-            variant="outline"
-            onPress={() => modal.present()}
-            disabled={vm.query.isPending || vm.isOffline}
-          >
-            {review ? "Review Staff rules" : (label ?? "Loading Staff rules…")}
-          </ActionButton>
-        )}
-        {review ? (
-          <ActionButton
-            variant="ghost"
-            onPress={keep}
-            disabled={vm.update.isPending || vm.isOffline}
-          >
-            Keep as it is
-          </ActionButton>
-        ) : null}
-        {vm.isOffline ? (
+      {tillRow ? (
+        <TillNudgeCard
+          icon="Eye"
+          tint="sky"
+          title="What sales reps can see"
+          sub={
+            vm.query.isError
+              ? "Staff rules could not load"
+              : vm.update.isError
+                ? vm.update.error.message
+                : vm.isOffline
+                  ? `${label ?? "Saved rule"} · reconnect to change`
+                  : (label ?? "Loading…")
+          }
+          actionLabel={
+            vm.query.isError
+              ? "Retry"
+              : vm.isOffline || vm.query.isPending
+                ? undefined
+                : "Change"
+          }
+          onAction={() =>
+            vm.query.isError ? void vm.query.refetch() : modal.present()
+          }
+        />
+      ) : (
+        <NudgeCard
+          title={review ? "Choose what your sales reps can see" : "Staff rules"}
+        >
           <Text className="text-sm text-muted-foreground">
-            Reconnect to update Staff rules.
+            {vm.query.data?.name} · What sales reps can see
           </Text>
-        ) : null}
-        {vm.update.isError ? (
-          <Text accessibilityRole="alert" className="text-sm text-destructive">
-            {vm.update.error.message}
-          </Text>
-        ) : null}
-      </NudgeCard>
+          {vm.query.isError ? (
+            <ActionButton
+              variant="outline"
+              onPress={() => void vm.query.refetch()}
+            >
+              Try loading Staff rules again
+            </ActionButton>
+          ) : (
+            <ActionButton
+              variant="outline"
+              onPress={() => modal.present()}
+              disabled={vm.query.isPending || vm.isOffline}
+            >
+              {review
+                ? "Review Staff rules"
+                : (label ?? "Loading Staff rules…")}
+            </ActionButton>
+          )}
+          {review ? (
+            <ActionButton
+              variant="ghost"
+              onPress={keep}
+              disabled={vm.update.isPending || vm.isOffline}
+            >
+              Keep as it is
+            </ActionButton>
+          ) : null}
+          {vm.isOffline ? (
+            <Text className="text-sm text-muted-foreground">
+              Reconnect to update Staff rules.
+            </Text>
+          ) : null}
+          {vm.update.isError ? (
+            <Text
+              accessibilityRole="alert"
+              className="text-sm text-destructive"
+            >
+              {vm.update.error.message}
+            </Text>
+          ) : null}
+        </NudgeCard>
+      )}
       <Modal
         ref={modal.ref}
         title="What sales reps can see"
