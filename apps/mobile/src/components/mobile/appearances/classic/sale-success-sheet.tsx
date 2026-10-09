@@ -64,7 +64,12 @@ export function ClassicSaleSuccessSheet({
     .filter(Boolean)
     .join(" · ")
   const rows: Array<[string, string, boolean?]> = [
-    ["Customer", params.customer || "Walk-in customer"],
+    [
+      "Customer",
+      params.customer && params.customer !== "Guest customer"
+        ? params.customer
+        : "Walk-in customer",
+    ],
     ["Items", itemsLabel],
     ...(payment ? [["Payment", payment] as [string, string]] : []),
     ...(params.balance && params.paymentState !== "paid"
