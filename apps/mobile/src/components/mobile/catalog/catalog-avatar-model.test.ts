@@ -17,6 +17,12 @@ describe("Catalog selected-media avatar", () => {
   test("uses the first attached photo in selection order within the current Store", () => {
     const photos = [
       {
+        assetId: "unranked",
+        storeId: "store-a",
+        sortOrder: null,
+        state: "APPROVED",
+      },
+      {
         assetId: "other-store",
         storeId: "store-b",
         sortOrder: 0,
@@ -41,10 +47,17 @@ describe("Catalog selected-media avatar", () => {
       storeId: "store-a",
     })
     expect(photos.map((photo) => photo.assetId)).toEqual([
+      "unranked",
       "other-store",
       "second",
       "first",
     ])
+    expect(
+      selectCatalogAvatar(
+        { name: "Eggs", photos: photos.slice(0, 1) },
+        "store-a",
+      ),
+    ).toEqual({ kind: "photo", assetId: "unranked", storeId: "store-a" })
   })
   test("never borrows another Store's media or a removed/rejected photo", () => {
     const item = {

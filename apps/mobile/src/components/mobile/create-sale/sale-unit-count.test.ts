@@ -14,5 +14,7 @@ test("quantity steps preserve fractions and clamp at zero", () => {
   expect(stepSaleQuantity("1.5", -1)).toBe("0.5")
   expect(stepSaleQuantity("0.5", -1)).toBe("0")
   expect(stepSaleQuantity("", 1)).toBe("1")
+  expect(stepSaleQuantity(undefined, 1)).toBe("1")
+  expect(stepSaleQuantity(undefined, -1)).toBe("0")
   expect(saleUnitCount(["0.12345678901234567890123456789"])).toBe("—")
 })

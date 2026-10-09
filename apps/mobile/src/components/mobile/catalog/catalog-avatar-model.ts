@@ -10,7 +10,7 @@ type CatalogMediaSelection = {
   photos?: ReadonlyArray<{
     storeId: string
     assetId: string
-    sortOrder: number
+    sortOrder: number | null
     state: string
   }>
 }
@@ -36,7 +36,11 @@ export function selectCatalogAvatar(
           entry.storeId === storeId &&
           (entry.state === "APPROVED" || entry.state === "PENDING_REVIEW"),
       )
-      .sort((a, b) => a.sortOrder - b.sortOrder)[0]
+      .sort(
+        (a, b) =>
+          (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
+          (b.sortOrder ?? Number.MAX_SAFE_INTEGER),
+      )[0]
     if (photo) return { kind: "photo", assetId: photo.assetId, storeId }
   }
   if (legacyImageUrl?.trim())

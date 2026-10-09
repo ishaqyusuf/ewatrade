@@ -13,7 +13,10 @@ export function saleUnitCount(quantities: readonly (string | undefined)[]) {
   }
 }
 
-export function stepSaleQuantity(quantity: string, direction: 1 | -1) {
+export function stepSaleQuantity(
+  quantity: string | undefined,
+  direction: 1 | -1,
+) {
   try {
     const next = addExactDecimals(quantity || "0", String(direction))
     return compareExactDecimals(next, "0") <= 0 ? "0" : next
