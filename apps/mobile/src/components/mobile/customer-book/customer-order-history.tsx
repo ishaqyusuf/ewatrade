@@ -85,50 +85,54 @@ export function CustomerOrderHistory({
           </Text>
         </>
       ) : null}
-      <View
-        className={
-          market
-            ? "rounded-2xl border border-market-line bg-market-field px-4"
-            : "rounded-[20px] bg-card px-3.5 shadow-sm"
-        }
-      >
-        {visible.map((row, index) => (
-          <Fragment
-            key={
-              row.kind === "pending"
-                ? `pending:${row.order.clientCommandId}`
-                : `synced:${row.order.id}`
-            }
-          >
-            {index && !market ? <View className="h-px bg-border" /> : null}
-            {row.kind === "pending" ? (
-              <PendingRow order={row.order} />
+      {/* Green Till: shadow outside, rounded clip inside so a pressed row's
+          ripple reaches the card edges without spilling past the corners. */}
+      <View className={market ? undefined : "rounded-[20px] bg-card shadow-sm"}>
+        <View
+          className={
+            market
+              ? "rounded-2xl border border-market-line bg-market-field px-4"
+              : "overflow-hidden rounded-[20px] px-3.5"
+          }
+        >
+          {visible.map((row, index) => (
+            <Fragment
+              key={
+                row.kind === "pending"
+                  ? `pending:${row.order.clientCommandId}`
+                  : `synced:${row.order.id}`
+              }
+            >
+              {index && !market ? <View className="h-px bg-border" /> : null}
+              {row.kind === "pending" ? (
+                <PendingRow order={row.order} />
+              ) : (
+                <Row
+                  order={row.order}
+                  onPress={() => onOpenOrder(row.order.id)}
+                />
+              )}
+            </Fragment>
+          ))}
+          {!rows.length ? (
+            market ? (
+              <View className="gap-2 py-5">
+                <Text className={`text-lg font-bold ${ink}`}>
+                  No loaded orders
+                </Text>
+                <Text className={`text-sm ${muted}`}>
+                  No orders are loaded for this customer.
+                </Text>
+              </View>
             ) : (
-              <Row
-                order={row.order}
-                onPress={() => onOpenOrder(row.order.id)}
+              <EmptyState
+                icon="ReceiptText"
+                message="No orders are loaded for this customer."
+                title="No loaded orders"
               />
-            )}
-          </Fragment>
-        ))}
-        {!rows.length ? (
-          market ? (
-            <View className="gap-2 py-5">
-              <Text className={`text-lg font-bold ${ink}`}>
-                No loaded orders
-              </Text>
-              <Text className={`text-sm ${muted}`}>
-                No orders are loaded for this customer.
-              </Text>
-            </View>
-          ) : (
-            <EmptyState
-              icon="ReceiptText"
-              message="No orders are loaded for this customer."
-              title="No loaded orders"
-            />
-          )
-        ) : null}
+            )
+          ) : null}
+        </View>
       </View>
       {rows.length > PAGE_SIZE ? (
         <View className="gap-3">

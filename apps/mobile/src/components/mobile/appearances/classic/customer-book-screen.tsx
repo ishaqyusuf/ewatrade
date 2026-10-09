@@ -117,7 +117,7 @@ export function ClassicCustomerBookRow({
   return (
     <View
       className={cn(
-        "bg-card px-3.5",
+        "overflow-hidden bg-card px-3.5",
         position.first && "rounded-t-[20px]",
         position.last && "mb-1 rounded-b-[20px]",
       )}

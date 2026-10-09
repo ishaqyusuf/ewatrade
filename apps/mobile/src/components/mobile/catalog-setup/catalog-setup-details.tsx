@@ -1,13 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { CatalogLivePreview } from "@/components/mobile/appearances/classic/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
+import { RowDivider } from "@/components/mobile/green-till/kit"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import { cn } from "@/lib/utils"
 import { catalogCategoryLabelEmoji } from "@ewatrade/utils/catalog-category-emojis"
 import {
   findCatalogIllustration,
@@ -268,16 +268,20 @@ function ClassicDetailRows({
           Optional
         </Text>
       </View>
-      <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
-        {rows.map(({ key, ...row }, index) => (
-          <ClassicDetailRow
-            key={key}
-            border={index > 0}
-            disabled={model.locked}
-            {...row}
-            onPress={() => open(key)}
-          />
-        ))}
+      {/* Shadow outside, rounded clip inside: each row's feedback spans the
+          card edge to edge without spilling past the corners. */}
+      <View className="rounded-[20px] bg-card shadow-sm">
+        <View className="overflow-hidden rounded-[20px] px-3.5">
+          {rows.map(({ key, ...row }, index) => (
+            <ClassicDetailRow
+              key={key}
+              border={index > 0}
+              disabled={model.locked}
+              {...row}
+              onPress={() => open(key)}
+            />
+          ))}
+        </View>
       </View>
     </View>
   )
@@ -309,14 +313,12 @@ function ClassicDetailRow({
       accessibilityHint={value}
       accessibilityLabel={label}
       accessibilityRole="button"
-      className={cn(
-        "min-h-[62px] flex-row items-center gap-3 py-3 active:opacity-70",
-        border && "border-t border-border",
-      )}
+      className="-mx-3.5 min-h-[62px] flex-row items-center gap-3 px-3.5 py-3 active:opacity-80"
       disabled={disabled}
       haptic
       onPress={onPress}
     >
+      {border ? <RowDivider position="top" /> : null}
       <View
         style={{
           alignItems: "center",

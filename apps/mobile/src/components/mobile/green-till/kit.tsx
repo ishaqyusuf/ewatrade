@@ -84,37 +84,53 @@ export function QuickActionRow({ actions }: { actions: QuickActionItem[] }) {
       )}
     >
       {actions.map((action) => (
-        <Pressable
-          accessibilityLabel={action.label}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: action.disabled }}
+        <View
           className={cn(
-            "items-center gap-[7px] active:opacity-80",
+            "items-center gap-[7px]",
             largeText ? "w-1/2" : "flex-1",
             action.disabled && "opacity-50",
           )}
-          disabled={action.disabled}
-          haptic
           key={action.label}
-          onPress={action.onPress}
-          testID={action.testID}
         >
+          {/* Press feedback lives on the tile only; the shadow sits on an
+              outer layer so the clipped ripple keeps the tile's corners. */}
           <View
             className={cn(
-              "size-[54px] items-center justify-center rounded-[18px]",
+              "rounded-[18px]",
               action.gold ? "bg-gold" : "bg-card shadow-sm",
             )}
           >
-            <Icon
-              className={cn("size-[22px]", !action.gold && "text-primary")}
-              color={action.gold ? palette.goldForeground : undefined}
-              name={action.icon}
-            />
+            <Pressable
+              accessibilityLabel={action.label}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: action.disabled }}
+              className="size-[54px] items-center justify-center rounded-[18px] active:opacity-80"
+              disabled={action.disabled}
+              haptic
+              onPress={action.onPress}
+              testID={action.testID}
+              transition
+            >
+              <Icon
+                className={cn("size-[22px]", !action.gold && "text-primary")}
+                color={action.gold ? palette.goldForeground : undefined}
+                name={action.icon}
+              />
+            </Pressable>
           </View>
-          <Text className="text-center text-[11.5px] font-bold [-rn-line-height:15] text-foreground">
-            {action.label}
-          </Text>
-        </Pressable>
+          {/* The label still opens the action, without its own feedback. */}
+          <Pressable
+            accessible={false}
+            disabled={action.disabled}
+            importantForAccessibility="no"
+            noRipple
+            onPress={action.onPress}
+          >
+            <Text className="text-center text-[11.5px] font-bold [-rn-line-height:15] text-foreground">
+              {action.label}
+            </Text>
+          </Pressable>
+        </View>
       ))}
     </View>
   )
@@ -158,50 +174,54 @@ function AttentionCard({ item }: { item: AttentionItem }) {
     <Pressable
       accessibilityLabel={`${item.title}. ${item.sub}`}
       accessibilityRole={item.onPress ? "button" : undefined}
+      className="w-[152px] rounded-[18px] active:opacity-80"
       disabled={!item.onPress}
       haptic
       onPress={item.onPress}
-      style={{
-        backgroundColor: tint.bg,
-        borderRadius: 18,
-        gap: 12,
-        padding: 12,
-        width: 152,
-      }}
+      transition={Boolean(item.onPress)}
     >
       <View
         style={{
-          alignItems: "center",
-          backgroundColor: tintChip(tint.fg),
-          borderRadius: 10,
-          height: 32,
-          justifyContent: "center",
-          width: 32,
+          backgroundColor: tint.bg,
+          borderRadius: 18,
+          gap: 12,
+          padding: 12,
         }}
       >
-        <Icon className="size-[18px]" color={tint.fg} name={item.icon} />
-      </View>
-      <View>
-        <NativeText
+        <View
           style={{
-            color: tint.fg,
-            fontSize: 14,
-            fontWeight: "700",
-            lineHeight: 18,
+            alignItems: "center",
+            backgroundColor: tintChip(tint.fg),
+            borderRadius: 10,
+            height: 32,
+            justifyContent: "center",
+            width: 32,
           }}
         >
-          {item.title}
-        </NativeText>
-        <NativeText
-          style={{
-            color: tint.fg,
-            fontSize: 12,
-            lineHeight: 17,
-            opacity: 0.85,
-          }}
-        >
-          {item.sub}
-        </NativeText>
+          <Icon className="size-[18px]" color={tint.fg} name={item.icon} />
+        </View>
+        <View>
+          <NativeText
+            style={{
+              color: tint.fg,
+              fontSize: 14,
+              fontWeight: "700",
+              lineHeight: 18,
+            }}
+          >
+            {item.title}
+          </NativeText>
+          <NativeText
+            style={{
+              color: tint.fg,
+              fontSize: 12,
+              lineHeight: 17,
+              opacity: 0.85,
+            }}
+          >
+            {item.sub}
+          </NativeText>
+        </View>
       </View>
     </Pressable>
   )
@@ -209,19 +229,45 @@ function AttentionCard({ item }: { item: AttentionItem }) {
 
 /* ---------- ListCard + RecordRow ---------- */
 
-/** A white card of rows with hairline dividers between them. */
+/**
+ * A white card of rows with hairline dividers between them. The inner layer
+ * clips to the rounded corners so a pressed row's ripple (RecordRow bleeds into
+ * the card padding) reaches both edges without spilling; the shadow stays on
+ * the outer layer.
+ */
 export function ListCard({ children }: { children: ReactNode }) {
   const rows = Children.toArray(children).filter(Boolean)
   return (
-    <View className="rounded-[20px] bg-card px-3.5 py-0.5 shadow-sm">
-      {rows.map((row, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: rows keep their order
-        <Fragment key={index}>
-          {index > 0 ? <View className="h-px bg-border" /> : null}
-          {row}
-        </Fragment>
-      ))}
+    <View className="rounded-[20px] bg-card shadow-sm">
+      <View className="overflow-hidden rounded-[20px] px-3.5 py-0.5">
+        {rows.map((row, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: rows keep their order
+          <Fragment key={index}>
+            {index > 0 ? <View className="h-px bg-border" /> : null}
+            {row}
+          </Fragment>
+        ))}
+      </View>
     </View>
+  )
+}
+
+/**
+ * Inset hairline for a pressable row that bleeds to its card edges: the row
+ * owns the padding (so its ripple reaches both edges) and the line keeps the
+ * card's 14pt inset.
+ */
+export function RowDivider({
+  position = "bottom",
+}: { position?: "top" | "bottom" }) {
+  return (
+    <View
+      pointerEvents="none"
+      className={cn(
+        "absolute left-3.5 right-3.5 h-px bg-border",
+        position === "top" ? "top-0" : "bottom-0",
+      )}
+    />
   )
 }
 
@@ -256,7 +302,9 @@ export function RecordRow({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole={onPress ? "button" : undefined}
       className={cn(
-        "min-h-[62px] gap-3 py-3 active:opacity-70",
+        "min-h-[62px] gap-3 py-3",
+        // Pressable rows bleed into the card padding so feedback spans the card.
+        onPress && "-mx-3.5 px-3.5 active:opacity-80",
         stackDetails && largeText ? "items-start" : "flex-row items-center",
       )}
       disabled={!onPress}

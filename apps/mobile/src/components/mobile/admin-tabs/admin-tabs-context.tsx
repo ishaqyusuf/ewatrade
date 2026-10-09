@@ -52,6 +52,11 @@ export function useAdminTabs() {
   return context
 }
 
+/** The tabs context when rendered inside the admin tabs, otherwise null. */
+export function useOptionalAdminTabs() {
+  return useContext(AdminTabsContext)
+}
+
 export function useResetAdminDock() {
   const { setDockHidden } = useAdminTabs()
 

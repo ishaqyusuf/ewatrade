@@ -6,6 +6,7 @@ import { recordAvatar } from "@/components/mobile/dashboard/green-till-home-mode
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import {
   GhostPreview,
+  RowDivider,
   SetupSteps,
   StatusPill,
 } from "@/components/mobile/green-till/kit"
@@ -386,7 +387,7 @@ export function ClassicOrdersRow({
   return (
     <View
       className={cn(
-        "bg-card px-3.5",
+        "overflow-hidden bg-card px-3.5",
         position.first && "rounded-t-[20px]",
         position.last && "mb-1 rounded-b-[20px]",
       )}
@@ -400,11 +401,9 @@ export function ClassicOrdersRow({
         }}
         disabled={disabled}
         onPress={onPress}
-        className={cn(
-          "min-h-[66px] flex-row items-center gap-3 py-3 active:opacity-70",
-          !position.last && "border-b border-border",
-        )}
+        className="-mx-3.5 min-h-[66px] flex-row items-center gap-3 px-3.5 py-3 active:opacity-80"
       >
+        {!position.last ? <RowDivider /> : null}
         <View
           style={{
             alignItems: "center",

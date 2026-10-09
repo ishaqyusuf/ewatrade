@@ -12,7 +12,11 @@ import type {
 } from "@/components/mobile/catalog/catalog-presentation"
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
-import { GhostPreview, StatusPill } from "@/components/mobile/green-till/kit"
+import {
+  GhostPreview,
+  RowDivider,
+  StatusPill,
+} from "@/components/mobile/green-till/kit"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -167,7 +171,7 @@ export function ClassicCatalogRow({
   return (
     <View
       className={cn(
-        "mx-[18px] bg-card px-3.5",
+        "mx-[18px] overflow-hidden bg-card px-3.5",
         index === 0 && "rounded-t-[20px]",
         last && "rounded-b-[20px]",
       )}
@@ -175,14 +179,11 @@ export function ClassicCatalogRow({
       <Pressable
         accessibilityLabel={`Open ${item.name}, ${item.priceLabel}, ${item.availabilityLabel}`}
         accessibilityRole="button"
-        className={cn(
-          "min-h-[62px] flex-row items-center gap-3 py-3 active:opacity-70",
-          !last && "border-b border-border",
-        )}
+        className="-mx-3.5 min-h-[62px] flex-row items-center gap-3 px-3.5 py-3 active:opacity-80"
         haptic
         onPress={onPress}
-        transition
       >
+        {!last ? <RowDivider /> : null}
         <View
           className={cn(
             "size-[42px] items-center justify-center overflow-hidden rounded-[13px]",

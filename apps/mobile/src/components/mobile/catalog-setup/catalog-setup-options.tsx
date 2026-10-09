@@ -529,9 +529,10 @@ export function ClassicProductChoices({
       ) : optionGroups.length > 1 ? (
         <Pressable
           accessibilityRole="button"
-          className="min-h-[58px] flex-row items-center gap-3 rounded-[20px] bg-card px-3.5 py-3 shadow-sm active:opacity-70"
+          className="min-h-[58px] flex-row items-center gap-3 rounded-[20px] bg-card px-3.5 py-3 shadow-sm active:opacity-80"
           haptic
           onPress={onOpenPricing}
+          transition
         >
           <View className="min-w-0 flex-1">
             <Text className="text-sm font-bold text-foreground">

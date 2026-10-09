@@ -406,12 +406,12 @@ function Statement({
             <View
               className={
                 first && last
-                  ? "rounded-[20px] bg-card px-3.5"
+                  ? "overflow-hidden rounded-[20px] bg-card px-3.5"
                   : first
-                    ? "rounded-t-[20px] bg-card px-3.5"
+                    ? "overflow-hidden rounded-t-[20px] bg-card px-3.5"
                     : last
-                      ? "rounded-b-[20px] bg-card px-3.5"
-                      : "bg-card px-3.5"
+                      ? "overflow-hidden rounded-b-[20px] bg-card px-3.5"
+                      : "overflow-hidden bg-card px-3.5"
               }
             >
               <View className={last ? undefined : "border-b border-border"}>

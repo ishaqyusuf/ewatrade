@@ -595,9 +595,10 @@ export function ClassicPricing({ model }: { model: CatalogSetupModel }) {
       {model.additionalUnits.length ? (
         <Pressable
           accessibilityRole="button"
-          className="min-h-[52px] flex-row items-center gap-3 rounded-[18px] bg-card px-3.5 shadow-sm active:opacity-70"
+          className="min-h-[52px] flex-row items-center gap-3 rounded-[18px] bg-card px-3.5 shadow-sm active:opacity-80"
           haptic
           onPress={() => setAdvanced((current) => !current)}
+          transition
         >
           <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
             Prices for other selling units

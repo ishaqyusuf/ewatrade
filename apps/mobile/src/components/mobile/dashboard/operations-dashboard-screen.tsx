@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { useOptionalAdminTabs } from "@/components/mobile/admin-tabs/admin-tabs-context"
 import {
   ClassicDashboardEmptyOrders,
   ClassicDashboardHero,
@@ -98,6 +99,14 @@ export function OperationsDashboardSurface({
   onBottomTabVisibilityChange?: (hidden: boolean) => void
 } = {}) {
   const router = useRouter()
+  // Add item opens the same quick-create sheet as the tab bar's plus button
+  // (its permissions and offline rules apply); outside the tabs it falls back
+  // to the product setup route.
+  const adminTabs = useOptionalAdminTabs()
+  const openQuickCreate = () => {
+    if (adminTabs) adminTabs.openCreate()
+    else router.push("/first-product-setup-modal" as never)
+  }
   const createModal = useModal()
   const trpc = useTRPC()
   const { profile } = useAuthContext()
@@ -620,7 +629,7 @@ export function OperationsDashboardSurface({
           businessName={profile?.businessName ?? "your business"}
           canCreateSale={hasSellableCatalogItem}
           isOffline={isOffline}
-          onAddItem={() => router.push("/first-product-setup-modal" as never)}
+          onAddItem={openQuickCreate}
           onInviteTeam={
             ownerHome.canManage
               ? () => router.push("/staff-invite-modal" as never)
@@ -795,9 +804,7 @@ export function OperationsDashboardSurface({
         <OwnerSetup
           catalogReady={hasSellableCatalogItem}
           itemValue={hasSellableCatalogItem ? "Ready" : "0"}
-          onAddItemPress={() =>
-            router.push("/first-product-setup-modal" as never)
-          }
+          onAddItemPress={openQuickCreate}
           onCreateOrderPress={() => router.push("/create-sale-modal" as never)}
           onInviteStaffPress={() => router.push("/staff-invite-modal" as never)}
           orderValue={String(recentOrderCount)}
