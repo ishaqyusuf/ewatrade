@@ -1,9 +1,15 @@
 "use client"
+import {
+  InlineRowCheckbox,
+  InlineSelectionBar,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { OpenFinanceSheet } from "./open-finance-sheet"
 import type { FinanceBook } from "./types"
 
@@ -16,7 +22,12 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
       { getNextPageParam: (page) => page.nextCursor ?? undefined },
     ),
   )
-  const counts = query.data?.pages.flatMap((page) => page.items) ?? []
+  const counts = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data],
+  )
+  const countIds = useMemo(() => counts.map((count) => count.id), [counts])
+  const selection = useInlineSelection({ ids: countIds, scope: book.id })
   return (
     <section className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -43,50 +54,68 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
           No cash counts recorded yet.
         </p>
       ) : (
-        <ol className="divide-y divide-border">
-          {counts.map((count) => (
-            <li
-              key={count.id}
-              className="flex flex-wrap items-center justify-between gap-4 py-4"
-            >
-              <div>
-                <p className="font-medium">
-                  {count.accountName} · {count.reference}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(count.asOf).toLocaleString("en-NG", {
-                    timeZone: book.timezone,
-                  })}
-                </p>
-                <p className="mt-1 text-sm">
-                  Counted{" "}
-                  {formatFinanceMoney(
-                    count.observedBalanceMinor,
-                    book.currencyCode,
-                  )}{" "}
-                  · Difference at count{" "}
-                  {formatFinanceMoney(
-                    count.differenceAtCountMinor,
-                    book.currencyCode,
-                  )}
-                </p>
-              </div>
-              <Button
-                appearance="form"
-                variant="outline"
-                aria-label={`View cash count ${count.reference}`}
-                onClick={() =>
-                  void setParams({
-                    financeSheet: "cash-count-detail",
-                    countId: count.id,
-                  })
+        <div className="grid gap-1">
+          <InlineSelectionBar
+            label="Select all loaded cash counts"
+            selection={selection}
+          />
+          <ol className="divide-y divide-border">
+            {counts.map((count) => (
+              <li
+                key={count.id}
+                className="flex items-start gap-3 py-4"
+                data-state={
+                  selection.isSelected(count.id) ? "selected" : undefined
                 }
               >
-                View count
-              </Button>
-            </li>
-          ))}
-        </ol>
+                <span className="pt-0.5">
+                  <InlineRowCheckbox
+                    selection={selection}
+                    id={count.id}
+                    label={`Select cash count ${count.reference}`}
+                  />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium">
+                      {count.accountName} · {count.reference}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(count.asOf).toLocaleString("en-NG", {
+                        timeZone: book.timezone,
+                      })}
+                    </p>
+                    <p className="mt-1 text-sm">
+                      Counted{" "}
+                      {formatFinanceMoney(
+                        count.observedBalanceMinor,
+                        book.currencyCode,
+                      )}{" "}
+                      · Difference at count{" "}
+                      {formatFinanceMoney(
+                        count.differenceAtCountMinor,
+                        book.currencyCode,
+                      )}
+                    </p>
+                  </div>
+                  <Button
+                    appearance="form"
+                    variant="outline"
+                    aria-label={`View cash count ${count.reference}`}
+                    onClick={() =>
+                      void setParams({
+                        financeSheet: "cash-count-detail",
+                        countId: count.id,
+                      })
+                    }
+                  >
+                    View count
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
       {query.hasNextPage ? (
         <Button

@@ -76,7 +76,7 @@ const contracts = [
       "accessibilityRole={accessibilityRole}",
       "selected: isAction ? undefined : isActive",
       "operational-bottom-tab-action",
-      "fontSize: 10",
+      "fontSize: 12",
       "gap: 4",
       "height: 52",
       "borderWidth: 2",

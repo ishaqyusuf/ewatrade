@@ -103,6 +103,34 @@ describe("production legal publication readiness", () => {
     ).toEqual([])
   })
 
+  test("accepts React server-rendered text boundaries in the approved version", async () => {
+    const fetchImpl = publicSite({
+      "/privacy": routedResponse(
+        "/privacy",
+        `<html><h1>Privacy Notice</h1><p>Version <!-- -->${version}<!-- --> · Effective ${effectiveDate}</p></html>`,
+        "text/html",
+      ),
+    })
+    expect(
+      await probeProductionLegal(origin, approvedPublication, fetchImpl),
+    ).toEqual([])
+  })
+
+  test("rejects a version that appears only inside an HTML comment", async () => {
+    const fetchImpl = publicSite({
+      "/privacy": routedResponse(
+        "/privacy",
+        `<html><h1>Privacy Notice</h1><!-- Version ${version} --><p>Version old · Effective ${effectiveDate}</p></html>`,
+        "text/html",
+      ),
+    })
+    expect(
+      await probeProductionLegal(origin, approvedPublication, fetchImpl),
+    ).toEqual([
+      "/privacy does not render the approved, indexable legal version.",
+    ])
+  })
+
   test("rejects a draft publication before reading any page", async () => {
     const paths = []
     const fetchImpl = async (url) => {

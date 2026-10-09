@@ -3,8 +3,15 @@ import {
   formatCommerceDate,
   formatCommerceQuantity,
 } from "@/components/mobile/commerce"
+import type {
+  OrdersFilterProps,
+  OrdersMastheadProps,
+  OrdersRowProps,
+  OrdersSummaryProps,
+} from "@/components/mobile/orders/orders-presentation"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
@@ -15,16 +22,10 @@ import {
   getOrderDispatchPresentation,
   orderDispatchDateLabel,
 } from "@/lib/orders-dispatch-ledger"
+import { cn } from "@/lib/utils"
+import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
 import { View } from "react-native"
-import { VariableContextProvider } from "nativewind"
-import { cn } from "@/lib/utils"
-import type {
-  OrdersMastheadProps,
-  OrdersSummaryProps,
-  OrdersRowProps,
-  OrdersFilterProps,
-} from "@/components/mobile/orders/orders-presentation"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export type { OrderFilter as OrderDispatchFilter } from "@/components/mobile/orders/orders-presentation"
@@ -85,6 +86,7 @@ export function OrdersDispatchLedgerMasthead({
 
 export function OrdersDispatchLedgerSummary({
   dateFilter,
+  loading = false,
   orders,
 }: OrdersSummaryProps) {
   const largeTextLayout = useLargeTextLayout()
@@ -138,12 +140,18 @@ export function OrdersDispatchLedgerSummary({
                   : "border-l border-market-line"),
             )}
           >
-            <Text
-              numberOfLines={largeTextLayout ? 2 : 1}
-              className={cn(styles.factValue, "text-market-ink")}
-            >
-              {fact.value}
-            </Text>
+            {loading ? (
+              <SkeletonGroup accessibilityLabel={`Loading ${fact.label}`}>
+                <Skeleton height={22} width="60%" />
+              </SkeletonGroup>
+            ) : (
+              <Text
+                numberOfLines={largeTextLayout ? 2 : 1}
+                className={cn(styles.factValue, "text-market-ink")}
+              >
+                {fact.value}
+              </Text>
+            )}
             <Text className={cn(styles.factLabel, "text-market-muted-ink")}>
               {fact.label}
             </Text>

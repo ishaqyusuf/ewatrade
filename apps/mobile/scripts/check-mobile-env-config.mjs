@@ -103,11 +103,11 @@ const EXPECTED = [
     checks: {
       ALLOWED_API_ORIGINS: includesAll([
         "https://ewatrade.com",
-        "https://dashboard.ewatrade.com",
+        "https://dash.ewatrade.com",
       ]),
       BETTER_AUTH_TRUSTED_ORIGINS: includesAll([
         "https://ewatrade.com",
-        "https://dashboard.ewatrade.com",
+        "https://dash.ewatrade.com",
       ]),
       EMAIL_FROM: productionEmail,
       EMAIL_REPLY_TO: productionEmail,
@@ -118,7 +118,7 @@ const EXPECTED = [
       CHAT_URL: equals("https://chat.ewatrade.com"),
       MARKETING_INBOX_EMAILS: productionEmail,
       NEXT_PUBLIC_APP_URL: equals("https://ewatrade.com"),
-      NEXT_PUBLIC_DASHBOARD_URL: equals("https://dashboard.ewatrade.com"),
+      NEXT_PUBLIC_DASHBOARD_URL: equals("https://dash.ewatrade.com"),
       NEXT_PUBLIC_PLATFORM_DOMAIN: equals("ewatrade.com"),
       NEXT_PUBLIC_MARKETING_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_SIGNUP_ENABLED: equals("true"),

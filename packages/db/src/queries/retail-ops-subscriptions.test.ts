@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test"
+import { getRetailOpsOrderPeriodStart } from "./retail-ops-subscription-plans"
 import {
+  RetailOpsSubscriptionError,
+  assertRetailOpsOrderAllowance,
+  assertRetailOpsPlanIdFeature,
+  assertRetailOpsProductAllowance,
   createRetailOpsSubscriptionCheckoutIntent,
   getRetailOpsSubscriptionSnapshot,
   registerRetailOpsOfflineDevice,
+  resolveRetailOpsPlanId,
 } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
@@ -93,6 +99,13 @@ function createMockSnapshotDb(
         return []
       },
     },
+    commercialOrder: {
+      count: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "commercialOrder.count", where })
+
+        return 7
+      },
+    },
     catalogItem: {
       count: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "catalogItem.count", where })
@@ -179,6 +192,13 @@ function createMockCheckoutDb() {
         calls.push({ kind: "offlineDeviceRevocation.findMany", where })
 
         return []
+      },
+    },
+    commercialOrder: {
+      count: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "commercialOrder.count", where })
+
+        return 7
       },
     },
     catalogItem: {
@@ -295,6 +315,13 @@ function createMockOfflineDeviceDb() {
         return []
       },
     },
+    commercialOrder: {
+      count: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "commercialOrder.count", where })
+
+        return 7
+      },
+    },
     catalogItem: {
       count: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "catalogItem.count", where })
@@ -384,15 +411,27 @@ describe("retail ops subscription queries", () => {
       usage: {
         businesses: 2,
         offlineDevices: 2,
+        ordersThisMonth: 7,
         products: 12,
         staff: 3,
       },
     })
     expect(snapshot.plans.map((plan) => plan.id)).toEqual([
+      "free",
       "starter",
       "growth",
       "pro",
     ])
+    // Durable rows predating ordersPerMonth stay unlimited; the catalogue
+    // label replaces the row's legacy "Most popular".
+    expect(snapshot.plan.limits.ordersPerMonth).toBeNull()
+    expect(snapshot.plan.priceLabel).toBe("Free during launch")
+    expect(snapshot.entitlements).toContainEqual({
+      isAtLimit: false,
+      key: "ordersPerMonth",
+      limit: null,
+      used: 7,
+    })
     expect(snapshot.entitlements).toContainEqual({
       isAtLimit: false,
       key: "offlineDevices",
@@ -428,6 +467,7 @@ describe("retail ops subscription queries", () => {
     expect(snapshot.plan.limits).toEqual({
       businesses: 0,
       offlineDevices: 0,
+      ordersPerMonth: 0,
       products: 0,
       reportsHistoryDays: 0,
       staff: 0,
@@ -550,5 +590,205 @@ describe("retail ops subscription queries", () => {
         storeId: "store_123",
       },
     })
+  })
+})
+
+function createPlanDb(input: {
+  durablePlan?: Record<string, unknown>
+  metadata?: unknown
+  orders?: number
+  products?: number
+}) {
+  const calls: SubscriptionCall[] = []
+  const tenant = createTenantRow({ metadata: input.metadata })
+  const db = {
+    $executeRaw: async () => 1,
+    catalogItem: { count: async () => input.products ?? 0 },
+    commercialOrder: {
+      count: async ({ where }: { where: unknown }) => {
+        calls.push({ kind: "commercialOrder.count", where })
+        return input.orders ?? 0
+      },
+    },
+    membership: { count: async () => 0 },
+    offlineDevice: { findMany: async () => [] },
+    offlineDeviceRevocation: { findMany: async () => [] },
+    store: { count: async () => 1 },
+    subscriptionPlan: {
+      findMany: async () => (input.durablePlan ? [input.durablePlan] : []),
+    },
+    tenant: {
+      findFirstOrThrow: async () => tenant,
+      findUniqueOrThrow: async () => tenant,
+    },
+    tenantSubscription: {
+      findUnique: async () =>
+        input.durablePlan
+          ? {
+              currentPeriodEndsAt: null,
+              limitsSnapshot: input.durablePlan.limits,
+              plan: input.durablePlan,
+              planId: "plan_row",
+              status: "ACTIVE",
+              trialEndsAt: null,
+              updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+            }
+          : null,
+    },
+  }
+
+  return { calls, client: db as unknown as DbClient }
+}
+
+const FREE_METADATA = { retailOps: { subscription: { planId: "free" } } }
+
+describe("Free plan and launch default", () => {
+  test("a business without a record is on the launch Starter plan, not a trial", async () => {
+    const snapshot = await getRetailOpsSubscriptionSnapshot(
+      createPlanDb({}).client,
+      { tenantId: "tenant_123" },
+    )
+
+    expect(snapshot.plan.id).toBe("starter")
+    expect(snapshot.plan.priceLabel).toBe("Free during launch")
+    expect(snapshot.subscription).toMatchObject({
+      source: "launch_default",
+      status: "active",
+      trialEndsAt: null,
+    })
+  })
+
+  test("resolves Free from metadata with its caps and no paid features", async () => {
+    const snapshot = await getRetailOpsSubscriptionSnapshot(
+      createPlanDb({ metadata: FREE_METADATA, orders: 12 }).client,
+      { tenantId: "tenant_123" },
+    )
+
+    expect(snapshot.plan).toMatchObject({
+      features: [],
+      id: "free",
+      limits: { ordersPerMonth: 30, products: 2, staff: 0 },
+    })
+    expect(snapshot.entitlements).toContainEqual({
+      isAtLimit: true,
+      key: "staff",
+      limit: 0,
+      used: 0,
+    })
+    expect(snapshot.entitlements).toContainEqual({
+      isAtLimit: false,
+      key: "ordersPerMonth",
+      limit: 30,
+      used: 12,
+    })
+  })
+
+  test("resolves the context plan id from durable key, metadata, then default", () => {
+    expect(
+      resolveRetailOpsPlanId({
+        metadata: FREE_METADATA,
+        subscriptionPlanKey: "growth",
+      }),
+    ).toBe("growth")
+    expect(resolveRetailOpsPlanId({ metadata: FREE_METADATA })).toBe("free")
+    expect(
+      resolveRetailOpsPlanId({ metadata: {}, subscriptionPlanKey: "legacy" }),
+    ).toBe("starter")
+  })
+
+  test("durable limits keep JSON null as unlimited and numbers as caps", async () => {
+    const plan = {
+      description: null,
+      id: "plan_row",
+      key: "starter",
+      limits: { ordersPerMonth: 500 },
+      name: "Starter",
+      priceLabel: "Trial",
+      supportLabel: null,
+    }
+    const capped = await getRetailOpsSubscriptionSnapshot(
+      createPlanDb({ durablePlan: plan }).client,
+      { tenantId: "tenant_123" },
+    )
+    expect(capped.plan.limits.ordersPerMonth).toBe(500)
+    expect(capped.plan.priceLabel).toBe("Free during launch")
+
+    const unlimited = await getRetailOpsSubscriptionSnapshot(
+      createPlanDb({
+        durablePlan: { ...plan, limits: { ordersPerMonth: null } },
+      }).client,
+      { tenantId: "tenant_123" },
+    )
+    expect(unlimited.plan.limits.ordersPerMonth).toBeNull()
+  })
+
+  test("blocks the 31st Free order in a UTC calendar month", async () => {
+    const now = new Date("2026-10-31T23:30:00.000-05:00")
+    const atCap = createPlanDb({ metadata: FREE_METADATA, orders: 30 })
+    const error = await assertRetailOpsOrderAllowance(atCap.client, {
+      now,
+      tenantId: "tenant_123",
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(RetailOpsSubscriptionError)
+    expect(error).toMatchObject({
+      code: "ENTITLEMENT_LIMIT_REACHED",
+      entitlement: { key: "ordersPerMonth", limit: 30, used: 30 },
+      message:
+        "Free includes 30 orders a month. Upgrade your plan to record more orders this month.",
+    })
+    // 23:30 in UTC-5 is already 1 November in UTC.
+    expect(atCap.calls[0]?.where).toEqual({
+      createdAt: { gte: new Date("2026-11-01T00:00:00.000Z") },
+      tenantId: "tenant_123",
+    })
+
+    await assertRetailOpsOrderAllowance(
+      createPlanDb({ metadata: FREE_METADATA, orders: 29 }).client,
+      { now, tenantId: "tenant_123" },
+    )
+  })
+
+  test("uncapped plans skip the monthly order count", async () => {
+    const starter = createPlanDb({ orders: 10_000 })
+
+    await assertRetailOpsOrderAllowance(starter.client, {
+      tenantId: "tenant_123",
+    })
+    expect(starter.calls).toEqual([])
+  })
+
+  test("enforces the two-product cap only on Free", async () => {
+    await expect(
+      assertRetailOpsProductAllowance(
+        createPlanDb({ metadata: FREE_METADATA, products: 2 }).client,
+        { tenantId: "tenant_123" },
+      ),
+    ).rejects.toMatchObject({
+      message: "Free includes 2 products. Upgrade your plan to add more.",
+    })
+    await assertRetailOpsProductAllowance(
+      createPlanDb({ metadata: FREE_METADATA, products: 1 }).client,
+      { tenantId: "tenant_123" },
+    )
+    await assertRetailOpsProductAllowance(
+      createPlanDb({ products: 40 }).client,
+      { tenantId: "tenant_123" },
+    )
+  })
+
+  test("gates Free features with upgrade messages", () => {
+    expect(() => assertRetailOpsPlanIdFeature("free", "finance")).toThrow(
+      "Upgrade from Free to use finance.",
+    )
+    expect(() => assertRetailOpsPlanIdFeature("free", "invoices")).toThrow(
+      "Upgrade from Free to generate receipts.",
+    )
+    expect(assertRetailOpsPlanIdFeature("starter", "finance").id).toBe(
+      "starter",
+    )
+    expect(
+      getRetailOpsOrderPeriodStart(new Date("2026-02-28T10:00:00Z")),
+    ).toEqual(new Date("2026-02-01T00:00:00.000Z"))
   })
 })

@@ -8,35 +8,49 @@ import {
   OfflineDevicePlatform as DurableOfflineDevicePlatform,
   OfflineDeviceStatus as DurableOfflineDeviceStatus,
 } from "../../generated/prisma/enums"
+import {
+  RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+  RETAIL_OPS_SUBSCRIPTION_PLANS,
+  type RetailOpsPaidPlanId,
+  type RetailOpsPlanFeature,
+  type RetailOpsPlanId,
+  type RetailOpsPlanLimits,
+  type RetailOpsSubscriptionPlan,
+  getRetailOpsOrderPeriodStart,
+  getRetailOpsPlanFeatureUpgradeMessage,
+  isRetailOpsPlanId,
+  planHasFeature,
+} from "./retail-ops-subscription-plans"
 import type { DbClient } from "./types"
 
-export type RetailOpsPlanId = "growth" | "pro" | "starter"
+// The plan catalogue is pure data shared with client apps; re-exported so
+// existing `@ewatrade/db/queries` imports keep working.
+export {
+  RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+  RETAIL_OPS_SUBSCRIPTION_PLANS,
+  getRetailOpsOrderPeriodStart,
+  getRetailOpsPlanFeatureUpgradeMessage,
+  planHasFeature,
+}
+export type {
+  RetailOpsPaidPlanId,
+  RetailOpsPlanFeature,
+  RetailOpsPlanId,
+  RetailOpsPlanLimits,
+  RetailOpsSubscriptionPlan,
+}
+
 export type RetailOpsSubscriptionStatus =
   | "active"
   | "cancelled"
   | "past_due"
   | "trialing"
 
-export type RetailOpsPlanLimits = {
-  businesses: number
-  offlineDevices: number
-  products: number
-  reportsHistoryDays: number
-  staff: number
-}
-
-export type RetailOpsSubscriptionPlan = {
-  description: string
-  id: RetailOpsPlanId
-  limits: RetailOpsPlanLimits
-  name: string
-  priceLabel: string
-  supportLabel: string
-}
-
 export type RetailOpsSubscriptionUsage = {
   businesses: number
   offlineDevices: number
+  /** Commercial Orders created since the start of the current UTC month. */
+  ordersThisMonth: number
   products: number
   staff: number
 }
@@ -44,14 +58,16 @@ export type RetailOpsSubscriptionUsage = {
 export type RetailOpsEntitlementUsage = {
   isAtLimit: boolean
   key: keyof RetailOpsPlanLimits
-  limit: number
+  /** null means the plan has no cap for this entitlement. */
+  limit: number | null
   used: number
 }
 
 export type RetailOpsTenantSubscription = {
   currentPeriodEndsAt: string | null
   planId: RetailOpsPlanId
-  source: "default_trial" | "tenant_metadata" | "tenant_subscription"
+  /** launch_default: no subscription record; the free-during-launch Starter. */
+  source: "launch_default" | "tenant_metadata" | "tenant_subscription"
   status: RetailOpsSubscriptionStatus
   trialEndsAt: string | null
   updatedAt: string
@@ -228,7 +244,9 @@ export type RetailOpsRevokedOfflineDevice =
   }
 
 type RetailOpsOfflineDeviceErrorCode = "DEVICE_REVOKED"
-type RetailOpsSubscriptionErrorCode = "ENTITLEMENT_LIMIT_REACHED"
+type RetailOpsSubscriptionErrorCode =
+  | "ENTITLEMENT_LIMIT_REACHED"
+  | "PLAN_FEATURE_UNAVAILABLE"
 type JsonRecord = Record<string, unknown>
 type DurableSubscriptionPlan = {
   description: string | null
@@ -283,17 +301,23 @@ function startOfDay(date: Date) {
 
 export class RetailOpsSubscriptionError extends Error {
   code: RetailOpsSubscriptionErrorCode
-  entitlement: RetailOpsEntitlementUsage
+  entitlement: RetailOpsEntitlementUsage | null
+  feature: RetailOpsPlanFeature | null
+  /** Server-authored upgrade text; safe to show users as-is. */
+  publicMessage: string
 
   constructor(
     code: RetailOpsSubscriptionErrorCode,
     message: string,
-    entitlement: RetailOpsEntitlementUsage,
+    entitlement: RetailOpsEntitlementUsage | null,
+    feature: RetailOpsPlanFeature | null = null,
   ) {
     super(message)
     this.name = "RetailOpsSubscriptionError"
     this.code = code
     this.entitlement = entitlement
+    this.feature = feature
+    this.publicMessage = message
   }
 }
 
@@ -306,51 +330,6 @@ export class RetailOpsOfflineDeviceError extends Error {
     this.code = code
   }
 }
-
-export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
-  {
-    description: "For one shop starting with simple sales and stock tracking.",
-    id: "starter",
-    limits: {
-      businesses: 1,
-      offlineDevices: 1,
-      products: 25,
-      reportsHistoryDays: 30,
-      staff: 2,
-    },
-    name: "Starter",
-    priceLabel: "Trial",
-    supportLabel: "Standard support",
-  },
-  {
-    description: "For growing teams that need more attendants and history.",
-    id: "growth",
-    limits: {
-      businesses: 3,
-      offlineDevices: 5,
-      products: 150,
-      reportsHistoryDays: 180,
-      staff: 10,
-    },
-    name: "Growth",
-    priceLabel: "Most popular",
-    supportLabel: "Priority support",
-  },
-  {
-    description: "For multi-branch businesses with heavier operations.",
-    id: "pro",
-    limits: {
-      businesses: 10,
-      offlineDevices: 20,
-      products: 500,
-      reportsHistoryDays: 730,
-      staff: 50,
-    },
-    name: "Pro",
-    priceLabel: "Advanced",
-    supportLabel: "Dedicated support",
-  },
-]
 
 function asRecord(value: unknown): JsonRecord {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {}
@@ -656,22 +635,24 @@ function createCheckoutIntentId(input: {
 function normalizePlanId(value: unknown): RetailOpsPlanId | null {
   const planId = getStringField(value)
 
-  if (planId === "growth" || planId === "pro" || planId === "starter") {
-    return planId
-  }
-
-  return null
+  return isRetailOpsPlanId(planId) ? planId : null
 }
 
-function normalizePlanLimit(
-  value: unknown,
-  fallback: number,
-): number {
+function normalizePlanLimit(value: unknown, fallback: number): number {
   const normalizedValue = getNumberField(value)
 
   if (normalizedValue === null) return fallback
 
   return Math.max(0, Math.floor(normalizedValue))
+}
+
+/** JSON null means unlimited; a missing or invalid value keeps the fallback. */
+function normalizeNullablePlanLimit(value: unknown, fallback: number | null) {
+  if (value === null) return null
+
+  return getNumberField(value) === null
+    ? fallback
+    : normalizePlanLimit(value, fallback ?? 0)
 }
 
 function normalizePlanLimits(
@@ -685,6 +666,10 @@ function normalizePlanLimits(
     offlineDevices: normalizePlanLimit(
       limits.offlineDevices,
       fallback.offlineDevices,
+    ),
+    ordersPerMonth: normalizeNullablePlanLimit(
+      limits.ordersPerMonth,
+      fallback.ordersPerMonth,
     ),
     products: normalizePlanLimit(limits.products, fallback.products),
     reportsHistoryDays: normalizePlanLimit(
@@ -729,7 +714,9 @@ function toDurableBillingProvider(provider: RetailOpsBillingProvider) {
   return DurableBillingProvider.OTHER
 }
 
-function fromDurableBillingProvider(provider: string): RetailOpsBillingProvider {
+function fromDurableBillingProvider(
+  provider: string,
+): RetailOpsBillingProvider {
   if (provider === DurableBillingProvider.APP_STORE) return "app_store"
   if (provider === DurableBillingProvider.MANUAL) return "manual"
   if (provider === DurableBillingProvider.PLAY_STORE) return "play_store"
@@ -748,11 +735,11 @@ function toDurableSubscriptionStatus(status: RetailOpsSubscriptionStatus) {
   return DurableBillingSubscriptionStatus.TRIALING
 }
 
-function toDurableCheckoutStatus(
-  status: RetailOpsBillingCheckoutEventStatus,
-) {
-  if (status === "cancelled") return DurableBillingCheckoutSessionStatus.CANCELLED
-  if (status === "completed") return DurableBillingCheckoutSessionStatus.COMPLETED
+function toDurableCheckoutStatus(status: RetailOpsBillingCheckoutEventStatus) {
+  if (status === "cancelled")
+    return DurableBillingCheckoutSessionStatus.CANCELLED
+  if (status === "completed")
+    return DurableBillingCheckoutSessionStatus.COMPLETED
   if (status === "expired") return DurableBillingCheckoutSessionStatus.EXPIRED
   if (status === "failed") return DurableBillingCheckoutSessionStatus.FAILED
 
@@ -804,10 +791,7 @@ function getDefaultSubscriptionStatus(
     return "active"
   }
 
-  if (
-    type === "invoice_uncollectible" ||
-    type === "subscription_past_due"
-  ) {
+  if (type === "invoice_uncollectible" || type === "subscription_past_due") {
     return "past_due"
   }
 
@@ -826,9 +810,7 @@ function normalizeBillingDate(value: Date | string | null | undefined) {
   return date
 }
 
-function normalizeBillingDateUpdate(
-  value: Date | string | null | undefined,
-) {
+function normalizeBillingDateUpdate(value: Date | string | null | undefined) {
   return value === undefined ? undefined : normalizeBillingDate(value)
 }
 
@@ -884,10 +866,14 @@ function mapDurableRetailOpsSubscriptionPlan(
 
   return {
     description: plan.description?.trim() || fallbackPlan.description,
+    // Features have no column yet; the catalogue owns them.
+    features: fallbackPlan.features,
     id: planId,
     limits: normalizePlanLimits(plan.limits, fallbackPlan.limits),
     name: plan.name.trim() || fallbackPlan.name,
-    priceLabel: plan.priceLabel?.trim() || fallbackPlan.priceLabel,
+    // No prices exist while paid checkout is off, so the catalogue label wins
+    // over older rows that still say "Trial" or "Most popular".
+    priceLabel: fallbackPlan.priceLabel,
     supportLabel: plan.supportLabel?.trim() || fallbackPlan.supportLabel,
   }
 }
@@ -909,17 +895,45 @@ function mergeDurableRetailOpsSubscriptionPlans(
     }
   }
 
-  return RETAIL_OPS_SUBSCRIPTION_PLANS.map((plan) => plansById.get(plan.id) ?? plan)
+  return RETAIL_OPS_SUBSCRIPTION_PLANS.map(
+    (plan) => plansById.get(plan.id) ?? plan,
+  )
 }
 
-export function projectDurableStoreAccess(input: { provider?: string; status: string; currentPeriodEndsAt: Date | null }, now = new Date()) {
-  if (input.provider !== "APP_STORE" && input.provider !== "PLAY_STORE") return null
-  return input.status === "ACTIVE" && Boolean(input.currentPeriodEndsAt && input.currentPeriodEndsAt > now)
+export function projectDurableStoreAccess(
+  input: {
+    provider?: string
+    status: string
+    currentPeriodEndsAt: Date | null
+  },
+  now = new Date(),
+) {
+  if (input.provider !== "APP_STORE" && input.provider !== "PLAY_STORE")
+    return null
+  return (
+    input.status === "ACTIVE" &&
+    Boolean(input.currentPeriodEndsAt && input.currentPeriodEndsAt > now)
+  )
 }
 
-export function projectDurableReviewerAccess(input: { provider?: string; billingSubscriptionId?: string | null; status: string; currentPeriodEndsAt: Date | null }, now = new Date()) {
-  if (input.provider !== "MANUAL" || !input.billingSubscriptionId?.startsWith("play-review:")) return null
-  return input.status === "ACTIVE" && Boolean(input.currentPeriodEndsAt && input.currentPeriodEndsAt > now)
+export function projectDurableReviewerAccess(
+  input: {
+    provider?: string
+    billingSubscriptionId?: string | null
+    status: string
+    currentPeriodEndsAt: Date | null
+  },
+  now = new Date(),
+) {
+  if (
+    input.provider !== "MANUAL" ||
+    !input.billingSubscriptionId?.startsWith("play-review:")
+  )
+    return null
+  return (
+    input.status === "ACTIVE" &&
+    Boolean(input.currentPeriodEndsAt && input.currentPeriodEndsAt > now)
+  )
 }
 
 function mapDurableRetailOpsTenantSubscription(
@@ -938,29 +952,31 @@ function mapDurableRetailOpsTenantSubscription(
   return {
     plan: {
       ...mappedPlan,
-      limits: timeBoundAccess === false ? { businesses: 0, offlineDevices: 0, products: 0, reportsHistoryDays: 0, staff: 0 } : normalizePlanLimits(
-        subscription.limitsSnapshot,
-        mappedPlan.limits,
-      ),
+      limits:
+        timeBoundAccess === false
+          ? {
+              businesses: 0,
+              offlineDevices: 0,
+              ordersPerMonth: 0,
+              products: 0,
+              reportsHistoryDays: 0,
+              staff: 0,
+            }
+          : normalizePlanLimits(subscription.limitsSnapshot, mappedPlan.limits),
     },
     subscription: {
       currentPeriodEndsAt:
         subscription.currentPeriodEndsAt?.toISOString() ?? null,
       planId: mappedPlan.id,
       source: "tenant_subscription",
-      status: timeBoundAccess === false ? "cancelled" : fromDurableSubscriptionStatus(subscription.status),
+      status:
+        timeBoundAccess === false
+          ? "cancelled"
+          : fromDurableSubscriptionStatus(subscription.status),
       trialEndsAt: subscription.trialEndsAt?.toISOString() ?? null,
       updatedAt: subscription.updatedAt.toISOString(),
     },
   }
-}
-
-function getDefaultTrialEndsAt(createdAt: Date) {
-  const trialEndsAt = new Date(createdAt)
-
-  trialEndsAt.setDate(trialEndsAt.getDate() + 14)
-
-  return trialEndsAt.toISOString()
 }
 
 function getTenantSubscription(input: {
@@ -985,12 +1001,14 @@ function getTenantSubscription(input: {
     }
   }
 
+  // No record: the business is on the launch plan, free while paid checkout
+  // is off. It is not a trial; nothing ends it.
   return {
     currentPeriodEndsAt: null,
-    planId: "starter",
-    source: "default_trial",
-    status: "trialing",
-    trialEndsAt: getDefaultTrialEndsAt(input.createdAt),
+    planId: RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+    source: "launch_default",
+    status: "active",
+    trialEndsAt: null,
     updatedAt: input.updatedAt.toISOString(),
   }
 }
@@ -1123,7 +1141,27 @@ function getEntitlementUsage(input: {
       limit: input.plan.limits.reportsHistoryDays,
       used: 0,
     },
+    {
+      isAtLimit:
+        input.plan.limits.ordersPerMonth !== null &&
+        input.usage.ordersThisMonth >= input.plan.limits.ordersPerMonth,
+      key: "ordersPerMonth",
+      limit: input.plan.limits.ordersPerMonth,
+      used: input.usage.ordersThisMonth,
+    },
   ]
+}
+
+function countRetailOpsOrdersThisMonth(
+  db: DbClient,
+  input: { now?: Date; tenantId: string },
+) {
+  return db.commercialOrder.count({
+    where: {
+      createdAt: { gte: getRetailOpsOrderPeriodStart(input.now) },
+      tenantId: input.tenantId,
+    },
+  })
 }
 
 async function listDurableRetailOpsOfflineDevices(
@@ -1325,41 +1363,44 @@ export async function getRetailOpsSubscriptionSnapshot(
       updatedAt: true,
     },
   })
-  const [businesses, products, staff, offlineDevices] = await Promise.all([
-    db.store.count({
-      where: {
-        tenantId: input.tenantId,
-        status: { not: "ARCHIVED" },
-      },
-    }),
-    db.catalogItem.count({
-      where: {
-        tenantId: input.tenantId,
-        status: { not: "ARCHIVED" },
-      },
-    }),
-    db.membership.count({
-      where: {
-        tenantId: input.tenantId,
-        role: {
-          in: ["CASHIER", "MANAGER", "OPERATOR"],
+  const [businesses, products, staff, offlineDevices, ordersThisMonth] =
+    await Promise.all([
+      db.store.count({
+        where: {
+          tenantId: input.tenantId,
+          status: { not: "ARCHIVED" },
         },
-        status: {
-          in: ["ACTIVE", "INVITED", "SUSPENDED"],
+      }),
+      db.catalogItem.count({
+        where: {
+          tenantId: input.tenantId,
+          status: { not: "ARCHIVED" },
         },
-      },
-    }),
-    getRetailOpsOfflineDeviceUsageCount(db, {
-      metadata: tenant.metadata,
-      tenantId: input.tenantId,
-    }),
-  ])
+      }),
+      db.membership.count({
+        where: {
+          tenantId: input.tenantId,
+          role: {
+            in: ["CASHIER", "MANAGER", "OPERATOR"],
+          },
+          status: {
+            in: ["ACTIVE", "INVITED", "SUSPENDED"],
+          },
+        },
+      }),
+      getRetailOpsOfflineDeviceUsageCount(db, {
+        metadata: tenant.metadata,
+        tenantId: input.tenantId,
+      }),
+      countRetailOpsOrdersThisMonth(db, { tenantId: input.tenantId }),
+    ])
   const subscriptionState = await getDurableRetailOpsSubscriptionState(db, {
     tenant,
   })
   const usage: RetailOpsSubscriptionUsage = {
     businesses,
     offlineDevices,
+    ordersThisMonth,
     products,
     staff,
   }
@@ -1477,9 +1518,7 @@ async function getBillingProviderEventRecord(
   const eventData = {
     errorMessage: null,
     failedAt: null,
-    metadata: input.metadata
-      ? toInputJsonValue(input.metadata)
-      : undefined,
+    metadata: input.metadata ? toInputJsonValue(input.metadata) : undefined,
     payload: toInputJsonValue(input.payload),
     processedAt: null,
     receivedAt: normalizeBillingDate(input.receivedAt) ?? new Date(),
@@ -1716,8 +1755,7 @@ async function applyBillingSubscriptionEvent(
     input.subscription?.status ??
     getDefaultSubscriptionStatus(input.type) ??
     fromDurableSubscriptionStatus(
-      existingSubscription?.status ??
-        DurableBillingSubscriptionStatus.TRIALING,
+      existingSubscription?.status ?? DurableBillingSubscriptionStatus.TRIALING,
     )
   const subscription = await db.tenantSubscription.upsert({
     where: {
@@ -1775,12 +1813,15 @@ async function applyBillingSubscriptionEvent(
         input.subscription?.currentPeriodStartsAt,
       ),
       limitsSnapshot: plan.limits as Prisma.InputJsonValue,
-      metadata: withBillingProviderEventMetadata(existingSubscription?.metadata, {
-        eventId: input.eventId,
-        eventType: input.type,
-        provider: input.provider,
-        providerEventId,
-      }),
+      metadata: withBillingProviderEventMetadata(
+        existingSubscription?.metadata,
+        {
+          eventId: input.eventId,
+          eventType: input.type,
+          provider: input.provider,
+          providerEventId,
+        },
+      ),
       planId: durablePlan.id,
       provider: toDurableBillingProvider(input.provider),
       status: toDurableSubscriptionStatus(status),
@@ -1822,7 +1863,8 @@ async function applyBillingInvoiceEvent(
 
   if (!tenantId) return null
 
-  const planId = invoice.planId ?? fallback?.planId ?? input.subscription?.planId
+  const planId =
+    invoice.planId ?? fallback?.planId ?? input.subscription?.planId
   const durablePlan = planId
     ? await ensureDurableRetailOpsSubscriptionPlan(db, {
         plan: getPlan(planId),
@@ -2055,6 +2097,32 @@ export async function processRetailOpsBillingProviderEvent(
   }
 }
 
+const ENTITLEMENT_NOUNS: Record<
+  keyof RetailOpsPlanLimits,
+  [one: string, many: string]
+> = {
+  businesses: ["business", "businesses"],
+  offlineDevices: ["offline device", "offline devices"],
+  ordersPerMonth: ["order a month", "orders a month"],
+  products: ["product", "products"],
+  reportsHistoryDays: ["day of report history", "days of report history"],
+  staff: ["staff member", "staff members"],
+}
+
+function getEntitlementLimitMessage(
+  plan: RetailOpsSubscriptionPlan,
+  entitlement: RetailOpsEntitlementUsage,
+) {
+  if (entitlement.key === "staff" && entitlement.limit === 0) {
+    return getRetailOpsPlanFeatureUpgradeMessage(plan, "staff")
+  }
+
+  const limit = entitlement.limit ?? 0
+  const [one, many] = ENTITLEMENT_NOUNS[entitlement.key]
+
+  return `${plan.name} includes ${limit} ${limit === 1 ? one : many}. Upgrade your plan to add more.`
+}
+
 export async function assertRetailOpsEntitlementAvailable(
   db: DbClient,
   input: {
@@ -2072,12 +2140,125 @@ export async function assertRetailOpsEntitlementAvailable(
   if (entitlement?.isAtLimit) {
     throw new RetailOpsSubscriptionError(
       "ENTITLEMENT_LIMIT_REACHED",
-      `The ${snapshot.plan.name} plan limit for ${input.key} has been reached.`,
+      getEntitlementLimitMessage(snapshot.plan, entitlement),
       entitlement,
     )
   }
 
   return snapshot
+}
+
+/** The tenant's resolved plan without the usage counts of a full snapshot. */
+export async function getRetailOpsTenantPlan(
+  db: DbClient,
+  input: { tenantId: string },
+) {
+  const tenant = await db.tenant.findUniqueOrThrow({
+    where: { id: input.tenantId },
+    select: { createdAt: true, id: true, metadata: true, updatedAt: true },
+  })
+  const { plan, subscription } = await getDurableRetailOpsSubscriptionState(
+    db,
+    { tenant },
+  )
+
+  return { plan, subscription }
+}
+
+/**
+ * Plan id from data the tenant context already loads: a durable subscription
+ * row wins, then tenant metadata, then the launch default. Mirrors
+ * getDurableRetailOpsSubscriptionState without the plan-row reads, which only
+ * change limits and labels, never features.
+ */
+export function resolveRetailOpsPlanId(input: {
+  metadata: unknown
+  subscriptionPlanKey?: string | null
+}): RetailOpsPlanId {
+  return (
+    normalizePlanId(input.subscriptionPlanKey) ??
+    normalizePlanId(
+      asRecord(getRetailOpsMetadata(input.metadata).subscription).planId,
+    ) ??
+    RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID
+  )
+}
+
+/** Throws the Free-plan upgrade error when the plan lacks the feature. */
+export function assertRetailOpsPlanIdFeature(
+  planId: RetailOpsPlanId,
+  feature: RetailOpsPlanFeature,
+) {
+  const plan = getPlan(planId)
+
+  if (!planHasFeature(plan, feature)) {
+    throw new RetailOpsSubscriptionError(
+      "PLAN_FEATURE_UNAVAILABLE",
+      getRetailOpsPlanFeatureUpgradeMessage(plan, feature),
+      null,
+      feature,
+    )
+  }
+
+  return plan
+}
+
+/**
+ * Monthly Commercial Order cap (Free: 30). Run inside the order transaction
+ * after the tenant order-number row is locked, so concurrent orders are
+ * counted serially. Plans without a cap return after the plan read.
+ */
+export async function assertRetailOpsOrderAllowance(
+  db: DbClient,
+  input: { now?: Date; tenantId: string },
+) {
+  const { plan } = await getRetailOpsTenantPlan(db, input)
+  const limit = plan.limits.ordersPerMonth
+
+  if (limit === null) return
+
+  const used = await countRetailOpsOrdersThisMonth(db, input)
+
+  if (used >= limit) {
+    throw new RetailOpsSubscriptionError(
+      "ENTITLEMENT_LIMIT_REACHED",
+      `${plan.name} includes ${limit} orders a month. Upgrade your plan to record more orders this month.`,
+      { isAtLimit: true, key: "ordersPerMonth", limit, used },
+    )
+  }
+}
+
+/**
+ * Only the Free plan's product cap is enforced. Paid-tier product caps were
+ * never re-wired after the catalog rebuild, and enforcing them now could
+ * block launch tenants already past 25 items (see the Free plan decision).
+ */
+export async function assertRetailOpsProductAllowance(
+  db: DbClient,
+  input: { tenantId: string },
+) {
+  const { plan } = await getRetailOpsTenantPlan(db, input)
+
+  if (plan.id !== "free") return
+
+  // All Catalog creation paths call this inside their write transaction.
+  // Per-command locks alone cannot serialize different product creations.
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`retail-ops-products:${input.tenantId}`}, 0))`
+  const used = await db.catalogItem.count({
+    where: { tenantId: input.tenantId, status: { not: "ARCHIVED" } },
+  })
+  const entitlement = {
+    isAtLimit: used >= plan.limits.products,
+    key: "products" as const,
+    limit: plan.limits.products,
+    used,
+  }
+  if (entitlement.isAtLimit)
+    throw new RetailOpsSubscriptionError(
+      "ENTITLEMENT_LIMIT_REACHED",
+      getEntitlementLimitMessage(plan, entitlement),
+      entitlement,
+    )
 }
 
 export async function assertRetailOpsReportRangeAllowed(
@@ -2107,7 +2288,10 @@ export async function assertRetailOpsReportRangeAllowed(
     ),
   )
 
-  if (requestedDays > reportsHistoryEntitlement.limit) {
+  if (
+    reportsHistoryEntitlement.limit !== null &&
+    requestedDays > reportsHistoryEntitlement.limit
+  ) {
     throw new RetailOpsSubscriptionError(
       "ENTITLEMENT_LIMIT_REACHED",
       `${snapshot.plan.name} includes ${reportsHistoryEntitlement.limit} days of report history.`,

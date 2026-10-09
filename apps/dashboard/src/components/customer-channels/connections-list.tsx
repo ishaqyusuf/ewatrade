@@ -1,7 +1,13 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  InlineRowCheckbox,
+  InlineSelectionBar,
+  useInlineSelection,
+} from "@/components/tables/core"
 
 import { Button } from "@ewatrade/ui"
+import { useMemo } from "react"
 import type { CustomerChannelConnection } from "./types"
 
 const readinessTone = {
@@ -19,10 +25,18 @@ function label(value: string) {
 export function ConnectionsList({
   connections,
   onManage,
+  scope,
 }: {
   connections: CustomerChannelConnection[]
   onManage: (connectionId: string) => void
+  /** Selection resets when this changes, e.g. the selected Store. */
+  scope: string
 }) {
+  const connectionIds = useMemo(
+    () => connections.map((connection) => connection.id),
+    [connections],
+  )
+  const selection = useInlineSelection({ ids: connectionIds, scope })
   return (
     <section className="grid gap-4 rounded-none border border-border bg-card p-5">
       <div>
@@ -45,13 +59,25 @@ export function ConnectionsList({
         </div>
       ) : (
         <div className="grid gap-3">
+          <InlineSelectionBar
+            label="Select all connections"
+            selection={selection}
+          />
           {connections.map((connection) => (
             <article
-              className="grid gap-4 rounded-none border border-border p-4 lg:grid-cols-[1fr_auto] lg:items-center"
+              className="grid gap-4 rounded-none border border-border p-4 data-[state=selected]:bg-muted/60 lg:grid-cols-[1fr_auto] lg:items-center"
+              data-state={
+                selection.isSelected(connection.id) ? "selected" : undefined
+              }
               key={connection.id}
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
+                  <InlineRowCheckbox
+                    selection={selection}
+                    id={connection.id}
+                    label={`Select ${connection.businessDisplayName || connection.displayNumber}`}
+                  />
                   <h3 className="font-medium">
                     {connection.businessDisplayName || connection.displayNumber}
                   </h3>

@@ -1,5 +1,8 @@
 import type { HomeOrdersState } from "./home-journey-presentation"
 
+/** Shown while a Home figure is loading; tiles render a skeleton for it. */
+export const HOME_METRIC_LOADING = "Loading…"
+
 type HomeQuerySnapshot = {
   resolved: boolean
   unavailable: boolean
@@ -18,7 +21,7 @@ function countValue(
     ? "Not loaded"
     : query.unavailable
       ? "Unavailable"
-      : "Loading…"
+      : HOME_METRIC_LOADING
 }
 
 export function getHomeJourneyMetrics(input: {
@@ -83,7 +86,7 @@ export function getHomeJourneyMetrics(input: {
         ? "Not loaded"
         : input.orderQuery.unavailable
           ? "Unavailable"
-          : "Loading…",
+          : HOME_METRIC_LOADING,
     detail: input.orderQuery.resolved
       ? `${prefix}Across ${input.loadedOrderCount} loaded ${input.loadedOrderCount === 1 ? "order" : "orders"}${input.queuedOrders > 0 ? " · queued value excluded" : ""}${input.orderQuery.stale ? " · refresh unavailable" : ""}`
       : "Loaded-order value is not available yet.",

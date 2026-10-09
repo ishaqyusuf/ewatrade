@@ -44,7 +44,7 @@ assert(
   "Development dashboard URL missing",
 )
 assert(
-  rustLauncher.includes("https://dashboard.ewatrade.com"),
+  rustLauncher.includes("https://dash.ewatrade.com"),
   "Production dashboard URL missing",
 )
 assert(rustLauncher.includes("DASHBOARD_URL"), "DASHBOARD_URL override missing")

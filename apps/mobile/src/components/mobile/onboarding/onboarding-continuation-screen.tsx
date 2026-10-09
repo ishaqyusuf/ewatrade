@@ -124,12 +124,12 @@ export function OnboardingContinuationScreen() {
         />
       ) : null}
       {!busy && !pending ? (
-        <StatusBanner message="Open your setup or verification email to continue. You can request access again if the link has expired." />
+        <StatusBanner message="Open your setup or confirmation email to continue. You can start a new signup if the link has expired." />
       ) : null}
       {context ? (
         <StatusBanner
           title={context.businessName}
-          message={`Approved setup for ${context.email}`}
+          message={`Setting up for ${context.email}`}
         />
       ) : null}
       {auth.isAuthenticated && pending ? (
@@ -160,13 +160,13 @@ export function OnboardingContinuationScreen() {
         </AuthActionButton>
       ) : context ? (
         <>
-          <StatusBanner message="Verify your approved email before completing setup. Open the verification email to return here." />
+          <StatusBanner message="We sent a confirmation link to your email. Open it on this phone to continue setting up." />
           <AuthActionButton
             isLoading={resend.isPending}
             loadingLabel="Sending…"
             onPress={() => resend.mutate(context.accessToken)}
           >
-            Send verification email
+            Resend the link
           </AuthActionButton>
           {resend.data ? <StatusBanner message={resend.data.message} /> : null}
           {resend.error ? (
@@ -195,7 +195,7 @@ export function OnboardingContinuationScreen() {
               )
           }}
         >
-          Request a new setup link
+          Start a new signup
         </AuthActionButton>
       ) : null}
       <AuthActionButton

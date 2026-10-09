@@ -1,11 +1,12 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { EmptyState } from "@/components/mobile/empty-state"
-import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
-import { StatusBanner } from "@/components/mobile/status-banner"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import * as Classic from "@/components/mobile/appearances/classic/stock-intake"
 import * as Market from "@/components/mobile/appearances/market-day/stock-intake"
+import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
+import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -14,21 +15,18 @@ import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
-import {
-  type FlatList as NativeFlatList,
-  type ScrollViewProps,
-} from "react-native"
+import type { FlatList as NativeFlatList, ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { StockIntakeFields } from "./stock-intake-fields"
 import {
   STOCK_MODES,
-  stockCustodyLabel,
-  type StockIntakeProps,
   type StockBalance,
+  type StockIntakeProps,
+  stockCustodyLabel,
 } from "./stock-intake-model"
-import { useStockIntake } from "./use-stock-intake"
-import { StockIntakeFields } from "./stock-intake-fields"
 import { StockIntakeReview } from "./stock-intake-review"
+import { useStockIntake } from "./use-stock-intake"
 
 export function StockIntakeChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="stock-intake" />
@@ -178,14 +176,15 @@ export function StockIntakeContent(props: StockIntakeProps) {
                           : "text-xs text-muted-foreground"
                       }
                     >
-                      {model.loading ||
-                      model.loadError ||
-                      !model.hasBalanceData ||
-                      !model.canManage ||
-                      model.scopeChanged ||
-                      model.missingStore
-                        ? "Balance report unavailable"
-                        : `${model.rows.length} matching balances`}
+                      {model.loading
+                        ? "Finding balances…"
+                        : model.loadError ||
+                            !model.hasBalanceData ||
+                            !model.canManage ||
+                            model.scopeChanged ||
+                            model.missingStore
+                          ? "Balance report unavailable"
+                          : `${model.rows.length} matching balances`}
                     </Text>
                   </Section>
                 </>
@@ -208,27 +207,35 @@ export function StockIntakeContent(props: StockIntakeProps) {
             model.canManage &&
             !model.scopeChanged &&
             !model.loadError ? (
-              <EmptyState
-                icon="Warehouse"
-                title={
-                  model.loading
-                    ? "Loading stock"
-                    : model.missingStore
+              model.loading ? (
+                <View className="px-4">
+                  <ListSkeleton
+                    count={5}
+                    label="Loading stock balances"
+                    variant="item"
+                  />
+                </View>
+              ) : (
+                <EmptyState
+                  icon="Warehouse"
+                  title={
+                    model.missingStore
                       ? "Store unavailable"
                       : model.offline && !model.hasBalanceData
                         ? "No cached stock balances"
                         : model.query
                           ? "No matching balances"
                           : "No stock balances"
-                }
-                message={
-                  model.offline && !model.hasBalanceData
-                    ? "Reconnect to load balances for this Store."
-                    : model.query
-                      ? "Try another Product, unit or custody search."
-                      : "Add a stock-tracked Product in the current Store before recording inventory."
-                }
-              />
+                  }
+                  message={
+                    model.offline && !model.hasBalanceData
+                      ? "Reconnect to load balances for this Store."
+                      : model.query
+                        ? "Try another Product, unit or custody search."
+                        : "Add a stock-tracked Product in the current Store before recording inventory."
+                  }
+                />
+              )
             ) : null
           }
           ListFooterComponent={

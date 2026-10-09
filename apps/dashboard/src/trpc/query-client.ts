@@ -6,6 +6,7 @@ import {
   defaultShouldDehydrateQuery,
 } from "@tanstack/react-query"
 import superjson from "superjson"
+import { shouldRetryQuery } from "./query-retry"
 
 export function makeQueryClient() {
   return new QueryClient({
@@ -32,6 +33,7 @@ export function makeQueryClient() {
     }),
     defaultOptions: {
       queries: {
+        retry: shouldRetryQuery,
         staleTime: 60 * 1000,
       },
       dehydrate: {

@@ -231,6 +231,9 @@ function createMockMobileAuthDb(input?: {
     onboardingSession: {
       create: async () => null,
     },
+    commercialOrder: {
+      count: async () => 0,
+    },
     catalogItem: {
       count: async () => 0,
     },

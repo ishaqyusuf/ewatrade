@@ -1,11 +1,10 @@
-import { getWebUrl } from "./base-url"
 import { onboardingLinkConfiguration } from "./onboarding-continuation-store"
 
 export function onboardingDashboardUrl(path: string) {
   const config = onboardingLinkConfiguration()
   const configured =
     config.dashboardUrl ||
-    (config.variant === "production" ? "https://dashboard.ewatrade.com" : "")
+    (config.variant === "production" ? "https://dash.ewatrade.com" : "")
   if (!configured)
     throw new Error("The setup website is not configured for this app.")
   const base = new URL(configured)
@@ -17,7 +16,7 @@ export function onboardingDashboardUrl(path: string) {
     !["http:", "https:"].includes(base.protocol) ||
     (config.variant !== "development" && base.protocol !== "https:") ||
     (config.variant !== "production" &&
-      base.hostname === "dashboard.ewatrade.com")
+      ["dash.ewatrade.com", "dashboard.ewatrade.com"].includes(base.hostname))
   )
     throw new Error("The setup website does not match this app environment.")
   return `${base.origin}${base.pathname.replace(/\/$/, "")}${path}`
@@ -53,22 +52,38 @@ export function requestOnboardingVerification(accessToken: string) {
   )
 }
 
-export function requestNativeEarlyAccess(input: {
+// Direct signup (7 October 2026): the dashboard creates the setup session and
+// emails the verification link; the app continues with the returned token.
+export async function startNativeSignup(input: {
   fullName: string
   email: string
-  companyName: string
+  businessName: string
   phone: string
-  businessSize: string
-  recordSystem: string
-  launchTimeline: string
-  setupNeeds: string[]
 }) {
-  const base = new URL(getWebUrl())
-  const config = onboardingLinkConfiguration()
+  const response = await fetch(onboardingDashboardUrl("/api/signup/start"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "omit",
+    redirect: "error",
+  })
+  const data = await response.json().catch(() => null)
   if (
-    config.variant !== "production" &&
-    ["ewatrade.com", "www.ewatrade.com"].includes(base.hostname)
+    !response.ok ||
+    typeof data?.accessToken !== "string" ||
+    typeof data?.expiresAt !== "string"
   )
-    throw new Error("The request website does not match this app environment.")
-  return postOnboarding(new URL("/api/early-access", base).toString(), input)
+    throw new Error(
+      typeof data?.message === "string"
+        ? data.message
+        : "Signup is unavailable. Try again.",
+    )
+  return {
+    accessToken: data.accessToken as string,
+    expiresAt: new Date(data.expiresAt).getTime(),
+    message:
+      typeof data.message === "string"
+        ? data.message
+        : "Check your email to continue.",
+  }
 }

@@ -2,6 +2,7 @@ import type { IconKeys } from "@/components/ui/icon"
 import type { LinkProps } from "expo-router"
 
 import { normalizeMobileRole } from "./mobile-roles"
+import type { RetailOpsPlanFeature } from "./retail-ops-subscription"
 import type { MobileWorkspaceFeatureAvailability } from "./workspace-feature-availability"
 
 export type AdminTabKey = "home" | "orders" | "catalog" | "more"
@@ -121,12 +122,24 @@ export function getAdminDockLabels(catalogLabel: AdminCatalogTabLabel) {
   return [tabs[0]?.label, tabs[1]?.label, "+", tabs[2]?.label, tabs[3]?.label]
 }
 
+// More-menu entries the plan must include; the API enforces the same gates.
+const PLAN_FEATURE_BY_ITEM: Partial<
+  Record<AdminMoreItemId, RetailOpsPlanFeature>
+> = {
+  finance: "finance",
+  "receipt-settings": "invoices",
+  team: "staff",
+}
+
 export function buildAdminMoreSections({
   availability,
+  planFeatures,
   role,
   staffAccessMode,
 }: {
   availability: MobileWorkspaceFeatureAvailability
+  /** Unknown (offline or unread) plans are not gated here. */
+  planFeatures?: readonly RetailOpsPlanFeature[]
   role: AdminManagementRole
   staffAccessMode?: "LEGACY" | "SCOPED"
 }): AdminMoreSection[] {
@@ -224,6 +237,14 @@ export function buildAdminMoreSections({
       id: "plan-billing",
       label: "Plan & billing",
     })
+  }
+
+  if (planFeatures) {
+    for (let index = storeItems.length - 1; index >= 0; index--) {
+      const feature = PLAN_FEATURE_BY_ITEM[storeItems[index]?.id ?? "inventory"]
+      if (feature && !planFeatures.includes(feature))
+        storeItems.splice(index, 1)
+    }
   }
 
   const sections: AdminMoreSection[] = [

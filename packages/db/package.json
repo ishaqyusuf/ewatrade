@@ -7,6 +7,7 @@
   "exports": {
     "./performance-tracing": "./src/performance-tracing.ts",
     "./onboarding-continuation": "./src/queries/onboarding-continuation.ts",
+    "./subscription-plans": "./src/queries/retail-ops-subscription-plans.ts",
     "./catalog-category-suggestions": "./src/queries/catalog-category-suggestions.ts",
     ".": "./src/index.ts",
     "./client": "./src/client.ts",

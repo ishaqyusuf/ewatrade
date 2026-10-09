@@ -6,7 +6,7 @@ import { redirect } from "next/navigation"
 import "@ewatrade/onboarding/styles/signup.css"
 
 export const metadata: Metadata = {
-  title: "Create your workspace — EwaTrade",
+  title: "Create your store — EwaTrade",
   robots: { index: false, follow: false },
 }
 
@@ -14,8 +14,7 @@ export default function SignupLayout({
   children,
 }: { children: React.ReactNode }) {
   const marketingUrl = getMarketingUrl()
-  if (process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true")
-    redirect(`${marketingUrl}/#early-access`)
+  if (process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true") redirect(marketingUrl)
   const qaEnabled =
     process.env.QA_ACCELERATOR_ENABLED === "true" &&
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)

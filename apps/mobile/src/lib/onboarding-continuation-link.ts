@@ -33,7 +33,7 @@ export function resolveOnboardingContinuationLink(
       const configured =
         configuration.dashboardUrl ||
         (configuration.variant === "production"
-          ? "https://dashboard.ewatrade.com"
+          ? "https://dash.ewatrade.com"
           : "")
       if (!configured) return null
       const dashboard = new URL(configured)
@@ -56,7 +56,9 @@ export function resolveOnboardingContinuationLink(
         return null
       if (
         configuration.variant !== "production" &&
-        dashboard.hostname === "dashboard.ewatrade.com"
+        ["dash.ewatrade.com", "dashboard.ewatrade.com"].includes(
+          dashboard.hostname,
+        )
       )
         return null
       const base = dashboard.pathname.replace(/\/$/, "")

@@ -1,8 +1,16 @@
-import { CatalogError, FinanceError } from "@ewatrade/db/queries"
+import {
+  CatalogError,
+  FinanceError,
+  RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+  assertRetailOpsPlanIdFeature,
+} from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import { protectedProcedure } from "./init"
 
-/** Shared Owner/Admin gate and FinanceError mapping for finance-owned writes. */
+/**
+ * Shared Owner/Admin gate, Free-plan gate and FinanceError mapping for the
+ * finance, customer-ledger and supplier/purchase procedures.
+ */
 export const financeProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
     if (
@@ -15,6 +23,13 @@ export const financeProcedure = protectedProcedure.use(
         message: "Only Owners and Admins can manage finance.",
       })
     }
+    // Supplier and purchase procedures live here too, so Free's missing
+    // "suppliers" feature is covered by the same finance gate.
+    assertRetailOpsPlanIdFeature(
+      ctx.tenantContext.tenant.retailOpsPlanId ??
+        RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+      "finance",
+    )
     const result = await next({
       ctx: {
         ...ctx,

@@ -50,7 +50,7 @@ const checks = [
   },
   {
     file: "components/mobile/floating-qa-button.tsx",
-    markers: ['pathname.endsWith("-modal")'],
+    markers: ['pathname !== "/login"', "isAuthenticated ||"],
   },
   {
     file: "components/mobile/new-business-onboarding-screen.tsx",

@@ -1,6 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import type { HomeJourneyPresentationProps } from "@/components/mobile/dashboard/home-journey-presentation"
 import { EmptyState } from "@/components/mobile/empty-state"
+import {
+  HomeSkeleton,
+  ListSkeleton,
+} from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -21,6 +25,7 @@ export function ClassicHomeJourney(props: HomeJourneyPresentationProps) {
   ) {
     const loading = journey.workspace === "loading"
     const offline = journey.workspace === "offline-unknown"
+    if (loading) return <HomeSkeleton label="Loading your business" />
     return (
       <View className="gap-5">
         <CounterHeading
@@ -257,7 +262,9 @@ function HomeTeam(props: HomeJourneyPresentationProps) {
 function RecentOrders(props: HomeJourneyPresentationProps) {
   if (props.ordersState === "loaded") return <>{props.recentOrders}</>
   if (props.ordersState === "loading")
-    return <StatusBanner icon="Loader2" message="Loading recent orders." />
+    return (
+      <ListSkeleton count={3} label="Loading recent orders" variant="item" />
+    )
   if (props.ordersState === "unavailable")
     return (
       <StatusBanner

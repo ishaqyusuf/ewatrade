@@ -1,0 +1,52 @@
+[
+  {
+    "id": "poultry",
+    "profileKey": "animal-feed-agricultural-supplies",
+    "label": "Poultry farm",
+    "business": "Mama Bisi Farms (Demo QA)",
+    "city": "Ibadan",
+    "owner": "Bisi Demo",
+    "input": "Crate of eggs, 5500, 120 crates\nLive broiler, 8000, 40 birds",
+    "narration": "Tell EwaTrade what you sell, your prices, and the stock you have. Check your setup list before adding anything to your business."
+  },
+  {
+    "id": "pharmacy",
+    "profileKey": "pharmacy-health-retail",
+    "label": "Pharmacy",
+    "business": "Kano Care Pharmacy (Demo QA)",
+    "city": "Kano",
+    "owner": "Sadiya Demo",
+    "input": "ORS sachet, 350, 80 sachets\nHand sanitiser, 1500, 25 bottles",
+    "narration": "For a pharmacy, type your product list and prices. Review every item, and fill in any missing details before confirming."
+  },
+  {
+    "id": "boutique",
+    "profileKey": "fashion-apparel",
+    "label": "Fashion boutique",
+    "business": "Adaeze Styles (Demo QA)",
+    "city": "Enugu",
+    "owner": "Adaeze Demo",
+    "input": "Ankara gown Small Blue, 15000, 5 pieces\nAnkara gown Medium Green, 15000, 5 pieces",
+    "narration": "Start your fashion catalogue with the items you have today. This rehearsal lists sizes and colours as separate products. Review the details before adding."
+  },
+  {
+    "id": "laundry",
+    "profileKey": "laundry-dry-cleaning",
+    "label": "Laundry",
+    "business": "FreshPress Laundry (Demo QA)",
+    "city": "Abuja",
+    "owner": "Femi Demo",
+    "input": "Shirt wash and iron service, 1000\nSuit dry clean service, 4500",
+    "narration": "EwaTrade supports services too. Add your laundry services and their prices, then check the setup list before you confirm."
+  },
+  {
+    "id": "bakery",
+    "profileKey": "food-bakery-catering",
+    "label": "Bakery",
+    "business": "Sweet Crumbs Bakery (Demo QA)",
+    "city": "Lagos",
+    "owner": "Bola Demo",
+    "input": "Family bread, 1800, 30 loaves\nCupcake box, 3600, 12 boxes",
+    "narration": "For a bakery, begin with your bread, cakes, prices, and opening stock. Build your catalogue one clear list at a time. Come. Trade. Together."
+  }
+]

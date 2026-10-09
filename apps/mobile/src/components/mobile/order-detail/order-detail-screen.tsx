@@ -10,10 +10,12 @@ import {
 } from "@/components/mobile/appearances/market-day/order-detail-dispatch-docket"
 import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { useModal } from "@/components/ui/modal"
+import { MotionView } from "@/components/ui/motion"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
@@ -98,6 +100,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     orderQuery.data ??
     cachedOrders.data?.find((candidate) => candidate.id === orderId) ??
     null
+  // Fade the overview in only when it replaces the loading state; a cached
+  // Order rides the native push without an extra fade.
+  const [orderReadyOnOpen] = useState(() => Boolean(order))
 
   async function refreshOrderQueries() {
     await Promise.all([
@@ -300,14 +305,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         scroll
       >
         <CommercialOrderOverviewHeader onBack={goBack} title="Order overview" />
-        <View className="flex-1 items-center justify-center py-16">
-          {orderQuery.isPending && !isOffline ? (
-            <EmptyState
-              icon="ReceiptText"
-              message="Loading the latest Commercial Order state."
-              title="Loading order"
-            />
-          ) : (
+        {orderQuery.isPending && !isOffline ? (
+          <DetailSkeleton label="Loading order" rows={4} />
+        ) : (
+          <View className="flex-1 items-center justify-center py-16">
             <EmptyState
               icon="ReceiptText"
               message={
@@ -319,11 +320,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                 isOffline ? "Order unavailable offline" : "Order not found"
               }
             />
-          )}
-        </View>
-        <ActionButton onPress={goBack} variant="outline">
-          Back to orders
-        </ActionButton>
+          </View>
+        )}
+        {orderQuery.isPending && !isOffline ? null : (
+          <ActionButton onPress={goBack} variant="outline">
+            Back to orders
+          </ActionButton>
+        )}
       </MobileScreen>
     )
   }
@@ -338,7 +341,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   return (
-    <View className="flex-1">
+    <MotionView animate={!orderReadyOnOpen} fill>
       <Screen
         hasBalanceDue={hasBalanceDue}
         mastheadVisible={mastheadVisible}
@@ -469,6 +472,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         presentation={fulfilAllPresentation}
         ref={fulfilAllModal.ref}
       />
-    </View>
+    </MotionView>
   )
 }

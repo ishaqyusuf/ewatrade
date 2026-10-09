@@ -1,7 +1,7 @@
 export const webSurfaces = {
   dashboard: {
     project: "ewatrade-dashboard",
-    origins: ["https://dashboard.ewatrade.com"],
+    origins: ["https://dash.ewatrade.com"],
   },
   marketing: {
     project: "ewatrade-marketing",

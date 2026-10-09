@@ -4,8 +4,10 @@ import {
   catalogItemUnavailable,
 } from "@/components/mobile/catalog-item/catalog-item-model"
 import type { CatalogItemScreenProps } from "@/components/mobile/catalog-item/catalog-item-presentation"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { Icon } from "@/components/ui/icon"
+import { MotionView } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -29,6 +31,7 @@ export function MarketDayCatalogItemScreen(props: CatalogItemScreenProps) {
   const [canvasStatus, setCanvasStatus] = useState(false)
   const offerings = item ? catalogItemOfferings(item) : []
   const unavailable = catalogItemUnavailable(props)
+  const [itemReadyOnOpen] = useState(() => Boolean(item))
   return (
     <VariableContextProvider
       value={{
@@ -111,98 +114,104 @@ export function MarketDayCatalogItemScreen(props: CatalogItemScreenProps) {
             </View>
           </View>
           {item ? (
-            <View className="gap-6 px-5 pt-5">
-              <View className="gap-3 border-b border-market-line pb-5">
-                <Text className="text-base text-market-ink [-rn-line-height:24]">
-                  {item.description ||
-                    (item.kind === "service"
-                      ? "Priced work, without inventory. Service delivery is managed separately."
-                      : "Product pricing and selling options for your business.")}
-                </Text>
-                <Text className="font-market-mono text-[11px] font-bold text-market-muted-ink">
-                  {offerings.length}{" "}
-                  {offerings.length === 1 ? "option" : "options"} · Priced
-                  individually
-                </Text>
-                {props.isOffline ? (
-                  <Text className="text-xs text-market-muted-ink [-rn-line-height:18]">
-                    Cached details. Order creation will use the workspace's
-                    current offline rules.
+            <MotionView animate={!itemReadyOnOpen}>
+              <View className="gap-6 px-5 pt-5">
+                <View className="gap-3 border-b border-market-line pb-5">
+                  <Text className="text-base text-market-ink [-rn-line-height:24]">
+                    {item.description ||
+                      (item.kind === "service"
+                        ? "Priced work, without inventory. Service delivery is managed separately."
+                        : "Product pricing and selling options for your business.")}
                   </Text>
-                ) : null}
-              </View>
-              <ActionButton
-                icon="PlusCircle"
-                className="rounded-xl bg-market-palm active:bg-market-palm"
-                foregroundColor={palette.onPalm}
-                onPress={onCreateOrder}
-              >
-                Create order with this {item.kind}
-              </ActionButton>
-              <View className="gap-3">
-                <Text
-                  accessibilityRole="header"
-                  className="font-market-mono text-[11px] font-bold uppercase tracking-[1.2px] text-market-muted-ink"
-                >
-                  Options & pricing
-                </Text>
-                <View className="border-t border-market-line">
-                  {offerings.map(({ offering, variant, price }, index) => (
-                    <View
-                      key={offering.id}
-                      className="flex-row items-start gap-3 border-b border-market-line py-4"
-                    >
-                      <Text className="w-6 pt-1 font-market-mono text-[10px] font-bold text-market-accent-ink">
-                        {String(index + 1).padStart(2, "0")}
-                      </Text>
-                      <View
-                        className={cn(
-                          "min-w-0 flex-1 gap-3",
-                          !largeText && "flex-row",
-                        )}
-                      >
-                        <View className="min-w-0 flex-1 gap-1">
-                          <Text className="text-base font-bold text-market-ink">
-                            {offering.name}
-                          </Text>
-                          <Text className="text-xs text-market-muted-ink [-rn-line-height:18]">
-                            {variant.name}
-                          </Text>
-                          {offering.status !== "active" ||
-                          variant.status !== "active" ? (
-                            <Text className="text-xs capitalize text-market-muted-ink">
-                              Option: {offering.status} · Variant:{" "}
-                              {variant.status}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <Text
-                          className={cn(
-                            "font-market-mono text-sm font-bold text-market-ink",
-                            !largeText && "max-w-[42%] text-right",
-                          )}
-                        >
-                          {price}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                  {offerings.length === 0 ? (
-                    <View className="gap-2 border-b border-market-line py-6">
-                      <Text className="text-base font-bold text-market-ink">
-                        No sellable options
-                      </Text>
-                      <Text className="text-sm text-market-muted-ink [-rn-line-height:21]">
-                        Add an active offering before creating an order.
-                      </Text>
-                    </View>
+                  <Text className="font-market-mono text-[11px] font-bold text-market-muted-ink">
+                    {offerings.length}{" "}
+                    {offerings.length === 1 ? "option" : "options"} · Priced
+                    individually
+                  </Text>
+                  {props.isOffline ? (
+                    <Text className="text-xs text-market-muted-ink [-rn-line-height:18]">
+                      Cached details. Order creation will use the workspace's
+                      current offline rules.
+                    </Text>
                   ) : null}
                 </View>
+                <ActionButton
+                  icon="PlusCircle"
+                  className="rounded-xl bg-market-palm active:bg-market-palm"
+                  foregroundColor={palette.onPalm}
+                  onPress={onCreateOrder}
+                >
+                  Create order with this {item.kind}
+                </ActionButton>
+                <View className="gap-3">
+                  <Text
+                    accessibilityRole="header"
+                    className="font-market-mono text-[11px] font-bold uppercase tracking-[1.2px] text-market-muted-ink"
+                  >
+                    Options & pricing
+                  </Text>
+                  <View className="border-t border-market-line">
+                    {offerings.map(({ offering, variant, price }, index) => (
+                      <View
+                        key={offering.id}
+                        className="flex-row items-start gap-3 border-b border-market-line py-4"
+                      >
+                        <Text className="w-6 pt-1 font-market-mono text-[10px] font-bold text-market-accent-ink">
+                          {String(index + 1).padStart(2, "0")}
+                        </Text>
+                        <View
+                          className={cn(
+                            "min-w-0 flex-1 gap-3",
+                            !largeText && "flex-row",
+                          )}
+                        >
+                          <View className="min-w-0 flex-1 gap-1">
+                            <Text className="text-base font-bold text-market-ink">
+                              {offering.name}
+                            </Text>
+                            <Text className="text-xs text-market-muted-ink [-rn-line-height:18]">
+                              {variant.name}
+                            </Text>
+                            {offering.status !== "active" ||
+                            variant.status !== "active" ? (
+                              <Text className="text-xs capitalize text-market-muted-ink">
+                                Option: {offering.status} · Variant:{" "}
+                                {variant.status}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <Text
+                            className={cn(
+                              "font-market-mono text-sm font-bold text-market-ink",
+                              !largeText && "max-w-[42%] text-right",
+                            )}
+                          >
+                            {price}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                    {offerings.length === 0 ? (
+                      <View className="gap-2 border-b border-market-line py-6">
+                        <Text className="text-base font-bold text-market-ink">
+                          No sellable options
+                        </Text>
+                        <Text className="text-sm text-market-muted-ink [-rn-line-height:21]">
+                          Add an active offering before creating an order.
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                <Text className="text-xs text-market-muted-ink [-rn-line-height:18]">
+                  This is an overview. The order flow checks current
+                  availability and pricing before a sale.
+                </Text>
               </View>
-              <Text className="text-xs text-market-muted-ink [-rn-line-height:18]">
-                This is an overview. The order flow checks current availability
-                and pricing before a sale.
-              </Text>
+            </MotionView>
+          ) : props.isPending ? (
+            <View className="px-5 py-6">
+              <DetailSkeleton label="Loading catalog item" rows={3} />
             </View>
           ) : (
             <View className="gap-4 px-5 py-8">

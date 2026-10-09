@@ -30,6 +30,7 @@ import {
 } from "../../generated/prisma/enums"
 import { getConfiguredCatalogOfferingAvailability } from "./catalog-inventory"
 import { assertPrescriptionStoreRole } from "./prescription-settings"
+import { assertRetailOpsProductAllowance } from "./retail-ops-subscriptions"
 import {
   ServiceCommerceCatalogError,
   resolveServiceCommerceCatalogSourceLine,
@@ -615,6 +616,7 @@ export async function createServiceCommerceCatalogDraft(
       if (!store) {
         throw new ServiceCommerceCatalogError("NOT_FOUND", "Store not found.")
       }
+      await assertRetailOpsProductAllowance(tx, { tenantId: input.tenantId })
       const item = await tx.catalogItem.create({
         data: {
           kind:

@@ -12,6 +12,7 @@ export {
   type InlineSelection,
   InlineRowCheckbox,
   InlineSelectAllCheckbox,
+  InlineSelectionBar,
   InlineSelectionStatus,
   pruneInlineSelection,
   useInlineSelection,

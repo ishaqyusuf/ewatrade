@@ -45,6 +45,37 @@ describe("EwaTrade error contract", () => {
     expect(JSON.stringify(response)).not.toContain("private account detail")
     expect(classifyError(cause).reportable).toBe(false)
   })
+  test("plan errors keep their server-authored upgrade text through wrappers", () => {
+    const planError = Object.assign(
+      new Error("Upgrade from Free to use finance."),
+      {
+        code: "PLAN_FEATURE_UNAVAILABLE",
+        publicMessage: "Upgrade from Free to use finance.",
+      },
+    )
+    const response = toPublicErrorEnvelope(
+      new Error("tRPC wrapper", { cause: planError }),
+    )
+    expect(response.error).toMatchObject({
+      code: "PLAN_UPGRADE_REQUIRED",
+      message: "Upgrade from Free to use finance.",
+      retryable: false,
+    })
+    expect(
+      classifyError(
+        Object.assign(new Error("limit"), {
+          code: "ENTITLEMENT_LIMIT_REACHED",
+        }),
+      ).code,
+    ).toBe("PLAN_LIMIT_REACHED")
+    // Other codes never adopt a carried publicMessage.
+    const leaky = Object.assign(new Error("private detail"), {
+      code: "P2002",
+      publicMessage: "private detail",
+    })
+    expect(toPublicErrorEnvelope(leaky).error.message).not.toContain("private")
+  })
+
   test("suppresses expected offline and stock conflicts", () => {
     for (const code of [
       "OFFLINE_COMMAND_CONFLICT",

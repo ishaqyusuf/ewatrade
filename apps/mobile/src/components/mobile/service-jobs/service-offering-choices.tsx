@@ -1,4 +1,5 @@
 import { FormField } from "@/components/mobile/form-field"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -52,9 +53,10 @@ export function ServiceOfferingChoices({
         </View>
       ) : null}
       {model.catalogQuery.isPending && !model.isOfflineMode ? (
-        <StatusBanner
-          icon="Loader2"
-          message="Loading available service offerings."
+        <ListSkeleton
+          count={3}
+          label="Loading service offerings"
+          variant="item"
         />
       ) : rows.length === 0 ? (
         <StatusBanner

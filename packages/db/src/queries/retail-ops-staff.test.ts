@@ -162,6 +162,9 @@ function createMockStaffInviteDb() {
         return { id: "tenant_123" }
       },
     },
+    commercialOrder: {
+      count: async () => 0,
+    },
     catalogItem: {
       count: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "catalogItem.count", where })

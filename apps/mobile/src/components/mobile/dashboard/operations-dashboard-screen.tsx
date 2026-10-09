@@ -30,6 +30,10 @@ import {
   DashboardActionRow,
   DashboardRecentOrderRow,
 } from "@/components/mobile/dashboard-kit"
+import {
+  HomeSkeleton,
+  ListSkeleton,
+} from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
 import { OrderVisibilityCard } from "@/components/mobile/staff/order-visibility-card"
@@ -37,6 +41,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { MobileStoresSwitcher } from "@/components/mobile/stores-switcher"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
+import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -69,6 +74,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useState } from "react"
 import { View } from "react-native"
+import { HOME_METRIC_LOADING } from "./home-journey-metrics"
 import { getHomeJourneyMetrics } from "./home-journey-metrics"
 import { useHomeJourney } from "./use-home-journey"
 
@@ -158,6 +164,7 @@ export function OperationsDashboardSurface({
     ),
   )
   const orderRows = orders.data ?? []
+  const revealRecentOrders = useFirstReveal(orderRows.length > 0)
   const currency = profile?.currencyCode ?? "NGN"
   const orderValue = orderRows.reduce(
     (total, order) => total + order.totalMinor,
@@ -527,11 +534,13 @@ export function OperationsDashboardSurface({
           }}
           onOperationalAction={operationalAction.onPress}
           operationalActionLabel={operationalAction.label}
-          recentOrders={orderRows
-            .slice(0, 4)
-            .map((order) => (
+          recentOrders={orderRows.slice(0, 4).map((order, index) => (
+            <RevealItem
+              active={revealRecentOrders}
+              index={index}
+              key={order.id}
+            >
               <DashboardRecentOrderRow
-                key={order.id}
                 amount={formatMinorMoney(order.totalMinor, order.currencyCode)}
                 customer={
                   order.customerName ||
@@ -545,7 +554,8 @@ export function OperationsDashboardSurface({
                 status={formatStatusLabel(order.status)}
                 tone={getOrderStatusTone(order.status)}
               />
-            ))}
+            </RevealItem>
+          ))}
         />
       ) : isOfflineAvailabilityUnknown ? (
         <StatusBanner
@@ -555,7 +565,7 @@ export function OperationsDashboardSurface({
           tone="warning"
         />
       ) : isFeatureAvailabilityPending ? (
-        <StatusBanner icon="Loader2" message="Loading Store overview." />
+        <HomeSkeleton label="Loading Store overview" />
       ) : isFeatureAvailabilityUnavailable ? (
         <StatusBanner
           icon="TriangleAlert"
@@ -612,26 +622,36 @@ export function OperationsDashboardSurface({
                   ? "Active work"
                   : "Catalog"
             }
-            primaryValue={String(
-              hasProduct
-                ? balanceCount
-                : featureAvailability.hasServiceItems ||
-                    featureAvailability.hasServiceJobs
-                  ? activeWorkCount
-                  : 0,
-            )}
+            primaryValue={
+              hasProduct && balances.isLoading
+                ? HOME_METRIC_LOADING
+                : String(
+                    hasProduct
+                      ? balanceCount
+                      : featureAvailability.hasServiceItems ||
+                          featureAvailability.hasServiceJobs
+                        ? activeWorkCount
+                        : 0,
+                  )
+            }
             recentOrderDetail={
               provisional.commercialOrders > 0
                 ? `${provisional.commercialOrders} waiting to sync`
                 : "Latest orders loaded"
             }
-            recentOrderValue={String(recentOrderCount)}
+            recentOrderValue={
+              orders.isLoading ? HOME_METRIC_LOADING : String(recentOrderCount)
+            }
             revenueDetail={
               orderRows.length === 0
                 ? "No synced order value yet"
                 : `Across the latest ${orderRows.length} ${orderRows.length === 1 ? "order" : "orders"}`
             }
-            revenueValue={formatMinorMoney(orderValue, currency)}
+            revenueValue={
+              orders.isLoading
+                ? HOME_METRIC_LOADING
+                : formatMinorMoney(orderValue, currency)
+            }
             syncLabel={
               isOffline
                 ? `${pendingCommandCount} waiting to sync`
@@ -698,7 +718,11 @@ export function OperationsDashboardSurface({
             View all sales
           </ActionButton>
           {orders.isLoading ? (
-            <StatusBanner icon="Loader2" message="Loading recent sales." />
+            <ListSkeleton
+              count={3}
+              label="Loading recent sales"
+              variant="item"
+            />
           ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
             <StatusBanner
               icon="Wind"
@@ -709,9 +733,12 @@ export function OperationsDashboardSurface({
           ) : orderRows.length === 0 ? (
             <RepEmpty message="New sales will appear here as soon as they are created." />
           ) : (
-            orderRows
-              .slice(0, 4)
-              .map((order) => (
+            orderRows.slice(0, 4).map((order, index) => (
+              <RevealItem
+                active={revealRecentOrders}
+                index={index}
+                key={order.id}
+              >
                 <DashboardRecentOrderRow
                   amount={formatMinorMoney(
                     order.totalMinor,
@@ -728,7 +755,6 @@ export function OperationsDashboardSurface({
                         `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
                     )
                     .join(", ")}`}
-                  key={order.id}
                   onPress={() =>
                     router.push(
                       `/order/${encodeURIComponent(order.id)}` as never,
@@ -737,7 +763,8 @@ export function OperationsDashboardSurface({
                   status={formatStatusLabel(order.status)}
                   tone={getOrderStatusTone(order.status)}
                 />
-              ))
+              </RevealItem>
+            ))
           )}
         </RepSection>
       ) : isMarketDay ? (
@@ -748,7 +775,11 @@ export function OperationsDashboardSurface({
             title="Recent orders"
           />
           {orders.isLoading ? (
-            <StatusBanner icon="Loader2" message="Loading recent orders." />
+            <ListSkeleton
+              count={3}
+              label="Loading recent orders"
+              variant="item"
+            />
           ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
             <StatusBanner
               icon="Wind"
@@ -768,9 +799,12 @@ export function OperationsDashboardSurface({
               onActionPress={() => router.push("/create-sale-modal" as never)}
             />
           ) : (
-            orderRows
-              .slice(0, 4)
-              .map((order) => (
+            orderRows.slice(0, 4).map((order, index) => (
+              <RevealItem
+                active={revealRecentOrders}
+                index={index}
+                key={order.id}
+              >
                 <DashboardRecentOrderRow
                   amount={formatMinorMoney(
                     order.totalMinor,
@@ -787,7 +821,6 @@ export function OperationsDashboardSurface({
                         `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
                     )
                     .join(", ")}`}
-                  key={order.id}
                   onPress={() =>
                     router.push(
                       `/order/${encodeURIComponent(order.id)}` as never,
@@ -796,7 +829,8 @@ export function OperationsDashboardSurface({
                   status={formatStatusLabel(order.status)}
                   tone={getOrderStatusTone(order.status)}
                 />
-              ))
+              </RevealItem>
+            ))
           )}
         </View>
       ) : null}

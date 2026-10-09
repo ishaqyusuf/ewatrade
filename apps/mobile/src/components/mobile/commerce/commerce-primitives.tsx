@@ -1,5 +1,6 @@
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
@@ -101,10 +102,12 @@ export function CommerceFilterChip({
 export function CommerceMetricTile({
   icon,
   label,
+  loading = false,
   value,
 }: {
   icon: IconKeys
   label: string
+  loading?: boolean
   value: string
 }) {
   return (
@@ -113,12 +116,20 @@ export function CommerceMetricTile({
         <Icon className="size-sm text-primary" name={icon} />
         <Text className="text-xs font-bold text-muted-foreground">{label}</Text>
       </View>
-      <Text
-        className="mt-3 text-xl font-extrabold tracking-tight text-foreground"
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
+      {loading ? (
+        <View className="mt-3">
+          <SkeletonGroup accessibilityLabel={`Loading ${label.toLowerCase()}`}>
+            <Skeleton height={24} width="55%" />
+          </SkeletonGroup>
+        </View>
+      ) : (
+        <Text
+          className="mt-3 text-xl font-extrabold tracking-tight text-foreground"
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+      )}
     </View>
   )
 }

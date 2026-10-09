@@ -7,6 +7,7 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import type { WorkspaceFeatureAvailability } from "@ewatrade/db/queries"
+import type { RetailOpsPlanFeature } from "@ewatrade/db/subscription-plans"
 import {
   BUSINESS_OPERATING_MODEL_KEYS,
   type BusinessOperatingModel,
@@ -43,6 +44,8 @@ type DashboardNavDefinition = Omit<DashboardNavItem, "children"> & {
   ) => boolean
   children?: DashboardNavDefinition[]
   isVisible?: (context: DashboardNavContext) => boolean
+  /** Hidden, and its pages redirect, when the tenant's plan lacks it. */
+  requiresPlanFeature?: RetailOpsPlanFeature
 }
 
 export type DashboardNavContext = Partial<
@@ -53,6 +56,8 @@ export type DashboardNavContext = Partial<
   businessProfileKey?: string | null
   isPlatformAdmin?: boolean
   operatingModel?: BusinessOperatingModel | null
+  /** Resolved plan features; undefined skips plan gating (the API still enforces). */
+  planFeatures?: RetailOpsPlanFeature[]
 }
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
@@ -196,6 +201,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "staff",
     label: "Staff",
     canAccess: canManageCatalog,
+    requiresPlanFeature: "staff",
   },
   {
     description: "Spending, money accounts and financial records",
@@ -203,6 +209,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "analytics",
     label: "Finance",
     canAccess: canManageTenantRole,
+    requiresPlanFeature: "finance",
     children: [
       {
         description: "Financial overview",
@@ -231,6 +238,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         icon: "analytics",
         label: "Suppliers",
         canAccess: canManageTenantRole,
+        requiresPlanFeature: "suppliers",
       },
       {
         description: "Customer statements and collections",
@@ -238,6 +246,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         icon: "analytics",
         label: "Customer accounts",
         canAccess: canManageTenantRole,
+        requiresPlanFeature: "finance",
       },
       {
         description: "Financial reports and exports",
@@ -306,6 +315,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         icon: "settings",
         label: "Receipts",
         canAccess: canManageTenantRole,
+        requiresPlanFeature: "invoices",
       },
       {
         description: "Business domain settings",
@@ -400,6 +410,17 @@ function scopedPageAllowed(
   ].includes(href)
 }
 
+function hasPlanFeature(
+  item: Pick<DashboardNavDefinition, "requiresPlanFeature">,
+  context: DashboardNavContext,
+) {
+  return (
+    !item.requiresPlanFeature ||
+    !context.planFeatures ||
+    context.planFeatures.includes(item.requiresPlanFeature)
+  )
+}
+
 function filterAndStripDefinitions(
   items: DashboardNavDefinition[],
   role: EwaTradeRole | null,
@@ -409,6 +430,7 @@ function filterAndStripDefinitions(
     if (
       !scopedPageAllowed(item.href, role, context) ||
       !item.canAccess(role, context) ||
+      !hasPlanFeature(item, context) ||
       (item.isVisible && !item.isVisible(context))
     ) {
       return []
@@ -418,6 +440,7 @@ function filterAndStripDefinitions(
       canAccess: _canAccess,
       children,
       isVisible: _isVisible,
+      requiresPlanFeature: _requiresPlanFeature,
       ...visibleItem
     } = item
     const visibleChildren = filterAndStripDefinitions(
@@ -463,9 +486,16 @@ export function canAccessDashboardPath(
 ) {
   const normalizedRole = getNormalizedRole(role)
   if (!scopedPageAllowed(pathname, normalizedRole, context)) return false
-  const matchedKnownPath = flattenDefinitions(DASHBOARD_NAV)
-    .filter((item) => matchesPath(pathname, item.href, item.end))
-    .sort((left, right) => right.href.length - left.href.length)[0]
+  const matchingPaths = flattenDefinitions(DASHBOARD_NAV).filter((item) =>
+    matchesPath(pathname, item.href, item.end),
+  )
+  // A gated section (e.g. /finance) also gates unlisted pages beneath it.
+  if (!matchingPaths.every((item) => hasPlanFeature(item, context))) {
+    return false
+  }
+  const matchedKnownPath = matchingPaths.sort(
+    (left, right) => right.href.length - left.href.length,
+  )[0]
 
   if (!matchedKnownPath) {
     return true

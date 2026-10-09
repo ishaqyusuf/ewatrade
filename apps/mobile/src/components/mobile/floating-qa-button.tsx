@@ -1,27 +1,17 @@
 import { QaAccountChooser } from "@/components/mobile/qa-account-chooser"
 import { useAppLockContext } from "@/hooks/use-app-lock"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
-import { isCustomerShellPath } from "@/lib/app-lock-route"
-import { usePathname, useSegments } from "expo-router"
+import { usePathname } from "expo-router"
 import { useEffect, useState } from "react"
 import { Keyboard, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-const DOCK_PATHS = new Set([
-  "/admin-home",
-  "/catalog",
-  "/dashboard",
-  "/more",
-  "/orders",
-  "/sales-rep-home",
-])
-const ACTION_PATHS = new Set(["/catalog", "/orders"])
-
 export function FloatingQaButton() {
   const qa = useQaAccelerator()
   const { isLocked } = useAppLockContext()
+  const { isAuthenticated } = useAuthContext()
   const pathname = usePathname()
-  const segments = useSegments()
   const insets = useSafeAreaInsets()
   const [keyboardVisible, setKeyboardVisible] = useState(Keyboard.isVisible())
 
@@ -38,32 +28,24 @@ export function FloatingQaButton() {
     }
   }, [])
 
+  // QA profiles are chosen only from the signed-out login screen. Switching to
+  // another QA profile means signing out first, so the control never overlaps
+  // in-app modals, docks, sync or checkout actions.
   if (
     !qa.clientEnabled ||
+    isAuthenticated ||
     isLocked ||
     keyboardVisible ||
-    isCustomerShellPath(segments) ||
-    pathname === "/" ||
-    pathname === "/onboarding" ||
-    pathname === "/verify-email" ||
-    pathname.endsWith("-modal") ||
-    pathname.startsWith("/order/") ||
-    pathname.startsWith("/updates")
+    pathname !== "/login"
   ) {
     return null
   }
-
-  const clearance = DOCK_PATHS.has(pathname)
-    ? ACTION_PATHS.has(pathname)
-      ? 184
-      : 104
-    : 16
 
   return (
     <View
       pointerEvents="box-none"
       style={{
-        bottom: Math.max(insets.bottom, 12) + clearance,
+        bottom: Math.max(insets.bottom, 12) + 16,
         position: "absolute",
         right: Math.max(insets.right, 16),
         zIndex: 50,

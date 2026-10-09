@@ -22,6 +22,7 @@ export function FinancePeriodAuditHistory({ bookId }: { bookId: string }) {
   })
   return (
     <FinancePeriodAuditView
+      scope={bookId}
       events={events}
       pending={query.isPending}
       error={query.isError ? query.error.message : null}

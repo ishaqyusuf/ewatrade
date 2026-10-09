@@ -1,5 +1,20 @@
+import { requireOptionalNativeModule } from "expo"
 import * as FileSystem from "expo-file-system/legacy"
 import { Platform } from "react-native"
+
+type DownloadSaver = {
+  isSupported: () => boolean
+  saveToDownloads: (
+    sourceUri: string,
+    displayName: string,
+    mimeType: string,
+    folder: string,
+  ) => Promise<{ folder: string; name: string; uri: string }>
+}
+
+const downloadSaver =
+  requireOptionalNativeModule<DownloadSaver>("DownloadSaver")
+const DOWNLOAD_FOLDER = "EwaTrade"
 
 export type ReceiptFile = {
   bytes: Uint8Array
@@ -20,7 +35,35 @@ export async function deliverReceiptFile(
   action: "save" | "share",
 ) {
   const encoded = base64(file.bytes)
+  if (
+    action === "save" &&
+    Platform.OS === "android" &&
+    downloadSaver?.isSupported() &&
+    FileSystem.cacheDirectory
+  ) {
+    // Android 10+: straight into Downloads/EwaTrade, no folder prompt.
+    const directory = `${FileSystem.cacheDirectory}receipt-save-${Date.now()}/`
+    await FileSystem.makeDirectoryAsync(directory, { intermediates: true })
+    try {
+      const uri = `${directory}${file.filename}`
+      await FileSystem.writeAsStringAsync(uri, encoded, {
+        encoding: FileSystem.EncodingType.Base64,
+      })
+      const saved = await downloadSaver.saveToDownloads(
+        uri,
+        file.filename,
+        file.mimeType,
+        DOWNLOAD_FOLDER,
+      )
+      return `Saved to ${saved.folder} as ${saved.name}`
+    } finally {
+      await FileSystem.deleteAsync(directory, { idempotent: true }).catch(
+        () => undefined,
+      )
+    }
+  }
   if (action === "save" && Platform.OS === "android") {
+    // Older Android, or a build without the native saver: ask for a folder.
     const permission =
       await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync()
     if (!permission.granted) return "Save cancelled."
@@ -65,7 +108,8 @@ export async function deliverReceiptFile(
             : "public.zip-archive",
       dialogTitle: action === "save" ? "Save receipt" : "Share receipt",
     })
-    return "Share sheet closed."
+    // The share sheet reports nothing useful back, so show no notice.
+    return ""
   } finally {
     await FileSystem.deleteAsync(directory, { idempotent: true }).catch(
       () => undefined,

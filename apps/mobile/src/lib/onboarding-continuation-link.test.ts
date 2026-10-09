@@ -23,13 +23,13 @@ test("setup and verification links resume only on the configured dashboard", () 
   ).toEqual({ kind: "verification", token: verification })
   expect(
     resolveOnboardingContinuationLink(
-      `https://dashboard.ewatrade.com/signup?access_token=${setup}`,
+      `https://dash.ewatrade.com/signup?access_token=${setup}`,
       configuration,
     ),
   ).toBeNull()
   expect(
     resolveOnboardingContinuationLink(
-      `https://dashboard.ewatrade.com/signup?access_token=${setup}`,
+      `https://dash.ewatrade.com/signup?access_token=${setup}`,
       { variant: "preview" },
     ),
   ).toBeNull()
@@ -53,13 +53,13 @@ test("coinstalled apps cannot resume another environment's custom scheme", () =>
 
 test("approval, ambiguous tokens, unrelated routes and host tricks are not continuation", () => {
   for (const value of [
-    `https://dashboard.ewatrade.com/api/early-access/approve?token=${verification}`,
-    `https://dashboard.ewatrade.com/signup?access_token=${setup}&access_token=${setup}`,
-    `https://dashboard.ewatrade.com/signup?access_token=${verification}`,
-    `https://dashboard.ewatrade.com/signup?access_token=${setup}&environment=preview`,
-    `https://dashboard.ewatrade.com.attacker.com/signup?access_token=${setup}`,
-    `https://user@dashboard.ewatrade.com/signup?access_token=${setup}`,
-    `https://dashboard.ewatrade.com/signup?access_token=${setup}#anything`,
+    `https://dash.ewatrade.com/api/early-access/approve?token=${verification}`,
+    `https://dash.ewatrade.com/signup?access_token=${setup}&access_token=${setup}`,
+    `https://dash.ewatrade.com/signup?access_token=${verification}`,
+    `https://dash.ewatrade.com/signup?access_token=${setup}&environment=preview`,
+    `https://dash.ewatrade.com.attacker.com/signup?access_token=${setup}`,
+    `https://user@dash.ewatrade.com/signup?access_token=${setup}`,
+    `https://dash.ewatrade.com/signup?access_token=${setup}#anything`,
     `ewatrade://orders?access_token=${setup}`,
   ])
     expect(

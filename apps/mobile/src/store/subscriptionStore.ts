@@ -1,6 +1,8 @@
 import {
+  RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
   RETAIL_OPS_PLANS,
   type RetailOpsPlan,
+  type RetailOpsPlanFeature,
   type RetailOpsPlanId,
   type RetailOpsPlanLimits,
   type RetailOpsSubscription,
@@ -18,10 +20,12 @@ export {
   getDefaultSubscription,
   getPlan,
   getUsageLimitState,
+  RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
   RETAIL_OPS_PLANS,
 }
 export type {
   RetailOpsPlan,
+  RetailOpsPlanFeature,
   RetailOpsPlanId,
   RetailOpsPlanLimits,
   RetailOpsSubscription,

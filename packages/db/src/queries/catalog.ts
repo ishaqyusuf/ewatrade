@@ -58,6 +58,7 @@ import {
   buildScopedListCursorWhere,
   buildScopedListPageWhere,
 } from "./list-sort"
+import { assertRetailOpsProductAllowance } from "./retail-ops-subscriptions"
 import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { StoreConversationError } from "./store-conversations-core"
@@ -940,6 +941,7 @@ export async function createCatalogItem(
         mediaUrls: [],
         texts: [selectedCategory.category],
       })
+    await assertRetailOpsProductAllowance(tx, { tenantId: input.tenantId })
     const item = await tx.catalogItem.create({
       data: {
         ...selectedCategory,

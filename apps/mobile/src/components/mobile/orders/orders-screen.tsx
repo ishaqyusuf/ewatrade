@@ -18,9 +18,11 @@ import {
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { toggleReceiptSelection } from "@/components/mobile/receipts/receipt-selection"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -168,6 +170,7 @@ export function OrdersScreen() {
     [orders.data?.pages],
   )
   const visibleOrders = loadedOrders
+  const revealRows = useFirstReveal(visibleOrders.length > 0)
   useEffect(() => {
     const eligible = new Set(
       loadedOrders
@@ -239,46 +242,30 @@ export function OrdersScreen() {
           !showFirstOrderGate &&
           !orders.isError ? (
             <Section>
-              {loadedOrders.length > 0 ? (
-                <ActionButton
-                  variant="outline"
-                  disabled={isOffline}
-                  onPress={() => {
-                    setSelectingReceipts((value) => !value)
-                    setReceiptIds([])
-                  }}
-                >
-                  {selectingReceipts ? "Cancel selection" : "Select receipts"}
-                </ActionButton>
-              ) : null}
-              <EmptyState
-                actionLabel={
-                  (orders.isPending && !isOffline) || isOffline
-                    ? undefined
-                    : "Clear filters"
-                }
-                actionProps={{ onPress: resetFilters, variant: "outline" }}
-                className="mt-3"
-                icon="ReceiptText"
-                message={
-                  orders.isPending && !isOffline
-                    ? "Loading Commercial Orders."
-                    : isOffline
+              {orders.isPending && !isOffline ? (
+                <ListSkeleton count={6} label="Loading orders" />
+              ) : (
+                <EmptyState
+                  actionLabel={isOffline ? undefined : "Clear filters"}
+                  actionProps={{ onPress: resetFilters, variant: "outline" }}
+                  className="mt-3"
+                  icon="ReceiptText"
+                  message={
+                    isOffline
                       ? "Reconnect to refresh Orders from your workspace."
                       : query || filter !== "all" || dateFilter !== "all"
                         ? "Try another date, search, or status filter."
                         : "New Product and Service Orders will appear here."
-                }
-                title={
-                  orders.isPending && !isOffline
-                    ? "Loading orders"
-                    : isOffline
+                  }
+                  title={
+                    isOffline
                       ? "No cached orders"
                       : query || filter !== "all" || dateFilter !== "all"
                         ? "No matching orders"
                         : "No orders yet"
-                }
-              />
+                  }
+                />
+              )}
             </Section>
           ) : null
         }
@@ -312,7 +299,11 @@ export function OrdersScreen() {
               </View>
             ) : null}
             {!showFirstOrderGate ? (
-              <Summary dateFilter={dateFilter} orders={visibleOrders} />
+              <Summary
+                dateFilter={dateFilter}
+                loading={orders.isPending && !isOffline}
+                orders={visibleOrders}
+              />
             ) : null}
             <Section>
               {provisionalOrders.length > 0 ? (
@@ -385,6 +376,20 @@ export function OrdersScreen() {
                       value={query}
                     />
                   ) : null}
+                  {loadedOrders.length > 0 ? (
+                    <ActionButton
+                      variant="outline"
+                      disabled={isOffline}
+                      onPress={() => {
+                        setSelectingReceipts((value) => !value)
+                        setReceiptIds([])
+                      }}
+                    >
+                      {selectingReceipts
+                        ? "Cancel selection"
+                        : "Select receipts"}
+                    </ActionButton>
+                  ) : null}
                 </>
               )}
               {visibleProvisionalOrders.map((order) => (
@@ -417,78 +422,85 @@ export function OrdersScreen() {
           ) : null
         }
         renderItem={({ index, item }) => (
-          <Section>
-            {selectingReceipts ? (
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityLabel={`Select ${item.orderNumber}`}
-                accessibilityState={{
-                  checked: receiptIds.includes(item.id),
-                  disabled:
+          <RevealItem active={revealRows} index={index}>
+            <Section>
+              {selectingReceipts ? (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={`Select ${item.orderNumber}`}
+                  accessibilityState={{
+                    checked: receiptIds.includes(item.id),
+                    disabled:
+                      !isReceiptOrderEligible(item.status) ||
+                      (!receiptIds.includes(item.id) &&
+                        receiptIds.length >= 20),
+                  }}
+                  disabled={
                     !isReceiptOrderEligible(item.status) ||
-                    (!receiptIds.includes(item.id) && receiptIds.length >= 20),
-                }}
-                disabled={
-                  !isReceiptOrderEligible(item.status) ||
-                  (!receiptIds.includes(item.id) && receiptIds.length >= 20)
-                }
-                className="min-h-12 justify-center border-b border-border py-3"
-                onPress={() =>
-                  setReceiptIds((current) =>
-                    toggleReceiptSelection(current, item.id),
-                  )
-                }
-              >
-                <Text className="font-semibold text-primary">
-                  {receiptIds.includes(item.id)
-                    ? "✓ Selected"
-                    : isReceiptOrderEligible(item.status)
-                      ? "Select receipt"
-                      : "Receipt unavailable"}{" "}
-                  · {item.orderNumber}
-                </Text>
-              </Pressable>
-            ) : null}
-            <Row
-              index={index}
-              onPress={() => {
-                if (selectingReceipts) {
-                  if (isReceiptOrderEligible(item.status))
+                    (!receiptIds.includes(item.id) && receiptIds.length >= 20)
+                  }
+                  className="min-h-12 justify-center border-b border-border py-3"
+                  onPress={() =>
                     setReceiptIds((current) =>
                       toggleReceiptSelection(current, item.id),
                     )
-                } else router.push(commercialOrderHref(item.id))
-              }}
-              order={item}
-            />
-          </Section>
+                  }
+                >
+                  <Text className="font-semibold text-primary">
+                    {receiptIds.includes(item.id)
+                      ? "✓ Selected"
+                      : isReceiptOrderEligible(item.status)
+                        ? "Select receipt"
+                        : "Receipt unavailable"}{" "}
+                    · {item.orderNumber}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Row
+                index={index}
+                onPress={() => {
+                  if (selectingReceipts) {
+                    if (isReceiptOrderEligible(item.status))
+                      setReceiptIds((current) =>
+                        toggleReceiptSelection(current, item.id),
+                      )
+                  } else router.push(commercialOrderHref(item.id))
+                }}
+                order={item}
+              />
+            </Section>
+          </RevealItem>
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       />
       {selectingReceipts ? (
-        <View
-          className="gap-2 border-t border-border bg-background px-4 pt-3"
-          style={{
-            paddingBottom: isDockHidden
-              ? Math.max(insets.bottom, 16)
-              : Math.max(insets.bottom + 90, 106),
-          }}
-        >
-          <Text accessibilityLiveRegion="polite">
-            {receiptIds.length} selected · maximum 20
-          </Text>
-          <ActionButton
-            disabled={!receiptIds.length || isOffline}
-            onPress={() =>
-              router.push({
-                pathname: "/order-receipts-modal",
-                params: { orderIds: receiptIds.join(",") },
-              })
-            }
-          >
-            Generate receipts
-          </ActionButton>
+        <View className="border-t border-border bg-background">
+          <View className="gap-2 px-4 pt-3">
+            <Text accessibilityLiveRegion="polite">
+              {receiptIds.length} selected · maximum 20
+            </Text>
+            <ActionButton
+              disabled={!receiptIds.length || isOffline}
+              onPress={() =>
+                router.push({
+                  pathname: "/order-receipts-modal",
+                  params: { orderIds: receiptIds.join(",") },
+                })
+              }
+            >
+              Generate receipts
+            </ActionButton>
+          </View>
+          {/* Spacer keeps the footer clear of the dock; style and className
+              stay on separate elements so NativeWind keeps the padding. */}
+          <View
+            style={{
+              height: isDockHidden
+                ? Math.max(insets.bottom, 16)
+                : Math.max(insets.bottom + 90, 106),
+            }}
+          />
         </View>
       ) : null}
       {isDockHidden && !showFirstOrderGate && !selectingReceipts ? (

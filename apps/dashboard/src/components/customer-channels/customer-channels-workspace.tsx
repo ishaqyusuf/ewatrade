@@ -1,8 +1,14 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  InlineRowCheckbox,
+  InlineSelectionBar,
+  useInlineSelection,
+} from "@/components/tables/core"
 
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -123,6 +129,7 @@ export function CustomerChannelsWorkspace({
       />
 
       <ConnectionsList
+        scope={selectedStoreId ?? "all"}
         connections={data.connections}
         onManage={(connectionId) =>
           void params.setParams({
@@ -229,54 +236,98 @@ export function CustomerChannelsWorkspace({
           </p>
         </div>
         {approvals.data.length > 0 ? (
-          <div className="grid gap-3 lg:grid-cols-2">
-            {approvals.data.map((approval) => (
-              <article
-                className="flex flex-col gap-4 rounded-none border border-border bg-card p-5"
-                key={approval.id}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      {approval.sourceKind.replace("_", " ")}
-                    </p>
-                    <h3 className="font-semibold">
-                      Quote version {approval.version}
-                    </h3>
-                  </div>
-                  <p className="font-semibold tabular-nums">
-                    {formatMoney(approval.totalMinor, approval.currencyCode)}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {approval.canApprove || approval.canReject
-                    ? "Your selected approver assignment permits a decision."
-                    : "Visible for coordination. Another selected approver must decide."}
-                </p>
-                <Button
-                  className="mt-auto w-fit"
-                  onClick={() =>
-                    void params.setParams({
-                      quoteApprovalId: approval.id,
-                      quoteId: approval.quoteId,
-                      serviceCommerceSheet: "quote_approval",
-                      storeId: selectedStoreId,
-                    })
-                  }
-                  variant="outline"
-                  appearance="form"
-                >
-                  Review exact version
-                </Button>
-              </article>
-            ))}
-          </div>
+          <PendingApprovalCards
+            approvals={approvals.data}
+            onReview={(approval) =>
+              void params.setParams({
+                quoteApprovalId: approval.id,
+                quoteId: approval.quoteId,
+                serviceCommerceSheet: "quote_approval",
+                storeId: selectedStoreId,
+              })
+            }
+            scope={selectedStoreId ?? "all"}
+          />
         ) : (
           <p className="rounded-none border border-dashed border-border p-5 text-sm text-muted-foreground">
             No quotations are waiting for approval.
           </p>
         )}
       </section>
+    </div>
+  )
+}
+
+type PendingApproval =
+  RouterOutputs["serviceCommerce"]["pendingQuoteApprovals"][number]
+
+function PendingApprovalCards({
+  approvals,
+  onReview,
+  scope,
+}: {
+  approvals: PendingApproval[]
+  onReview: (approval: PendingApproval) => void
+  scope: string
+}) {
+  const approvalIds = useMemo(
+    () => approvals.map((approval) => approval.id),
+    [approvals],
+  )
+  const selection = useInlineSelection({ ids: approvalIds, scope })
+  return (
+    <div className="grid gap-3">
+      <InlineSelectionBar
+        label="Select all pending approvals"
+        selection={selection}
+      />
+      <div className="grid gap-3 lg:grid-cols-2">
+        {approvals.map((approval) => (
+          <article
+            className="flex flex-col gap-4 rounded-none border border-border bg-card p-5 data-[state=selected]:bg-muted/60"
+            data-state={
+              selection.isSelected(approval.id) ? "selected" : undefined
+            }
+            key={approval.id}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="pt-0.5">
+                  <InlineRowCheckbox
+                    selection={selection}
+                    id={approval.id}
+                    label={`Select Quote version ${approval.version}`}
+                  />
+                </span>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {approval.sourceKind.replace("_", " ")}
+                  </p>
+                  <h3 className="font-semibold">
+                    Quote version {approval.version}
+                  </h3>
+                </div>
+              </div>
+              <p className="font-semibold tabular-nums">
+                {formatMoney(approval.totalMinor, approval.currencyCode)}
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {approval.canApprove || approval.canReject
+                ? "Your selected approver assignment permits a decision."
+                : "Visible for coordination. Another selected approver must decide."}
+            </p>
+            <Button
+              className="mt-auto w-fit"
+              onClick={() => onReview(approval)}
+              variant="outline"
+              appearance="form"
+            >
+              Review exact version
+            </Button>
+          </article>
+        ))}
+      </div>
     </div>
   )
 }

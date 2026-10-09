@@ -74,11 +74,7 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/floating-qa-button.tsx",
-    markers: [
-      'pathname === "/"',
-      'pathname === "/onboarding"',
-      'pathname === "/verify-email"',
-    ],
+    markers: ['pathname !== "/login"', "isAuthenticated ||"],
   },
   {
     file: "app/login.tsx",

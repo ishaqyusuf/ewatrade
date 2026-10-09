@@ -1,5 +1,6 @@
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -75,7 +76,9 @@ export function PaymentsReceivedScreen() {
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
-          payments.isError ? null : (
+          payments.isError ? null : payments.isPending ? (
+            <ListSkeleton count={6} label="Loading payments" variant="ledger" />
+          ) : (
             <EmptyState
               className="min-h-80 flex-1 justify-center border-b border-border px-0"
               icon="CreditCard"

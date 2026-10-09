@@ -23,6 +23,8 @@ export async function getAccountPrivacyProfileInventory(
       emailVerifiedAt: true,
       phoneVerifiedAt: true,
       isPlatformAdmin: true,
+      ageBand: true,
+      ageDeclaredAt: true,
     },
   })
   const authAccounts = await db.account.count({ where: { userId: subjectId } })
@@ -48,6 +50,8 @@ export async function getAccountPrivacyProfileInventory(
         profile.emailVerifiedAt,
         profile.phoneVerifiedAt,
         profile.isPlatformAdmin,
+        profile.ageBand !== "UNDECLARED",
+        profile.ageDeclaredAt,
       ].filter(Boolean).length
     : 0
   return {

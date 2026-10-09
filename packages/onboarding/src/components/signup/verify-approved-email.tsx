@@ -8,11 +8,18 @@ import { EarlyAccessPreview } from "../early-access-preview"
 export function VerifyApprovedEmail({
   accessToken,
   email,
-}: { accessToken: string; email: string }) {
+  initialPreview = null,
+}: {
+  accessToken: string
+  email: string
+  initialPreview?: EarlyAccessQaPreview | null
+}) {
   const workflow = useDashboardWorkflow()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
-  const [preview, setPreview] = useState<EarlyAccessQaPreview | null>(null)
+  const [preview, setPreview] = useState<EarlyAccessQaPreview | null>(
+    initialPreview,
+  )
   async function send() {
     setBusy(true)
     setMessage("")
@@ -47,11 +54,11 @@ export function VerifyApprovedEmail({
     }
   }
   return (
-    <section className="space-y-4" aria-label="Verify approved contact email">
-      <h1 className="text-2xl font-semibold">Verify your email to continue.</h1>
+    <section className="space-y-4" aria-label="Confirm your email">
+      <h1 className="text-2xl font-semibold">Check your email.</h1>
       <p>
-        Your request is approved. Confirm <strong>{email}</strong> before
-        setting up your workspace.
+        We sent a confirmation link to <strong>{email}</strong>. Open it to
+        continue setting up your business. This page updates once you confirm.
       </p>
       <button
         type="button"
@@ -59,7 +66,7 @@ export function VerifyApprovedEmail({
         disabled={busy}
         onClick={() => void send()}
       >
-        {busy ? "Sending…" : "Send verification email"}
+        {busy ? "Sending…" : "Resend the link"}
       </button>
       <output aria-live="polite">{message}</output>
       {preview ? <EarlyAccessPreview preview={preview} /> : null}

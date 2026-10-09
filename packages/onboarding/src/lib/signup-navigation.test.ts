@@ -44,7 +44,7 @@ test("production preserves the canonical dashboard base path", () => {
 test("email setup links ignore request host and preserve the exact token", () => {
   Reflect.set(process.env, "NODE_ENV", "production")
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN = "ewatrade.com"
-  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dashboard.ewatrade.com"
+  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   const token = "ea_fixture/+?&"
   const link = new URL(
     buildEarlyAccessSignupUrl({
@@ -53,10 +53,10 @@ test("email setup links ignore request host and preserve the exact token", () =>
     }),
   )
   expect(link.origin + link.pathname).toBe(
-    "https://dashboard.ewatrade.com/signup",
+    "https://dash.ewatrade.com/signup",
   )
   expect(link.searchParams.get("access_token")).toBe(token)
-  expect(getDashboardSignupUrl()).toBe("https://dashboard.ewatrade.com/signup")
+  expect(getDashboardSignupUrl()).toBe("https://dash.ewatrade.com/signup")
 })
 test("hosted links refuse insecure or credential-bearing custom origins", () => {
   for (const configuredUrl of [
@@ -79,5 +79,5 @@ test("production fallback uses the documented dashboard hostname", () => {
       isProduction: true,
       platformDomain: "ewatrade.com",
     }),
-  ).toBe("https://dashboard.ewatrade.com/signup")
+  ).toBe("https://dash.ewatrade.com/signup")
 })

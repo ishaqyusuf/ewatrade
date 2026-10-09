@@ -156,9 +156,9 @@ test("proxy replaces spoofed identity with signed group and removes proof from c
     return Response.json({ accepted: 1 }, { status: 202 })
   }) as typeof fetch
   const request = (token: string) =>
-    new Request("https://dashboard.ewatrade.com/api/analytics", {
+    new Request("https://dash.ewatrade.com/api/analytics", {
       method: "POST",
-      headers: { origin: "https://dashboard.ewatrade.com" },
+      headers: { origin: "https://dash.ewatrade.com" },
       body: JSON.stringify({
         sentAt: new Date(now).toISOString(),
         sdk: { name: "@ishaqyusuf/logly-core", version: "0.2.0" },
