@@ -88,6 +88,13 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     const preview = mismatch?.startsWith("preview") ?? false
     const quickPreview = mismatch?.startsWith("preview_quick") ?? false
     await mkdir(path.join(root, "scripts"), { recursive: true })
+    await writeFile(
+      path.join(root, "scripts", "eas-ios-simulator-artifact.ts"),
+      await readFile(
+        path.join(import.meta.dir, "eas-ios-simulator-artifact.ts"),
+        "utf8",
+      ),
+    )
     await mkdir(path.join(root, "apps", "mobile", "scripts"), {
       recursive: true,
     })

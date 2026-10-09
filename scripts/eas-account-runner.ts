@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
+import { isReviewedIosPreviewSimulatorArtifact } from "./eas-ios-simulator-artifact"
 
 type Operation =
   | "auth"
@@ -100,11 +101,19 @@ const iosSimulator = actionArgs.includes("--ios-simulator")
 if (
   iosSimulator &&
   (actionArgs.filter((arg) => arg === "--ios-simulator").length !== 1 ||
-    operation !== "build" ||
     target !== "preview" ||
-    buildPlatform !== "ios")
+    !(
+      (operation === "build" && buildPlatform === "ios") ||
+      operation === "download"
+    ))
 )
-  throw new Error("--ios-simulator is available only for an iOS Preview build.")
+  throw new Error(
+    "--ios-simulator is available only for an iOS Preview build or download.",
+  )
+const expectedSimulatorArtifactCommit =
+  operation === "download" && iosSimulator
+    ? assertExpectedUpdateCommit(actionArgs, "Simulator download")
+    : undefined
 // Production updates (and any update given --expected-commit) publish only clean
 // committed HEAD. Preview without a commit stays a quick working-tree OTA.
 const reviewedUpdate =
@@ -1650,7 +1659,7 @@ async function downloadBuild(
   const outputFlag = args.indexOf("--output")
   const outputPath = outputFlag >= 0 ? args[outputFlag + 1] : undefined
   if (!outputPath || !path.isAbsolute(outputPath)) {
-    console.error("Choose an absolute --output path for the AAB.")
+    console.error("Choose an absolute --output path for the build artifact.")
     return 1
   }
   const proc = Bun.spawn({
@@ -1675,6 +1684,12 @@ async function downloadBuild(
     status?: string
     platform?: string
     artifacts?: { buildUrl?: string }
+    buildProfile?: string
+    distribution?: string
+    channel?: string
+    gitCommitHash?: string | null
+    isForIosSimulator?: boolean
+    project?: { id?: string; ownerAccount?: { name?: string } }
   }
   try {
     build = JSON.parse(rawOutput)
@@ -1685,10 +1700,15 @@ async function downloadBuild(
   if (
     build.id !== exactId ||
     build.status !== "FINISHED" ||
-    build.platform !== "ANDROID" ||
+    (iosSimulator
+      ? !isReviewedIosPreviewSimulatorArtifact(build, {
+          id: exactId,
+          commit: expectedSimulatorArtifactCommit ?? "",
+        })
+      : build.platform !== "ANDROID") ||
     !build.artifacts?.buildUrl?.startsWith("https://")
   ) {
-    console.error("Exact finished Android artifact is unavailable.")
+    console.error("Exact reviewed build artifact is unavailable.")
     return 1
   }
   try {
