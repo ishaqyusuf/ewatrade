@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import {
   ClassicCloseoutHeader,
   ClassicCloseoutRow,
+  signedVariance,
 } from "@/components/mobile/appearances/classic/closeout-screen"
 import {
   MarketDayCloseoutHeader,
@@ -11,6 +12,7 @@ import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-c
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
+import { SectionHeader } from "@/components/mobile/green-till/kit"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -70,6 +72,13 @@ export function CloseoutContent(props: CloseoutContentProps) {
                 updatedAt={model.balancesUpdatedAt}
                 completed={completed}
                 storeName={model.storeName}
+                differences={model.lines
+                  .filter((line) => line.variance && line.variance !== "0")
+                  .map(
+                    (line) =>
+                      `${line.balance.productName} ${signedVariance(line.variance ?? "0")} ${line.balance.inventoryUnitName}`,
+                  )
+                  .join(" · ")}
                 count={
                   model.loading ||
                   model.loadError ||
@@ -136,6 +145,23 @@ export function CloseoutContent(props: CloseoutContentProps) {
                   onUndo={model.undo}
                 />
               ) : null}
+              {!market && model.lines.length > 0 && !completed ? (
+                <View className="-mb-4">
+                  <SectionHeader
+                    title="What you counted"
+                    actionLabel={
+                      model.offline ? undefined : "Reset to expected"
+                    }
+                    onAction={() => {
+                      for (const line of model.lines)
+                        model.editValue(
+                          line.balance.balanceSourceId,
+                          String(line.balance.onHandQuantity),
+                        )
+                    }}
+                  />
+                </View>
+              ) : null}
             </View>
           }
           ListEmptyComponent={
@@ -173,6 +199,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
             <Row
               line={item}
               index={index}
+              last={index === model.lines.length - 1}
               disabled={model.locked}
               onChange={(value) =>
                 model.editValue(item.balance.balanceSourceId, value)
