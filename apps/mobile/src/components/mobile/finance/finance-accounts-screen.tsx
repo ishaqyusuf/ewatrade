@@ -1,6 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -10,6 +10,8 @@ import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
 import { FlatList, View } from "react-native"
+import { HeroCard } from "../green-till/hero-card"
+import { ListCard, RecordRow } from "../green-till/kit"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { FinanceMoneyForm } from "./finance-money-form"
 import {
@@ -39,17 +41,20 @@ export function FinanceAccountsScreen() {
   )
 }
 function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const trpc = useTRPC()
   const router = useRouter()
   const balances = useQuery(
-    trpc.finance.balances.queryOptions({ bookId: book.id }, { retry: false }),
+    trpc.finance.balances.queryOptions(
+      { bookId: book.id },
+      { retry: false, enabled: !offline },
+    ),
   )
   const command = useMobileFinanceCommand({
     bookId: book.id,
     actorUserId,
     tenantId,
   })
-  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const [creating, setCreating] = useState(false)
   const accounts = balances.data?.accounts.filter(isMoneyAccount) ?? []
   const active = accounts.filter((a) => !a.archivedAt)
@@ -74,11 +79,12 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
     )
   return (
     <FlatList
-      className="flex-1 px-4"
+      className="flex-1"
+      contentContainerClassName="gap-3 px-[18px] pb-12"
       data={balances.isError ? [] : accounts}
       keyExtractor={(item) => item.id}
       refreshing={balances.isRefetching}
-      onRefresh={() => void balances.refetch()}
+      onRefresh={offline ? undefined : () => void balances.refetch()}
       ListHeaderComponent={
         <View className="gap-5 pb-4">
           <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -98,27 +104,41 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
               onActionPress={() => void balances.refetch()}
             />
           ) : null}
-          {balances.data && !balances.isError ? (
-            <View className="gap-2 border-y border-border py-5">
-              <Text className="text-sm text-muted-foreground">
-                Total recorded balance
-              </Text>
-              <Text className="text-3xl font-bold">
-                {formatFinanceMoney(
-                  accounts
-                    .reduce(
-                      (sum, account) => sum + BigInt(account.balanceMinor),
-                      0n,
+          {balances.isPending && !offline ? (
+            <Skeleton className="h-48 rounded-[22px]" />
+          ) : (
+            <HeroCard
+              label="Total recorded balance"
+              amount={
+                balances.data
+                  ? formatFinanceMoney(
+                      accounts
+                        .reduce((sum, a) => sum + BigInt(a.balanceMinor), 0n)
+                        .toString(),
+                      book.currencyCode,
                     )
-                    .toString(),
-                  book.currencyCode,
-                )}
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                {book.currencyCode} · {accounts.length} accounts · Includes
-                archived balances
-              </Text>
-            </View>
+                  : "—"
+              }
+              sub={`${book.currencyCode} · ${accounts.length} loaded accounts · includes archived balances`}
+            />
+          )}
+          {offline ? (
+            <StatusBanner
+              title="Reconnect to record"
+              message={
+                balances.data
+                  ? `Saved balances · as of ${new Date(balances.dataUpdatedAt).toLocaleString()}`
+                  : "Reconnect to load money accounts."
+              }
+              tone="warning"
+            />
+          ) : null}
+          {balances.data && active.length === 0 ? (
+            <StatusBanner
+              title="No active money accounts"
+              message="Create or reactivate a money account in Finance on the dashboard before recording a movement."
+              tone="muted"
+            />
           ) : null}
           <ActionButton
             disabled={
@@ -163,29 +183,24 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
         </Text>
       }
       renderItem={({ item }) => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${item.name} statement`}
-          haptic
-          className="flex-row flex-wrap items-center justify-between gap-3 border-b border-border py-5"
-          onPress={() =>
-            router.push({
-              pathname: "/finance-account/[accountId]",
-              params: { accountId: item.id },
-            } as Href)
-          }
-        >
-          <View className="min-w-0 flex-1">
-            <Text className="text-base font-bold">{item.name}</Text>
-            <Text className="text-sm text-muted-foreground">
-              {item.purpose.toLowerCase()}
-              {item.archivedAt ? " · Archived" : ""}
-            </Text>
-          </View>
-          <Text className="text-base font-semibold">
-            {formatFinanceMoney(item.balanceMinor, book.currencyCode)} ›
-          </Text>
-        </Pressable>
+        <ListCard>
+          <RecordRow
+            stackDetails
+            title={item.name}
+            meta={`${item.purpose.toLowerCase()}${item.archivedAt ? " · Archived" : ""}`}
+            amount={formatFinanceMoney(item.balanceMinor, book.currencyCode)}
+            avatar={{
+              icon: item.purpose === "CASH" ? "Wallet" : "Building2",
+              tint: item.purpose === "CASH" ? "mint" : "sky",
+            }}
+            onPress={() =>
+              router.push({
+                pathname: "/finance-account/[accountId]",
+                params: { accountId: item.id },
+              } as Href)
+            }
+          />
+        </ListCard>
       )}
     />
   )

@@ -4,6 +4,7 @@ import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { createExpenseFixture } from "@/internal-tooling/fixture-recipes"
 import { financeUtcDate } from "@/lib/finance-expense-input"
@@ -19,7 +20,17 @@ import { type Href, useRouter } from "expo-router"
 import { useRef, useState } from "react"
 import { FlatList, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { HeroCard } from "../green-till/hero-card"
+import {
+  ListCard,
+  NudgeCard,
+  QuickActionRow,
+  RecordRow,
+  StatusPill,
+} from "../green-till/kit"
+import { FinanceBankDateField } from "./finance-bank-date-field"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { FinanceChoice } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -85,6 +96,7 @@ function SpendingWorkspace({
     trpc.finance.bills.infiniteQueryOptions(
       { bookId: book.id, limit: 30, status },
       {
+        enabled: !offline,
         getNextPageParam: (page) => page.nextCursor ?? undefined,
         retry: false,
       },
@@ -161,68 +173,93 @@ function SpendingWorkspace({
   const canSubmit = command.ready && !command.pending && !offline
   const header = (
     <View className="gap-5 pb-5">
-      <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        Business money
-      </Text>
-      <Text className="text-sm text-muted-foreground">
-        What you spent, paid and still owe. Recorded finance entries only.
-      </Text>
       {!creating ? (
-        <ActionButton
-          variant="outline"
-          onPress={() => router.push("/finance-accounts-modal" as Href)}
-        >
-          Money accounts and statements
-        </ActionButton>
-      ) : null}
-      {!creating ? (
-        <ActionButton
-          variant="outline"
-          onPress={() => router.push("/customer-ledger-modal" as Href)}
-        >
-          Customer accounts
-        </ActionButton>
-      ) : null}
-      {!creating ? (
-        <ActionButton variant="outline" onPress={onSuppliersPress}>
-          Supplier accounts
-        </ActionButton>
-      ) : null}
-      {!creating ? (
-        <ActionButton
-          variant="outline"
-          onPress={() => router.push("/finance-reports-modal" as Href)}
-        >
-          Financial reports
-        </ActionButton>
-      ) : null}
-      {!creating ? (
-        <ActionButton
-          variant="outline"
-          onPress={() => router.push("/finance-periods-modal" as Href)}
-        >
-          Posting periods and audit history
-        </ActionButton>
+        <>
+          {bills.isPending && !offline ? (
+            <Skeleton className="h-52 rounded-[22px]" />
+          ) : (
+            <HeroCard
+              label={
+                status
+                  ? `${status === "PARTIAL" ? "Part paid" : status.toLowerCase()} expenses · still owed`
+                  : "Still owed · current expenses"
+              }
+              amount={summary ? money(summary.outstandingMinor) : "—"}
+              sub={
+                summary
+                  ? "Recorded finance entries only"
+                  : "Spending summary unavailable"
+              }
+              stats={[
+                {
+                  label: "Incurred",
+                  value: summary ? money(summary.incurredMinor) : "—",
+                },
+                {
+                  label: "Paid",
+                  value: summary ? money(summary.paidAgainstBillsMinor) : "—",
+                },
+              ]}
+            >
+              <ActionButton
+                tone="cream"
+                icon="Plus"
+                disabled={!canSubmit}
+                onPress={() => {
+                  setCreating(true)
+                  setFormError(null)
+                }}
+              >
+                Record expense
+              </ActionButton>
+            </HeroCard>
+          )}
+          {offline ? (
+            <StatusBanner
+              tone="warning"
+              title="Reconnect to record"
+              message={
+                bills.data
+                  ? `Saved spending · as of ${new Date(bills.dataUpdatedAt).toLocaleString()}. Finance entries are never queued.`
+                  : "Reconnect to load financial records. Finance entries are never queued."
+              }
+            />
+          ) : null}
+          <QuickActionRow
+            actions={[
+              {
+                label: "Money accounts",
+                icon: "Wallet",
+                onPress: () => router.push("/finance-accounts-modal" as Href),
+              },
+              {
+                label: "Customers",
+                icon: "Users",
+                onPress: () => router.push("/customer-ledger-modal" as Href),
+              },
+              { label: "Suppliers", icon: "Truck", onPress: onSuppliersPress },
+              {
+                label: "Reports",
+                icon: "BarChart3",
+                onPress: () => router.push("/finance-reports-modal" as Href),
+              },
+            ]}
+          />
+          <NudgeCard
+            icon="Calendar"
+            tint="lilac"
+            title="Posting periods"
+            sub="Date locks and audit history"
+            actionLabel="Open"
+            onAction={() => router.push("/finance-periods-modal" as Href)}
+          />
+        </>
       ) : null}
       <FinanceCommandFeedback
         command={command}
         onRecorded={clearRecordedDraft}
         onRejected={() => setReview(null)}
       />
-      {summary ? (
-        <View className="flex-row gap-3 border-y border-border py-4">
-          {[
-            { label: "Incurred", value: summary.incurredMinor },
-            { label: "Paid", value: summary.paidAgainstBillsMinor },
-            { label: "Still owed", value: summary.outstandingMinor },
-          ].map(({ label, value }) => (
-            <View key={label} className="min-w-0 flex-1 gap-1">
-              <Text className="text-xs text-muted-foreground">{label}</Text>
-              <Text className="text-base font-bold">{money(value)}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
       {creating ? (
         review ? (
           <View className="gap-4">
@@ -301,12 +338,13 @@ function SpendingWorkspace({
               value={amount}
               onChangeValue={setAmount}
             />
-            <FormField
-              label="Expense date (UTC)"
-              helper="YYYY-MM-DD"
+            <FinanceBankDateField
+              label="Expense date"
               value={date}
-              onChangeText={setDate}
-              maxLength={10}
+              onChange={setDate}
+              minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
+              maximum={new Date().toISOString().slice(0, 10)}
+              disabled={command.pending || offline}
             />
             <Text className="text-sm font-bold">Expense category</Text>
             {balances.isError ? (
@@ -318,25 +356,13 @@ function SpendingWorkspace({
               />
             ) : null}
             {categories.map((a) => (
-              <Pressable
+              <FinanceChoice
                 key={a.id}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: categoryId === a.id }}
-                accessibilityLabel={a.name}
-                className="min-h-12 justify-center border-b border-border py-3"
+                label={a.name}
+                selected={categoryId === a.id}
                 onPress={() => setCategory(a.id)}
-              >
-                <Text
-                  className={
-                    categoryId === a.id
-                      ? "font-bold text-primary"
-                      : "text-foreground"
-                  }
-                >
-                  {categoryId === a.id ? "✓ " : ""}
-                  {a.name}
-                </Text>
-              </Pressable>
+                disabled={command.pending || offline}
+              />
             ))}
             {formError ? (
               <StatusBanner message={formError} tone="destructive" />
@@ -356,17 +382,7 @@ function SpendingWorkspace({
             </ActionButton>
           </View>
         )
-      ) : (
-        <ActionButton
-          disabled={!canSubmit}
-          onPress={() => {
-            setCreating(true)
-            setFormError(null)
-          }}
-        >
-          Record expense
-        </ActionButton>
-      )}
+      ) : null}
       {!creating ? (
         <>
           <View className="flex-row flex-wrap gap-2">
@@ -381,13 +397,17 @@ function SpendingWorkspace({
                 key={label}
                 accessibilityRole="button"
                 accessibilityState={{ selected: status === value }}
-                className="min-h-11 justify-center px-2"
+                className={
+                  status === value
+                    ? "min-h-11 rounded-full bg-primary justify-center px-4"
+                    : "min-h-11 rounded-full bg-card justify-center px-4"
+                }
                 onPress={() => setStatus(value)}
               >
                 <Text
                   className={
                     status === value
-                      ? "font-bold text-primary"
+                      ? "font-bold text-primary-foreground"
                       : "text-muted-foreground"
                   }
                 >
@@ -427,20 +447,20 @@ function SpendingWorkspace({
         keyboardShouldPersistTaps="handled"
         disableScrollOnKeyboardHide
       >
-        <View className="px-4 pb-12">{header}</View>
+        <View className="px-[18px] pb-12">{header}</View>
       </KeyboardAwareScrollView>
     )
   return (
     <FlatList
-      contentContainerClassName="px-4 pb-12"
+      contentContainerClassName="gap-3 px-[18px] pb-12"
       keyboardShouldPersistTaps="handled"
       data={bills.data?.pages.flatMap((p) => p.items) ?? []}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={header}
       refreshing={bills.isRefetching}
-      onRefresh={() => void bills.refetch()}
+      onRefresh={offline ? undefined : () => void bills.refetch()}
       onEndReached={() => {
-        if (bills.hasNextPage && !bills.isFetchingNextPage)
+        if (!offline && bills.hasNextPage && !bills.isFetchingNextPage)
           void bills.fetchNextPage()
       }}
       onEndReachedThreshold={0.4}
@@ -448,38 +468,50 @@ function SpendingWorkspace({
         !bills.isError ? (
           <Text className="py-6 text-muted-foreground">
             {bills.isPending
-              ? "Loading spending…"
+              ? offline
+                ? "Reconnect to load spending."
+                : "Loading spending…"
               : "No spending recorded. Record your first expense above."}
           </Text>
         ) : null
       }
       renderItem={({ item }) => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open expense: ${item.description}`}
-          className="min-h-12 flex-row justify-between gap-4 border-b border-border py-4"
-          disabled={command.pending}
-          onPress={() =>
-            router.push({
-              pathname: "/finance-expense/[billId]",
-              params: { billId: item.id },
-            } as Href)
-          }
-        >
-          <View className="min-w-0 flex-1 gap-1">
-            <Text className="font-bold">{item.description}</Text>
-            <Text className="text-xs text-muted-foreground">
-              {item.payeeName} · {item.status === "VOID" ? "Cancelled · " : ""}{" "}
-              {new Date(item.incurredAt).toISOString().slice(0, 10)}
-            </Text>
-          </View>
-          <View className="gap-1">
-            <Text className="font-bold">{money(item.totalMinor)}</Text>
-            <Text className="text-xs text-primary">
-              Owed {money(item.outstandingMinor)}
-            </Text>
-          </View>
-        </Pressable>
+        <ListCard>
+          <RecordRow
+            stackDetails
+            title={item.description}
+            meta={`${item.payeeName} · ${new Date(item.incurredAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`}
+            amount={money(item.totalMinor)}
+            avatar={{ icon: "Receipt", tint: "rose" }}
+            status={
+              <StatusPill
+                label={
+                  item.status === "VOID"
+                    ? "Cancelled"
+                    : item.status === "PAID"
+                      ? "Paid"
+                      : `Owed ${money(item.outstandingMinor)}`
+                }
+                tone={
+                  item.status === "VOID"
+                    ? "muted"
+                    : item.status === "PAID"
+                      ? "ok"
+                      : "warn"
+                }
+              />
+            }
+            onPress={
+              command.pending
+                ? undefined
+                : () =>
+                    router.push({
+                      pathname: "/finance-expense/[billId]",
+                      params: { billId: item.id },
+                    } as Href)
+            }
+          />
+        </ListCard>
       )}
       ListFooterComponent={
         bills.isFetchingNextPage ? (

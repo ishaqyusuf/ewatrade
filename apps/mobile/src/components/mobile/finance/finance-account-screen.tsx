@@ -1,5 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -10,6 +9,8 @@ import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import { FlatList, View } from "react-native"
+import { HeroCard } from "../green-till/hero-card"
+import { FinanceBankDateField } from "./finance-bank-date-field"
 import { FinanceFormBody } from "./finance-form-body"
 import {
   type FinanceWorkspace,
@@ -126,17 +127,19 @@ function StatementWindow({
           Use UTC dates on or after bookkeeping began. Changing dates starts a
           new statement snapshot.
         </Text>
-        <FormField
-          label="From (YYYY-MM-DD, UTC)"
+        <FinanceBankDateField
+          label="From"
           value={from}
-          onChangeText={setFrom}
-          maxLength={10}
+          onChange={setFrom}
+          minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
+          maximum={new Date().toISOString().slice(0, 10)}
         />
-        <FormField
-          label="Through (YYYY-MM-DD, UTC)"
+        <FinanceBankDateField
+          label="Through"
           value={through}
-          onChangeText={setThrough}
-          maxLength={10}
+          onChange={setThrough}
+          minimum={new Date(book.startsAt).toISOString().slice(0, 10)}
+          maximum={new Date().toISOString().slice(0, 10)}
         />
         {error ? <StatusBanner message={error} tone="destructive" /> : null}
         <ActionButton onPress={apply}>Apply dates</ActionButton>
@@ -147,7 +150,7 @@ function StatementWindow({
     )
   return (
     <FlatList
-      className="flex-1 px-4"
+      className="flex-1 px-[18px]"
       data={data?.items ?? []}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={
@@ -186,23 +189,15 @@ function StatementWindow({
           ) : null}
           {data ? (
             <>
-              <View className="flex-row flex-wrap gap-5 border-y border-border py-4">
-                {[
-                  ["Opening", data.openingBalanceMinor],
-                  ["Money in", data.debitMinor],
-                  ["Money out", data.creditMinor],
-                  ["Closing", data.closingBalanceMinor],
-                ].map(([label, amount]) => (
-                  <View key={label} className="min-w-[40%] flex-1 gap-1">
-                    <Text className="text-xs text-muted-foreground">
-                      {label}
-                    </Text>
-                    <Text className="text-base font-bold">
-                      {money(amount ?? "0")}
-                    </Text>
-                  </View>
-                ))}
-              </View>
+              <HeroCard
+                label="Closing balance · selected dates"
+                amount={money(data.closingBalanceMinor)}
+                sub={`Opening ${money(data.openingBalanceMinor)}`}
+                stats={[
+                  { label: "Money in", value: money(data.debitMinor) },
+                  { label: "Money out", value: money(data.creditMinor) },
+                ]}
+              />
               <Text className="text-xs text-muted-foreground">
                 Snapshot {data.snapshotSequence} · Page opens at{" "}
                 {money(data.pageOpeningBalanceMinor)}
