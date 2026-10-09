@@ -7,10 +7,9 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
-import { Textarea } from "@/components/ui/textarea"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useColorScheme } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { normalizeMobileRole } from "@/lib/mobile-roles"
@@ -28,6 +27,7 @@ import {
   Text as NativeText,
   View as NativeView,
   StyleSheet,
+  TextInput,
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -131,6 +131,7 @@ function ReceiptSettingsEditor({
   setScope: (value: "business" | "store") => void
 }) {
   const trpc = useTRPC()
+  const colors = useColors()
   const largeText = useLargeTextLayout()
   const insets = useSafeAreaInsets()
   const lockedRef = useRef(false)
@@ -300,16 +301,24 @@ function ReceiptSettingsEditor({
               {displayed.thankYouNote.length}/300
             </Text>
           </View>
-          <Textarea
+          <TextInput
             accessibilityLabel="Thank-you note"
             accessibilityLabelledBy="receipt-thank-you-label"
-            className="mt-1 min-h-[44px] rounded-none border-0 bg-transparent px-0 py-0 text-[14.5px] opacity-100 dark:bg-transparent"
             editable={!locked}
             maxLength={300}
-            numberOfLines={6}
+            multiline
             value={displayed.thankYouNote}
             onChangeText={(value) => change({ thankYouNote: value })}
             placeholder="Thank you for shopping with us."
+            placeholderTextColor={colors.mutedForeground}
+            style={{
+              color: colors.foreground,
+              fontSize: 14.5,
+              marginTop: 4,
+              minHeight: 22,
+              padding: 0,
+              textAlignVertical: "top",
+            }}
           />
         </View>
         <View className="mx-1 flex-row items-start gap-1.5">
