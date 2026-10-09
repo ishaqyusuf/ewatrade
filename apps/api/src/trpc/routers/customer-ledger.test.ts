@@ -16,6 +16,7 @@ test("ledger router loads implemented repository procedures", () => {
     "commandStatus",
     "ensureAccount",
     "entryDetail",
+    "receivables",
     "recordOpening",
     "recordReceipt",
     "refundUnusedCredit",

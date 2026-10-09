@@ -192,6 +192,8 @@ export const customerLedgerReceivablesSchema = z
   .object({
     query: z.string().trim().max(160).optional(),
     cursor: id.optional(),
+    // useInfiniteQuery adds the paging direction to the input.
+    direction: z.enum(["forward", "backward"]).optional(),
     limit: z.number().int().min(1).max(10).default(10),
   })
   .strict()
