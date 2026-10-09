@@ -35,7 +35,11 @@ import {
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import { useTRPC } from "@/trpc/client"
 import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import {
@@ -47,7 +51,8 @@ import {
 } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ledgerDayHeaders } from "./orders-ledger-model"
+import { SALE_STATUSES } from "../dashboard/green-till-home-model"
+import { ledgerDayHeaders, ledgerDayPositions } from "./orders-ledger-model"
 
 import {
   ClassicFirstOrderGate,
@@ -157,6 +162,48 @@ export function OrdersScreen() {
     [dateFilter],
   )
   const statuses = useMemo(() => statusesForOrderFilter(filter), [filter])
+  // Classic hero and status counts come from the server for the period, not
+  // from the orders loaded so far. "All time" uses the bounded window path.
+  const reportWindow = useMemo(
+    () => ({
+      createdAfter: createdAfter ?? new Date(0),
+      mine: rep && salesView === "mine",
+    }),
+    [createdAfter, rep, salesView],
+  )
+  const reportEnabled = !isMarketDay && !isOffline
+  const salesReport = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...reportWindow, statuses: [...SALE_STATUSES] },
+      { enabled: reportEnabled, retry: false },
+    ),
+  )
+  const countAll = useQuery(
+    trpc.orders.reportSummary.queryOptions(reportWindow, {
+      enabled: reportEnabled,
+      retry: false,
+    }),
+  )
+  const countOpen = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...reportWindow, statuses: [...OPEN_STATUSES] },
+      { enabled: reportEnabled, retry: false },
+    ),
+  )
+  const countDone = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...reportWindow, statuses: ["COMPLETED"] },
+      { enabled: reportEnabled, retry: false },
+    ),
+  )
+  const countCancelled = useQuery(
+    trpc.orders.reportSummary.queryOptions(
+      { ...reportWindow, statuses: ["CANCELLED", "REFUNDED"] },
+      { enabled: reportEnabled, retry: false },
+    ),
+  )
+  const statusCount = (value?: { orderCount: number }) =>
+    value ? ` ${value.orderCount}` : ""
   const searchedOrders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
@@ -206,6 +253,11 @@ export function OrdersScreen() {
     () => ledgerDayHeaders(visibleOrders),
     [visibleOrders],
   )
+  const dayPositions = useMemo(
+    () => ledgerDayPositions(visibleOrders),
+    [visibleOrders],
+  )
+  const lastDayId = [...dayHeaders.keys()].at(-1)
   useEffect(() => {
     const eligible = new Set(
       loadedOrders
@@ -370,6 +422,23 @@ export function OrdersScreen() {
                 <Summary dateFilter={dateFilter} orders={visibleOrders} />
               ) : (
                 <ClassicOrdersSummary
+                  report={
+                    salesReport.data
+                      ? {
+                          currencyCode: salesReport.data.currencyCode,
+                          orderCount: salesReport.data.orderCount,
+                          orderValueMinor: salesReport.data.orderValueMinor,
+                          outstandingMinor:
+                            "outstandingMinor" in salesReport.data
+                              ? salesReport.data.outstandingMinor
+                              : undefined,
+                          partial:
+                            "partial" in salesReport.data
+                              ? salesReport.data.partial
+                              : undefined,
+                        }
+                      : null
+                  }
                   dateFilter={dateFilter}
                   orders={visibleOrders}
                   totalCount={isOffline ? visibleOrders.length : totalCount}
@@ -441,26 +510,37 @@ export function OrdersScreen() {
                   ) : null}
                   <FilterRow
                     active={filter}
-                    labels={{
-                      all:
-                        filter === "all" && !isOffline && orders.data
-                          ? `All ${totalCount}`
-                          : "All",
-                      cancelled: "Cancelled",
-                      completed: "Done",
-                      open: "Open",
-                    }}
+                    labels={
+                      isMarketDay
+                        ? {
+                            all:
+                              filter === "all" && !isOffline && orders.data
+                                ? `All ${totalCount}`
+                                : "All",
+                            cancelled: "Cancelled",
+                            completed: "Done",
+                            open: "Open",
+                          }
+                        : {
+                            all: `All${statusCount(countAll.data)}`,
+                            cancelled: `Cancelled${statusCount(countCancelled.data)}`,
+                            completed: `Done${statusCount(countDone.data)}`,
+                            open: `Open${statusCount(countOpen.data)}`,
+                          }
+                    }
                     onChange={setFilter}
                     values={["all", "open", "completed", "cancelled"]}
                   />
                   {showSearch && (!isMarketDay || !isOffline) ? (
                     <FormField
+                      accessibilityLabel="Search orders"
                       autoCapitalize="none"
-                      label="Search"
+                      label="Search orders"
                       leadingIcon="Search"
                       onChangeText={setQuery}
-                      placeholder="Search order, customer, or item"
+                      placeholder="Search order, customer or item"
                       value={query}
+                      variant={isMarketDay ? "filled" : "till-search"}
                     />
                   ) : null}
                 </>
@@ -506,12 +586,12 @@ export function OrdersScreen() {
         renderItem={({ index, item }) => (
           <Section>
             {!isMarketDay && dayHeaders.has(item.id) ? (
-              <View className="mt-3 mb-2 flex-row flex-wrap items-center justify-between gap-2">
-                <Text className="text-xs font-bold text-muted-foreground">
+              <View className="mt-3 -mb-1.5 flex-row flex-wrap items-baseline justify-between gap-2">
+                <Text className="text-[15px] font-extrabold text-foreground">
                   {dayHeaders.get(item.id)?.label}
                 </Text>
-                <Text className="text-xs text-muted-foreground">
-                  Loaded · {dayHeaders.get(item.id)?.total}
+                <Text className="text-xs font-bold tabular-nums text-muted-foreground">
+                  {`${item.id === lastDayId && orders.hasNextPage ? "Loaded · " : ""}${dayHeaders.get(item.id)?.total} · ${dayHeaders.get(item.id)?.count}`}
                 </Text>
               </View>
             ) : null}
@@ -548,6 +628,7 @@ export function OrdersScreen() {
             ) : null}
             <Row
               index={index}
+              position={dayPositions.get(item.id)}
               selecting={selectingReceipts}
               selected={receiptIds.includes(item.id)}
               disabled={

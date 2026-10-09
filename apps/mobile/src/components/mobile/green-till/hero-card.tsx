@@ -9,7 +9,12 @@ import { type ReactNode, useId, useState } from "react"
 import { Text as NativeText, StyleSheet, View } from "react-native"
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
 
-export type HeroStat = { label: string; value: string }
+export type HeroStat = {
+  label: string
+  value: string
+  /** Gold value, for money still to collect. */
+  accent?: boolean
+}
 export type HeroPill = {
   label: string
   tone?: "synced" | "offline" | "busy" | "draft"
@@ -225,7 +230,10 @@ export function HeroCard({
               </NativeText>
               <NativeText
                 numberOfLines={largeText ? undefined : 1}
-                style={[styles.statValue, { color: fg }]}
+                style={[
+                  styles.statValue,
+                  { color: stat.accent ? palette.gold : fg },
+                ]}
               >
                 {stat.value}
               </NativeText>

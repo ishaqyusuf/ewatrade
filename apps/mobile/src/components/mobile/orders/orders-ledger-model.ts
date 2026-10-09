@@ -29,6 +29,66 @@ export function ledgerMoney(
     first.currencyCode,
   ).replace(/\.00$/, "")
 }
+/** "Today", "Yesterday", else "8 Oct 2026". */
+export function ledgerDayLabel(date: Date | string, now = new Date()) {
+  const day = new Date(date)
+  day.setHours(0, 0, 0, 0)
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+  const days = Math.round((today.getTime() - day.getTime()) / 86_400_000)
+  if (days === 0) return "Today"
+  if (days === 1) return "Yesterday"
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(day)
+}
+
+/** Where each order sits in its day's card, so rows can round the ends. */
+export function ledgerDayPositions(orders: readonly LedgerOrder[]) {
+  const positions = new Map<string, { first: boolean; last: boolean }>()
+  orders.forEach((order, index) => {
+    const key = new Date(order.createdAt).toDateString()
+    const previous = orders[index - 1]
+    const next = orders[index + 1]
+    positions.set(order.id, {
+      first: !previous || new Date(previous.createdAt).toDateString() !== key,
+      last: !next || new Date(next.createdAt).toDateString() !== key,
+    })
+  })
+  return positions
+}
+
+/** "10 × Broilers", or "10 × Broilers +2 more". */
+export function ledgerItemsLabel(order: {
+  lines: readonly {
+    quantity: string | number
+    snapshot?: { catalogItemName?: string | null } | null
+  }[]
+}) {
+  const [first, ...rest] = order.lines
+  if (!first) return "No items"
+  const quantity = Number(first.quantity)
+  const name = first.snapshot?.catalogItemName ?? "Item"
+  return `${Number.isFinite(quantity) ? quantity : first.quantity} × ${name}${rest.length ? ` +${rest.length} more` : ""}`
+}
+
+/** The fulfilment line shown under a row while work is still open. */
+export function ledgerFulfillmentLine(status: string) {
+  const lines: Record<
+    string,
+    { label: string; icon: "Package" | "Store" | "Truck" | "Clock" }
+  > = {
+    PENDING: { label: "Awaiting confirmation", icon: "Clock" },
+    CONFIRMED: { label: "Confirmed · not fulfilled", icon: "Package" },
+    FULFILLING: { label: "In fulfilment", icon: "Package" },
+    READY_FOR_PICKUP: { label: "Ready for pickup", icon: "Store" },
+    OUT_FOR_DELIVERY: { label: "Out for delivery", icon: "Truck" },
+  }
+  return lines[status] ?? null
+}
+
 export function ledgerDayHeaders(orders: readonly LedgerOrder[]) {
   const days = new Map<string, LedgerOrder[]>()
   for (const order of orders) {
@@ -37,17 +97,17 @@ export function ledgerDayHeaders(orders: readonly LedgerOrder[]) {
     group.push(order)
     days.set(key, group)
   }
-  const headers = new Map<string, { label: string; total: string }>()
+  const headers = new Map<
+    string,
+    { label: string; total: string; count: number }
+  >()
   for (const group of days.values()) {
     const first = group[0]
     if (!first) continue
     headers.set(first.id, {
-      label: new Intl.DateTimeFormat(undefined, {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(new Date(first.createdAt)),
+      label: ledgerDayLabel(first.createdAt),
       total: ledgerMoney(group),
+      count: group.length,
     })
   }
   return headers
@@ -62,7 +122,7 @@ export function ledgerPayment(status: string) {
     return { label: "Payment failed", tone: "danger" as const }
   if (status === "AUTHORIZED")
     return { label: "Authorized", tone: "info" as const }
-  return { label: "Unpaid", tone: "warn" as const }
+  return { label: "Unpaid", tone: "danger" as const }
 }
 export function ledgerFulfillment(status: string) {
   const labels: Record<string, string> = {
