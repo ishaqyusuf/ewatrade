@@ -10,6 +10,7 @@ import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
 import { addExactDecimals, compareExactDecimals } from "@ewatrade/utils"
+import { useEffect } from "react"
 import { Text as NativeText, TextInput, View } from "react-native"
 
 const UNIT_SUGGESTIONS = ["Carton", "Pack", "Tray", "Half bag", "Dozen"]
@@ -27,6 +28,7 @@ function stepCount(value: string, direction: 1 | -1) {
 export function ClassicSellingUnitFields({
   referenceUnits,
   currencyCode,
+  isEditingUnit,
   multiplePriceOptions,
   onChangeDirection,
   onChangeDraft,
@@ -36,6 +38,17 @@ export function ClassicSellingUnitFields({
 }: SellingUnitEditorFieldsProps) {
   const largeTextLayout = useLargeTextLayout()
   const colors = useColors()
+  // A new unit starts as a bigger pack (1 Carton = 12 Crates), the common case.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only for a fresh draft
+  useEffect(() => {
+    if (
+      !isEditingUnit &&
+      !unitEditorDraft.name.trim() &&
+      !unitEditorDraft.relationCount.trim() &&
+      unitEditorDraft.relationDirection === "units_per_canonical"
+    )
+      onChangeDirection("canonical_per_unit")
+  }, [])
   const referenceName =
     referenceUnits?.find((unit) => unit.id === unitEditorDraft.referenceUnitId)
       ?.name ??

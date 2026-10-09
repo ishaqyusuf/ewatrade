@@ -559,7 +559,9 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                         ? market
                           ? "Done with image"
                           : "Done"
-                        : "Done with selling units"}
+                        : market
+                          ? "Done with selling units"
+                          : "Done"}
                     </ActionButton>
                   </BottomSearchFooter>
                 ) : undefined,
