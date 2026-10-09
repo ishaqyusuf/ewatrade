@@ -7,85 +7,47 @@ import {
   setCatalogOfferingStoreAvailability,
 } from "./catalog"
 
-const publication = {
-  documentHash: "a".repeat(64),
-  effectiveDate: "2026-09-28",
-  version: "approved-catalog-test",
-}
-
-function publicationTransaction(acceptedHash: string | null) {
-  const reads: unknown[] = []
-  const tx = {
-    legalAcceptance: {
-      findUnique: async (query: unknown) => {
-        reads.push(query)
-        return acceptedHash ? { documentHash: acceptedHash } : null
-      },
-    },
-  }
-  return { reads, tx }
-}
-
 describe("Catalog publication safety", () => {
-  test("requires an approved effective Terms publication before reading acceptance", async () => {
-    const { reads, tx } = publicationTransaction(publication.documentHash)
+  test("does not reread or record Terms acceptance during Catalog publication", async () => {
+    const tx = {
+      legalAcceptance: {
+        findUnique: async () => {
+          throw new Error("Registration owns acceptance")
+        },
+        create: async () => {
+          throw new Error("Catalog must not record agreement")
+        },
+        upsert: async () => {
+          throw new Error("Catalog must not record agreement")
+        },
+      },
+    }
     await expect(
       assertCatalogPublicationSafety(tx as never, {
         actorUserId: "merchant-1",
         mediaUrls: [],
-        publication: null,
-        texts: ["Bread"],
+        texts: ["Bread", "Fresh daily"],
       }),
-    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
-    expect(reads).toHaveLength(0)
-  })
-
-  test("missing and stale acceptance block publication, then exact acceptance permits a retry", async () => {
-    let acceptedHash: string | null = null
-    const tx = {
-      legalAcceptance: {
-        findUnique: async () =>
-          acceptedHash ? { documentHash: acceptedHash } : null,
-      },
-    }
-    const input = {
-      actorUserId: "merchant-1",
-      mediaUrls: [],
-      publication,
-      texts: ["Bread", "Fresh daily"],
-    }
-    await expect(
-      assertCatalogPublicationSafety(tx as never, input),
-    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
-    acceptedHash = "b".repeat(64)
-    await expect(
-      assertCatalogPublicationSafety(tx as never, input),
-    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
-    acceptedHash = publication.documentHash
-    await expect(
-      assertCatalogPublicationSafety(tx as never, input),
     ).resolves.toBeUndefined()
   })
 
-  test("rejects unsafe Catalog text even after exact Terms acceptance", async () => {
-    const { tx } = publicationTransaction(publication.documentHash)
+  test("rejects unsafe Catalog text without a repeated Terms gate", async () => {
+    const tx = {}
     await expect(
       assertCatalogPublicationSafety(tx as never, {
         actorUserId: "merchant-1",
         mediaUrls: [],
-        publication,
         texts: ["Bread", "[[qa-reject]]"],
       }),
     ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
   })
 
   test("rejects image URLs while approved live media screening is absent", async () => {
-    const { tx } = publicationTransaction(publication.documentHash)
+    const tx = {}
     await expect(
       assertCatalogPublicationSafety(tx as never, {
         actorUserId: "merchant-1",
         mediaUrls: ["https://example.test/product.jpg"],
-        publication,
         texts: ["Bread"],
       }),
     ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
@@ -121,9 +83,6 @@ describe("Catalog publication safety", () => {
           ],
         }),
       },
-      legalAcceptance: {
-        findUnique: async () => ({ documentHash: publication.documentHash }),
-      },
       sellableOffering: {
         findFirst: async () => ({
           catalogItemId: "item-1",
@@ -134,7 +93,6 @@ describe("Catalog publication safety", () => {
     const input = {
       actorUserId: "merchant-1",
       offeringId: "offering-1",
-      publication,
       tenantId: "tenant-1",
     }
     await expect(
@@ -151,7 +109,7 @@ describe("Catalog publication safety", () => {
     ).resolves.toBeUndefined()
   })
 
-  test("createCatalogItem refuses missing Terms before any Catalog write", async () => {
+  test("createCatalogItem refuses unsafe text before any Catalog write", async () => {
     const writes: string[] = []
     const tx = {
       catalogCommandReceipt: { findUnique: async () => null },
@@ -165,7 +123,7 @@ describe("Catalog publication safety", () => {
       store: {
         findFirst: async () => {
           writes.push("store.findFirst")
-          throw new Error("Store lookup must follow Terms")
+          throw new Error("Store lookup must follow screening")
         },
       },
     }
@@ -177,7 +135,7 @@ describe("Catalog publication safety", () => {
         actorUserId: "merchant-1",
         clientOperationId: "create-catalog-1",
         kind: "service",
-        name: "Laundry",
+        name: "[[qa-reject]]",
         storeId: "store-1",
         tenantId: "tenant-1",
         variants: [
@@ -196,7 +154,7 @@ describe("Catalog publication safety", () => {
           },
         ],
       }),
-    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
+    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
     expect(writes).toEqual([])
   })
 
@@ -229,9 +187,6 @@ describe("Catalog publication safety", () => {
           ],
         }),
       },
-      legalAcceptance: {
-        findUnique: async () => ({ documentHash: publication.documentHash }),
-      },
       sellableOffering: {
         findFirst: async () => ({
           catalogItemId: "item-1",
@@ -261,7 +216,7 @@ describe("Catalog publication safety", () => {
         ...input,
         isAvailable: true,
       }),
-    ).rejects.toMatchObject({ code: "CATALOG_TERMS_REQUIRED" })
+    ).rejects.toMatchObject({ code: "INVALID_CATALOG_ITEM" })
     expect(writes).toEqual([])
     await expect(
       setCatalogOfferingStoreAvailability(db as never, {

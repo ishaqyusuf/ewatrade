@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { setupPrerequisiteNeeds } from "./setup-prerequisites"
+import {
+  readSetupPrerequisites,
+  setupPrerequisiteNeeds,
+} from "./setup-prerequisites"
 
 const product = (state: string) => ({
   kind: "PRODUCT" as const,
@@ -32,13 +35,67 @@ const money = (state: string, errorCode: string | null = null) => ({
 })
 
 describe("setup prerequisite needs", () => {
-  test("Terms only matter while catalog records remain to be added", () => {
-    expect(setupPrerequisiteNeeds([product("CONFIRMED")]).catalog).toBe(true)
-    expect(setupPrerequisiteNeeds([product("FAILED")]).catalog).toBe(true)
-    expect(setupPrerequisiteNeeds([product("COMMITTED")]).catalog).toBe(false)
-    expect(setupPrerequisiteNeeds([product("SKIPPED")]).catalog).toBe(false)
-    expect(setupPrerequisiteNeeds([customer("CONFIRMED", true)]).catalog).toBe(
-      false,
+  test("product drafts need no repeated legal acceptance or Finance setup", async () => {
+    const db = {
+      legalAcceptance: {
+        findUnique: async () => {
+          throw new Error("Registration owns acceptance")
+        },
+      },
+      financeBook: {
+        findUnique: async () => {
+          throw new Error("Products do not need Finance")
+        },
+      },
+    }
+    for (const state of ["CONFIRMED", "FAILED", "COMMITTED", "SKIPPED"]) {
+      expect(
+        await readSetupPrerequisites(
+          db as never,
+          {
+            userId: "merchant-1",
+            tenantId: "tenant-1",
+            currencyCode: "NGN",
+          },
+          [product(state)],
+        ),
+      ).toEqual({ termsRequired: false, financeBookMissing: false })
+    }
+  })
+
+  test("Finance availability still uses the business and operating currency", async () => {
+    let book: { id: string } | null = null
+    const reads: unknown[] = []
+    const db = {
+      financeBook: {
+        findUnique: async (query: unknown) => {
+          reads.push(query)
+          return book
+        },
+      },
+    }
+    const input = {
+      userId: "merchant-1",
+      tenantId: "tenant-1",
+      currencyCode: "NGN",
+    }
+    const entities = [customer("CONFIRMED", true)]
+    expect(await readSetupPrerequisites(db as never, input, entities)).toEqual({
+      termsRequired: false,
+      financeBookMissing: true,
+    })
+    book = { id: "book-1" }
+    expect(await readSetupPrerequisites(db as never, input, entities)).toEqual({
+      termsRequired: false,
+      financeBookMissing: false,
+    })
+    expect(reads).toEqual(
+      Array(2).fill({
+        where: {
+          tenantId_currencyCode: { tenantId: "tenant-1", currencyCode: "NGN" },
+        },
+        select: { id: true },
+      }),
     )
   })
 
@@ -64,7 +121,6 @@ describe("setup prerequisite needs", () => {
 
   test("cash and bank accounts need Finance whether or not they have a balance", () => {
     expect(setupPrerequisiteNeeds([money("CONFIRMED")])).toEqual({
-      catalog: false,
       balances: true,
     })
     expect(

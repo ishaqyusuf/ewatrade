@@ -28,7 +28,6 @@ import {
   ExactDecimalError,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
-import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
@@ -59,7 +58,6 @@ import {
   buildScopedListPageWhere,
 } from "./list-sort"
 import { assertRetailOpsProductAllowance } from "./retail-ops-subscriptions"
-import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { StoreConversationError } from "./store-conversations-core"
 
@@ -235,38 +233,16 @@ export type GetCatalogItemInput = {
   tenantId: string
 }
 
-type CatalogTermsPublication = NonNullable<
-  ReturnType<typeof currentEffectiveLegalPublication>
->
-
 /** A write-time boundary for all customer-visible Catalog copy and media. */
 export async function assertCatalogPublicationSafety(
-  tx: Prisma.TransactionClient,
+  _tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
     mediaUrls: readonly (string | null | undefined)[]
-    publication?: CatalogTermsPublication | null
     texts: readonly (string | null | undefined)[]
   },
 ) {
-  try {
-    await assertAccountStoreConversationTermsAccepted(
-      tx,
-      input.actorUserId,
-      input.publication === undefined
-        ? currentEffectiveLegalPublication()
-        : input.publication,
-    )
-  } catch (error) {
-    if (error instanceof StoreConversationError) {
-      throw new CatalogError(
-        "CATALOG_TERMS_REQUIRED",
-        "Review and accept the current EwaTrade Terms before publishing Catalog content.",
-      )
-    }
-    throw error
-  }
-
+  // Terms acceptance belongs to registration, not each Catalog write.
   // URL validation is not image inspection. Keep media closed until the
   // approved live media provider is wired into this same publication boundary.
   if (input.mediaUrls.some((url) => url?.trim())) {
@@ -304,7 +280,6 @@ export async function assertExistingCatalogOfferingPublicationSafety(
   input: {
     actorUserId: string
     offeringId: string
-    publication?: CatalogTermsPublication | null
     tenantId: string
   },
 ) {
@@ -336,7 +311,6 @@ export async function assertExistingCatalogOfferingPublicationSafety(
   }
   await assertCatalogPublicationSafety(tx, {
     actorUserId: input.actorUserId,
-    publication: input.publication,
     mediaUrls: [item.imageUrl, ...item.imageLinks, variant.imageUrl],
     texts: [
       item.name,

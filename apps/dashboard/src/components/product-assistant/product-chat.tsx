@@ -150,13 +150,6 @@ export function ProductChat({
         >
           <SetupPrerequisites
             prerequisites={data.prerequisites}
-            onTermsAccepted={() =>
-              void queryClient.invalidateQueries({
-                queryKey: trpc.productAssistant.state.queryKey({
-                  conversationId: data.conversation.id,
-                }),
-              })
-            }
             onFinanceReady={() =>
               void queryClient.invalidateQueries({
                 queryKey: trpc.productAssistant.state.queryKey({

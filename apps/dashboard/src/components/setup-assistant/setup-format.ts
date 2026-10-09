@@ -52,7 +52,7 @@ export function entitySource(entity: SetupDraftEntity) {
 
 const ERROR_COPY: Record<string, string> = {
   CATALOG_TERMS_REQUIRED:
-    "Accept the EwaTrade Terms at the top of this list; this record is then queued again.",
+    "This record was blocked by an older Terms check. Try again to add it.",
   DUPLICATE_CATALOG_KEY:
     "An item with this name is already in your catalog. Rename it or skip it.",
   DUPLICATE_CUSTOMER:
