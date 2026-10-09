@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -8,11 +9,12 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { FlatList } from "react-native-css/components/FlatList"
 import { View } from "react-native"
 import type { ScrollViewProps } from "react-native"
+import { FlatList } from "react-native-css/components/FlatList"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import type { SaleStepViewProps } from "./create-sale-presentation"
+import { saleUnitCount } from "./sale-unit-count"
 import { useSalePresentation } from "./use-sale-presentation"
 
 export function CreateSaleItems({
@@ -58,6 +60,26 @@ export function CreateSaleItems({
         current={1}
         title={itemKind === "service" ? "New service order" : "New order"}
       />
+      {!market ? (
+        <View className="pb-4">
+          <HeroCard
+            label="Sale total"
+            amount={formatMinorMoney(totalMinor, currencyCode).replace(
+              /\.00(?=\D*$)/,
+              "",
+            )}
+            pill={{
+              label: isOffline ? "Will queue" : "Draft",
+              tone: isOffline ? "offline" : "draft",
+            }}
+            sub={
+              selectedLines.length
+                ? `${selectedLines.length} items · ${saleUnitCount(selectedLines.map((line) => line.quantity))} units`
+                : "Add the first item"
+            }
+          />
+        </View>
+      ) : null}
       {isOffline ? (
         <View className={tone("pb-4")}>
           <StatusBanner
@@ -129,9 +151,11 @@ export function CreateSaleItems({
               message={
                 choicesLoading
                   ? "Loading available products and services."
-                  : itemKind === "service"
-                    ? "Tap the + button to add a service."
-                    : "Tap the + button to add a product or service."
+                  : model.allRows.length === 0
+                    ? "Items need a selling price and available stock in this store. Ask an owner to check the catalog."
+                    : itemKind === "service"
+                      ? "Tap the + button to add a service."
+                      : "Tap the + button to add a product or service."
               }
               title={choicesLoading ? "Loading Catalog" : "No items added yet"}
             />
@@ -173,7 +197,9 @@ export function CreateSaleItems({
               disabled: choicesLoading || model.actionsLocked,
             }}
             className={tone(
-              "h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:bg-primary/90",
+              market
+                ? "h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:bg-primary/90"
+                : "h-14 w-14 items-center justify-center rounded-[18px] bg-gold shadow-lg",
             )}
             disabled={choicesLoading || model.actionsLocked}
             haptic
@@ -182,7 +208,11 @@ export function CreateSaleItems({
             transition
           >
             <Icon
-              className={tone("size-base text-primary-foreground")}
+              className={
+                market
+                  ? tone("size-base text-primary-foreground")
+                  : "size-[24px] text-gold-foreground"
+              }
               name="Plus"
             />
           </Pressable>
@@ -212,7 +242,8 @@ export function CreateSaleItems({
                   "text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground",
                 )}
               >
-                Total · {selectedRows.length} selected
+                Total · {saleUnitCount(selectedRows.map((row) => row.quantity))}{" "}
+                units
               </Text>
               <Text className={tone("text-xl font-extrabold text-foreground")}>
                 {formatMinorMoney(totalMinor, currencyCode)}

@@ -25,6 +25,10 @@ export type SelectedCustomer = {
 }
 
 export type CreateSaleCompletion = {
+  orderId?: string
+  paymentMethod?: string
+  unitCount?: string
+  balance?: string
   amount: string
   customer: string
   itemCount: number
@@ -36,6 +40,7 @@ export type CreateSaleCompletion = {
 export type CreateSaleContentProps = {
   attendantName?: string
   initialCatalogItemId?: string
+  initialOfferingId?: string
   initialCustomer?: SelectedCustomer
   itemKind?: "service"
   onComplete?: (completion: CreateSaleCompletion) => void

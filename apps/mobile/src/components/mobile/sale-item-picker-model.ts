@@ -52,18 +52,22 @@ export function selectInitialCatalogItemLine<
   T extends { catalogItemId: string; disabledReason?: string; id: string },
 >({
   catalogItemId,
+  offeringId,
   choices,
   lineId,
   lines,
 }: {
   catalogItemId: string
+  offeringId?: string
   choices: T[]
   lineId: string
   lines: SaleItemPickerLine<T>[]
 }) {
   const offering = choices.find(
     (choice) =>
-      choice.catalogItemId === catalogItemId && !choice.disabledReason,
+      choice.catalogItemId === catalogItemId &&
+      !choice.disabledReason &&
+      (!offeringId || choice.id === offeringId),
   )
   if (!offering || lines.some((line) => line.offering.id === offering.id)) {
     return lines

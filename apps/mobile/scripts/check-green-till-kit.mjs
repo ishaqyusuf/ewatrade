@@ -32,9 +32,20 @@ const contracts = [
       'fontWeight: "700"',
       "export function SetupSteps",
       "export function GhostPreview",
+      'variant = "chart"',
+      'variant === "rows"',
       "border-dashed",
       "export function NudgeCard",
       "export function ToggleRow",
+    ],
+  },
+  {
+    file: "components/mobile/list-create-fab.tsx",
+    markers: [
+      'tone = "default"',
+      'tone === "gold"',
+      "bg-gold",
+      "text-gold-foreground",
     ],
   },
   {

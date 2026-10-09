@@ -189,3 +189,27 @@ describe("commercial order overview model", () => {
     expect(activity[2]?.detail).toContain("Received by Ada Cashier")
   })
 })
+
+test("real stock-event timestamps join payment activity in chronological order", () => {
+  const order = makeOrder()
+  const line = order.lines[0]
+  if (!line) throw new Error("Missing product fixture")
+  line.productFulfillments.push({
+    id: "fulfil-timed",
+    quantity: "2",
+    stockOperationId: "stock-timed",
+    createdAt: new Date("2026-07-24T08:01:00Z"),
+  })
+  const activity = buildCommercialOrderActivity(order)
+  expect(
+    activity.find((row) => row.key === "fulfilment:fulfil-timed")?.time,
+  ).not.toBe("Time unavailable")
+  const times = activity
+    .filter((row) => row.occurredAt)
+    .map((row) => new Date(row.occurredAt ?? 0).getTime())
+  expect(times).toEqual([...times].sort((a, b) => a - b))
+  expect(
+    buildCommercialOrderActivity({ ...order, status: "CANCELLED" }).at(-1)
+      ?.label,
+  ).toBe("Order cancelled")
+})

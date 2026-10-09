@@ -1,6 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { MoneyField } from "@/components/mobile/money-field"
+import { getSaleOfferingStockLabel } from "@/components/mobile/sale-item-picker-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -9,14 +11,15 @@ import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { minorToMajorInput } from "@ewatrade/utils"
+import DateTimePicker from "@react-native-community/datetimepicker"
+import { useState } from "react"
+import { View } from "react-native"
+import { Platform } from "react-native"
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { PAYMENT_METHODS } from "./create-sale-model"
 import { deliveryDateLabel } from "./create-sale-model"
-import { getSaleOfferingStockLabel } from "@/components/mobile/sale-item-picker-model"
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { View } from "react-native"
-import DateTimePicker from "@react-native-community/datetimepicker"
-import { Platform } from "react-native"
 import type { SaleStepViewProps } from "./create-sale-presentation"
+import { saleUnitCount } from "./sale-unit-count"
 import { useSalePresentation } from "./use-sale-presentation"
 
 export function CreateSaleReview({
@@ -58,6 +61,14 @@ export function CreateSaleReview({
     isSubmitting,
   } = model
 
+  const [enteringPartPayment, setEnteringPartPayment] = useState(false)
+  const paymentChoice =
+    paymentSummary.receivedMinor === totalMinor && totalMinor > 0
+      ? "paid"
+      : paymentSummary.receivedMinor > 0 || enteringPartPayment
+        ? "part"
+        : "pending"
+
   return (
     <View className={tone("flex-1")}>
       <KeyboardAwareScrollView
@@ -94,11 +105,231 @@ export function CreateSaleReview({
             />
           ) : null}
 
-          <TotalSummary
-            helper={`${selectedRows.length} item${selectedRows.length === 1 ? "" : "s"}`}
-            label="Total to collect"
-            value={formatMinorMoney(totalMinor, currencyCode)}
-          />
+          {market ? (
+            <TotalSummary
+              helper={`${selectedRows.length} item${selectedRows.length === 1 ? "" : "s"}`}
+              label="Total to collect"
+              value={formatMinorMoney(totalMinor, currencyCode)}
+            />
+          ) : (
+            <HeroCard
+              label={
+                paymentSummary.balanceDueMinor > 0
+                  ? "Balance due"
+                  : "Total · paid in full"
+              }
+              amount={formatMinorMoney(
+                paymentSummary.balanceDueMinor > 0
+                  ? paymentSummary.balanceDueMinor
+                  : totalMinor,
+                currencyCode,
+              )}
+              pill={{
+                label: isOffline
+                  ? "Will queue"
+                  : `${saleUnitCount(selectedRows.map((row) => row.quantity))} units`,
+                tone: isOffline ? "offline" : "draft",
+              }}
+              sub={`Total ${formatMinorMoney(totalMinor, currencyCode)} · received ${formatMinorMoney(paymentSummary.receivedMinor, currencyCode)}`}
+            />
+          )}
+
+          <View className={tone("gap-4 border-t border-border pt-5")}>
+            <View className={tone("gap-1")}>
+              <Text
+                className={tone(
+                  "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
+                )}
+              >
+                Payment
+              </Text>
+              <Text className={tone("text-sm text-muted-foreground")}>
+                Choose the method and enter what the customer paid.
+              </Text>
+            </View>
+            {!market ? (
+              <View className="gap-3">
+                {(
+                  [
+                    [
+                      "paid",
+                      "Paid in full",
+                      `Collect ${formatMinorMoney(totalMinor, currencyCode)} now`,
+                      "CheckCircle2",
+                    ],
+                    [
+                      "part",
+                      "Part payment",
+                      "Enter what they paid now",
+                      "Wallet",
+                    ],
+                    [
+                      "pending",
+                      "Payment pending",
+                      "Record now, collect later",
+                      "Clock",
+                    ],
+                  ] as const
+                ).map(([choice, label, helper, icon]) => (
+                  <Pressable
+                    key={choice}
+                    accessibilityRole="radio"
+                    accessibilityLabel={label}
+                    accessibilityState={{
+                      selected: paymentChoice === choice,
+                      disabled: model.actionsLocked,
+                    }}
+                    disabled={model.actionsLocked}
+                    className={cn(
+                      "min-h-[62px] flex-row items-center gap-3 rounded-[20px] border bg-card p-3.5",
+                      paymentChoice === choice
+                        ? "border-primary"
+                        : "border-border",
+                    )}
+                    onPress={() => {
+                      setEnteringPartPayment(choice === "part")
+                      if (choice === "paid")
+                        setAmountReceived(minorToMajorInput(totalMinor))
+                      else if (choice === "pending" || paymentChoice === "paid")
+                        setAmountReceived("")
+                    }}
+                  >
+                    <View
+                      className={cn(
+                        "size-[40px] items-center justify-center rounded-[14px]",
+                        choice === "paid" ? "bg-tint-mint" : "bg-tint-amber",
+                      )}
+                    >
+                      <Icon
+                        name={icon}
+                        className={cn(
+                          "size-[20px]",
+                          choice === "paid"
+                            ? "text-tint-mint-foreground"
+                            : "text-tint-amber-foreground",
+                        )}
+                      />
+                    </View>
+                    <View className="min-w-0 flex-1 gap-1">
+                      <Text className="text-sm font-bold text-foreground">
+                        {label}
+                      </Text>
+                      <Text className="text-xs text-muted-foreground">
+                        {helper}
+                      </Text>
+                    </View>
+                    {paymentChoice === choice ? (
+                      <Icon
+                        name="CheckCircle2"
+                        className="size-[20px] text-primary"
+                      />
+                    ) : (
+                      <View className="size-[20px] rounded-full border border-border" />
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {market || paymentChoice !== "pending" ? (
+              <View
+                className={cn("gap-2", largeText ? "flex-col" : "flex-row")}
+              >
+                {PAYMENT_METHODS.map(([value, label]) => (
+                  <SegmentOption
+                    className={largeText ? "w-full flex-none" : undefined}
+                    disabled={model.actionsLocked}
+                    icon={
+                      value === "cash"
+                        ? "Wallet"
+                        : value === "bank_transfer"
+                          ? "Building"
+                          : "CreditCard"
+                    }
+                    key={value}
+                    label={label}
+                    onPress={() => setPaymentMethod(value)}
+                    selected={paymentMethod === value}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            {market || paymentChoice === "part" ? (
+              <MoneyField
+                inputClassName={
+                  market ? "bg-market-field text-market-ink" : undefined
+                }
+                editable={!model.actionsLocked}
+                actionLabel="All amount paid"
+                currencyCode={currencyCode}
+                error={paymentSummary.error ?? undefined}
+                helper="Leave empty for an unpaid sale, or enter a part payment."
+                label="Amount received"
+                onActionPress={() =>
+                  setAmountReceived(minorToMajorInput(totalMinor))
+                }
+                onChangeValue={setAmountReceived}
+                placeholder="0.00"
+                value={amountReceived}
+              />
+            ) : null}
+
+            <View className={tone("gap-3 rounded-2xl bg-muted/60 p-4")}>
+              <View
+                className={cn(
+                  tone("justify-between gap-3"),
+                  largeText ? "flex-col" : "flex-row items-center",
+                )}
+              >
+                <Text className={tone("text-sm text-muted-foreground")}>
+                  Amount received
+                </Text>
+                <Text className={tone("font-bold text-foreground")}>
+                  {formatMinorMoney(paymentSummary.receivedMinor, currencyCode)}
+                </Text>
+              </View>
+              <View className={tone("h-px bg-border")} />
+              <View
+                className={cn(
+                  tone("justify-between gap-3"),
+                  largeText ? "flex-col" : "flex-row items-end",
+                )}
+              >
+                <View className={tone("min-w-0 shrink gap-1")}>
+                  <Text
+                    className={tone(
+                      "text-xs font-bold uppercase tracking-[1px] text-muted-foreground",
+                    )}
+                  >
+                    Balance due
+                  </Text>
+                  <Text
+                    className={tone(
+                      paymentSummary.paymentState === "paid"
+                        ? "text-xs font-semibold text-primary"
+                        : "text-xs font-semibold text-tint-amber-foreground",
+                    )}
+                  >
+                    {paymentSummary.paymentState === "paid"
+                      ? "Paid in full"
+                      : paymentSummary.paymentState === "partially_paid"
+                        ? "Part payment"
+                        : "Payment pending"}
+                  </Text>
+                </View>
+                <Text
+                  className={tone(
+                    "shrink text-2xl font-extrabold text-foreground",
+                  )}
+                >
+                  {formatMinorMoney(
+                    paymentSummary.balanceDueMinor,
+                    currencyCode,
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
 
           <View>
             <View
@@ -177,7 +408,7 @@ export function CreateSaleReview({
                 )}
               >
                 <Icon
-                  className={tone("size-sm text-muted-foreground")}
+                  className={tone("size-[20px] text-muted-foreground")}
                   name={selectedCustomer ? "User" : "UserX"}
                 />
               </View>
@@ -213,108 +444,6 @@ export function CreateSaleReview({
                   "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
                 )}
               >
-                Payment
-              </Text>
-              <Text className={tone("text-sm text-muted-foreground")}>
-                Choose the method and enter what the customer paid.
-              </Text>
-            </View>
-            <View className={cn("gap-2", largeText ? "flex-col" : "flex-row")}>
-              {PAYMENT_METHODS.map(([value, label]) => (
-                <SegmentOption
-                  className={largeText ? "w-full flex-none" : undefined}
-                  disabled={model.actionsLocked}
-                  icon={
-                    value === "cash"
-                      ? "Wallet"
-                      : value === "bank_transfer"
-                        ? "Building"
-                        : "CreditCard"
-                  }
-                  key={value}
-                  label={label}
-                  onPress={() => setPaymentMethod(value)}
-                  selected={paymentMethod === value}
-                />
-              ))}
-            </View>
-
-            <MoneyField
-              inputClassName={
-                market ? "bg-market-field text-market-ink" : undefined
-              }
-              editable={!model.actionsLocked}
-              actionLabel="All amount paid"
-              currencyCode={currencyCode}
-              error={paymentSummary.error ?? undefined}
-              helper="Leave empty for an unpaid sale, or enter a part payment."
-              label="Amount received"
-              onActionPress={() =>
-                setAmountReceived(minorToMajorInput(totalMinor))
-              }
-              onChangeValue={setAmountReceived}
-              placeholder="0.00"
-              value={amountReceived}
-            />
-
-            <View className={tone("gap-3 rounded-2xl bg-muted/60 p-4")}>
-              <View
-                className={cn(
-                  tone("justify-between gap-3"),
-                  largeText ? "flex-col" : "flex-row items-center",
-                )}
-              >
-                <Text className={tone("text-sm text-muted-foreground")}>
-                  Amount received
-                </Text>
-                <Text className={tone("font-bold text-foreground")}>
-                  {formatMinorMoney(paymentSummary.receivedMinor, currencyCode)}
-                </Text>
-              </View>
-              <View className={tone("h-px bg-border")} />
-              <View
-                className={cn(
-                  tone("justify-between gap-3"),
-                  largeText ? "flex-col" : "flex-row items-end",
-                )}
-              >
-                <View className={tone("min-w-0 shrink gap-1")}>
-                  <Text
-                    className={tone(
-                      "text-xs font-bold uppercase tracking-[1px] text-muted-foreground",
-                    )}
-                  >
-                    Balance due
-                  </Text>
-                  <Text className={tone("text-xs font-semibold text-primary")}>
-                    {paymentSummary.paymentState === "paid"
-                      ? "Paid in full"
-                      : paymentSummary.paymentState === "partially_paid"
-                        ? "Part payment"
-                        : "Payment pending"}
-                  </Text>
-                </View>
-                <Text
-                  className={tone(
-                    "shrink text-2xl font-extrabold text-foreground",
-                  )}
-                >
-                  {formatMinorMoney(
-                    paymentSummary.balanceDueMinor,
-                    currencyCode,
-                  )}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View className={tone("gap-4 border-t border-border pt-5")}>
-            <View className={tone("gap-1")}>
-              <Text
-                className={tone(
-                  "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-                )}
-              >
                 Delivery and fulfillment
               </Text>
               <Text className={tone("text-sm text-muted-foreground")}>
@@ -331,7 +460,7 @@ export function CreateSaleReview({
                   )}
                 >
                   <Icon
-                    className={tone("size-sm text-primary")}
+                    className={tone("size-[20px] text-primary")}
                     name="Calendar"
                   />
                 </View>
@@ -469,6 +598,7 @@ export function CreateSaleReview({
               market && "bg-market-palm active:bg-market-hero-pressed",
             )}
             isLoading={isSubmitting}
+            tone={market ? undefined : "gold"}
             loadingLabel="Confirming sale"
             onPress={() => void submit()}
             trailingIcon="ArrowRight"

@@ -13,6 +13,7 @@ export type CommercialOrderActivity = {
   key: string
   label: string
   time: string
+  occurredAt?: Date | string
 }
 
 export function canFulfillCommercialOrderLine(line: CommercialOrderLine) {
@@ -53,6 +54,7 @@ export function buildCommercialOrderActivity(
     {
       detail: `Commercial Order created by ${order.createdBy?.name ?? "Unknown team member"}.`,
       key: `created:${order.id}`,
+      occurredAt: order.createdAt,
       label: "Order received",
       time: formatCommerceDateTime(order.createdAt),
     },
@@ -70,6 +72,7 @@ export function buildCommercialOrderActivity(
         ? `${amount} of existing customer credit ${payment.type === "REFUND" ? "released" : "applied"} by ${payment.recordedBy?.name ?? "Unknown team member"}.`
         : `${payment.type === "REFUND" ? "Refund" : "Payment"} of ${amount} by ${commerceStatusLabel(payment.method)}${payment.reference ? ` · ${payment.reference}` : ""} · ${payment.type === "REFUND" ? "Recorded" : "Received"} by ${payment.recordedBy?.name ?? "Unknown team member"}.`,
       key: `payment:${payment.id}`,
+      occurredAt: payment.recordedAt,
       label: creditSettlement
         ? payment.type === "REFUND"
           ? "Customer credit released"
@@ -86,19 +89,41 @@ export function buildCommercialOrderActivity(
       rows.push({
         detail: `${formatCommerceQuantity(fulfilment.quantity)} × ${commerceLineTitle(line)} fulfilled from reserved stock.`,
         key: `fulfilment:${fulfilment.id}`,
+        occurredAt: fulfilment.createdAt,
         label: "Product fulfilled",
-        time: "Recorded",
+        time: fulfilment.createdAt
+          ? formatCommerceDateTime(fulfilment.createdAt)
+          : "Time unavailable",
       })
     }
     for (const productReturn of line.productReturns) {
       rows.push({
         detail: `${formatCommerceQuantity(productReturn.quantity)} × ${commerceLineTitle(line)} returned · ${commerceStatusLabel(productReturn.disposition)}.`,
         key: `return:${productReturn.id}`,
+        occurredAt: productReturn.createdAt,
         label: "Product returned",
-        time: "Recorded",
+        time: productReturn.createdAt
+          ? formatCommerceDateTime(productReturn.createdAt)
+          : "Time unavailable",
       })
     }
   }
 
-  return rows
+  if (order.status === "CANCELLED")
+    rows.push({
+      key: `cancelled:${order.id}`,
+      label: "Order cancelled",
+      detail:
+        "This order is cancelled. Payment and fulfilment are unavailable.",
+      time: "Time unavailable",
+    })
+  return rows.sort(
+    (left, right) =>
+      (left.occurredAt
+        ? new Date(left.occurredAt).getTime()
+        : Number.POSITIVE_INFINITY) -
+      (right.occurredAt
+        ? new Date(right.occurredAt).getTime()
+        : Number.POSITIVE_INFINITY),
+  )
 }

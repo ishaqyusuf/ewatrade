@@ -1,10 +1,14 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { FormField } from "@/components/mobile/form-field"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
-import { customerFromSuggestion } from "./create-sale-model"
-import { FlatList } from "react-native-css/components/FlatList"
+import { formatMinorMoney } from "@ewatrade/utils"
 import { View } from "react-native"
+import { FlatList } from "react-native-css/components/FlatList"
+import { customerFromSuggestion } from "./create-sale-model"
 import type { SaleStepViewProps } from "./create-sale-presentation"
 import { useSalePresentation } from "./use-sale-presentation"
 
@@ -77,8 +81,24 @@ export function CreateSaleCustomerStep({
                 setError(null)
                 setStep("items")
               }}
-              title="Select customer"
+              title={market ? "Select customer" : "Who is buying?"}
             />
+            {!market ? (
+              <View className="pb-4">
+                <HeroCard
+                  label="Sale total"
+                  amount={formatMinorMoney(
+                    model.totalMinor,
+                    model.currencyCode,
+                  ).replace(/\.00(?=\D*$)/, "")}
+                  pill={{
+                    label: `${model.selectedRows.length} items`,
+                    tone: "draft",
+                  }}
+                  sub={`Buyer: ${model.selectedCustomer?.name ?? "Walk-in"}`}
+                />
+              </View>
+            ) : null}
             {recentOrders.isError ? (
               <View className={tone("pb-4")}>
                 <StatusBanner
@@ -100,6 +120,21 @@ export function CreateSaleCustomerStep({
                 onActionPress={isOffline ? undefined : retryCustomers}
               />
             ) : null}
+            {!market ? (
+              <View className="gap-3 pb-4">
+                <FormField
+                  label="Search customers"
+                  leadingIcon="Search"
+                  placeholder="Search customer, phone, or email"
+                  value={customerSearch}
+                  onChangeText={setCustomerSearch}
+                  maxLength={160}
+                />
+                <Text className="text-xs text-muted-foreground">
+                  Selected: {model.selectedCustomer?.name ?? "Walk-in"}
+                </Text>
+              </View>
+            ) : null}
             <CustomerActionRow
               icon="UserPlus"
               onPress={presentCustomerSheet}
@@ -107,8 +142,8 @@ export function CreateSaleCustomerStep({
             />
             <CustomerActionRow
               icon="UserX"
-              onPress={() => selectCustomer(null)}
-              title="Continue as guest"
+              onPress={() => selectCustomer(null, market)}
+              title={market ? "Continue as guest" : "Walk-in"}
             />
             <Text
               className={tone(
@@ -122,7 +157,7 @@ export function CreateSaleCustomerStep({
         renderItem={({ item }) => (
           <CustomerSuggestionRow
             customer={item}
-            onPress={() => selectCustomer(customerFromSuggestion(item))}
+            onPress={() => selectCustomer(customerFromSuggestion(item), market)}
           />
         )}
         showsVerticalScrollIndicator={false}
@@ -160,7 +195,7 @@ export function CreateSaleCustomerStep({
           ) : null
         }
       />
-      {showCustomerSearch ? (
+      {market && showCustomerSearch ? (
         <BottomSearchFooter
           variant={market ? "market-day" : "default"}
           alwaysShowSearch={Boolean(customerSearch)}
@@ -175,6 +210,26 @@ export function CreateSaleCustomerStep({
           )}
           value={customerSearch}
         />
+      ) : null}
+      {!market ? (
+        <BottomSearchFooter
+          onHeightChange={setActionsHeight}
+          accessibilityLabel="Customer actions"
+          onChangeText={() => undefined}
+          placeholder=""
+          searchVisible={false}
+          totalCount={0}
+          value=""
+        >
+          <ActionButton
+            tone="gold"
+            disabled={model.actionsLocked}
+            onPress={() => selectCustomer(model.selectedCustomer)}
+            trailingIcon="ArrowRight"
+          >
+            Continue with {model.selectedCustomer?.name ?? "walk-in"}
+          </ActionButton>
+        </BottomSearchFooter>
       ) : null}
     </View>
   )

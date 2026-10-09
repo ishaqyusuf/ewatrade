@@ -110,3 +110,16 @@ describe("Order Quiet Sheet payment methods", () => {
     ])
   })
 })
+
+test("closed orders cannot open fulfilment even when a stale reservation looks active", () => {
+  for (const status of ["CANCELLED", "REFUNDED"] as const) {
+    const closed = { ...ORDER, status }
+    expect(getOrderFulfilmentConfirmation(closed, { kind: "all" })).toBeNull()
+    expect(
+      getOrderFulfilmentConfirmation(closed, {
+        kind: "line",
+        orderLineId: "line-rice",
+      }),
+    ).toBeNull()
+  }
+})

@@ -55,6 +55,7 @@ export function ClassicOrderActionStack({
         disabled={disabled}
         isLoading={isLoading}
         loadingLabel={loadingLabel}
+        tone="gold"
         onPress={onConfirm}
       >
         {actionLabel}

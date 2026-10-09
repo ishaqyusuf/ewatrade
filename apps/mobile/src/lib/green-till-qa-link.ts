@@ -5,6 +5,9 @@ const QA_ROUTES = new Set([
   // Quick Fill forms, so QA can open each one directly. The screens still
   // apply their own sign-in and role checks.
   "closeout-modal",
+  "catalog-items-modal",
+  "orders",
+  "receipt-settings-modal",
   "create-sale-modal",
   "customer-book-modal",
   "first-product-setup-modal",
@@ -23,17 +26,20 @@ export function resolveGreenTillQaPath(
   if (!development) return null
   try {
     const url = new URL(path)
+    const recordPath =
+      ["catalog-item", "order"].includes(url.hostname) &&
+      /^\/[A-Za-z0-9_-]+$/.test(url.pathname)
     if (
       url.protocol !== "ewatrade-dev:" ||
       url.username ||
       url.password ||
       url.port ||
       url.hash ||
-      (url.pathname !== "" && url.pathname !== "/") ||
-      !QA_ROUTES.has(url.hostname)
+      (!recordPath && url.pathname !== "" && url.pathname !== "/") ||
+      (!recordPath && !QA_ROUTES.has(url.hostname))
     )
       return null
-    return `/${url.hostname}${url.search}`
+    return `/${url.hostname}${recordPath ? url.pathname : ""}${url.search}`
   } catch {
     return null
   }

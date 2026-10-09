@@ -8,7 +8,9 @@ export function ServiceAction({
   tone = "palm",
   className,
   ...props
-}: ComponentProps<typeof ActionButton> & { tone?: "palm" | "gold" }) {
+}: Omit<ComponentProps<typeof ActionButton>, "tone"> & {
+  tone?: "palm" | "gold"
+}) {
   const { market } = useServiceAppearance()
   const palette = useMarketDayPalette()
   const primary = !props.variant || props.variant === "default"

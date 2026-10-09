@@ -4,9 +4,12 @@ import type {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native"
+import type { CatalogAvatarMedia } from "./catalog-avatar-model"
 
 export type CatalogKindFilter = "all" | "product" | "service"
 export type CatalogRow = {
+  avatar?: CatalogAvatarMedia
+  problem?: "out_of_stock" | "no_price" | "not_counted"
   detail: string
   availabilityLabel: string
   id: string
@@ -32,6 +35,8 @@ export type CatalogFrameProps = {
   showCanvasStatusBar: boolean
 }
 export type CatalogMastheadProps = {
+  title?: string
+  countLabel?: string
   firstItem: boolean
   onLayout: (event: LayoutChangeEvent) => void
   onAdd: () => void

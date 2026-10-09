@@ -213,11 +213,15 @@ function serializeOrder(order: OrderGraph) {
           : ("service" as const),
       offeringId: line.offeringId,
       productFulfillments: line.productFulfillments.map((fulfillment) => ({
+        ...(fulfillment.createdAt ? { createdAt: fulfillment.createdAt } : {}),
         id: fulfillment.id,
         quantity: fulfillment.quantity.toString(),
         stockOperationId: fulfillment.stockOperationId,
       })),
       productReturns: line.productReturns.map((productReturn) => ({
+        ...(productReturn.createdAt
+          ? { createdAt: productReturn.createdAt }
+          : {}),
         disposition: productReturn.disposition,
         id: productReturn.id,
         quantity: productReturn.quantity.toString(),

@@ -6,6 +6,10 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 export type OrderDetailContentProps = {
   activity: CommercialOrderActivity[]
   businessName: string
+  cachedAt?: string
+  onReceipt?: () => void
+  onCall?: () => void
+  onMessage?: () => void
   error: string | null
   fulfillingOrderLineId?: string
   isFulfillingAll: boolean

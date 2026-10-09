@@ -14,6 +14,7 @@ type ReplayCommand = ReplayInput["commands"][number]
 type ReplayResult = RouterOutputs["offline"]["replay"][number]
 
 export type LocalOfflineCommand = ReplayCommand & {
+  displayTotal?: { amountMinor: number; currencyCode: string }
   authoritativeState?: unknown
   conflictCode?: string | null
   conflictMessage?: string | null
@@ -36,6 +37,7 @@ type OfflineCommandState = {
   discardCommand: (clientCommandId: string) => void
   queueCommand: (
     command: Omit<ReplayCommand, "clientCommandId" | "createdAtClient"> & {
+      displayTotal?: { amountMinor: number; currencyCode: string }
       clientCommandId?: string
       createdAtClient?: Date
     },

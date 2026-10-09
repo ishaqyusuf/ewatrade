@@ -5,6 +5,20 @@ const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
 
 const contracts = [
   {
+    file: "src/components/mobile/appearances/classic/catalog-screen.tsx",
+    markers: ["<CatalogAvatar", "item.avatar"],
+  },
+  {
+    file: "src/components/mobile/catalog/catalog-avatar.tsx",
+    markers: [
+      "CatalogIllustrationPreview",
+      "variant=thumbnail",
+      'cachePolicy="none"',
+      '"x-store-id"',
+      "selected image unavailable",
+    ],
+  },
+  {
     file: "src/app/_layout.tsx",
     markers: ['name="catalog-item/[catalogItemId]"'],
   },
@@ -13,7 +27,7 @@ const contracts = [
     markers: ["CatalogItemScreen", "useLocalSearchParams"],
   },
   {
-    file: "src/components/mobile/catalog-items-sheet.tsx",
+    file: "src/components/mobile/catalog/catalog-screen.tsx",
     forbiddenMarkers: [
       "CatalogItemOverview",
       "initialCatalogItemId",
@@ -21,7 +35,8 @@ const contracts = [
     ],
     markers: [
       'pathname: "/catalog-item/[catalogItemId]"',
-      'className="mx-2 px-2 active:bg-accent"',
+      "filterCatalogShelf",
+      "ClassicCatalogChoices",
     ],
   },
   {
@@ -30,11 +45,11 @@ const contracts = [
     markers: ["CatalogItemsContent", 'presentation="tab"'],
   },
   {
-    file: "src/components/mobile/global-search-screen.tsx",
+    file: "src/components/mobile/global-search/global-search-screen.tsx",
     markers: ['pathname: "/catalog-item/[catalogItemId]"'],
   },
   {
-    file: "src/components/mobile/simple-catalog-item-screen.tsx",
+    file: "src/components/mobile/catalog-setup/use-catalog-setup.ts",
     markers: ["trpc.catalog.listItemsPage.queryFilter()", 'refetchType: "all"'],
   },
 ]

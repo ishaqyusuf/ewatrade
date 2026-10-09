@@ -21,6 +21,7 @@ type AdminTabsContextValue = {
     createdAtClient: Date
     customerName?: string
     customerPhone?: string
+    displayTotal?: { amountMinor: number; currencyCode: string }
     lineCount: number
   }>
   setDockHidden: Dispatch<SetStateAction<boolean>>

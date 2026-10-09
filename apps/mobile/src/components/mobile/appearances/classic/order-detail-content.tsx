@@ -4,8 +4,6 @@ import {
   type CommercialOrderLine,
   commerceLineOption,
   commerceLineTitle,
-  commerceOrderTone,
-  commercePaymentTone,
   commerceStatusLabel,
   formatCommerceDate,
   formatCommerceDateTime,
@@ -16,24 +14,37 @@ import {
   canFulfillCommercialOrderLine,
   getCommercialOrderOverviewSummary,
 } from "@/components/mobile/commerce/commercial-order-overview-model"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
+import { QuickActionRow, StatusPill } from "@/components/mobile/green-till/kit"
 import type {
   OrderDetailContentProps,
   OrderDetailPrimaryActionProps,
 } from "@/components/mobile/order-detail/order-detail-presentation"
 import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
+import { ledgerPayment } from "@/components/mobile/orders/orders-ledger-model"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { formatMinorMoney } from "@ewatrade/utils"
+import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { isClosedOrder } from "@/lib/order-action-eligibility"
+import { formatOrderDetailMoney as formatMinorMoney } from "@/lib/order-detail-dispatch-docket"
+import { cn } from "@/lib/utils"
+import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
+import { View as NativeView } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function ClassicOrderDetailContent({
   activity,
+  cachedAt,
+  onReceipt,
+  onCall,
+  onMessage,
   error,
   fulfillingOrderLineId,
   isFulfillingAll,
@@ -46,10 +57,11 @@ export function ClassicOrderDetailContent({
   order,
 }: OrderDetailContentProps) {
   const summary = getCommercialOrderOverviewSummary(order)
+  const closed = isClosedOrder(order.status)
   const { fulfillmentScheduledForFuture } = useOrderDetailPresentation(order)
 
   return (
-    <View className="gap-7" testID="commercial-order-overview-screen">
+    <View className="gap-4" testID="commercial-order-overview-screen">
       <CommercialOrderOverviewHeader
         onBack={onBack}
         subtitle={formatCommerceDate(order.createdAt)}
@@ -57,11 +69,46 @@ export function ClassicOrderDetailContent({
       />
 
       <OrderOverviewSummary order={order} summary={summary} />
+      <QuickActionRow
+        actions={[
+          {
+            label: "Fulfil",
+            icon: "Package",
+            onPress: onFulfillAll,
+            disabled:
+              closed ||
+              isOffline ||
+              fulfillmentScheduledForFuture ||
+              isFulfillingAll ||
+              !!fulfillingOrderLineId ||
+              summary.fulfillableProductLineCount === 0,
+          },
+          {
+            label: "Receipt",
+            icon: "ReceiptText",
+            onPress: onReceipt ?? (() => undefined),
+            disabled:
+              isOffline || !onReceipt || !isReceiptOrderEligible(order.status),
+          },
+          {
+            label: "Call",
+            icon: "Phone",
+            onPress: onCall ?? (() => undefined),
+            disabled: !order.customerPhone || !onCall,
+          },
+          {
+            label: "Message",
+            icon: "MessageCircle",
+            onPress: onMessage ?? (() => undefined),
+            disabled: !order.customerPhone || !onMessage,
+          },
+        ]}
+      />
 
       {isOffline ? (
         <StatusBanner
           icon="Wind"
-          message="Showing cached Order details. Payment and fulfilment actions require a connection."
+          message={`Showing cached order details${cachedAt ? ` · saved ${cachedAt}` : ""}. Payment, fulfilment and receipt actions require a connection.`}
           title="Offline mode"
           tone="warning"
         />
@@ -92,6 +139,7 @@ export function ClassicOrderDetailContent({
         {order.lines.map((line) => (
           <OrderLineRow
             disabled={
+              closed ||
               isOffline ||
               fulfillmentScheduledForFuture ||
               isFulfillingAll ||
@@ -139,6 +187,17 @@ export function ClassicOrderDetailContent({
         />
       </OrderOverviewSection>
 
+      <OrderOverviewSection title="Payments">
+        <OrderTotalRow
+          label="Paid"
+          value={formatMinorMoney(order.amountPaidMinor, order.currencyCode)}
+        />
+        <OrderTotalRow
+          label="Balance due"
+          emphasized
+          value={formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
+        />
+      </OrderOverviewSection>
       <OrderOverviewSection title="Payment and fulfilment">
         <OrderInfoRow
           detail={
@@ -167,14 +226,14 @@ export function ClassicOrderDetailContent({
             order.currencyCode,
           )} due`}
           icon="CreditCard"
-          title={commerceStatusLabel(order.paymentStatus)}
+          title={ledgerPayment(order.paymentStatus).label}
         />
         <OrderInfoRow
           detail={fulfilmentDetail(summary)}
           icon="Warehouse"
           title={commerceStatusLabel(order.status)}
         />
-        {summary.fulfillableProductLineCount > 0 ? (
+        {!closed && summary.fulfillableProductLineCount > 0 ? (
           <View className="gap-2 py-4">
             <ActionButton
               disabled={
@@ -190,8 +249,8 @@ export function ClassicOrderDetailContent({
               Fulfill all products
             </ActionButton>
             <Text className="text-center text-xs text-muted-foreground">
-              Commits all {summary.fulfillableProductLineCount} reserved Product{" "}
-              {summary.fulfillableProductLineCount === 1 ? "line" : "lines"}.
+              Confirm when all {summary.fulfillableProductLineCount} product
+              lines are ready to hand over.
             </Text>
           </View>
         ) : null}
@@ -227,7 +286,7 @@ export function CommercialOrderOverviewHeader({
           haptic
           onPress={onBack}
         >
-          <Icon className="size-base text-foreground" name="ArrowLeft" />
+          <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
         </Pressable>
         <View className="min-w-0 flex-1">
           <Text
@@ -237,8 +296,7 @@ export function CommercialOrderOverviewHeader({
             Order overview
           </Text>
           <Text
-            className="text-3xl font-extrabold tracking-tight text-foreground"
-            numberOfLines={1}
+            className="text-[23px] font-extrabold tracking-tight text-foreground"
             selectable
           >
             {title}
@@ -270,6 +328,7 @@ export function ClassicOrderDetailPrimaryAction({
           icon="CreditCard"
           onPress={onPress}
           testID="order-record-payment-action"
+          tone="gold"
         >
           Record payment
         </ActionButton>
@@ -285,60 +344,72 @@ function OrderOverviewSummary({
   order: CommercialOrder
   summary: ReturnType<typeof getCommercialOrderOverviewSummary>
 }) {
-  const itemCount = formatCommerceQuantity(summary.itemCount)
-
-  return (
-    <View className="gap-5 rounded-3xl bg-secondary p-5">
-      <View className="gap-2">
-        <Text className="text-sm font-bold text-muted-foreground" selectable>
-          Total order value
+  const colors = useColors()
+  const closed = isClosedOrder(order.status)
+  const paidPercent =
+    order.totalMinor > 0
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            Math.round((order.amountPaidMinor / order.totalMinor) * 100),
+          ),
+        )
+      : 0
+  if (closed)
+    return (
+      <View className="gap-3 rounded-[26px] bg-muted p-5">
+        <Text className="text-[23px] font-extrabold text-muted-foreground">
+          {commerceStatusLabel(order.status)}
         </Text>
-        <Text
-          className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground"
-          selectable
-        >
-          {formatMinorMoney(order.totalMinor, order.currencyCode)}
+        <Text className="text-sm text-muted-foreground">
+          Order value · {formatMinorMoney(order.totalMinor, order.currencyCode)}
         </Text>
-        <View className="flex-row flex-wrap gap-2 pt-1">
-          <StatusBadge
-            label={commerceStatusLabel(order.paymentStatus)}
-            tone={commercePaymentTone(order.paymentStatus)}
-          />
-          <StatusBadge
-            label={commerceStatusLabel(order.status)}
-            tone={commerceOrderTone(order.status)}
-          />
-        </View>
+        <Text className="text-xs text-muted-foreground">
+          Payment and fulfilment are unavailable for this order.
+        </Text>
       </View>
-      <View className="h-px bg-border" />
-      <View className="flex-row gap-4">
-        <SummaryMetric
-          label={summary.itemCount === 1 ? "Item" : "Items"}
-          value={itemCount}
-        />
-        <View className="w-px bg-border" />
-        <SummaryMetric
-          label="Balance due"
-          value={formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
-        />
-      </View>
-    </View>
-  )
-}
-
-function SummaryMetric({ label, value }: { label: string; value: string }) {
+    )
   return (
-    <View className="min-w-0 flex-1 gap-1">
-      <Text
-        className="text-xl font-extrabold tabular-nums text-foreground"
-        numberOfLines={1}
-        selectable
+    <View className="gap-3">
+      <HeroCard
+        label={order.balanceDueMinor > 0 ? "Balance due" : "Paid in full"}
+        amount={formatMinorMoney(
+          order.balanceDueMinor > 0 ? order.balanceDueMinor : order.totalMinor,
+          order.currencyCode,
+        )}
+        sub={`${formatMinorMoney(order.amountPaidMinor, order.currencyCode)} paid of ${formatMinorMoney(order.totalMinor, order.currencyCode)}`}
+        stats={[
+          { label: "Items", value: formatCommerceQuantity(summary.itemCount) },
+          {
+            label: "Products fulfilled",
+            value: summary.productLineCount
+              ? `${summary.fulfilledProductLineCount} of ${summary.productLineCount}`
+              : "Service order",
+          },
+          {
+            label: "Delivery",
+            value: order.deliveryDueAt
+              ? formatCommerceDateTime(order.deliveryDueAt)
+              : "Not scheduled",
+          },
+        ]}
+      />
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel="Order paid"
+        accessibilityValue={{ min: 0, max: 100, now: paidPercent }}
+        className="h-1.5 overflow-hidden rounded-full bg-muted"
       >
-        {value}
-      </Text>
-      <Text className="text-xs font-semibold text-muted-foreground" selectable>
-        {label}
-      </Text>
+        <NativeView
+          style={{
+            height: 6,
+            width: `${paidPercent}%`,
+            backgroundColor: colors.primary,
+          }}
+        />
+      </View>
+      <StatusPill {...ledgerPayment(order.paymentStatus)} />
     </View>
   )
 }
@@ -357,7 +428,7 @@ function OrderCustomerRow({
   const content = (
     <>
       <View className="size-11 items-center justify-center rounded-full bg-primary">
-        <Icon className="size-sm text-primary-foreground" name="User" />
+        <Icon className="size-[18px] text-primary-foreground" name="User" />
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground" selectable>
@@ -377,7 +448,10 @@ function OrderCustomerRow({
         </Text>
       </View>
       {hasCustomer ? (
-        <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+        <Icon
+          className="size-[18px] text-muted-foreground"
+          name="ChevronRight"
+        />
       ) : null}
     </>
   )
@@ -423,7 +497,7 @@ function OrderOverviewSection({
           </Text>
         ) : null}
       </View>
-      <View className="border-y border-border">{children}</View>
+      <View className="rounded-[20px] bg-card px-3.5">{children}</View>
     </View>
   )
 }
@@ -441,11 +515,18 @@ function OrderLineRow({
   onFulfill: () => void
   order: CommercialOrder
 }) {
-  const canFulfill = canFulfillCommercialOrderLine(line)
+  const largeText = useLargeTextLayout()
+  const canFulfill =
+    !isClosedOrder(order.status) && canFulfillCommercialOrderLine(line)
 
   return (
     <View className="gap-3 border-b border-border py-4 last:border-b-0">
-      <View className="flex-row items-start justify-between gap-4">
+      <View
+        className={cn(
+          "gap-3",
+          largeText ? "flex-col" : "flex-row items-start justify-between",
+        )}
+      >
         <View className="min-w-0 flex-1 gap-1">
           <Text className="font-bold text-foreground" selectable>
             {commerceLineTitle(line)}
@@ -484,7 +565,11 @@ function OrderLineRow({
           <StatusBadge label="Fulfilled" tone="success" />
         ) : line.reservation ? (
           <StatusBadge
-            label={commerceStatusLabel(line.reservation.status)}
+            label={
+              line.reservation.status === "ACTIVE"
+                ? "Ready to fulfil"
+                : commerceStatusLabel(line.reservation.status)
+            }
             tone={line.reservation.status === "ACTIVE" ? "primary" : "muted"}
           />
         ) : (
@@ -499,7 +584,7 @@ function OrderLineRow({
           onPress={onFulfill}
           variant="outline"
         >
-          Fulfil product line
+          Fulfil
         </ActionButton>
       ) : null}
     </View>
@@ -515,8 +600,14 @@ function OrderTotalRow({
   label: string
   value: string
 }) {
+  const largeText = useLargeTextLayout()
   return (
-    <View className="flex-row items-center justify-between gap-4 border-b border-border py-4 last:border-b-0">
+    <View
+      className={cn(
+        "gap-3 border-b border-border py-3 last:border-b-0",
+        largeText ? "flex-col" : "flex-row items-center justify-between",
+      )}
+    >
       <Text
         className={
           emphasized
@@ -553,7 +644,7 @@ function OrderInfoRow({
   return (
     <View className="flex-row items-start gap-3 border-b border-border py-4 last:border-b-0">
       <View className="size-10 items-center justify-center rounded-full bg-muted">
-        <Icon className="size-sm text-primary" name={icon} />
+        <Icon className="size-[18px] text-primary" name={icon} />
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-bold text-foreground" selectable>

@@ -5,6 +5,7 @@ import {
   formatCommerceQuantity,
 } from "@/components/mobile/commerce/commerce-model"
 import { canFulfillCommercialOrderLine } from "@/components/mobile/commerce/commercial-order-overview-model"
+import { isClosedOrder } from "./order-action-eligibility"
 
 export const ORDER_PAYMENT_METHODS = [
   ["cash", "Cash"],
@@ -33,6 +34,7 @@ export function getOrderFulfilmentConfirmation(
   order: CommercialOrder,
   target: OrderFulfilmentTarget,
 ): OrderFulfilmentConfirmation | null {
+  if (isClosedOrder(order.status)) return null
   if (target.kind === "line") {
     const line = order.lines.find(
       (candidate) => candidate.id === target.orderLineId,

@@ -12,15 +12,26 @@ export type OrdersMastheadProps = {
   title?: string
   businessName: string
   onCustomersPress: () => void
+  onSelectReceipts?: () => void
+  selectingReceipts?: boolean
+  selectionDisabled?: boolean
   onLayout?: (event: LayoutChangeEvent) => void
 }
 
 export type OrdersSummaryProps = {
   dateFilter: OrderDispatchDateFilter
   orders: CommercialOrder[]
+  totalCount?: number
+  isOffline?: boolean
+  savedAt?: string
+  loading?: boolean
+  onDateChange?: (value: OrderDispatchDateFilter) => void
 }
 
 export type OrdersRowProps = {
+  selecting?: boolean
+  selected?: boolean
+  disabled?: boolean
   index: number
   order: CommercialOrder
   onPress: () => void
