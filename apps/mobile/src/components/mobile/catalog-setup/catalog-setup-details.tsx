@@ -243,13 +243,13 @@ function ClassicDetailRows({
         </Text>
       </View>
       <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
-        {rows.map((row, index) => (
+        {rows.map(({ key, ...row }, index) => (
           <ClassicDetailRow
-            key={row.key}
+            key={key}
             border={index > 0}
             disabled={model.locked}
             {...row}
-            onPress={() => open(row.key)}
+            onPress={() => open(key)}
           />
         ))}
       </View>
