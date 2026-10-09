@@ -2,39 +2,68 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { FinanceFormBody } from "@/components/mobile/finance/finance-form-body"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
 import { View } from "react-native"
+import { HeroCard } from "../green-till/hero-card"
+import { ListCard, RecordRow } from "../green-till/kit"
 import { CustomerLedgerGate } from "./customer-ledger-gate"
+import { ReceivablesDirectory } from "./receivables-directory"
 export function CustomerLedgerDirectory() {
+  const [browse, setBrowse] = useState(false)
   return (
     <CustomerLedgerGate>
-      {(s) => <Directory key={`${s.actorUserId}:${s.tenantId}`} />}
+      {(s) =>
+        browse ? (
+          <Directory key={`${s.actorUserId}:${s.tenantId}`} />
+        ) : (
+          <ReceivablesDirectory
+            key={`${s.actorUserId}:${s.tenantId}`}
+            onBrowse={() => setBrowse(true)}
+          />
+        )
+      }
     </CustomerLedgerGate>
   )
 }
 function Directory() {
   const trpc = useTRPC()
+  const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [cursor, setCursor] = useState<string>()
   const query = useQuery(
     trpc.customers.listPage.queryOptions(
       { query: search.trim() || undefined, cursor, limit: 30 },
-      { retry: false },
+      { retry: false, enabled: !offline },
     ),
   )
   return (
     <FinanceFormBody>
-      <Text className="text-xl font-bold">Saved customer accounts</Text>
-      <Text className="text-sm text-muted-foreground">
-        Choose a saved customer. Historical contact similarity does not
-        establish account ownership.
-      </Text>
+      <HeroCard
+        label="Customer accounts"
+        title="Who owes you?"
+        sub="Open a customer to see recorded debt and available credit."
+        pill={{
+          label: offline ? "Saved copy" : "Online",
+          tone: offline ? "offline" : "synced",
+        }}
+      />
+      {offline ? (
+        <StatusBanner
+          tone="warning"
+          message={
+            query.data
+              ? `Saved copy as of ${new Date(query.dataUpdatedAt).toLocaleString()}. Reconnect to refresh balances.`
+              : "Reconnect to load customer accounts."
+          }
+        />
+      ) : null}
       <FormField
         label="Find a customer"
         value={search}
@@ -42,58 +71,58 @@ function Directory() {
           setSearch(v)
           setCursor(undefined)
         }}
+        editable={!offline}
         maxLength={160}
       />
-      {query.isPending ? (
-        <Text>Loading customers…</Text>
+      {query.isPending && !offline ? (
+        <View className="gap-3">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </View>
       ) : query.isError ? (
         <StatusBanner
           message={query.error.message}
           tone="destructive"
-          actionLabel="Try again"
+          actionLabel={offline ? undefined : "Try again"}
           onActionPress={() => void query.refetch()}
         />
-      ) : (
+      ) : query.data ? (
         <>
-          <View>
+          <ListCard>
             {query.data.items.map((c) => (
-              <Pressable
+              <RecordRow
+                stackDetails
                 key={c.id}
-                accessibilityRole="button"
-                accessibilityLabel={`View ${c.name} statement`}
-                className="border-b border-border py-4"
+                title={c.name}
+                meta={c.phone ?? c.email ?? "Saved customer"}
+                avatar={{ initials: c.name.trim().slice(0, 1), tint: "lilac" }}
                 onPress={() =>
                   router.push(
                     `/customer-ledger/${encodeURIComponent(c.id)}` as Href,
                   )
                 }
-              >
-                <Text className="font-semibold">{c.name}</Text>
-                <Text className="text-sm text-muted-foreground">
-                  {c.phone ?? c.email ?? "Saved customer"}
-                </Text>
-              </Pressable>
+              />
             ))}
-          </View>
+          </ListCard>
           {!query.data.items.length ? (
             <Text>No matching saved customers.</Text>
           ) : null}
           <ActionButton
             variant="outline"
-            disabled={!cursor || query.isFetching}
+            disabled={offline || !cursor || query.isFetching}
             onPress={() => setCursor(undefined)}
           >
             First page
           </ActionButton>
           <ActionButton
             variant="outline"
-            disabled={!query.data.nextCursor || query.isFetching}
+            disabled={offline || !query.data.nextCursor || query.isFetching}
             onPress={() => setCursor(query.data.nextCursor)}
           >
             Next page
           </ActionButton>
         </>
-      )}
+      ) : null}
     </FinanceFormBody>
   )
 }
