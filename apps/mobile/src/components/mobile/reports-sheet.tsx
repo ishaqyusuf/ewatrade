@@ -55,6 +55,11 @@ function OperationalReportsContent({
   presentation?: "screen" | "sheet"
 }) {
   const router = useRouter()
+  const { profile } = useAuthContext()
+  // Financial reports are Owner/Admin only, like the More Finance tile.
+  const canOpenFinance = ["OWNER", "ADMIN"].includes(
+    profile?.role?.trim().toUpperCase() ?? "",
+  )
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const colors = useColors()
   const trpc = useTRPC()
@@ -247,6 +252,23 @@ function OperationalReportsContent({
           ))}
         </ListCard>
       </View>
+      {canOpenFinance ? (
+        <ListCard>
+          <RecordRow
+            title="Financial reports"
+            meta="Profit and loss, cash flow, balance sheet"
+            avatar={{ icon: "FileText", tint: "lilac" }}
+            status={
+              <Icon
+                className="size-[16px]"
+                color={colors.mutedForeground}
+                name="ChevronRight"
+              />
+            }
+            onPress={() => router.push("/finance-reports-modal" as Href)}
+          />
+        </ListCard>
+      ) : null}
       {report.isEmpty && reportQueries.every((q) => q.data !== undefined) ? (
         <EmptyState
           icon="analytics"
