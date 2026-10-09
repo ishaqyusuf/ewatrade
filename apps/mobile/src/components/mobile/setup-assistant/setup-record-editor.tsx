@@ -301,8 +301,20 @@ export function SetupRecordEditor({
           </>
         ) : (
           <>
+            {payload?.kind === "product" &&
+            (payload.options?.length || payload.variants?.length) ? (
+              <Text className="text-xs text-muted-foreground">
+                Individual variant prices and stock stay as shown in your setup
+                list. Change individual variants in the chat.
+              </Text>
+            ) : null}
             <FormField
-              label="Price"
+              label={
+                payload?.kind === "product" &&
+                (payload.options?.length || payload.variants?.length)
+                  ? "Shared price"
+                  : "Price"
+              }
               value={price}
               onChangeText={setPrice}
               keyboardType="decimal-pad"
@@ -317,7 +329,11 @@ export function SetupRecordEditor({
                   editable={!disabled}
                 />
                 <FormField
-                  label="Current stock"
+                  label={
+                    payload.options?.length || payload.variants?.length
+                      ? "Shared stock"
+                      : "Current stock"
+                  }
                   value={stock}
                   onChangeText={setStock}
                   keyboardType="decimal-pad"
