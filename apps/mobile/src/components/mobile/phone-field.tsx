@@ -11,6 +11,7 @@ import {
   getCountryCallingCode,
   getExampleNumber,
   isSupportedCountry,
+  parsePhoneNumberFromString,
 } from "libphonenumber-js"
 import examples from "libphonenumber-js/mobile/examples"
 import type { ComponentProps } from "react"
@@ -33,6 +34,13 @@ export function formatNationalPhone(countryCode: string, digits: string) {
   return new AsYouType()
     .input(`+${dial}${digits}`)
     .replace(new RegExp(`^\\+${dial}\\s?`), "")
+}
+
+/** The country of a stored international number such as +2348035550142. */
+export function phoneCountryOf(value?: string | null) {
+  const phone = value?.trim()
+  if (!phone?.startsWith("+")) return undefined
+  return parsePhoneNumberFromString(phone)?.country
 }
 
 /** The country's own example mobile number, without its trunk 0. */

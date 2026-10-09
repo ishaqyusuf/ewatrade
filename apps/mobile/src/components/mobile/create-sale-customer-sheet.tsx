@@ -9,6 +9,7 @@ import {
   isCreateCustomerSaveDisabled,
 } from "@/components/mobile/create-sale-customer-sheet-model"
 import { FormField } from "@/components/mobile/form-field"
+import { PhoneField, phoneCountryOf } from "@/components/mobile/phone-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -32,7 +33,7 @@ import type {
 } from "@gorhom/bottom-sheet"
 import { BottomSheetFooter, useBottomSheetModal } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
-import { forwardRef, useCallback, useRef, useState } from "react"
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react"
 import { View, useWindowDimensions } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -80,6 +81,20 @@ export const CreateSaleCustomerSheet = forwardRef<
     const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
     const country = getCountry(selectedCountry ?? phoneCountryCode)
     const useCountryPhone = phoneCountryCode !== undefined
+    // Green Till keeps the typed local digits (so a trunk 0 is not swallowed)
+    // and stores the international number on the draft.
+    const [localPhone, setLocalPhone] = useState(() =>
+      toLocalPhone(country.dialCode, draft.phone),
+    )
+    useEffect(() => {
+      if (draft.phone === toInternationalPhone(country.dialCode, localPhone))
+        return
+      // Set from outside (Quick Fill, Undo, reset): follow its country.
+      const detected = phoneCountryOf(draft.phone)
+      const next = getCountry(detected ?? country.code)
+      if (detected && detected !== country.code) setSelectedCountry(detected)
+      setLocalPhone(toLocalPhone(next.dialCode, draft.phone))
+    }, [draft.phone, country.code, country.dialCode, localPhone])
     const { height } = useWindowDimensions()
     const palette = useMarketDayPalette()
     const market = appearance === "market-day"
@@ -268,38 +283,57 @@ export const CreateSaleCustomerSheet = forwardRef<
                   disabled={disabled || isLoading}
                 />
               ) : null}
-              <FormField
-                variant={market ? "market" : "green-gate"}
-                maxLength={40}
-                editable={!isLoading && !disabled}
-                keyboardType="phone-pad"
-                label={
-                  useCountryPhone ? `Phone · +${country.dialCode}` : "Phone"
-                }
-                leadingIcon="Phone"
-                onChangeText={(phone) =>
-                  onChange({
-                    ...draft,
-                    phone: useCountryPhone
-                      ? toInternationalPhone(country.dialCode, phone)
-                      : phone,
-                  })
-                }
-                placeholder="Phone number"
-                value={
-                  useCountryPhone
-                    ? toLocalPhone(country.dialCode, draft.phone)
-                    : draft.phone
-                }
-              />
-              {!market && showMore && useCountryPhone ? (
-                <CountrySelect
-                  label="Phone country"
-                  value={country.code}
-                  onChange={setSelectedCountry}
-                  disabled={disabled || isLoading}
+              {!market && useCountryPhone ? (
+                <PhoneField
+                  countryCode={country.code}
+                  editable={!isLoading && !disabled}
+                  label="Phone"
+                  onChangeText={(digits) => {
+                    setLocalPhone(digits)
+                    onChange({
+                      ...draft,
+                      phone: toInternationalPhone(country.dialCode, digits),
+                    })
+                  }}
+                  onCountryChange={(code) => {
+                    setSelectedCountry(code)
+                    onChange({
+                      ...draft,
+                      phone: toInternationalPhone(
+                        getCountry(code).dialCode,
+                        localPhone,
+                      ),
+                    })
+                  }}
+                  value={localPhone}
+                  variant="green-gate"
                 />
-              ) : null}
+              ) : (
+                <FormField
+                  variant={market ? "market" : "green-gate"}
+                  maxLength={40}
+                  editable={!isLoading && !disabled}
+                  keyboardType="phone-pad"
+                  label={
+                    useCountryPhone ? `Phone · +${country.dialCode}` : "Phone"
+                  }
+                  leadingIcon="Phone"
+                  onChangeText={(phone) =>
+                    onChange({
+                      ...draft,
+                      phone: useCountryPhone
+                        ? toInternationalPhone(country.dialCode, phone)
+                        : phone,
+                    })
+                  }
+                  placeholder="Phone number"
+                  value={
+                    useCountryPhone
+                      ? toLocalPhone(country.dialCode, draft.phone)
+                      : draft.phone
+                  }
+                />
+              )}
               {showMore ? (
                 <FormField
                   variant={market ? "market" : "green-gate"}
@@ -316,6 +350,7 @@ export const CreateSaleCustomerSheet = forwardRef<
               ) : null}
               {!market ? (
                 <ShowMoreToggle
+                  hint={useCountryPhone ? "Email" : "Country, email"}
                   open={showMore}
                   locked={Boolean(draft.email.trim())}
                   onToggle={() => setMoreOpen((open) => !open)}
@@ -332,12 +367,14 @@ export const CreateSaleCustomerSheet = forwardRef<
 
 CreateSaleCustomerSheet.displayName = "CreateSaleCustomerSheet"
 
-/** Dashed "Show more · Country, email" row that folds the secondary fields. */
+/** Dashed "Show more · Email" row that folds the secondary fields. */
 function ShowMoreToggle({
+  hint,
   locked,
   onToggle,
   open,
 }: {
+  hint: string
   /** An email is filled in, so the fields cannot fold away. */
   locked: boolean
   onToggle: () => void
@@ -358,7 +395,7 @@ function ShowMoreToggle({
       </Text>
       {open ? null : (
         <Text className="min-w-0 flex-1 text-[12.5px] font-semibold text-muted-foreground">
-          Country, email
+          {hint}
         </Text>
       )}
       <Icon
