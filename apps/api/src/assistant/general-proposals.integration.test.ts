@@ -14,6 +14,7 @@ import {
   getConfiguredCatalogOfferingAvailability,
 } from "@ewatrade/db/queries"
 import type { Prisma, PrismaClient } from "@ewatrade/db/types"
+import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { resolveModel } from "./chat-route"
 import { generalBudgetScopeKey } from "./general-allowance"
@@ -62,6 +63,17 @@ if (enabled) setDefaultTimeout(600_000)
           },
         })
         userId = user.id
+        // Catalog writes require the effective Terms outside local/preview.
+        const terms = currentEffectiveLegalPublication()
+        if (terms)
+          await db.legalAcceptance.create({
+            data: {
+              userId: user.id,
+              version: terms.version,
+              documentHash: terms.documentHash,
+              surface: "general-assistant-integration",
+            },
+          })
         const tenant = await db.tenant.create({
           data: {
             slug: `general-${marker}`,
