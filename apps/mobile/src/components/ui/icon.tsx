@@ -133,6 +133,7 @@ const ShieldCheck = hugeIcon("SecurityCheckIcon")
 const SecurityPassword = hugeIcon("SecurityPasswordIcon")
 const SlidersHorizontal = hugeIcon("FilterHorizontalIcon")
 const StickyNote = hugeIcon("StickyNote")
+const Tag = hugeIcon("Tag01Icon")
 const Trash = hugeIcon("Trash")
 const TrendingDown = hugeIcon("AnalyticsDownIcon")
 const TrendingUp = hugeIcon("AnalyticsUpIcon")
@@ -357,6 +358,7 @@ const appIcons = {
   SecurityPassword,
   SlidersHorizontal,
   StickyNote,
+  Tag,
   Trash,
   TrendingUp,
   TrendingDown,

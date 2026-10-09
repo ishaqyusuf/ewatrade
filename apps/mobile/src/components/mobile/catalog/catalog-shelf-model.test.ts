@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import type { CatalogRow } from "./catalog-presentation"
-import { catalogShelfTitle, filterCatalogShelf } from "./catalog-shelf-model"
+import {
+  catalogAvatarTint,
+  catalogCountLabel,
+  catalogShelfCounts,
+  catalogShelfTitle,
+  filterCatalogShelf,
+  sortCatalogRows,
+} from "./catalog-shelf-model"
 
 const rows: CatalogRow[] = [
   {
@@ -64,5 +71,46 @@ describe("Catalog Shelf List", () => {
     expect(catalogShelfTitle(true, true)).toBe("Catalog")
     expect(catalogShelfTitle(true, undefined)).toBe("Catalog")
     expect(catalogShelfTitle(false, true)).toBe("Services")
+  })
+
+  test("counts only when every item is loaded", () => {
+    expect(catalogShelfCounts(rows, rows.length + 5)).toBeNull()
+    const counts = catalogShelfCounts(rows, rows.length)
+    expect(counts).toMatchObject({ out_of_stock: 1, service: 1 })
+    expect(counts && catalogCountLabel(counts)).toBe(
+      `${rows.length} items · ${rows.length - 1} products, 1 service`,
+    )
+    expect(
+      catalogCountLabel({
+        ...(counts as NonNullable<typeof counts>),
+        all: 2,
+        product: 2,
+        service: 0,
+      }),
+    ).toBe("2 products")
+  })
+
+  test("gives services sky and products a stable tint", () => {
+    expect(catalogAvatarTint("Delivery", "service")).toBe("sky")
+    expect(catalogAvatarTint("Feed", "product")).toBe(
+      catalogAvatarTint(" feed ", "product"),
+    )
+  })
+
+  test("sorts A to Z ignoring case", () => {
+    const named = (name: string) => ({
+      ...(rows[1] as CatalogRow),
+      id: name,
+      name,
+    })
+    expect(
+      sortCatalogRows([
+        named("QA Test"),
+        named("Eggs"),
+        named("QA bird"),
+        named("Feed 10kg"),
+        named("Feed 2kg"),
+      ]).map((row) => row.name),
+    ).toEqual(["Eggs", "Feed 2kg", "Feed 10kg", "QA bird", "QA Test"])
   })
 })

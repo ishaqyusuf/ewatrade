@@ -145,7 +145,12 @@ export function MarketDayCatalogFilter({
   active,
   label,
   onPress,
-}: { active: boolean; label: string; onPress: () => void }) {
+}: {
+  active: boolean
+  count?: number
+  label: string
+  onPress: () => void
+}) {
   return (
     <Pressable
       accessibilityRole="button"

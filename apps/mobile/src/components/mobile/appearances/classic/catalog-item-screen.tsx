@@ -8,8 +8,12 @@ import type {
   CatalogItemScreenProps,
 } from "@/components/mobile/catalog-item/catalog-item-presentation"
 import { CatalogSavedPhotos } from "@/components/mobile/catalog-item/catalog-saved-photos"
-import { CatalogAvatar } from "@/components/mobile/catalog/catalog-avatar"
+import {
+  CATALOG_AVATAR_TINT,
+  CatalogAvatar,
+} from "@/components/mobile/catalog/catalog-avatar"
 import { selectCatalogAvatar } from "@/components/mobile/catalog/catalog-avatar-model"
+import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { flattenSaleOfferings } from "@/components/mobile/create-sale/create-sale-model"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
@@ -42,6 +46,7 @@ export function ClassicCatalogItemOverview({
 }: CatalogItemOverviewProps) {
   const [selectedId, setSelectedId] = useState<string>()
   const largeText = useLargeTextLayout()
+  const tint = catalogAvatarTint(item.name, item.kind)
   const offerings = catalogItemOfferings(item).filter(
     ({ offering, variant }) =>
       offering.status === "active" &&
@@ -121,11 +126,14 @@ export function ClassicCatalogItemOverview({
         />
       ) : null}
       <View className="flex-row items-center gap-3">
-        <View className="size-[42px] items-center justify-center overflow-hidden rounded-[14px] bg-tint-mint">
+        <View
+          className={`size-[42px] items-center justify-center overflow-hidden rounded-[13px] ${CATALOG_AVATAR_TINT[tint].bg}`}
+        >
           <CatalogAvatar
             media={selectCatalogAvatar(item, storeId, item.imageUrl)}
             name={item.name}
             service={item.kind === "service"}
+            tint={tint}
           />
         </View>
         <Text

@@ -1,5 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { CatalogAvatar } from "@/components/mobile/catalog/catalog-avatar"
+import {
+  CATALOG_AVATAR_TINT,
+  CatalogAvatar,
+} from "@/components/mobile/catalog/catalog-avatar"
 import { selectCatalogAvatar } from "@/components/mobile/catalog/catalog-avatar-model"
 import type {
   CatalogChoiceProps,
@@ -7,6 +10,7 @@ import type {
   CatalogMastheadProps,
   CatalogRow,
 } from "@/components/mobile/catalog/catalog-presentation"
+import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { GhostPreview, StatusPill } from "@/components/mobile/green-till/kit"
 import { Pressable } from "@/components/ui/pressable"
@@ -159,6 +163,7 @@ export function ClassicCatalogRow({
   last = false,
 }: { item: CatalogRow; onPress: () => void; index?: number; last?: boolean }) {
   const largeText = useLargeTextLayout()
+  const tint = catalogAvatarTint(item.name, item.kind)
   return (
     <View
       className={cn(
@@ -170,21 +175,25 @@ export function ClassicCatalogRow({
       <Pressable
         accessibilityLabel={`Open ${item.name}, ${item.priceLabel}, ${item.availabilityLabel}`}
         accessibilityRole="button"
-        className="min-h-[62px] flex-row items-center gap-3 border-b border-border py-3 active:opacity-70"
+        className={cn(
+          "min-h-[62px] flex-row items-center gap-3 py-3 active:opacity-70",
+          !last && "border-b border-border",
+        )}
         haptic
         onPress={onPress}
         transition
       >
         <View
           className={cn(
-            "size-[42px] items-center justify-center overflow-hidden rounded-[14px]",
-            item.kind === "service" ? "bg-tint-lilac" : "bg-tint-mint",
+            "size-[42px] items-center justify-center overflow-hidden rounded-[13px]",
+            CATALOG_AVATAR_TINT[tint].bg,
           )}
         >
           <CatalogAvatar
             media={item.avatar ?? selectCatalogAvatar(item)}
             name={item.name}
             service={item.kind === "service"}
+            tint={tint}
           />
         </View>
         <View
@@ -206,7 +215,12 @@ export function ClassicCatalogRow({
                 : item.availabilityLabel}
             </Text>
           </View>
-          <View className={cn("gap-1", !largeText && "max-w-[44%] items-end")}>
+          <View
+            className={cn(
+              "gap-1",
+              largeText ? "items-start" : "max-w-[44%] items-end",
+            )}
+          >
             <Text className="text-sm font-bold tabular-nums text-foreground">
               {item.problem === "no_price" ? "—" : item.priceLabel}
             </Text>
@@ -218,9 +232,11 @@ export function ClassicCatalogRow({
                     ? "danger"
                     : item.problem === "no_price"
                       ? "warn"
-                      : "info"
+                      : "muted"
                 }
               />
+            ) : item.kind === "service" ? (
+              <StatusPill label="Service" tone="muted" />
             ) : null}
           </View>
         </View>
@@ -231,17 +247,25 @@ export function ClassicCatalogRow({
 
 export function ClassicCatalogFilter({
   active,
+  count,
   label,
   onPress,
-}: { active: boolean; label: string; onPress: () => void }) {
+}: {
+  active: boolean
+  count?: number
+  label: string
+  onPress: () => void
+}) {
+  // Counts give way at large text so the three labels still fit.
+  const showCount = count !== undefined && !useLargeTextLayout()
   return (
     <Pressable
-      accessibilityLabel={label}
+      accessibilityLabel={count === undefined ? label : `${label}, ${count}`}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={cn(
-        "min-h-11 min-w-0 flex-1 items-center justify-center rounded-[14px] px-3 py-2",
-        active ? "bg-card shadow-sm" : "bg-muted",
+        "min-h-9 min-w-0 flex-1 flex-row items-center justify-center gap-[5px] rounded-[10px] px-2 py-1",
+        active ? "bg-card shadow-sm" : "bg-transparent",
       )}
       haptic
       onPress={onPress}
@@ -255,6 +279,11 @@ export function ClassicCatalogFilter({
       >
         {label}
       </Text>
+      {showCount ? (
+        <Text className="text-[11px] font-bold tabular-nums text-muted-foreground">
+          {count}
+        </Text>
+      ) : null}
     </Pressable>
   )
 }

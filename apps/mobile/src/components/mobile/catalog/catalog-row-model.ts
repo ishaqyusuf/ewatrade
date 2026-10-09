@@ -31,8 +31,8 @@ export function mapCatalogItem(
     return {
       avatar,
       problem: priceLabel === "Price not set" ? "no_price" : undefined,
-      detail: `${priceLabel} · No inventory`,
-      availabilityLabel: "No inventory",
+      detail: `${priceLabel} · Service`,
+      availabilityLabel: "Service",
       id: item.id,
       kind: item.kind,
       name: item.name,
@@ -64,7 +64,9 @@ export function mapCatalogItem(
   const availabilityLabel =
     availableQuantity === null
       ? "Availability not recorded"
-      : `${availableQuantity} ${unitName} available`
+      : Number(availableQuantity) <= 0
+        ? `${availableQuantity} ${unitName} left`
+        : `${availableQuantity} ${unitName} available`
 
   return {
     avatar,

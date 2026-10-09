@@ -24,13 +24,16 @@ import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
@@ -61,9 +64,15 @@ import type {
 import { mapCatalogItem } from "./catalog-row-model"
 import {
   type CatalogAttention,
+  catalogCountLabel,
+  catalogShelfCounts,
   catalogShelfTitle,
   filterCatalogShelf,
+  sortCatalogRows,
 } from "./catalog-shelf-model"
+
+/** The Catalog lists items A to Z; the server sorts so every page follows on. */
+const CATALOG_SORT = { field: "name", direction: "asc" } as const
 
 export function CatalogItemsContent({
   designScreen = "catalog",
@@ -92,6 +101,7 @@ export function CatalogItemsContent({
   const { height } = useWindowDimensions()
   const trpc = useTRPC()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
+  const greenTill = GREEN_TILL_THEME[useColorScheme().colorScheme]
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
   const [attention, setAttention] = useState<CatalogAttention | null>(null)
@@ -116,7 +126,7 @@ export function CatalogItemsContent({
   // Keep the unfiltered first page available when a search loses connectivity.
   const savedItemsQuery = useInfiniteQuery(
     trpc.catalog.listItemsPage.infiniteQueryOptions(
-      { limit: LIST_PAGE_SIZE },
+      { limit: LIST_PAGE_SIZE, sort: CATALOG_SORT },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
         retry: false,
@@ -130,6 +140,7 @@ export function CatalogItemsContent({
         kind: isOffline || kindFilter === "all" ? undefined : kindFilter,
         limit: LIST_PAGE_SIZE,
         query: isOffline ? undefined : deferredQuery || undefined,
+        sort: CATALOG_SORT,
       },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -141,8 +152,10 @@ export function CatalogItemsContent({
   const visibleQuery = isOffline ? savedItemsQuery : itemsQuery
   const loadedRows = useMemo(
     () =>
-      (visibleQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
-        (item) => mapCatalogItem(item, availabilityQuery.data?.storeId),
+      sortCatalogRows(
+        (visibleQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
+          (item) => mapCatalogItem(item, availabilityQuery.data?.storeId),
+        ),
       ),
     [availabilityQuery.data?.storeId, visibleQuery.data?.pages],
   )
@@ -152,6 +165,22 @@ export function CatalogItemsContent({
     attention: isMarketDay ? null : attention,
   })
   const totalCount = visibleQuery.data?.pages[0]?.totalCount ?? 0
+  // Online, the type switch and search filter on the server, so counts are kept
+  // from the last unfiltered, fully loaded page set.
+  const unfiltered = isOffline || (kindFilter === "all" && !deferredQuery)
+  const hasPages = Boolean(visibleQuery.data)
+  const freshCounts = useMemo(
+    () =>
+      unfiltered && hasPages
+        ? catalogShelfCounts(loadedRows, isOffline ? 0 : totalCount)
+        : null,
+    [unfiltered, hasPages, loadedRows, isOffline, totalCount],
+  )
+  const [keptCounts, setKeptCounts] = useState(freshCounts)
+  useEffect(() => {
+    if (freshCounts) setKeptCounts(freshCounts)
+  }, [freshCounts])
+  const counts = unfiltered ? freshCounts : keptCounts
   const mixedCatalog =
     availabilityQuery.data?.hasProductItems &&
     availabilityQuery.data?.hasServiceItems
@@ -166,7 +195,10 @@ export function CatalogItemsContent({
       })
     : null
   const Choices = isMarketDay ? MarketDayCatalogChoices : ClassicCatalogChoices
-  const showSearch = shouldShowListSearch(totalCount) || query.length > 0
+  // Search stays put when a type filter narrows the list.
+  const showSearch =
+    shouldShowListSearch(Math.max(totalCount, counts?.all ?? 0)) ||
+    query.length > 0
   const showFirstItemGate = shouldShowCatalogFirstItemGate({
     hasCatalogItems: availabilityQuery.data?.hasCatalogItems,
     isError: visibleQuery.isError || isOffline || !canEdit,
@@ -233,9 +265,11 @@ export function CatalogItemsContent({
             <Masthead
               title={catalogTitle}
               countLabel={
-                visibleQuery.data
-                  ? `${isOffline ? loadedRows.length : totalCount} ${isOffline ? "saved items" : "items"}`
-                  : undefined
+                counts
+                  ? `${catalogCountLabel(counts)}${isOffline ? " · saved" : ""}`
+                  : visibleQuery.data
+                    ? `${isOffline ? loadedRows.length : totalCount} ${isOffline ? "saved items" : "items"}`
+                    : undefined
               }
               firstItem={showFirstItemGate}
               disabled={isOffline || !canEdit}
@@ -267,12 +301,18 @@ export function CatalogItemsContent({
               ) : null}
               {!isMarketDay && presentation === "tab" && showSearch ? (
                 <FormField
+                  accessibilityLabel="Search catalog"
                   autoCapitalize="words"
-                  label="Find item"
+                  label="Search catalog"
                   leadingIcon="Search"
                   onChangeText={setQuery}
-                  placeholder="Search name, type, or unit"
+                  placeholder={
+                    isOffline
+                      ? "Search saved items"
+                      : "Search name, type or unit"
+                  }
                   value={query}
+                  variant="till-search"
                 />
               ) : null}
               {availabilityQuery.data?.hasCatalogItems &&
@@ -281,17 +321,19 @@ export function CatalogItemsContent({
                   className={
                     isMarketDay
                       ? "flex-row flex-wrap gap-2"
-                      : "flex-row rounded-[14px] bg-muted p-1"
+                      : "flex-row rounded-[13px] border border-border bg-muted p-[3px]"
                   }
                 >
                   <Filter
                     active={kindFilter === "all"}
+                    count={isMarketDay ? undefined : counts?.all}
                     label="All"
                     onPress={() => setKindFilter("all")}
                   />
                   {availabilityQuery.data.hasProductItems ? (
                     <Filter
                       active={kindFilter === "product"}
+                      count={isMarketDay ? undefined : counts?.product}
                       label="Products"
                       onPress={() => setKindFilter("product")}
                     />
@@ -299,6 +341,7 @@ export function CatalogItemsContent({
                   {availabilityQuery.data.hasServiceItems ? (
                     <Filter
                       active={kindFilter === "service"}
+                      count={isMarketDay ? undefined : counts?.service}
                       label="Services"
                       onPress={() => setKindFilter("service")}
                     />
@@ -313,15 +356,17 @@ export function CatalogItemsContent({
               {!isMarketDay &&
               (attention || loadedRows.some((row) => row.problem)) ? (
                 <View className="gap-2">
-                  <Text className="text-xs text-muted-foreground">
-                    {isOffline ? "Saved items" : "Loaded items"}
-                  </Text>
+                  {counts ? null : (
+                    <Text className="text-xs text-muted-foreground">
+                      {isOffline ? "Saved items" : "Loaded items"}
+                    </Text>
+                  )}
                   <View className="flex-row flex-wrap gap-2">
                     {(
                       [
-                        ["out_of_stock", "Out of stock"],
-                        ["no_price", "No price"],
-                        ["not_counted", "Not counted"],
+                        ["out_of_stock", "out of stock", "TriangleAlert"],
+                        ["no_price", "no price", "Tag"],
+                        ["not_counted", "not counted", "ClipboardList"],
                       ] as const
                     )
                       .filter(
@@ -329,40 +374,63 @@ export function CatalogItemsContent({
                           attention === key ||
                           loadedRows.some((row) => row.problem === key),
                       )
-                      .map(([key, label]) => (
-                        <Pressable
-                          key={key}
-                          accessibilityLabel={label}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: attention === key }}
-                          onPress={() =>
-                            setAttention(attention === key ? null : key)
-                          }
-                          className={cn(
-                            "min-h-11 justify-center rounded-full border px-3 py-2",
-                            attention === key
-                              ? "border-primary"
-                              : "border-transparent",
-                            key === "out_of_stock"
-                              ? "bg-tint-rose"
-                              : key === "no_price"
-                                ? "bg-tint-amber"
-                                : "bg-tint-sky",
-                          )}
-                        >
-                          <Text
-                            className={
-                              key === "out_of_stock"
-                                ? "text-xs font-bold text-tint-rose-foreground"
-                                : key === "no_price"
-                                  ? "text-xs font-bold text-tint-amber-foreground"
-                                  : "text-xs font-bold text-tint-sky-foreground"
+                      .map(([key, problem, icon]) => {
+                        const count = counts?.[key]
+                        const label =
+                          count === undefined
+                            ? `${problem[0]?.toUpperCase()}${problem.slice(1)}`
+                            : `${count} ${problem}`
+                        const tone =
+                          key === "out_of_stock"
+                            ? "rose"
+                            : key === "no_price"
+                              ? "amber"
+                              : "sky"
+                        return (
+                          <Pressable
+                            key={key}
+                            accessibilityLabel={label}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: attention === key }}
+                            onPress={() =>
+                              setAttention(attention === key ? null : key)
                             }
+                            className={cn(
+                              "min-h-[34px] flex-row items-center justify-center gap-1.5 rounded-full border-2 px-[11px] py-1",
+                              tone === "rose"
+                                ? "bg-tint-rose"
+                                : tone === "amber"
+                                  ? "bg-tint-amber"
+                                  : "bg-tint-sky",
+                              attention !== key
+                                ? "border-transparent"
+                                : tone === "rose"
+                                  ? "border-tint-rose-foreground"
+                                  : tone === "amber"
+                                    ? "border-tint-amber-foreground"
+                                    : "border-tint-sky-foreground",
+                            )}
                           >
-                            {label}
-                          </Text>
-                        </Pressable>
-                      ))}
+                            <Icon
+                              className="size-[14px]"
+                              color={greenTill[`${tone}Foreground`]}
+                              name={icon}
+                            />
+                            <Text
+                              className={cn(
+                                "text-xs font-bold",
+                                tone === "rose"
+                                  ? "text-tint-rose-foreground"
+                                  : tone === "amber"
+                                    ? "text-tint-amber-foreground"
+                                    : "text-tint-sky-foreground",
+                              )}
+                            >
+                              {label}
+                            </Text>
+                          </Pressable>
+                        )
+                      })}
                   </View>
                 </View>
               ) : null}

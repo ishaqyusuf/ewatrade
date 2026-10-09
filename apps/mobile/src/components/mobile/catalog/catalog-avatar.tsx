@@ -2,29 +2,50 @@ import { CatalogIllustrationPreview } from "@/components/mobile/catalog-setup/ca
 import { Icon } from "@/components/ui/icon"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
 import { getBaseUrl } from "@/lib/base-url"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { Image } from "expo-image"
 import { useState } from "react"
 import type { CatalogAvatarMedia } from "./catalog-avatar-model"
+import type { CatalogAvatarTint } from "./catalog-shelf-model"
+
+/** Static class pairs so NativeWind sees every tint. */
+export const CATALOG_AVATAR_TINT = {
+  mint: { bg: "bg-tint-mint", fg: "text-tint-mint-foreground" },
+  amber: { bg: "bg-tint-amber", fg: "text-tint-amber-foreground" },
+  sky: { bg: "bg-tint-sky", fg: "text-tint-sky-foreground" },
+  lilac: { bg: "bg-tint-lilac", fg: "text-tint-lilac-foreground" },
+  rose: { bg: "bg-tint-rose", fg: "text-tint-rose-foreground" },
+} as const satisfies Record<CatalogAvatarTint, { bg: string; fg: string }>
 
 /** The initial means no selected media, never a photo-loading placeholder. */
 export function CatalogAvatar({
   media,
   name,
   service,
-}: { media: CatalogAvatarMedia; name: string; service: boolean }) {
+  tint = service ? "sky" : "mint",
+}: {
+  media: CatalogAvatarMedia
+  name: string
+  service: boolean
+  tint?: CatalogAvatarTint
+}) {
   const { token, profile } = useAuthContext()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const { colorScheme } = useColorScheme()
   if (media.kind === "initial")
-    return (
+    return service ? (
+      <Icon
+        className="size-[19px]"
+        color={GREEN_TILL_THEME[colorScheme][`${tint}Foreground`]}
+        name="Wrench"
+      />
+    ) : (
       <Text
         maxFontSizeMultiplier={1.3}
-        className={
-          service
-            ? "text-sm font-bold text-tint-lilac-foreground"
-            : "text-sm font-bold text-tint-mint-foreground"
-        }
+        className={`text-[15px] font-bold ${CATALOG_AVATAR_TINT[tint].fg}`}
       >
         {media.label}
       </Text>

@@ -32,6 +32,8 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
     | "market"
     | "market-search"
     | "search"
+    /** Green Till list search: borderless card field, 46 tall. */
+    | "till-search"
 }
 
 export function FormField({
@@ -56,7 +58,9 @@ export function FormField({
   const isGreenGate = variant === "green-gate"
   const isMarketSearchVariant = variant === "market-search"
   const isMarketVariant = variant === "market"
-  const isSearchVariant = variant === "search" || isMarketSearchVariant
+  const isTillSearch = variant === "till-search"
+  const isSearchVariant =
+    variant === "search" || isMarketSearchVariant || isTillSearch
   const colors = useColors()
   const marketDay = useMarketDayPalette()
   const largeTextLayout = useLargeTextLayout()
@@ -92,6 +96,7 @@ export function FormField({
   const shouldShowLabel =
     !isSearchVariant && (!isAuthVariant || largeTextLayout)
   const isMultiline = !!inputProps.multiline
+  const singleLineHeight = largeTextLayout ? 64 : 50
   const embeddedStyle =
     inputProps.style || (!isMultiline && largeTextLayout)
       ? [
@@ -163,9 +168,11 @@ export function FormField({
           backgroundColor:
             isMarketSearchVariant || isMarketVariant
               ? marketDay.field
-              : isSearchVariant || isGreenGate
-                ? colors.muted
-                : colors.card,
+              : isTillSearch
+                ? colors.card
+                : isSearchVariant || isGreenGate
+                  ? colors.muted
+                  : colors.card,
           borderColor: isMarketVariant
             ? error
               ? colors.destructive
@@ -178,7 +185,7 @@ export function FormField({
           borderRadius:
             isMarketSearchVariant || isMarketVariant
               ? 16
-              : isGreenGate
+              : isGreenGate || isTillSearch
                 ? 14
                 : 12,
           borderWidth: isMarketSearchVariant
@@ -190,10 +197,16 @@ export function FormField({
                 : 1,
           boxShadow: isMarketSearchVariant
             ? `5px 5px 0 ${marketDay.marigold}`
-            : undefined,
+            : isTillSearch
+              ? "0 1px 2px rgba(0, 0, 0, 0.06)"
+              : undefined,
           flexDirection: "row",
           gap: 10,
-          minHeight: isMultiline ? 92 : largeTextLayout ? 64 : 50,
+          minHeight: isMultiline
+            ? 92
+            : isTillSearch && !largeTextLayout
+              ? 46
+              : singleLineHeight,
           paddingHorizontal: 14,
           paddingVertical: isMultiline ? 10 : largeTextLayout ? 6 : 0,
         }}
@@ -226,7 +239,9 @@ export function FormField({
                 className: cn(
                   isMultiline
                     ? "min-h-[72px] flex-1 border-0 bg-transparent px-0 py-0"
-                    : "h-[48px] flex-1 border-0 bg-transparent px-0",
+                    : isTillSearch
+                      ? "h-[46px] flex-1 border-0 bg-transparent px-0 text-[15px]"
+                      : "h-[48px] flex-1 border-0 bg-transparent px-0",
                   inputClassName,
                   isGreenGate && "text-[15px] font-semibold",
                   isMarketVariant && "text-market-ink",
