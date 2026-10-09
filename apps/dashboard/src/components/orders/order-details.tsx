@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation"
 import { useRef } from "react"
 import { orderMoney } from "./order-draft"
+import { OrderStatusDot } from "./order-status"
 
 export function OrderDetails({
   orderId,
@@ -78,11 +79,10 @@ export function OrderDetails({
           {order.customerName || "Walk-in customer"}
           {order.customerPhone ? ` · ${order.customerPhone}` : ""}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {(fulfillment.data?.status ?? order.status)
-            .toLowerCase()
-            .replaceAll("_", " ")}
-        </p>
+        <OrderStatusDot
+          status={fulfillment.data?.status ?? order.status}
+          className="text-xs text-muted-foreground"
+        />
       </div>
       {order.lines.map((line) => (
         <div key={line.id} className="grid gap-2 border border-border p-4">

@@ -6,6 +6,7 @@ import {
   DirectoryCollection,
   DirectoryRecord,
   DirectoryToolbar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
 } from "@/components/tables/core"
 import type { expenseSortFields } from "@/hooks/sort-params"
@@ -264,7 +265,7 @@ export function ExpenseTableView({
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
           aria-label="Expense records"
         >
           <DndContext

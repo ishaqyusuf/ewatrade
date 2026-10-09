@@ -5,6 +5,7 @@ import {
   type DirectoryRecordDetail,
   DirectoryToolbar,
   SelectionBar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
   selectColumn,
   useLoadedRowSelection,
@@ -167,7 +168,7 @@ export function InventoryLedgerTable<T extends { id: string }>({
         <section
           aria-label={label}
           ref={scroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
         >
           <DndContext
             id={`${tableId}-dnd`}

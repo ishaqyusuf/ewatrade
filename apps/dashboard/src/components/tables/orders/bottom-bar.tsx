@@ -39,7 +39,7 @@ export function OrdersBottomBar({ table }: { table: Table<OrderRow> }) {
         }
       >
         {eligible.length && ineligibleCount
-          ? `Generate ${eligible.length} receipts`
+          ? `Generate ${eligible.length} ${eligible.length === 1 ? "receipt" : "receipts"}`
           : "Generate receipts"}
       </Button>
     </BottomBar>

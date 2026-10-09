@@ -31,12 +31,7 @@ export function ServiceWorkBottomBar({
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button
-                  className="rounded-none"
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                >
+                <Button size="sm" disabled={busy}>
                   Actions
                 </Button>
               }

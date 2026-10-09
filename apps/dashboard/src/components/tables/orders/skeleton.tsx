@@ -20,7 +20,7 @@ export function OrdersTableSkeleton({
     <TableSkeleton
       columns={orderColumns()}
       rowCount={8}
-      rowHeight={57}
+      rowHeight={48}
       stickyColumnIds={["select", "orderNumber"]}
       actionsColumnId="actions"
       columnVisibility={initialSettings?.columns}

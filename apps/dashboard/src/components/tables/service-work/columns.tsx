@@ -41,7 +41,7 @@ export function createServiceWorkColumns(
         headerLabel: "Order",
         sticky: true,
         className:
-          "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
+          "z-20 bg-background group-hover:bg-muted/40 group-focus-visible:bg-muted/40 group-aria-selected:bg-muted/60",
         reorderable: false,
         skeleton: { type: "text" },
       },

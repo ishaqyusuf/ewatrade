@@ -11,7 +11,12 @@ import type {
 import { flexRender } from "@tanstack/react-table"
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react"
 import { memo } from "react"
-import { ACTIONS_FULL_WIDTH_CELL_CLASS, type TableColumnMeta } from "./types"
+import {
+  ACTIONS_FULL_WIDTH_CELL_CLASS,
+  TABLE_ROW_ACCENT_CLASS,
+  TABLE_ROW_RULE_CLASS,
+  type TableColumnMeta,
+} from "./types"
 
 export interface VirtualRowProps<TData> {
   row: Row<TData>
@@ -85,8 +90,8 @@ function VirtualRowInner<TData>({
       onClick={openFromClick}
       onKeyDown={openFromKeyboard}
       className={cn(
-        "group absolute left-0 top-0 flex w-full min-w-full items-center border-0",
-        onRowOpen && "cursor-pointer",
+        "group absolute left-0 top-0 flex w-full min-w-full items-center border-0 outline-none",
+        onRowOpen && "cursor-pointer focus-visible:bg-muted/40",
         isSelected && "bg-muted/60",
         "hover:bg-muted/40",
         isExporting && "opacity-60",
@@ -122,14 +127,21 @@ function VirtualRowInner<TData>({
             data-column-id={id}
             data-row-interactive={nonClickableColumns.has(id) || undefined}
             className={cn(
-              "flex h-full items-center overflow-hidden border-b border-border px-4",
+              "flex h-full items-center overflow-hidden px-4",
+              TABLE_ROW_RULE_CLASS,
+              index === 0 && TABLE_ROW_ACCENT_CLASS,
               actionFillsWidth && ACTIONS_FULL_WIDTH_CELL_CLASS,
               !actionFillsWidth && getStickyClassName(id, meta?.className),
               isAction && "justify-center",
             )}
             style={style}
           >
-            <div className="w-full min-w-0 overflow-hidden truncate">
+            <div
+              className={cn(
+                "w-full min-w-0 overflow-hidden truncate",
+                meta?.align === "end" && "text-right tabular-nums",
+              )}
+            >
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </div>
           </td>

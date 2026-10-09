@@ -3,6 +3,7 @@
 import {
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   getHeaderLabel,
 } from "@/components/tables/core"
@@ -94,7 +95,7 @@ export function OrdersTableHeader({
                 }
                 const className = getStickyClassName(
                   id,
-                  "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                  TABLE_HEADER_CELL_CLASS,
                 )
                 const sortControl =
                   id === SELECT_COLUMN_ID ? (
@@ -131,6 +132,10 @@ export function OrdersTableHeader({
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                       {sortControl}
                       {scrollControls}
+                    </div>
+                  ) : meta?.align === "end" ? (
+                    <div className="flex min-w-0 flex-1 justify-end">
+                      {sortControl}
                     </div>
                   ) : (
                     sortControl

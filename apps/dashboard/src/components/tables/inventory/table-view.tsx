@@ -3,6 +3,7 @@
 import {
   DirectoryToolbar,
   SelectionBar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
 } from "@/components/tables/core"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
@@ -114,7 +115,7 @@ export function InventoryTableView({
       ) : (
         <section
           ref={tableScroll.setContainerRef}
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
           aria-label="Inventory balances"
         >
           <DndContext

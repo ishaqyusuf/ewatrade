@@ -45,7 +45,7 @@ export function DraggableHeader({
       data-table-sticky={sticky ? "true" : undefined}
       data-table-sticky-side={sticky ? stickySide : undefined}
       className={cn(
-        "group/header relative flex h-full min-w-0 select-none items-center border-t border-border px-4",
+        "group/header relative flex h-full min-w-0 select-none items-center border-b border-border px-4",
         isDragging && "z-50 border border-border bg-background shadow-sm",
         className,
       )}

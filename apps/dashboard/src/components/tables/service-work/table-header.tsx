@@ -5,6 +5,7 @@ import {
   HorizontalPagination,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
+  TABLE_HEADER_CELL_CLASS,
   type TableColumnMeta,
   type TableScrollState,
   getHeaderLabel,
@@ -103,7 +104,7 @@ export function ServiceWorkTableHeader({
                 }
                 const className = getStickyClassName(
                   id,
-                  "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
+                  TABLE_HEADER_CELL_CLASS,
                 )
                 const ariaSort = field
                   ? sortDirection === "asc"

@@ -4,6 +4,7 @@ import type { WorkJob } from "@/components/service-work/service-utils"
 import {
   DirectoryToolbar,
   SelectionBar,
+  TABLE_SCROLL_CONTAINER_CLASS,
   VirtualRow,
 } from "@/components/tables/core"
 import type { serviceWorkSortFields } from "@/hooks/sort-params"
@@ -147,7 +148,7 @@ export function ServiceWorkTableView({
         <section
           ref={scroll.setContainerRef}
           aria-label="Service work records"
-          className="max-h-[560px] overflow-auto overscroll-contain border border-border"
+          className={TABLE_SCROLL_CONTAINER_CLASS}
         >
           <DndContext
             id="service-work-table-dnd"

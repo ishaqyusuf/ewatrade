@@ -8,7 +8,12 @@ import type {
 } from "@tanstack/react-table"
 import { useMemo } from "react"
 import { SkeletonCell } from "./skeleton-cell"
-import { type TableColumnMeta, getColumnId, getHeaderLabel } from "./types"
+import {
+  TABLE_ROW_RULE_CLASS,
+  type TableColumnMeta,
+  getColumnId,
+  getHeaderLabel,
+} from "./types"
 
 export interface TableSkeletonProps<TData> {
   columns: ColumnDef<TData>[]
@@ -144,12 +149,14 @@ export function TableSkeleton<TData>({
                   data-table-sticky={isSticky ? "true" : undefined}
                   scope="col"
                   className={cn(
-                    "flex h-full shrink-0 items-center border-b border-border px-4 text-xs font-medium text-muted-foreground",
+                    "flex h-full shrink-0 items-center border-b border-border px-4 text-xs font-normal text-muted-foreground",
                     isSticky && "z-10 bg-background md:sticky",
                     isActions &&
                       !actionFillsWidth &&
                       "z-10 ml-auto justify-center bg-background md:sticky md:right-0",
                     actionFillsWidth && "justify-center bg-background",
+                    (column.meta as TableColumnMeta | undefined)?.align ===
+                      "end" && "justify-end",
                   )}
                   style={style}
                 >
@@ -167,7 +174,7 @@ export function TableSkeleton<TData>({
           {skeletonRows.map((skeletonRow) => (
             <tr
               key={skeletonRow.id}
-              className="group flex items-center border-b border-border"
+              className={cn("group flex items-center", TABLE_ROW_RULE_CLASS)}
               style={{ height: rowHeight }}
             >
               {visibleColumns.map((column) => {
@@ -185,6 +192,7 @@ export function TableSkeleton<TData>({
                         !actionFillsWidth &&
                         "z-10 justify-center bg-background md:sticky md:right-0",
                       actionFillsWidth && "justify-center bg-background",
+                      meta?.align === "end" && "justify-end",
                       !actionFillsWidth && meta?.className,
                     )}
                     style={style}
