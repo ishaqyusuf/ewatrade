@@ -109,10 +109,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     await Promise.all([
       queryClient.invalidateQueries(trpc.orders.get.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-      queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
       queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
-      queryClient.invalidateQueries(trpc.catalog.listItemsPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItemsPage.pathFilter()),
       queryClient.invalidateQueries(trpc.inventory.balanceReport.queryFilter()),
     ])
   }

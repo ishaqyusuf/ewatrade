@@ -390,10 +390,10 @@ export function useServiceJobs() {
 
   async function refresh() {
     await Promise.all([
-      queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
+      queryClient.invalidateQueries(trpc.services.queuePage.pathFilter()),
       queryClient.invalidateQueries(trpc.services.getJob.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-      queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
       queryClient.invalidateQueries(
         trpc.tenant.featureAvailability.queryFilter(),

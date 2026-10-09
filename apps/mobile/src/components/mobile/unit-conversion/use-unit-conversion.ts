@@ -295,7 +295,7 @@ export function useUnitConversion({ onComplete }: ConversionProps) {
             trpc.inventory.operationHistory.queryFilter(),
           ),
           queryClient.invalidateQueries(
-            trpc.catalog.listItemsPage.queryFilter(),
+            trpc.catalog.listItemsPage.pathFilter(),
           ),
           queryClient.invalidateQueries(
             trpc.tenant.featureAvailability.queryFilter(),

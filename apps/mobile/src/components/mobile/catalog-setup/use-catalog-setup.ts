@@ -547,7 +547,7 @@ export function useCatalogSetup({
           refetchType: "all",
         }),
         queryClient.invalidateQueries({
-          ...trpc.catalog.listItemsPage.queryFilter(),
+          ...trpc.catalog.listItemsPage.pathFilter(),
           refetchType: "all",
         }),
         queryClient.invalidateQueries({

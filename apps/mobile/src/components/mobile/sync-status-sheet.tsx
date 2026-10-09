@@ -98,15 +98,15 @@ export function SyncStatusContent({
           ),
           queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
           queryClient.invalidateQueries(
-            trpc.catalog.listItemsPage.queryFilter(),
+            trpc.catalog.listItemsPage.pathFilter(),
           ),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
           queryClient.invalidateQueries(
             trpc.orders.customerCount.queryFilter(),
           ),
           queryClient.invalidateQueries(trpc.services.queue.queryFilter()),
-          queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
+          queryClient.invalidateQueries(trpc.services.queuePage.pathFilter()),
         ])
       },
     }),
@@ -127,7 +127,7 @@ export function SyncStatusContent({
         await Promise.all([
           conflicts.refetch(),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
         ])
       },
     }),

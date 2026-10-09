@@ -318,7 +318,7 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
             trpc.inventory.categorySuggestions.queryFilter(),
           ),
           queryClient.invalidateQueries(
-            trpc.catalog.listItemsPage.queryFilter(),
+            trpc.catalog.listItemsPage.pathFilter(),
           ),
           queryClient.invalidateQueries(
             trpc.tenant.featureAvailability.queryFilter(),

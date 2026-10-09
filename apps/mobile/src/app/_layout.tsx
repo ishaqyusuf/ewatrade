@@ -413,10 +413,10 @@ function OfflinePolicyReconciler() {
           queryClient.invalidateQueries(trpc.offline.conflicts.queryFilter()),
           queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
           queryClient.invalidateQueries(
-            trpc.catalog.listItemsPage.queryFilter(),
+            trpc.catalog.listItemsPage.pathFilter(),
           ),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
           queryClient.invalidateQueries(
             trpc.tenant.featureAvailability.queryFilter(),
           ),

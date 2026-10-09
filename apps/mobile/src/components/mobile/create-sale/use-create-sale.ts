@@ -612,7 +612,7 @@ export function useCreateSale({
       })
       await Promise.all([
         queryClient.invalidateQueries(trpc.customers.count.queryFilter()),
-        queryClient.invalidateQueries(trpc.customers.listPage.queryFilter()),
+        queryClient.invalidateQueries(trpc.customers.listPage.pathFilter()),
       ])
       selectCustomer({
         email: customer.email ?? undefined,
@@ -636,14 +636,14 @@ export function useCreateSale({
   async function refreshOrderQueries() {
     await Promise.all([
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-      queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
       queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
-      queryClient.invalidateQueries(trpc.catalog.listItemsPage.queryFilter()),
+      queryClient.invalidateQueries(trpc.catalog.listItemsPage.pathFilter()),
       queryClient.invalidateQueries(trpc.inventory.balanceReport.queryFilter()),
       queryClient.invalidateQueries(trpc.customers.count.queryFilter()),
-      queryClient.invalidateQueries(trpc.customers.listPage.queryFilter()),
-      queryClient.invalidateQueries(trpc.services.queuePage.queryFilter()),
+      queryClient.invalidateQueries(trpc.customers.listPage.pathFilter()),
+      queryClient.invalidateQueries(trpc.services.queuePage.pathFilter()),
       queryClient.invalidateQueries(
         trpc.tenant.featureAvailability.queryFilter(),
       ),

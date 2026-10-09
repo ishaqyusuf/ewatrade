@@ -402,7 +402,7 @@ function HeroMeter({
   palette,
 }: {
   meter: NonNullable<HeroCardProps["meter"]>
-  palette: (typeof GREEN_TILL_THEME)["light"]
+  palette: (typeof GREEN_TILL_THEME)["light" | "dark"]
 }) {
   const [width, setWidth] = useState(0)
   const percent = Math.max(0, Math.min(100, meter.percent))

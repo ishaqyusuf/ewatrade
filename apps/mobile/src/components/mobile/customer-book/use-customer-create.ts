@@ -107,7 +107,7 @@ export function useCustomerCreate({
           queryClient.invalidateQueries(trpc.customers.count.queryFilter(), {
             throwOnError: true,
           }),
-          queryClient.invalidateQueries(trpc.customers.listPage.queryFilter(), {
+          queryClient.invalidateQueries(trpc.customers.listPage.pathFilter(), {
             throwOnError: true,
           }),
           queryClient.invalidateQueries(

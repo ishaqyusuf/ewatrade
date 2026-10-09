@@ -105,7 +105,7 @@ export function MoreScreen() {
         await Promise.all([
           offlineRecords.refetch(),
           queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-          queryClient.invalidateQueries(trpc.orders.listPage.queryFilter()),
+          queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
         ])
       },
     }),
