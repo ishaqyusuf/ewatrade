@@ -9,9 +9,9 @@ export function OpenSearchButton({ onClick }: { onClick: () => void }) {
     <>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
-        className="rounded-none md:hidden"
+        className="size-11 md:hidden"
         onClick={onClick}
         aria-label="Open dashboard search"
         aria-keyshortcuts="Meta+K Control+K /"

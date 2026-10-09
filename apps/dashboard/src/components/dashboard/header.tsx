@@ -18,7 +18,7 @@ type Props = {
 export function DashboardHeader({ commandPaths, ctx, navItems, user }: Props) {
   return (
     <header
-      className="md:m-0 z-50 px-6 md:border-b h-[70px] flex justify-between items-center top-0 backdrop-filter backdrop-blur-xl md:backdrop-filter md:backdrop-blur-none bg-background/70 transition-transform"
+      className="md:m-0 z-50 gap-2 px-4 md:gap-4 md:px-6 md:border-b h-[70px] flex justify-between items-center top-0 backdrop-filter backdrop-blur-xl md:backdrop-filter md:backdrop-blur-none bg-background/70 transition-transform"
       style={{
         transform: "translateY(calc(var(--header-offset, 0px) * -1))",
         transitionDuration: "var(--header-transition, 200ms)",
