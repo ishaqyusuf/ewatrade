@@ -29,7 +29,7 @@ export type ActionButtonProps = ButtonProps & {
 }
 
 const toneClasses = {
-  cream: "bg-[#FFF9ED] active:opacity-90 dark:bg-[#F3FBF6]",
+  cream: "bg-cream active:opacity-90",
   gold: "bg-gold active:opacity-90",
   soft: "bg-accent active:opacity-90",
 } as const

@@ -26,6 +26,16 @@ export const GREEN_TILL_THEME = {
     rose: "#FCE8E6",
     roseForeground: "#9B1C1C",
     cardShadow: "rgba(14,74,56,0.45)",
+    // On the always-green hero: watermark, chips, change and status dots.
+    heroWatermark: "rgba(255,255,255,0.07)",
+    heroChip: "rgba(255,255,255,0.14)",
+    heroUp: "#8EF0BE",
+    heroDown: "#FFB4A8",
+    dotSynced: "#8EF0BE",
+    dotOffline: "#F8C66A",
+    dotBusy: "#9CC3F5",
+    lilacChip: "rgba(91,58,168,0.14)",
+    clear: "transparent",
   },
   dark: {
     heroFrom: "#17543F",
@@ -51,7 +61,21 @@ export const GREEN_TILL_THEME = {
     rose: "#3A1D1D",
     roseForeground: "#F7A3A3",
     cardShadow: "rgba(0,0,0,0.6)",
+    heroWatermark: "rgba(255,255,255,0.07)",
+    heroChip: "rgba(255,255,255,0.14)",
+    heroUp: "#8EF0BE",
+    heroDown: "#FFB4A8",
+    dotSynced: "#8EF0BE",
+    dotOffline: "#F8C66A",
+    dotBusy: "#9CC3F5",
+    lilacChip: "rgba(196,178,245,0.16)",
+    clear: "transparent",
   },
 } as const
 
 export type GreenTillTint = "mint" | "amber" | "sky" | "lilac" | "rose"
+
+/** A tint's foreground at about 14% opacity, for icon chips on tinted cards. */
+export function tintChip(foregroundHex: string) {
+  return `${foregroundHex}24`
+}

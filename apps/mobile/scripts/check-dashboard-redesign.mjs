@@ -48,7 +48,7 @@ const requiredMarkers = [
       "DashboardActionRow",
       "DashboardRecentOrderRow",
       'title="Recent orders"',
-      'title="Recent sales"',
+      'title="Your sales"',
       "Add a product",
       "Add a service",
       "Add a sellable item to create orders",

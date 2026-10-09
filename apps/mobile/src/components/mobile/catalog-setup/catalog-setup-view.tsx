@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
 import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { KeyboardInlineComposer } from "@/components/mobile/keyboard-inline-composer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { RetainedEditorStack } from "@/components/mobile/retained-editor-stack"
@@ -9,6 +10,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
@@ -42,6 +44,7 @@ import type { CatalogSetupModel } from "./use-catalog-setup"
 export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const largeTextLayout = useLargeTextLayout()
   const market = useMobileDesign("first-product") === "market-day"
+  const businessName = useAuthContext().profile?.businessName
   const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(88)
   const [composerHeight, setComposerHeight] = useState(88)
@@ -141,39 +144,28 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     return (
       <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
         <View
-          className={cn("flex-1", market ? "bg-market-canvas" : "px-4 pt-2")}
+          className={cn(
+            "flex-1",
+            market ? "bg-market-canvas" : "px-[18px] pt-2",
+          )}
         >
           {market ? (
             <Market.MarketSetupHeader kind={null} />
           ) : (
-            <View className={catalogSetupClassName("gap-2 pb-6", market)}>
-              <Text
-                className={catalogSetupClassName(
-                  "text-xl font-extrabold text-foreground",
-                  market,
-                )}
-              >
-                What are you adding?
-              </Text>
-              <Text
-                className={catalogSetupClassName(
-                  "text-sm [-rn-line-height:20] text-muted-foreground",
-                  market,
-                )}
-              >
-                Products can track stock. Services do not affect inventory.
-              </Text>
+            <View className="pb-3.5">
+              <HeroCard
+                label={`New item${businessName ? ` · ${businessName}` : ""}`}
+                sub="Pick one. You can add details later."
+                title="What are you adding?"
+              />
             </View>
           )}
-          <View
-            className={
-              market || largeTextLayout ? "gap-3 p-4" : "flex-row gap-3"
-            }
-          >
+          <View className={market ? "gap-3 p-4" : "gap-3"}>
             <KindChoice
-              description="An item you keep and sell."
-              icon="Warehouse"
+              description="Something you keep and sell. Tracks stock."
+              icon="Package"
               label="Product"
+              tint="mint"
               onPress={() => setKind("product")}
               recommendation={
                 businessProfile?.recommendedItemKinds.includes("product")
@@ -182,9 +174,10 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               }
             />
             <KindChoice
-              description="Work you price and deliver."
+              description="Work you price and deliver. No stock."
               icon="Wrench"
               label="Service"
+              tint="sky"
               onPress={() => setKind("service")}
               recommendation={
                 businessProfile?.recommendedItemKinds.includes("service")

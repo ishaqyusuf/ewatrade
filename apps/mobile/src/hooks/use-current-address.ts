@@ -31,13 +31,18 @@ export function useCurrentAddress() {
         setStatus("idle")
         return null
       }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      }).catch(() => {
+      // No Google "Location Accuracy" prompt: use the location the phone
+      // already has (GPS), then the last known position.
+      const position =
+        (await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          mayShowUserSettingsDialog: false,
+        }).catch(() => null)) ??
+        (await Location.getLastKnownPositionAsync().catch(() => null))
+      if (!position)
         throw new Error(
           "Turn on location on your phone, or type the address below.",
         )
-      })
       const result = await lookup.mutateAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
