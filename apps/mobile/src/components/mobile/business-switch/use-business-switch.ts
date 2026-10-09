@@ -2,7 +2,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { canManageMobileOperations } from "@/lib/mobile-roles"
 import { getSession, isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
-import { useBusinessStore, type RetailOpsBusiness } from "@/store/businessStore"
+import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
@@ -67,6 +67,19 @@ export function useBusinessSwitch({
       networkMode: "always",
     }),
   )
+  const plan = useQuery(
+    trpc.retailOps.subscription.queryOptions(undefined, {
+      enabled:
+        !blocked &&
+        !local &&
+        !isOffline &&
+        ["OWNER", "ADMIN"].includes(auth.profile?.role?.toUpperCase() ?? ""),
+      retry: false,
+    }),
+  )
+  const businessLimitReached = !!plan.data?.entitlements.find(
+    (item) => item.key === "businesses",
+  )?.isAtLimit
   const businesses = useMemo<RetailOpsBusiness[]>(
     () =>
       blocked
@@ -242,6 +255,12 @@ export function useBusinessSwitch({
   }, [currentSession, memberships.refetch])
 
   function openCreate() {
+    if (businessLimitReached) {
+      setError(
+        "Your plan’s business limit is reached. Open Plan & billing to review your usage.",
+      )
+      return
+    }
     if (
       !currentSession() ||
       busy.current ||
@@ -295,7 +314,9 @@ export function useBusinessSwitch({
       !accepted &&
       !selectingId &&
       (local ? localHydrated : !isOffline && !memberships.isPending),
+    businessLimitReached,
     canCreate:
+      !businessLimitReached &&
       !blocked &&
       !accepted &&
       !selectingId &&

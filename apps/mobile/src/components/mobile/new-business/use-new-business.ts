@@ -2,18 +2,18 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { createBusinessFixture } from "@/internal-tooling/fixture-recipes"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { switchMobileBusinessSession } from "@/lib/workspace-feature-availability"
-import { useBusinessStore, type RetailOpsBusiness } from "@/store/businessStore"
+import { type RetailOpsBusiness, useBusinessStore } from "@/store/businessStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import {
   BUSINESS_OPERATING_MODELS,
   BUSINESS_ORDER_CHANNELS,
   BUSINESS_TEAM_SIZES,
+  type BusinessOrderChannel,
+  type BusinessProfile,
   OPERATING_CURRENCIES,
   findBusinessProfile,
   listBusinessProfiles,
-  type BusinessProfile,
-  type BusinessOrderChannel,
 } from "@ewatrade/utils"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
@@ -21,11 +21,11 @@ import { useRouter } from "expo-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
+  type NewBusinessDraft,
   businessCreateInput,
   businessDetailsIssue,
   businessProfileIssue,
   newBusinessDraft,
-  type NewBusinessDraft,
 } from "./new-business-model"
 
 type SubmitState = "editing" | "saving" | "created" | "uncertain"
@@ -286,6 +286,7 @@ export function useNewBusiness() {
       OPERATING_CURRENCIES.find((value) => value.code === fixture.currencyCode)
         ?.code ?? "NGN"
     updateDraft({
+      countryCode: "NG",
       businessName: fixture.businessName,
       addressLine1: fixture.addressLine1,
       city: fixture.city,

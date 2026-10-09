@@ -9,6 +9,7 @@ import { useState } from "react"
 import { Alert, Linking } from "react-native"
 import { LegalAcceptancePanel } from "./legal-acceptance-panel"
 import { MobileScreen } from "./screen"
+import { SettingsScreen } from "./settings-screen"
 
 const policyLinks = [
   ["terms", "Terms of Service"],
@@ -69,7 +70,7 @@ export function AccountPrivacyScreen() {
     }
   }
   return (
-    <MobileScreen contentClassName="gap-6 px-5 py-6">
+    <MobileScreen contentClassName="gap-4 px-[18px] py-6">
       <Pressable
         accessibilityRole="button"
         className="min-h-11 justify-center"
@@ -77,12 +78,17 @@ export function AccountPrivacyScreen() {
       >
         <Text className="font-semibold text-primary">Back</Text>
       </Pressable>
-      <Text
-        accessibilityRole="header"
-        className="text-2xl font-bold text-foreground"
-      >
-        Account and privacy
-      </Text>
+      <SettingsScreen
+        title={
+          request.data ? "Deletion request received" : "Account and privacy"
+        }
+        sub={
+          request.data
+            ? "Your account has not been erased."
+            : "Your account, legal documents and personal information"
+        }
+        loading={request.isPending}
+      />
       <Text className="text-base leading-6 text-muted-foreground">
         Request deletion of your EwaTrade account and associated personal
         information. This is different from leaving one business or closing a

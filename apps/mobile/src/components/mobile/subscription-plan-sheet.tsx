@@ -1,33 +1,32 @@
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
-import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
-import { useBusinessStore } from "@/store/businessStore"
+import { publicLegalUrl } from "@/lib/public-legal-url"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
-import {
-  type RetailOpsPlan,
-  type RetailOpsPlanId,
-  type RetailOpsSubscription,
-  getBusinessSubscription,
-  getPlan,
-  useSubscriptionStore,
+import type {
+  RetailOpsPlan,
+  RetailOpsPlanId,
+  RetailOpsSubscription,
 } from "@/store/subscriptionStore"
 import { useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef } from "react"
+import { Linking } from "react-native"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { ActionButton } from "./action-button"
+import { ListCard, RecordRow } from "./green-till/kit"
+import { SettingsScreen } from "./settings-screen"
 import {
   SUBSCRIPTION_SCREEN_COPY,
-  getSubscriptionStatusTone,
   getSubscriptionUsagePresentation,
 } from "./subscription-plan-presentation"
 
 type SubscriptionPlanSheetProps = {
-  usage: {
+  usage?: {
     businesses: number
     products: number
     staff: number
@@ -62,18 +61,6 @@ type ProductionSubscriptionSnapshot = {
   }
 }
 
-function formatDate(value: string | undefined) {
-  if (!value) return "Not set"
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "Not set"
-
-  return date.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-  })
-}
-
 function subscriptionStatusLabel(status: RetailOpsSubscription["status"]) {
   if (status === "trialing") return "Trial"
   if (status === "past_due") return "Past due"
@@ -81,50 +68,11 @@ function subscriptionStatusLabel(status: RetailOpsSubscription["status"]) {
   return "Active"
 }
 
-function toOptionalDate(value: string | null | undefined) {
-  return value ?? undefined
-}
-
-function UsageTile({
-  label,
-  limit,
-  used,
-}: {
-  label: string
-  limit: number
-  used: number
-}) {
-  const presentation = getSubscriptionUsagePresentation(used, limit)
-
-  return (
-    <View className="min-h-20 justify-center gap-1 py-3">
-      <Text className="text-xl font-extrabold tracking-tight text-foreground">
-        {presentation.valueLabel}
-      </Text>
-      <Text className="text-xs font-semibold text-muted-foreground">
-        {label}
-      </Text>
-      {presentation.statusLabel ? (
-        <Text className="text-[10px] font-extrabold uppercase tracking-wide text-destructive">
-          {presentation.statusLabel}
-        </Text>
-      ) : null}
-    </View>
-  )
-}
-
 export function SubscriptionPlanContent({
   presentation = "sheet",
-  usage,
 }: SubscriptionPlanContentProps) {
   const trpc = useTRPC()
-  const activeBusinessId = useBusinessStore((state) => state.activeBusinessId)
   const isOfflineMode = useOperationalModeStore((state) => state.isOfflineMode)
-  const subscriptions = useSubscriptionStore((state) => state.subscriptions)
-  const localSubscription = getBusinessSubscription(
-    subscriptions,
-    activeBusinessId,
-  )
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
       enabled: !isOfflineMode,
@@ -134,87 +82,82 @@ export function SubscriptionPlanContent({
   const productionSnapshot = subscriptionQuery.data as
     | ProductionSubscriptionSnapshot
     | undefined
-  const shouldUseProductionSnapshot =
-    !isOfflineMode && !!productionSnapshot && !subscriptionQuery.isError
-  const subscription = shouldUseProductionSnapshot
-    ? {
-        businessId: activeBusinessId ?? "production-business",
-        currentPeriodEndsAt: toOptionalDate(
-          productionSnapshot.subscription.currentPeriodEndsAt,
-        ),
-        planId: productionSnapshot.subscription.planId,
-        status: productionSnapshot.subscription.status,
-        trialEndsAt: toOptionalDate(
-          productionSnapshot.subscription.trialEndsAt,
-        ),
-        updatedAt: productionSnapshot.subscription.updatedAt,
-      }
-    : localSubscription
-  const currentPlan = shouldUseProductionSnapshot
-    ? productionSnapshot.plan
-    : getPlan(subscription.planId)
-  const usageSnapshot = shouldUseProductionSnapshot
-    ? productionSnapshot.usage
-    : usage
-  const sourceLabel = isOfflineMode
-    ? "Local"
-    : subscriptionQuery.isError
-      ? "Local fallback"
-      : subscriptionQuery.isFetching
-        ? "Refreshing"
-        : "Online"
-  const sourceDetail = isOfflineMode
-    ? "Saved plan details are shown while this device is offline."
-    : subscriptionQuery.isError
-      ? "Plan details could not refresh. Saved information is shown."
-      : subscriptionQuery.isFetching
-        ? "Refreshing your plan and usage."
-        : "Your current plan and limits are up to date."
-  const shouldShowSourceNotice =
-    sourceLabel !== "Online" && sourceLabel !== "Refreshing"
-  const offlineDeviceUsage = shouldUseProductionSnapshot
-    ? productionSnapshot.usage.offlineDevices
-    : null
-  const contentClassName =
-    presentation === "screen" ? "gap-5 px-4 pb-6" : "gap-5 px-5 pb-6"
-
+  const verified = productionSnapshot
+  const supportUrl = publicLegalUrl("support")
   const content = (
-    <View className={contentClassName}>
-      {shouldShowSourceNotice ? (
-        <StatusBanner
-          actionLabel={subscriptionQuery.isError ? "Try again" : undefined}
-          icon="Clock"
-          message={sourceDetail}
-          onActionPress={
-            subscriptionQuery.isError
-              ? () => void subscriptionQuery.refetch()
-              : undefined
-          }
-          title={sourceLabel}
-          tone="warning"
-        />
-      ) : null}
-
-      <View className="flex-row items-center gap-3 border-y border-border py-4">
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
-            Current plan
+    <View className="gap-4 px-[18px] pb-6">
+      <SettingsScreen
+        loading={subscriptionQuery.isPending && !isOfflineMode}
+        title={verified?.plan.name ?? "Plan unavailable"}
+        sub={
+          verified
+            ? `${subscriptionStatusLabel(verified.subscription.status)} · ${verified.plan.supportLabel}`
+            : "Connect to load your plan and limits."
+        }
+      >
+        {isOfflineMode || subscriptionQuery.isError ? (
+          <StatusBanner
+            title={isOfflineMode ? "Offline plan" : "Plan could not refresh"}
+            tone="warning"
+            actionLabel={isOfflineMode ? undefined : "Try again"}
+            onActionPress={() => void subscriptionQuery.refetch()}
+            message={
+              verified
+                ? `Saved plan · as of ${new Date(subscriptionQuery.dataUpdatedAt).toLocaleString()}`
+                : "Current plan and usage are unavailable."
+            }
+          />
+        ) : null}
+        {verified ? (
+          <ListCard>
+            {verified.entitlements.map((entitlement) => (
+              <RecordRow
+                stackDetails
+                key={entitlement.key}
+                title={
+                  entitlement.key === "offlineDevices"
+                    ? "Offline devices"
+                    : entitlement.key[0].toUpperCase() +
+                      entitlement.key.slice(1)
+                }
+                meta={
+                  entitlement.isAtLimit ? "Plan limit reached" : "Current usage"
+                }
+                amount={
+                  getSubscriptionUsagePresentation(
+                    entitlement.used,
+                    entitlement.limit,
+                  ).valueLabel
+                }
+                avatar={{
+                  icon:
+                    entitlement.key === "staff"
+                      ? "Users"
+                      : entitlement.key === "products"
+                        ? "Package"
+                        : "Building2",
+                  tint: entitlement.isAtLimit ? "amber" : "mint",
+                }}
+              />
+            ))}
+          </ListCard>
+        ) : null}
+        <Text className="text-sm text-muted-foreground">
+          Need more room? Contact support to discuss a plan change.
+        </Text>
+        {supportUrl ? (
+          <ActionButton
+            variant="outline"
+            onPress={() => void Linking.openURL(supportUrl)}
+          >
+            Contact support
+          </ActionButton>
+        ) : (
+          <Text className="text-xs text-muted-foreground">
+            Support contact is unavailable in this build.
           </Text>
-          <Text className="text-xl font-extrabold tracking-tight text-foreground">
-            {currentPlan.name}
-          </Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
-            {subscription.status === "trialing"
-              ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
-              : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}{" "}
-            · {currentPlan.supportLabel}
-          </Text>
-        </View>
-        <StatusBadge
-          label={subscriptionStatusLabel(subscription.status)}
-          tone={getSubscriptionStatusTone(subscription.status)}
-        />
-      </View>
+        )}
+      </SettingsScreen>
     </View>
   )
 

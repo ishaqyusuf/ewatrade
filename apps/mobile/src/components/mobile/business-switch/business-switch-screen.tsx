@@ -1,30 +1,31 @@
-import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
+import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Modal, useModal } from "@/components/ui/modal"
-import { Text } from "@/components/ui/text"
 import { Icon } from "@/components/ui/icon"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
-  BottomSheetFlatList,
   type BottomSheetBackdropProps,
+  BottomSheetFlatList,
   type BottomSheetModal,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import {
+  type ReactNode,
   forwardRef,
   useCallback,
   useRef,
   useState,
-  type ReactNode,
 } from "react"
 import { RefreshControl, useWindowDimensions } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -40,12 +41,11 @@ import {
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { BUSINESS_SWITCH_COPY } from "../business-switch-presentation"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
-import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
-import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
   BusinessSwitchSheetFooter,
   WorkspaceFooterContext,
 } from "./business-switch-sheet-footer"
+import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
 
 type WorkspaceController = ReturnType<typeof useBusinessSwitch>
 type SwitchProps = { onComplete?: () => void }
@@ -92,6 +92,13 @@ function WorkspaceBody({
             icon="Building2"
             title="Checking workspace access"
             message="Wait while the selected membership is verified. Other selections are temporarily disabled."
+          />
+        ) : null}
+        {vm.businessLimitReached ? (
+          <StatusBanner
+            title="Business limit reached"
+            message="Open Plan & billing from More to review your plan usage before adding another business."
+            tone="warning"
           />
         ) : null}
         {vm.error || (!vm.local && vm.memberships.isError) ? (
@@ -170,7 +177,7 @@ function WorkspaceBody({
         {...listProps}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: market ? 0 : 20,
+          paddingHorizontal: market ? 0 : 18,
           paddingBottom: footerSpace,
         }}
       />
@@ -184,7 +191,7 @@ function WorkspaceBody({
         contentContainerClassName={
           market
             ? "grow pb-[var(--workspace-list-bottom)]"
-            : "grow px-4 pb-[var(--workspace-list-bottom)]"
+            : "grow gap-3 px-[18px] pb-[var(--workspace-list-bottom)]"
         }
       />
     </VariableContextProvider>

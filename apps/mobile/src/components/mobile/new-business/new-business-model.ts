@@ -1,12 +1,13 @@
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   BUSINESS_PROFILE_SCHEMA_VERSION,
-  findBusinessProfile,
   type BusinessOperatingModel,
   type BusinessOrderChannel,
   type BusinessTeamSize,
   type OperatingCurrencyCode,
+  findBusinessProfile,
 } from "@ewatrade/utils"
+import { getCountry, toInternationalPhone } from "@ewatrade/utils/countries"
 
 export const BUSINESS_SETUP_STEPS = ["Type", "Profile", "Details", "Review"]
 export const BUSINESS_SETUP_TITLES = [
@@ -16,6 +17,7 @@ export const BUSINESS_SETUP_TITLES = [
   "Review and create",
 ]
 export type NewBusinessDraft = {
+  countryCode?: string
   businessName: string
   addressLine1: string
   city: string
@@ -29,6 +31,7 @@ export type NewBusinessDraft = {
 }
 export function newBusinessDraft(): NewBusinessDraft {
   return {
+    countryCode: "NG",
     businessName: "",
     addressLine1: "",
     city: "",
@@ -73,8 +76,12 @@ export function businessCreateInput(
     addressLine1: draft.addressLine1.trim(),
     businessName: draft.businessName.trim(),
     city: draft.city.trim(),
+    countryCode: draft.countryCode ?? "NG",
     currencyCode: draft.currencyCode,
-    supportPhone: draft.phone.trim(),
+    supportPhone: toInternationalPhone(
+      getCountry(draft.countryCode).dialCode,
+      draft.phone,
+    ),
     onboarding: {
       businessProfileKey: draft.businessProfileKey,
       businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,

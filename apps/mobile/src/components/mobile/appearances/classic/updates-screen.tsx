@@ -11,11 +11,12 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColors, useColorScheme } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
 import { ScrollView } from "react-native-css/components/ScrollView"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { SettingsScreen } from "../../settings-screen"
 
 export function ClassicUpdatesScreen(model: UpdatesPresentationProps) {
   const insets = useSafeAreaInsets()
@@ -33,7 +34,7 @@ export function ClassicUpdatesScreen(model: UpdatesPresentationProps) {
           backgroundColor={colors.background}
           style={colorScheme === "dark" ? "light" : "dark"}
         />
-        <View className="flex-row items-center gap-3 px-4 py-3">
+        <View className="flex-row items-center gap-3 px-[18px] py-3">
           <Pressable
             accessibilityLabel="Go back"
             accessibilityRole="button"
@@ -41,7 +42,7 @@ export function ClassicUpdatesScreen(model: UpdatesPresentationProps) {
             onPress={model.onBack}
             className="size-11 items-center justify-center rounded-full bg-card"
           >
-            <Icon name="ChevronLeft" className="size-md text-foreground" />
+            <Icon name="ChevronLeft" className="size-[20px] text-foreground" />
           </Pressable>
           <Text
             accessibilityRole="header"
@@ -52,37 +53,10 @@ export function ClassicUpdatesScreen(model: UpdatesPresentationProps) {
         </View>
         <ScrollView
           className="flex-1"
-          contentContainerClassName="gap-4 px-4 pb-[var(--updates-bottom)] pt-2"
+          contentContainerClassName="gap-4 px-[18px] pb-[var(--updates-bottom)] pt-2"
         >
           <View className="gap-4 rounded-2xl bg-card p-4">
-            <View className="flex-row items-start gap-3">
-              <View
-                className="min-w-0 flex-1 gap-2"
-                accessibilityLiveRegion="polite"
-              >
-                <Text className="text-sm font-semibold uppercase text-muted-foreground">
-                  Status
-                </Text>
-                <Text className="text-2xl font-extrabold text-foreground">
-                  {model.status}
-                </Text>
-                <Text className="text-sm text-muted-foreground [-rn-line-height:21]">
-                  {model.message}
-                </Text>
-              </View>
-              <View className="size-12 items-center justify-center rounded-full bg-secondary">
-                <Icon
-                  name={
-                    model.pending
-                      ? "Download"
-                      : model.enabled
-                        ? "RefreshCw"
-                        : "Info"
-                  }
-                  className="size-md text-foreground"
-                />
-              </View>
-            </View>
+            <SettingsScreen title={model.status} sub={model.message} />
             {model.errorMessage ? (
               <Text
                 accessibilityRole="alert"
@@ -101,7 +75,7 @@ export function ClassicUpdatesScreen(model: UpdatesPresentationProps) {
             ))}
           </View>
           <UpdatesActions model={model} />
-          <View className="rounded-2xl bg-card px-4">
+          <View className="rounded-2xl bg-card px-[18px]">
             {model.info.map((row) => (
               <View
                 key={row.label}

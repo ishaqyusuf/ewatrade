@@ -1,14 +1,15 @@
 import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
 import { ClassicAppLockScreen } from "@/components/mobile/appearances/classic/app-lock-screen"
 import { MarketDayAppLockScreen } from "@/components/mobile/appearances/market-day/app-lock-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
 import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { Alert } from "react-native"
 
 function normalizeLockCode(value: string) {
   return value.replace(/\D/g, "").slice(0, APP_LOCK_CODE_LENGTH)
@@ -63,7 +64,8 @@ export function AppLockUnlockScreen({
     lockedUntil !== null && new Date(lockedUntil).getTime() > Date.now()
   const helperMessage = useMemo(() => {
     if (isLoading) return "Checking your app lock."
-    if (isSubmittingBiometrics) return "Checking fingerprint."
+    if (isSubmittingBiometrics)
+      return `Checking ${biometricsStatus.label.toLowerCase()}.`
     if (isSubmittingCode) return "Checking your lock code."
     if (hasHydrationError) {
       return "App lock storage is unavailable. Sign out and reset app lock to continue."
@@ -77,6 +79,7 @@ export function AppLockUnlockScreen({
   }, [
     biometricsStatus.isAvailable,
     biometricsStatus.reason,
+    biometricsStatus.label,
     hasBiometricsEnabled,
     hasHydrationError,
     isLoading,
@@ -146,7 +149,7 @@ export function AppLockUnlockScreen({
         setMessage(result.error)
       }
     } catch {
-      setMessage("Fingerprint unlock could not be completed.")
+      setMessage("Biometric unlock could not be completed.")
     } finally {
       setIsSubmittingBiometrics(false)
     }
@@ -243,7 +246,20 @@ export function AppLockUnlockScreen({
         <Pressable
           accessibilityRole="button"
           haptic
-          onPress={handleForgotCode}
+          onPress={() =>
+            Alert.alert(
+              "Sign out and reset app lock?",
+              "You will need to sign in again. Pending work remains on this device; keep this installation until it is synced.",
+              [
+                { text: "Keep app locked", style: "cancel" },
+                {
+                  text: "Sign out",
+                  style: "destructive",
+                  onPress: () => void handleForgotCode(),
+                },
+              ],
+            )
+          }
           transition
           className={
             design === "market-day"

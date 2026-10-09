@@ -39,7 +39,7 @@ if (!domainContent.includes("DOMAIN_MANAGEMENT_COPY")) {
     "Domain management must use the approved Storefront-first presentation copy.",
   )
 }
-if (!domainContent.includes("paddingHorizontal: 20")) {
+if (!domainContent.includes("paddingHorizontal: 18")) {
   throw new Error(
     "Domain management must keep full-width interaction surfaces inside the screen gutter.",
   )

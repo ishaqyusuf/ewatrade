@@ -1,15 +1,15 @@
 import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
 import { ClassicAppLockScreen } from "@/components/mobile/appearances/classic/app-lock-screen"
 import { MarketDayAppLockScreen } from "@/components/mobile/appearances/market-day/app-lock-screen"
-import { AppLockManagement } from "./app-lock-management"
 import { Text } from "@/components/ui/text"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useAppLockContext } from "@/hooks/use-app-lock"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
 import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
 import { useRouter } from "expo-router"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { AppLockManagement } from "./app-lock-management"
 
 type AppLockSetupMode =
   | "create"
@@ -90,14 +90,14 @@ export function AppLockSettingsScreen() {
       if (enabled && !appLock.biometricsStatus.isAvailable) {
         setMessage(
           appLock.biometricsStatus.reason ??
-            "Fingerprint unlock is not available on this device.",
+            "Biometric unlock is not available on this device.",
         )
         return
       }
 
       await appLock.setBiometricsEnabled(enabled)
       setMessage(
-        enabled ? "Fingerprint unlock enabled." : "Fingerprint unlock off.",
+        enabled ? "Biometric unlock enabled." : "Biometric unlock off.",
       )
     },
     [appLock],
@@ -190,11 +190,12 @@ export function AppLockSettingsScreen() {
           hasLock={appLock.isConfigured}
           biometricsEnabled={!!appLock.config?.biometricsEnabled}
           biometricsAvailable={appLock.biometricsStatus.isAvailable}
+          biometricLabel={appLock.biometricsStatus.label}
           biometricDetail={
             appLock.biometricsStatus.isAvailable
               ? `Use ${appLock.biometricsStatus.label.toLowerCase()} from the PIN keypad.`
               : (appLock.biometricsStatus.reason ??
-                "Fingerprint unlock is not available on this device.")
+                "Biometric unlock is not available on this device.")
           }
           message={message}
           onChangePin={startChange}

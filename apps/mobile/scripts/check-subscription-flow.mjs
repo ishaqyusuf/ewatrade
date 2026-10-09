@@ -24,10 +24,7 @@ const FILES = {
     "src/components/mobile/subscription-plan-sheet.tsx",
   ),
   subscriptionStore: join(MOBILE_DIR, "src/store/subscriptionStore.ts"),
-  floatingQa: join(
-    MOBILE_DIR,
-    "src/components/mobile/floating-qa-button.tsx",
-  ),
+  floatingQa: join(MOBILE_DIR, "src/components/mobile/floating-qa-button.tsx"),
 }
 
 const CONTRACTS = [
@@ -88,8 +85,8 @@ const CONTRACTS = [
       "StatusBadge",
       "StatusBanner",
       "trpc.retailOps.subscription",
-      "shouldUseProductionSnapshot",
-      "UsageTile",
+      "verified = productionSnapshot",
+      "verified.entitlements.map",
       "SUBSCRIPTION_SCREEN_COPY",
       "Current plan",
       "StoreSubscriptionPanel",
