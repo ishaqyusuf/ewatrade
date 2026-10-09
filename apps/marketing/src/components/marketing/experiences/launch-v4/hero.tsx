@@ -17,6 +17,8 @@ import {
 import { usePreviewMotion } from "@ewatrade/onboarding/components/product-preview/use-preview-motion"
 import type { CSSProperties } from "react"
 import { useEffect, useRef, useState } from "react"
+import { HeroHeadline } from "./hero-headline"
+
 const captions = [
   "Your whole business at a glance.",
   "Pick the item. Record the order.",
@@ -97,9 +99,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
           {"\n      "}
           <div className={"gg-hero-copy"}>
             {"\n        "}
-            <h1 className={"gg-h1"} id={"hero-h"}>
-              {"Run your shop from any screen."}
-            </h1>
+            <HeroHeadline paused={paused} replay={replay} />
             {"\n        "}
             <p className={"gg-hero-sub"}>
               {

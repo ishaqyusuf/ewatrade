@@ -850,3 +850,15 @@
 .launch-v4 .gg-theme-toggle svg {width:21px;height:21px;}
 .launch-v4 .gg-theme-toggle:hover {background:var(--ew-on-green-line);}
 .launch-v4 .gg-theme-toggle:focus-visible {outline:2px solid var(--ew-gold);outline-offset:3px;}
+
+/* All four words share one grid cell, reserving the longest phrase's width. */
+.launch-v4 .gg-headline-line { display: block; }
+.launch-v4 .gg-headline-words { display: inline-grid; vertical-align: bottom; overflow: clip; padding-block: 0.12em; margin-block: -0.12em; color: #85deb4; }
+.launch-v4 .gg-headline-word { grid-area: 1 / 1; white-space: nowrap; opacity: 0; transform: translateY(35%); transition: opacity 220ms ease, transform 280ms var(--ew-ease); }
+.launch-v4 .gg-headline-word.is-previous { transform: translateY(-35%); }
+.launch-v4 .gg-headline-word.is-current { opacity: 1; transform: translateY(0); }
+.launch-v4 .gg-headline-words[data-static="true"] .gg-headline-word { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .launch-v4 .gg-headline-word { opacity: 0; transform: none; transition: none; }
+  .launch-v4 .gg-headline-word:first-child { opacity: 1; }
+}
