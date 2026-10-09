@@ -25,6 +25,7 @@ import {
   draftGeneralProposal,
   editGeneralProposal,
   generalProposalForApp,
+  generalProposalWithReview,
 } from "./general-proposals"
 const enabled = process.env.RUN_GENERAL_ASSISTANT_INTEGRATION === "1"
 if (enabled) setDefaultTimeout(600_000)
@@ -504,6 +505,144 @@ if (enabled) setDefaultTimeout(600_000)
             })
           ).amountPaidMinor,
         ).toBe(1500)
+        // B01: customer updates are revision-bound, diffed and never rewrite orders.
+        const atomic = await db.customer.findFirstOrThrow({
+          where: { tenantId: tenant.id, name: "Atomic customer" },
+        })
+        // A same-name customer must not be confused with the target by ID.
+        await db.customer.create({
+          data: {
+            tenantId: tenant.id,
+            name: "Atomic customer",
+            phone: "+2348000000002",
+            normalizedPhone: "+2348000000002",
+          },
+        })
+        await db.commercialOrder.update({
+          where: { id: orderResult.receipt?.recordId },
+          data: { customerId: atomic.id, customerName: "Atomic customer" },
+        })
+        await expect(
+          draftGeneralProposal(ctx, conversation.id, {
+            action: "customer_update",
+            customerId: atomic.id,
+            name: "Atomic customer",
+          }),
+        ).rejects.toMatchObject({ code: "CONFLICT" })
+        const renamePayload = {
+          action: "customer_update" as const,
+          customerId: atomic.id,
+          name: "Atomic Customer Ltd",
+          phone: "+2348000000001",
+        }
+        const renameDraft = await draftGeneralProposal(
+          ctx,
+          conversation.id,
+          renamePayload,
+        )
+        const renameRow = await db.assistantActionProposal.findUniqueOrThrow({
+          where: { id: renameDraft.proposalId },
+        })
+        expect(
+          (await generalProposalWithReview(ctx, renameRow)).review,
+        ).toContain("Name: Atomic customer → Atomic Customer Ltd")
+        const renameApp = generalProposalForApp(renameRow)
+        // Another edit lands between review and Confirm.
+        await db.customer.update({
+          where: { id: atomic.id },
+          data: {
+            email: "atomic@example.invalid",
+            normalizedEmail: "atomic@example.invalid",
+          },
+        })
+        await expect(
+          decideGeneralProposal(ctx, {
+            proposalId: renameApp.id,
+            revision: renameApp.revision,
+            decision: "confirm",
+            approvalToken: renameApp.approvalToken,
+          }),
+        ).rejects.toMatchObject({ code: "CONFLICT" })
+        const renewed = await editGeneralProposal(ctx, {
+          proposalId: renameApp.id,
+          revision: renameApp.revision,
+          payload: renamePayload,
+        })
+        const renamed = await decideGeneralProposal(ctx, {
+          proposalId: renewed.id,
+          revision: renewed.revision,
+          decision: "confirm",
+          approvalToken: renewed.approvalToken,
+        })
+        expect(renamed.receipt?.title).toBe("Customer updated")
+        expect(
+          await db.customer.findUniqueOrThrow({
+            where: { id: atomic.id },
+            select: { name: true, phone: true, email: true },
+          }),
+        ).toEqual({
+          name: "Atomic Customer Ltd",
+          phone: "+2348000000001",
+          email: "atomic@example.invalid",
+        })
+        expect(
+          (
+            await db.commercialOrder.findUniqueOrThrow({
+              where: { id: orderResult.receipt?.recordId },
+            })
+          ).customerName,
+        ).toBe("Atomic customer")
+        const duplicateDraft = await draftGeneralProposal(
+          ctx,
+          conversation.id,
+          {
+            action: "customer_update",
+            customerId: atomic.id,
+            phone: "+2348000000002",
+          },
+        )
+        const duplicateApp = generalProposalForApp(
+          await db.assistantActionProposal.findUniqueOrThrow({
+            where: { id: duplicateDraft.proposalId },
+          }),
+        )
+        await expect(
+          decideGeneralProposal(ctx, {
+            proposalId: duplicateApp.id,
+            revision: duplicateApp.revision,
+            decision: "confirm",
+            approvalToken: duplicateApp.approvalToken,
+          }),
+        ).rejects.toMatchObject({ code: "CONFLICT" })
+        const racing = await Promise.all(
+          ["Racer one", "Racer two"].map(async (name) =>
+            generalProposalForApp(
+              await db.assistantActionProposal.findUniqueOrThrow({
+                where: {
+                  id: (
+                    await draftGeneralProposal(ctx, conversation.id, {
+                      action: "customer_update",
+                      customerId: atomic.id,
+                      name,
+                    })
+                  ).proposalId,
+                },
+              }),
+            ),
+          ),
+        )
+        const raced = await Promise.allSettled(
+          racing.map((proposal) =>
+            decideGeneralProposal(ctx, {
+              proposalId: proposal.id,
+              revision: proposal.revision,
+              decision: "confirm",
+              approvalToken: proposal.approvalToken,
+            }),
+          ),
+        )
+        expect(raced.filter((r) => r.status === "fulfilled")).toHaveLength(1)
+        expect(raced.filter((r) => r.status === "rejected")).toHaveLength(1)
         await db.membership.update({
           where: { id: tenantContext.membership.id },
           data: { role: "CASHIER" },
@@ -526,7 +665,7 @@ if (enabled) setDefaultTimeout(600_000)
         )
         expect(
           await db.customer.count({ where: { tenantId: tenant.id } }),
-        ).toBe(2)
+        ).toBe(3)
       } finally {
         if (tenantId)
           await db.$transaction(
