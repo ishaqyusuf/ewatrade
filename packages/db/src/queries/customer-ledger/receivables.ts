@@ -47,7 +47,12 @@ export async function listCustomerLedgerReceivables(
         },
       })
       const page = rows.slice(0, limit)
-      const items = []
+      const items: {
+        id: string
+        customer: (typeof page)[number]["customer"]
+        currencyCode: string
+        totals: Awaited<ReturnType<typeof getCustomerLedgerTotalsInTransaction>>
+      }[] = []
       for (const account of page)
         items.push({
           id: account.id,
