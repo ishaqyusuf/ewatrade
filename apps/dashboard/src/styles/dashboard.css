@@ -1,27 +1,33 @@
+/* shadcn Luma preset: Stone base + Emerald theme, Figtree, small radius. */
 .ewatrade-dashboard {
-  --font-sans: var(--font-hedvig-sans);
-  --font-display: var(--font-hedvig-serif);
-  --font-serif: var(--font-hedvig-serif);
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(0 0% 7%);
-  --card: hsl(45 18% 96%);
-  --card-foreground: hsl(240 10% 3.9%);
-  --popover: hsl(45 18% 96%);
-  --popover-foreground: hsl(240 10% 3.9%);
-  --primary: hsl(240 5.9% 10%);
-  --primary-foreground: hsl(0 0% 98%);
-  --secondary: hsl(40 11% 89%);
-  --secondary-foreground: hsl(240 5.9% 10%);
-  --muted: hsl(40 11% 89%);
-  --muted-foreground: hsl(0 0% 38%);
-  --accent: hsl(40 10% 94%);
-  --accent-foreground: hsl(240 5.9% 10%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(45 5% 85%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(240 5.9% 10%);
-  --radius: 0rem;
+  --font-sans: var(--font-figtree);
+  --font-display: var(--font-figtree);
+  --font-serif: var(--font-figtree);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.147 0.004 49.25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.147 0.004 49.25);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.147 0.004 49.25);
+  --primary: oklch(0.508 0.118 165.612);
+  --primary-foreground: oklch(0.979 0.021 166.113);
+  --secondary: oklch(0.97 0.001 106.424);
+  --secondary-foreground: oklch(0.216 0.006 56.043);
+  --muted: oklch(0.97 0.001 106.424);
+  --muted-foreground: oklch(0.553 0.013 58.071);
+  --accent: oklch(0.97 0.001 106.424);
+  --accent-foreground: oklch(0.216 0.006 56.043);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.923 0.003 48.717);
+  --input: oklch(0.923 0.003 48.717);
+  --ring: oklch(0.508 0.118 165.612);
+  --chart-1: oklch(0.845 0.143 164.978);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.596 0.145 163.225);
+  --chart-4: oklch(0.508 0.118 165.612);
+  --chart-5: oklch(0.432 0.095 166.913);
+  --radius: 0.45rem;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--accent);
@@ -37,26 +43,27 @@
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Surfaces sit one step above the preset's dark values for readability. */
 .ewatrade-dashboard.dark {
-  --background: hsl(0 0% 5%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(0 0% 7%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(0 0% 7%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(240 5.9% 10%);
-  --secondary: hsl(0 0% 7%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(0 0% 11%);
-  --accent: hsl(0 0% 11%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(359 100% 61%);
-  --destructive-foreground: hsl(0 0% 100%);
-  --border: hsl(0 0% 11%);
-  --input: hsl(0 0% 11%);
-  --ring: hsl(240 4.9% 83.9%);
+  --background: oklch(0.195 0.004 49.25);
+  --foreground: oklch(0.985 0.001 106.423);
+  --card: oklch(0.235 0.004 49.25);
+  --card-foreground: oklch(0.985 0.001 106.423);
+  --popover: oklch(0.235 0.004 49.25);
+  --popover-foreground: oklch(0.985 0.001 106.423);
+  --primary: oklch(0.696 0.17 162.48);
+  --primary-foreground: oklch(0.262 0.051 172.552);
+  --secondary: oklch(0.28 0.004 49.25);
+  --secondary-foreground: oklch(0.985 0.001 106.423);
+  --muted: oklch(0.28 0.004 49.25);
+  --muted-foreground: oklch(0.72 0.012 56.259);
+  --accent: oklch(0.28 0.004 49.25);
+  --accent-foreground: oklch(0.985 0.001 106.423);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.596 0.145 163.225);
 }
 
 .ewatrade-dashboard .scrollbar-hide {
