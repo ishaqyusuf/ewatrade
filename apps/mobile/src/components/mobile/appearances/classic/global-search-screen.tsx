@@ -1,19 +1,22 @@
+import type {
+  SearchAction,
+  SearchFrameProps,
+  SearchHeaderProps,
+  SearchResult,
+} from "@/components/mobile/global-search/search-presentation"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
-import type {
-  SearchResult,
-  SearchAction,
-  SearchFrameProps,
-  SearchHeaderProps,
-} from "@/components/mobile/global-search/search-presentation"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { StatusBar } from "expo-status-bar"
+import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
 import { ScrollView } from "react-native-css/components/ScrollView"
-import { VariableContextProvider } from "nativewind"
-import { StatusBar } from "expo-status-bar"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { matchParts, searchPayment } from "../../global-search/search-display"
+import { ListCard, StatusPill } from "../../green-till/kit"
 export function ClassicSearchFrame({
   children,
   footerHeight,
@@ -38,7 +41,7 @@ export function ClassicSearchFrame({
         <ScrollView
           automaticallyAdjustKeyboardInsets
           className="flex-1"
-          contentContainerClassName="gap-6 px-6 pt-[var(--search-content-top)] pb-[var(--search-content-bottom)]"
+          contentContainerClassName="gap-4 px-[18px] pt-[var(--search-content-top)] pb-[var(--search-content-bottom)]"
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           onScroll={onScroll}
@@ -60,7 +63,7 @@ export function ClassicSearchHeader({ onClose, onLayout }: SearchHeaderProps) {
         haptic
         onPress={onClose}
       >
-        <Icon className="size-base text-foreground" name="ArrowLeft" />
+        <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
       </Pressable>
       <View className="min-w-0 flex-1">
         <Text className="text-3xl font-extrabold tracking-tight text-foreground">
@@ -85,64 +88,69 @@ export function ClassicSearchSection({
       >
         {title}
       </Text>
-      <View className="border-y border-border">{children}</View>
+      <ListCard>{children}</ListCard>
     </View>
   )
 }
-function resultAppearance(type: SearchResult["type"]): {
-  avatarClassName: string
-  icon: IconKeys
-} {
-  if (type === "order") {
-    return { avatarClassName: "bg-primary", icon: "ReceiptText" }
-  }
-  if (type === "customer") {
-    return { avatarClassName: "bg-secondary", icon: "User" }
-  }
-  if (type === "service_job") {
-    return { avatarClassName: "bg-accent", icon: "Wrench" }
-  }
-  if (type === "staff") {
-    return { avatarClassName: "bg-muted", icon: "Users" }
-  }
-  return { avatarClassName: "bg-muted", icon: "Warehouse" }
-}
-
 export function ClassicSearchRow({
   item,
   onPress,
+  query = "",
+  sell = false,
 }: {
   item: SearchResult
   onPress: () => void
+  query?: string
+  sell?: boolean
 }) {
-  const appearance = resultAppearance(item.type)
-
+  const large = useLargeTextLayout()
+  const payment = item.type === "order" ? searchPayment(item.subtitle) : null
+  const [before, match, after] = matchParts(item.title, query)
+  const icon: IconKeys =
+    item.type === "order"
+      ? "ReceiptText"
+      : item.type === "customer"
+        ? "User"
+        : item.type === "service_job"
+          ? "Wrench"
+          : item.type === "staff"
+            ? "Users"
+            : "Warehouse"
   return (
     <Pressable
-      accessibilityLabel={`Open ${item.title}`}
       accessibilityRole="button"
-      className="min-h-16 flex-row items-center gap-3 border-b border-border py-3 active:bg-accent"
-      haptic
+      accessibilityLabel={`${sell ? "Sell" : "Open"} ${item.title}`}
       onPress={onPress}
-      transition
+      haptic
+      className="min-h-[62px] gap-2 py-3"
     >
-      <View
-        className={`size-11 items-center justify-center rounded-full ${appearance.avatarClassName}`}
-      >
-        <Icon
-          className={
-            item.type === "order"
-              ? "size-sm text-primary-foreground"
-              : "size-sm text-foreground"
-          }
-          name={appearance.icon}
-        />
+      <View className="flex-row items-center gap-3">
+        <View className="size-[38px] items-center justify-center rounded-full bg-tint-lilac">
+          <Icon
+            name={icon}
+            className="size-[20px] text-tint-lilac-foreground"
+          />
+        </View>
+        <View className="min-w-0 flex-1">
+          <Text
+            className="text-sm font-bold text-foreground"
+            numberOfLines={large ? undefined : 2}
+          >
+            {before}
+            <Text className="bg-tint-amber text-tint-amber-foreground">
+              {match}
+            </Text>
+            {after}
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            {payment
+              ? item.subtitle.split(" · ").slice(0, -1).join(" · ")
+              : item.subtitle}
+          </Text>
+        </View>
       </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-extrabold text-foreground">{item.title}</Text>
-        <Text className="text-xs text-muted-foreground">{item.subtitle}</Text>
-      </View>
-      <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
+      {payment ? <StatusPill {...payment} /> : null}
+      {sell ? <StatusPill label="Sell" tone="ok" /> : null}
     </Pressable>
   )
 }
