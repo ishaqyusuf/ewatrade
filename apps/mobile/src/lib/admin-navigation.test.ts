@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  buildAccountSections,
   buildAdminMoreSections,
   canAccessAdminTabs,
   getAdminCatalogTabLabel,
@@ -120,4 +121,15 @@ describe("admin mobile navigation", () => {
     )
     expect(managerItems.some((item) => item.id === "plan-billing")).toBe(false)
   })
+})
+
+test("account access has no management tools", () => {
+  const items = buildAccountSections().flatMap((s) => s.items)
+  expect(items.map((i) => i.id)).toEqual([
+    "app-theme",
+    "app-lock",
+    "app-updates",
+    "sign-out",
+  ])
+  expect(items.some((i) => i.id === "finance" || i.id === "team")).toBe(false)
 })

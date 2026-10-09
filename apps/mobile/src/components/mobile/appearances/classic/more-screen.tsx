@@ -1,7 +1,6 @@
-import {
-  type MoreFrameProps,
-  type MoreHeaderProps,
-  businessInitials,
+import type {
+  MoreFrameProps,
+  MoreHeaderProps,
 } from "@/components/mobile/more/more-presentation"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { Icon } from "@/components/ui/icon"
@@ -17,6 +16,9 @@ import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
 import { ScrollView } from "react-native-css/components/ScrollView"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { ActionButton } from "../../action-button"
+import { HeroCard } from "../../green-till/hero-card"
+import { ListCard, RecordRow, SectionHeader } from "../../green-till/kit"
 
 export function ClassicMoreFrame({ children, onScroll }: MoreFrameProps) {
   const edgeFeedback = useScrollEdgeFeedback()
@@ -39,7 +41,7 @@ export function ClassicMoreFrame({ children, onScroll }: MoreFrameProps) {
         <ScrollView
           {...edgeFeedback}
           className="flex-1"
-          contentContainerClassName="px-5 pt-[var(--more-list-top)] pb-[var(--more-list-bottom)]"
+          contentContainerClassName="gap-4 px-[18px] pt-[var(--more-list-top)] pb-[var(--more-list-bottom)]"
           onScroll={onScroll}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
@@ -55,11 +57,9 @@ export function ClassicMoreSection({
   children,
 }: { title: string; children: ReactNode }) {
   return (
-    <View className="mb-6">
-      <Text className="mb-1 text-[11px] font-extrabold uppercase tracking-[1.5px] text-muted-foreground">
-        {title}
-      </Text>
-      {children}
+    <View>
+      <SectionHeader title={title} />
+      <ListCard>{children}</ListCard>
     </View>
   )
 }
@@ -95,7 +95,7 @@ export function ClassicMoreHeader({
         haptic
         onPress={onSyncPress}
       >
-        <Icon className="size-sm text-primary" name="RefreshCw" />
+        <Icon className="size-[20px] text-primary" name="RefreshCw" />
         <Text className="text-sm font-extrabold text-primary">
           {syncAlertCount > 0 ? `Sync ${syncAlertCount}` : "Sync"}
         </Text>
@@ -116,52 +116,14 @@ export function ClassicMoreWorkspace({
   onPress: () => void
   roleLabel: string
 }) {
-  const largeTextLayout = useLargeTextLayout()
-
   return (
-    <Pressable
-      accessibilityLabel={`Switch business from ${businessName}`}
-      accessibilityRole="button"
-      className={
-        largeTextLayout
-          ? "mb-6 min-h-20 flex-row items-start gap-4 rounded-2xl border border-border bg-card px-4 py-3"
-          : "mb-6 min-h-20 flex-row items-center gap-4 rounded-2xl border border-border bg-card px-4 py-3"
-      }
-      haptic
-      onPress={onPress}
-      rippleOpacity={0.07}
-    >
-      <View
-        className={
-          largeTextLayout
-            ? "mt-1 size-12 items-center justify-center rounded-full bg-primary"
-            : "size-12 items-center justify-center rounded-full bg-primary"
-        }
-      >
-        <Text className="font-extrabold text-primary-foreground">
-          {businessInitials(businessName)}
-        </Text>
+    <HeroCard label="Current business" title={businessName} sub={roleLabel}>
+      <View className="mt-4">
+        <ActionButton tone="cream" icon="RefreshCw" onPress={onPress}>
+          Switch business
+        </ActionButton>
       </View>
-      <View className="min-w-0 flex-1">
-        <Text className="text-lg font-bold text-foreground">
-          {businessName}
-        </Text>
-        <Text
-          className="mt-0.5 text-sm text-muted-foreground"
-          numberOfLines={largeTextLayout ? undefined : 1}
-        >
-          {roleLabel} · Current business
-        </Text>
-      </View>
-      <Icon
-        className={
-          largeTextLayout
-            ? "mt-1 size-sm text-muted-foreground"
-            : "size-sm text-muted-foreground"
-        }
-        name="ChevronRight"
-      />
-    </Pressable>
+    </HeroCard>
   )
 }
 
@@ -174,60 +136,21 @@ export function ClassicMoreRow({
   item: AdminMoreItem
   onPress: () => void
 }) {
-  const largeTextLayout = useLargeTextLayout()
-
   return (
-    <Pressable
-      accessibilityHint={detail}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: item.disabled }}
-      className={
-        item.disabled
-          ? "min-h-16 flex-row items-stretch gap-3"
-          : "min-h-16 flex-row items-stretch gap-3 active:bg-accent"
+    <RecordRow
+      stackDetails
+      title={item.label}
+      meta={detail}
+      avatar={{
+        icon: item.icon,
+        tint: item.id === "sign-out" ? "rose" : "lilac",
+      }}
+      status={
+        item.disabled ? (
+          <StatusBadge label="Set up" tone="warning" />
+        ) : undefined
       }
-      disabled={item.disabled}
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <View className={largeTextLayout ? "w-9 pt-4" : "w-9 justify-center"}>
-        <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-sm text-muted-foreground" name={item.icon} />
-        </View>
-      </View>
-      <View
-        className={
-          largeTextLayout
-            ? "min-w-0 flex-1 flex-row items-start gap-3 border-b border-border py-4"
-            : "min-w-0 flex-1 flex-row items-center gap-3 border-b border-border py-4"
-        }
-      >
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-extrabold text-foreground">{item.label}</Text>
-          {detail ? (
-            <Text className="text-sm leading-5 text-muted-foreground">
-              {detail}
-            </Text>
-          ) : null}
-        </View>
-        {item.disabled ? (
-          <StatusBadge
-            className={largeTextLayout ? "mt-1" : undefined}
-            label="Set up"
-            tone="warning"
-          />
-        ) : (
-          <Icon
-            className={
-              largeTextLayout
-                ? "mt-1 size-sm text-muted-foreground"
-                : "size-sm text-muted-foreground"
-            }
-            name="ChevronRight"
-          />
-        )}
-      </View>
-    </Pressable>
+      onPress={item.disabled ? undefined : onPress}
+    />
   )
 }

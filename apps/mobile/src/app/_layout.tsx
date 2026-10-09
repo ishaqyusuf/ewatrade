@@ -188,6 +188,7 @@ const InitialLayout = ({
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="no-access" options={gateOptions} />
+          <Stack.Screen name="account" options={{ headerShown: false }} />
           <Stack.Screen
             name="account-privacy"
             options={{ headerShown: false }}

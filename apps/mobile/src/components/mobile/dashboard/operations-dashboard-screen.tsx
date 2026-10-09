@@ -38,7 +38,6 @@ import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
 import { OrderVisibilityCard } from "@/components/mobile/staff/order-visibility-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { MobileStoresSwitcher } from "@/components/mobile/stores-switcher"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
@@ -506,6 +505,7 @@ export function OperationsDashboardSurface({
             onNotificationPress={() =>
               router.push("/sync-status-modal" as never)
             }
+            onProfilePress={() => router.push("/account")}
             roleLabel="Sales rep"
           />
         ) : isAttendant ? (

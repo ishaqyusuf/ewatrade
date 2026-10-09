@@ -24,8 +24,8 @@ export function MoreApprovalCard({
   return (
     <View
       className={cn(
-        "gap-3 border-b py-4",
-        market ? "border-market-line" : "border-border",
+        "gap-3 rounded-2xl p-4",
+        market ? "border-market-line" : "bg-tint-amber",
       )}
     >
       <View className="flex-row items-start gap-3">
@@ -38,7 +38,7 @@ export function MoreApprovalCard({
           <Icon
             name="ReceiptText"
             className={cn(
-              "size-sm",
+              "size-[20px]",
               market ? "text-market-accent-ink" : "text-primary",
             )}
           />
@@ -66,7 +66,7 @@ export function MoreApprovalCard({
         <ActionButton
           className={largeText ? "w-full" : "w-auto flex-1"}
           disabled={disabled}
-          variant="outline"
+          variant={market ? "outline" : "default"}
           onPress={onApprove}
         >
           Approve
@@ -74,7 +74,7 @@ export function MoreApprovalCard({
         <ActionButton
           className={largeText ? "w-full" : "w-auto flex-1"}
           disabled={disabled}
-          variant="destructive"
+          variant={market ? "destructive" : "outline"}
           onPress={onReject}
         >
           Reject
