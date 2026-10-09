@@ -1,24 +1,24 @@
 import {
-  ClassicSaleStageHeader,
-  ClassicSelectedOrderLine,
   ClassicCustomerActionRow,
   ClassicCustomerSuggestionRow,
+  ClassicSaleStageHeader,
+  ClassicSelectedOrderLine,
 } from "@/components/mobile/appearances/classic/create-sale"
 import {
-  MarketDaySaleStageHeader,
-  MarketDaySelectedOrderLine,
   MarketDayCustomerActionRow,
   MarketDayCustomerSuggestionRow,
-  MarketDaySaleTotal,
   MarketDaySaleSegment,
+  MarketDaySaleStageHeader,
+  MarketDaySaleTotal,
+  MarketDaySelectedOrderLine,
   marketDaySaleClasses,
 } from "@/components/mobile/appearances/market-day/create-sale"
 import {
   SaleSegmentOption,
   SaleTotalSummary,
 } from "@/components/mobile/sale-flow"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
 
 export function useSalePresentation(appearance: MobileDesign) {

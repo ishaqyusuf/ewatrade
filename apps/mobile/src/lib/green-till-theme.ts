@@ -36,6 +36,11 @@ export const GREEN_TILL_THEME = {
     dotBusy: "#9CC3F5",
     lilacChip: "rgba(91,58,168,0.14)",
     clear: "transparent",
+    // Queued (offline) success: a warm dark surface instead of green.
+    queuedHighlight: "#3B3A2C",
+    queuedFrom: "#2A2A22",
+    queuedTo: "#1C1C18",
+    scrim: "rgba(10,16,14,0.55)",
   },
   dark: {
     heroFrom: "#17543F",
@@ -70,6 +75,11 @@ export const GREEN_TILL_THEME = {
     dotBusy: "#9CC3F5",
     lilacChip: "rgba(196,178,245,0.16)",
     clear: "transparent",
+    // Queued (offline) success: a warm dark surface instead of green.
+    queuedHighlight: "#3B3A2C",
+    queuedFrom: "#2A2A22",
+    queuedTo: "#1C1C18",
+    scrim: "rgba(10,16,14,0.55)",
   },
 } as const
 

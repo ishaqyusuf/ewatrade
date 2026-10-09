@@ -44,6 +44,8 @@ export type CreateSaleContentProps = {
   initialCustomer?: SelectedCustomer
   itemKind?: "service"
   onComplete?: (completion: CreateSaleCompletion) => void
+  /** Fires as soon as the order is saved or queued, before lists refresh. */
+  onRecorded?: (completion: CreateSaleCompletion) => void
   presentation?: "screen" | "sheet"
 }
 

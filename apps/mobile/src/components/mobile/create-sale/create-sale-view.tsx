@@ -49,7 +49,8 @@ export function CreateSaleView({
         className={tone("flex-1 bg-background")}
         pointerEvents={model.actionsLocked ? "none" : "auto"}
       >
-        {model.completion ? (
+        {model.completion &&
+        (appearance === "market-day" || model.postSubmitWarning) ? (
           <StatusBanner
             title={
               model.completion.status === "queued"

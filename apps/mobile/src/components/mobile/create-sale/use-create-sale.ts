@@ -69,6 +69,7 @@ export function useCreateSale({
   initialCustomer,
   itemKind,
   onComplete,
+  onRecorded,
 }: CreateSaleContentProps) {
   const submissionPending = useRef(false)
   const submitted = useRef(false)
@@ -747,6 +748,7 @@ export function useCreateSale({
         }
         submitted.current = true
         if (mounted.current) setCompletion(result)
+        if (mounted.current) onRecorded?.(result)
         if (mounted.current) onComplete?.(result)
         return
       }
@@ -781,6 +783,7 @@ export function useCreateSale({
       }
       submitted.current = true
       if (mounted.current) setCompletion(result)
+      if (mounted.current) onRecorded?.(result)
       try {
         await refreshOrderQueries()
       } catch {

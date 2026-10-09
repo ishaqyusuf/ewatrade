@@ -1,9 +1,18 @@
 import { WorkflowModalScreen } from "@/components/mobile"
-import { CreateSaleContent } from "@/components/mobile/create-sale/create-sale-screen"
+import { ClassicSaleSuccessSheet } from "@/components/mobile/appearances/classic/sale-success-sheet"
+import {
+  type CreateSaleCompletion,
+  CreateSaleContent,
+} from "@/components/mobile/create-sale/create-sale-screen"
 import { CreateSaleWorkflowChrome } from "@/components/mobile/create-sale/create-sale-workflow-chrome"
 import { useAuthContext } from "@/hooks/use-auth"
-import { showOperationSuccess } from "@/lib/operation-success-navigation"
+import { useMobileDesign } from "@/hooks/use-mobile-design"
+import {
+  type OperationSuccessParams,
+  showOperationSuccess,
+} from "@/lib/operation-success-navigation"
 import { useLocalSearchParams, useNavigation } from "expo-router"
+import { useState } from "react"
 
 export default function CreateSaleModalRoute() {
   const navigation = useNavigation()
@@ -19,6 +28,8 @@ export default function CreateSaleModalRoute() {
   }>()
   const { profile } = useAuthContext()
   const itemKind = params.kind === "service" ? "service" : undefined
+  const classic = useMobileDesign("create-sale") !== "market-day"
+  const [success, setSuccess] = useState<OperationSuccessParams | null>(null)
 
   return (
     <WorkflowModalScreen
@@ -43,23 +54,36 @@ export default function CreateSaleModalRoute() {
             : undefined
         }
         itemKind={itemKind}
-        onComplete={(completion) =>
-          showOperationSuccess(navigation, {
-            amount: completion.amount,
-            orderId: completion.orderId,
-            paymentMethod: completion.paymentMethod,
-            unitCount: completion.unitCount,
-            balance: completion.balance,
-            customer: completion.customer,
-            itemCount: String(completion.itemCount),
-            kind: "order",
-            paymentState: completion.paymentState,
-            reference: completion.reference,
-            status: completion.status,
-          })
-        }
+        onComplete={(completion) => {
+          // Classic already shows the success sheet (onRecorded).
+          if (!classic)
+            showOperationSuccess(navigation, saleSuccessParams(completion))
+        }}
+        onRecorded={(completion) => {
+          // Classic: the success rises as a sheet over the checkout.
+          if (classic) setSuccess(saleSuccessParams(completion))
+        }}
         presentation="screen"
       />
+      {success ? <ClassicSaleSuccessSheet params={success} /> : null}
     </WorkflowModalScreen>
   )
+}
+
+function saleSuccessParams(
+  completion: CreateSaleCompletion,
+): OperationSuccessParams {
+  return {
+    amount: completion.amount,
+    orderId: completion.orderId,
+    paymentMethod: completion.paymentMethod,
+    unitCount: completion.unitCount,
+    balance: completion.balance,
+    customer: completion.customer,
+    itemCount: String(completion.itemCount),
+    kind: "order",
+    paymentState: completion.paymentState,
+    reference: completion.reference,
+    status: completion.status,
+  }
 }
