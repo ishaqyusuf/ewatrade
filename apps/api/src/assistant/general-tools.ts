@@ -69,7 +69,10 @@ export function createGeneralTools(
       return false
     }
   })
-  const actionSchema = z.discriminatedUnion("action", allowedActions)
+  const [firstAction, ...otherActions] = allowedActions
+  const actionSchema = firstAction
+    ? z.discriminatedUnion("action", [firstAction, ...otherActions])
+    : z.never()
   const reads = {
     searchRecords: tool({
       description:

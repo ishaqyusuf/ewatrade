@@ -79,7 +79,7 @@ export async function readGeneralActiveRun(
     },
     data: {
       status: "FAILED",
-      errorCode: "INTERRUPTED",
+      errorCode: "TURN_INTERRUPTED",
       completedAt: new Date(),
     },
   })

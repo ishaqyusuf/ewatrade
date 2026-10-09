@@ -40,6 +40,7 @@ import {
   generalBudgetScopeKey,
 } from "./general-allowance"
 import { requireGeneralScope } from "./general-context"
+import { generalPersistentParts } from "./general-persistence"
 import { createGeneralTools } from "./general-tools"
 export type GeneralUIMessage = UIMessage<never, GeneralDataParts>
 const requestSchema = z
@@ -273,10 +274,7 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
         onFinish: async ({ responseMessage, isAborted }) => {
           clearTimeout(deadline)
           c.req.raw.signal.removeEventListener("abort", abort)
-          const parts = responseMessage.parts.flatMap((part) => {
-            const parsed = generalStoredPartSchema.safeParse(part)
-            return parsed.success ? [parsed.data] : []
-          })
+          const parts = generalPersistentParts(responseMessage.parts)
           await completeAssistantRun(ctx.db, {
             runId: begun.run.id,
             tenantId: scope.tenantId,
@@ -325,6 +323,17 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
   })
 }
 function routeFailure(c: Context, error: unknown) {
+  if (!(error instanceof TRPCError))
+    console.error("[assistant] General request failed", {
+      name: error instanceof Error ? error.name : "unknown",
+      code:
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code.slice(0, 60)
+          : undefined,
+    })
   return error instanceof TRPCError
     ? failure(c, getHTTPStatusCodeFromError(error), error.code, error.message)
     : failure(

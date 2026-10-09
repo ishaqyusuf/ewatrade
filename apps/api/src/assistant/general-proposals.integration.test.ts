@@ -1,6 +1,11 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import {
+  beginAssistantRunInTransaction,
+  completeAssistantRun,
+} from "@ewatrade/db/assistant"
+import {
+  readGeneralActiveRun,
   readGeneralProposals,
   startGeneralConversation,
 } from "@ewatrade/db/assistant-general"
@@ -9,6 +14,10 @@ import {
   getConfiguredCatalogOfferingAvailability,
 } from "@ewatrade/db/queries"
 import type { Prisma, PrismaClient } from "@ewatrade/db/types"
+import { OpenAPIHono } from "@hono/zod-openapi"
+import { resolveModel } from "./chat-route"
+import { generalBudgetScopeKey } from "./general-allowance"
+import { registerGeneralAssistantChatRoutes } from "./general-chat-route"
 import type { GeneralContext } from "./general-context"
 import {
   decideGeneralProposal,
@@ -24,11 +33,23 @@ if (enabled) setDefaultTimeout(600_000)
     test("exact review, atomic receipt rollback, replay, expiry, edits, cancellation and revocation", async () => {
       if (
         process.env.DATABASE_PROFILE_VERIFIED !== "1" ||
-        new URL(process.env.EWATRADE_DATABASE_URL ?? "").pathname !==
-          "/ewatrade_general_assistant_20261009"
+        ![
+          "/ewatrade_general_assistant_20261009",
+          "/ewatrade_general_assistant_main_20261009",
+        ].includes(new URL(process.env.EWATRADE_DATABASE_URL ?? "").pathname)
       )
         throw Error("Isolated Development target required")
       const { prisma: db } = await import("@ewatrade/db")
+      const [actual] = await db.$queryRaw<
+        Array<{ database: string }>
+      >`SELECT current_database() AS database`
+      if (
+        actual?.database !==
+        new URL(process.env.EWATRADE_DATABASE_URL ?? "").pathname.slice(1)
+      )
+        throw Error(
+          "Runtime database does not match the verified isolated target",
+        )
       const marker = randomUUID()
       let tenantId: string | undefined
       let userId: string | undefined
@@ -98,6 +119,7 @@ if (enabled) setDefaultTimeout(600_000)
           storeId: store.id,
           userId: user.id,
         }
+        await verifyGeneralTransport(ctx, session.token)
         const conversation = await startGeneralConversation(db, scope)
         const drafted = await draftGeneralProposal(ctx, conversation.id, {
           action: "customer_create",
@@ -495,13 +517,34 @@ if (enabled) setDefaultTimeout(600_000)
         ).toBe(2)
       } finally {
         if (tenantId)
-          await db.tenant.deleteMany({
-            where: {
-              id: tenantId,
-              dataClassification: "QA",
-              slug: `general-${marker}`,
+          await db.$transaction(
+            async (tx) => {
+              const owned = await tx.tenant.findFirst({
+                where: {
+                  id: tenantId,
+                  dataClassification: "QA",
+                  slug: `general-${marker}`,
+                },
+                select: { id: true },
+              })
+              if (!owned) throw Error("Refusing unowned fixture cleanup")
+              // Reservations and order lines restrict deletion of their catalog
+              // references. Remove this fixture's orders before cascading its tenant.
+              await tx.stockReservation.deleteMany({
+                where: { tenantId: owned.id },
+              })
+              await tx.commercialOrder.deleteMany({
+                where: { tenantId: owned.id },
+              })
+              await tx.assistantBudget.deleteMany({
+                where: {
+                  scopeKey: { startsWith: `assistant:${owned.id}:GENERAL:` },
+                },
+              })
+              await tx.tenant.delete({ where: { id: owned.id } })
             },
-          })
+            { timeout: 30_000 },
+          )
         if (userId)
           await db.user.deleteMany({
             where: { id: userId, email: `general-${marker}@example.invalid` },
@@ -511,3 +554,203 @@ if (enabled) setDefaultTimeout(600_000)
     })
   },
 )
+
+async function verifyGeneralTransport(ctx: GeneralContext, token: string) {
+  const { db, tenantId, activeStoreId, tenantSlug } = ctx
+  if (!tenantId || !activeStoreId || !tenantSlug)
+    throw Error("Fixture scope required")
+  const scope = {
+    tenantId,
+    storeId: activeStoreId,
+    userId: ctx.session.user.id,
+  }
+  // This guard runs before HTTP admission: the suite must never spend provider money.
+  const model = await resolveModel(db, "QA", "GENERAL")
+  if (!model?.rehearsal) throw Error("Provider-free model required")
+  const app = new OpenAPIHono()
+  registerGeneralAssistantChatRoutes(app)
+  const otherStore = await db.store.create({
+    data: {
+      tenantId,
+      name: "QA Other Store",
+      slug: "qa-other",
+      status: "ACTIVE",
+    },
+  })
+  const conversation = await startGeneralConversation(db, scope)
+  const headers = {
+    authorization: `Bearer ${token}`,
+    "x-tenant-slug": tenantSlug,
+    "x-store-id": activeStoreId,
+    "content-type": "application/json",
+  }
+  const body = {
+    conversationId: conversation.id,
+    requestId: randomUUID(),
+    message: {
+      id: randomUUID(),
+      role: "user",
+      parts: [{ type: "text", text: "hello" }],
+    },
+  }
+  const post = (value: unknown) =>
+    app.request("/api/assistant/general/chat", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(value),
+    })
+  const response = await post(body)
+  expect(response.status).toBe(200)
+  expect(await response.text()).toContain("data-general-run")
+  const run = await db.assistantRun.findUniqueOrThrow({
+    where: {
+      actorUserId_requestId: {
+        actorUserId: scope.userId,
+        requestId: body.requestId,
+      },
+    },
+  })
+  expect(run.status).toBe("COMPLETED")
+  expect(run.provider).toBe("ewatrade-rehearsal")
+  expect(await db.assistantUsageEvent.count({ where: { runId: run.id } })).toBe(
+    1,
+  )
+  const budgetKey = generalBudgetScopeKey(scope)
+  const budget = await db.assistantBudget.findUniqueOrThrow({
+    where: { scopeKey: budgetKey },
+  })
+  expect(budget.requests).toBe(1)
+  expect((await post(body)).status).toBe(409)
+  expect(
+    await db.assistantMessage.count({
+      where: { conversationId: conversation.id },
+    }),
+  ).toBe(2)
+  expect(
+    (
+      await db.assistantBudget.findUniqueOrThrow({
+        where: { scopeKey: budgetKey },
+      })
+    ).requests,
+  ).toBe(1)
+  expect(
+    (
+      await post({
+        ...body,
+        requestId: randomUUID(),
+        message: {
+          ...body.message,
+          parts: [{ type: "data-general-answer", data: {} }],
+        },
+      })
+    ).status,
+  ).toBe(400)
+  expect(
+    (
+      await post({
+        ...body,
+        conversationId: "foreign-conversation",
+        requestId: randomUUID(),
+      })
+    ).status,
+  ).toBe(404)
+  expect(
+    (
+      await app.request(`/api/assistant/general/runs/${run.id}`, {
+        headers: { ...headers, "x-store-id": otherStore.id },
+      })
+    ).status,
+  ).toBe(404)
+  const draftResponse = await post({
+    ...body,
+    requestId: randomUUID(),
+    message: {
+      ...body.message,
+      id: randomUUID(),
+      parts: [{ type: "text", text: "add customer Stream QA" }],
+    },
+  })
+  expect(draftResponse.status).toBe(200)
+  const draftStream = await draftResponse.text()
+  expect(draftStream).toContain("data-general-proposal")
+  expect(draftStream).not.toContain("approvalToken")
+  expect(await db.customer.count({ where: { tenantId } })).toBe(0)
+  expect(
+    await db.assistantActionProposal.count({
+      where: { conversationId: conversation.id },
+    }),
+  ).toBe(1)
+
+  // A restart releases an abandoned run, but late provider usage is still charged
+  // once and cannot replace the conversation with a late assistant reply.
+  const orphan = await db.$transaction((tx) =>
+    beginAssistantRunInTransaction(tx, {
+      actorUserId: scope.userId,
+      conversationId: conversation.id,
+      model: "rehearsal-v1",
+      provider: "ewatrade-rehearsal",
+      promptVersion: "qa",
+      requestId: randomUUID(),
+      userMessage: {
+        id: randomUUID(),
+        role: "user",
+        parts: [{ type: "text", text: "orphan" }],
+      },
+    }),
+  )
+  await db.assistantRun.update({
+    where: { id: orphan.run.id },
+    data: { startedAt: new Date(Date.now() - 180_000) },
+  })
+  await readGeneralActiveRun(
+    db,
+    { ...scope, userId: "foreign-user" },
+    conversation.id,
+  )
+  expect(
+    (await db.assistantRun.findUniqueOrThrow({ where: { id: orphan.run.id } }))
+      .status,
+  ).toBe("RUNNING")
+  expect(await readGeneralActiveRun(db, scope, conversation.id)).toBeNull()
+  const tokensBefore = (
+    await db.assistantBudget.findUniqueOrThrow({
+      where: { scopeKey: budgetKey },
+    })
+  ).tokens
+  const completion = {
+    runId: orphan.run.id,
+    tenantId,
+    actorUserId: scope.userId,
+    model: "rehearsal-v1",
+    provider: "ewatrade-rehearsal",
+    status: "COMPLETED" as const,
+    usage: { inputTokens: 7, outputTokens: 3, totalTokens: 10 },
+    budgetScopeKey: budgetKey,
+    assistantMessage: {
+      id: randomUUID(),
+      role: "assistant" as const,
+      parts: [{ type: "text", text: "late reply" }],
+    },
+  }
+  await completeAssistantRun(db, completion)
+  await completeAssistantRun(db, completion)
+  expect(
+    (await db.assistantRun.findUniqueOrThrow({ where: { id: orphan.run.id } }))
+      .errorCode,
+  ).toBe("TURN_INTERRUPTED")
+  expect(
+    await db.assistantUsageEvent.count({ where: { runId: orphan.run.id } }),
+  ).toBe(1)
+  expect(
+    await db.assistantMessage.count({
+      where: { id: completion.assistantMessage.id },
+    }),
+  ).toBe(0)
+  expect(
+    (
+      await db.assistantBudget.findUniqueOrThrow({
+        where: { scopeKey: budgetKey },
+      })
+    ).tokens,
+  ).toBe(tokensBefore + 10)
+}
