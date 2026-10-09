@@ -7,7 +7,7 @@ import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
-import type { ComponentProps } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { useState } from "react"
 import { View } from "react-native"
 
@@ -19,6 +19,7 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   inputClassName?: string
   label: string
   leadingIcon?: IconKeys
+  leadingContent?: ReactNode
   leadingActionLabel?: string
   onLeadingActionPress?: () => void
   leadingText?: string
@@ -44,6 +45,7 @@ export function FormField({
   inputClassName,
   label,
   leadingIcon,
+  leadingContent,
   leadingActionLabel,
   onLeadingActionPress,
   leadingText,
@@ -211,26 +213,27 @@ export function FormField({
           paddingVertical: isMultiline ? 10 : largeTextLayout ? 6 : 0,
         }}
       >
-        {leadingIcon ? (
-          onLeadingActionPress && leadingActionLabel ? (
-            <Pressable
-              accessibilityLabel={leadingActionLabel}
-              accessibilityRole="button"
-              className="min-h-11 min-w-11 items-center justify-center rounded-full active:bg-accent"
-              disabled={inputProps.editable === false}
-              haptic
-              onPress={onLeadingActionPress}
-            >
+        {leadingContent ??
+          (leadingIcon ? (
+            onLeadingActionPress && leadingActionLabel ? (
+              <Pressable
+                accessibilityLabel={leadingActionLabel}
+                accessibilityRole="button"
+                className="min-h-11 min-w-11 items-center justify-center rounded-full active:bg-accent"
+                disabled={inputProps.editable === false}
+                haptic
+                onPress={onLeadingActionPress}
+              >
+                <Icon className={iconClassName} name={leadingIcon} />
+              </Pressable>
+            ) : (
               <Icon className={iconClassName} name={leadingIcon} />
-            </Pressable>
-          ) : (
-            <Icon className={iconClassName} name={leadingIcon} />
-          )
-        ) : leadingText ? (
-          <Text className={cn("font-semibold", iconClassName)}>
-            {leadingText}
-          </Text>
-        ) : null}
+            )
+          ) : leadingText ? (
+            <Text className={cn("font-semibold", iconClassName)}>
+              {leadingText}
+            </Text>
+          ) : null)}
         <Input
           accessibilityLabel={inputProps.accessibilityLabel ?? label}
           {...(embeddedStyle

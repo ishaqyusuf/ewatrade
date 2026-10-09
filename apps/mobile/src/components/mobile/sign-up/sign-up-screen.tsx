@@ -18,6 +18,7 @@ import { CountrySelect } from "@/components/mobile/country-select"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { CurrentLocationCard } from "@/components/mobile/current-location-card"
 import { FormField } from "@/components/mobile/form-field"
+import { PhoneField } from "@/components/mobile/phone-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -102,7 +103,13 @@ export function SignUpScreen({
   const [countryCode, setCountryCode] = useState(
     () => getCountry(continuation?.draft.countryCode).code,
   )
-  const dialCode = getCountry(countryCode).dialCode
+  // The phone has its own country (flag ▾ +code inside the field). It follows
+  // the business country until the owner picks a different one.
+  const [phoneCountryCode, setPhoneCountryCode] = useState(
+    () => getCountry(continuation?.draft.countryCode).code,
+  )
+  const [phoneCountryChosen, setPhoneCountryChosen] = useState(false)
+  const dialCode = getCountry(phoneCountryCode).dialCode
   const [phone, setPhone] = useState(() =>
     toLocalPhone(
       getCountry(continuation?.draft.countryCode).dialCode,
@@ -117,6 +124,7 @@ export function SignUpScreen({
   const changeCountry = (code: string) => {
     setCountryCode(code)
     // The phone keeps its local digits; only the +code beside it changes.
+    if (!phoneCountryChosen) setPhoneCountryCode(code)
     const currency = currencyForCountry(code)
     if (currency) setCurrencyCode(currency)
   }
@@ -606,6 +614,9 @@ export function SignUpScreen({
             setAddressLine1(fixture.addressLine1)
             setCity(fixture.city)
             setCountryCode("NG")
+            // The QA fixture number is a +1 test line, so its country is US.
+            setPhoneCountryCode("US")
+            setPhoneCountryChosen(true)
             setRegion("Lagos")
             setPhone(toLocalPhone("1", fixture.phone))
             setCurrencyCode(fixture.currencyCode as OperatingCurrencyCode)
@@ -628,6 +639,7 @@ export function SignUpScreen({
           setBusinessProfileKey(snapshot.businessProfileKey)
           setCity(snapshot.city)
           setCountryCode(snapshot.countryCode)
+          setPhoneCountryCode(snapshot.countryCode)
           setRegion(snapshot.region)
           setCurrencyCode(snapshot.currencyCode)
           setEmail(snapshot.email)
@@ -827,14 +839,14 @@ export function SignUpScreen({
             value={city}
             variant={appearance === "classic" ? "green-gate" : "auth"}
           />
-          <FormField
-            accessibilityLabel={`Phone, plus ${dialCode}`}
-            keyboardType="phone-pad"
+          <PhoneField
+            countryCode={phoneCountryCode}
             label="Phone"
-            leadingText={`+${dialCode}`}
             onChangeText={setPhone}
-            placeholder="803 123 4567"
-            textContentType="telephoneNumber"
+            onCountryChange={(code) => {
+              setPhoneCountryChosen(true)
+              setPhoneCountryCode(code)
+            }}
             value={phone}
             variant={appearance === "classic" ? "green-gate" : "auth"}
           />

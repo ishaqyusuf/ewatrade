@@ -15,7 +15,7 @@ import {
   searchCountries,
 } from "@ewatrade/utils/countries"
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet"
-import { useMemo, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import { useWindowDimensions } from "react-native"
 
 /**
@@ -26,11 +26,13 @@ export function CountrySelect({
   label = "Country",
   disabled = false,
   onChange,
+  renderTrigger,
   value,
 }: {
   label?: string
   disabled?: boolean
   onChange: (code: string) => void
+  renderTrigger?: (country: Country, open: () => void) => ReactNode
   value: string
 }) {
   const colors = useColors()
@@ -40,6 +42,11 @@ export function CountrySelect({
   const [search, setSearch] = useState("")
   const country = getCountry(value)
   const countries = useMemo(() => searchCountries(search), [search])
+  const open = () => {
+    if (disabled) return
+    setSearch("")
+    modal.present()
+  }
 
   const choose = (next: Country) => {
     if (disabled) return
@@ -49,47 +56,50 @@ export function CountrySelect({
 
   return (
     <View className="gap-2.5">
-      <Text className="text-xs font-bold [-rn-line-height:18] text-muted-foreground">
-        {label}
-      </Text>
-      <Pressable
-        accessibilityHint="Opens the country list"
-        accessibilityLabel={`${label}: ${country.name}`}
-        accessibilityRole="button"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        haptic
-        onPress={() => {
-          setSearch("")
-          modal.present()
-        }}
-        style={{
-          alignItems: "center",
-          backgroundColor: colors.muted,
-          borderColor: colors.border,
-          borderRadius: 14,
-          borderWidth: 1,
-          flexDirection: "row",
-          gap: 10,
-          minHeight: largeText ? 64 : 50,
-          paddingHorizontal: 14,
-        }}
-        testID="country-select"
-      >
-        <Text className="text-[20px] [-rn-line-height:26]">
-          {countryFlag(country.code)}
-        </Text>
-        <Text
-          className="min-w-0 flex-1 text-[15px] font-semibold text-foreground"
-          numberOfLines={largeText ? undefined : 1}
-        >
-          {country.name}
-        </Text>
-        <Icon
-          className="size-[18px] text-muted-foreground"
-          name="ChevronDown"
-        />
-      </Pressable>
+      {renderTrigger ? (
+        renderTrigger(country, open)
+      ) : (
+        <>
+          <Text className="text-xs font-bold [-rn-line-height:18] text-muted-foreground">
+            {label}
+          </Text>
+          <Pressable
+            accessibilityHint="Opens the country list"
+            accessibilityLabel={`${label}: ${country.name}`}
+            accessibilityRole="button"
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            haptic
+            onPress={open}
+            style={{
+              alignItems: "center",
+              backgroundColor: colors.muted,
+              borderColor: colors.border,
+              borderRadius: 14,
+              borderWidth: 1,
+              flexDirection: "row",
+              gap: 10,
+              minHeight: largeText ? 64 : 50,
+              paddingHorizontal: 14,
+            }}
+            testID="country-select"
+          >
+            <Text className="text-[20px] [-rn-line-height:26]">
+              {countryFlag(country.code)}
+            </Text>
+            <Text
+              className="min-w-0 flex-1 text-[15px] font-semibold text-foreground"
+              numberOfLines={largeText ? undefined : 1}
+            >
+              {country.name}
+            </Text>
+            <Icon
+              className="size-[18px] text-muted-foreground"
+              name="ChevronDown"
+            />
+          </Pressable>
+        </>
+      )}
 
       <Modal
         enableDynamicSizing={false}

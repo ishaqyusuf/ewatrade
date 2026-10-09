@@ -5,8 +5,10 @@ import {
   StatusBanner,
 } from "@/components/mobile"
 import { FormField } from "@/components/mobile/form-field"
+import { PhoneField } from "@/components/mobile/phone-field"
 import { savePendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { startNativeSignup } from "@/lib/onboarding-web-client"
+import { getCountry, toInternationalPhone } from "@ewatrade/utils/countries"
 import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useState } from "react"
@@ -19,13 +21,14 @@ export function SignupStartScreen() {
   const [email, setEmail] = useState("")
   const [businessName, setBusinessName] = useState("")
   const [phone, setPhone] = useState("")
+  const [countryCode, setCountryCode] = useState("NG")
   const start = useMutation({
     mutationFn: async () => {
       const result = await startNativeSignup({
         fullName: fullName.trim(),
         email: email.trim(),
         businessName: businessName.trim(),
-        phone: phone.trim(),
+        phone: toInternationalPhone(getCountry(countryCode).dialCode, phone),
       })
       await savePendingOnboarding({
         kind: "setup",
@@ -64,12 +67,13 @@ export function SignupStartScreen() {
         autoCapitalize="none"
         autoComplete="email"
       />
-      <FormField
+      <PhoneField
+        countryCode={countryCode}
+        editable={!start.isPending}
         label="Phone (optional)"
-        value={phone}
         onChangeText={setPhone}
-        keyboardType="phone-pad"
-        autoComplete="tel"
+        onCountryChange={setCountryCode}
+        value={phone}
       />
       {start.error ? (
         <StatusBanner tone="destructive" message={start.error.message} />
