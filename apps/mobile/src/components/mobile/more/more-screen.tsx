@@ -259,7 +259,15 @@ function MoreContent({
             label="Signed in"
             title={auth.profile?.name ?? "Your account"}
             sub={`${auth.profile?.businessName ?? "Current business"} · ${getMobileRoleLabel(auth.profile?.role)}`}
-          />
+          >
+            <ActionButton
+              tone="cream"
+              icon="RefreshCw"
+              onPress={() => router.push("/business-switch-modal")}
+            >
+              Switch business
+            </ActionButton>
+          </HeroCard>
         ) : (
           <Workspace
             businessName={auth.profile?.businessName ?? "Current business"}

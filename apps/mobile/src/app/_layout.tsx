@@ -157,10 +157,6 @@ const InitialLayout = ({
           <Stack.Screen name="(admin-tabs)" options={gateOptions} />
 
           <Stack.Screen
-            name="business-switch-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
             name="new-business-onboarding-modal"
             options={{ headerShown: false, presentation: "modal" }}
           />
@@ -320,6 +316,10 @@ const InitialLayout = ({
           <Stack.Screen name="your-sales" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
+          <Stack.Screen
+            name="business-switch-modal"
+            options={{ headerShown: false, presentation: "modal" }}
+          />
           <Stack.Screen
             name="order-receipts-modal"
             options={{ headerShown: false, presentation: "modal" }}

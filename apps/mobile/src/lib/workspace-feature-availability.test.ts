@@ -119,6 +119,44 @@ describe("mobile workspace feature availability", () => {
     })
   })
 
+  test("rep membership switching clears the previous store and catalog authority", () => {
+    for (const role of ["CASHIER", "OPERATOR"]) {
+      const switched = switchMobileBusinessSession(
+        {
+          profile: {
+            id: "rep",
+            email: "rep@example.test",
+            name: "Rep",
+            role,
+            businessId: "previous",
+            storeId: "previous-store",
+            storeName: "Previous store",
+            staffAccessMode: "SCOPED",
+            catalogEditor: true,
+          },
+          token: "session-token",
+        },
+        {
+          id: "member-business",
+          createdAt: "",
+          name: "Member business",
+          slug: "member-business",
+          role,
+          currency: "NGN",
+        },
+      )
+      expect(switched.token).toBe("session-token")
+      expect(switched.profile).toMatchObject({
+        businessId: "member-business",
+        role,
+        catalogEditor: false,
+      })
+      expect(switched.profile.storeId).toBeUndefined()
+      expect(switched.profile.storeName).toBeUndefined()
+      expect(switched.profile.staffAccessMode).toBeUndefined()
+    }
+  })
+
   test("switches the authoritative business context without carrying feature state", () => {
     const switched = switchMobileBusinessSession(
       {

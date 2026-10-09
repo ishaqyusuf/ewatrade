@@ -42,7 +42,10 @@ export function useBusinessSwitch({
     canManageMobileOperations(auth.profile?.role) &&
     (auth.profile?.status?.toUpperCase() ?? "ACTIVE") === "ACTIVE"
   const scopeChanged = !identity || identity !== origin.current
-  const blocked = scopeChanged || !canManage || !auth.session
+  const blocked =
+    scopeChanged ||
+    !auth.session ||
+    (auth.profile?.status?.toUpperCase() ?? "ACTIVE") !== "ACTIVE"
   const [search, updateSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -132,7 +135,6 @@ export function useBusinessSwitch({
     ])
     if (
       key !== origin.current ||
-      !canManageMobileOperations(session.profile.role) ||
       (session.profile.status?.toUpperCase() ?? "ACTIVE") !== "ACTIVE"
     )
       return null
@@ -255,6 +257,7 @@ export function useBusinessSwitch({
   }, [currentSession, memberships.refetch])
 
   function openCreate() {
+    if (!canManageMobileOperations(currentSession()?.profile.role)) return
     if (businessLimitReached) {
       setError(
         "Your plan’s business limit is reached. Open Plan & billing to review your usage.",
@@ -269,6 +272,7 @@ export function useBusinessSwitch({
     )
       return
     const navigate = () => {
+      if (!canManageMobileOperations(currentSession()?.profile.role)) return
       if (
         !currentSession() ||
         (!latest.current.local &&
@@ -316,6 +320,7 @@ export function useBusinessSwitch({
       (local ? localHydrated : !isOffline && !memberships.isPending),
     businessLimitReached,
     canCreate:
+      canManage &&
       !businessLimitReached &&
       !blocked &&
       !accepted &&
