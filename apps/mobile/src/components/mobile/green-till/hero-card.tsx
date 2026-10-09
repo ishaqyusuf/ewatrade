@@ -36,6 +36,8 @@ type HeroCardProps = {
   delta?: { value: string; direction: "up" | "down" }
   stats?: HeroStat[]
   progress?: { done: number; total: number }
+  /** A continuous bar above the stats, e.g. how much of an order is paid. */
+  meter?: { label: string; percent: number; tone: "gold" | "up" }
   cta?: { label: string; icon?: IconKeys; onPress: () => void; testID?: string }
   children?: ReactNode
   testID?: string
@@ -51,6 +53,7 @@ export function HeroCard({
   label,
   pill,
   progress,
+  meter,
   stats,
   sub,
   testID,
@@ -202,6 +205,26 @@ export function HeroCard({
         </View>
       ) : null}
 
+      {meter ? (
+        <View
+          accessibilityLabel={meter.label}
+          accessibilityRole="progressbar"
+          accessibilityValue={{ max: 100, min: 0, now: meter.percent }}
+          style={[styles.meter, { backgroundColor: palette.heroLine }]}
+        >
+          <View
+            style={[
+              styles.meterFill,
+              {
+                backgroundColor:
+                  meter.tone === "gold" ? palette.gold : palette.heroUp,
+                width: `${Math.max(0, Math.min(100, meter.percent))}%`,
+              },
+            ]}
+          />
+        </View>
+      ) : null}
+
       {stats?.length ? (
         <View
           style={[
@@ -346,6 +369,8 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   progress: { flexDirection: "row", gap: 6, marginTop: 14 },
+  meter: { borderRadius: 999, height: 8, marginTop: 14, overflow: "hidden" },
+  meterFill: { borderRadius: 999, height: 8 },
   progressBar: { borderRadius: 6, flex: 1, height: 6 },
   row: {
     alignItems: "center",

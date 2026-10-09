@@ -444,29 +444,12 @@ function OrderOverviewSummary({
               : "Not set",
           },
         ]}
-      >
-        <NativeView
-          accessibilityRole="progressbar"
-          accessibilityLabel="Order paid"
-          accessibilityValue={{ min: 0, max: 100, now: paidPercent }}
-          style={{
-            backgroundColor: palette.heroLine,
-            borderRadius: 999,
-            height: 8,
-            marginTop: 12,
-            overflow: "hidden",
-          }}
-        >
-          <NativeView
-            style={{
-              backgroundColor: due ? palette.gold : palette.heroUp,
-              borderRadius: 999,
-              height: 8,
-              width: `${paidPercent}%`,
-            }}
-          />
-        </NativeView>
-      </HeroCard>
+        meter={{
+          label: `${paidPercent}% paid`,
+          percent: paidPercent,
+          tone: due ? "gold" : "up",
+        }}
+      />
     </View>
   )
 }
