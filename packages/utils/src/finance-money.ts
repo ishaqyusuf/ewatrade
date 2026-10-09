@@ -13,18 +13,30 @@ export function parseFinanceMoney(value: string): string {
 export function formatFinanceMoney(value: string, currency: string): string {
   const amount = BigInt(value)
   const absolute = amount < BigInt(0) ? -amount : amount
-  const whole = absolute / BigInt(100)
+  const whole = (absolute / BigInt(100)).toString()
   const fraction = (absolute % BigInt(100)).toString().padStart(2, "0")
-  const signed =
-    amount < BigInt(0) ? (whole === BigInt(0) ? -0 : -whole) : whole
-  return new Intl.NumberFormat("en-NG", {
+  const formatter = new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
-    .formatToParts(signed)
-    .map((part) => (part.type === "fraction" ? fraction : part.value))
+  // Hermes (React Native) cannot format a BigInt, so the locale only
+  // supplies the layout (sign, symbol, separators) from small numbers and the
+  // exact digits are spliced in as strings.
+  const group =
+    formatter.formatToParts(1000).find((part) => part.type === "group")
+      ?.value ?? ","
+  const digits = whole.replace(/\B(?=(\d{3})+(?!\d))/g, group)
+  return formatter
+    .formatToParts(amount < BigInt(0) ? -1 : 1)
+    .map((part) =>
+      part.type === "integer"
+        ? digits
+        : part.type === "fraction"
+          ? fraction
+          : part.value,
+    )
     .join("")
 }
 
