@@ -7,23 +7,15 @@ import {
   assertQaAcceleratorStartupSafety,
   isQaAcceleratorClientMode,
 } from "@ewatrade/utils/qa-accelerator"
-import { Hedvig_Letters_Sans, Hedvig_Letters_Serif } from "next/font/google"
+import { Figtree } from "next/font/google"
 import { Providers } from "./providers"
 
 assertQaAcceleratorStartupSafety(process.env)
 
-const hedvigSans = Hedvig_Letters_Sans({
-  weight: "400",
+const figtree = Figtree({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-hedvig-sans",
-})
-
-const hedvigSerif = Hedvig_Letters_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-hedvig-serif",
+  variable: "--font-figtree",
 })
 
 export const metadata: Metadata = {
@@ -61,11 +53,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(
-        "ewatrade-dashboard",
-        hedvigSans.variable,
-        hedvigSerif.variable,
-      )}
+      className={cn("ewatrade-dashboard", figtree.variable)}
     >
       <body className="bg-background font-sans antialiased">
         <DashboardEventsProvider>

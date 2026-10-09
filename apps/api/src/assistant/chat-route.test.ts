@@ -5,6 +5,7 @@ import type { RehearsalTurn } from "@ewatrade/ai/rehearsal-model"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import type { SetupDraftEntityWrite } from "@ewatrade/assistant/setup/tools"
 import { AssistantRecordError } from "@ewatrade/db/assistant"
+import { assistantBudgetScopeKey } from "@ewatrade/db/assistant"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import type { AssistantChatRepository } from "./chat-repository"
@@ -41,6 +42,8 @@ function fakeRepository(
     budgetAllowed?: boolean
     authorized?: () => boolean
     attachments?: Array<Record<string, unknown>>
+    purpose?: "SETUP" | "PRODUCT_CREATE"
+    workflowContext?: Record<string, unknown>
   } = {},
 ) {
   const attachments = (options.attachments ?? []) as never[]
@@ -52,6 +55,7 @@ function fakeRepository(
     writes: [] as SetupDraftEntityWrite[],
     persistedAssistantMessage: false,
     assistantText: null as string | null,
+    budgetScopeKey: null as string | null,
   }
   const repository: AssistantChatRepository = {
     readConversation: async (conversationId) => {
@@ -67,6 +71,8 @@ function fakeRepository(
         tenantId: scope.tenantId,
         storeId: scope.storeId,
         title: null,
+        purpose: options.purpose ?? "SETUP",
+        workflowContext: (options.workflowContext ?? null) as never,
         setupDraft: { id: "draft_1", revision: 0 },
       }
     },
@@ -84,10 +90,12 @@ function fakeRepository(
             run: { id: "run_1", conversationId: "conv_1", status: "RUNNING" },
           }
     },
-    reserveBudget: async () =>
-      options.budgetAllowed === false
+    reserveBudget: async (input) => {
+      calls.budgetScopeKey = input.scopeKey
+      return options.budgetAllowed === false
         ? { allowed: false as const, remainingRequests: 0 }
-        : { allowed: true as const, remainingRequests: 59 },
+        : { allowed: true as const, remainingRequests: 59 }
+    },
     completeRun: async (input) => {
       calls.completed.push({
         status: input.status,
@@ -97,8 +105,11 @@ function fakeRepository(
       const parts = input.assistantMessage?.parts as
         | Array<{ type: string; text?: string }>
         | undefined
-      const first = parts?.[0]
-      calls.assistantText = first?.type === "text" ? (first.text ?? null) : null
+      calls.assistantText =
+        parts
+          ?.filter((part) => part.type === "text")
+          .map((part) => part.text ?? "")
+          .join("") ?? null
     },
     listMessages: async () => [
       {
@@ -131,7 +142,14 @@ function fakeRepository(
         ? {
             id: "run_1",
             conversationId: "conv_1",
-            status: "COMPLETED",
+            status:
+              calls.completed.at(-1)?.status === "FAILED"
+                ? "FAILED"
+                : calls.completed.length
+                  ? "COMPLETED"
+                  : options.purpose === "PRODUCT_CREATE"
+                    ? "RUNNING"
+                    : "COMPLETED",
             errorCode: null,
             startedAt: new Date(0),
             completedAt: new Date(1_000),
@@ -299,6 +317,86 @@ describe("assistant chat admission", () => {
 })
 
 describe("assistant chat turn", () => {
+  test("focused product policy stages one stable product and shares the business allowance", async () => {
+    const fake = fakeRepository({
+      purpose: "PRODUCT_CREATE",
+      workflowContext: {
+        handoffDigest: "a".repeat(64),
+        snapshot: {
+          form: {
+            kind: "product",
+            name: "",
+            description: "",
+            unitName: "",
+            price: "",
+            openingStockQuantity: "",
+            usage: "FOR_SALE",
+          },
+          storeId: scope.storeId,
+          category: "",
+          illustrationId: null,
+          photoAssetIds: [],
+          sku: "",
+          barcode: "",
+          showAdvanced: false,
+          showUnits: false,
+          showDescription: false,
+          showOpeningStock: false,
+          selectedHelperKey: null,
+          canonicalTransactionScale: 2,
+          optionGroups: [],
+          variantDrafts: {},
+          additionalUnits: [],
+        },
+      },
+    })
+    const { server } = app(fake, {
+      model: scriptedModel([
+        {
+          kind: "tool",
+          toolName: "setup_draft_upsert_items",
+          input: {
+            items: [
+              {
+                kind: "product",
+                name: "Eggs",
+                unitName: "Egg",
+                price: "150",
+                sellingUnits: [
+                  { name: "Tray", containsQuantity: "30", price: "4200" },
+                ],
+              },
+            ],
+          },
+        },
+        { kind: "text", text: "Review your product and press Create product." },
+      ]),
+    })
+    const response = await chat(server)
+    expect(response.status).toBe(200)
+    const body = await response.text()
+    expect(body).toContain('"finishReason":"stop"')
+    for (
+      let attempt = 0;
+      attempt < 50 && !fake.calls.completed.length;
+      attempt++
+    ) {
+      await Bun.sleep(100)
+    }
+    expect(fake.calls.assistantText).toBe(
+      "Review your product and press Create product.",
+    )
+    expect(fake.calls.writes.map((write) => write.key)).toEqual(["product"])
+    expect(fake.calls.writes[0]?.payload).toMatchObject({
+      sellingUnits: [
+        { name: "Tray", containsQuantity: "30", priceMinor: 420000 },
+      ],
+    })
+    expect(fake.calls.budgetScopeKey).toBe(
+      assistantBudgetScopeKey(scope.tenantId, "SETUP"),
+    )
+    expect(fake.calls.completed.at(-1)?.status).toBe("COMPLETED")
+  })
   test("stages draft records, saves the reply and releases the slot", async () => {
     const fake = fakeRepository()
     const guard = new AssistantStreamGuard({
@@ -415,7 +513,13 @@ describe("assistant chat turn", () => {
     const reader = response.body?.getReader()
     await reader?.read()
     await reader?.cancel()
-    await Bun.sleep(300)
+    for (
+      let attempt = 0;
+      attempt < 50 && !fake.calls.completed.length;
+      attempt++
+    ) {
+      await Bun.sleep(100)
+    }
     expect(fake.calls.writes.map((write) => write.key)).toEqual([
       "product:feed",
     ])

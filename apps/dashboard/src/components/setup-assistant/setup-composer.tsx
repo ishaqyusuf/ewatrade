@@ -46,6 +46,7 @@ export function SetupComposer({
   mediaEnabled,
   onSend,
   onStop,
+  inputLabel = "Tell the assistant about your business",
 }: {
   conversationId: string
   /** The assistant is answering; sending waits, Stop is offered. */
@@ -54,6 +55,7 @@ export function SetupComposer({
   mediaEnabled: boolean
   onSend: (parts: SetupComposerPart[]) => void
   onStop: () => void
+  inputLabel?: string
 }) {
   const [input, setInput] = useState("")
   const [transcriptHint, setTranscriptHint] = useState(false)
@@ -169,18 +171,12 @@ export function SetupComposer({
         <InputGroup>
           <InputGroupTextarea
             ref={inputRef}
-            aria-label="Tell the assistant about your business"
+            aria-label={inputLabel}
             placeholder="Tell me what you sell, your prices and how many you have…"
             rows={2}
             maxLength={8000}
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault()
-                send()
-              }
-            }}
           />
           <InputGroupAddon
             align="block-end"

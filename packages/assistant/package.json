@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./product/contracts": "./src/product/contracts.ts",
+    "./product/allowance": "./src/product/allowance.ts",
     "./files/pdf-text": "./src/files/pdf-text.ts",
     "./files/spreadsheet": "./src/files/spreadsheet.ts",
     "./setup/areas": "./src/setup/areas.ts",
@@ -16,6 +18,7 @@
     "./setup/prompt": "./src/setup/prompt.ts",
     "./setup/rehearsal": "./src/setup/rehearsal.ts",
     "./setup/tools": "./src/setup/tools.ts",
+    "./setup/variants": "./src/setup/variants.ts",
     "./setup/vision": "./src/setup/vision.ts"
   },
   "scripts": {

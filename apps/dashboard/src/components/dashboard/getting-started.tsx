@@ -4,46 +4,19 @@ import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import type { GettingStartedAction } from "@/lib/dashboard-overview"
 import { ArrowRight01Icon, SparklesIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import dynamic from "next/dynamic"
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
-
-const CatalogItemSheet = dynamic(
-  () =>
-    import("@/components/catalog-item/catalog-item-sheet").then(
-      (module) => module.CatalogItemSheet,
-    ),
-  {
-    loading: () => (
-      <output className="block text-sm text-muted-foreground">
-        Opening form…
-      </output>
-    ),
-  },
-)
 
 export function GettingStarted({
   actions,
-  store,
 }: {
   actions: GettingStartedAction[]
   store: { businessProfileKey: string | null; currencyCode: string; id: string }
 }) {
-  const { catalogItemMode, setParams } = useCatalogItemParams()
-  const [sheetLoaded, setSheetLoaded] = useState(catalogItemMode === "create")
-  const openerRef = useRef<HTMLButtonElement | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
-  const canCreateItems = actions.some((action) => action.catalogCreateKind)
-  useEffect(() => {
-    if (catalogItemMode === "create") setSheetLoaded(true)
-  }, [catalogItemMode])
+  const { setParams } = useCatalogItemParams()
   if (actions.length === 0) return null
 
   return (
     <>
-      {notice ? (
-        <output className="block text-sm text-foreground">{notice}</output>
-      ) : null}
       <section className="border-y border-border bg-background">
         <div className="flex items-start gap-3 border-b border-border px-4 py-5 sm:px-5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -78,9 +51,7 @@ export function GettingStarted({
                 key={action.href}
                 type="button"
                 className="flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-muted/50 sm:px-5"
-                onClick={(event) => {
-                  openerRef.current = event.currentTarget
-                  setNotice(null)
+                onClick={() => {
                   void setParams({
                     catalogItem: "create",
                     catalogCreateKind: action.catalogCreateKind,
@@ -109,16 +80,6 @@ export function GettingStarted({
           )}
         </div>
       </section>
-      {canCreateItems && (sheetLoaded || catalogItemMode === "create") ? (
-        <CatalogItemSheet
-          finalFocus={openerRef}
-          businessProfileKey={store.businessProfileKey}
-          allowKindChange={false}
-          currencyCode={store.currencyCode}
-          storeId={store.id}
-          onCreated={(name) => setNotice(`${name} added.`)}
-        />
-      ) : null}
     </>
   )
 }

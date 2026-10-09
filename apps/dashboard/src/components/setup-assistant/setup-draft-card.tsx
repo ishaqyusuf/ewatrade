@@ -21,6 +21,11 @@ import {
   SetupIllustrationControl,
   SetupRecordAvatar,
 } from "./setup-illustration"
+import {
+  SetupVariantFields,
+  setupEditedVariants,
+  setupVariantEditorRows,
+} from "./setup-variant-fields"
 
 const STATE_LABEL: Record<SetupDraftEntity["state"], string> = {
   PROPOSED: "Ready to confirm",
@@ -323,6 +328,12 @@ function RecordEditor({
       ? minorToMajorInput(payload.opening?.amountMinor)
       : "",
   )
+  const perVariant =
+    payload.kind === "product" &&
+    Boolean(payload.options?.length || payload.variants?.length)
+  const [variantRows, setVariantRows] = useState(() =>
+    payload.kind === "product" ? setupVariantEditorRows(payload) : [],
+  )
 
   function submit() {
     const trimmedName = name.trim() || payload.name
@@ -351,12 +362,25 @@ function RecordEditor({
     onSave({
       ...payload,
       name: trimmedName,
-      priceMinor,
+      priceMinor: perVariant ? undefined : priceMinor,
       usage: usage === "FOR_SALE" && !payload.usage ? undefined : usage,
       unitName: unit.trim() || payload.unitName,
-      openingStock: /^\d+(\.\d{1,6})?$/.test(openingStock)
-        ? openingStock
-        : undefined,
+      ...(perVariant
+        ? {
+            variants: setupEditedVariants(payload, variantRows),
+            sellingUnits: payload.sellingUnits?.map((unit) => ({
+              ...unit,
+              priceMinor: undefined,
+            })),
+          }
+        : {}),
+      openingStock: perVariant
+        ? variantRows.every((row) => row.stock.trim())
+          ? undefined
+          : payload.openingStock
+        : /^\d+(\.\d{1,6})?$/.test(openingStock)
+          ? openingStock
+          : undefined,
     })
   }
 
@@ -423,39 +447,53 @@ function RecordEditor({
               </select>
             </EditorField>
           ) : null}
-          <EditorField
-            id={`${id}-price`}
-            label={
-              payload.kind === "product"
-                ? `${usage === "INTERNAL_USE" ? "Selling price (optional)" : "Price"} per ${unit.toLowerCase() || "unit"}`
-                : "Price"
-            }
-          >
-            <MoneyInput
+          {!perVariant ? (
+            <EditorField
               id={`${id}-price`}
-              currencyCode={currencyCode}
-              inputMode="decimal"
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-            />
-          </EditorField>
+              label={
+                payload.kind === "product"
+                  ? `${usage === "INTERNAL_USE" ? "Selling price (optional)" : "Price"} per ${unit.toLowerCase() || "unit"}`
+                  : "Price"
+              }
+            >
+              <MoneyInput
+                id={`${id}-price`}
+                currencyCode={currencyCode}
+                inputMode="decimal"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+              />
+            </EditorField>
+          ) : null}
           {payload.kind === "product" ? (
             <>
-              <EditorField id={`${id}-unit`} label="Counted in">
-                <Input
-                  id={`${id}-unit`}
-                  value={unit}
-                  onChange={(event) => setUnit(event.target.value)}
+              {perVariant ? (
+                <SetupVariantFields
+                  rows={variantRows}
+                  unitName={payload.unitName}
+                  currencyCode={currencyCode}
+                  internalUse={usage === "INTERNAL_USE"}
+                  onChange={setVariantRows}
                 />
-              </EditorField>
-              <EditorField id={`${id}-stock`} label="In stock now">
-                <Input
-                  id={`${id}-stock`}
-                  inputMode="decimal"
-                  value={stock}
-                  onChange={(event) => setStock(event.target.value)}
-                />
-              </EditorField>
+              ) : (
+                <>
+                  <EditorField id={`${id}-unit`} label="Counted in">
+                    <Input
+                      id={`${id}-unit`}
+                      value={unit}
+                      onChange={(event) => setUnit(event.target.value)}
+                    />
+                  </EditorField>
+                  <EditorField id={`${id}-stock`} label="In stock now">
+                    <Input
+                      id={`${id}-stock`}
+                      inputMode="decimal"
+                      value={stock}
+                      onChange={(event) => setStock(event.target.value)}
+                    />
+                  </EditorField>
+                </>
+              )}
             </>
           ) : null}
         </>

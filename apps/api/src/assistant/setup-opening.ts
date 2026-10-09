@@ -54,9 +54,9 @@ export type SetupMessageDraft = {
 }
 
 /**
- * One bounded model call for the opening or welcome-back message. Rehearsal
- * (QA), no provider, a slow provider or an unusable answer all fall back to
- * the deterministic text, so starting setup never waits on or fails with AI.
+ * One bounded model call for the opening or welcome-back message. Explicit
+ * development rehearsal, no provider, a slow provider or an unusable answer
+ * fall back to deterministic text, so starting setup never waits on or fails with AI.
  */
 export async function writeSetupMessage(input: {
   model: ResolvedAssistantModel | null

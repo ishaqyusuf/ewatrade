@@ -107,3 +107,11 @@ root `.env` plus the selected profile; never use public/mobile-prefixed variable
 Missing keys leave the manual category picker available. Master-admin config UI
 is planned; implementation and deferred testing are tracked in
 [the Brain checklist](.brain/plans/2026-10-02-catalog-ai-category-suggestions-implementation.md).
+
+### Persistent assistant and product creation
+
+Eligible owners and admins can open `/assistant`, add a product through a focused
+conversation, and return to the complete Catalog form. Billing and the assistant
+show the shared business AI allowance. Mobile remains deferred and new chat media
+is disabled. See the [product assistant release note](docs/releases/product-creation-assistant.md)
+for behavior, validation and rollout status.
