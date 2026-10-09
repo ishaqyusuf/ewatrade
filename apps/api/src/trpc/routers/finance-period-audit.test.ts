@@ -3,6 +3,20 @@ import { financePeriodAuditSchema } from "../../schemas/finance-period-audit"
 import { createCallerFactory } from "../init"
 import { financeRouter } from "./finance"
 
+test("period audit input accepts infinite-query page direction and stays strict", () => {
+  // tRPC infinite queries send `direction` with every page; without it the
+  // close/reopen history failed validation and never loaded.
+  for (const direction of ["forward", "backward"] as const)
+    expect(
+      financePeriodAuditSchema.safeParse({ bookId: "book-1", direction })
+        .success,
+    ).toBe(true)
+  expect(
+    financePeriodAuditSchema.safeParse({ bookId: "book-1", direction: "up" })
+      .success,
+  ).toBe(false)
+})
+
 test("period audit schema rejects actor injection and invalid pagination", () => {
   expect(financePeriodAuditSchema.parse({ bookId: "book-1" })).toEqual({
     bookId: "book-1",

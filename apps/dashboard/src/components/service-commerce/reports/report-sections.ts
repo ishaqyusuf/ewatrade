@@ -1,30 +1,12 @@
+import {
+  type ReportFunnelStep,
+  type ReportMetricGroup,
+  type ReportMetricTone,
+  buildReportFunnel,
+  reportMetric,
+} from "@/components/reports/report-metrics"
 import type { ServiceCommerceReportSection } from "@/hooks/use-service-commerce-report-params"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
-
-export type ReportMetric = {
-  label: string
-  /** `null` is Unknown: the fact is not available, so it is never shown as zero. */
-  value: number | null
-  format?: "count" | "duration" | "money"
-  /** Required when `format` is money. */
-  currencyCode?: string | null
-  /** A current snapshot rather than an occurrence inside the window. */
-  current?: boolean
-  note?: string
-  unknownReason?: string
-  /** Total that `value` is a share of; drawn as a proportion bar. */
-  shareOf?: number
-  /**
-   * Owner-approved emphasis (6 October 2026) when the value is above zero:
-   * failures and rejections are red, blocks and quarantines amber. Unknown
-   * data stays neutral.
-   */
-  tone?: ReportMetricTone
-}
-
-export type ReportMetricTone = "failure" | "block"
-
-export type ReportMetricGroup = { title: string; metrics: ReportMetric[] }
 
 export type ReportSectionContent = {
   key: Exclude<ServiceCommerceReportSection, "stores">
@@ -33,13 +15,6 @@ export type ReportSectionContent = {
   description: string
   groups: ReportMetricGroup[]
   footnote?: string
-}
-
-export type ReportFunnelStep = {
-  label: string
-  count: number
-  /** Percent of the step above; `null` when the step above is zero. */
-  ratio?: number | null
 }
 
 const CHANNEL_LABELS: Record<
@@ -85,34 +60,10 @@ const OBSERVED_OUTCOME_TONES: Partial<
   failed: "failure",
 }
 
-/** The tone a metric shows: only toned metrics above zero are emphasized. */
-export function metricTone(metric: ReportMetric): ReportMetricTone | null {
-  return metric.tone && metric.value !== null && metric.value > 0
-    ? metric.tone
-    : null
-}
-
-/** A section shows failure when any failure count is above zero, else block. */
-export function sectionTone(
-  section: Pick<ReportSectionContent, "groups">,
-): ReportMetricTone | null {
-  const tones = section.groups.flatMap((group) => group.metrics.map(metricTone))
-  if (tones.includes("failure")) return "failure"
-  return tones.includes("block") ? "block" : null
-}
-
 export function humanizeReportValue(value: string) {
   return value
     .replaceAll("_", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-export function formatReportDuration(seconds: number) {
-  const rounded = Math.round(seconds)
-  if (rounded < 60) return `${rounded}s`
-  const minutes = Math.floor(rounded / 60)
-  if (minutes < 60) return `${minutes}m ${rounded % 60}s`
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
 }
 
 export function usageAttributionLabel(dimension: {
@@ -131,37 +82,18 @@ export function usageAttributionLabel(dimension: {
     .join(" · ")
 }
 
-/**
- * Ratios compare occurrences inside one window with the step above. They are
- * not cohort conversion, so a step can exceed 100%.
- */
 export function lifecycleFunnel(
   lifecycle: ServiceCommerceReportOutput["lifecycle"],
 ): ReportFunnelStep[] {
-  const steps = [
+  return buildReportFunnel([
     { label: "Requests received", count: lifecycle.requestsReceived },
     { label: "Quotes issued", count: lifecycle.quotesIssued },
     { label: "Quotes accepted", count: lifecycle.quotesAccepted },
     { label: "Payments succeeded", count: lifecycle.paymentsSucceeded },
-  ]
-  return steps.map((step, index) => {
-    const previous = steps[index - 1]
-    if (!previous) return step
-    return {
-      ...step,
-      ratio:
-        previous.count > 0
-          ? Math.round((step.count / previous.count) * 100)
-          : null,
-    }
-  })
+  ])
 }
 
-const metric = (
-  label: string,
-  value: number | null,
-  extra: Omit<ReportMetric, "label" | "value"> = {},
-): ReportMetric => ({ label, value, ...extra })
+const metric = reportMetric
 
 /** The report's metric set as named groups; paired values become separate rows. */
 export function buildReportSections(

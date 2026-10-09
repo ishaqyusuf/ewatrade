@@ -141,3 +141,28 @@ export function InlineSelectionStatus({
     </output>
   )
 }
+
+/**
+ * Select-all and status for repeated rows or cards that have no table header.
+ * Select-all covers the loaded rows only.
+ */
+export function InlineSelectionBar({
+  label,
+  note,
+  selection,
+}: {
+  /** Accessible name of the select-all checkbox. */
+  label: string
+  note?: string
+  selection: InlineSelection
+}) {
+  return (
+    <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <InlineSelectAllCheckbox selection={selection} label={label} />
+        <span aria-hidden="true">Select all</span>
+      </div>
+      <InlineSelectionStatus selection={selection} note={note} />
+    </div>
+  )
+}

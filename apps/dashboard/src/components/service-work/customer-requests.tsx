@@ -2,6 +2,11 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { label } from "@/components/service-work/service-utils"
+import {
+  InlineRowCheckbox,
+  InlineSelectionBar,
+  useInlineSelection,
+} from "@/components/tables/core"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
 import { Badge, Button, SubmitButton } from "@ewatrade/ui"
@@ -10,6 +15,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
+import { useMemo } from "react"
 
 export function CustomerRequests({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
@@ -24,6 +30,11 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
       { retry: false },
     ),
   )
+  const requestIds = useMemo(
+    () => requests.map((request) => request.id),
+    [requests],
+  )
+  const selection = useInlineSelection({ ids: requestIds, scope: storeId })
   const dispositionMutation = useMutation(
     trpc.serviceAccess.updateRequest.mutationOptions({
       onSuccess: async () => {
@@ -57,95 +68,121 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
           No customer requests yet.
         </p>
       ) : (
-        requests.map((request) => (
-          <div className="border-b border-border py-4" key={request.id}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="font-medium">{request.customerName}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {request.lines
-                    .map((line) => `${line.quantity} × ${line.offeringName}`)
-                    .join(", ")}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  From {request.formLabel}
-                </p>
+        <div className="grid">
+          <InlineSelectionBar
+            label="Select all loaded customer requests"
+            selection={selection}
+          />
+          {requests.map((request) => (
+            <div
+              className="flex items-start gap-3 border-b border-border py-4"
+              data-state={
+                selection.isSelected(request.id) ? "selected" : undefined
+              }
+              key={request.id}
+            >
+              <span className="pt-0.5">
+                <InlineRowCheckbox
+                  selection={selection}
+                  id={request.id}
+                  label={`Select request from ${request.customerName}`}
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-medium">{request.customerName}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {request.lines
+                        .map(
+                          (line) => `${line.quantity} × ${line.offeringName}`,
+                        )
+                        .join(", ")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      From {request.formLabel}
+                    </p>
+                  </div>
+                  <Badge className="w-fit rounded-full capitalize">
+                    {label(request.status)}
+                  </Badge>
+                </div>
+                {request.details ? (
+                  <p className="mt-3 bg-muted px-3 py-2 text-sm">
+                    {request.details}
+                  </p>
+                ) : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {request.status !== "CONVERTED" &&
+                  request.status !== "DECLINED" ? (
+                    <Button
+                      appearance="form"
+                      size="sm"
+                      onClick={() =>
+                        setParams({
+                          requestId: request.id,
+                          serviceSheet: "quote",
+                        })
+                      }
+                    >
+                      Issue quote
+                    </Button>
+                  ) : null}
+                  {request.status === "SUBMITTED" ? (
+                    <SubmitButton
+                      type="button"
+                      isSubmitting={
+                        dispositionMutation.isPending &&
+                        dispositionMutation.variables?.requestId ===
+                          request.id &&
+                        dispositionMutation.variables?.status ===
+                          "needs_information"
+                      }
+                      size="sm"
+                      variant="outline"
+                      disabled={dispositionMutation.isPending}
+                      onClick={() =>
+                        dispositionMutation.mutate({
+                          requestId: request.id,
+                          response:
+                            "Please provide the additional details requested by the business.",
+                          status: "needs_information",
+                        })
+                      }
+                    >
+                      Request information
+                    </SubmitButton>
+                  ) : null}
+                  {request.status !== "CONVERTED" &&
+                  request.status !== "DECLINED" ? (
+                    <SubmitButton
+                      type="button"
+                      isSubmitting={
+                        dispositionMutation.isPending &&
+                        dispositionMutation.variables?.requestId ===
+                          request.id &&
+                        dispositionMutation.variables?.status === "declined"
+                      }
+                      size="sm"
+                      variant="ghost"
+                      disabled={dispositionMutation.isPending}
+                      onClick={() =>
+                        dispositionMutation.mutate({
+                          requestId: request.id,
+                          response:
+                            "The business is unable to quote this request.",
+                          status: "declined",
+                        })
+                      }
+                    >
+                      Decline
+                    </SubmitButton>
+                  ) : null}
+                </div>
               </div>
-              <Badge className="w-fit rounded-full capitalize">
-                {label(request.status)}
-              </Badge>
             </div>
-            {request.details ? (
-              <p className="mt-3 bg-muted px-3 py-2 text-sm">
-                {request.details}
-              </p>
-            ) : null}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {request.status !== "CONVERTED" &&
-              request.status !== "DECLINED" ? (
-                <Button
-                  appearance="form"
-                  size="sm"
-                  onClick={() =>
-                    setParams({
-                      requestId: request.id,
-                      serviceSheet: "quote",
-                    })
-                  }
-                >
-                  Issue quote
-                </Button>
-              ) : null}
-              {request.status === "SUBMITTED" ? (
-                <SubmitButton
-                  type="button"
-                  isSubmitting={
-                    dispositionMutation.isPending &&
-                    dispositionMutation.variables?.requestId === request.id &&
-                    dispositionMutation.variables?.status ===
-                      "needs_information"
-                  }
-                  size="sm"
-                  variant="outline"
-                  disabled={dispositionMutation.isPending}
-                  onClick={() =>
-                    dispositionMutation.mutate({
-                      requestId: request.id,
-                      response:
-                        "Please provide the additional details requested by the business.",
-                      status: "needs_information",
-                    })
-                  }
-                >
-                  Request information
-                </SubmitButton>
-              ) : null}
-              {request.status !== "CONVERTED" &&
-              request.status !== "DECLINED" ? (
-                <SubmitButton
-                  type="button"
-                  isSubmitting={
-                    dispositionMutation.isPending &&
-                    dispositionMutation.variables?.requestId === request.id &&
-                    dispositionMutation.variables?.status === "declined"
-                  }
-                  size="sm"
-                  variant="ghost"
-                  disabled={dispositionMutation.isPending}
-                  onClick={() =>
-                    dispositionMutation.mutate({
-                      requestId: request.id,
-                      response: "The business is unable to quote this request.",
-                      status: "declined",
-                    })
-                  }
-                >
-                  Decline
-                </SubmitButton>
-              ) : null}
-            </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </section>
   )

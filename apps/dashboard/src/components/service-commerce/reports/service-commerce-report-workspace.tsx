@@ -10,7 +10,6 @@ import {
   TableRow,
   Tabs,
   TabsContent,
-  TabsList,
   TabsTrigger,
   cn,
 } from "@ewatrade/ui"
@@ -22,6 +21,18 @@ import {
   ReportHeadlineStrip,
   ReportHeadlineStripSkeleton,
 } from "@/components/reports/report-headline-strip"
+import {
+  ReportFunnel,
+  ReportMetricGroups,
+  ReportTabPanel,
+  ReportTabsList,
+  ReportTabsSkeleton,
+  ReportToneDot,
+} from "@/components/reports/report-metric-groups"
+import {
+  reportCountFormat as countFormat,
+  sectionTone,
+} from "@/components/reports/report-metrics"
 import { ScrollableContent } from "@/components/scrollable-content"
 import {
   InlineRowCheckbox,
@@ -43,24 +54,16 @@ import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
 
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
-import { type ReactNode, useMemo } from "react"
+import { useMemo } from "react"
 import {
-  type ReportMetric,
-  type ReportMetricGroup,
-  type ReportMetricTone,
   type ReportSectionContent,
   buildReportSections,
-  formatReportDuration,
   humanizeReportValue,
   lifecycleFunnel,
-  metricTone,
-  sectionTone,
   usageAttributionLabel,
 } from "./report-sections"
 
 type StoreOption = { id: string; name: string }
-
-const countFormat = new Intl.NumberFormat("en-NG")
 
 const DETAIL_LABELS: Record<ServiceCommerceReportDetail, string> = {
   catalog: "Catalog",
@@ -92,204 +95,6 @@ function hasReportActivity(report: ServiceCommerceReportOutput) {
     ...report.costs.flatMap((cost) => [cost.knownCount, cost.unknownCount]),
     ...numericReportValues(report.storeConversations),
   ].some((value) => value > 0)
-}
-
-function MetricValue({ metric }: { metric: ReportMetric }) {
-  if (
-    metric.value === null ||
-    (metric.format === "money" && !metric.currencyCode)
-  )
-    return (
-      <dd
-        className="cursor-help text-right italic text-muted-foreground underline decoration-dotted underline-offset-4"
-        title={
-          metric.unknownReason ??
-          "Not available for this window. It is never shown as zero."
-        }
-      >
-        Unknown
-      </dd>
-    )
-  const text =
-    metric.format === "money" && metric.currencyCode
-      ? formatMinorMoney(metric.value, metric.currencyCode)
-      : metric.format === "duration"
-        ? formatReportDuration(metric.value)
-        : countFormat.format(metric.value)
-  const tone = metricTone(metric)
-  return (
-    <dd
-      className={cn(
-        "whitespace-nowrap text-right tabular-nums",
-        metric.value === 0 ? "text-muted-foreground" : "font-semibold",
-        tone === "failure" && "text-destructive",
-        tone === "block" && "text-amber-700 dark:text-amber-400",
-      )}
-    >
-      {text}
-    </dd>
-  )
-}
-
-const TONE_LABELS: Record<ReportMetricTone, string> = {
-  block: "has blocks",
-  failure: "has failures",
-}
-
-/** Square marker on a tab whose section has a failure or block above zero. */
-function ToneDot({ tone }: { tone: ReportMetricTone | null }) {
-  if (!tone) return null
-  return (
-    <>
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-1.5 shrink-0",
-          tone === "failure" ? "bg-destructive" : "bg-amber-500",
-        )}
-        title={`This section ${TONE_LABELS[tone]}`}
-      />
-      <span className="sr-only">, {TONE_LABELS[tone]}</span>
-    </>
-  )
-}
-
-function MetricRow({ metric }: { metric: ReportMetric }) {
-  const recorded = metric.value !== null && metric.value !== 0
-  return (
-    <div className="flex items-baseline justify-between gap-3 border-b border-border py-2 text-sm">
-      <dt
-        className={cn(
-          "min-w-0 flex-1",
-          recorded ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {metric.label}
-        {metric.current ? (
-          <span
-            className="ml-1.5 border border-border px-1 align-[1px] text-[10px] uppercase tracking-wide text-muted-foreground"
-            title="Current snapshot, not a count inside the window"
-          >
-            now
-          </span>
-        ) : null}
-        {metric.note ? (
-          <span className="block text-xs text-muted-foreground">
-            {metric.note}
-          </span>
-        ) : null}
-        {metric.shareOf !== undefined ? (
-          <span aria-hidden="true" className="mt-1 block h-0.5 bg-muted">
-            <span
-              className="block h-full bg-primary"
-              style={{
-                width: `${metric.shareOf > 0 && metric.value ? (metric.value / metric.shareOf) * 100 : 0}%`,
-              }}
-            />
-          </span>
-        ) : null}
-      </dt>
-      <MetricValue metric={metric} />
-    </div>
-  )
-}
-
-function MetricGroups({ groups }: { groups: ReportMetricGroup[] }) {
-  return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13.5rem),1fr))] gap-x-8 gap-y-5">
-      {groups.map((group) => (
-        <section aria-label={group.title} key={group.title}>
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {group.title}
-          </h3>
-          <dl>
-            {group.metrics.map((metric) => (
-              <MetricRow key={metric.label} metric={metric} />
-            ))}
-          </dl>
-        </section>
-      ))}
-    </div>
-  )
-}
-
-function LifecycleFunnel({
-  lifecycle,
-}: {
-  lifecycle: ServiceCommerceReportOutput["lifecycle"]
-}) {
-  const steps = lifecycleFunnel(lifecycle)
-  const largest = Math.max(...steps.map((step) => step.count), 1)
-  return (
-    <div className="grid gap-2.5">
-      <ol aria-label="Lifecycle funnel" className="grid gap-2.5">
-        {steps.map((step) => (
-          <li
-            className="grid grid-cols-[minmax(0,1fr)_3.5rem_3rem] items-center gap-x-3 gap-y-1.5 text-sm sm:grid-cols-[10rem_minmax(0,1fr)_4rem_3rem]"
-            key={step.label}
-          >
-            <span>{step.label}</span>
-            <span
-              aria-hidden="true"
-              className="col-span-3 row-start-2 h-2.5 bg-muted sm:col-span-1 sm:row-start-auto"
-            >
-              <span
-                className="block h-full bg-primary"
-                style={{ width: `${(step.count / largest) * 100}%` }}
-              />
-            </span>
-            <span
-              className={cn(
-                "text-right tabular-nums",
-                step.count === 0 ? "text-muted-foreground" : "font-semibold",
-              )}
-            >
-              {countFormat.format(step.count)}
-            </span>
-            <span
-              className="text-right text-xs tabular-nums text-muted-foreground"
-              title="Compared with the step above"
-            >
-              {step.ratio === undefined
-                ? ""
-                : step.ratio === null
-                  ? "—"
-                  : `${step.ratio}%`}
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="text-xs text-muted-foreground">
-        Percentages compare counts in this window with the step above. They
-        don't follow the same customers through, so a step can be above 100%.
-      </p>
-    </div>
-  )
-}
-
-function SectionPanel({
-  children,
-  description,
-  title,
-}: {
-  children: ReactNode
-  description: string
-  title: string
-}) {
-  return (
-    <section
-      aria-label={title}
-      className="grid min-w-0 gap-5 border border-border bg-background p-4 sm:p-6"
-    >
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      {children}
-    </section>
-  )
 }
 
 type DrilldownRow = {
@@ -365,7 +170,7 @@ function ReportDailyDetail({
           This detail reached its safe query limit and may be incomplete.
         </output>
       ) : null}
-      {drilldown.isLoading ? (
+      {drilldown.isPending ? (
         <output
           aria-label="Loading report detail"
           className="block h-32 animate-pulse bg-muted"
@@ -555,7 +360,7 @@ export function ServiceCommerceReportWorkspace({
           />
         </PageHeader>
 
-        {report.isLoading ? (
+        {report.isPending ? (
           <ReportLoading />
         ) : report.isError ? (
           <ReportError
@@ -659,25 +464,19 @@ function ReportContent({
         }}
         value={activeSection}
       >
-        <div className="min-w-0 overflow-x-auto border-b border-border pb-1.5 [scrollbar-width:none]">
-          <TabsList
-            aria-label="Report sections"
-            className="w-max"
-            variant="line"
-          >
-            {sections.map((content) => (
-              <TabsTrigger key={content.key} value={content.key}>
-                {content.tab}
-                <ToneDot tone={sectionTone(content)} />
-              </TabsTrigger>
-            ))}
-            {showStores ? (
-              <TabsTrigger value="stores">
-                Stores · {report.storeBreakdown.length}
-              </TabsTrigger>
-            ) : null}
-          </TabsList>
-        </div>
+        <ReportTabsList label="Report sections">
+          {sections.map((content) => (
+            <TabsTrigger key={content.key} value={content.key}>
+              {content.tab}
+              <ReportToneDot tone={sectionTone(content)} />
+            </TabsTrigger>
+          ))}
+          {showStores ? (
+            <TabsTrigger value="stores">
+              Stores · {report.storeBreakdown.length}
+            </TabsTrigger>
+          ) : null}
+        </ReportTabsList>
         {sections.map((content) => (
           <TabsContent key={content.key} value={content.key}>
             <SectionTab
@@ -691,12 +490,12 @@ function ReportContent({
         ))}
         {showStores ? (
           <TabsContent value="stores">
-            <SectionPanel
+            <ReportTabPanel
               description="Each Store's share of the headline figures in this window."
               title="Store breakdown"
             >
               <StoreBreakdownTable report={report} />
-            </SectionPanel>
+            </ReportTabPanel>
           </TabsContent>
         ) : null}
       </Tabs>
@@ -718,12 +517,15 @@ function SectionTab({
   storeId: string | null
 }) {
   return (
-    <SectionPanel description={content.description} title={content.title}>
+    <ReportTabPanel description={content.description} title={content.title}>
       {content.key === "lifecycle" ? (
-        <LifecycleFunnel lifecycle={report.lifecycle} />
+        <ReportFunnel
+          label="Lifecycle funnel"
+          steps={lifecycleFunnel(report.lifecycle)}
+        />
       ) : null}
       {content.groups.length ? (
-        <MetricGroups groups={content.groups} />
+        <ReportMetricGroups groups={content.groups} />
       ) : content.key === "costs" ? (
         <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
           No cost facts were recorded for this Store and window. Costs appear
@@ -741,7 +543,7 @@ function SectionTab({
           storeId={storeId}
         />
       ) : null}
-    </SectionPanel>
+    </ReportTabPanel>
   )
 }
 
@@ -856,18 +658,7 @@ function ReportLoading() {
     <div className="grid min-w-0 gap-6">
       <output className="sr-only">Loading Service Commerce report</output>
       <ReportHeadlineStripSkeleton count={4} />
-      <div
-        aria-hidden="true"
-        className="flex gap-4 overflow-hidden border-b border-border pb-3"
-      >
-        {Array.from({ length: 6 }, (_, index) => (
-          <div
-            className="h-5 w-20 shrink-0 animate-pulse bg-muted"
-            key={`report-tab-skeleton-${index + 1}`}
-          />
-        ))}
-      </div>
-      <div aria-hidden="true" className="h-96 animate-pulse bg-muted" />
+      <ReportTabsSkeleton />
     </div>
   )
 }

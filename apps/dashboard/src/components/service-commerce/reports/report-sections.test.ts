@@ -1,13 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
 
-import {
-  buildReportSections,
-  formatReportDuration,
-  lifecycleFunnel,
-  metricTone,
-  sectionTone,
-} from "./report-sections"
+import { metricTone, sectionTone } from "@/components/reports/report-metrics"
+import { buildReportSections, lifecycleFunnel } from "./report-sections"
 
 function report(
   overrides: Partial<ServiceCommerceReportOutput> = {},
@@ -264,12 +259,6 @@ describe("Service Commerce report sections", () => {
       { count: 0, label: "Quotes accepted", ratio: 0 },
       { count: 2, label: "Payments succeeded", ratio: null },
     ])
-  })
-
-  test("formats durations compactly", () => {
-    expect(formatReportDuration(42.4)).toBe("42s")
-    expect(formatReportDuration(312)).toBe("5m 12s")
-    expect(formatReportDuration(3_900)).toBe("1h 5m")
   })
 
   test("marks failures red and blocks amber only above zero; Unknown data stays neutral", () => {
