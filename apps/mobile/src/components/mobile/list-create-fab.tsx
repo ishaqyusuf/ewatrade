@@ -1,15 +1,13 @@
-import { FOOTER_SLIDE_MS } from "@/components/mobile/bottom-search-footer"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { useColors } from "@/hooks/use-color"
+import { animateDock } from "@/lib/dock-motion"
 import { cn } from "@/lib/utils"
 import { useEffect } from "react"
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withTiming,
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { getListCreateFabBottom } from "./list-create-fab-model"
@@ -49,10 +47,12 @@ export function ListCreateFab({
   const animatedBottom = useSharedValue(targetBottom)
 
   useEffect(() => {
-    animatedBottom.value = withTiming(targetBottom, {
-      duration: reduceMotion ? 0 : FOOTER_SLIDE_MS,
-      easing: Easing.out(Easing.cubic),
-    })
+    // Same motion as the dock: down with the hide timing, up with its spring.
+    animatedBottom.value = animateDock(
+      targetBottom,
+      targetBottom < animatedBottom.value,
+      reduceMotion,
+    )
   }, [animatedBottom, reduceMotion, targetBottom])
 
   const animatedStyle = useAnimatedStyle(() => ({

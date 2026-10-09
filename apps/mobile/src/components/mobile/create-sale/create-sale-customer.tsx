@@ -4,6 +4,7 @@ import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
@@ -50,6 +51,7 @@ export function CreateSaleCustomerStep({
     directoryCustomerCount,
   } = model
   const heroPalette = GREEN_TILL_THEME[useColorScheme().colorScheme]
+  const scrollHide = useBottomSearchScroll()
 
   return (
     <View className={tone("flex-1")}>
@@ -233,6 +235,8 @@ export function CreateSaleCustomerStep({
           }
         }}
         onEndReachedThreshold={0.35}
+        onScroll={scrollHide.onScroll}
+        scrollEventThrottle={16}
         ListFooterComponent={
           recentOrders.isFetchingNextPage ||
           customerDirectory.isFetchingNextPage ? (
@@ -250,6 +254,7 @@ export function CreateSaleCustomerStep({
         <BottomSearchFooter
           variant={market ? "market-day" : "default"}
           alwaysShowSearch={Boolean(customerSearch)}
+          hidden={scrollHide.hidden}
           maxLength={160}
           onHeightChange={setActionsHeight}
           accessibilityLabel="Search customer, phone, or email"

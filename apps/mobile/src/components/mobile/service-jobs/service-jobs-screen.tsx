@@ -3,6 +3,7 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { VariableContextProvider } from "nativewind"
 import { useRef, useState } from "react"
 import { Keyboard, type ScrollView } from "react-native"
@@ -34,6 +35,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
   const workspaceTop = useRef(0)
   const linesTop = useRef(0)
   const [footerHeight, setFooterHeight] = useState(88)
+  const scrollHide = useBottomSearchScroll()
   const {
     creating,
     selectedJob,
@@ -266,12 +268,17 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                 </View>
               </KeyboardAwareScrollView>
             ) : (
-              <ServiceJobsQueue model={model} feedback={feedback} />
+              <ServiceJobsQueue
+                model={model}
+                feedback={feedback}
+                onScroll={scrollHide.onScroll}
+              />
             )}
             {market && showQueueSearch ? (
               <BottomSearchFooter
                 variant={market ? "market-day" : "default"}
                 accessibilityLabel="Search service jobs"
+                hidden={scrollHide.hidden}
                 onHeightChange={setFooterHeight}
                 localSearch={isOfflineMode}
                 alwaysShowSearch

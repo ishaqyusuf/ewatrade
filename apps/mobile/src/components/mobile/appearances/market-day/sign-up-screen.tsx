@@ -17,6 +17,7 @@ export function MarketDaySignUpScreen({
   footer,
   header,
   onBack,
+  onScroll,
   step,
 }: SignUpPresentationProps) {
   const largeText = useLargeTextLayout()
@@ -44,6 +45,7 @@ export function MarketDaySignUpScreen({
           setCanopyScrolledAway((current) =>
             current === passed ? current : passed,
           )
+          onScroll?.(event)
         }}
         safeAreaColor={statusColor}
       >

@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
@@ -52,6 +53,7 @@ export function GlobalSearchScreen() {
   const [footerHeight, setFooterHeight] = useState(100)
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
+  const scrollHide = useBottomSearchScroll()
   // biome-ignore lint/correctness/useExhaustiveDependencies: appearance changes invalidate measured header geometry
   useEffect(() => {
     setHeaderHeight(0)
@@ -229,6 +231,7 @@ export function GlobalSearchScreen() {
           setShowCanvasStatusBar((current) =>
             current === next ? current : next,
           )
+          scrollHide.onScroll(event)
         }}
       >
         <Header
@@ -375,6 +378,7 @@ export function GlobalSearchScreen() {
         accessibilityLabel="Search the workspace"
         alwaysShowSearch
         autoFocus
+        hidden={scrollHide.hidden}
         maxLength={160}
         onHeightChange={setFooterHeight}
         onChangeText={(value) => {

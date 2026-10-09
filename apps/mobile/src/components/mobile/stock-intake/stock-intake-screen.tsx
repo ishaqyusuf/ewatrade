@@ -11,6 +11,7 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
@@ -48,6 +49,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
   } = market ? Market : Classic
   const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(150)
+  const scrollHide = useBottomSearchScroll()
   const list = useRef<NativeFlatList<StockBalance>>(null)
   const completed = model.phase === "complete"
   const chooser = useModal()
@@ -78,6 +80,8 @@ export function StockIntakeContent(props: StockIntakeProps) {
           keyExtractor={(row) => row.balanceSourceId}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
+          onScroll={scrollHide.onScroll}
+          scrollEventThrottle={16}
           renderScrollComponent={(scrollProps: ScrollViewProps) => (
             <KeyboardAwareScrollView
               {...scrollProps}
@@ -290,6 +294,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
             localSearch
             searchVisible={market}
             alwaysShowSearch={market}
+            hidden={market && scrollHide.hidden}
             includeSafeArea={props.presentation !== "sheet"}
             variant={market ? "market-day" : "default"}
             accessibilityLabel="Search stock balances"

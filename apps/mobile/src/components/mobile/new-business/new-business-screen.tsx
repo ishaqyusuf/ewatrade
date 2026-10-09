@@ -1,20 +1,21 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import * as Classic from "@/components/mobile/appearances/classic/new-business"
+import * as Market from "@/components/mobile/appearances/market-day/new-business"
+import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
-import * as Classic from "@/components/mobile/appearances/classic/new-business"
-import * as Market from "@/components/mobile/appearances/market-day/new-business"
+import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { listBusinessProfiles } from "@ewatrade/utils"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
-import { View, type ScrollView } from "react-native"
+import { type ScrollView, View } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import {
   NewBusinessDetails,
   NewBusinessProfile,
@@ -34,6 +35,7 @@ export function NewBusinessOnboardingScreen() {
     : Classic
   const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(88)
+  const scrollHide = useBottomSearchScroll()
   const scrollRef = useRef<ScrollView>(null)
   useEffect(() => {
     if (model.error) scrollRef.current?.scrollTo({ y: 0, animated: true })
@@ -103,6 +105,8 @@ export function NewBusinessOnboardingScreen() {
             keyExtractor={(profile) => profile.key}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
+            onScroll={scrollHide.onScroll}
+            scrollEventThrottle={16}
             ListHeaderComponent={header}
             renderItem={({ item }) => (
               <ProfileRow
@@ -159,6 +163,7 @@ export function NewBusinessOnboardingScreen() {
               : "Business setup actions"
           }
           alwaysShowSearch
+          hidden={model.step === 1 && scrollHide.hidden}
           searchVisible={model.step === 1}
           maxLength={160}
           onHeightChange={setFooterHeight}

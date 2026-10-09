@@ -9,6 +9,7 @@ import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { isSalesRepRole } from "@/lib/mobile-roles"
 import { useState } from "react"
 import type { ReactNode } from "react"
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { CommerceFilterChip } from "../commerce"
 import { FormField } from "../form-field"
@@ -21,7 +22,12 @@ import type { ServiceJobsModel } from "./use-service-jobs"
 export function ServiceJobsQueue({
   model,
   feedback,
-}: { model: ServiceJobsModel; feedback: ReactNode }) {
+  onScroll,
+}: {
+  model: ServiceJobsModel
+  feedback: ReactNode
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
+}) {
   const {
     market,
     ServiceHeader: Header,
@@ -63,6 +69,8 @@ export function ServiceJobsQueue({
       keyboardShouldPersistTaps="handled"
       refreshControl={!isOfflineMode ? <QueryRefreshControl /> : undefined}
       onEndReachedThreshold={0.4}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       onEndReached={() => {
         if (
           !isOfflineMode &&

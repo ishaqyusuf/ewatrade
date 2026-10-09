@@ -1,27 +1,27 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { StatusBanner } from "@/components/mobile/status-banner"
 import {
   type SaleItemPickerLine,
   getSaleItemPickerLineCounts,
   getSaleOfferingStockLabel,
 } from "@/components/mobile/sale-item-picker-model"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { cn } from "@/lib/utils"
-import { formatMinorMoney } from "@ewatrade/utils"
-import { StatusBar } from "expo-status-bar"
-import { useEffect, useMemo, useState } from "react"
-import { Modal, useModal } from "@/components/ui/modal"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
-import { VariableContextProvider } from "nativewind"
-import { FlatList } from "react-native-css/components/FlatList"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
+import { cn } from "@/lib/utils"
+import { formatMinorMoney } from "@ewatrade/utils"
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import { StatusBar } from "expo-status-bar"
+import { VariableContextProvider } from "nativewind"
+import { useEffect, useMemo, useState } from "react"
 import {
   Image,
   Modal as NativeModal,
@@ -29,6 +29,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native"
+import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export type SaleOfferingChoice = {
@@ -312,6 +313,7 @@ export function FullScreenSaleItemPicker({
   const market = appearance === "market-day"
   const largeText = useLargeTextLayout()
   const [footerHeight, setFooterHeight] = useState(104)
+  const scrollHide = useBottomSearchScroll()
   const { colorScheme } = useColorScheme()
   const insets = useSafeAreaInsets()
   const lineCountsByOfferingId = useMemo(
@@ -503,6 +505,8 @@ export function FullScreenSaleItemPicker({
               if (hasNextPage && !isFetchingNextPage) onFetchNextPage()
             }}
             onEndReachedThreshold={0.35}
+            onScroll={scrollHide.onScroll}
+            scrollEventThrottle={16}
             renderItem={({ item }) => (
               <SaleOfferingPickerRow
                 appearance={appearance}
@@ -518,6 +522,7 @@ export function FullScreenSaleItemPicker({
           <BottomSearchFooter
             accessibilityLabel="Search product or service"
             alwaysShowSearch
+            hidden={scrollHide.hidden}
             maxLength={160}
             layout={largeText ? "stacked" : "inline"}
             variant={market ? "market-day" : "default"}

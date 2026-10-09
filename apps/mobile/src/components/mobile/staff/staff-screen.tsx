@@ -9,6 +9,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
@@ -20,20 +21,20 @@ import { RefreshControl, useWindowDimensions } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { ScrollView } from "react-native-css/components/ScrollView"
 import {
+  ClassicStaffEmpty,
   ClassicStaffHeader,
   ClassicStaffRow,
-  ClassicStaffEmpty,
 } from "../appearances/classic/staff-screen"
 import {
+  MarketDayStaffEmpty,
   MarketDayStaffHeader,
   MarketDayStaffRow,
-  MarketDayStaffEmpty,
 } from "../appearances/market-day/staff-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
-import { STAFF_SEARCH_LIMIT } from "./staff-model"
 import { OrderVisibilityCard } from "./order-visibility-card"
 import { StaffInvitationSheet } from "./staff-invitation-sheet"
+import { STAFF_SEARCH_LIMIT } from "./staff-model"
 import { useStaffDirectory } from "./use-staff-directory"
 
 type StaffInviteProps = { onComplete?: () => void }
@@ -52,6 +53,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
   const vm = useStaffDirectory(onComplete)
   const { invitation, rows } = vm
   const [footerHeight, setFooterHeight] = useState(88)
+  const scrollHide = useBottomSearchScroll()
   const discoveredSearch = useRef(false)
   if (shouldShowListSearch(rows.length) || vm.search)
     discoveredSearch.current = true
@@ -148,6 +150,8 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
+            onScroll={scrollHide.onScroll}
+            scrollEventThrottle={16}
             ListHeaderComponent={
               <View className="gap-4 pb-4">
                 <Header loadedCount={rows.length} />
@@ -243,6 +247,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             <BottomSearchFooter
               accessibilityLabel="Search attendants"
               alwaysShowSearch
+              hidden={scrollHide.hidden}
               maxLength={STAFF_SEARCH_LIMIT}
               onHeightChange={setFooterHeight}
               onChangeText={vm.setSearch}
@@ -272,7 +277,11 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
           {showFab ? (
             <ListCreateFab
               accessibilityLabel="Invite staff"
-              bottomOffset={showSearch ? footerHeight : 0}
+              bottomOffset={
+                showSearch && !(scrollHide.hidden && !vm.search)
+                  ? footerHeight
+                  : 0
+              }
               disabled={!vm.canOpenInvite}
               onPress={invitation.present}
               testID="staff-add-fab"

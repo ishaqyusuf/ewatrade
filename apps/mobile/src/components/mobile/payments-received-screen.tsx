@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { LIST_PAGE_SIZE, shouldFetchNextListPage } from "@/lib/list-pagination"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
@@ -39,6 +40,7 @@ export function PaymentsReceivedScreen() {
   const router = useRouter()
   const trpc = useTRPC()
   const [query, setQuery] = useState("")
+  const scrollHide = useBottomSearchScroll()
   const deferredQuery = useDeferredValue(query.trim())
   const payments = useInfiniteQuery(
     trpc.orders.payments.infiniteQueryOptions(
@@ -155,6 +157,8 @@ export function PaymentsReceivedScreen() {
           }
         }}
         onEndReachedThreshold={0.35}
+        onScroll={scrollHide.onScroll}
+        scrollEventThrottle={16}
         renderItem={({ item }) => (
           <Pressable
             accessibilityLabel={`Open order ${item.order.orderNumber}`}
@@ -215,6 +219,7 @@ export function PaymentsReceivedScreen() {
       <BottomSearchFooter
         accessibilityLabel="Search received payments"
         alwaysShowSearch
+        hidden={scrollHide.hidden}
         onChangeText={setQuery}
         placeholder="Search payments..."
         searchVisible={presentation.showSearch}

@@ -5,6 +5,7 @@ import { FormField } from "@/components/mobile/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
@@ -43,6 +44,7 @@ export function CatalogSetupHelperPicker({
   const Row = market ? MarketHelperRow : ClassicHelperRow
   const [query, setQuery] = useState("")
   const [footerHeight, setFooterHeight] = useState(88)
+  const scrollHide = useBottomSearchScroll()
   const insets = useSafeAreaInsets()
   const colors = useColors()
   const palette = useMarketDayPalette()
@@ -267,6 +269,8 @@ export function CatalogSetupHelperPicker({
             keyExtractor={(row) => row.key}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
+            onScroll={scrollHide.onScroll}
+            scrollEventThrottle={16}
             ListHeaderComponent={
               <Pressable
                 accessibilityRole="button"
@@ -364,6 +368,7 @@ export function CatalogSetupHelperPicker({
               localSearch
               accessibilityLabel={"Search " + kindLabel + " setups"}
               alwaysShowSearch
+              hidden={scrollHide.hidden}
               maxLength={160}
               onHeightChange={setFooterHeight}
               onChangeText={setQuery}

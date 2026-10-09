@@ -24,6 +24,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
 import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
@@ -180,6 +181,7 @@ export function SignUpScreen({
     teamSize: BusinessTeamSize
   } | null>(null)
   const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
+  const scrollHide = useBottomSearchScroll()
   const normalizedEmail = email.trim().toLowerCase()
   const normalizedBusinessName = businessName.trim()
   const hasBusinessContact =
@@ -532,12 +534,14 @@ export function SignUpScreen({
       header={header}
       preview={preview}
       onBack={goBack}
+      onScroll={scrollHide.onScroll}
       footer={
         step === "businessType" &&
         showProfileSearch &&
         appearance === "market-day" ? (
           <BottomSearchFooter
             accessibilityLabel="Search business categories"
+            hidden={scrollHide.hidden}
             label="Business category"
             onChangeText={setProfileQuery}
             placeholder="Search categories"

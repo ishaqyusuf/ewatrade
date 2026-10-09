@@ -30,6 +30,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
@@ -108,6 +109,7 @@ export function CatalogItemsContent({
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const [footerHeight, setFooterHeight] = useState(100)
+  const scrollHide = useBottomSearchScroll()
   const deferredQuery = useDeferredValue(query)
   const addSheet = useModal()
   const pendingAdd = useRef<"product" | "service" | null>(null)
@@ -236,6 +238,7 @@ export function CatalogItemsContent({
   const edgeFeedback = useScrollEdgeFeedback()
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     onScroll?.(event)
+    scrollHide.onScroll(event)
     const canvas =
       mastheadHeight > 0 &&
       Math.max(0, event.nativeEvent.contentOffset.y) >=
@@ -555,6 +558,7 @@ export function CatalogItemsContent({
           accessibilityLabel="Search catalog items"
           alwaysShowSearch={isMarketDay || query.length > 0}
           bottomOffset={footerOffset}
+          hidden={scrollHide.hidden}
           onHeightChange={setFooterHeight}
           maxLength={160}
           layout={isMarketDay ? "inline" : "stacked"}
@@ -576,7 +580,11 @@ export function CatalogItemsContent({
         <ListCreateFab
           tone="gold"
           accessibilityLabel="Add catalog item"
-          bottomOffset={showBottomSearch ? footerHeight : 0}
+          bottomOffset={
+            showBottomSearch && !(scrollHide.hidden && !query)
+              ? footerHeight
+              : 0
+          }
           dockHidden={dockHidden}
           disabled={isOffline || !canEdit}
           onPress={openAdd}

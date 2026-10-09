@@ -1,5 +1,10 @@
 import { FormField } from "@/components/mobile/form-field"
 import { useColors } from "@/hooks/use-color"
+import {
+  DOCK_OPACITY_INPUT,
+  DOCK_OPACITY_OUTPUT,
+  animateDock,
+} from "@/lib/dock-motion"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -8,16 +13,12 @@ import { useEffect, useState } from "react"
 import { View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 import Animated, {
-  Easing,
+  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withTiming,
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-
-/** Shared with ListCreateFab so a FAB above the footer moves with it. */
-export const FOOTER_SLIDE_MS = 240
 
 type BottomSearchFooterProps = {
   accessibilityLabel: string
@@ -77,14 +78,19 @@ export function BottomSearchFooter({
   const hiddenProgress = useSharedValue(shouldHide ? 1 : 0)
 
   useEffect(() => {
-    hiddenProgress.value = withTiming(shouldHide ? 1 : 0, {
-      duration: reduceMotion ? 0 : FOOTER_SLIDE_MS,
-      easing: Easing.out(Easing.cubic),
-    })
+    hiddenProgress.value = animateDock(
+      shouldHide ? 1 : 0,
+      shouldHide,
+      reduceMotion,
+    )
   }, [hiddenProgress, reduceMotion, shouldHide])
 
   const slideStyle = useAnimatedStyle(() => ({
-    opacity: 1 - hiddenProgress.value * hiddenProgress.value,
+    opacity: interpolate(
+      hiddenProgress.value,
+      DOCK_OPACITY_INPUT,
+      DOCK_OPACITY_OUTPUT,
+    ),
     transform: [{ translateY: hiddenProgress.value * (height + 12) }],
   }))
 

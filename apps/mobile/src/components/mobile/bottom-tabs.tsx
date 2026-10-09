@@ -1,15 +1,17 @@
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
+import {
+  DOCK_OPACITY_INPUT,
+  DOCK_OPACITY_OUTPUT,
+  animateDock,
+} from "@/lib/dock-motion"
 import { useEffect } from "react"
 import { View as RNView } from "react-native"
 import Animated, {
-  Easing,
   interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSpring,
-  withTiming,
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MobileBottomTabItem } from "./bottom-tab-item"
@@ -50,22 +52,19 @@ export function MobileBottomTabs({
       : Math.max(safeBottom + 72, 88)
 
   useEffect(() => {
-    hiddenProgress.value = reduceMotion
-      ? shouldHide
-        ? 1
-        : 0
-      : shouldHide
-        ? withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
-        : withSpring(0, {
-            damping: 26,
-            mass: 0.8,
-            overshootClamping: true,
-            stiffness: 240,
-          })
+    hiddenProgress.value = animateDock(
+      shouldHide ? 1 : 0,
+      shouldHide,
+      reduceMotion,
+    )
   }, [hiddenProgress, reduceMotion, shouldHide])
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(hiddenProgress.value, [0, 0.65, 1], [1, 1, 0]),
+    opacity: interpolate(
+      hiddenProgress.value,
+      DOCK_OPACITY_INPUT,
+      DOCK_OPACITY_OUTPUT,
+    ),
     transform: [{ translateY: hiddenProgress.value * hiddenTranslateY }],
   }))
   const tabStates = tabs.map((tab, index) => ({

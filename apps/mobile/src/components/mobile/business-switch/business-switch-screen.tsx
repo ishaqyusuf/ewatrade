@@ -1,32 +1,39 @@
-import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
+import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Modal, useModal } from "@/components/ui/modal"
-import { Text } from "@/components/ui/text"
 import { Icon } from "@/components/ui/icon"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
-  BottomSheetFlatList,
   type BottomSheetBackdropProps,
+  BottomSheetFlatList,
   type BottomSheetModal,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import {
+  type ReactNode,
   forwardRef,
   useCallback,
   useRef,
   useState,
-  type ReactNode,
 } from "react"
-import { RefreshControl, useWindowDimensions } from "react-native"
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  RefreshControl,
+  useWindowDimensions,
+} from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { ScrollView } from "react-native-css/components/ScrollView"
 import {
@@ -40,12 +47,11 @@ import {
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { BUSINESS_SWITCH_COPY } from "../business-switch-presentation"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
-import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
-import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
   BusinessSwitchSheetFooter,
   WorkspaceFooterContext,
 } from "./business-switch-sheet-footer"
+import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
 
 type WorkspaceController = ReturnType<typeof useBusinessSwitch>
 type SwitchProps = { onComplete?: () => void }
@@ -57,11 +63,13 @@ function WorkspaceBody({
   vm,
   market,
   footerSpace,
+  onScroll,
   sheet = false,
 }: {
   vm: WorkspaceController
   market: boolean
   footerSpace: number
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
   sheet?: boolean
 }) {
   const Header = market ? MarketDayWorkspaceHeader : ClassicWorkspaceHeader
@@ -181,6 +189,8 @@ function WorkspaceBody({
         {...listProps}
         className="flex-1"
         keyboardDismissMode="interactive"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerClassName={
           market
             ? "grow pb-[var(--workspace-list-bottom)]"
@@ -219,6 +229,7 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
   const vm = useBusinessSwitch({ onComplete })
   const market = useMobileDesign("business-switch") === "market-day"
   const [footerHeight, setFooterHeight] = useState(88)
+  const scrollHide = useBottomSearchScroll()
   const discovered = useRef(false)
   if (shouldShowListSearch(vm.businesses.length) || vm.search)
     discovered.current = true
@@ -230,12 +241,14 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
         vm={vm}
         market={market}
         footerSpace={(searchVisible ? footerHeight : 0) + (market ? 24 : 112)}
+        onScroll={scrollHide.onScroll}
       />
       {searchVisible ? (
         <BottomSearchFooter
           accessibilityLabel="Find business"
           label="Find business"
           alwaysShowSearch
+          hidden={scrollHide.hidden}
           localSearch
           maxLength={BUSINESS_SEARCH_LIMIT}
           placeholder="Name, role or currency"
@@ -260,7 +273,11 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
       {!market ? (
         <ListCreateFab
           accessibilityLabel="Add a new business"
-          bottomOffset={searchVisible ? footerHeight : 0}
+          bottomOffset={
+            searchVisible && !(scrollHide.hidden && !vm.search)
+              ? footerHeight
+              : 0
+          }
           disabled={!vm.canCreate}
           onPress={vm.openCreate}
           testID="business-add-fab"
