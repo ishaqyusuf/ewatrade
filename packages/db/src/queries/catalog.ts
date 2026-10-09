@@ -20,6 +20,12 @@ export type {
 import { createHash } from "node:crypto"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { type ProductUsage, productUsages } from "@ewatrade/utils/product-usage"
+import {
+  type SearchField,
+  rankBySearch,
+  searchStem,
+  searchTokens,
+} from "@ewatrade/utils/search-rank"
 
 import {
   EXACT_CANONICAL_MAX_SCALE,
@@ -1427,78 +1433,23 @@ export async function listCatalogItemsPage(
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
   const normalizedQuery = input.query?.trim()
-  const normalizedKind = normalizedQuery?.toLowerCase().replace(/s$/, "")
   const baseWhere: Prisma.CatalogItemWhereInput = {
     kind: input.kind ? catalogKind(input.kind) : undefined,
     status: input.status ? catalogStatus(input.status) : undefined,
     tenantId: input.tenantId,
   }
-  const where: Prisma.CatalogItemWhereInput = normalizedQuery
-    ? {
-        ...baseWhere,
-        OR: [
-          { name: { contains: normalizedQuery, mode: "insensitive" } },
-          { slug: { contains: normalizedQuery, mode: "insensitive" } },
-          { description: { contains: normalizedQuery, mode: "insensitive" } },
-          { category: { contains: normalizedQuery, mode: "insensitive" } },
-          ...(normalizedKind === "product"
-            ? [{ kind: CatalogItemKind.PRODUCT }]
-            : normalizedKind === "service"
-              ? [{ kind: CatalogItemKind.SERVICE }]
-              : []),
-          {
-            product: {
-              is: {
-                currentUnitConfiguration: {
-                  is: {
-                    units: {
-                      some: {
-                        OR: [
-                          {
-                            name: {
-                              contains: normalizedQuery,
-                              mode: "insensitive",
-                            },
-                          },
-                          {
-                            symbol: {
-                              contains: normalizedQuery,
-                              mode: "insensitive",
-                            },
-                          },
-                        ],
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          {
-            variants: {
-              some: {
-                OR: [
-                  { name: { contains: normalizedQuery, mode: "insensitive" } },
-                  {
-                    description: {
-                      contains: normalizedQuery,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
-              },
-            },
-          },
-          {
-            offerings: {
-              some: {
-                name: { contains: normalizedQuery, mode: "insensitive" },
-              },
-            },
-          },
-        ],
-      }
-    : baseWhere
+  // Deep search: any query word may match any searchable field; results are
+  // then ranked by how much of the query each item matches.
+  const searchTerms = normalizedQuery
+    ? searchTokens(normalizedQuery).map(searchStem)
+    : []
+  if (searchTerms.length) {
+    return listRankedCatalogItemsPage(db, input, {
+      ...baseWhere,
+      OR: searchTerms.flatMap(catalogSearchConditions),
+    })
+  }
+  const where: Prisma.CatalogItemWhereInput = baseWhere
   const sortFields: Array<{
     direction: "asc" | "desc"
     field: "name" | "kind" | "status" | "updatedAt"
@@ -1572,6 +1523,111 @@ export async function listCatalogItemsPage(
   return {
     items: pageRecords.map(serializeCatalogItem),
     nextCursor: hasNextPage ? pageRecords.at(-1)?.id : undefined,
+    totalCount,
+  }
+}
+
+/** Matches one search word against every searchable catalog field. */
+function catalogSearchConditions(term: string): Prisma.CatalogItemWhereInput[] {
+  const contains = { contains: term, mode: "insensitive" as const }
+  const kindWord = term.toLowerCase()
+  return [
+    { name: contains },
+    { slug: contains },
+    { description: contains },
+    { category: contains },
+    ...(kindWord === "product"
+      ? [{ kind: CatalogItemKind.PRODUCT }]
+      : kindWord === "service"
+        ? [{ kind: CatalogItemKind.SERVICE }]
+        : []),
+    {
+      product: {
+        is: {
+          currentUnitConfiguration: {
+            is: {
+              units: {
+                some: { OR: [{ name: contains }, { symbol: contains }] },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      variants: {
+        some: { OR: [{ name: contains }, { description: contains }] },
+      },
+    },
+    { offerings: { some: { name: contains } } },
+  ]
+}
+
+const RANKED_SEARCH_CANDIDATES = 300
+const RANK_CURSOR = "rank:"
+
+function catalogSearchFields(
+  item: ReturnType<typeof serializeCatalogItem>,
+): SearchField[] {
+  return [
+    { text: item.name },
+    ...item.variants.flatMap((variant) => [
+      { text: variant.name, weight: 0.9 },
+      ...variant.offerings.map((offering) => ({
+        text: offering.name,
+        weight: 0.9,
+      })),
+    ]),
+    ...(item.product?.currentUnitConfiguration?.units ?? []).map((unit) => ({
+      text: unit.name,
+      weight: 0.8,
+    })),
+    { text: item.category, weight: 0.7 },
+    { text: item.kind, weight: 0.6 },
+    { text: item.description, weight: 0.4 },
+  ]
+}
+
+/**
+ * Search pages: candidates that match any query word, ranked best first, then
+ * paged by position ("rank:20"). Candidates are capped so ranking stays fast.
+ */
+async function listRankedCatalogItemsPage(
+  db: PrismaClient,
+  input: ListCatalogItemsPageInput,
+  where: Prisma.CatalogItemWhereInput,
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const offset = input.cursor?.startsWith(RANK_CURSOR)
+    ? Math.max(Number(input.cursor.slice(RANK_CURSOR.length)) || 0, 0)
+    : 0
+  const [records, totalCount] = await Promise.all([
+    db.catalogItem.findMany({
+      include: catalogItemGraphForStores(input.storeIds),
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: RANKED_SEARCH_CANDIDATES,
+      where,
+    }),
+    db.catalogItem.count({
+      where: {
+        kind: where.kind,
+        status: where.status,
+        tenantId: where.tenantId,
+      },
+    }),
+  ])
+  const ranked = rankBySearch(
+    records.map(serializeCatalogItem),
+    input.query ?? "",
+    catalogSearchFields,
+  )
+  const page = ranked.slice(offset, offset + limit)
+  return {
+    items: page,
+    nextCursor:
+      offset + limit < ranked.length
+        ? `${RANK_CURSOR}${offset + limit}`
+        : undefined,
     totalCount,
   }
 }

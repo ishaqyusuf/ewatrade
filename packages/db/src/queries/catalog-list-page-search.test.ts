@@ -3,7 +3,7 @@ import type { PrismaClient } from "../generated/prisma/client"
 import { listCatalogItemsPage } from "./catalog"
 
 describe("catalog list page search", () => {
-  test("searches slug while retaining tenant, kind, and status scope", async () => {
+  test("searches each word in any field while retaining tenant, kind, and status scope", async () => {
     let findWhere: Record<string, unknown> | undefined
     let countWhere: Record<string, unknown> | undefined
     const db = {
@@ -36,8 +36,12 @@ describe("catalog list page search", () => {
       status: "ACTIVE",
       tenantId: "tenant_1",
     })
+    // Deep search: each word may match any field, in any order.
     expect(findWhere?.OR).toContainEqual({
-      slug: { contains: "ginger-root", mode: "insensitive" },
+      slug: { contains: "ginger", mode: "insensitive" },
+    })
+    expect(findWhere?.OR).toContainEqual({
+      name: { contains: "root", mode: "insensitive" },
     })
   })
 })

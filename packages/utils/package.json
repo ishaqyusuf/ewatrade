@@ -13,6 +13,7 @@
     "./currency": "./src/currency.ts",
     "./countries": "./src/countries.ts",
     "./geo-address": "./src/geo-address.ts",
+    "./search-rank": "./src/search-rank.ts",
     "./finance-money": "./src/finance-money.ts",
     "./finance-close-checklist": "./src/finance-close-checklist.ts",
     "./finance-report-output": "./src/finance-report-output.ts",
