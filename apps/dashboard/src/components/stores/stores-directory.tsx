@@ -2,6 +2,7 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import { OrderVisibilityCard } from "@/components/staff/order-visibility-card"
 import { StoresDataTable } from "@/components/tables/stores/data-table"
 import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
@@ -87,6 +88,13 @@ export function StoresDirectory({
       ) : (
         <StoresDataTable stores={stores.data} view={view} />
       )}
+      {stores.data?.map((store) => (
+        <OrderVisibilityCard
+          key={store.id}
+          storeId={store.id}
+          storeName={store.name}
+        />
+      ))}
       <CreateStoreModal />
     </div>
   )

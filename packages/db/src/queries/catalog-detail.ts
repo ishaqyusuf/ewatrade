@@ -6,6 +6,7 @@ export type CatalogDetailScope = {
   storeId: string
   itemId: string
   inventory: boolean
+  createdByUserId?: string
 }
 export type DetailCursor = { at: string; key: string }
 export type DetailPage = { limit: number; cursor?: DetailCursor | null }
@@ -55,7 +56,11 @@ export function catalogOrderWhere(
   scope: CatalogDetailScope,
 ): Prisma.CommercialOrderLineWhereInput {
   return {
-    order: { tenantId: scope.tenantId, storeId: scope.storeId },
+    order: {
+      tenantId: scope.tenantId,
+      storeId: scope.storeId,
+      createdByUserId: scope.createdByUserId,
+    },
     snapshot: { catalogItemId: scope.itemId },
   }
 }
@@ -150,6 +155,7 @@ export async function getCatalogItemDetail(
       order: {
         tenantId: scope.tenantId,
         storeId: scope.storeId,
+        createdByUserId: scope.createdByUserId,
         status: { not: "CANCELLED" },
       },
     },

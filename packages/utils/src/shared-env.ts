@@ -38,6 +38,12 @@ export const EWATRADE_SHARED_ENV_NAMES = [
   "NEXT_PUBLIC_LOGLY_PROJECT",
   "NEXT_PUBLIC_SIGNUP_ENABLED",
   "NEXT_PUBLIC_STOREFRONT_URL",
+  // Product analytics (Logly)
+  "NEXT_PUBLIC_LOGLY_DASHBOARD_ENABLED",
+  "NEXT_PUBLIC_LOGLY_MARKETING_ENABLED",
+  "LOGLY_IDENTITY_SECRET",
+  "LOGLY_DASHBOARD_PROJECT_KEY",
+  "LOGLY_MARKETING_PROJECT_KEY",
 ] as const
 
 /** Returns the names it filled, for start-up diagnostics (never values). */

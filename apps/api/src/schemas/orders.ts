@@ -90,11 +90,19 @@ export const commercialOrderCreateSchema = z
   .strict()
 
 export const commercialOrderGetSchema = z
-  .object({ orderId: z.string().trim().min(1) })
+  .object({
+    orderId: z.string().trim().min(1).optional(),
+    orderNumber: z.string().trim().min(1).max(160).optional(),
+  })
   .strict()
+  .refine(
+    (input) => Boolean(input.orderId) !== Boolean(input.orderNumber),
+    "Choose an order id or number.",
+  )
 
 export const commercialOrderListSchema = z
   .object({
+    mine: z.boolean().optional(),
     limit: z.number().int().min(1).max(100).optional(),
     storeId: z.string().trim().min(1).optional(),
   })
@@ -118,6 +126,7 @@ const commercialOrderStatusSchema = z.enum([
 
 export const commercialOrderListPageSchema = z
   .object({
+    mine: z.boolean().optional(),
     createdAfter: z.coerce.date().optional(),
     cursor: z.string().trim().min(1).optional(),
     direction: z.enum(["forward", "backward"]).optional(),

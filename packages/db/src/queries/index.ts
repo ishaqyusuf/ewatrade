@@ -110,3 +110,4 @@ export { setCatalogProductUsage } from "./product-usage"
 export * from "./account-privacy-profile"
 
 export * from "./account-privacy-retention"
+export * from "./order-visibility"

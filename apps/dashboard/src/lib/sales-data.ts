@@ -1,6 +1,9 @@
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
 import { prisma } from "@ewatrade/db"
-import { listCustomerOrderDirectory } from "@ewatrade/db/queries"
+import {
+  listCustomerOrderDirectory,
+  resolveOrderScope,
+} from "@ewatrade/db/queries"
 
 export async function getDashboardCustomerBook(input: {
   role: string
@@ -12,7 +15,11 @@ export async function getDashboardCustomerBook(input: {
   const customers = await listCustomerOrderDirectory(prisma, {
     query: input.search,
     storeId: input.storeId,
-    tenantId: input.tenantId,
+    ...(await resolveOrderScope(prisma, {
+      ...input,
+      activeStoreId: input.storeId,
+      allowedStoreIds: [input.storeId],
+    })),
   })
 
   return customers.map(

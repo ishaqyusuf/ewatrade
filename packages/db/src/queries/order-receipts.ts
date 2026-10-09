@@ -85,7 +85,12 @@ export async function saveOrderReceiptSettings(
 
 export async function getOrderReceipts(
   db: PrismaClient,
-  input: { tenantId: string; storeId: string; orderIds: string[] },
+  input: {
+    tenantId: string
+    storeId: string
+    orderIds: string[]
+    createdByUserId?: string
+  },
 ) {
   if (
     input.orderIds.length < 1 ||
@@ -103,6 +108,7 @@ export async function getOrderReceipts(
         where: {
           tenantId: input.tenantId,
           storeId: input.storeId,
+          createdByUserId: input.createdByUserId,
           id: { in: input.orderIds },
         },
         include: {

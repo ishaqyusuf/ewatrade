@@ -25,12 +25,14 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useOrderVisibility } from "@/hooks/use-order-visibility"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
+import { isSalesRepRole } from "@/lib/mobile-roles"
 import { useTRPC } from "@/trpc/client"
 import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import { useInfiniteQuery } from "@tanstack/react-query"
@@ -101,6 +103,9 @@ export function OrdersScreen() {
     : ClassicOrdersFilterRow
   const Row = isMarketDay ? OrdersDispatchLedgerRow : ClassicOrdersRow
   const auth = useAuthContext()
+  const visibility = useOrderVisibility()
+  const rep = isSalesRepRole(auth.profile?.role)
+  const [salesView, setSalesView] = useState<"store" | "mine">("store")
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const trpc = useTRPC()
@@ -145,6 +150,7 @@ export function OrdersScreen() {
   const orders = useInfiniteQuery(
     trpc.orders.listPage.infiniteQueryOptions(
       {
+        mine: rep && salesView === "mine",
         createdAfter,
         limit: LIST_PAGE_SIZE,
         query: isOffline ? undefined : deferredQuery || undefined,
@@ -279,6 +285,7 @@ export function OrdersScreen() {
         ListHeaderComponent={
           <View className="gap-5 pb-4">
             <Masthead
+              title={rep ? "Your sales" : "Orders"}
               businessName={auth.profile?.businessName ?? "Your business"}
               onCustomersPress={() => router.push("/customer-book-modal")}
               onLayout={(event) => {
@@ -288,6 +295,22 @@ export function OrdersScreen() {
                 )
               }}
             />
+            {rep &&
+            visibility.query.data?.salesRepOrderVisibility ===
+              "ALL_STORE_ORDERS" ? (
+              <View className="flex-row gap-3 px-4">
+                {(["store", "mine"] as const).map((view) => (
+                  <ActionButton
+                    key={view}
+                    className="flex-1"
+                    variant={salesView === view ? "default" : "outline"}
+                    onPress={() => setSalesView(view)}
+                  >
+                    {view === "store" ? "Store" : "Mine"}
+                  </ActionButton>
+                ))}
+              </View>
+            ) : null}
             {!showFirstOrderGate ? (
               <Summary dateFilter={dateFilter} orders={visibleOrders} />
             ) : null}

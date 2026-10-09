@@ -6,6 +6,7 @@ type OverviewInput = {
     WorkspaceFeatureAvailability,
     "hasOrders" | "hasCatalogItems" | "hasProductItems"
   >
+  createdByUserId?: string
   monthStart: Date
   storeId: string
   tenantId: string
@@ -22,6 +23,8 @@ export async function getDashboardOverviewMetrics(
           where: {
             createdAt: { gte: input.todayStart },
             storeId: input.storeId,
+            tenantId: input.tenantId,
+            createdByUserId: input.createdByUserId,
           },
           _sum: { totalMinor: true },
         })
@@ -31,6 +34,8 @@ export async function getDashboardOverviewMetrics(
           where: {
             createdAt: { gte: input.monthStart },
             storeId: input.storeId,
+            tenantId: input.tenantId,
+            createdByUserId: input.createdByUserId,
           },
         })
       : Promise.resolve(0),
@@ -58,7 +63,7 @@ export async function getDashboardOverviewMetrics(
 
 export function getDashboardRecentOrders(
   db: DbClient,
-  input: { storeId: string },
+  input: { storeId: string; tenantId?: string; createdByUserId?: string },
 ) {
   return db.commercialOrder.findMany({
     orderBy: { createdAt: "desc" },
@@ -72,6 +77,10 @@ export function getDashboardRecentOrders(
       totalMinor: true,
     },
     take: 5,
-    where: { storeId: input.storeId },
+    where: {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      createdByUserId: input.createdByUserId,
+    },
   })
 }

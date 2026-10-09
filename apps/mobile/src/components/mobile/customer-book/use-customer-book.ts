@@ -7,13 +7,12 @@ import {
   getCustomerBookPresentation,
 } from "@/components/mobile/customer-book-presentation-model"
 import { useAuthContext } from "@/hooks/use-auth"
-import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
-import { useCustomerCreate } from "./use-customer-create"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
+import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
 import {
   activeBusinessOfflineCommands,
   useOfflineCommandStore,
@@ -30,6 +29,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { useCustomerCreate } from "./use-customer-create"
 export type CustomerBookProps = {
   createOnOpen?: boolean
   initialCustomerId?: string
@@ -166,13 +166,24 @@ export function useCustomerBook({
   )
   const loadedOrders = useMemo(() => {
     const pageOrders = orders.data?.pages.flatMap((page) => page.items) ?? []
+    if (
+      isSalesRepRole(profile?.role) &&
+      initialOrder.data?.createdByUserId !== profile?.id
+    )
+      return pageOrders
     if (!initialOrder.data || initialOrder.data.id !== lookupOrderId)
       return pageOrders
     return [
       initialOrder.data,
       ...pageOrders.filter((order) => order.id !== initialOrder.data.id),
     ]
-  }, [initialOrder.data, lookupOrderId, orders.data?.pages])
+  }, [
+    initialOrder.data,
+    lookupOrderId,
+    orders.data?.pages,
+    profile?.id,
+    profile?.role,
+  ])
   const directoryCustomers = useMemo(
     () => directory.data?.pages.flatMap((page) => page.items) ?? [],
     [directory.data?.pages],

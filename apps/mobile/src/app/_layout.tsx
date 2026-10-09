@@ -23,6 +23,7 @@ import { QaAuthorizationSheet } from "@/components/mobile/qa-authorization-sheet
 import { StartupSplashGate } from "@/components/mobile/startup-splash-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
+import { OrderVisibilityReconciler } from "@/hooks/use-order-visibility"
 import { QaAcceleratorProvider } from "@/hooks/use-qa-accelerator"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
@@ -116,6 +117,7 @@ const InitialLayout = () => {
   return (
     <>
       <OfflinePolicyReconciler />
+      <OrderVisibilityReconciler />
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
 
       <Stack
@@ -309,6 +311,7 @@ const InitialLayout = () => {
             name="sales-rep-home"
             options={{ headerShown: false }}
           />
+          <Stack.Screen name="your-sales" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
           <Stack.Screen
@@ -398,6 +401,9 @@ function OfflinePolicyReconciler() {
     trpc.offline.replay.mutationOptions({
       onSuccess: async (results) => {
         commandState.applyReplayResults(results)
+        await queryClient.invalidateQueries(
+          trpc.stores.orderVisibility.queryFilter(),
+        )
         await Promise.all([
           queryClient.invalidateQueries(trpc.offline.conflicts.queryFilter()),
           queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),

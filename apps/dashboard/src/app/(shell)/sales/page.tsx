@@ -82,6 +82,7 @@ export default async function SalesRoutePage({
         fallback={<OrdersTableSkeleton initialSettings={initialSettings} />}
       >
         <SalesPage
+          salesRep={["CASHIER", "OPERATOR"].includes(ctx.membership.role)}
           store={store}
           initialSettings={initialSettings}
           initialViewSettings={initialViewSettings}
