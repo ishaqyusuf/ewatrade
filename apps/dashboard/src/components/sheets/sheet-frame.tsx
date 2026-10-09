@@ -20,6 +20,7 @@ import type { ComponentProps, ReactNode } from "react"
 
 type SheetFrameProps = {
   children: ReactNode
+  loadingFallback?: ReactNode
   closeError?: string | null
   title: string
   description?: string
@@ -34,6 +35,7 @@ type SheetFrameProps = {
 
 export function SheetFrame({
   children,
+  loadingFallback = <output aria-live="polite">Loading…</output>,
   closeError,
   title,
   description,
@@ -92,9 +94,7 @@ export function SheetFrame({
           <FormFeedback appearance="dashboard">{closeError}</FormFeedback>
         ) : null}
         <ErrorBoundary errorComponent={WorkspaceError}>
-          <Suspense fallback={<output aria-live="polite">Loading…</output>}>
-            {children}
-          </Suspense>
+          <Suspense fallback={loadingFallback}>{children}</Suspense>
         </ErrorBoundary>
       </section>
       {footer ? (

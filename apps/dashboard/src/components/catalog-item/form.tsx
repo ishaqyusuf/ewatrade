@@ -53,6 +53,7 @@ import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { CatalogImageEditor } from "./catalog-image-editor"
+import { CatalogItemSkeleton } from "./catalog-item-skeleton"
 
 import {
   type CatalogSetupHelper,
@@ -1163,18 +1164,18 @@ export function CatalogItemForm({
             }}
           />
         ) : (
-          <div className="space-y-4 p-6">
-            <output>
-              {productState.isError
-                ? productState.error.message
-                : "Preparing your product chat…"}
-            </output>
+          <div className="space-y-4">
             <Button
               variant="outline"
               onClick={() => void setParams({ catalogCreateMode: "form" })}
             >
               Back to form
             </Button>
+            {productState.isError ? (
+              <p role="alert">{productState.error.message}</p>
+            ) : (
+              <CatalogItemSkeleton chat />
+            )}
           </div>
         )
       ) : null}

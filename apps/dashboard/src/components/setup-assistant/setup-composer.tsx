@@ -177,12 +177,6 @@ export function SetupComposer({
             maxLength={8000}
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault()
-                send()
-              }
-            }}
           />
           <InputGroupAddon
             align="block-end"

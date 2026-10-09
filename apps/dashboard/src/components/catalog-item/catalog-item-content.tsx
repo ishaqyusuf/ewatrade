@@ -6,6 +6,7 @@ import { type ComponentProps, useState } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
 import { CatalogItemKindChoices } from "./catalog-item-kind-choices"
 import { CatalogItemSheetHeader } from "./catalog-item-sheet-header"
+import { CatalogItemSkeleton } from "./catalog-item-skeleton"
 import { CatalogItemForm } from "./form"
 import { useCatalogItemForm } from "./form-context"
 
@@ -27,6 +28,9 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
   const [footerHost, setFooterHost] = useState<HTMLDivElement | null>(null)
   return (
     <SheetFrame
+      loadingFallback={
+        <CatalogItemSkeleton chat={catalogCreateMode === "chat"} />
+      }
       finalFocus={props.finalFocus}
       closeError={props.closeError}
       popupClassName={`${themeClass} ${catalogCreateMode === "chat" ? "sm:w-[min(1120px,95vw)] sm:max-w-[1120px]" : "sm:w-[min(900px,95vw)] sm:max-w-[900px]"}`}

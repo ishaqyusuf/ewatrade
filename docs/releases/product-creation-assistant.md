@@ -6,6 +6,9 @@ build passed. Application rollout and Production acceptance remain pending.
 
 ## What owners and admins can do
 
+- Use Enter to add another line in setup and product chat; the Send button submits.
+- Open Add product immediately in its sheet, with a form or chat skeleton while
+  content loads. Loading retains the Close and Back to form controls.
 - Open the permanent **AI assistant** destination at `/assistant`, including after
   the business has Catalog items or orders. The existing assistant capability
   flag and OWNER/ADMIN role control access.
