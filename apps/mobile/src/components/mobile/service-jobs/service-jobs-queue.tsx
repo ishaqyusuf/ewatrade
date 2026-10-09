@@ -8,17 +8,31 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { isSalesRepRole } from "@/lib/mobile-roles"
+import { formatMinorMoney } from "@ewatrade/utils"
 import { useState } from "react"
 import type { ReactNode } from "react"
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  ScrollView,
+} from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
-import { CommerceFilterChip } from "../commerce"
-import { FormField } from "../form-field"
+import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
 import { HeroCard } from "../green-till/hero-card"
 import { ServiceAction as ActionButton } from "./service-action"
 import { overdueWork, workMatches } from "./service-work-summary"
 import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
+
+const WORK_FILTER_LABELS: Record<string, string> = {
+  all: "All",
+  blocked: "Blocked",
+  in_progress: "In progress",
+  mine: "Mine",
+  overdue: "Overdue",
+  queued: "Queued",
+  ready: "Ready",
+}
 
 export function ServiceJobsQueue({
   model,
@@ -55,15 +69,54 @@ export function ServiceJobsQueue({
     workMatches(job, "ready", undefined, now),
   ).length
   const late = jobs.filter((job) => overdueWork(job, now)).length
-  const active = jobs.filter(
+  const activeJobs = jobs.filter(
     (job) =>
       !job.handedOffAt && !["completed", "cancelled"].includes(job.summary),
-  ).length
+  )
+  const active = activeJobs.length
+  const countOf = (value: string) =>
+    jobs.filter((job) => workMatches(job, value, model.profile?.id, now)).length
+  const working = countOf("in_progress")
+  const queued = countOf("queued")
+  const blocked = countOf("blocked")
+  const mine = countOf("mine")
+  const readyJobs = jobs.filter((job) =>
+    workMatches(job, "ready", undefined, now),
+  )
+  const dueCurrencies = new Set(readyJobs.map((job) => job.currencyCode))
+  const readyDueMinor =
+    dueCurrencies.size === 1
+      ? readyJobs.reduce((sum, job) => sum + job.balanceDueMinor, 0)
+      : 0
+  const salesRep = isSalesRepRole(model.profile?.role)
+  const filters = [
+    ...(salesRep || mine ? (["mine"] as const) : []),
+    "all",
+    "ready",
+    "in_progress",
+    "queued",
+    ...(blocked ? (["blocked"] as const) : []),
+    ...(late ? (["overdue"] as const) : []),
+  ]
+  const heroSub =
+    isOfflineMode && jobsQuery.dataUpdatedAt
+      ? `Saved copy · as of ${new Date(jobsQuery.dataUpdatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+      : ready
+        ? `${ready} ready to collect${readyDueMinor > 0 ? ` · ${formatMinorMoney(readyDueMinor, [...dueCurrencies][0])} due` : ""}`
+        : late
+          ? `${late} overdue`
+          : active
+            ? "Nothing ready to collect yet"
+            : "No work waiting"
   const reveal = useFirstReveal(!jobsQuery.isPending)
   return (
     <FlatList
       className="flex-1"
-      contentContainerClassName="gap-2 px-[18px] pb-[var(--service-jobs-bottom)]"
+      contentContainerClassName={
+        market
+          ? "gap-2 px-[18px] pb-[var(--service-jobs-bottom)]"
+          : "px-[18px] pb-[var(--service-jobs-bottom)]"
+      }
       data={visible}
       keyExtractor={(job) => job.id}
       keyboardDismissMode="interactive"
@@ -101,20 +154,20 @@ export function ServiceJobsQueue({
                   ? "Your work queue"
                   : jobsQuery.isError && !jobs.length
                     ? "Work unavailable"
-                    : `${active} active jobs`
+                    : `${active} active job${active === 1 ? "" : "s"}`
               }
-              sub={`Loaded ${jobs.length} jobs${isOfflineMode && jobsQuery.dataUpdatedAt ? ` · as of ${new Date(jobsQuery.dataUpdatedAt).toLocaleString()}` : " · counts cover this loaded view"}`}
+              sub={jobsQuery.isPending ? undefined : heroSub}
               pill={{
-                label: isOfflineMode ? "Saved copy" : "Online",
+                label: isOfflineMode ? "Offline" : "Synced",
                 tone: isOfflineMode ? "offline" : "synced",
               }}
               stats={
                 jobsQuery.isPending || (jobsQuery.isError && !jobs.length)
                   ? undefined
                   : [
-                      { label: "Active", value: String(active) },
                       { label: "Ready", value: String(ready) },
-                      { label: "Overdue", value: String(late) },
+                      { label: "In progress", value: String(working) },
+                      { label: "Queued", value: String(queued) },
                     ]
               }
             >
@@ -125,49 +178,39 @@ export function ServiceJobsQueue({
               ) : null}
             </HeroCard>
           )}
-          {!market ? (
-            <>
-              <FormField
-                label="Find a job"
-                accessibilityLabel="Search service jobs"
-                value={search}
-                onChangeText={model.setSearch}
-                placeholder="Receipt or service"
-              />
-              <View className="flex-row flex-wrap gap-2">
-                {[
-                  "all",
-                  "mine",
-                  "ready",
-                  "blocked",
-                  ...(late ? ["overdue"] : []),
-                ].map((value) => (
-                  <CommerceFilterChip
-                    key={value}
-                    label={
-                      value === "all"
-                        ? "All loaded"
-                        : value[0].toUpperCase() + value.slice(1)
-                    }
-                    active={filter === value}
-                    onPress={() => setFilter(value)}
-                  />
-                ))}
-              </View>
-            </>
+          {!market && jobs.length ? (
+            <ScrollView
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 18 }}
+              horizontal
+              keyboardShouldPersistTaps="handled"
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0, marginHorizontal: -18 }}
+            >
+              {filters.map((value) => (
+                <ClassicCustomerBookFilter
+                  key={value}
+                  active={filter === value}
+                  count={value === "all" ? jobs.length : countOf(value)}
+                  label={WORK_FILTER_LABELS[value]}
+                  onPress={() => setFilter(value)}
+                />
+              ))}
+            </ScrollView>
           ) : null}
-          <ActionButton
-            icon="Plus"
-            tone="gold"
-            disabled={isOfflineMode}
-            onPress={() => {
-              setAmountPaid("")
-              setPaymentReference("")
-              setCreating(true)
-            }}
-          >
-            New service
-          </ActionButton>
+          {market ? (
+            <ActionButton
+              icon="Plus"
+              tone="gold"
+              disabled={isOfflineMode}
+              onPress={() => {
+                setAmountPaid("")
+                setPaymentReference("")
+                setCreating(true)
+              }}
+            >
+              New service
+            </ActionButton>
+          ) : null}
           {jobsQuery.isError && !isOfflineMode ? (
             <View className="gap-3">
               <StatusBanner
@@ -183,6 +226,19 @@ export function ServiceJobsQueue({
               >
                 Retry work queue
               </ActionButton>
+            </View>
+          ) : null}
+          {!market && visible.length ? (
+            <View className="-mb-3 flex-row items-baseline justify-between px-0.5">
+              <Text
+                accessibilityRole="header"
+                className="text-base font-extrabold tracking-tight text-foreground"
+              >
+                Work queue
+              </Text>
+              <Text className="text-xs font-bold text-muted-foreground">
+                {visible.length} shown
+              </Text>
             </View>
           ) : null}
         </View>
@@ -220,6 +276,8 @@ export function ServiceJobsQueue({
       renderItem={({ item: job, index }) => (
         <RevealItem active={reveal} index={index}>
           <Row
+            first={index === 0}
+            last={index === visible.length - 1}
             job={job}
             onPress={() => {
               setAmountPaid("")

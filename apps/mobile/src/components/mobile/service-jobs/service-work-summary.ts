@@ -40,5 +40,8 @@ export function workMatches(
   if (filter === "ready")
     return job.summary === "ready_for_handoff" && !job.handedOffAt
   if (filter === "blocked") return job.summary === "blocked"
+  if (filter === "in_progress")
+    return ["in_progress", "partially_ready"].includes(job.summary)
+  if (filter === "queued") return job.summary === "queued"
   return true
 }

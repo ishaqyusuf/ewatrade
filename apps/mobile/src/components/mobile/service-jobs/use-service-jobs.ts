@@ -1,17 +1,3 @@
-import { useServiceCommand } from "./use-service-command"
-import { useServiceActions } from "./use-service-actions"
-import { useServiceStatusEditor } from "./service-status-sheet"
-import { useServicePaymentEditor } from "./service-payment-sheet"
-import { useServiceEvidenceChooser } from "./service-evidence-sheet"
-import {
-  useServiceHistory,
-  type ServiceHistoryKind,
-} from "./service-history-sheet"
-import { useServiceTextEditor } from "./service-text-sheet"
-import type { ServicePaymentKind } from "./service-payment-model"
-import { prepareServiceIntake } from "./service-intake-command"
-import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
-import { projectServiceIntake } from "./service-intake-model"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
   createMessageFixture,
@@ -21,6 +7,7 @@ import { LIST_PAGE_SIZE, shouldShowListSearch } from "@/lib/list-pagination"
 import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import type { QaFixtureContext } from "@ewatrade/utils/qa-fixtures"
 import {
   useInfiniteQuery,
@@ -32,15 +19,28 @@ import * as Crypto from "expo-crypto"
 import * as ImagePicker from "expo-image-picker"
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import {
-  retainEvidenceAsset,
   discardRetainedEvidence,
+  retainEvidenceAsset,
 } from "./service-evidence-files"
+import { useServiceEvidenceChooser } from "./service-evidence-sheet"
 import {
-  serviceOfferings,
-  actions,
-  type WorkJob,
+  type ServiceHistoryKind,
+  useServiceHistory,
+} from "./service-history-sheet"
+import { prepareServiceIntake } from "./service-intake-command"
+import { projectServiceIntake } from "./service-intake-model"
+import {
   type PendingEvidence,
+  type WorkJob,
+  type actions,
+  serviceOfferings,
 } from "./service-jobs-model"
+import type { ServicePaymentKind } from "./service-payment-model"
+import { useServicePaymentEditor } from "./service-payment-sheet"
+import { useServiceStatusEditor } from "./service-status-sheet"
+import { useServiceTextEditor } from "./service-text-sheet"
+import { useServiceActions } from "./use-service-actions"
+import { useServiceCommand } from "./use-service-command"
 
 export function useServiceJobs() {
   const trpc = useTRPC()
@@ -159,6 +159,7 @@ export function useServiceJobs() {
       : loadedJobs.filter((job) =>
           [
             job.orderNumber,
+            job.customerName ?? "",
             ...job.lines.flatMap((line) => [
               line.catalogItemName,
               line.offeringName,

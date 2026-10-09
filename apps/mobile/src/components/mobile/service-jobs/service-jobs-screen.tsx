@@ -9,6 +9,8 @@ import { VariableContextProvider } from "nativewind"
 import { useRef, useState } from "react"
 import { Keyboard, type ScrollView } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { ListCreateFab } from "../list-create-fab"
 import { ServiceAction } from "./service-action"
 import { ServiceCommandReview } from "./service-command-review"
 import { ServiceEvidenceSheet } from "./service-evidence-sheet"
@@ -37,6 +39,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
   const linesTop = useRef(0)
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const insets = useSafeAreaInsets()
   const {
     creating,
     selectedJob,
@@ -45,6 +48,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
     notice,
     isOfflineMode,
     jobsQuery,
+    jobs,
     showQueueSearch,
     search,
     setSearch,
@@ -112,10 +116,14 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
     </>
   )
   const blocked = model.scopeChanged || !model.canOperate || !model.storeId
+  // Classic keeps the queue search at the bottom with the gold New service
+  // button above it, both hiding on scroll like the tab bar.
+  const classicQueue = !market && !blocked && !creating && !selectedJobId
   return (
     <VariableContextProvider
       value={{
-        "--service-jobs-bottom": showQueueSearch ? footerHeight + 24 : 48,
+        "--service-jobs-bottom":
+          showQueueSearch || classicQueue ? footerHeight + 24 : 48,
       }}
     >
       <View
@@ -269,6 +277,46 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                 onScroll={scrollHide.onScroll}
               />
             )}
+            {classicQueue ? (
+              <>
+                <ListCreateFab
+                  accessibilityLabel={
+                    isOfflineMode
+                      ? "New service, needs a connection"
+                      : "New service"
+                  }
+                  bottomOffset={
+                    scrollHide.hidden && !search
+                      ? 0
+                      : Math.max(
+                          0,
+                          footerHeight + 14 - Math.max(insets.bottom + 16, 24),
+                        )
+                  }
+                  disabled={isOfflineMode}
+                  onPress={() => {
+                    model.setAmountPaid("")
+                    model.setPaymentReference("")
+                    model.setCreating(true)
+                  }}
+                  testID="service-new-fab"
+                  tone="gold"
+                />
+                <BottomSearchFooter
+                  alwaysShowSearch
+                  accessibilityLabel="Search service jobs"
+                  hidden={scrollHide.hidden}
+                  localSearch={isOfflineMode}
+                  maxLength={160}
+                  onChangeText={setSearch}
+                  onHeightChange={setFooterHeight}
+                  placeholder="Receipt, customer or service"
+                  totalCount={jobs.length}
+                  value={search}
+                  variant="action-bar"
+                />
+              </>
+            ) : null}
             {market && showQueueSearch ? (
               <BottomSearchFooter
                 variant={market ? "market-day" : "default"}

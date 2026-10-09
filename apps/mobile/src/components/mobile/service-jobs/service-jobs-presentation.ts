@@ -7,7 +7,13 @@ export type ServiceHeaderProps = {
   description: string
   meta?: string
 }
-export type ServiceJobRowProps = { job: WorkJob; onPress: () => void }
+export type ServiceJobRowProps = {
+  job: WorkJob
+  onPress: () => void
+  /** Classic rows share one card: the first rounds the top, the last the bottom. */
+  first?: boolean
+  last?: boolean
+}
 export type ServiceSectionProps = {
   title: string
   description?: string
