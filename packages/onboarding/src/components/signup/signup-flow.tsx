@@ -460,7 +460,7 @@ function SignupFlowContent() {
       />
       <div>
         {/* Stepper (hidden on success step) */}
-        {step < 5 && (
+        {step < 5 && !needsStart && (
           <SignupStepper
             currentStep={step}
             entryStage={
