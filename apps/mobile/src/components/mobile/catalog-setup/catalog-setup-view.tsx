@@ -505,7 +505,13 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
           <RetainedEditorStack
             editors={editors.map((entry, index) => ({
               key: `${index}-${entry.key}-${entry.parent?.key ?? "root"}`,
-              title: entry.parent?.label ?? CATALOG_EDITOR_TITLES[entry.key],
+              title:
+                entry.parent?.label ??
+                (!market && entry.key === "images"
+                  ? "Photos"
+                  : !market && entry.key === "units"
+                    ? "Sell another way"
+                    : CATALOG_EDITOR_TITLES[entry.key]),
               footer:
                 !market && entry.key === "category" ? (
                   <BottomSearchFooter
