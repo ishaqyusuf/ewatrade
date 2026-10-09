@@ -5,7 +5,6 @@ import {
 import { createRehearsalModel } from "@ewatrade/ai/rehearsal-model"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import { respondSetupRehearsal } from "@ewatrade/assistant/setup/rehearsal"
-import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 
 export type ResolvedAssistantModel = AssistantLanguageModel & {
   rehearsal: boolean
@@ -14,8 +13,9 @@ export type ResolvedAssistantModel = AssistantLanguageModel & {
 type Environment = Readonly<Record<string, string | undefined>>
 
 /**
- * QA data never reaches a live provider; the rehearsal model is its registered
- * test adapter. Live businesses use the stored runtime configuration.
+ * Assistant text is an owner-approved exception to provider-free QA: QA chats
+ * use DeepSeek with the same history, draft tools and budget as live chats.
+ * Provider-free rehearsal remains an explicit non-production development mode.
  */
 export async function resolveSetupAssistantModel(input: {
   dataClassification: "LIVE" | "QA"
@@ -27,13 +27,7 @@ export async function resolveSetupAssistantModel(input: {
   const rehearsalRequested =
     environment.ASSISTANT_REHEARSAL_MODE === "true" &&
     environment.APP_ENV !== "production"
-  if (input.dataClassification === "QA" || rehearsalRequested) {
-    const decision = evaluateQaProviderPolicy({
-      adapter: "test",
-      operation: "ai_analysis",
-      tenantDataClassification: input.dataClassification,
-    })
-    if (!decision.allowed) return null
+  if (rehearsalRequested) {
     return {
       model: createRehearsalModel((prompt) =>
         respondSetupRehearsal(
@@ -51,6 +45,12 @@ export async function resolveSetupAssistantModel(input: {
     environment,
   )
   if (!configuration) return null
+  // The QA exception covers DeepSeek text only, not other live providers.
+  if (
+    input.dataClassification === "QA" &&
+    configuration.provider !== "DEEPSEEK"
+  )
+    return null
   const model = (input.createLiveModel ?? createAssistantLanguageModel)(
     configuration,
     { environment },

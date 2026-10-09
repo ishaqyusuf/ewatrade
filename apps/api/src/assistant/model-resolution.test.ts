@@ -6,15 +6,19 @@ const failIfCalled = () => {
 }
 
 describe("setup assistant model resolution", () => {
-  test("QA tenants always get the provider-free rehearsal model", async () => {
+  test("QA assistant chats use DeepSeek even when production requests rehearsal", async () => {
     const model = await resolveSetupAssistantModel({
       dataClassification: "QA",
-      readRuntimeConfiguration: async () => failIfCalled(),
-      environment: { DEEPSEEK_API: "sk-live" },
-      createLiveModel: failIfCalled,
+      readRuntimeConfiguration: async () => null,
+      environment: {
+        DEEPSEEK_API: "sk-live",
+        APP_ENV: "production",
+        ASSISTANT_REHEARSAL_MODE: "true",
+      },
     })
-    expect(model?.rehearsal).toBe(true)
-    expect(model?.provider).toBe("ewatrade-rehearsal")
+    expect(model?.rehearsal).toBe(false)
+    expect(model?.provider).toBe("deepseek")
+    expect(model?.modelId).toBe("deepseek-flash")
   })
 
   test("rehearsal mode is ignored in production for live tenants", async () => {
