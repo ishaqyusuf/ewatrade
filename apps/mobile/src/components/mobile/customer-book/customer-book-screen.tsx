@@ -19,7 +19,7 @@ import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { useBusinessStore } from "@/store/businessStore"
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from "@ewatrade/utils/countries"
 import { VariableContextProvider } from "nativewind"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton, MarketDayActionButton } from "../action-button"
@@ -53,7 +53,12 @@ export function activeCustomerFilterLabel(
 const MARKET_FILTERS = ["all", "synced", "pending"] as const
 const CLASSIC_FILTERS = ["all", "pending", "none"] as const
 
-export function CustomerBookContent(props: CustomerBookProps) {
+export function CustomerBookContent(
+  props: CustomerBookProps & {
+    /** Lets the route hide its Customers bar while a profile shows its own. */
+    onProfileOpenChange?: (open: boolean) => void
+  },
+) {
   const { profile } = useAuthContext()
   const businessCountry = useBusinessStore(
     (s) => s.businesses.find((b) => b.id === profile?.businessId)?.country,
@@ -103,6 +108,11 @@ export function CustomerBookContent(props: CustomerBookProps) {
     presentation,
   } = useCustomerBook(props)
   const searchVisible = market || showSearch
+  const profileOpen = Boolean(selectedCustomer)
+  const { onProfileOpenChange } = props
+  useEffect(() => {
+    onProfileOpenChange?.(profileOpen)
+  }, [onProfileOpenChange, profileOpen])
   const reveal = useFirstReveal(!isLoading)
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()

@@ -26,17 +26,19 @@ export function CustomerOpenOrders({
       },
     ),
   )
-  if (isOffline || (!customerId && !phone)) return null
+  // Only speak up when there is something to act on: no loading or empty copy.
+  if (
+    isOffline ||
+    (!customerId && !phone) ||
+    query.isPending ||
+    (!query.isError && !query.data?.length)
+  )
+    return null
   return (
-    <View className="gap-2 px-4 py-3">
-      <Text className="text-base font-semibold text-foreground">
+    <View className="gap-1 rounded-[20px] bg-card px-3.5 py-3 shadow-sm">
+      <Text className="text-sm font-extrabold text-foreground">
         Open orders to collect or fulfil
       </Text>
-      {query.isPending ? (
-        <Text className="text-sm text-muted-foreground">
-          Looking up open orders…
-        </Text>
-      ) : null}
       {query.isError ? (
         <Pressable
           onPress={() => void query.refetch()}
@@ -52,7 +54,7 @@ export function CustomerOpenOrders({
           key={order.id}
           accessibilityRole="button"
           onPress={() => onOpenOrder(order.id)}
-          className="min-h-16 gap-1 border-b border-border py-3"
+          className="min-h-14 gap-0.5 border-t border-border py-2.5"
         >
           <Text className="font-medium text-foreground">
             {order.orderNumber} ·{" "}
@@ -63,11 +65,6 @@ export function CustomerOpenOrders({
           </Text>
         </Pressable>
       ))}
-      {query.data?.length === 0 ? (
-        <Text className="text-sm text-muted-foreground">
-          No open orders for this customer.
-        </Text>
-      ) : null}
     </View>
   )
 }

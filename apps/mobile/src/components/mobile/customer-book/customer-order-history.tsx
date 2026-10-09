@@ -1,22 +1,23 @@
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
+import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { useState } from "react"
+import { Fragment } from "react"
 import { ActionButton } from "../action-button"
-import { EmptyState } from "../empty-state"
 import {
-  CommerceOrderRow,
-  CommercePendingOrderRow,
-} from "../commerce/commerce-primitives"
+  ClassicCustomerOrderRow,
+  ClassicCustomerPendingRow,
+} from "../appearances/classic/customer-profile"
+import {
+  MarketDayCustomerOrderRow,
+  MarketDayCustomerPendingRow,
+} from "../appearances/market-day/customer-profile"
 import type {
   CommerceCustomer,
   CommercialOrder,
   PendingCommerceOrder,
 } from "../commerce/commerce-model"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { useState } from "react"
-import {
-  MarketDayCustomerOrderRow,
-  MarketDayCustomerPendingRow,
-} from "../appearances/market-day/customer-profile"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { EmptyState } from "../empty-state"
 
 type HistoryRow =
   | { kind: "pending"; order: PendingCommerceOrder }
@@ -38,10 +39,10 @@ export function CustomerOrderHistory({
   onPageChange: () => void
 }) {
   const palette = useMarketDayPalette()
-  const Row = market ? MarketDayCustomerOrderRow : CommerceOrderRow
+  const Row = market ? MarketDayCustomerOrderRow : ClassicCustomerOrderRow
   const PendingRow = market
     ? MarketDayCustomerPendingRow
-    : CommercePendingOrderRow
+    : ClassicCustomerPendingRow
   const ink = market ? "text-market-ink" : "text-foreground"
   const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   const pageAction = market
@@ -75,39 +76,48 @@ export function CustomerOrderHistory({
       className="gap-3"
       onLayout={(event) => onLayout(event.nativeEvent.layout.y)}
     >
-      <Text className={"text-lg font-extrabold " + ink}>Loaded orders</Text>
-      <Text className={"text-xs leading-5 " + muted}>
-        {customer.orders.length} synced · {customer.pendingOrders.length}{" "}
-        pending sync. Pending values are not included in synced order value.
-      </Text>
+      {market ? (
+        <>
+          <Text className={`text-lg font-extrabold ${ink}`}>Loaded orders</Text>
+          <Text className={`text-xs leading-5 ${muted}`}>
+            {customer.orders.length} synced · {customer.pendingOrders.length}{" "}
+            pending sync. Pending values are not included in synced order value.
+          </Text>
+        </>
+      ) : null}
       <View
         className={
           market
             ? "rounded-2xl border border-market-line bg-market-field px-4"
-            : "rounded-2xl bg-card px-4"
+            : "rounded-[20px] bg-card px-3.5 shadow-sm"
         }
       >
-        {visible.map((row) =>
-          row.kind === "pending" ? (
-            <PendingRow
-              key={`pending:${row.order.clientCommandId}`}
-              order={row.order}
-            />
-          ) : (
-            <Row
-              key={`synced:${row.order.id}`}
-              order={row.order}
-              onPress={() => onOpenOrder(row.order.id)}
-            />
-          ),
-        )}
+        {visible.map((row, index) => (
+          <Fragment
+            key={
+              row.kind === "pending"
+                ? `pending:${row.order.clientCommandId}`
+                : `synced:${row.order.id}`
+            }
+          >
+            {index && !market ? <View className="h-px bg-border" /> : null}
+            {row.kind === "pending" ? (
+              <PendingRow order={row.order} />
+            ) : (
+              <Row
+                order={row.order}
+                onPress={() => onOpenOrder(row.order.id)}
+              />
+            )}
+          </Fragment>
+        ))}
         {!rows.length ? (
           market ? (
             <View className="gap-2 py-5">
-              <Text className={"text-lg font-bold " + ink}>
+              <Text className={`text-lg font-bold ${ink}`}>
                 No loaded orders
               </Text>
-              <Text className={"text-sm " + muted}>
+              <Text className={`text-sm ${muted}`}>
                 No orders are loaded for this customer.
               </Text>
             </View>
@@ -122,7 +132,7 @@ export function CustomerOrderHistory({
       </View>
       {rows.length > PAGE_SIZE ? (
         <View className="gap-3">
-          <Text accessibilityLiveRegion="polite" className={"text-xs " + muted}>
+          <Text accessibilityLiveRegion="polite" className={`text-xs ${muted}`}>
             Showing {start + 1}–{Math.min(start + PAGE_SIZE, rows.length)} of{" "}
             {rows.length} loaded orders
           </Text>

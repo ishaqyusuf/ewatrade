@@ -40,6 +40,8 @@ type HeroCardProps = {
   meter?: { label: string; percent: number; tone: "gold" | "up" }
   cta?: { label: string; icon?: IconKeys; onPress: () => void; testID?: string }
   children?: ReactNode
+  /** Rendered above the label row, e.g. a customer's avatar and name. */
+  top?: ReactNode
   testID?: string
 }
 
@@ -58,6 +60,7 @@ export function HeroCard({
   sub,
   testID,
   title,
+  top,
 }: HeroCardProps) {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
@@ -104,6 +107,7 @@ export function HeroCard({
         </View>
       </View>
 
+      {top ? <View style={styles.top}>{top}</View> : null}
       {label || pill ? (
         <View style={styles.row}>
           <NativeText style={[styles.label, { color: muted }]}>
@@ -315,6 +319,7 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
   },
   clip: { borderRadius: 26, overflow: "hidden" },
+  top: { marginBottom: 16 },
   cta: { marginTop: 14 },
   done: {
     alignItems: "center",

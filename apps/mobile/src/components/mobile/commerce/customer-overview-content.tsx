@@ -128,7 +128,11 @@ export function CustomerOverviewContent({
       ref={scroll}
       className={market ? "flex-1 bg-market-canvas" : "flex-1"}
       contentContainerClassName={
-        orderLinked ? "gap-5 px-4 pb-12" : "gap-6 px-4 pb-12"
+        market
+          ? orderLinked
+            ? "gap-5 px-4 pb-12"
+            : "gap-6 px-4 pb-12"
+          : "gap-4 px-[18px] pb-12"
       }
       refreshControl={isOffline ? undefined : <QueryRefreshControl />}
       showsVerticalScrollIndicator={false}
@@ -140,6 +144,38 @@ export function CustomerOverviewContent({
           onBack={onBack}
           onClose={orderLinked ? onClose : undefined}
         />
+      ) : !appearance || appearance === "classic" ? (
+        <View className="flex-row items-center gap-2.5 pt-2">
+          <Pressable
+            accessibilityLabel="Back to customers"
+            accessibilityRole="button"
+            className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+            haptic
+            onPress={onBack}
+          >
+            <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
+          </Pressable>
+          <Text
+            accessibilityRole="header"
+            numberOfLines={1}
+            className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
+          >
+            Customer
+          </Text>
+          {orderLinked && onClose ? (
+            <Pressable
+              accessibilityLabel="Close customer overview"
+              accessibilityRole="button"
+              className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+              haptic
+              onPress={onClose}
+            >
+              <Icon className="size-[18px] text-foreground" name="X" />
+            </Pressable>
+          ) : (
+            <View className="size-11" />
+          )}
+        </View>
       ) : (
         <CommercePageHeader
           action={
@@ -174,19 +210,15 @@ export function CustomerOverviewContent({
               gold: true,
               onPress: onCreateOrder,
             },
-            ...(customer.phone
-              ? [
-                  {
-                    label: "Call",
-                    icon: "Phone" as const,
-                    onPress: () => {
-                      void Linking.openURL(`tel:${customer.phone}`).catch(
-                        () => {},
-                      )
-                    },
-                  },
-                ]
-              : []),
+            {
+              label: "Call",
+              icon: "Phone" as const,
+              disabled: !customer.phone,
+              onPress: () => {
+                if (!customer.phone) return
+                void Linking.openURL(`tel:${customer.phone}`).catch(() => {})
+              },
+            },
             ...(onStatement
               ? [
                   {
@@ -214,52 +246,92 @@ export function CustomerOverviewContent({
       )}
 
       {!market ? headerContent : null}
-      {!historyComplete ? (
+      {!historyComplete && market ? (
         <Text className={`text-xs font-semibold ${muted}`}>
           {historyNotice}
         </Text>
       ) : null}
 
-      <ScrollView
-        contentContainerClassName={
-          market
-            ? "gap-5 border-b border-market-line px-1"
-            : "gap-5 border-b border-border px-1"
-        }
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        testID="customer-overview-tabs"
-      >
-        {visibleTabs.map((tab) => {
-          const selected = activeTab === tab.key
-          return (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              className={
-                selected
-                  ? market
-                    ? "min-h-11 justify-center border-b-2 border-market-marigold px-1"
-                    : "min-h-11 justify-center border-b-2 border-primary px-1"
-                  : "min-h-11 justify-center border-b-2 border-transparent px-1"
-              }
-              haptic
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text
+      {!market ? (
+        <View
+          accessibilityRole="tablist"
+          className="flex-row gap-1 rounded-[14px] bg-muted p-1"
+          testID="customer-overview-tabs"
+        >
+          {visibleTabs.map((tab) => {
+            const selected = activeTab === tab.key
+            const count = customer.orders.length + customer.pendingOrders.length
+            return (
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
                 className={
                   selected
-                    ? `text-sm font-extrabold ${market ? "text-market-accent-ink" : "text-primary"}`
-                    : `text-sm font-semibold ${muted}`
+                    ? "min-h-9 flex-1 items-center justify-center rounded-[10px] bg-card px-2 shadow-sm"
+                    : "min-h-9 flex-1 items-center justify-center rounded-[10px] px-2"
                 }
+                haptic
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
               >
-                {tab.label}
-              </Text>
-            </Pressable>
-          )
-        })}
-      </ScrollView>
+                <Text
+                  className={
+                    selected
+                      ? "text-[13px] font-extrabold text-foreground"
+                      : "text-[13px] font-extrabold text-muted-foreground"
+                  }
+                >
+                  {tab.key === "orders" && count
+                    ? `${tab.label} · ${count}`
+                    : tab.label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+      ) : null}
+      {market ? (
+        <ScrollView
+          contentContainerClassName={
+            market
+              ? "gap-5 border-b border-market-line px-1"
+              : "gap-5 border-b border-border px-1"
+          }
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          testID="customer-overview-tabs"
+        >
+          {visibleTabs.map((tab) => {
+            const selected = activeTab === tab.key
+            return (
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                className={
+                  selected
+                    ? market
+                      ? "min-h-11 justify-center border-b-2 border-market-marigold px-1"
+                      : "min-h-11 justify-center border-b-2 border-primary px-1"
+                    : "min-h-11 justify-center border-b-2 border-transparent px-1"
+                }
+                haptic
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+              >
+                <Text
+                  className={
+                    selected
+                      ? `text-sm font-extrabold ${market ? "text-market-accent-ink" : "text-primary"}`
+                      : `text-sm font-semibold ${muted}`
+                  }
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+      ) : null}
 
       {activeTab === "information" ? (
         <Information customer={customer} historyComplete={historyComplete} />
@@ -277,6 +349,23 @@ export function CustomerOverviewContent({
             scroll.current?.scrollTo({ y: historyTop.current, animated: true })
           }
         />
+      ) : null}
+      {activeTab === "orders" &&
+      !market &&
+      (customer.orders.length || customer.pendingOrders.length) ? (
+        <View className="-mt-3 flex-row items-start gap-1.5 px-0.5">
+          <Icon
+            className="mt-px size-[14px] text-muted-foreground"
+            name="Clock"
+          />
+          <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {isOffline
+              ? "Cached history. Reconnect to load current orders."
+              : historyComplete
+                ? "Every loaded order for this customer."
+                : "Loaded orders only. Totals can change as more orders load."}
+          </Text>
+        </View>
       ) : null}
 
       {emptyTab ? (
