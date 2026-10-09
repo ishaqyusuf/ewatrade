@@ -41,6 +41,9 @@ export const GREEN_TILL_THEME = {
     queuedFrom: "#2A2A22",
     queuedTo: "#1C1C18",
     scrim: "rgba(10,16,14,0.55)",
+    // Chips over photos and illustrations (Cover, remove).
+    overlayChip: "rgba(20,24,22,0.62)",
+    overlayForeground: "#FFFFFF",
   },
   dark: {
     heroFrom: "#17543F",
@@ -80,6 +83,9 @@ export const GREEN_TILL_THEME = {
     queuedFrom: "#2A2A22",
     queuedTo: "#1C1C18",
     scrim: "rgba(10,16,14,0.55)",
+    // Chips over photos and illustrations (Cover, remove).
+    overlayChip: "rgba(20,24,22,0.62)",
+    overlayForeground: "#FFFFFF",
   },
 } as const
 

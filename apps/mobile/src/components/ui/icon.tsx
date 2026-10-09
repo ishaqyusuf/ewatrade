@@ -93,7 +93,9 @@ const Hash = hugeIcon("Hash")
 const HelpCircle = hugeIcon("HelpCircleIcon")
 const Hourglass = hugeIcon("Hourglass")
 const House = hugeIcon("House")
+const Image = hugeIcon("Image01Icon")
 const Info = hugeIcon("Info")
+const Layers = hugeIcon("Layers01Icon")
 const LayoutDashboard = hugeIcon("LayoutDashboard")
 const LayoutGrid = hugeIcon("LayoutGrid")
 const Link = hugeIcon("Link01Icon")
@@ -320,7 +322,9 @@ const appIcons = {
   Hourglass,
   House,
 
+  Image,
   Info,
+  Layers,
   jobs: Briefcase,
   LayoutDashboard,
   LayoutGrid,
