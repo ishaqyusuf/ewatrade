@@ -1,4 +1,5 @@
 "use client"
+import { GeneralChat } from "@/components/general-assistant/general-chat"
 import { PageHeader } from "@/components/page-header"
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
@@ -39,8 +40,9 @@ export function AssistantHome() {
     <div className="flex flex-1 flex-col gap-6 py-6">
       <PageHeader
         title="AI assistant"
-        description="Add products and continue setting up your business."
+        description="Ask about your business, record everyday work, add products and continue setting up."
       />
+      <GeneralChat />
       {state.isPending ? (
         <output>Loading your assistant…</output>
       ) : state.isError ? (
@@ -50,8 +52,8 @@ export function AssistantHome() {
         </div>
       ) : !state.data?.enabled ? (
         <p>
-          The assistant isn't available for this business. You can still add
-          products in Catalog.
+          Adding products with AI isn't available for this business. You can
+          still add products in Catalog.
         </p>
       ) : (
         <>
