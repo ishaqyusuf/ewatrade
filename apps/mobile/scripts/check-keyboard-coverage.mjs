@@ -322,7 +322,7 @@ const contracts = [
   {
     file: "components/mobile/workflow-modal-screen.tsx",
     markers: [
-      'contentClassName="px-0 pt-6 pb-0"',
+      'contentClassName="px-0 pt-2 pb-0"',
       "contentContainerStyle={{ paddingBottom: 0 }}",
     ],
     reason:

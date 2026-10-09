@@ -111,27 +111,32 @@ function DefaultWorkflowModalChrome({
         }}
       />
       <MobileScreen
-        contentClassName="px-0 pt-6 pb-0"
+        contentClassName="px-0 pt-2 pb-0"
         contentContainerStyle={{ paddingBottom: 0 }}
         keyboardBottomOffset={keyboardBottomOffset}
         scroll={false}
       >
         {hideHeader ? null : (
-          <View className="mb-4 flex-row items-center justify-between gap-3 px-4">
-            <View className="min-w-0 flex-1">
-              <Text className="text-2xl font-extrabold text-foreground">
-                {title}
-              </Text>
-            </View>
+          // Green Till: X on the left, centred title, balancing spacer.
+          <View className="mb-3.5 flex-row items-center gap-2.5 px-4">
             <Pressable
               accessibilityLabel={closeLabel}
-              className="h-11 w-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+              accessibilityRole="button"
+              className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
               haptic
               onPress={onClose}
               transition
             >
-              <Icon className="size-sm text-foreground" name="X" />
+              <Icon className="size-[18px] text-foreground" name="X" />
             </Pressable>
+            <Text
+              accessibilityRole="header"
+              numberOfLines={1}
+              className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
+            >
+              {title}
+            </Text>
+            <View className="size-11" />
           </View>
         )}
         <View className="min-h-0 flex-1">{children}</View>
