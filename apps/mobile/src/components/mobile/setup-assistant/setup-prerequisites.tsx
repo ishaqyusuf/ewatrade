@@ -26,7 +26,7 @@ export function SetupPrerequisites({
       {finance ? (
         <StatusBanner
           title="Set up Finance for opening balances"
-          message="Your customers can be added first. Set up your Finance book on the dashboard, then return and refresh to record their balances."
+          message="Your customers can be added first. Set up your Finance book on the dashboard, then return and refresh to record customer, cash and bank balances."
           actionLabel="Open Finance"
           onActionPress={() => void Linking.openURL(`${getWebUrl()}/finance`)}
           tone="warning"

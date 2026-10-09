@@ -2,6 +2,7 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useEffect, useState } from "react"
 import { ScrollView } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -15,8 +16,11 @@ import { HeroCard } from "../green-till/hero-card"
 import { StatusBanner } from "../status-banner"
 import { type SetupEntity, setupCounts } from "./setup-model"
 import { SetupRecordCard } from "./setup-record-card"
+import { SetupRecordEditor } from "./setup-record-editor"
 export function SetupAssistantQa({ state }: { state: string }) {
   const tray = useModal()
+  const editor = useModal()
+  const [editing, setEditing] = useState<SetupEntity | null>(null)
   const insets = useSafeAreaInsets()
   const [draft, setDraft] = useState("")
   const [entities, setEntities] = useState<SetupEntity[]>([
@@ -41,6 +45,17 @@ export function SetupAssistantQa({ state }: { state: string }) {
         name: "Aisha Bello",
         phone: "+2348035550142",
         opening: { direction: "owes_business", amountMinor: 1300000 },
+      },
+    },
+    {
+      key: "cash",
+      kind: "MONEY_ACCOUNT",
+      state: "PROPOSED",
+      payload: {
+        kind: "money_account",
+        name: "Shop cash",
+        purpose: "CASH",
+        openingBalanceMinor: 1250000,
       },
     },
   ])
@@ -89,7 +104,7 @@ export function SetupAssistantQa({ state }: { state: string }) {
               />
               <AssistantBubble
                 user
-                text="Crate of eggs, ₦4,500. I have 40 crates. Aisha owes me ₦13,000."
+                text="Crate of eggs, ₦4,500. I have 40 crates. Aisha owes me ₦13,000. My shop cash is ₦12,500."
               />
               <AssistantBubble text="I’ve put those in your setup list. Check the price and opening balance before adding them." />
               {state === "allowance" ? (
@@ -122,7 +137,7 @@ export function SetupAssistantQa({ state }: { state: string }) {
           reason="Development preview · typing only · no records are added."
         />
         <Modal ref={tray.ref} title="Setup list" snapPoints={["90%"]}>
-          <ScrollView contentContainerClassName="gap-3 px-[18px] pb-8">
+          <BottomSheetScrollView contentContainerClassName="gap-3 px-[18px] pb-8">
             {entities.map((e) => (
               <SetupRecordCard
                 key={e.key}
@@ -130,8 +145,8 @@ export function SetupAssistantQa({ state }: { state: string }) {
                 currency="NGN"
                 disabled={offline}
                 onEdit={() => {
-                  setDraft(`Tell me more about ${e.key}`)
-                  tray.dismiss()
+                  setEditing(e)
+                  editor.present()
                 }}
                 onState={(next) =>
                   setEntities((es) =>
@@ -153,7 +168,32 @@ export function SetupAssistantQa({ state }: { state: string }) {
               Preview only. A simulated added state has no real receipt or deep
               link.
             </Text>
-          </ScrollView>
+          </BottomSheetScrollView>
+        </Modal>
+        <Modal
+          ref={editor.ref}
+          title="Record details"
+          stackBehavior="push"
+          snapPoints={["90%"]}
+          keyboardBehavior="extend"
+        >
+          {editing ? (
+            <SetupRecordEditor
+              key={editing.key}
+              entity={editing}
+              disabled={offline}
+              onSave={(payload) => {
+                setEntities((rows) =>
+                  rows.map((row) =>
+                    row.key === editing.key
+                      ? { ...row, payload, state: "PROPOSED" }
+                      : row,
+                  ),
+                )
+                editor.dismiss()
+              }}
+            />
+          ) : null}
         </Modal>
       </View>
     </View>

@@ -19,6 +19,7 @@ import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
 import { type SetupEntity, setupEntityPayload } from "./setup-model"
+import { setupMoneyEdit } from "./setup-money-edit"
 export function SetupRecordEditor({
   entity,
   disabled,
@@ -62,6 +63,17 @@ export function SetupRecordEditor({
       ? (payload.opening?.direction ?? "owes_business")
       : "owes_business",
   )
+  const [purpose, setPurpose] = useState<"CASH" | "BANK">(
+    payload?.kind === "money_account" ? payload.purpose : "CASH",
+  )
+  const [bankName, setBankName] = useState(
+    payload?.kind === "money_account" ? (payload.bankName ?? "") : "",
+  )
+  const [balance, setBalance] = useState(
+    payload?.kind === "money_account"
+      ? minorToMajorInput(payload.openingBalanceMinor)
+      : "",
+  )
   const [undo, setUndo] = useState<{
     name: string
     price: string
@@ -70,10 +82,24 @@ export function SetupRecordEditor({
     country: string
     phone: string
     email: string
+    purpose: "CASH" | "BANK"
+    bankName: string
+    balance: string
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
   function save() {
     if (!payload || disabled) return
+    if (payload.kind === "money_account") {
+      const edited = setupMoneyEdit({ name, purpose, bankName, balance })
+      if (!edited) {
+        setError(
+          "Check the name, bank and balance. Leave an unknown balance blank.",
+        )
+        return
+      }
+      onSave(edited)
+      return
+    }
     if (payload.kind !== "customer" && price && majorToMinor(price) === null) {
       setError("Enter a valid price.")
       return
@@ -143,15 +169,29 @@ export function SetupRecordEditor({
           canUndo={!!undo}
           onFill={(_, seq) => {
             if (disabled) return
-            setUndo({ name, price, stock, unit, country, phone, email })
+            setUndo({
+              name,
+              price,
+              stock,
+              unit,
+              country,
+              phone,
+              email,
+              purpose,
+              bankName,
+              balance,
+            })
             setName(
-              `${payload?.kind === "customer" ? "Aisha Bello" : "Crate of eggs"} ${seq}`,
+              `${payload?.kind === "customer" ? "Aisha Bello" : payload?.kind === "money_account" ? "Shop cash" : "Crate of eggs"} ${seq}`,
             )
             setPrice("4500")
             setStock("20")
             setUnit("Crate")
             setCountry("NG")
             setPhone("8035550142")
+            setPurpose("CASH")
+            setBankName("")
+            setBalance("12500")
           }}
           onUndo={() => {
             if (!undo || disabled) return
@@ -162,6 +202,9 @@ export function SetupRecordEditor({
             setCountry(undo.country)
             setPhone(undo.phone)
             setEmail(undo.email)
+            setPurpose(undo.purpose)
+            setBankName(undo.bankName)
+            setBalance(undo.balance)
             setUndo(null)
           }}
         />
@@ -217,6 +260,44 @@ export function SetupRecordEditor({
                 My business owes
               </ActionButton>
             </View>
+          </>
+        ) : payload?.kind === "money_account" ? (
+          <>
+            <View className="flex-row gap-2">
+              <ActionButton
+                variant={purpose === "CASH" ? undefined : "outline"}
+                disabled={disabled}
+                onPress={() => setPurpose("CASH")}
+              >
+                Cash
+              </ActionButton>
+              <ActionButton
+                variant={purpose === "BANK" ? undefined : "outline"}
+                disabled={disabled}
+                onPress={() => setPurpose("BANK")}
+              >
+                Bank
+              </ActionButton>
+            </View>
+            {purpose === "BANK" ? (
+              <FormField
+                label="Bank name"
+                value={bankName}
+                onChangeText={setBankName}
+                editable={!disabled}
+              />
+            ) : null}
+            <FormField
+              label="Current balance"
+              value={balance}
+              onChangeText={setBalance}
+              keyboardType="decimal-pad"
+              editable={!disabled}
+            />
+            <Text className="text-xs text-muted-foreground">
+              Leave the balance blank if you do not know it. Enter 0 only when
+              the account is empty.
+            </Text>
           </>
         ) : (
           <>

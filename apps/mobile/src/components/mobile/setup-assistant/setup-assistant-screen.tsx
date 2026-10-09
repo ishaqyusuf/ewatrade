@@ -23,6 +23,7 @@ import { StatusBanner } from "../status-banner"
 import { SetupAssistantQa } from "./setup-assistant-qa"
 import {
   type SetupEntity,
+  setupAreas,
   setupCommitKeys,
   setupCounts,
   setupPlainText,
@@ -336,10 +337,29 @@ function SetupAssistantLive() {
                 : "Check each record. Nothing is in your business until you add it."}
             </Text>
             <View className="flex-row flex-wrap gap-2">
-              {["Sell", "Use", "Customers", "Money"].map((area) => (
-                <View key={area} className="rounded-full bg-card px-3 py-2">
+              {setupAreas(vm.data).map((area) => (
+                <View
+                  key={area.area}
+                  className="rounded-full bg-card px-3 py-2"
+                >
                   <Text className="text-xs font-bold text-muted-foreground">
-                    {area}
+                    {
+                      {
+                        sell: "Sell",
+                        use: "Use",
+                        customers: "Customers",
+                        money: "Money",
+                      }[area.area]
+                    }{" "}
+                    ·{" "}
+                    {
+                      {
+                        OPEN: "Not started",
+                        STARTED: `${area.records} staged`,
+                        DONE: "Done",
+                        SKIPPED: "Skipped",
+                      }[area.status]
+                    }
                   </Text>
                 </View>
               ))}
@@ -404,6 +424,7 @@ function SetupAssistantLive() {
         <Modal
           ref={editor.ref}
           title="Record details"
+          stackBehavior="push"
           snapPoints={["90%"]}
           enablePanDownToClose={!vm.pending}
           keyboardBehavior="extend"

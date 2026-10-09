@@ -1,3 +1,7 @@
+import {
+  SETUP_AREAS,
+  summarizeSetupAreas,
+} from "@ewatrade/assistant/setup/areas"
 import { setupEntityPayloadSchema } from "@ewatrade/assistant/setup/contracts"
 import { formatMinorMoney } from "@ewatrade/utils/currency"
 import { z } from "zod"
@@ -24,6 +28,16 @@ const snapshot = z.object({
   conversation: z.object({ id: z.string(), status: z.string() }).nullable(),
   currencyCode: z.string(),
   countryCode: z.string().optional(),
+  areas: z
+    .array(
+      z.object({
+        area: z.enum(SETUP_AREAS),
+        label: z.string(),
+        status: z.enum(["OPEN", "STARTED", "DONE", "SKIPPED"]),
+        records: z.number().int().min(0),
+      }),
+    )
+    .optional(),
   messages: z.array(
     z.object({
       id: z.string(),
@@ -40,6 +54,9 @@ const snapshot = z.object({
 })
 export type SetupSnapshot = z.infer<typeof snapshot>
 export type SetupEntity = z.infer<typeof entity>
+export function setupAreas(data: SetupSnapshot | null) {
+  return data?.areas ?? summarizeSetupAreas(null, data?.draft?.entities ?? [])
+}
 export function readSetupSnapshot(value: unknown) {
   const parsed = snapshot.safeParse(value)
   return parsed.success ? parsed.data : null
@@ -151,8 +168,10 @@ export function setupSource(e: SetupEntity) {
 export function setupRecordRoute(e: SetupEntity) {
   if (e.state !== "COMMITTED" || !e.committedRecordId) return null
   const id = encodeURIComponent(e.committedRecordId)
-  if (["PRODUCT", "SERVICE"].includes(e.kind)) return `/catalog-item/${id}`
+  if (["PRODUCT", "SERVICE", "INTERNAL_USE"].includes(e.kind))
+    return `/catalog-item/${id}`
   if (e.kind === "CUSTOMER") return `/customer-ledger/${id}`
+  if (e.kind === "MONEY_ACCOUNT") return `/finance-account/${id}`
   return null
 }
 export function setupPlainText(parts: unknown[]) {

@@ -89,7 +89,12 @@ export function SetupRecordCard({
               variant="outline"
               onPress={() => router.push(receipt as never)}
             >
-              Open in {entity.kind === "CUSTOMER" ? "Customers" : "Catalog"}
+              Open in{" "}
+              {entity.kind === "CUSTOMER"
+                ? "Customers"
+                : entity.kind === "MONEY_ACCOUNT"
+                  ? "Finance"
+                  : "Catalog"}
             </ActionButton>
           ) : entity.state === "SKIPPED" ? (
             <ActionButton

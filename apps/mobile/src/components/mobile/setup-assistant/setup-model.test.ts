@@ -2,6 +2,8 @@ import { expect, test } from "bun:test"
 import {
   readSetupCache,
   readSetupRun,
+  readSetupSnapshot,
+  setupAreas,
   setupCommitKeys,
   setupCounts,
   setupPlainText,
@@ -32,6 +34,37 @@ test("only explicitly confirmed records and unresolved committed balances may be
   ]
   expect(setupCommitKeys(es)).toEqual(["eggs", "balance"])
   expect(setupCounts(es)).toEqual({ open: 2, confirmed: 1, check: 1, added: 1 })
+})
+
+test("guided progress retains server marks and old snapshots derive staged counts only", () => {
+  const data = readSetupSnapshot({
+    enabled: true,
+    conversation: null,
+    currencyCode: "NGN",
+    messages: [],
+    draft: { revision: 1, entities: [entity] },
+    areas: [{ area: "sell", label: "Sell", status: "DONE", records: 1 }],
+  })
+  expect(setupAreas(data)[0]?.status).toBe("DONE")
+  expect(
+    setupAreas(data ? { ...data, areas: undefined } : null)[0],
+  ).toMatchObject({ status: "STARTED", records: 1 })
+  expect(setupAreas(null).every((area) => area.status === "OPEN")).toBe(true)
+})
+
+test("cash and bank receipts open only the actual saved Finance account", () => {
+  const money = {
+    ...entity,
+    kind: "MONEY_ACCOUNT",
+    committedRecordId: "account/123",
+  }
+  expect(setupRecordRoute(money)).toBeNull()
+  expect(setupRecordRoute({ ...money, state: "COMMITTED" })).toBe(
+    "/finance-account/account%2F123",
+  )
+  expect(
+    setupRecordRoute({ ...money, state: "COMMITTED", committedRecordId: null }),
+  ).toBeNull()
 })
 test("offline setup cache refuses another scope, stale snapshots and malformed data", () => {
   const data = {
