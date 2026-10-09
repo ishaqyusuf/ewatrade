@@ -1,12 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { EmptyState } from "@/components/mobile/empty-state"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
-import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { SyncReliabilityToggle } from "@/components/mobile/sync-flow"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useColorScheme } from "@/hooks/use-color"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import {
   canManageMobileOperations,
   normalizeMobileRole,
@@ -24,9 +25,9 @@ import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Constants from "expo-constants"
 import { useEffect } from "react"
-import { Platform, ScrollView, View } from "react-native"
+import { Text as NativeText, Platform, ScrollView, View } from "react-native"
 import { HeroCard } from "./green-till/hero-card"
-import { ToggleRow } from "./green-till/kit"
+import { ListCard, SectionHeader, StatusPill } from "./green-till/kit"
 import {
   queueCreatedAt,
   queueItemTitle,
@@ -54,6 +55,8 @@ export function SyncStatusContent({
   const { profile } = useAuthContext()
   const canManageReviews = canManageMobileOperations(profile?.role)
   const state = useOfflineCommandStore()
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
   const commands = activeBusinessOfflineCommands(
     state.commands,
     profile?.businessId,
@@ -241,21 +244,21 @@ export function SyncStatusContent({
       refreshControl={<QueryRefreshControl />}
     >
       <HeroCard
-        label="Sync & offline"
+        label="This phone"
         title={
           !state.hasHydrated
-            ? "Checking this device"
+            ? "Checking this phone"
             : isOfflineMode
               ? "Working offline"
               : reviewing.length + staged.length
                 ? `${reviewing.length + staged.length} need review`
                 : pending.length
                   ? `${pending.length} waiting to sync`
-                  : "All synced on this device"
+                  : "All synced"
         }
         sub={presentation.statusMessage}
         pill={{
-          label: isOfflineMode ? "Offline" : "This device",
+          label: isOfflineMode ? "Offline" : "Online",
           tone: isOfflineMode ? "offline" : "synced",
         }}
         stats={
@@ -272,33 +275,58 @@ export function SyncStatusContent({
         }
       >
         {!state.hasHydrated ? <Skeleton className="mt-4 h-12 w-full" /> : null}
+        <View
+          style={{
+            alignItems: "center",
+            borderTopColor: palette.heroLine,
+            borderTopWidth: 1,
+            flexDirection: "row",
+            gap: 12,
+            marginTop: 16,
+            paddingTop: 14,
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <NativeText
+              style={{
+                color: palette.heroForeground,
+                fontSize: 14,
+                fontWeight: "700",
+              }}
+            >
+              Work offline
+            </NativeText>
+            <NativeText style={{ color: palette.heroMuted, fontSize: 12.5 }}>
+              {!offlineAllowed
+                ? "Offline work is off for this business"
+                : "New sales stay on this phone until you reconnect"}
+            </NativeText>
+          </View>
+          <Switch
+            accessibilityLabel="Work offline"
+            checked={isOfflineMode}
+            disabled={(!offlineAllowed && !isOfflineMode) || operationPending}
+            onCheckedChange={(value) => {
+              if (
+                profile?.businessId &&
+                !operationPending &&
+                (offlineAllowed || !value)
+              )
+                setOfflineMode(profile.businessId, value)
+            }}
+          />
+        </View>
       </HeroCard>
-      <ToggleRow
-        title="Work offline"
-        sub={
-          !offlineAllowed
-            ? "Offline work is disabled for this business."
-            : "New sales stay on this device until you reconnect."
-        }
-        value={isOfflineMode}
-        disabled={(!offlineAllowed && !isOfflineMode) || operationPending}
-        onValueChange={(value) => {
-          if (
-            profile?.businessId &&
-            !operationPending &&
-            (offlineAllowed || !value)
-          )
-            setOfflineMode(profile.businessId, value)
-        }}
-      />
-      <ActionButton
-        disabled={!canReplay}
-        isLoading={operationPending}
-        loadingLabel="Syncing"
-        onPress={replayNow}
-      >
-        {presentation.syncLabel}
-      </ActionButton>
+      {syncCount > 0 || operationPending ? (
+        <ActionButton
+          disabled={!canReplay}
+          isLoading={operationPending}
+          loadingLabel="Syncing"
+          onPress={replayNow}
+        >
+          {presentation.syncLabel}
+        </ActionButton>
+      ) : null}
       {settings.isError ? (
         <StatusBanner
           actionLabel="Try again"
@@ -341,7 +369,7 @@ export function SyncStatusContent({
       {canManageReviews ? (
         (conflicts.data?.length ?? 0) > 0 ? (
           <View>
-            <SectionLabel>Conflict review</SectionLabel>
+            <SectionHeader title="Needs review" />
             <View className="border-y border-border">
               {(conflicts.data ?? []).map((conflict, index, rows) => (
                 <View
@@ -419,45 +447,41 @@ export function SyncStatusContent({
         ) : null
       ) : null}
 
-      {onComplete ? (
+      {onComplete && _presentation === "sheet" ? (
         <ActionButton onPress={onComplete} variant="outline">
           Done
         </ActionButton>
       ) : null}
       <View>
-        <SectionLabel>Activity</SectionLabel>
+        <SectionHeader title="On this phone" />
         {commands.length === 0 ? (
-          <EmptyState
-            className="border-y border-border px-0 py-4"
-            icon="Wind"
-            message={presentation.activityMessage}
-            title={presentation.activityTitle}
-            variant="flat"
-          />
+          <View className="rounded-[20px] bg-card px-4 py-3.5 shadow-sm">
+            <Text className="text-sm font-bold text-foreground">
+              {presentation.activityTitle}
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              {presentation.activityMessage}
+            </Text>
+          </View>
         ) : (
-          <View className="border-y border-border">
+          <ListCard>
             {commands
               .slice()
               .reverse()
-              .map((command, index) => (
-                <View
-                  className={`gap-2 py-4 ${
-                    index < commands.length - 1 ? "border-b border-border" : ""
-                  }`}
-                  key={command.clientCommandId}
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="min-w-0 flex-1 font-bold text-foreground">
+              .map((command) => (
+                <View className="gap-1 py-3" key={command.clientCommandId}>
+                  <View className="flex-row items-start justify-between gap-3">
+                    <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
                       {queueItemTitle(command.payload)}
                     </Text>
-                    <StatusBadge
+                    <StatusPill
                       label={queueStatusLabel(command.localStatus)}
                       tone={
                         command.localStatus === "applied"
-                          ? "success"
+                          ? "ok"
                           : command.localStatus === "review" ||
                               command.localStatus === "approval"
-                            ? "warning"
+                            ? "warn"
                             : "muted"
                       }
                     />
@@ -472,14 +496,14 @@ export function SyncStatusContent({
                   ) : null}
                 </View>
               ))}
-          </View>
+          </ListCard>
         )}
       </View>
 
       {canManageSettings ? (
         <View>
-          <SectionLabel>Business policy</SectionLabel>
-          <View className="border-t border-border">
+          <SectionHeader title="Business policy" />
+          <View className="overflow-hidden rounded-[20px] bg-card shadow-sm">
             {!settings.data ? (
               <Text className="py-4 text-muted-foreground">
                 Policy unavailable. Reconnect to load settings.
@@ -488,7 +512,7 @@ export function SyncStatusContent({
               <>
                 <SyncReliabilityToggle
                   active={policyEnabled}
-                  className="rounded-2xl bg-card px-4"
+                  className="px-4"
                   description="Orders and checkout only."
                   disabled={!canChangePolicy}
                   label="Allow staff to work offline"
@@ -503,8 +527,8 @@ export function SyncStatusContent({
                 />
                 <SyncReliabilityToggle
                   active={settings.data?.approvalRequired ?? false}
-                  className="rounded-2xl bg-card px-4"
-                  description="Review staff Orders before they are applied."
+                  className="border-t border-border px-4"
+                  description="Review staff orders before they are applied."
                   disabled={!canChangePolicy || !policyEnabled}
                   label="Require staff record approval"
                   onPress={() => {
@@ -523,26 +547,5 @@ export function SyncStatusContent({
         </View>
       ) : null}
     </ScrollView>
-  )
-}
-
-function Divider() {
-  return <View className="h-10 w-px bg-border" />
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Text className="mb-2 mt-5 text-[10px] font-extrabold uppercase tracking-[1.4px] text-muted-foreground">
-      {children}
-    </Text>
-  )
-}
-
-function Summary({ label, value }: { label: string; value: number }) {
-  return (
-    <View className="min-w-0 flex-1 items-center">
-      <Text className="text-xl font-extrabold text-foreground">{value}</Text>
-      <Text className="text-xs text-muted-foreground">{label}</Text>
-    </View>
   )
 }
