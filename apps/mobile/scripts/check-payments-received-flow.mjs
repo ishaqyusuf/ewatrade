@@ -10,8 +10,8 @@ const contracts = [
       "currencyTotals",
       "PAYMENTS_RECEIVED_COPY.error",
       "buildPaymentsReceivedPresentation",
-      'variant="flat"',
-      "searchVisible={presentation.showSearch}",
+      "HeroCard",
+      "editable={!offline}",
     ],
     reason:
       "the mobile directory must keep bounded pagination, safe recovery, compact empty presentation, and conditional search",

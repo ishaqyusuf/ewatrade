@@ -12,7 +12,7 @@ const contracts = [
       "trpc.serviceReporting.summary",
       "trpc.orders.reportSummary",
       "buildReportsPresentation",
-      "Store snapshot",
+      "Order value · all time",
       "Order value",
       "Operations",
       "Reports incomplete",
