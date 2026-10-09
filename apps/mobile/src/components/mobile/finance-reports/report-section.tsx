@@ -9,7 +9,7 @@ export function ReportSection({
   children,
 }: { title: string; children: ReactNode }) {
   return (
-    <View className="gap-3 border-t border-border pt-5">
+    <View className="gap-3 rounded-[20px] bg-card p-4">
       <Text className="text-lg font-bold">{title}</Text>
       {children}
     </View>
@@ -34,13 +34,13 @@ export function ReportAmount({
       haptic
       accessibilityRole="button"
       accessibilityLabel={`View ${label} account entries`}
-      className="min-h-12 flex-row flex-wrap items-center gap-3 border-b border-border py-3"
+      className="min-h-12 flex-row flex-wrap items-center gap-3 border-b border-dotted border-border py-3"
       onPress={onPress}
     >
       {content}
     </Pressable>
   ) : (
-    <View className="flex-row flex-wrap gap-3 border-b border-border py-3">
+    <View className="flex-row flex-wrap gap-3 border-b border-dotted border-border py-3">
       {content}
     </View>
   )

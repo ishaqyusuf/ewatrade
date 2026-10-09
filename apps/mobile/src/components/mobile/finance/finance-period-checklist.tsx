@@ -3,6 +3,7 @@ import { Text } from "@/components/ui/text"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { View } from "react-native"
+import { SetupSteps } from "../green-till/kit"
 
 type Checklist = RouterOutputs["finance"]["periodCloseChecklist"]
 
@@ -51,33 +52,22 @@ export function FinancePeriodChecklist({
         message={`Date-lock eligible: ${checklist.dateLockEligible ? "yes" : "no"}. Operationally reconciled: no. Report coverage: ${checklist.completeness.toLowerCase().replaceAll("_", " ")}.`}
         tone={canProceed ? "warning" : "destructive"}
       />
-      <View className="gap-3">
-        {checklist.checks.map((check) => (
-          <View key={check.id} className="gap-1 border-b border-border pb-3">
-            <View className="flex-row items-start justify-between gap-2">
-              <Text className="min-w-0 flex-1 font-semibold">
-                {check.label}
-              </Text>
-              <Text
-                className={
-                  check.status === "PASS"
-                    ? "text-xs font-bold text-success"
-                    : check.status === "BLOCKED"
-                      ? "text-xs font-bold text-destructive"
-                      : "text-xs font-bold text-warn"
-                }
-              >
-                {check.status.replaceAll("_", " ")}
-              </Text>
-            </View>
-            <Text className="text-sm text-muted-foreground">
-              {check.id === "POSTED_TRIAL_BALANCE"
-                ? `Posted debits ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} · credits ${formatFinanceMoney(checklist.trialBalance.creditMinor, checklist.currencyCode)}.`
-                : check.explanation}
-            </Text>
-          </View>
-        ))}
-      </View>
+      <SetupSteps
+        steps={checklist.checks.map((check) => ({
+          key: check.id,
+          title: check.label,
+          state:
+            check.status === "PASS"
+              ? "done"
+              : check.status === "BLOCKED"
+                ? "locked"
+                : "now",
+          sub:
+            check.id === "POSTED_TRIAL_BALANCE"
+              ? `Posted debits ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} · credits ${formatFinanceMoney(checklist.trialBalance.creditMinor, checklist.currencyCode)}.`
+              : check.explanation,
+        }))}
+      />
       <View className="gap-2">
         <Text className="font-semibold">Cash at the exact cutoff</Text>
         {checklist.cash.length ? (

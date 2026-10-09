@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -10,10 +11,12 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { FlatList, View } from "react-native"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
 import {
   FinanceExpenseCorrectionForm,
   FinanceExpensePaymentForm,
 } from "./finance-expense-forms"
+import { FinanceDetailScaffold, HistoryTimeline } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -28,7 +31,7 @@ export function FinanceExpenseScreen({ billId }: { billId: string }) {
   if (!billId)
     return <StatusBanner message="Choose an expense from spending records." />
   return (
-    <FinanceWorkspaceGate>
+    <FinanceWorkspaceGate requireOnline>
       {(workspace) => (
         <ExpenseWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}:${billId}`}
@@ -56,7 +59,7 @@ function ExpenseWorkspace({
   const detail = useQuery(
     trpc.finance.bill.queryOptions(
       { bookId: book.id, billId },
-      { retry: false },
+      { retry: false, enabled: !offline },
     ),
   )
   const [action, setAction] = useState<Action | null>(null)
@@ -67,16 +70,33 @@ function ExpenseWorkspace({
       onRejected={() => setAction(null)}
     />
   )
+  if (offline || (detail.isFetching && detail.data))
+    return (
+      <View className="gap-4 px-[18px]">
+        {feedback}
+        <FinanceDetailScaffold
+          title="Financial record"
+          label="Current record"
+          loading={!offline}
+          sub="Reconnect and refresh to view this record."
+        />
+        <StatusBanner
+          tone="warning"
+          title={offline ? "Reconnect to review" : "Refreshing original record"}
+          message="Balances, history and actions require a fresh online read."
+        />
+      </View>
+    )
   if (detail.isPending)
     return (
-      <View className="gap-4 px-4">
+      <View className="gap-4 px-[18px]">
         {feedback}
-        <Text>Loading expense…</Text>
+        <Skeleton className="h-48 rounded-[22px]" />
       </View>
     )
   if (detail.isError)
     return (
-      <View className="gap-4 px-4">
+      <View className="gap-4 px-[18px]">
         {feedback}
         <StatusBanner
           title="Expense unavailable"
@@ -109,7 +129,7 @@ function ExpenseWorkspace({
       : undefined
     if (action.paymentId && !payment)
       return (
-        <View className="gap-4 px-4">
+        <View className="gap-4 px-[18px]">
           {feedback}
           <StatusBanner
             message="The selected payment is unavailable. Refresh its expense history before continuing."
@@ -136,7 +156,7 @@ function ExpenseWorkspace({
   const activePayments = bill.payments.some((payment) => !payment.reversedAt)
   return (
     <FlatList
-      contentContainerClassName="px-4 pb-12"
+      contentContainerClassName="px-[18px] pb-12"
       data={bill.payments}
       keyExtractor={(payment) => payment.id}
       refreshing={detail.isRefetching}
@@ -144,18 +164,32 @@ function ExpenseWorkspace({
       ListHeaderComponent={
         <View className="gap-4 pb-4">
           {feedback}
-          <Text className="text-xl font-bold">{bill.description}</Text>
-          <Text className="text-sm text-muted-foreground">
-            {bill.payeeName} ·{" "}
-            {new Date(bill.incurredAt).toISOString().slice(0, 10)} UTC
-          </Text>
-          <View className="gap-2 border-y border-border py-4">
-            <Text>Original expense: {money(bill.totalMinor)}</Text>
-            <Text>Paid: {money(bill.paidMinor)}</Text>
-            <Text className="text-xl font-bold">
-              Still owed: {money(bill.outstandingMinor)}
-            </Text>
-          </View>
+          <FinanceDetailScaffold
+            title={bill.description}
+            label="Still owed"
+            amount={money(bill.outstandingMinor)}
+            sub={`${bill.payeeName} · ${financeDisplayDate(bill.incurredAt)} UTC`}
+            stats={[
+              { label: "Original expense", value: money(bill.totalMinor) },
+              { label: "Paid", value: money(bill.paidMinor) },
+            ]}
+          />
+          <HistoryTimeline
+            items={[
+              {
+                id: bill.id,
+                title: "Original expense retained",
+                detail: `${financeDisplayDate(bill.incurredAt)} UTC`,
+              },
+              ...bill.payments.map((payment) => ({
+                id: payment.id,
+                title: payment.reversedAt
+                  ? "Payment reversed · original retained"
+                  : "Payment recorded",
+                detail: money(payment.amountMinor),
+              })),
+            ]}
+          />
           {bill.voidedAt ? (
             <StatusBanner
               title="Cancelled expense"

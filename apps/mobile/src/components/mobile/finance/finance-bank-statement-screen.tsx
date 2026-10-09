@@ -12,6 +12,7 @@ import {
   type NativeBankStatementDetail,
   validateNativeBankStatementDetail,
 } from "./finance-bank-read-state"
+import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -118,7 +119,7 @@ function StatementWorkspace({
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
     <FlatList
-      className="flex-1 px-4"
+      className="flex-1 px-[18px]"
       data={items}
       keyExtractor={(item) => `${item.kind}:${item.row.id}`}
       refreshing={query.isFetching}
@@ -157,14 +158,22 @@ function StatementWorkspace({
           </ActionButton>
           {data ? (
             <>
-              <Text className="text-xl font-bold">
-                {data.statement.reference}
-              </Text>
-              <Text>
-                {book.accounts.find((a) => a.id === accountId)?.name} ·{" "}
-                {data.statement.startsAt.toISOString().slice(0, 10)} –{" "}
-                {data.statement.endsAt.toISOString().slice(0, 10)} UTC
-              </Text>
+              <FinanceDetailScaffold
+                title={data.statement.reference}
+                label="Closing difference"
+                amount={money(data.closingDifferenceMinor)}
+                sub={`${book.accounts.find((a) => a.id === accountId)?.name ?? "Bank account"} · original evidence`}
+                stats={[
+                  {
+                    label: "Bank closing",
+                    value: money(data.statement.closingBalanceMinor),
+                  },
+                  {
+                    label: "Posted closing",
+                    value: money(data.postedClosingMinor),
+                  },
+                ]}
+              />
               <View className="gap-3 border-y border-border py-4">
                 {[
                   ["Bank opening", data.statement.openingBalanceMinor],

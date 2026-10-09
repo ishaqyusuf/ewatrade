@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import {
   type FinanceMoneyKind,
@@ -14,8 +15,11 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRef, useState } from "react"
 import { View } from "react-native"
+import { FinanceBankDateField } from "./finance-bank-date-field"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
 import { FinanceFormBody } from "./finance-form-body"
+import { FinanceDetailScaffold, HistoryTimeline } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -29,7 +33,7 @@ type Review = {
 }
 export function FinanceMovementScreen({ entryId }: { entryId: string }) {
   return (
-    <FinanceWorkspaceGate>
+    <FinanceWorkspaceGate requireOnline>
       {(workspace) => (
         <MovementWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}:${entryId}`}
@@ -138,7 +142,7 @@ function MovementWorkspace({
         onRecorded={done}
         onRejected={done}
       />
-      {movement.isPending ? <Text>Loading money movement…</Text> : null}
+      {movement.isPending ? <Skeleton className="h-48 rounded-[22px]" /> : null}
       {movement.isError && !review ? (
         <StatusBanner
           title="Movement unavailable"
@@ -150,21 +154,39 @@ function MovementWorkspace({
       ) : null}
       {original && (!movement.isError || review) ? (
         <>
-          <Text className="text-xl font-bold">
-            {review
-              ? "Review correction"
-              : (financeMoneyKinds[original.sourceKind as FinanceMoneyKind] ??
-                "Money movement")}
-          </Text>
-          <Text className="text-base font-semibold">
-            {original.description}
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            Original date:{" "}
-            {new Date(original.effectiveAt).toISOString().slice(0, 10)} UTC ·
-            Recorded {new Date(original.recordedAt).toISOString().slice(0, 10)}{" "}
-            UTC
-          </Text>
+          <FinanceDetailScaffold
+            title={
+              review
+                ? "Review correction"
+                : (financeMoneyKinds[original.sourceKind as FinanceMoneyKind] ??
+                  "Money movement")
+            }
+            label="Original recorded amount"
+            amount={money(
+              original.lines
+                .reduce((sum, line) => sum + BigInt(line.debitMinor), 0n)
+                .toString(),
+            )}
+            sub={original.description}
+          />
+          <HistoryTimeline
+            items={[
+              {
+                id: "original",
+                title: "Original movement retained",
+                detail: `Effective ${financeDisplayDate(original.effectiveAt)} UTC · recorded ${financeDisplayDate(original.recordedAt, true)} UTC`,
+              },
+              ...(original.reversal
+                ? [
+                    {
+                      id: "reversal",
+                      title: "Reversed · original retained",
+                      detail: `${original.reversal.description} · ${financeDisplayDate(original.reversal.effectiveAt)} UTC`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
           <View className="gap-4 border-y border-border py-4">
             {original.lines.map((line, index) => (
               <View key={`${line.accountId}:${index}`} className="gap-1">
@@ -228,11 +250,15 @@ function MovementWorkspace({
                 maxLength={400}
                 multiline
               />
-              <FormField
-                label="Correction date (YYYY-MM-DD, UTC)"
+              <FinanceBankDateField
+                label="Correction date"
                 value={date}
-                onChangeText={setDate}
-                maxLength={10}
+                onChange={setDate}
+                minimum={new Date(original.effectiveAt)
+                  .toISOString()
+                  .slice(0, 10)}
+                maximum={new Date().toISOString().slice(0, 10)}
+                disabled={!canSubmit}
               />
               <ActionButton
                 disabled={!canSubmit}

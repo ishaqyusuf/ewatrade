@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -11,6 +12,8 @@ import { useState } from "react"
 import { ScrollView, View } from "react-native"
 import { FinanceCashActionForm } from "./finance-cash-action-form"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
+import { FinanceDetailScaffold, HistoryTimeline } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -22,7 +25,7 @@ export function FinanceCountScreen({ countId }: { countId: string }) {
   if (!countId)
     return <StatusBanner message="Choose a cash count from its history." />
   return (
-    <FinanceWorkspaceGate>
+    <FinanceWorkspaceGate requireOnline>
       {(workspace) => (
         <CountWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}:${countId}`}
@@ -49,7 +52,7 @@ function CountWorkspace({
   const detail = useQuery(
     trpc.finance.cashCount.queryOptions(
       { bookId: book.id, countId },
-      { retry: false },
+      { retry: false, enabled: !offline },
     ),
   )
   const [action, setAction] = useState<"ADJUST" | "REVERSE" | null>(null)
@@ -66,6 +69,23 @@ function CountWorkspace({
       }}
     />
   )
+  if (offline || (detail.isFetching && detail.data))
+    return (
+      <View className="gap-4 px-[18px]">
+        {feedback}
+        <FinanceDetailScaffold
+          title="Financial record"
+          label="Current record"
+          loading={!offline}
+          sub="Reconnect and refresh to view this record."
+        />
+        <StatusBanner
+          tone="warning"
+          title={offline ? "Reconnect to review" : "Refreshing original record"}
+          message="Balances, history and actions require a fresh online read."
+        />
+      </View>
+    )
   const canAct = command.ready && !command.pending && !offline
   if (action && detail.data)
     return (
@@ -82,7 +102,7 @@ function CountWorkspace({
     )
   if (detail.isPending || detail.isError)
     return (
-      <View className="gap-4 px-4">
+      <View className="gap-4 px-[18px]">
         {feedback}
         {detail.isError ? (
           <StatusBanner
@@ -93,7 +113,7 @@ function CountWorkspace({
             onActionPress={() => void detail.refetch()}
           />
         ) : (
-          <Text>Loading cash count…</Text>
+          <Skeleton className="h-48 rounded-[22px]" />
         )}
       </View>
     )
@@ -109,24 +129,48 @@ function CountWorkspace({
     if (result === "RECORDED" || result === "SUPERSEDED") done()
   }
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-12">
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="gap-4 px-[18px] pb-12"
+    >
       {feedback}
-      <Text className="text-xl font-bold">{count.reference}</Text>
-      <Text className="text-sm text-muted-foreground">
-        {count.accountName} · Count time {new Date(count.asOf).toISOString()}{" "}
-        UTC
-      </Text>
-      <View className="gap-3 border-y border-border py-4">
-        <Text>Expected at count: {money(count.expectedBalanceMinor)}</Text>
-        <Text>Observed: {money(count.observedBalanceMinor)}</Text>
-        <Text className="text-xl font-bold">
-          Difference at count: {money(count.differenceMinor)}
-        </Text>
-      </View>
-      <Text className="text-sm text-muted-foreground">
-        These are the original count facts, retained after corrections. Recorded{" "}
-        {new Date(count.recordedAt).toISOString()} UTC.
-      </Text>
+      <FinanceDetailScaffold
+        title={count.reference}
+        label="Difference at count"
+        amount={money(count.differenceMinor)}
+        sub={`${count.accountName} · ${financeDisplayDate(count.asOf, true)} UTC`}
+        stats={[
+          { label: "Expected", value: money(count.expectedBalanceMinor) },
+          { label: "Observed", value: money(count.observedBalanceMinor) },
+        ]}
+      />
+      <HistoryTimeline
+        items={[
+          {
+            id: "count",
+            title: "Original count retained",
+            detail: `Recorded ${financeDisplayDate(count.recordedAt, true)} UTC`,
+          },
+          ...(count.adjustment
+            ? [
+                {
+                  id: "adjustment",
+                  title: "Adjustment recorded",
+                  detail: `${count.adjustment.description} · ${financeDisplayDate(count.adjustment.recordedAt, true)} UTC`,
+                },
+              ]
+            : []),
+          ...(count.adjustment?.reversal
+            ? [
+                {
+                  id: "reversal",
+                  title: "Adjustment reversed · original retained",
+                  detail: `${financeDisplayDate(count.adjustment.reversal.recordedAt, true)} UTC`,
+                },
+              ]
+            : []),
+        ]}
+      />
       {count.reviewRequired ? (
         <StatusBanner
           title="Earlier cash history changed"
@@ -134,26 +178,7 @@ function CountWorkspace({
           tone="warning"
         />
       ) : null}
-      {count.adjustment ? (
-        <View className="gap-3 border-b border-border py-4">
-          <Text className="font-bold">
-            {count.adjustment.reversal
-              ? "Adjustment reversed · Original retained"
-              : "Adjustment recorded · Original count retained"}
-          </Text>
-          <Text>{count.adjustment.description}</Text>
-          <Text className="text-sm text-muted-foreground">
-            Adjustment recorded{" "}
-            {new Date(count.adjustment.recordedAt).toISOString()} UTC
-          </Text>
-          {count.adjustment.reversal ? (
-            <Text className="text-sm text-muted-foreground">
-              Reversal recorded{" "}
-              {new Date(count.adjustment.reversal.recordedAt).toISOString()} UTC
-            </Text>
-          ) : null}
-        </View>
-      ) : BigInt(count.differenceMinor) === 0n ? (
+      {!count.adjustment && BigInt(count.differenceMinor) === 0n ? (
         <StatusBanner
           title="Count matched"
           message="The physical observation matched the recorded balance at count. No adjustment is needed."
