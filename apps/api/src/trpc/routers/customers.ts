@@ -3,9 +3,11 @@ import {
   CustomerDirectoryError,
   countCustomers,
   createCustomer,
+  customerRevision,
   getCustomerById,
   listCustomersPage,
   lookupCommercialOrders,
+  updateCustomerInTransaction,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 
@@ -13,6 +15,7 @@ import {
   customerCreateSchema,
   customerGetByIdSchema,
   customerListPageSchema,
+  customerUpdateSchema,
 } from "../../schemas/customers"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import { orderScope } from "../order-scope"
@@ -43,6 +46,7 @@ export const customersRouter = createTRPCRouter({
         })
       return {
         ...customer,
+        revision: customerRevision(customer),
         orders: await lookupCommercialOrders(ctx.db, {
           ...(await orderScope(ctx, {
             storeId: ctx.tenantContext.activeStore?.id,
@@ -75,6 +79,35 @@ export const customersRouter = createTRPCRouter({
             message: error.message,
           })
         }
+        throw error
+      }
+    }),
+
+  update: protectedProcedure
+    .input(customerUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanUseCustomers(ctx.tenantContext.membership.role)
+      const { customerId, expectedRevision, ...fields } = input
+      try {
+        return await ctx.db.$transaction((tx) =>
+          updateCustomerInTransaction(tx, {
+            ...fields,
+            customerId,
+            expectedRevision,
+            tenantId: ctx.tenantContext.tenant.id,
+          }),
+        )
+      } catch (error) {
+        if (error instanceof CustomerDirectoryError)
+          throw new TRPCError({
+            code:
+              error.code === "CUSTOMER_NOT_FOUND"
+                ? "NOT_FOUND"
+                : error.code === "NO_CUSTOMER_CHANGES"
+                  ? "BAD_REQUEST"
+                  : "CONFLICT",
+            message: error.message,
+          })
         throw error
       }
     }),

@@ -3,7 +3,11 @@ import type { DbClient } from "./types"
 
 export class CustomerDirectoryError extends Error {
   constructor(
-    readonly code: "DUPLICATE_CUSTOMER",
+    readonly code:
+      | "DUPLICATE_CUSTOMER"
+      | "CUSTOMER_NOT_FOUND"
+      | "STALE_CUSTOMER"
+      | "NO_CUSTOMER_CHANGES",
     message: string,
   ) {
     super(message)
@@ -89,6 +93,123 @@ export async function createCustomerInTransaction(
     },
     select: customerSelect,
   })
+}
+
+/** Optimistic-concurrency revision for an editable customer record. */
+export function customerRevision(customer: { updatedAt: Date }) {
+  return customer.updatedAt.toISOString()
+}
+
+export type CustomerFieldChange = {
+  field: "name" | "phone" | "email"
+  before: string | null
+  after: string | null
+}
+
+/**
+ * Edit directory details only. Orders keep their own saved customer name, so
+ * history is never rewritten. `null` clears an optional field; an omitted
+ * field is unchanged. Rejects a stale revision, a duplicate phone or email,
+ * and a request that changes nothing.
+ */
+export async function updateCustomerInTransaction(
+  db: DbClient,
+  input: {
+    customerId: string
+    tenantId: string
+    expectedRevision: string
+    name?: string
+    phone?: string | null
+    email?: string | null
+  },
+) {
+  const current = await db.customer.findFirst({
+    where: { id: input.customerId, tenantId: input.tenantId },
+    select: customerSelect,
+  })
+  if (!current)
+    throw new CustomerDirectoryError(
+      "CUSTOMER_NOT_FOUND",
+      "This customer is unavailable.",
+    )
+  if (customerRevision(current) !== input.expectedRevision)
+    throw new CustomerDirectoryError(
+      "STALE_CUSTOMER",
+      "This customer changed. Review the latest details and try again.",
+    )
+  const next = {
+    name: input.name === undefined ? current.name : input.name.trim(),
+    phone:
+      input.phone === undefined ? current.phone : input.phone?.trim() || null,
+    email:
+      input.email === undefined ? current.email : input.email?.trim() || null,
+  }
+  const changes = (["name", "phone", "email"] as const).flatMap((field) =>
+    (current[field] ?? null) === next[field]
+      ? []
+      : [{ field, before: current[field] ?? null, after: next[field] }],
+  ) satisfies CustomerFieldChange[]
+  if (!next.name)
+    throw new CustomerDirectoryError(
+      "NO_CUSTOMER_CHANGES",
+      "A customer needs a name.",
+    )
+  if (!changes.length)
+    throw new CustomerDirectoryError(
+      "NO_CUSTOMER_CHANGES",
+      "These details already match the customer.",
+    )
+  const normalizedEmail = normalizeEmail(next.email ?? undefined)
+  const normalizedPhone = normalizePhone(next.phone ?? undefined)
+  const duplicateConditions: Prisma.CustomerWhereInput[] = []
+  if (normalizedEmail) duplicateConditions.push({ normalizedEmail })
+  if (normalizedPhone) duplicateConditions.push({ normalizedPhone })
+  if (
+    duplicateConditions.length > 0 &&
+    (await db.customer.findFirst({
+      select: { id: true },
+      where: {
+        OR: duplicateConditions,
+        tenantId: input.tenantId,
+        id: { not: current.id },
+      },
+    }))
+  )
+    throw new CustomerDirectoryError(
+      "DUPLICATE_CUSTOMER",
+      "Another customer already uses this phone number or email address.",
+    )
+  try {
+    // The revision is rechecked in the write so concurrent edits cannot both win.
+    const updated = await db.customer.updateMany({
+      where: {
+        id: current.id,
+        tenantId: input.tenantId,
+        updatedAt: current.updatedAt,
+      },
+      data: { ...next, normalizedEmail, normalizedPhone },
+    })
+    if (updated.count !== 1)
+      throw new CustomerDirectoryError(
+        "STALE_CUSTOMER",
+        "This customer changed. Review the latest details and try again.",
+      )
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    )
+      throw new CustomerDirectoryError(
+        "DUPLICATE_CUSTOMER",
+        "Another customer already uses this phone number or email address.",
+      )
+    throw error
+  }
+  const customer = await db.customer.findFirstOrThrow({
+    where: { id: current.id, tenantId: input.tenantId },
+    select: customerSelect,
+  })
+  return { customer, changes }
 }
 
 export async function ensureOrderCustomerInTransaction(
