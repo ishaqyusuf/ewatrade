@@ -1,3 +1,4 @@
+import { rankBySearch } from "@ewatrade/utils/search-rank"
 import type { CatalogKindFilter, CatalogRow } from "./catalog-presentation"
 
 export type CatalogAttention = NonNullable<CatalogRow["problem"]>
@@ -15,13 +16,16 @@ export function filterCatalogShelf(
     attention?: CatalogAttention | null
   },
 ) {
-  const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
-  return rows.filter((row) => {
+  const scoped = rows.filter((row) => {
     if (kind !== "all" && row.kind !== kind) return false
-    if (attention && row.problem !== attention) return false
-    const text = `${row.name} ${row.kind} ${row.unitName}`.toLocaleLowerCase()
-    return terms.every((term) => text.includes(term))
+    return !attention || row.problem === attention
   })
+  // Deep search: words in any order, best match first.
+  return rankBySearch(scoped, query, (row) => [
+    { text: row.name },
+    { text: row.unitName, weight: 0.8 },
+    { text: row.kind, weight: 0.6 },
+  ])
 }
 
 /**

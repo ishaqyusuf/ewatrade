@@ -150,15 +150,14 @@ export function CatalogItemsContent({
     ),
   )
   const visibleQuery = isOffline ? savedItemsQuery : itemsQuery
-  const loadedRows = useMemo(
-    () =>
-      sortCatalogRows(
-        (visibleQuery.data?.pages.flatMap((page) => page.items) ?? []).map(
-          (item) => mapCatalogItem(item, availabilityQuery.data?.storeId),
-        ),
-      ),
-    [availabilityQuery.data?.storeId, visibleQuery.data?.pages],
-  )
+  // Server search results arrive ranked best first; keep that order.
+  const rankedOnline = !isOffline && Boolean(deferredQuery.trim())
+  const loadedRows = useMemo(() => {
+    const rows = (
+      visibleQuery.data?.pages.flatMap((page) => page.items) ?? []
+    ).map((item) => mapCatalogItem(item, availabilityQuery.data?.storeId))
+    return rankedOnline ? rows : sortCatalogRows(rows)
+  }, [availabilityQuery.data?.storeId, visibleQuery.data?.pages, rankedOnline])
   const rows = filterCatalogShelf(loadedRows, {
     query: isOffline ? deferredQuery : "",
     kind: isOffline ? kindFilter : "all",
