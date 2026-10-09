@@ -51,6 +51,8 @@ export function useGeneralAssistant() {
   const mounted = useRef(true)
   const actionLock = useRef(false)
   const recoveryLock = useRef(false)
+  /** dataUpdatedAt of the last history applied or streamed into the chat. */
+  const appliedAt = useRef(0)
   const attemptedText = useRef<string | null>(null)
   const sessionUnavailable =
     !origin ||
@@ -222,6 +224,8 @@ export function useGeneralAssistant() {
       }
     },
     onFinish: ({ isAbort, isError }) => {
+      // History fetched before this reply finished must not replace it.
+      appliedAt.current = Date.now()
       if (!isAbort && !isError) attemptedText.current = null
       else if (
         mounted.current &&
@@ -233,8 +237,14 @@ export function useGeneralAssistant() {
   })
   const busy = chat.status === "submitted" || chat.status === "streaming"
   useEffect(() => {
-    if (data && !busy && !chat.error) chat.setMessages(data.messages)
-  }, [data, busy, chat.error, chat.setMessages])
+    if (conversationId) appliedAt.current = 0
+  }, [conversationId])
+  const historyAt = offline ? (cached?.savedAt ?? 0) : state.dataUpdatedAt
+  useEffect(() => {
+    if (!data || busy || chat.error || historyAt <= appliedAt.current) return
+    appliedAt.current = historyAt
+    chat.setMessages(data.messages)
+  }, [data, busy, chat.error, chat.setMessages, historyAt])
   useEffect(() => {
     if (server?.activeRunId && !busy) setRunId(server.activeRunId)
   }, [server?.activeRunId, busy])
@@ -257,59 +267,65 @@ export function useGeneralAssistant() {
       void chat.stop()
     }
   }, [chat.stop])
-  const recover = useCallback(async () => {
-    if (!runId || busy || !canWork() || recoveryLock.current) return
-    recoveryLock.current = true
-    try {
-      await refresh()
-      const response = await guardedFetch(
-        `${getBaseUrl()}/api/assistant/general/runs/${encodeURIComponent(runId)}`,
-      )
-      const parsed = runSchema.safeParse(
-        response.ok ? await response.json() : null,
-      )
-      if (!canWork()) return
-      if (
-        parsed.success &&
-        parsed.data.conversationId === conversationId &&
-        parsed.data.status !== "RUNNING"
-      ) {
-        chat.clearError()
+  /** `quiet` checks stay silent while a just-finished run settles. */
+  const recover = useCallback(
+    async ({ quiet = false }: { quiet?: boolean } = {}) => {
+      if (!runId || busy || !canWork() || recoveryLock.current) return
+      recoveryLock.current = true
+      try {
         await refresh()
-        setRunId(null)
-        setNotice(
-          parsed.data.status === "FAILED"
-            ? "Reply interrupted. Your saved drafts are still here. You can send a new message."
-            : null,
+        const response = await guardedFetch(
+          `${getBaseUrl()}/api/assistant/general/runs/${encodeURIComponent(runId)}`,
         )
-      } else
-        setNotice(
-          "Reply is still processing or its status is uncertain. Check again shortly.",
+        const parsed = runSchema.safeParse(
+          response.ok ? await response.json() : null,
         )
-    } catch {
-      if (canWork())
-        setNotice("Reconnect and check reply status before sending again.")
-    } finally {
-      recoveryLock.current = false
-    }
-  }, [
-    runId,
-    busy,
-    canWork,
-    refresh,
-    guardedFetch,
-    conversationId,
-    chat.clearError,
-  ])
+        if (!canWork()) return
+        if (
+          parsed.success &&
+          parsed.data.conversationId === conversationId &&
+          parsed.data.status !== "RUNNING"
+        ) {
+          chat.clearError()
+          await refresh()
+          setRunId(null)
+          setNotice(
+            parsed.data.status === "FAILED"
+              ? "Reply interrupted. Your saved drafts are still here. You can send a new message."
+              : null,
+          )
+        } else if (!quiet)
+          setNotice(
+            "Reply is still processing or its status is uncertain. Check again shortly.",
+          )
+      } catch {
+        if (canWork() && !quiet)
+          setNotice("Reconnect and check reply status before sending again.")
+      } finally {
+        recoveryLock.current = false
+      }
+    },
+    [
+      runId,
+      busy,
+      canWork,
+      refresh,
+      guardedFetch,
+      conversationId,
+      chat.clearError,
+    ],
+  )
   useEffect(() => {
     if (!runId || busy || offline || scopeChanged) return
+    // Settle a finished reply at once; only the last check reports uncertainty.
     let rounds = 0
+    void recover({ quiet: true })
     const timer = setInterval(() => {
       if (++rounds > 6) {
         clearInterval(timer)
         return
       }
-      void recover()
+      void recover({ quiet: rounds < 6 })
     }, 1500)
     return () => clearInterval(timer)
   }, [runId, busy, offline, scopeChanged, recover])

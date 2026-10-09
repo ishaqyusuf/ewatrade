@@ -2,6 +2,7 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import {
   type GeneralProposal,
   generalActionSummary,
@@ -212,7 +213,10 @@ export function AskAssistantLive() {
                   }
                 />
               ) : null}
-              {vm.runId && !vm.busy && !vm.offline ? (
+              {vm.runId &&
+              !vm.busy &&
+              !vm.offline &&
+              (vm.notice || vm.chat.error) ? (
                 <ActionButton
                   variant="outline"
                   disabled={vm.pending}
@@ -272,7 +276,7 @@ export function AskAssistantLive() {
                     />
                   ) : (
                     <ProposalCard
-                      title={proposal.payload.action.replaceAll("_", " ")}
+                      title={capabilityForAction(proposal.payload.action).title}
                       summary={
                         proposal.review?.join("\n") ??
                         generalActionSummary(
