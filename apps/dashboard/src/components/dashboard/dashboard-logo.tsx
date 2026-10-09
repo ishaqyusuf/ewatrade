@@ -6,7 +6,7 @@ export function DashboardLogo() {
     <Link
       href="/"
       aria-label="EwaTrade dashboard home"
-      className="flex size-6 shrink-0 items-center justify-center text-sidebar-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex size-6 shrink-0 items-center justify-center rounded-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <BrandMark className="size-6" />
     </Link>

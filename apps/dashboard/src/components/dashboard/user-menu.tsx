@@ -4,6 +4,7 @@ import { SignOut } from "@/components/dashboard/sign-out"
 import { ThemeSwitch } from "@/components/dashboard/theme-switch"
 import type { SessionUser } from "@/lib/session"
 import { getUserInitials } from "@/lib/user-display"
+import { cn } from "@/utils"
 import {
   Avatar,
   AvatarFallback,
@@ -18,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
 import Link from "next/link"
+import { SHELL_MENU_CLASS } from "./shell/menu-styles"
 
 type Props = {
   isExpanded?: boolean
@@ -49,10 +51,10 @@ export function UserMenu({
             title={isExpanded ? undefined : displayName}
             className={
               isExpanded
-                ? "h-auto w-full justify-start gap-3 rounded-none px-2 py-2 text-left"
+                ? "h-auto w-full justify-start gap-3 rounded-lg px-2 py-2 text-left"
                 : placement === "header"
                   ? "size-8 rounded-full p-0"
-                  : "mx-auto size-10 rounded-none p-0"
+                  : "mx-auto size-10 rounded-lg p-0"
             }
           />
         }
@@ -80,8 +82,8 @@ export function UserMenu({
         appearance="dashboard"
         align={placement === "header" ? "end" : "start"}
         side={placement === "header" ? "bottom" : "top"}
-        sideOffset={placement === "header" ? 10 : 8}
-        className="w-60 max-w-[calc(100vw-32px)]"
+        sideOffset={8}
+        className={cn("w-60 max-w-[calc(100vw-32px)]", SHELL_MENU_CLASS)}
       >
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-2 py-1.5">
@@ -102,7 +104,7 @@ export function UserMenu({
             <DropdownMenuGroup>
               <DropdownMenuItem
                 render={<Link href={settingsHref} />}
-                className="rounded-none px-2 py-1.5 font-normal"
+                className="px-2 py-1.5 font-normal"
               >
                 Settings
               </DropdownMenuItem>
