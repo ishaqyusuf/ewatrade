@@ -74,6 +74,8 @@ export type SetupKnownAttachment = {
 }
 
 export type SetupToolDependencies = {
+  productOnly?: boolean
+  productSeed?: unknown
   context: SetupBusinessContext
   sourceMessageId: string | null
   knownAttachments?: SetupKnownAttachment[]
@@ -501,8 +503,10 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         )
         continue
       }
-      const key =
-        candidate.key && current.some((entity) => entity.key === candidate.key)
+      const key = deps.productOnly
+        ? "product"
+        : candidate.key &&
+            current.some((entity) => entity.key === candidate.key)
           ? candidate.key
           : setupEntityKey(candidate.payload.kind, candidate.payload.name)
       const payload = illustrated(
@@ -610,6 +614,9 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           status: "success",
           data: {
             business: deps.context,
+            ...(deps.productOnly
+              ? { ownerSuppliedForm: deps.productSeed }
+              : {}),
             areas,
             nextArea: nextSetupArea(areas)?.area ?? null,
             draft: draft.map((entity) => ({
@@ -719,6 +726,21 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         finishedArea: finishedAreaField,
       }),
       execute: async ({ items, finishedArea }) => {
+        if (
+          deps.productOnly &&
+          (items.length !== 1 ||
+            items[0]?.kind !== "product" ||
+            !items[0]?.unitName?.trim() ||
+            items[0]?.options?.length)
+        )
+          return {
+            status: "failed" as const,
+            warnings: [
+              "Stage exactly one product with an explicit stock counting unit. Ask the owner for the missing unit. Advanced options require Back to form.",
+            ],
+          }
+        if (deps.productOnly)
+          items = items.map((item) => ({ ...item, key: "product" }))
         const warnings: string[] = []
         const result = await stage(
           items.map((item) => ({

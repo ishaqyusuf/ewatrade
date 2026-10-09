@@ -22,13 +22,14 @@ type CatalogItemContentProps = {
 export function CatalogItemContent(props: CatalogItemContentProps) {
   const themeClass = useCatalogThemeClass()
   const { form, setForm } = useCatalogItemForm()
-  const { setParams } = useCatalogItemParams()
+  const { setParams, catalogConversation, catalogCreateMode } =
+    useCatalogItemParams()
   const [footerHost, setFooterHost] = useState<HTMLDivElement | null>(null)
   return (
     <SheetFrame
       finalFocus={props.finalFocus}
       closeError={props.closeError}
-      popupClassName={`${themeClass} sm:w-[min(900px,95vw)] sm:max-w-[900px]`}
+      popupClassName={`${themeClass} ${catalogCreateMode === "chat" ? "sm:w-[min(1120px,95vw)] sm:max-w-[1120px]" : "sm:w-[min(900px,95vw)] sm:max-w-[900px]"}`}
       mobileBottomSheet={!form.kind}
       title={
         form.kind === "product"
@@ -45,14 +46,21 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
             : "Choose what you want to add."
       }
       header={
-        props.allowKindChange === false ? null : <CatalogItemSheetHeader />
+        props.allowKindChange === false ||
+        catalogCreateMode === "chat" ? null : (
+          <CatalogItemSheetHeader />
+        )
       }
       footer={
         form.kind ? <div className="w-full" ref={setFooterHost} /> : undefined
       }
     >
       {form.kind ? (
-        <CatalogItemForm {...props} footerHost={footerHost} />
+        <CatalogItemForm
+          key={catalogConversation ?? "new"}
+          {...props}
+          footerHost={footerHost}
+        />
       ) : (
         <CatalogItemKindChoices
           onSelect={(kind) => {

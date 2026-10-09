@@ -51,6 +51,7 @@ export default async function ShellLayout({
     () => undefined,
   )
   const navigationContext = {
+    assistantEnabled: process.env.ASSISTANT_SETUP_ENABLED === "true",
     staffAccessMode: ctx.membership.staffAccessMode,
     catalogEditor: ctx.membership.catalogEditor,
     isPlatformAdmin: session.user.isPlatformAdmin,
@@ -89,6 +90,11 @@ export default async function ShellLayout({
         />
         <GlobalSheetsProvider
           access={{
+            catalog: canAccessDashboardPath(
+              "/catalog",
+              ctx.membership.role,
+              navigationContext,
+            ),
             scopedStaff,
             finance:
               ["OWNER", "ADMIN"].includes(ctx.membership.role.toUpperCase()) &&
@@ -100,7 +106,13 @@ export default async function ShellLayout({
             ),
           }}
           actorUserId={session.user.id}
-          store={{ id: store.id, name: store.name }}
+          store={{
+            id: store.id,
+            name: store.name,
+            currencyCode: store.currencyCode,
+            businessProfileKey:
+              store.businessOnboarding?.businessProfileKey ?? null,
+          }}
           storeIds={ctx.stores.map((item) => item.id)}
           tenantId={ctx.tenant.id}
         >

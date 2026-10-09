@@ -1,4 +1,5 @@
 type AssociationEnvironment = {
+  [key: string]: string | undefined
   APP_ENV?: string
   VERCEL_ENV?: string
   NEXT_PUBLIC_DASHBOARD_URL?: string

@@ -769,573 +769,585 @@ export async function createCatalogItem(
   db: PrismaClient,
   input: CreateCatalogItemInput,
 ) {
+  return db.$transaction((tx) => createCatalogItemInTransaction(tx, input), {
+    ...CATALOG_WRITE_TRANSACTION_OPTIONS,
+  })
+}
+
+/** Joins a caller's transaction without starting a nested Prisma transaction. */
+export async function createCatalogItemInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateCatalogItemInput,
+) {
   assertCreateCatalogItem(input)
   const payloadHash = catalogPayloadHash(input)
 
-  return db.$transaction(async (tx) => {
-    if (input.illustrationId !== undefined)
-      await authorizeCatalogPhotoScope(tx, input)
-    const readPrevious = () =>
-      tx.catalogCommandReceipt.findUnique({
-        where: {
-          tenantId_clientOperationId: {
-            clientOperationId: input.clientOperationId,
-            tenantId: input.tenantId,
-          },
-        },
-      })
-
-    const replay = async (
-      previousCommand: NonNullable<Awaited<ReturnType<typeof readPrevious>>>,
-    ) => {
-      if (
-        previousCommand.payloadHash !== payloadHash ||
-        previousCommand.commandType !== "CREATE_CATALOG_ITEM" ||
-        previousCommand.storeId !== input.storeId
-      ) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This client operation identity was already used with different input.",
-        )
-      }
-
-      if (input.illustrationId !== undefined) {
-        await tx.$queryRaw`SELECT "id" FROM "CatalogItem"
-          WHERE "id" = ${previousCommand.catalogItemId} AND "tenantId" = ${input.tenantId}
-          FOR SHARE`
-      }
-      const previousItem = await tx.catalogItem.findUnique({
-        include: catalogItemGraph,
-        where: { id: previousCommand.catalogItemId, tenantId: input.tenantId },
-      })
-
-      if (!previousItem) {
-        throw new CatalogError(
-          "CATALOG_ITEM_NOT_FOUND",
-          "The prior Catalog command result is unavailable.",
-        )
-      }
-
-      if (input.illustrationId !== undefined) {
-        await authorizeCatalogPhotoScope(tx, input)
-        if (
-          !previousItem.illustrations.some(
-            (entry) =>
-              entry.storeId === input.storeId &&
-              entry.illustrationId === input.illustrationId,
-          )
-        ) {
-          throw new CatalogError(
-            "IDEMPOTENCY_MISMATCH",
-            "The previous item no longer owns this Store illustration.",
-          )
-        }
-      }
-      if (input.photoAssetIds?.length) {
-        await assertCatalogPhotoCreationReplay(tx, {
-          actorUserId: input.actorUserId,
+  if (input.illustrationId !== undefined)
+    await authorizeCatalogPhotoScope(tx, input)
+  const readPrevious = () =>
+    tx.catalogCommandReceipt.findUnique({
+      where: {
+        tenantId_clientOperationId: {
+          clientOperationId: input.clientOperationId,
           tenantId: input.tenantId,
-          storeId: input.storeId,
-          assetIds: input.photoAssetIds,
-          catalogItemId: previousItem.id,
-        })
-      }
-
-      return serializeCatalogItem(previousItem)
-    }
-
-    const previousCommand = await readPrevious()
-    if (previousCommand) return replay(previousCommand)
-
-    await assertCatalogPublicationSafety(tx, {
-      actorUserId: input.actorUserId,
-      mediaUrls: [
-        input.imageUrl,
-        ...(input.imageLinks ?? []),
-        ...input.variants.map((variant) => variant.imageUrl),
-      ],
-      texts: [
-        input.name,
-        input.category,
-        input.description,
-        ...(input.optionGroups ?? []).flatMap((group) => [
-          group.name,
-          ...group.values.map((value) => value.label),
-        ]),
-        ...(input.kind === "product"
-          ? input.unitConfiguration.units.flatMap((unit) => [
-              unit.name,
-              unit.symbol,
-            ])
-          : []),
-        ...input.variants.flatMap((variant) => [
-          variant.name,
-          variant.description,
-          ...variant.offerings.flatMap((offering) => [
-            offering.name,
-            ...(input.kind === "service"
-              ? ["guidance" in offering ? offering.guidance : undefined]
-              : []),
-          ]),
-        ]),
-      ],
-    })
-
-    const store = await tx.store.findFirst({
-      where: { id: input.storeId, tenantId: input.tenantId },
-      select: {
-        currencyCode: true,
-        id: true,
+        },
       },
     })
 
-    if (!store) {
+  const replay = async (
+    previousCommand: NonNullable<Awaited<ReturnType<typeof readPrevious>>>,
+  ) => {
+    if (
+      previousCommand.payloadHash !== payloadHash ||
+      previousCommand.commandType !== "CREATE_CATALOG_ITEM" ||
+      previousCommand.storeId !== input.storeId
+    ) {
       throw new CatalogError(
-        "STORE_NOT_FOUND",
-        "Store not found for this business.",
+        "IDEMPOTENCY_MISMATCH",
+        "This client operation identity was already used with different input.",
       )
     }
 
-    const financialContext = await lockCommerceFinancialContext(tx, {
-      tenantId: input.tenantId,
-      currencyCode: store.currencyCode,
+    if (input.illustrationId !== undefined) {
+      await tx.$queryRaw`SELECT "id" FROM "CatalogItem"
+          WHERE "id" = ${previousCommand.catalogItemId} AND "tenantId" = ${input.tenantId}
+          FOR SHARE`
+    }
+    const previousItem = await tx.catalogItem.findUnique({
+      include: catalogItemGraph,
+      where: { id: previousCommand.catalogItemId, tenantId: input.tenantId },
     })
-    await lockCatalogCommandInTransaction(tx, input)
-    const concurrentPrevious = await readPrevious()
-    if (concurrentPrevious) return replay(concurrentPrevious)
-    assertFreshOpeningStockPrecision(input)
-    const openingEffectiveAt = new Date()
-    let hasOpeningStock = false
 
-    const requestedAvailabilityStoreIds = Array.from(
-      new Set(
-        input.variants.flatMap((variant) =>
-          variant.offerings.flatMap((offering) =>
-            (offering.storeAvailability ?? []).map(
-              (availability) => availability.storeId,
-            ),
-          ),
-        ),
-      ),
-    )
-    if (requestedAvailabilityStoreIds.length > 0) {
-      const availableStores = await tx.store.count({
-        where: {
-          id: { in: requestedAvailabilityStoreIds },
-          tenantId: input.tenantId,
-        },
-      })
-      if (availableStores !== requestedAvailabilityStoreIds.length) {
+    if (!previousItem) {
+      throw new CatalogError(
+        "CATALOG_ITEM_NOT_FOUND",
+        "The prior Catalog command result is unavailable.",
+      )
+    }
+
+    if (input.illustrationId !== undefined) {
+      await authorizeCatalogPhotoScope(tx, input)
+      if (
+        !previousItem.illustrations.some(
+          (entry) =>
+            entry.storeId === input.storeId &&
+            entry.illustrationId === input.illustrationId,
+        )
+      ) {
         throw new CatalogError(
-          "STORE_NOT_FOUND",
-          "One or more Offering availability Stores do not belong to this business.",
+          "IDEMPOTENCY_MISMATCH",
+          "The previous item no longer owns this Store illustration.",
         )
       }
     }
-
-    const slug = await createUniqueCatalogSlug(tx, input.tenantId, input.name)
-    const selectedCategory = await resolveCatalogCategorySelection(tx, input)
-    if (
-      selectedCategory.category &&
-      selectedCategory.category !== input.category?.trim()
-    )
-      await assertCatalogPublicationSafety(tx, {
-        actorUserId: input.actorUserId,
-        mediaUrls: [],
-        texts: [selectedCategory.category],
-      })
-    await assertRetailOpsProductAllowance(tx, { tenantId: input.tenantId })
-    const item = await tx.catalogItem.create({
-      data: {
-        ...selectedCategory,
-        description: input.description?.trim() || null,
-        imageLinks: input.imageLinks ?? [],
-        imageUrl: input.imageUrl?.trim() || null,
-        kind: catalogKind(input.kind),
-        name: input.name.trim(),
-        slug,
-        status: CatalogRecordStatus.ACTIVE,
-        tenantId: input.tenantId,
-      },
-    })
-
-    const unitIdsByKey = new Map<string, string>()
-    const optionGroupIdsByKey = new Map<string, string>()
-    const optionValueIdsByKey = new Map<string, string>()
-    let productId: string | null = null
-    let configurationVersionId: string | null = null
-    let canonicalInventoryUnitId: string | null = null
-    let canonicalTransactionScale: number | null = null
-    let defaultVariantId: string | null = null
-    let hasVariantOpeningStockInput = false
-    const variantOpeningStocks: Array<{
-      quantity: string
-      variantId: string
-      variantKey: string
-    }> = []
-
-    if (input.kind === "product") {
-      const product = await tx.catalogProduct.create({
-        data: { catalogItemId: item.id, usage: input.usage ?? "FOR_SALE" },
-      })
-      productId = product.id
-      const configuration = await tx.unitConfigurationVersion.create({
-        data: {
-          canonicalBalanceScale: input.unitConfiguration.canonicalBalanceScale,
-          productId: product.id,
-          status: UnitConfigurationStatus.CURRENT,
-          version: 1,
-        },
-      })
-      configurationVersionId = configuration.id
-
-      for (const [index, unit] of input.unitConfiguration.units.entries()) {
-        const createdUnit = await tx.inventoryUnit.create({
-          data: {
-            configurationVersionId: configuration.id,
-            factor: parseExactDecimal(unit.factor, {
-              allowZero: false,
-              maxScale: EXACT_FACTOR_MAX_SCALE,
-            }),
-            key: unit.key.trim().toLowerCase(),
-            name: unit.name.trim(),
-            sortOrder: index,
-            stockBehavior: stockBehavior(unit.stockBehavior),
-            symbol: unit.symbol?.trim() || null,
-            transactionScale: unit.transactionScale,
-          },
-        })
-
-        unitIdsByKey.set(createdUnit.key, createdUnit.id)
-        if (unit.stockBehavior === "canonical_shared") {
-          canonicalInventoryUnitId = createdUnit.id
-          canonicalTransactionScale = createdUnit.transactionScale
-        }
-      }
-
-      await tx.catalogProduct.update({
-        data: {
-          currentUnitConfigurationVersionId: configuration.id,
-        },
-        where: { id: product.id },
-      })
-    } else {
-      await tx.catalogService.create({
-        data: { catalogItemId: item.id },
-      })
-    }
-
-    for (const [groupIndex, groupInput] of (
-      input.optionGroups ?? []
-    ).entries()) {
-      const groupKey = groupInput.key.trim().toLowerCase()
-      const group = await tx.variantOptionGroup.create({
-        data: {
-          catalogItemId: item.id,
-          key: groupKey,
-          name: groupInput.name.trim(),
-          sortOrder: groupIndex,
-        },
-      })
-      optionGroupIdsByKey.set(groupKey, group.id)
-
-      for (const [valueIndex, valueInput] of groupInput.values.entries()) {
-        const valueKey = valueInput.key.trim().toLowerCase()
-        const value = await tx.variantOptionValue.create({
-          data: {
-            groupId: group.id,
-            key: valueKey,
-            label: valueInput.label.trim(),
-            sortOrder: valueIndex,
-          },
-        })
-        optionValueIdsByKey.set(`${groupKey}:${valueKey}`, value.id)
-      }
-    }
-
-    for (const [variantIndex, variantInput] of input.variants.entries()) {
-      const variant = await tx.sellableVariant.create({
-        data: {
-          catalogItemId: item.id,
-          description: variantInput.description?.trim() || null,
-          imageUrl: variantInput.imageUrl?.trim() || null,
-          isDefault: variantInput.isDefault,
-          key: variantInput.key.trim().toLowerCase(),
-          name: variantInput.name.trim(),
-          sortOrder: variantIndex,
-          status:
-            variantInput.enabled === false
-              ? CatalogRecordStatus.DRAFT
-              : CatalogRecordStatus.ACTIVE,
-        },
-      })
-      if (variant.isDefault) {
-        defaultVariantId = variant.id
-      }
-      if (
-        input.kind === "product" &&
-        "openingStockQuantity" in variantInput &&
-        variantInput.openingStockQuantity !== undefined
-      ) {
-        hasVariantOpeningStockInput = true
-        variantOpeningStocks.push({
-          quantity: parseExactDecimal(variantInput.openingStockQuantity, {
-            maxScale: EXACT_QUANTITY_MAX_SCALE,
-          }),
-          variantId: variant.id,
-          variantKey: variantInput.key.trim().toLowerCase(),
-        })
-      }
-
-      for (const selectionInput of variantInput.selections ?? []) {
-        const groupKey = selectionInput.groupKey.trim().toLowerCase()
-        const valueKey = selectionInput.valueKey.trim().toLowerCase()
-        const groupId = optionGroupIdsByKey.get(groupKey)
-        const valueId = optionValueIdsByKey.get(`${groupKey}:${valueKey}`)
-
-        if (!groupId || !valueId) {
-          throw new CatalogError(
-            "INVALID_CATALOG_ITEM",
-            `Variant ${variantInput.name} references an unknown option value.`,
-          )
-        }
-
-        await tx.sellableVariantSelection.create({
-          data: { groupId, valueId, variantId: variant.id },
-        })
-      }
-
-      for (const [
-        offeringIndex,
-        offeringInput,
-      ] of variantInput.offerings.entries()) {
-        const offering = await tx.sellableOffering.create({
-          data: {
-            catalogItemId: item.id,
-            currencyCode: store.currencyCode,
-            fixedPriceMinor: offeringInput.fixedPriceMinor ?? null,
-            key: offeringInput.key.trim().toLowerCase(),
-            kind:
-              input.kind === "product"
-                ? SellableOfferingKind.PRODUCT_UNIT
-                : SellableOfferingKind.SERVICE,
-            name: offeringInput.name.trim(),
-            pricingPolicy: pricingPolicy(offeringInput.pricingPolicy),
-            sortOrder: offeringIndex,
-            status:
-              variantInput.enabled === false || offeringInput.enabled === false
-                ? CatalogRecordStatus.DRAFT
-                : CatalogRecordStatus.ACTIVE,
-            tenantId: input.tenantId,
-            variantId: variant.id,
-          },
-        })
-
-        if (input.kind === "product") {
-          const productOffering =
-            offeringInput as CreateCatalogProductInput["variants"][number]["offerings"][number]
-          const inventoryUnitId = unitIdsByKey.get(
-            productOffering.inventoryUnitKey.trim().toLowerCase(),
-          )
-
-          if (!inventoryUnitId) {
-            throw new CatalogError(
-              "INVALID_OFFERING",
-              `Offering ${offeringInput.name} references an unknown Inventory Unit.`,
-            )
-          }
-
-          await tx.productUnitOffering.create({
-            data: {
-              barcode: productOffering.barcode?.trim() || null,
-              inventoryUnitId,
-              offeringId: offering.id,
-              sku: productOffering.sku?.trim() || null,
-              tenantId: input.tenantId,
-            },
-          })
-        } else {
-          const serviceOffering =
-            offeringInput as CreateCatalogServiceInput["variants"][number]["offerings"][number]
-          await tx.serviceOffering.create({
-            data: {
-              authorizationPolicy:
-                serviceOffering.authorizationPolicy === "after_required_payment"
-                  ? WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
-                  : serviceOffering.authorizationPolicy === "manual_release"
-                    ? WorkAuthorizationPolicy.MANUAL_RELEASE
-                    : WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION,
-              guidance: serviceOffering.guidance?.trim() || null,
-              offeringId: offering.id,
-              quantityScale: serviceOffering.quantityScale ?? 0,
-              workPolicy:
-                serviceOffering.workPolicy === "tracked"
-                  ? ServiceWorkPolicy.TRACKED
-                  : ServiceWorkPolicy.CHARGE_ONLY,
-            },
-          })
-        }
-
-        const storeAvailability = offeringInput.storeAvailability ?? [
-          { isAvailable: true, storeId: store.id },
-        ]
-        await tx.storeOfferingAvailability.createMany({
-          data: storeAvailability.map((availability) => ({
-            isAvailable: availability.isAvailable,
-            offeringId: offering.id,
-            storeId: availability.storeId,
-          })),
-        })
-
-        if (offering.fixedPriceMinor !== null) {
-          await tx.catalogPriceChange.create({
-            data: {
-              changedByUserId: input.actorUserId,
-              currencyCode: store.currencyCode,
-              offeringId: offering.id,
-              priceMinor: offering.fixedPriceMinor,
-              reason: "Initial price",
-              tenantId: input.tenantId,
-            },
-          })
-        }
-      }
-    }
-
-    if (
-      input.kind === "product" &&
-      productId &&
-      configurationVersionId &&
-      canonicalInventoryUnitId &&
-      canonicalTransactionScale !== null
-    ) {
-      const openingStocks = hasVariantOpeningStockInput
-        ? variantOpeningStocks
-        : input.openingStockQuantity !== undefined && defaultVariantId
-          ? [
-              {
-                quantity: parseExactDecimal(input.openingStockQuantity, {
-                  maxScale: EXACT_QUANTITY_MAX_SCALE,
-                }),
-                variantId: defaultVariantId,
-                variantKey: "default",
-              },
-            ]
-          : []
-
-      for (const openingStock of openingStocks) {
-        if (openingStock.quantity === "0") continue
-
-        const balanceSource = await tx.stockBalanceSource.create({
-          data: {
-            inventoryUnitId: canonicalInventoryUnitId,
-            kind: StockBalanceKind.SHARED_POOL,
-            onHandQuantity: openingStock.quantity,
-            productId,
-            storeId: store.id,
-            tenantId: input.tenantId,
-            variantId: openingStock.variantId,
-          },
-        })
-        hasOpeningStock = true
-        const operation = await tx.stockOperation.create({
-          data: {
-            actorUserId: input.actorUserId,
-            clientOperationId: `${input.clientOperationId}:opening-stock:${openingStock.variantKey}`,
-            payloadHash,
-            reason: `Initial stock for ${openingStock.variantKey}`,
-            source: "catalog_setup",
-            storeId: store.id,
-            tenantId: input.tenantId,
-            type: StockOperationType.OPENING_STOCK,
-            effectiveAt: openingEffectiveAt,
-          },
-        })
-
-        await tx.stockMovement.create({
-          data: {
-            balanceSourceId: balanceSource.id,
-            configurationVersionId,
-            enteredInventoryUnitId: canonicalInventoryUnitId,
-            enteredQuantity: openingStock.quantity,
-            operationId: operation.id,
-            previousOnHandQuantity: "0",
-            resultingOnHandQuantity: openingStock.quantity,
-            signedCanonicalEffect: openingStock.quantity,
-            transactionScaleSnapshot: canonicalTransactionScale,
-            unitFactorSnapshot: "1",
-          },
-        })
-      }
-    }
-
     if (input.photoAssetIds?.length) {
-      await attachCatalogPhotoAssets(tx, {
+      await assertCatalogPhotoCreationReplay(tx, {
         actorUserId: input.actorUserId,
         tenantId: input.tenantId,
         storeId: input.storeId,
         assetIds: input.photoAssetIds,
-        catalogItemId: item.id,
+        catalogItemId: previousItem.id,
       })
     }
 
-    if (input.illustrationId !== undefined) {
-      await tx.catalogItemIllustration.create({
-        data: {
-          tenantId: input.tenantId,
-          storeId: input.storeId,
-          catalogItemId: item.id,
-          illustrationId: input.illustrationId,
-        },
-      })
-    }
-    const receipt = await tx.catalogCommandReceipt.create({
-      data: {
-        catalogItemId: item.id,
-        clientOperationId: input.clientOperationId,
-        commandType: "CREATE_CATALOG_ITEM",
-        payloadHash,
-        storeId: store.id,
+    return serializeCatalogItem(previousItem)
+  }
+
+  const previousCommand = await readPrevious()
+  if (previousCommand) return replay(previousCommand)
+
+  await assertCatalogPublicationSafety(tx, {
+    actorUserId: input.actorUserId,
+    mediaUrls: [
+      input.imageUrl,
+      ...(input.imageLinks ?? []),
+      ...input.variants.map((variant) => variant.imageUrl),
+    ],
+    texts: [
+      input.name,
+      input.category,
+      input.description,
+      ...(input.optionGroups ?? []).flatMap((group) => [
+        group.name,
+        ...group.values.map((value) => value.label),
+      ]),
+      ...(input.kind === "product"
+        ? input.unitConfiguration.units.flatMap((unit) => [
+            unit.name,
+            unit.symbol,
+          ])
+        : []),
+      ...input.variants.flatMap((variant) => [
+        variant.name,
+        variant.description,
+        ...variant.offerings.flatMap((offering) => [
+          offering.name,
+          ...(input.kind === "service"
+            ? ["guidance" in offering ? offering.guidance : undefined]
+            : []),
+        ]),
+      ]),
+    ],
+  })
+
+  const store = await tx.store.findFirst({
+    where: { id: input.storeId, tenantId: input.tenantId },
+    select: {
+      currencyCode: true,
+      id: true,
+    },
+  })
+
+  if (!store) {
+    throw new CatalogError(
+      "STORE_NOT_FOUND",
+      "Store not found for this business.",
+    )
+  }
+
+  const financialContext = await lockCommerceFinancialContext(tx, {
+    tenantId: input.tenantId,
+    currencyCode: store.currencyCode,
+  })
+  await lockCatalogCommandInTransaction(tx, input)
+  const concurrentPrevious = await readPrevious()
+  if (concurrentPrevious) return replay(concurrentPrevious)
+  assertFreshOpeningStockPrecision(input)
+  const openingEffectiveAt = new Date()
+  let hasOpeningStock = false
+
+  const requestedAvailabilityStoreIds = Array.from(
+    new Set(
+      input.variants.flatMap((variant) =>
+        variant.offerings.flatMap((offering) =>
+          (offering.storeAvailability ?? []).map(
+            (availability) => availability.storeId,
+          ),
+        ),
+      ),
+    ),
+  )
+  if (requestedAvailabilityStoreIds.length > 0) {
+    const availableStores = await tx.store.count({
+      where: {
+        id: { in: requestedAvailabilityStoreIds },
         tenantId: input.tenantId,
       },
     })
+    if (availableStores !== requestedAvailabilityStoreIds.length) {
+      throw new CatalogError(
+        "STORE_NOT_FOUND",
+        "One or more Offering availability Stores do not belong to this business.",
+      )
+    }
+  }
 
-    if (hasOpeningStock && financialContext) {
-      try {
-        await recordInventoryOpeningValuationInTransaction(tx, {
-          tenantId: input.tenantId,
-          receiptId: receipt.id,
-          expectedBookId: financialContext.bookId,
-        })
-      } catch (error) {
-        if (error instanceof FinanceError)
-          throw new CatalogError("INVALID_STOCK_OPERATION", error.message)
-        throw error
+  const slug = await createUniqueCatalogSlug(tx, input.tenantId, input.name)
+  const selectedCategory = await resolveCatalogCategorySelection(tx, input)
+  if (
+    selectedCategory.category &&
+    selectedCategory.category !== input.category?.trim()
+  )
+    await assertCatalogPublicationSafety(tx, {
+      actorUserId: input.actorUserId,
+      mediaUrls: [],
+      texts: [selectedCategory.category],
+    })
+  await assertRetailOpsProductAllowance(tx, { tenantId: input.tenantId })
+  const item = await tx.catalogItem.create({
+    data: {
+      ...selectedCategory,
+      description: input.description?.trim() || null,
+      imageLinks: input.imageLinks ?? [],
+      imageUrl: input.imageUrl?.trim() || null,
+      kind: catalogKind(input.kind),
+      name: input.name.trim(),
+      slug,
+      status: CatalogRecordStatus.ACTIVE,
+      tenantId: input.tenantId,
+    },
+  })
+
+  const unitIdsByKey = new Map<string, string>()
+  const optionGroupIdsByKey = new Map<string, string>()
+  const optionValueIdsByKey = new Map<string, string>()
+  let productId: string | null = null
+  let configurationVersionId: string | null = null
+  let canonicalInventoryUnitId: string | null = null
+  let canonicalTransactionScale: number | null = null
+  let defaultVariantId: string | null = null
+  let hasVariantOpeningStockInput = false
+  const variantOpeningStocks: Array<{
+    quantity: string
+    variantId: string
+    variantKey: string
+  }> = []
+
+  if (input.kind === "product") {
+    const product = await tx.catalogProduct.create({
+      data: { catalogItemId: item.id, usage: input.usage ?? "FOR_SALE" },
+    })
+    productId = product.id
+    const configuration = await tx.unitConfigurationVersion.create({
+      data: {
+        canonicalBalanceScale: input.unitConfiguration.canonicalBalanceScale,
+        productId: product.id,
+        status: UnitConfigurationStatus.CURRENT,
+        version: 1,
+      },
+    })
+    configurationVersionId = configuration.id
+
+    for (const [index, unit] of input.unitConfiguration.units.entries()) {
+      const createdUnit = await tx.inventoryUnit.create({
+        data: {
+          configurationVersionId: configuration.id,
+          factor: parseExactDecimal(unit.factor, {
+            allowZero: false,
+            maxScale: EXACT_FACTOR_MAX_SCALE,
+          }),
+          key: unit.key.trim().toLowerCase(),
+          name: unit.name.trim(),
+          sortOrder: index,
+          stockBehavior: stockBehavior(unit.stockBehavior),
+          symbol: unit.symbol?.trim() || null,
+          transactionScale: unit.transactionScale,
+        },
+      })
+
+      unitIdsByKey.set(createdUnit.key, createdUnit.id)
+      if (unit.stockBehavior === "canonical_shared") {
+        canonicalInventoryUnitId = createdUnit.id
+        canonicalTransactionScale = createdUnit.transactionScale
       }
     }
 
-    const created = await tx.catalogItem.findUnique({
-      include: catalogItemGraph,
-      where: { id: item.id },
+    await tx.catalogProduct.update({
+      data: {
+        currentUnitConfigurationVersionId: configuration.id,
+      },
+      where: { id: product.id },
     })
+  } else {
+    await tx.catalogService.create({
+      data: { catalogItemId: item.id },
+    })
+  }
 
-    if (!created) {
-      throw new CatalogError(
-        "CATALOG_ITEM_NOT_FOUND",
-        "Catalog Item could not be reloaded after creation.",
-      )
+  for (const [groupIndex, groupInput] of (input.optionGroups ?? []).entries()) {
+    const groupKey = groupInput.key.trim().toLowerCase()
+    const group = await tx.variantOptionGroup.create({
+      data: {
+        catalogItemId: item.id,
+        key: groupKey,
+        name: groupInput.name.trim(),
+        sortOrder: groupIndex,
+      },
+    })
+    optionGroupIdsByKey.set(groupKey, group.id)
+
+    for (const [valueIndex, valueInput] of groupInput.values.entries()) {
+      const valueKey = valueInput.key.trim().toLowerCase()
+      const value = await tx.variantOptionValue.create({
+        data: {
+          groupId: group.id,
+          key: valueKey,
+          label: valueInput.label.trim(),
+          sortOrder: valueIndex,
+        },
+      })
+      optionValueIdsByKey.set(`${groupKey}:${valueKey}`, value.id)
+    }
+  }
+
+  for (const [variantIndex, variantInput] of input.variants.entries()) {
+    const variant = await tx.sellableVariant.create({
+      data: {
+        catalogItemId: item.id,
+        description: variantInput.description?.trim() || null,
+        imageUrl: variantInput.imageUrl?.trim() || null,
+        isDefault: variantInput.isDefault,
+        key: variantInput.key.trim().toLowerCase(),
+        name: variantInput.name.trim(),
+        sortOrder: variantIndex,
+        status:
+          variantInput.enabled === false
+            ? CatalogRecordStatus.DRAFT
+            : CatalogRecordStatus.ACTIVE,
+      },
+    })
+    if (variant.isDefault) {
+      defaultVariantId = variant.id
+    }
+    if (
+      input.kind === "product" &&
+      "openingStockQuantity" in variantInput &&
+      variantInput.openingStockQuantity !== undefined
+    ) {
+      hasVariantOpeningStockInput = true
+      variantOpeningStocks.push({
+        quantity: parseExactDecimal(variantInput.openingStockQuantity, {
+          maxScale: EXACT_QUANTITY_MAX_SCALE,
+        }),
+        variantId: variant.id,
+        variantKey: variantInput.key.trim().toLowerCase(),
+      })
     }
 
-    return serializeCatalogItem(created)
-  }, CATALOG_WRITE_TRANSACTION_OPTIONS)
+    for (const selectionInput of variantInput.selections ?? []) {
+      const groupKey = selectionInput.groupKey.trim().toLowerCase()
+      const valueKey = selectionInput.valueKey.trim().toLowerCase()
+      const groupId = optionGroupIdsByKey.get(groupKey)
+      const valueId = optionValueIdsByKey.get(`${groupKey}:${valueKey}`)
+
+      if (!groupId || !valueId) {
+        throw new CatalogError(
+          "INVALID_CATALOG_ITEM",
+          `Variant ${variantInput.name} references an unknown option value.`,
+        )
+      }
+
+      await tx.sellableVariantSelection.create({
+        data: { groupId, valueId, variantId: variant.id },
+      })
+    }
+
+    for (const [
+      offeringIndex,
+      offeringInput,
+    ] of variantInput.offerings.entries()) {
+      const offering = await tx.sellableOffering.create({
+        data: {
+          catalogItemId: item.id,
+          currencyCode: store.currencyCode,
+          fixedPriceMinor: offeringInput.fixedPriceMinor ?? null,
+          key: offeringInput.key.trim().toLowerCase(),
+          kind:
+            input.kind === "product"
+              ? SellableOfferingKind.PRODUCT_UNIT
+              : SellableOfferingKind.SERVICE,
+          name: offeringInput.name.trim(),
+          pricingPolicy: pricingPolicy(offeringInput.pricingPolicy),
+          sortOrder: offeringIndex,
+          status:
+            variantInput.enabled === false || offeringInput.enabled === false
+              ? CatalogRecordStatus.DRAFT
+              : CatalogRecordStatus.ACTIVE,
+          tenantId: input.tenantId,
+          variantId: variant.id,
+        },
+      })
+
+      if (input.kind === "product") {
+        const productOffering =
+          offeringInput as CreateCatalogProductInput["variants"][number]["offerings"][number]
+        const inventoryUnitId = unitIdsByKey.get(
+          productOffering.inventoryUnitKey.trim().toLowerCase(),
+        )
+
+        if (!inventoryUnitId) {
+          throw new CatalogError(
+            "INVALID_OFFERING",
+            `Offering ${offeringInput.name} references an unknown Inventory Unit.`,
+          )
+        }
+
+        await tx.productUnitOffering.create({
+          data: {
+            barcode: productOffering.barcode?.trim() || null,
+            inventoryUnitId,
+            offeringId: offering.id,
+            sku: productOffering.sku?.trim() || null,
+            tenantId: input.tenantId,
+          },
+        })
+      } else {
+        const serviceOffering =
+          offeringInput as CreateCatalogServiceInput["variants"][number]["offerings"][number]
+        await tx.serviceOffering.create({
+          data: {
+            authorizationPolicy:
+              serviceOffering.authorizationPolicy === "after_required_payment"
+                ? WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
+                : serviceOffering.authorizationPolicy === "manual_release"
+                  ? WorkAuthorizationPolicy.MANUAL_RELEASE
+                  : WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION,
+            guidance: serviceOffering.guidance?.trim() || null,
+            offeringId: offering.id,
+            quantityScale: serviceOffering.quantityScale ?? 0,
+            workPolicy:
+              serviceOffering.workPolicy === "tracked"
+                ? ServiceWorkPolicy.TRACKED
+                : ServiceWorkPolicy.CHARGE_ONLY,
+          },
+        })
+      }
+
+      const storeAvailability = offeringInput.storeAvailability ?? [
+        { isAvailable: true, storeId: store.id },
+      ]
+      await tx.storeOfferingAvailability.createMany({
+        data: storeAvailability.map((availability) => ({
+          isAvailable: availability.isAvailable,
+          offeringId: offering.id,
+          storeId: availability.storeId,
+        })),
+      })
+
+      if (offering.fixedPriceMinor !== null) {
+        await tx.catalogPriceChange.create({
+          data: {
+            changedByUserId: input.actorUserId,
+            currencyCode: store.currencyCode,
+            offeringId: offering.id,
+            priceMinor: offering.fixedPriceMinor,
+            reason: "Initial price",
+            tenantId: input.tenantId,
+          },
+        })
+      }
+    }
+  }
+
+  if (
+    input.kind === "product" &&
+    productId &&
+    configurationVersionId &&
+    canonicalInventoryUnitId &&
+    canonicalTransactionScale !== null
+  ) {
+    const openingStocks = hasVariantOpeningStockInput
+      ? variantOpeningStocks
+      : input.openingStockQuantity !== undefined && defaultVariantId
+        ? [
+            {
+              quantity: parseExactDecimal(input.openingStockQuantity, {
+                maxScale: EXACT_QUANTITY_MAX_SCALE,
+              }),
+              variantId: defaultVariantId,
+              variantKey: "default",
+            },
+          ]
+        : []
+
+    for (const openingStock of openingStocks) {
+      if (openingStock.quantity === "0") continue
+
+      const balanceSource = await tx.stockBalanceSource.create({
+        data: {
+          inventoryUnitId: canonicalInventoryUnitId,
+          kind: StockBalanceKind.SHARED_POOL,
+          onHandQuantity: openingStock.quantity,
+          productId,
+          storeId: store.id,
+          tenantId: input.tenantId,
+          variantId: openingStock.variantId,
+        },
+      })
+      hasOpeningStock = true
+      const operation = await tx.stockOperation.create({
+        data: {
+          actorUserId: input.actorUserId,
+          clientOperationId: `${input.clientOperationId}:opening-stock:${openingStock.variantKey}`,
+          payloadHash,
+          reason: `Initial stock for ${openingStock.variantKey}`,
+          source: "catalog_setup",
+          storeId: store.id,
+          tenantId: input.tenantId,
+          type: StockOperationType.OPENING_STOCK,
+          effectiveAt: openingEffectiveAt,
+        },
+      })
+
+      await tx.stockMovement.create({
+        data: {
+          balanceSourceId: balanceSource.id,
+          configurationVersionId,
+          enteredInventoryUnitId: canonicalInventoryUnitId,
+          enteredQuantity: openingStock.quantity,
+          operationId: operation.id,
+          previousOnHandQuantity: "0",
+          resultingOnHandQuantity: openingStock.quantity,
+          signedCanonicalEffect: openingStock.quantity,
+          transactionScaleSnapshot: canonicalTransactionScale,
+          unitFactorSnapshot: "1",
+        },
+      })
+    }
+  }
+
+  if (input.photoAssetIds?.length) {
+    await attachCatalogPhotoAssets(tx, {
+      actorUserId: input.actorUserId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      assetIds: input.photoAssetIds,
+      catalogItemId: item.id,
+    })
+  }
+
+  if (input.illustrationId !== undefined) {
+    await tx.catalogItemIllustration.create({
+      data: {
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+        catalogItemId: item.id,
+        illustrationId: input.illustrationId,
+      },
+    })
+  }
+  const receipt = await tx.catalogCommandReceipt.create({
+    data: {
+      catalogItemId: item.id,
+      clientOperationId: input.clientOperationId,
+      commandType: "CREATE_CATALOG_ITEM",
+      payloadHash,
+      storeId: store.id,
+      tenantId: input.tenantId,
+    },
+  })
+
+  if (hasOpeningStock && financialContext) {
+    try {
+      await recordInventoryOpeningValuationInTransaction(tx, {
+        tenantId: input.tenantId,
+        receiptId: receipt.id,
+        expectedBookId: financialContext.bookId,
+      })
+    } catch (error) {
+      if (error instanceof FinanceError)
+        throw new CatalogError("INVALID_STOCK_OPERATION", error.message)
+      throw error
+    }
+  }
+
+  const created = await tx.catalogItem.findUnique({
+    include: catalogItemGraph,
+    where: { id: item.id },
+  })
+
+  if (!created) {
+    throw new CatalogError(
+      "CATALOG_ITEM_NOT_FOUND",
+      "Catalog Item could not be reloaded after creation.",
+    )
+  }
+
+  return serializeCatalogItem(created)
 }
 
 export async function createSimpleCatalogItem(
   db: PrismaClient,
   input: CreateSimpleCatalogItemInput,
 ) {
+  return createCatalogItem(db, simpleCatalogItemCommand(input))
+}
+
+export function simpleCatalogItemCommand(
+  input: CreateSimpleCatalogItemInput,
+): CreateCatalogItemInput {
   if (input.kind === "service") {
-    return createCatalogItem(db, {
+    return {
       actorUserId: input.actorUserId,
       clientOperationId: input.clientOperationId,
       description: input.description,
@@ -1362,13 +1374,13 @@ export async function createSimpleCatalogItem(
           ],
         },
       ],
-    })
+    }
   }
 
   const unitName = input.canonicalUnitName.trim()
   const unitKey = slugifyCatalogItem(unitName)
 
-  return createCatalogItem(db, {
+  return {
     actorUserId: input.actorUserId,
     clientOperationId: input.clientOperationId,
     description: input.description,
@@ -1406,7 +1418,7 @@ export async function createSimpleCatalogItem(
         ],
       },
     ],
-  })
+  }
 }
 
 export async function listCatalogItems(

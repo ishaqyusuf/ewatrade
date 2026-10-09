@@ -1,4 +1,9 @@
 import {
+  PRODUCT_ASSISTANT_PROMPT_VERSION,
+  productAssistantInstructions,
+  productWorkflowContextSchema,
+} from "@ewatrade/assistant/product/contracts"
+import {
   SETUP_ATTACHMENTS_PER_MESSAGE,
   SETUP_ATTACHMENT_PART,
 } from "@ewatrade/assistant/setup/attachments"
@@ -210,6 +215,10 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
     throw error
   }
   const draftId = conversation.setupDraft?.id
+  const productMode = conversation.purpose === "PRODUCT_CREATE"
+  const productSnapshot = productMode
+    ? productWorkflowContextSchema.parse(conversation.workflowContext).snapshot
+    : null
   if (conversation.status !== "ACTIVE" || !draftId)
     return failure(
       context,
@@ -282,7 +291,9 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
         actorUserId: scope.userId,
         conversationId: conversation.id,
         model: model.modelId,
-        promptVersion: SETUP_ASSISTANT_PROMPT_VERSION,
+        promptVersion: productMode
+          ? PRODUCT_ASSISTANT_PROMPT_VERSION
+          : SETUP_ASSISTANT_PROMPT_VERSION,
         provider: model.provider,
         requestId: body.requestId,
         userMessage,
@@ -296,6 +307,8 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
           error.code,
           ATTACHMENT_REFUSALS[error.code] ?? error.message,
         )
+      if (error instanceof AssistantRecordError)
+        return failure(context, 409, error.code, error.message)
       throw error
     }
     if (begun.replay)
@@ -393,16 +406,31 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
           },
           transient: true,
         })
-        const tools = createSetupAssistantTools({
+        const setupTools = createSetupAssistantTools({
+          productOnly: productMode,
+          productSeed: productSnapshot?.form,
           context: business,
           sourceMessageId: body.message.id,
           knownAttachments: knownAttachments(sentAttachments),
-          authorize: () => repository.isActorStillAuthorized(conversation.id),
+          authorize: async () =>
+            !controller.signal.aborted &&
+            (await repository.isActorStillAuthorized(conversation.id)) &&
+            (!productMode ||
+              (await repository.readRun(begun.run.id))?.status === "RUNNING") &&
+            !controller.signal.aborted,
           readDraft: () => repository.readDraftEntities(draftId),
-          readAreaMarks: () => repository.readAreaMarks(draftId),
-          markArea: (area, mark) => repository.markArea(draftId, area, mark),
+          readAreaMarks: productMode
+            ? undefined
+            : () => repository.readAreaMarks(draftId),
+          markArea: productMode
+            ? undefined
+            : (area, mark) => repository.markArea(draftId, area, mark),
           writeEntities: (entities) =>
-            repository.writeDraftEntities(draftId, entities),
+            repository.writeDraftEntities(
+              draftId,
+              entities,
+              productMode ? begun.run.id : undefined,
+            ),
           removeEntities: (keys) =>
             repository.removeDraftEntities(draftId, keys),
           onDraftChanged: (change) =>
@@ -412,9 +440,19 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
               transient: true,
             }),
         })
+        const tools = productMode
+          ? {
+              setup_get_context: setupTools.setup_get_context,
+              setup_search_quick_setups: setupTools.setup_search_quick_setups,
+              setup_search_categories: setupTools.setup_search_categories,
+              setup_draft_upsert_items: setupTools.setup_draft_upsert_items,
+            }
+          : setupTools
         const agent = new ToolLoopAgent({
           model: model.model,
-          instructions: buildSetupAssistantInstructions(business),
+          instructions: productMode
+            ? productAssistantInstructions(business)
+            : buildSetupAssistantInstructions(business),
           tools,
           stopWhen: stepCountIs(8),
           maxOutputTokens: 2_000,

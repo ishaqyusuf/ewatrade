@@ -1,7 +1,11 @@
 "use client"
 
 import { type ReactNode, useSyncExternalStore } from "react"
-import { type GlobalSheetAccess, GlobalSheets } from "./global-sheets"
+import {
+  type GlobalSheetAccess,
+  type GlobalSheetStore,
+  GlobalSheets,
+} from "./global-sheets"
 
 const subscribeToHydration = () => () => undefined
 
@@ -16,7 +20,7 @@ export function GlobalSheetsProvider({
   access: GlobalSheetAccess
   actorUserId: string
   children: ReactNode
-  store: { id: string; name: string }
+  store: GlobalSheetStore
   storeIds: string[]
   tenantId: string
 }) {

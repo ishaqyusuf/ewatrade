@@ -4,6 +4,7 @@
 enum AssistantConversationPurpose {
   SETUP
   GENERAL
+  PRODUCT_CREATE
 }
 
 enum AssistantConversationStatus {
@@ -44,6 +45,8 @@ model AssistantConversation {
   purpose      AssistantConversationPurpose
   status       AssistantConversationStatus  @default(OFFERED)
   title        String?
+  // Validated product form snapshot. Uses existing private photo asset ids.
+  workflowContext Json?
   lastSequence Int                          @default(0)
   createdAt    DateTime                     @default(now())
   updatedAt    DateTime                     @updatedAt

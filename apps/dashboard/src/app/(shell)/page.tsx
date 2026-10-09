@@ -8,6 +8,7 @@ import {
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { PageHeader } from "@/components/page-header"
+import { AssistantProductEntry } from "@/components/product-assistant/assistant-home"
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
@@ -61,7 +62,10 @@ export default async function DashboardHomePage() {
           }
         />
         {store ? (
-          <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
+          <div className="flex flex-wrap gap-2">
+            <AssistantProductEntry label="Add products with AI" />
+            <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
+          </div>
         ) : null}
       </div>
       {store ? (
