@@ -15,7 +15,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
-type NavIconName = DashboardNavItem["icon"] | "finance"
+type NavIconName = DashboardNavItem["icon"]
 
 const NAV_ICONS = {
   assistant: SparklesIcon,
@@ -32,11 +32,6 @@ const NAV_ICONS = {
   settings: Settings01Icon,
   staff: UserGroupIcon,
 } satisfies Record<NavIconName, typeof Home01Icon>
-
-/** Finance shares the "analytics" key with Reports in navigation; give it its own icon. */
-export function getNavIconName(item: DashboardNavItem): NavIconName {
-  return item.href === "/finance" ? "finance" : item.icon
-}
 
 export function NavIcon({
   name,

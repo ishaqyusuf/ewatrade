@@ -20,6 +20,7 @@ export type DashboardNavIcon =
   | "analytics"
   | "customers"
   | "conversations"
+  | "finance"
   | "home"
   | "inventory"
   | "products"
@@ -216,7 +217,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
   {
     description: "Spending, money accounts and financial records",
     href: "/finance",
-    icon: "analytics",
+    icon: "finance",
     label: "Finance",
     canAccess: canManageTenantRole,
     requiresPlanFeature: "finance",
@@ -224,28 +225,28 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
       {
         description: "Financial overview",
         href: "/finance",
-        icon: "analytics",
+        icon: "finance",
         label: "Overview",
         canAccess: canManageTenantRole,
       },
       {
         description: "Review spending records",
         href: "/finance/spending",
-        icon: "analytics",
+        icon: "finance",
         label: "Spending",
         canAccess: canManageTenantRole,
       },
       {
         description: "Manage money accounts",
         href: "/finance/accounts",
-        icon: "analytics",
+        icon: "finance",
         label: "Accounts",
         canAccess: canManageTenantRole,
       },
       {
         description: "Manage supplier balances and bills",
         href: "/finance/suppliers",
-        icon: "analytics",
+        icon: "finance",
         label: "Suppliers",
         canAccess: canManageTenantRole,
         requiresPlanFeature: "suppliers",
@@ -253,7 +254,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
       {
         description: "Customer statements and collections",
         href: "/customer-ledger",
-        icon: "analytics",
+        icon: "finance",
         label: "Customer accounts",
         canAccess: canManageTenantRole,
         requiresPlanFeature: "finance",
@@ -261,7 +262,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
       {
         description: "Financial reports and exports",
         href: "/finance/reports",
-        icon: "analytics",
+        icon: "finance",
         label: "Finance reports",
         canAccess: canManageTenantRole,
       },

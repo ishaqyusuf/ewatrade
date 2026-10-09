@@ -24,7 +24,7 @@ import {
   useMemo,
   useState,
 } from "react"
-import { NavIcon, getNavIconName } from "./nav-icon"
+import { NavIcon } from "./nav-icon"
 import { useDashboardShell } from "./shell/dashboard-shell"
 import {
   SHELL_MENU_CLASS,
@@ -128,7 +128,7 @@ function RailFlyout({
         <RailItemBody
           active={active}
           hasFlyout
-          icon={<NavIcon name={getNavIconName(item)} className="size-[19px]" />}
+          icon={<NavIcon name={item.icon} className="size-[19px]" />}
           label={item.label}
           showLabel={showLabel}
         />
@@ -263,9 +263,7 @@ export function DashboardSidebar({ navItems }: Props) {
         >
           <RailItemBody
             active={active}
-            icon={
-              <NavIcon name={getNavIconName(item)} className="size-[19px]" />
-            }
+            icon={<NavIcon name={item.icon} className="size-[19px]" />}
             label={item.label}
             showLabel={railLabels}
           />

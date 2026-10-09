@@ -7,7 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useId, useState } from "react"
-import { NavIcon, getNavIconName } from "./nav-icon"
+import { NavIcon } from "./nav-icon"
 import { isNavItemActive } from "./shell/rail-model"
 
 type Props = {
@@ -54,7 +54,7 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                 >
                   <span className="flex size-10 shrink-0 items-center justify-center">
                     <NavIcon
-                      name={getNavIconName(item)}
+                      name={item.icon}
                       className={cn(
                         "size-5 transition-colors",
                         isActive && "text-primary",
