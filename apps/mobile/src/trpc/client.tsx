@@ -18,6 +18,7 @@ import { useState } from "react"
 import superjson from "superjson"
 import { makeQueryClient } from "./query-client"
 import { searchPostLink } from "./search-post-link"
+import { sessionExpiryLink } from "./session-expiry-link"
 
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
 
@@ -77,6 +78,7 @@ export function TRPCReactProvider(
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
+        sessionExpiryLink(),
         splitLink({
           condition: (op) => op.type === "query" && op.path === "search.global",
           true: searchPostLink({

@@ -1,4 +1,8 @@
 import {
+  SESSION_ENDED_NOTICE,
+  subscribeSessionExpired,
+} from "@/lib/session-expiry"
+import {
   type MobileProfile,
   type MobileSession,
   deleteSession,
@@ -8,7 +12,7 @@ import {
 import { useBusinessStore } from "@/store/businessStore"
 import { clearMobileDataCache } from "@/trpc/client"
 import { useRouter } from "expo-router"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 
 type AuthContextProps = ReturnType<typeof useCreateAuthContext>
 export const AuthContext = createContext<AuthContextProps | undefined>(
@@ -57,6 +61,28 @@ export const useCreateAuthContext = () => {
     setPendingRedirect(null)
   }, [pendingRedirect, router, session])
 
+  const endSession = (notice?: typeof SESSION_ENDED_NOTICE) => {
+    clearMobileDataCache()
+    void deleteSession()
+    setSessionState(null)
+    setPendingRedirect(null)
+    router.replace(
+      notice ? { pathname: "/login", params: { notice } } : "/login",
+    )
+  }
+
+  // A rejected token can never pass the startup checks; return to sign-in.
+  const endSessionRef = useRef(endSession)
+  endSessionRef.current = endSession
+  useEffect(
+    () =>
+      subscribeSessionExpired((expiredToken) => {
+        if (getSession()?.token !== expiredToken) return
+        endSessionRef.current(SESSION_ENDED_NOTICE)
+      }),
+    [],
+  )
+
   const applySession = (
     nextSession: MobileSession,
     redirectHref = "/dashboard",
@@ -103,16 +129,10 @@ export const useCreateAuthContext = () => {
       applySession(createLocalSession(input))
     },
     signOutLocal() {
-      clearMobileDataCache()
-      void deleteSession()
-      setSessionState(null)
-      router.replace("/login")
+      endSession()
     },
     onLogout() {
-      clearMobileDataCache()
-      void deleteSession()
-      setSessionState(null)
-      router.replace("/login")
+      endSession()
     },
   }
 }

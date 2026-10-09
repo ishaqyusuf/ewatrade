@@ -2,6 +2,7 @@ import { AppAutoUpdateModal } from "@/components/app-auto-update-modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
+import { classifySessionError } from "@/lib/session-expiry"
 import { isLocalSessionToken } from "@/lib/session-store"
 import { AnalyticsRuntime } from "@/runtime/analytics-runtime"
 import { useTRPC } from "@/trpc/client"
@@ -44,6 +45,11 @@ export function AccountAgeStartupGate({
     trpc.serviceCommerce.accountDeclareAgeBand.mutationOptions(),
   )
 
+  // The session-expiry link signs out on UNAUTHORIZED; keep "checking" until it does.
+  const sessionRejected =
+    ageStatus.isError &&
+    classifySessionError(ageStatus.error) === "unauthorized"
+
   if (!auth.isAuthenticated) return children
   if (localQaSession || ageStatus.data?.eligible === true)
     return (
@@ -68,7 +74,7 @@ export function AccountAgeStartupGate({
     >
       {/* Keep recovery updates available while workspace access is gated. */}
       <AppAutoUpdateModal restoreRoute={false} />
-      {ageStatus.isPending ? (
+      {ageStatus.isPending || sessionRejected ? (
         <Text className="text-sm text-muted-foreground">
           Checking age status…
         </Text>

@@ -17,6 +17,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
+import { SESSION_ENDED_NOTICE } from "@/lib/session-expiry"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation } from "@tanstack/react-query"
@@ -28,7 +29,11 @@ export function LoginScreen() {
   const Presentation =
     design === "market-day" ? MarketDayLoginScreen : ClassicLoginScreen
   const router = useRouter()
-  const params = useLocalSearchParams<{ email?: string; returnTo?: string }>()
+  const params = useLocalSearchParams<{
+    email?: string
+    notice?: string
+    returnTo?: string
+  }>()
   const trpc = useTRPC()
   const auth = useAuthContext()
   const completeOnboarding = useOnboardingStore(
@@ -143,6 +148,13 @@ export function LoginScreen() {
       }
     >
       <View className="gap-4">
+        {params.notice === SESSION_ENDED_NOTICE && !error ? (
+          <StatusBanner
+            icon="LogOut"
+            message="Your session ended. Sign in again."
+            tone="warning"
+          />
+        ) : null}
         <FormField
           autoCapitalize="none"
           keyboardType="email-address"
