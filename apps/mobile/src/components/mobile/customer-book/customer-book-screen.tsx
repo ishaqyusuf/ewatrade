@@ -11,6 +11,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { Toast } from "@/components/ui/toast"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
@@ -19,7 +20,7 @@ import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { useBusinessStore } from "@/store/businessStore"
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from "@ewatrade/utils/countries"
 import { VariableContextProvider } from "nativewind"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton, MarketDayActionButton } from "../action-button"
@@ -108,6 +109,17 @@ export function CustomerBookContent(
     presentation,
   } = useCustomerBook(props)
   const searchVisible = market || showSearch
+  // Green Till confirms a save with a bottom toast instead of a banner.
+  const toastedNotice = useRef<string | null>(null)
+  useEffect(() => {
+    if (!creation.notice) {
+      toastedNotice.current = null
+      return
+    }
+    if (market || toastedNotice.current === creation.notice) return
+    toastedNotice.current = creation.notice
+    Toast.show(creation.notice, { position: "bottom", type: "success" })
+  }, [creation.notice, market])
   const profileOpen = Boolean(selectedCustomer)
   const { onProfileOpenChange } = props
   useEffect(() => {
@@ -158,7 +170,7 @@ export function CustomerBookContent(
           </ActionButton>
         </View>
       ) : null}
-      {creation.notice ? (
+      {creation.notice && market ? (
         <View className="px-4 py-2">
           <StatusBanner
             icon="CheckCircle2"
@@ -480,7 +492,7 @@ export function CustomerBookContent(
                     : "Add customer"
               }
               bottomOffset={
-                scrollHide.hidden
+                scrollHide.hidden && !search
                   ? 0
                   : Math.max(
                       0,

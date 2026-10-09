@@ -68,6 +68,7 @@ const CheckSquare = hugeIcon("CheckmarkSquare01Icon")
 const ChevronDown = hugeIcon("ArrowDown01Icon")
 const ChevronLeft = hugeIcon("ArrowLeft01Icon")
 const ChevronRight = hugeIcon("ArrowRight01Icon")
+const ChevronUp = hugeIcon("ArrowUp01Icon")
 const CircleCheck = hugeIcon("CircleCheck")
 const CircleDollarSign = hugeIcon("DollarCircleIcon")
 const ClipboardCheck = hugeIcon("ClipboardCheck")
@@ -293,6 +294,7 @@ const appIcons = {
   CheckSquare,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,

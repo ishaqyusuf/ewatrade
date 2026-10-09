@@ -34,6 +34,8 @@ import { BottomSheetFooter, useBottomSheetModal } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { forwardRef, useCallback, useRef, useState } from "react"
 import { View, useWindowDimensions } from "react-native"
+import { KeyboardStickyView } from "react-native-keyboard-controller"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export type { SaleCustomerDraft } from "@/components/mobile/create-sale-customer-sheet-model"
 
@@ -83,7 +85,16 @@ export const CreateSaleCustomerSheet = forwardRef<
     const market = appearance === "market-day"
     const [footerHeight, setFooterHeight] = useState(88)
     const hasDraft = hasCreateCustomerDraft(draft)
-    const maxDynamicContentSize = getCreateCustomerSheetMaxHeight(height)
+    // Green Till: a full-screen form that asks for name and phone first;
+    // Show more reveals the secondary fields (phone country, email).
+    const [moreOpen, setMoreOpen] = useState(false)
+    const showMore = market || moreOpen || Boolean(draft.email.trim())
+    const insets = useSafeAreaInsets()
+    const fullScreen = !market
+    const expandedHeight = height - insets.top
+    const maxDynamicContentSize = market
+      ? getCreateCustomerSheetMaxHeight(height)
+      : expandedHeight
     const saveDisabled = isCreateCustomerSaveDisabled({
       disabled: disabled || isLoading,
       name: draft.name,
@@ -105,37 +116,41 @@ export const CreateSaleCustomerSheet = forwardRef<
     const renderFooter = useCallback(
       (props: BottomSheetFooterProps) => (
         <BottomSheetFooter {...props}>
-          <View
-            onLayout={(event) =>
-              setFooterHeight(event.nativeEvent.layout.height)
-            }
-            className={cn(
-              "px-5 pb-5 pt-3",
-              market ? "bg-market-field" : "bg-card",
-            )}
-          >
-            <ActionButton
-              icon={recoveryAction ? "Search" : "UserPlus"}
-              disabled={actionDisabled}
-              isLoading={isLoading}
-              loadingLabel="Saving customer"
-              onPress={recoveryAction?.onPress ?? onSave}
-              foregroundColor={market ? palette.onPalm : undefined}
-              disabledForegroundColor={market ? palette.mutedInk : undefined}
-              className={
-                market
-                  ? actionDisabled
-                    ? "bg-market-line active:bg-market-line"
-                    : "bg-market-palm active:bg-market-hero-pressed"
-                  : undefined
+          {/* Full screen: the sheet cannot rise, so Save rides the keyboard. */}
+          <KeyboardStickyView enabled={fullScreen}>
+            <View
+              onLayout={(event) =>
+                setFooterHeight(event.nativeEvent.layout.height)
               }
+              className={cn(
+                "px-5 pb-5 pt-3",
+                market ? "bg-market-field" : "bg-card",
+              )}
             >
-              {recoveryAction?.label ?? saveLabel}
-            </ActionButton>
-          </View>
+              <ActionButton
+                icon={recoveryAction ? "Search" : "UserPlus"}
+                disabled={actionDisabled}
+                isLoading={isLoading}
+                loadingLabel="Saving customer"
+                onPress={recoveryAction?.onPress ?? onSave}
+                foregroundColor={market ? palette.onPalm : undefined}
+                disabledForegroundColor={market ? palette.mutedInk : undefined}
+                className={
+                  market
+                    ? actionDisabled
+                      ? "bg-market-line active:bg-market-line"
+                      : "bg-market-palm active:bg-market-hero-pressed"
+                    : undefined
+                }
+              >
+                {recoveryAction?.label ?? saveLabel}
+              </ActionButton>
+            </View>
+          </KeyboardStickyView>
         </BottomSheetFooter>
       ),
       [
+        fullScreen,
         market,
         actionDisabled,
         isLoading,
@@ -149,18 +164,29 @@ export const CreateSaleCustomerSheet = forwardRef<
 
     return (
       <VariableContextProvider
-        value={{ "--sale-customer-footer": footerHeight }}
+        value={{
+          "--sale-customer-footer": footerHeight,
+        }}
       >
         <Modal
           backdropComponent={renderBackdrop}
-          enableDynamicSizing
+          enableDynamicSizing={!fullScreen}
           enablePanDownToClose={!hasDraft && !isLoading}
           keyboardBehavior="fillParent"
           footerComponent={renderFooter}
           maxDynamicContentSize={maxDynamicContentSize}
           ref={ref}
-          onDismiss={onDismiss}
-          snapPoints={[...CREATE_CUSTOMER_SHEET_SNAP_POINTS]}
+          onDismiss={() => {
+            setMoreOpen(false)
+            onDismiss?.()
+          }}
+          snapPoints={
+            fullScreen ? ["100%"] : [...CREATE_CUSTOMER_SHEET_SNAP_POINTS]
+          }
+          detached={!fullScreen}
+          handleComponent={fullScreen ? null : undefined}
+          bottomInset={fullScreen ? 0 : undefined}
+          topInset={insets.top}
           accessibilityLabel="Add customer"
           hideHeader={!market}
           title={market ? "Create customer" : undefined}
@@ -234,7 +260,7 @@ export const CreateSaleCustomerSheet = forwardRef<
                   Optional contact
                 </Text>
               ) : null}
-              {useCountryPhone ? (
+              {market && useCountryPhone ? (
                 <CountrySelect
                   label="Phone country"
                   value={country.code}
@@ -266,18 +292,35 @@ export const CreateSaleCustomerSheet = forwardRef<
                     : draft.phone
                 }
               />
-              <FormField
-                variant={market ? "market" : "green-gate"}
-                maxLength={320}
-                editable={!isLoading && !disabled}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                label="Email"
-                leadingIcon="Mail"
-                onChangeText={(email) => onChange({ ...draft, email })}
-                placeholder="Email address"
-                value={draft.email}
-              />
+              {!market && showMore && useCountryPhone ? (
+                <CountrySelect
+                  label="Phone country"
+                  value={country.code}
+                  onChange={setSelectedCountry}
+                  disabled={disabled || isLoading}
+                />
+              ) : null}
+              {showMore ? (
+                <FormField
+                  variant={market ? "market" : "green-gate"}
+                  maxLength={320}
+                  editable={!isLoading && !disabled}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  label="Email"
+                  leadingIcon="Mail"
+                  onChangeText={(email) => onChange({ ...draft, email })}
+                  placeholder="Email address"
+                  value={draft.email}
+                />
+              ) : null}
+              {!market ? (
+                <ShowMoreToggle
+                  open={showMore}
+                  locked={Boolean(draft.email.trim())}
+                  onToggle={() => setMoreOpen((open) => !open)}
+                />
+              ) : null}
               <View className="h-[var(--sale-customer-footer)]" />
             </View>
           </BottomSheetKeyboardAwareScrollView>
@@ -289,7 +332,44 @@ export const CreateSaleCustomerSheet = forwardRef<
 
 CreateSaleCustomerSheet.displayName = "CreateSaleCustomerSheet"
 
-/** Green Till sheet header: left title and line, round close button. */
+/** Dashed "Show more · Country, email" row that folds the secondary fields. */
+function ShowMoreToggle({
+  locked,
+  onToggle,
+  open,
+}: {
+  /** An email is filled in, so the fields cannot fold away. */
+  locked: boolean
+  onToggle: () => void
+  open: boolean
+}) {
+  if (open && locked) return null
+  return (
+    <Pressable
+      accessibilityLabel={open ? "Show fewer fields" : "Show more fields"}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      className="min-h-11 flex-row items-center gap-1.5 rounded-[14px] border-[1.5px] border-dashed border-border px-3.5"
+      haptic
+      onPress={onToggle}
+    >
+      <Text className="text-[13.5px] font-extrabold text-primary">
+        {open ? "Show less" : "Show more"}
+      </Text>
+      {open ? null : (
+        <Text className="min-w-0 flex-1 text-[12.5px] font-semibold text-muted-foreground">
+          Country, email
+        </Text>
+      )}
+      <Icon
+        className="ml-auto size-[16px] text-primary"
+        name={open ? "ChevronUp" : "ChevronDown"}
+      />
+    </Pressable>
+  )
+}
+
+/** Green Till full-screen form bar: X on the left, centred title, line below. */
 function ClassicSheetHeader({
   description,
   dismissible,
@@ -299,28 +379,28 @@ function ClassicSheetHeader({
 }) {
   const { dismiss } = useBottomSheetModal()
   return (
-    <View className="flex-row items-start gap-2.5">
-      <View className="min-w-0 flex-1">
+    <View className="gap-3 pt-2">
+      <View className="flex-row items-center gap-2.5">
+        <Pressable
+          accessibilityLabel="Close add customer"
+          accessibilityRole="button"
+          className="size-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+          disabled={!dismissible}
+          haptic
+          onPress={() => dismiss()}
+        >
+          <Icon className="size-[18px] text-foreground" name="X" />
+        </Pressable>
         <Text
           accessibilityRole="header"
-          className="text-xl font-extrabold tracking-tight text-foreground"
+          numberOfLines={1}
+          className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
         >
           Add customer
         </Text>
-        <Text className="mt-0.5 text-[13px] text-muted-foreground">
-          {description}
-        </Text>
+        <View className="size-11" />
       </View>
-      <Pressable
-        accessibilityLabel="Close add customer"
-        accessibilityRole="button"
-        className="size-10 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
-        disabled={!dismissible}
-        haptic
-        onPress={() => dismiss()}
-      >
-        <Icon className="size-[18px] text-foreground" name="X" />
-      </Pressable>
+      <Text className="text-[13px] text-muted-foreground">{description}</Text>
     </View>
   )
 }
