@@ -7,6 +7,7 @@ import {
   ASSISTANT_RUNTIME_CONFIGURATION_KEY,
   resolveAssistantRuntimeConfiguration,
 } from "@ewatrade/ai/runtime-config"
+import { respondGeneralRehearsal } from "@ewatrade/assistant/general/rehearsal"
 import { SETUP_ASSISTANT_PROMPT_VERSION } from "@ewatrade/assistant/setup/contracts"
 import type { SetupAssistantDataParts } from "@ewatrade/assistant/setup/messages"
 import { buildSetupAssistantInstructions } from "@ewatrade/assistant/setup/prompt"
@@ -77,9 +78,10 @@ const chatRequestSchema = z
 
 type ResolvedModel = AssistantLanguageModel & { rehearsal: boolean }
 
-async function resolveModel(
+export async function resolveModel(
   db: typeof prisma,
   dataClassification: "LIVE" | "QA",
+  purpose: "SETUP" | "GENERAL" = "SETUP",
 ): Promise<ResolvedModel | null> {
   // QA data never reaches a live provider; the rehearsal model is the test adapter.
   const rehearsalRequested =
@@ -94,7 +96,9 @@ async function resolveModel(
     if (!decision.allowed) return null
     return {
       model: createRehearsalModel((prompt) =>
-        respondSetupRehearsal(
+        (purpose === "GENERAL"
+          ? respondGeneralRehearsal
+          : respondSetupRehearsal)(
           prompt as Parameters<typeof respondSetupRehearsal>[0],
         ),
       ),

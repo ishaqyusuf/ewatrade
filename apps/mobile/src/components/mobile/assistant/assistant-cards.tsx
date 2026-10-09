@@ -35,6 +35,7 @@ export function ProposalCard({
   summary,
   state,
   disabled,
+  confirmDisabled = false,
   reason,
   onConfirm,
   onEdit,
@@ -42,8 +43,15 @@ export function ProposalCard({
 }: {
   title: string
   summary: string
-  state: "pending" | "confirmed" | "cancelled"
+  state:
+    | "pending"
+    | "confirmed"
+    | "cancelled"
+    | "expired"
+    | "failed"
+    | "executing"
   disabled: boolean
+  confirmDisabled?: boolean
   reason?: string
   onConfirm: () => void
   onEdit: () => void
@@ -59,7 +67,13 @@ export function ProposalCard({
               ? "Check and confirm"
               : state === "confirmed"
                 ? "Confirmed"
-                : "Cancelled"
+                : state === "expired"
+                  ? "Expired"
+                  : state === "failed"
+                    ? "Needs review"
+                    : state === "executing"
+                      ? "Checking result"
+                      : "Cancelled"
           }
           tone={state === "confirmed" ? "ok" : "muted"}
         />
@@ -71,7 +85,10 @@ export function ProposalCard({
             {reason ?? "Nothing changes until you confirm."}
           </Text>
           <View className="flex-row flex-wrap gap-2">
-            <ActionButton disabled={disabled} onPress={onConfirm}>
+            <ActionButton
+              disabled={disabled || confirmDisabled}
+              onPress={onConfirm}
+            >
               Confirm
             </ActionButton>
             <ActionButton

@@ -47,6 +47,7 @@ const serviceAttributionModels = [
 ] as const
 
 const directConversationModels = [
+  "assistantActionProposal",
   "storeConversationAccountLinkCommand",
   "storeConversationAccountDeviceCommand",
   "storeConversationAccountAuditEvent",
@@ -622,6 +623,7 @@ test("operator review identifies an unmatched email and a sole owner without exp
         return 5
       },
     },
+    assistantActionProposal: { count: async () => 0 },
     storeConversationPushEndpoint: { count: async () => 0 },
     storeConversationWhatsAppBridgeCapability: {
       count: async (query: unknown) => {
@@ -1125,6 +1127,7 @@ test("commercial and clinical review use the verified subject after User removal
     serviceRequest: { count },
     commerceInquiry: { count },
     ...directConversationStub(directConversationQueries, () => 1),
+    assistantActionProposal: { count },
     storeConversationPushEndpoint: { count },
     ...prescriptionInventoryStub(prescriptionQueries, () => 1),
   } as unknown as PrismaClient

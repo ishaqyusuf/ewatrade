@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto"
 import {
   type AssistantConversationStatus,
   Prisma,
+  type PrismaClient,
   type SetupDraftEntityKind,
   type SetupDraftEntityState,
 } from "../../generated/prisma/client"
@@ -211,7 +212,16 @@ export function newAssistantMessageId() {
 
 /** Idempotent per actor/request: a replayed request never runs the model twice. */
 export async function beginAssistantRun(
-  db: DbClient,
+  db: PrismaClient,
+  input: Parameters<typeof beginAssistantRunInTransaction>[1],
+) {
+  return db.$transaction((tx) => beginAssistantRunInTransaction(tx, input), {
+    ...transactionOptions,
+  })
+}
+
+export async function beginAssistantRunInTransaction(
+  tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
     conversationId: string
@@ -222,38 +232,33 @@ export async function beginAssistantRun(
     userMessage: AssistantStoredMessage
   },
 ) {
-  const begin = async (tx: Prisma.TransactionClient) => {
-    const prior = await tx.assistantRun.findUnique({
-      where: {
-        actorUserId_requestId: {
-          actorUserId: input.actorUserId,
-          requestId: input.requestId,
-        },
-      },
-      select: { id: true, conversationId: true, status: true },
-    })
-    if (prior) return { replay: true as const, run: prior }
-    await appendAssistantMessage(tx, {
-      conversationId: input.conversationId,
-      message: input.userMessage,
-      clientRequestId: input.requestId,
-    })
-    const run = await tx.assistantRun.create({
-      data: {
+  const prior = await tx.assistantRun.findUnique({
+    where: {
+      actorUserId_requestId: {
         actorUserId: input.actorUserId,
-        conversationId: input.conversationId,
-        model: input.model,
-        promptVersion: input.promptVersion,
-        provider: input.provider,
         requestId: input.requestId,
       },
-      select: { id: true, conversationId: true, status: true },
-    })
-    return { replay: false as const, run }
-  }
-  return "$transaction" in db
-    ? db.$transaction(begin, transactionOptions)
-    : begin(db)
+    },
+    select: { id: true, conversationId: true, status: true },
+  })
+  if (prior) return { replay: true as const, run: prior }
+  await appendAssistantMessage(tx, {
+    conversationId: input.conversationId,
+    message: input.userMessage,
+    clientRequestId: input.requestId,
+  })
+  const run = await tx.assistantRun.create({
+    data: {
+      actorUserId: input.actorUserId,
+      conversationId: input.conversationId,
+      model: input.model,
+      promptVersion: input.promptVersion,
+      provider: input.provider,
+      requestId: input.requestId,
+    },
+    select: { id: true, conversationId: true, status: true },
+  })
+  return { replay: false as const, run }
 }
 
 export type AssistantUsage = {

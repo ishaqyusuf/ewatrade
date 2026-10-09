@@ -9,7 +9,10 @@
     "./setup/messages": "./src/setup/messages.ts",
     "./setup/prompt": "./src/setup/prompt.ts",
     "./setup/tools": "./src/setup/tools.ts",
-    "./setup/rehearsal": "./src/setup/rehearsal.ts"
+    "./setup/rehearsal": "./src/setup/rehearsal.ts",
+    "./general/contracts": "./src/general/contracts.ts",
+    "./general/prompt": "./src/general/prompt.ts",
+    "./general/rehearsal": "./src/general/rehearsal.ts"
   },
   "scripts": {
     "lint": "biome check .",

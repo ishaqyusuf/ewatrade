@@ -18,6 +18,7 @@ import {
   finalizeInventoryCloseout,
   finalizeStockCount,
   getCatalogOfferingAvailability,
+  getConfiguredCatalogOfferingAvailability,
   getInventoryReconciliationSummary,
   getStockOperationAudit,
   listInventoryBalanceReport,
@@ -356,6 +357,28 @@ export const inventoryRouter = createTRPCRouter({
         return await finalizeStockCount(ctx.db, {
           ...input,
           actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  configuredOfferingAvailability: protectedProcedure
+    .input(inventoryOfferingAvailabilitySchema)
+    .query(async ({ ctx, input }) => {
+      inventoryRole(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await getConfiguredCatalogOfferingAvailability(ctx.db, {
+          offeringId: input.offeringId,
+          storeId,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
