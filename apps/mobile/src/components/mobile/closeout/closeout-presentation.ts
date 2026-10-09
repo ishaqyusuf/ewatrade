@@ -6,6 +6,10 @@ export type CloseoutHeaderProps = {
   storeName: string
   count: number | null
   changedCount: number | null
+  loading?: boolean
+  offline?: boolean
+  updatedAt?: number
+  completed?: boolean
 }
 export type CloseoutRowProps = {
   line: CloseoutLine

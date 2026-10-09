@@ -1,9 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
-import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
-import { StatusBanner } from "@/components/mobile/status-banner"
 import {
   ClassicCloseoutHeader,
   ClassicCloseoutRow,
@@ -13,6 +8,11 @@ import {
   MarketDayCloseoutRow,
 } from "@/components/mobile/appearances/market-day/closeout-screen"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { EmptyState } from "@/components/mobile/empty-state"
+import { FormField } from "@/components/mobile/form-field"
+import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -24,8 +24,8 @@ import { useState } from "react"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { CloseoutReviewSheet } from "./closeout-review-sheet"
 import type { CloseoutContentProps } from "./closeout-model"
+import { CloseoutReviewSheet } from "./closeout-review-sheet"
 import { useCloseout } from "./use-closeout"
 
 export function CloseoutWorkflowChrome(props: WorkflowModalChromeProps) {
@@ -47,7 +47,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
       >
         <FlatList
           className="flex-1"
-          contentContainerClassName="grow px-4 pb-[var(--closeout-footer)]"
+          contentContainerClassName="grow px-[18px] pb-[var(--closeout-footer)]"
           data={completed ? [] : model.lines}
           keyExtractor={(line) => line.balance.balanceSourceId}
           keyboardDismissMode="interactive"
@@ -64,6 +64,10 @@ export function CloseoutContent(props: CloseoutContentProps) {
             <View className="gap-4 pb-4">
               <Header
                 attendantName={model.attendantName}
+                loading={model.loading}
+                offline={model.offline}
+                updatedAt={model.balancesUpdatedAt}
+                completed={completed}
                 storeName={model.storeName}
                 count={
                   model.loading ||
