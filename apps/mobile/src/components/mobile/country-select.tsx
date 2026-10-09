@@ -24,10 +24,12 @@ import { useWindowDimensions } from "react-native"
  */
 export function CountrySelect({
   label = "Country",
+  disabled = false,
   onChange,
   value,
 }: {
   label?: string
+  disabled?: boolean
   onChange: (code: string) => void
   value: string
 }) {
@@ -40,6 +42,7 @@ export function CountrySelect({
   const countries = useMemo(() => searchCountries(search), [search])
 
   const choose = (next: Country) => {
+    if (disabled) return
     onChange(next.code)
     modal.dismiss()
   }
@@ -53,6 +56,8 @@ export function CountrySelect({
         accessibilityHint="Opens the country list"
         accessibilityLabel={`${label}: ${country.name}`}
         accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
         haptic
         onPress={() => {
           setSearch("")
@@ -127,7 +132,8 @@ export function CountrySelect({
               <Pressable
                 accessibilityLabel={`${item.name}, plus ${item.dialCode}`}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityState={{ selected, disabled }}
+                disabled={disabled}
                 className={cn(
                   "mx-3 min-h-12 flex-row items-center gap-3 rounded-2xl px-3 py-2.5 active:bg-accent",
                   selected && "bg-accent",

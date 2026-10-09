@@ -152,7 +152,10 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "catalog:",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@ai-sdk/react": "3.0.143",
+    "ai": "6.0.141",
+    "@ewatrade/assistant": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
