@@ -1,13 +1,37 @@
+import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useColorScheme, useColors } from "@/hooks/use-color"
+import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { Text as NativeText } from "react-native"
 import { ActionButton } from "../action-button"
+import { workDueLabel } from "../appearances/classic/service-jobs"
 import { HeroCard } from "../green-till/hero-card"
-import { QuickActionRow, StatusPill } from "../green-till/kit"
 import { StatusBanner } from "../status-banner"
+import { textLabel } from "./service-jobs-model"
 import { ServiceWorkLines } from "./service-work-lines"
-import { overdueWork, workStatusLabel } from "./service-work-summary"
+import { overdueWork } from "./service-work-summary"
 import type { ServiceJobsModel } from "./use-service-jobs"
+
+const TRACK = ["Received", "Working", "Ready", "Collected"] as const
+
+/** How far along the Received → Working → Ready → Collected track a job is. */
+function trackStep(summary: string, handedOff: boolean) {
+  if (handedOff || summary === "completed") return 4
+  if (summary === "ready_for_handoff") return 3
+  if (["in_progress", "partially_ready", "blocked"].includes(summary)) return 2
+  return 1
+}
+
+function dueLine(due: Date | string, late: boolean) {
+  const label = workDueLabel(due) ?? ""
+  const today = /^\d{2}:\d{2}$/.test(label)
+  if (late) return `Overdue · was due ${today ? `today ${label}` : label}`
+  return `Due ${today ? `today ${label}` : label}`
+}
+
 export function ClassicServiceJobWorkspace({
   model,
   onLinesLayout,
@@ -17,65 +41,129 @@ export function ClassicServiceJobWorkspace({
   onLinesLayout: (y: number) => void
   onPageChange: () => void
 }) {
+  const { colorScheme } = useColorScheme()
+  const colors = useColors()
+  const palette = GREEN_TILL_THEME[colorScheme]
   const job = model.selectedJob
   if (!job) return null
   const canAct = model.command.canAct()
   const late = overdueWork(job, Date.now())
-  const ready = job.summary === "ready_for_handoff" && !job.handedOffAt
+  const handedOff = Boolean(job.handedOffAt)
+  const ready = job.summary === "ready_for_handoff" && !handedOff
+  const step = trackStep(job.summary, handedOff)
+  const money = (minor: number) => formatMinorMoney(minor, job.currencyCode)
+  const mine = model.profile?.id
+    ? job.currentAssigneeUserId === model.profile.id
+    : false
+  const back = () => {
+    model.setAmountPaid("")
+    model.setPaymentReference("")
+    model.setSelectedJobId(null)
+  }
   return (
     <View className="gap-4">
-      <ActionButton
-        variant="ghost"
-        icon="ArrowLeft"
-        onPress={() => {
-          model.setAmountPaid("")
-          model.setPaymentReference("")
-          model.setSelectedJobId(null)
-        }}
-      >
-        Work queue
-      </ActionButton>
+      <View className="flex-row items-center justify-between">
+        <RoundButton
+          icon="ChevronLeft"
+          label="Back to work queue"
+          onPress={back}
+        />
+        <Text
+          accessibilityRole="header"
+          className="text-[17px] font-extrabold text-foreground"
+        >
+          {job.orderNumber}
+        </Text>
+        <RoundButton
+          icon="Clock"
+          label="Job history"
+          onPress={() => model.openHistory("notes")}
+        />
+      </View>
       <HeroCard
-        label={`${job.customerName || "Walk-in customer"} · ${job.orderNumber}`}
-        amount={formatMinorMoney(job.balanceDueMinor, job.currencyCode)}
-        sub="Balance to collect"
+        label={job.customerName || "Walk-in customer"}
         pill={{
-          label: workStatusLabel(job.summary),
-          tone: job.handedOffAt ? "synced" : "draft",
+          label:
+            job.balanceDueMinor <= 0
+              ? "Paid"
+              : job.amountPaidMinor > 0
+                ? "Part paid"
+                : "Unpaid",
+          tone: job.balanceDueMinor > 0 ? "draft" : "synced",
         }}
+        title={
+          job.balanceDueMinor > 0
+            ? `${money(job.balanceDueMinor)} due`
+            : handedOff
+              ? "Collected"
+              : "Paid in full"
+        }
+        sub={`${money(job.amountPaidMinor)} of ${money(job.orderTotalMinor)} paid`}
       >
-        <View className="mt-4 flex-row flex-wrap gap-2">
-          {["Received", "Working", "Ready", "Collected"].map((label) => (
-            <StatusPill
-              key={label}
-              label={label}
-              tone={workStatusLabel(job.summary) === label ? "ok" : "muted"}
+        {job.dueCommitmentAt && !handedOff ? (
+          <View className="mt-1.5 flex-row items-center gap-1.5">
+            <Icon
+              className="size-[14px]"
+              color={late ? palette.heroDown : palette.heroMuted}
+              name="Clock"
             />
+            <NativeText
+              style={{
+                color: late ? palette.heroDown : palette.heroMuted,
+                fontSize: 12.5,
+                fontWeight: late ? "700" : "400",
+              }}
+            >
+              {dueLine(job.dueCommitmentAt, late)}
+            </NativeText>
+          </View>
+        ) : null}
+        <View
+          accessibilityLabel={`Progress: ${TRACK[step - 1]}`}
+          className="mt-4 flex-row gap-1.5"
+        >
+          {TRACK.map((label, index) => (
+            <View key={label} className="flex-1 gap-1.5">
+              <View
+                style={{
+                  backgroundColor:
+                    index < step ? palette.gold : palette.heroLine,
+                  borderRadius: 2,
+                  height: 4,
+                }}
+              />
+              <NativeText
+                style={{
+                  color:
+                    index < step ? palette.heroForeground : palette.heroMuted,
+                  fontSize: 11,
+                  fontWeight: "700",
+                }}
+              >
+                {label}
+              </NativeText>
+            </View>
           ))}
         </View>
-        {ready ? (
+        {ready || (job.balanceDueMinor > 0 && !handedOff) ? (
           <View className="mt-4">
             <ActionButton
               tone="cream"
+              icon={ready ? "Wallet" : "CreditCard"}
               disabled={!canAct}
-              onPress={() => model.openPaymentEditor(job, "handoff")}
+              onPress={() =>
+                model.openPaymentEditor(job, ready ? "handoff" : "payment")
+              }
             >
-              {job.balanceDueMinor > 0
-                ? "Collect balance and hand over"
-                : "Mark collected"}
+              {ready
+                ? job.balanceDueMinor > 0
+                  ? "Collect balance and hand over"
+                  : "Hand over"
+                : "Record payment"}
             </ActionButton>
           </View>
-        ) : job.handedOffAt ? (
-          <Text className="mt-4 text-hero-foreground">Collected</Text>
         ) : null}
       </HeroCard>
-      {job.dueCommitmentAt ? (
-        <StatusBanner
-          tone={late ? "destructive" : "default"}
-          title={late ? "Overdue" : "Due"}
-          message={new Date(job.dueCommitmentAt).toLocaleString()}
-        />
-      ) : null}
       {job.summary === "blocked" ? (
         <StatusBanner
           tone="destructive"
@@ -86,84 +174,274 @@ export function ClassicServiceJobWorkspace({
           }
         />
       ) : null}
-      <QuickActionRow
-        actions={[
-          ...(job.balanceDueMinor > 0
-            ? [
-                {
-                  label: "Payment",
-                  icon: "CreditCard" as const,
-                  disabled: !canAct,
-                  onPress: () => model.openPaymentEditor(job, "payment"),
-                },
-              ]
-            : []),
-          {
-            label: "Note",
-            icon: "FileText",
-            disabled: !canAct,
-            onPress: () => model.openTextEditor(job, "note"),
-          },
-          {
-            label: "Evidence",
-            icon: "Camera",
-            disabled: !canAct,
-            onPress: () => model.openEvidenceChooser(job),
-          },
-          ...(model.canManage
-            ? [
-                {
-                  label: "Customer update",
-                  icon: "MessageCircle" as const,
-                  disabled: !model.command.canAct(true),
-                  onPress: () => model.openTextEditor(job, "message"),
-                },
-              ]
-            : []),
-        ]}
+      <InfoCard
+        icon="UserPlus"
+        tint="lilac"
+        title={
+          mine
+            ? "Assigned to you"
+            : job.currentAssigneeUserId
+              ? "Assigned to a teammate"
+              : "Not assigned yet"
+        }
+        detail={
+          mine ? "You are working on this job" : "Take this job to work on it"
+        }
+        actionLabel={mine || !model.profile?.id ? undefined : "Assign to me"}
+        actionDisabled={!canAct || model.assignMutation.isPending}
+        onAction={() => model.assignToMe(job)}
       />
-      {model.profile?.id && job.currentAssigneeUserId !== model.profile.id ? (
-        <ActionButton
-          variant="outline"
-          disabled={!canAct}
-          isLoading={model.assignMutation.isPending}
-          onPress={() => model.assignToMe(job)}
-        >
-          Assign to me
-        </ActionButton>
-      ) : null}
       <ServiceWorkLines
+        key={job.id}
         job={job}
         disabled={!canAct}
         onTransition={model.transition}
         onLayout={onLinesLayout}
         onPageChange={onPageChange}
       />
-      <Text className="text-xs text-muted-foreground">
-        Notes and evidence stay private unless a manager publishes reviewed
-        evidence.
-      </Text>
-      {job.notes.slice(-3).map((entry) => (
-        <View className="rounded-[20px] bg-card p-4" key={entry.id}>
-          <Text>{entry.body}</Text>
+      {model.canManage ? (
+        <InfoCard
+          icon="MessageCircle"
+          tint="sky"
+          title="Customer update"
+          detail="WhatsApp or SMS · managers only"
+          actionLabel="Send"
+          actionDisabled={!model.command.canAct(true)}
+          onAction={() => model.openTextEditor(job, "message")}
+        />
+      ) : null}
+      <View className="gap-2">
+        <View className="mt-1 flex-row items-baseline justify-between px-0.5">
+          <Text
+            accessibilityRole="header"
+            className="text-base font-extrabold tracking-tight text-foreground"
+          >
+            Private record
+          </Text>
+          {job.notes.length || job.evidence.length ? (
+            <Pressable
+              accessibilityRole="button"
+              className="min-h-9 justify-end"
+              haptic
+              hitSlop={8}
+              onPress={() =>
+                model.openHistory(job.notes.length ? "notes" : "evidence")
+              }
+            >
+              <Text className="text-[13px] font-bold text-primary">
+                See all
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
-      ))}
-      {job.notes.length ? (
-        <ActionButton
-          variant="outline"
-          onPress={() => model.openHistory("notes")}
+        {job.notes.length || job.evidence.length ? (
+          <View className="gap-2.5 rounded-[20px] bg-card p-3 shadow-sm">
+            {job.notes.slice(-2).map((entry) => (
+              <View key={entry.id} className="rounded-xl bg-muted px-3 py-2.5">
+                <Text className="text-[13px] text-foreground">
+                  {entry.body}
+                </Text>
+                <Text className="mt-0.5 text-[11px] text-muted-foreground">
+                  {new Date(entry.createdAt).toLocaleTimeString("en-GB", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </View>
+            ))}
+            {job.evidence.length ? (
+              <View className="flex-row flex-wrap gap-2">
+                {job.evidence.slice(-4).map((entry) => (
+                  <Pressable
+                    key={entry.id}
+                    accessibilityRole="button"
+                    className="min-h-8 flex-row items-center gap-1.5 rounded-lg bg-muted px-2.5 active:opacity-80"
+                    haptic
+                    onPress={() => model.openHistory("evidence")}
+                  >
+                    <Icon
+                      className="size-[13px]"
+                      color={
+                        entry.uploadStatus === "FAILED"
+                          ? colors.destructive
+                          : colors.mutedForeground
+                      }
+                      name={entry.mediaType === "VIDEO" ? "Video" : "Camera"}
+                    />
+                    <Text className="text-xs font-bold text-foreground">
+                      {entry.label || textLabel(entry.purpose)} ·{" "}
+                      {textLabel(entry.uploadStatus)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+        <View className="flex-row gap-2">
+          <RecordTile
+            icon="Camera"
+            label="Photo"
+            tint="sky"
+            disabled={!canAct || model.captureBusy}
+            onPress={() => void model.captureEvidence(job, "photo")}
+          />
+          <RecordTile
+            icon="Video"
+            label="Video"
+            tint="sky"
+            disabled={!canAct || model.captureBusy}
+            onPress={() => void model.captureEvidence(job, "video")}
+          />
+          <RecordTile
+            icon="FileText"
+            label="Note"
+            tint="mint"
+            disabled={!canAct}
+            onPress={() => model.openTextEditor(job, "note")}
+          />
+        </View>
+        <Text className="px-0.5 text-xs text-muted-foreground">
+          Notes and evidence stay private unless a manager publishes reviewed
+          evidence.
+        </Text>
+      </View>
+    </View>
+  )
+}
+
+function RoundButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: IconKeys
+  label: string
+  onPress: () => void
+}) {
+  const colors = useColors()
+  return (
+    <View className="rounded-full bg-card shadow-sm">
+      <Pressable
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        className="size-10 items-center justify-center rounded-full active:opacity-80"
+        haptic
+        onPress={onPress}
+        transition
+      >
+        <Icon className="size-[18px]" color={colors.foreground} name={icon} />
+      </Pressable>
+    </View>
+  )
+}
+
+function TintTile({ icon, tint }: { icon: IconKeys; tint: GreenTillTint }) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        backgroundColor: palette[tint],
+        borderRadius: 11,
+        height: 34,
+        justifyContent: "center",
+        width: 34,
+      }}
+    >
+      <Icon
+        className="size-[17px]"
+        color={palette[`${tint}Foreground`]}
+        name={icon}
+      />
+    </View>
+  )
+}
+
+function InfoCard({
+  icon,
+  tint,
+  title,
+  detail,
+  actionLabel,
+  actionDisabled,
+  onAction,
+}: {
+  icon: IconKeys
+  tint: GreenTillTint
+  title: string
+  detail: string
+  actionLabel?: string
+  actionDisabled?: boolean
+  onAction: () => void
+}) {
+  return (
+    <View className="min-h-[62px] flex-row items-center gap-3 rounded-[20px] bg-card px-3.5 py-3 shadow-sm">
+      <TintTile icon={icon} tint={tint} />
+      <View className="min-w-0 flex-1">
+        <Text className="text-sm font-bold text-foreground">{title}</Text>
+        <Text className="text-xs text-muted-foreground">{detail}</Text>
+      </View>
+      {actionLabel ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: actionDisabled }}
+          className="min-h-11 justify-center px-1"
+          disabled={actionDisabled}
+          haptic
+          hitSlop={6}
+          onPress={onAction}
         >
-          View all {job.notes.length} loaded notes
-        </ActionButton>
+          <Text
+            className={
+              actionDisabled
+                ? "text-[13px] font-bold text-muted-foreground"
+                : "text-[13px] font-bold text-primary"
+            }
+          >
+            {actionLabel}
+          </Text>
+        </Pressable>
       ) : null}
-      {job.evidence.length ? (
-        <ActionButton
-          variant="outline"
-          onPress={() => model.openHistory("evidence")}
-        >
-          View {job.evidence.length} loaded attachments
-        </ActionButton>
-      ) : null}
+    </View>
+  )
+}
+
+function RecordTile({
+  icon,
+  label,
+  tint,
+  disabled,
+  onPress,
+}: {
+  icon: IconKeys
+  label: string
+  tint: GreenTillTint
+  disabled?: boolean
+  onPress: () => void
+}) {
+  return (
+    <View
+      className={
+        disabled
+          ? "flex-1 rounded-[18px] bg-card opacity-50 shadow-sm"
+          : "flex-1 rounded-[18px] bg-card shadow-sm"
+      }
+    >
+      <Pressable
+        accessibilityLabel={`Add ${label.toLowerCase()}`}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        className="items-center gap-1.5 rounded-[18px] py-3.5 active:opacity-80"
+        disabled={disabled}
+        haptic
+        onPress={onPress}
+        transition
+      >
+        <TintTile icon={icon} tint={tint} />
+        <Text className="text-[13px] font-bold text-foreground">{label}</Text>
+      </Pressable>
     </View>
   )
 }
