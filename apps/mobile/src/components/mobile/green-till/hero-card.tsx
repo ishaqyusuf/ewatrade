@@ -205,25 +205,7 @@ export function HeroCard({
         </View>
       ) : null}
 
-      {meter ? (
-        <View
-          accessibilityLabel={meter.label}
-          accessibilityRole="progressbar"
-          accessibilityValue={{ max: 100, min: 0, now: meter.percent }}
-          style={[styles.meter, { backgroundColor: palette.heroLine }]}
-        >
-          <View
-            style={[
-              styles.meterFill,
-              {
-                backgroundColor:
-                  meter.tone === "gold" ? palette.gold : palette.heroUp,
-                width: `${Math.max(0, Math.min(100, meter.percent))}%`,
-              },
-            ]}
-          />
-        </View>
-      ) : null}
+      {meter ? <HeroMeter meter={meter} palette={palette} /> : null}
 
       {stats?.length ? (
         <View
@@ -369,8 +351,12 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   progress: { flexDirection: "row", gap: 6, marginTop: 14 },
-  meter: { borderRadius: 999, height: 8, marginTop: 14, overflow: "hidden" },
-  meterFill: { borderRadius: 999, height: 8 },
+  meter: {
+    borderRadius: 999,
+    height: 8,
+    marginTop: 14,
+    overflow: "hidden",
+  },
   progressBar: { borderRadius: 6, flex: 1, height: 6 },
   row: {
     alignItems: "center",
@@ -404,3 +390,34 @@ const styles = StyleSheet.create({
   },
   watermark: { bottom: -30, position: "absolute", right: -22 },
 })
+
+/** Paid share of an order, sized in pixels from the measured track. */
+function HeroMeter({
+  meter,
+  palette,
+}: {
+  meter: NonNullable<HeroCardProps["meter"]>
+  palette: (typeof GREEN_TILL_THEME)["light"]
+}) {
+  const [width, setWidth] = useState(0)
+  const percent = Math.max(0, Math.min(100, meter.percent))
+  return (
+    <View
+      accessibilityLabel={meter.label}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ max: 100, min: 0, now: percent }}
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={[styles.meter, { backgroundColor: palette.heroLine }]}
+    >
+      <View
+        style={{
+          backgroundColor:
+            meter.tone === "gold" ? palette.gold : palette.heroUp,
+          borderRadius: 999,
+          height: 8,
+          width: Math.round((width * percent) / 100),
+        }}
+      />
+    </View>
+  )
+}
