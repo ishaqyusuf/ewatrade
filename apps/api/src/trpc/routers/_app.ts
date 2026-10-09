@@ -2,6 +2,7 @@ import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server"
 import { createTRPCRouter } from "../init"
 import { accountPrivacyRouter } from "./account-privacy"
+import { assistantRouter } from "./assistant"
 import { authRouter } from "./auth"
 import { catalogRouter } from "./catalog"
 import { customerLedgerRouter } from "./customer-ledger"
@@ -62,6 +63,7 @@ export const appRouter = createTRPCRouter({
   search: searchRouter,
   setupAssistant: setupAssistantRouter,
   productAssistant: productAssistantRouter,
+  assistant: assistantRouter,
   tenant: tenantRouter,
   stores: storesRouter,
 })

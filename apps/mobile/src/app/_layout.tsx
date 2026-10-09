@@ -200,6 +200,10 @@ const InitialLayout = ({
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
         >
+          <Stack.Screen
+            name="setup-assistant"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="customer-ledger-modal" options={modalOptions} />
           <Stack.Screen
             name="customer-ledger/[customerId]"
@@ -264,6 +268,7 @@ const InitialLayout = ({
           <Stack.Screen name="app-lock-modal" options={modalOptions} />
           <Stack.Screen name="updates" options={{ headerShown: false }} />
           <Stack.Screen name="create-sale-modal" options={modalOptions} />
+          <Stack.Screen name="ask-assistant" options={{ headerShown: false }} />
           <Stack.Screen name="global-search" options={modalOptions} />
           <Stack.Screen
             name="operation-success"

@@ -19,7 +19,9 @@ import {
 } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { AssistantEntry } from "./assistant/assistant-entry"
 import { type MobileBottomTab, MobileBottomTabs } from "./bottom-tabs"
+import { SetupAssistantEntry } from "./setup-assistant/setup-assistant-entry"
 
 export type MobileAppShellRole = "attendant" | "owner"
 
@@ -284,6 +286,12 @@ export function MobileAppShell({
                     ) : null}
                   </Pressable>
                 </View>
+                {showBottomTabs ? (
+                  <View className="flex-row items-center gap-2">
+                    <SetupAssistantEntry compact />
+                    <AssistantEntry />
+                  </View>
+                ) : null}
                 {headerAction}
               </View>
             ) : null}

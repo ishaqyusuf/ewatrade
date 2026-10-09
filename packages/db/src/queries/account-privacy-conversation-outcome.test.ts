@@ -151,7 +151,7 @@ describe("account privacy empty conversation outcome", () => {
       processor: "account-privacy-conversation-empty-v1",
       evidenceDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
     })
-    expect(Object.keys(queries)).toHaveLength(21)
+    expect(Object.keys(queries)).toHaveLength(22)
     expect(queries.storeConversationAccountAccess).toEqual({
       where: { accountUserId: "user-1" },
     })
@@ -179,6 +179,7 @@ describe("account privacy empty conversation outcome", () => {
     ["historical link", { historicalLinks: 1 }],
     ["privacy request", { privacyRequests: 1 }],
     ["historical candidate", { historicalCandidates: 1 }],
+    ["assistant proposal", { directModel: "assistantActionProposal" }],
     ["direct audit", { directModel: "storeConversationModerationAuditEvent" }],
   ])("refuses %s even after a previous empty outcome", async (_name, state) => {
     enable()

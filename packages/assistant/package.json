@@ -19,7 +19,10 @@
     "./setup/rehearsal": "./src/setup/rehearsal.ts",
     "./setup/tools": "./src/setup/tools.ts",
     "./setup/variants": "./src/setup/variants.ts",
-    "./setup/vision": "./src/setup/vision.ts"
+    "./setup/vision": "./src/setup/vision.ts",
+    "./general/contracts": "./src/general/contracts.ts",
+    "./general/prompt": "./src/general/prompt.ts",
+    "./general/rehearsal": "./src/general/rehearsal.ts"
   },
   "scripts": {
     "lint": "biome check .",

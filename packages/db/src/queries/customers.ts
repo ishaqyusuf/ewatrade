@@ -40,6 +40,13 @@ export async function getCustomerById(
 
 export async function createCustomer(
   db: PrismaClient,
+  input: Parameters<typeof createCustomerInTransaction>[1],
+) {
+  return createCustomerInTransaction(db, input)
+}
+
+export async function createCustomerInTransaction(
+  db: DbClient,
   input: {
     email?: string
     name: string

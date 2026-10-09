@@ -24,6 +24,7 @@ const serviceAttributionModels = [
   "commerceInquiryAuditEvent",
 ] as const
 const directConversationModels = [
+  "assistantActionProposal",
   "storeConversationAccountLinkCommand",
   "storeConversationAccountDeviceCommand",
   "storeConversationAccountAuditEvent",

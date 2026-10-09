@@ -23,3 +23,24 @@ test("stock, reconciliation and business catalog grants are distinct", () => {
   expect(staffProcedureAction("catalog.createItem", "mutation")).toBe("catalog")
   expect(staffProcedureAction("orders.listPage", "query")).toBe("read")
 })
+
+test("assistant staging delegates decisions to scoped action checks; stock inspection is read-only", () => {
+  for (const path of [
+    "assistant.start",
+    "assistant.editProposal",
+    "assistant.decideProposal",
+  ])
+    expect(staffProcedureAction(path, "mutation")).toBe("read")
+  expect(
+    staffProcedureAction("inventory.configuredOfferingAvailability", "query"),
+  ).toBe("read")
+  expect(
+    staffProcedureAction(
+      "inventory.configuredOfferingAvailability",
+      "mutation",
+    ),
+  ).toBeNull()
+  expect(
+    staffProcedureAction("assistant.executeAnyAction", "mutation"),
+  ).toBeNull()
+})

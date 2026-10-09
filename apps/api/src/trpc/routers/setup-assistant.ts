@@ -118,6 +118,12 @@ export const setupAssistantRouter = createTRPCRouter({
     )
       return { enabled: false as const }
     const scope = requireSetupAssistantScope(ctx)
+    const location = await ctx.db.store.findFirst({
+      where: { id: scope.storeId, tenantId: scope.tenantId },
+      select: { countryCode: true, tenant: { select: { countryCode: true } } },
+    })
+    const countryCode =
+      location?.countryCode ?? location?.tenant.countryCode ?? "NG"
     const conversation = await findSetupConversation(ctx.db, scope)
     if (!conversation?.setupDraft)
       return {
@@ -126,6 +132,7 @@ export const setupAssistantRouter = createTRPCRouter({
         messages: [],
         draft: null,
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
+        countryCode,
         prerequisites: { termsRequired: false, financeBookMissing: false },
         followUp: setupFollowUpState([]),
         areas: summarizeSetupAreas(null, []),
@@ -133,10 +140,19 @@ export const setupAssistantRouter = createTRPCRouter({
         mediaEnabled: isSetupAssistantMediaEnabled(),
         businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
       }
-    const [messages, draft, sent] = await Promise.all([
+    const [messages, draft, sent, activeRun] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
       readSetupDraft(ctx.db, conversation.setupDraft.id),
       listSentAssistantAttachments(ctx.db, conversation.id),
+      ctx.db.assistantRun.findFirst({
+        where: {
+          conversationId: conversation.id,
+          actorUserId: scope.userId,
+          status: "RUNNING",
+        },
+        orderBy: { startedAt: "desc" },
+        select: { id: true },
+      }),
     ])
     const attachments = sent.map(({ errorCode, ...attachment }) => ({
       ...attachment,
@@ -162,12 +178,14 @@ export const setupAssistantRouter = createTRPCRouter({
         id: conversation.id,
         status: conversation.status,
       },
+      activeRunId: activeRun?.id ?? null,
       messages: withExpiredAttachments(
         messages.map(({ id, role, parts }) => ({ id, role, parts })),
         expired,
       ),
       draft,
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
+      countryCode,
       prerequisites,
       followUp: setupFollowUpState(draft.entities),
       areas: summarizeSetupAreas(draft.areas, draft.entities),

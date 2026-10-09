@@ -1349,6 +1349,13 @@ export async function createSimpleCatalogItem(
   return createCatalogItem(db, simpleCatalogItemCommand(input))
 }
 
+export async function createSimpleCatalogItemInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateSimpleCatalogItemInput,
+) {
+  return createCatalogItemInTransaction(tx, simpleCatalogItemCommand(input))
+}
+
 export function simpleCatalogItemCommand(
   input: CreateSimpleCatalogItemInput,
 ): CreateCatalogItemInput {

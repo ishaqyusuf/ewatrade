@@ -407,6 +407,8 @@ const captureDashboardOutcome = t.middleware(async (opts) => {
 const enforceStaffWriteTransaction = t.middleware(async (opts) => {
   if (
     opts.type !== "mutation" ||
+    // Proposal services lock and reread membership inside their own transaction.
+    opts.path.startsWith("assistant.") ||
     opts.ctx.tenantContext?.staffAccess?.mode !== "SCOPED" ||
     ["OWNER", "ADMIN"].includes(opts.ctx.tenantContext.staffAccess.businessRole)
   )

@@ -133,3 +133,14 @@ test("batch four routes remain development only", () => {
     expect(resolveGreenTillQaPath(`ewatrade-dev://${route}`, false)).toBeNull()
   }
 })
+
+test("assistant design previews are development-only named routes", () => {
+  for (const route of ["setup-assistant", "ask-assistant"]) {
+    expect(
+      resolveGreenTillQaPath(`ewatrade-dev://${route}?qaState=offline`, true),
+    ).toBe(`/${route}?qaState=offline`)
+    expect(
+      resolveGreenTillQaPath(`ewatrade-dev://${route}?qaState=offline`, false),
+    ).toBeNull()
+  }
+})

@@ -2,6 +2,7 @@ import type { PrismaClient } from "../../generated/prisma/client"
 
 type ConversationInventoryClient = Pick<
   PrismaClient,
+  | "assistantActionProposal"
   | "storeConversationAccountLinkCommand"
   | "storeConversationAccountDeviceCommand"
   | "storeConversationAccountAuditEvent"
@@ -28,6 +29,9 @@ export async function getAccountPrivacyConversationInventory(
   verifiedSubjectUserId: string,
 ) {
   // Keep reads sequential for use inside the final serializable transaction.
+  const assistantProposals = await db.assistantActionProposal.count({
+    where: { actorUserId: verifiedSubjectUserId },
+  })
   const linkCommands = await db.storeConversationAccountLinkCommand.count({
     where: { accountUserId: verifiedSubjectUserId },
   })
@@ -99,6 +103,7 @@ export async function getAccountPrivacyConversationInventory(
     where: { accountUserId: verifiedSubjectUserId },
   })
   return {
+    assistantProposals,
     linkCommands,
     deviceCommands,
     accountAuditEvents,

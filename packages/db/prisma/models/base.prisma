@@ -375,6 +375,7 @@ model User {
   sessions                                       Session[]
   memberships                                    Membership[]
   assistantConversations                         AssistantConversation[]
+  assistantActionProposals                       AssistantActionProposal[] @relation("AssistantProposalActor")
   retailOpsStaffProfiles                         RetailOpsStaffProfile[]                           @relation("RetailOpsStaffProfileUser")
   sentMessages                                   Message[]
   automationEvents                               AutomationEvent[]                                 @relation("AutomationActor")

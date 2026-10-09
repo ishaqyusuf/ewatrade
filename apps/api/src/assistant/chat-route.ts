@@ -1,3 +1,4 @@
+import { ASSISTANT_RUNTIME_CONFIGURATION_KEY } from "@ewatrade/ai/runtime-config"
 import {
   PRODUCT_ASSISTANT_PROMPT_VERSION,
   productAssistantInstructions,
@@ -11,6 +12,7 @@ import { SETUP_ASSISTANT_PROMPT_VERSION } from "@ewatrade/assistant/setup/contra
 import type { SetupAssistantDataParts } from "@ewatrade/assistant/setup/messages"
 import { buildSetupAssistantInstructions } from "@ewatrade/assistant/setup/prompt"
 import { createSetupAssistantTools } from "@ewatrade/assistant/setup/tools"
+import type { prisma } from "@ewatrade/db"
 import {
   AssistantRecordError,
   type AssistantScope,
@@ -47,6 +49,7 @@ import {
 } from "./chat-repository"
 import {
   type ResolvedAssistantModel,
+  resolveGeneralAssistantModel,
   resolveSetupAssistantModel,
 } from "./model-resolution"
 import {
@@ -134,6 +137,30 @@ export function defaultAssistantChatDependencies(): AssistantChatDependencies {
     guard: new AssistantStreamGuard(),
     activeRuns: new Map(),
   }
+}
+
+/** Model for routes outside this setup chat, such as the gated general assistant. */
+export function resolveModel(
+  db: typeof prisma,
+  dataClassification: "LIVE" | "QA",
+  purpose: "SETUP" | "GENERAL" = "SETUP",
+): Promise<ResolvedAssistantModel | null> {
+  const readRuntimeConfiguration = async () =>
+    (
+      await db.systemConfiguration.findUnique({
+        where: { key: ASSISTANT_RUNTIME_CONFIGURATION_KEY },
+        select: { value: true },
+      })
+    )?.value
+  return purpose === "GENERAL"
+    ? resolveGeneralAssistantModel({
+        dataClassification,
+        readRuntimeConfiguration,
+      })
+    : resolveSetupAssistantModel({
+        dataClassification,
+        readRuntimeConfiguration,
+      })
 }
 
 function failure(

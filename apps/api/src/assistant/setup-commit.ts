@@ -459,9 +459,10 @@ export async function commitSetupDraft(
   options: { keys?: readonly string[] } = {},
 ) {
   const draft = await deps.readSetupDraft(db, draftId)
+  const selected = options.keys ? new Set(options.keys) : null
   const pending = draft.entities.filter(
     (entity) =>
-      (!options.keys || options.keys.includes(entity.key)) &&
+      (!selected || selected.has(entity.key)) &&
       (entity.state === "CONFIRMED" ||
         (entity.state === "COMMITTED" &&
           isOpeningBalancePending(entity.errorCode))),

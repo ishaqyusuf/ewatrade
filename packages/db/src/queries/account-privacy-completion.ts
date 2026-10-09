@@ -88,6 +88,7 @@ export const ACCOUNT_PRIVACY_ALLOWED_DISPOSITIONS: Record<
 export async function assessAccountPrivacyCompletion(
   db: Pick<
     PrismaClient,
+    | "assistantActionProposal"
     | "accountPrivacyRequest"
     | "user"
     | "membership"

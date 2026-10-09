@@ -58,6 +58,7 @@ model AssistantConversation {
   runs        AssistantRun[]
   attachments AssistantAttachment[]
   setupDraft  SetupDraft?
+  proposals   AssistantActionProposal[]
 
   @@index([tenantId, storeId, ownerUserId, purpose])
 }
@@ -226,4 +227,47 @@ model SetupDraftEntity {
   draft SetupDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
 
   @@unique([draftId, key])
+}
+
+// Reviewed user approvals. Model tools can draft but cannot execute these actions.
+enum AssistantActionProposalStatus {
+  PENDING
+  EXECUTING
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+model AssistantActionProposal {
+  id                String                        @id @default(cuid())
+  conversationId    String
+  tenantId          String
+  storeId           String
+  actorUserId       String
+  action            String
+  actionVersion     Int                           @default(1)
+  payload           Json
+  payloadHash       String
+  revision          Int                           @default(1)
+  targetRecordId    String?
+  targetRevision    String?
+  roleSnapshot      String
+  approvalTokenHash String
+  expiresAt         DateTime
+  // Generated when drafted, reused across every execution/recovery attempt.
+  idempotencyKey    String
+  status            AssistantActionProposalStatus @default(PENDING)
+  executedResult    Json?
+  errorCode         String?
+  decidedAt         DateTime?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  actor User @relation("AssistantProposalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, actorUserId, idempotencyKey])
+  @@index([conversationId, status, createdAt])
+  @@index([tenantId, storeId, actorUserId, status, expiresAt])
 }

@@ -19,6 +19,7 @@ import { secureHeaders } from "hono/secure-headers"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
 import { registerAssistantAttachmentRoutes } from "./assistant/attachment-upload"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
+import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
@@ -193,6 +194,7 @@ registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerAssistantChatRoutes(app)
 registerAssistantAttachmentRoutes(app)
+registerGeneralAssistantChatRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)
 registerServiceCommerceMediaDeliveryRoutes(app)
 registerServiceCommerceMediaUploadRoutes(app)

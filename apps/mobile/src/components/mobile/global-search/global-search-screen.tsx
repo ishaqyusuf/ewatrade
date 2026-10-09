@@ -30,6 +30,7 @@ import { useRouter } from "expo-router"
 import { useEffect, useMemo, useState } from "react"
 import { Keyboard } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { AssistantEntry } from "../assistant/assistant-entry"
 import { CommerceFilterChip } from "../commerce"
 import { QuickActionRow } from "../green-till/kit"
 import { availableSearchActions } from "./search-display"
@@ -372,6 +373,9 @@ export function GlobalSearchScreen() {
             message="Try an order number, customer contact, product, service, or team member."
             title="No results"
           />
+        ) : null}
+        {normalizedQuery.length >= 2 ? (
+          <AssistantEntry query={normalizedQuery} />
         ) : null}
       </Frame>
       <BottomSearchFooter

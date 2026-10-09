@@ -174,7 +174,9 @@
       "name": "@ewatrade/mobile",
       "version": "1.0.0",
       "dependencies": {
+        "@ai-sdk/react": "3.0.143",
         "@ewatrade/api": "workspace:*",
+        "@ewatrade/assistant": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
         "@ewatrade/errors": "workspace:*",
         "@ewatrade/events": "workspace:*",
@@ -203,6 +205,7 @@
         "@trpc/client": "^11.16.0",
         "@trpc/server": "^11.16.0",
         "@trpc/tanstack-react-query": "^11.16.0",
+        "ai": "6.0.141",
         "class-variance-authority": "^0.7.0",
         "clsx": "^2.1.1",
         "expo": "~54.0.37",
