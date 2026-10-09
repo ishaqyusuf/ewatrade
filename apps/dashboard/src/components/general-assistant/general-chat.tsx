@@ -1,5 +1,4 @@
 "use client"
-import { useOrderParams } from "@/hooks/use-order-params"
 import type {
   GeneralProposal,
   GeneralReceipt,
@@ -63,7 +62,6 @@ const markdownComponents = {
 export function GeneralChat() {
   const vm = useGeneralAssistant()
   const router = useRouter()
-  const { setParams: setOrderParams } = useOrderParams()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
   const disabled = vm.state.isError || vm.pending || vm.busy || !!vm.runId
   const exhausted =
@@ -81,11 +79,11 @@ export function GeneralChat() {
       router.push(
         `/catalog?catalogDetail=${encodeURIComponent(receipt.recordId)}`,
       )
+    // Order details open as a sheet on the sales page.
     else
-      void setOrderParams({
-        orderSheet: "details",
-        orderId: receipt.orderId ?? receipt.recordId,
-      })
+      router.push(
+        `/sales?orderSheet=details&orderId=${encodeURIComponent(receipt.orderId ?? receipt.recordId)}`,
+      )
   }
   if (vm.availability.isPending)
     return <output className="text-sm">Loading your assistant…</output>

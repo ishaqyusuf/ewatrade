@@ -52,6 +52,18 @@ import { HeroCard } from "../green-till/hero-card"
 import { QuickActionRow, SectionHeader } from "../green-till/kit"
 import { MoreApprovalCard } from "./more-approval-card"
 import { MoreSignOutSheet, MoreThemeSheet } from "./more-sheets"
+/** Short tile names so the four-up grid never wraps or truncates. */
+const MORE_TILE_LABELS: Partial<Record<string, string>> = {
+  finance: "Finance",
+  "order-reminders": "Reminders",
+  "payments-received": "Payments",
+  "receipt-settings": "Receipts",
+}
+const MORE_ROW_DETAILS: Partial<Record<string, string>> = {
+  "plan-billing": "Your plan and payments",
+  "website-domain": "Store link and custom domain",
+}
+
 export function MoreScreen() {
   const { availability, syncAlertCount } = useAdminTabs()
   useResetAdminDock()
@@ -330,11 +342,12 @@ function MoreContent({
                 { length: Math.ceil(section.items.length / 4) },
                 (_, group) => (
                   <QuickActionRow
+                    columns={4}
                     key={section.items[group * 4]?.id}
                     actions={section.items
                       .slice(group * 4, group * 4 + 4)
                       .map((item) => ({
-                        label: item.label,
+                        label: MORE_TILE_LABELS[item.id] ?? item.label,
                         icon: item.icon,
                         disabled: item.disabled,
                         onPress: () => handleItem(item),
@@ -348,14 +361,15 @@ function MoreContent({
               {section.items.map((item) => (
                 <Row
                   detail={
-                    item.id === "app-theme"
+                    MORE_ROW_DETAILS[item.id] ??
+                    (item.id === "app-theme"
                       ? themeOverride.charAt(0).toUpperCase() +
                         themeOverride.slice(1)
                       : item.id === "inventory" && item.disabled
                         ? "Add a Product to enable inventory"
                         : item.id === "sync-offline"
                           ? `${offlineSettings.data ? (offlineSettings.data.approvalRequired ? "Staff approval on" : "Staff approval off") : "Approval settings unavailable"} · ${offlineRecords.data ? `${stagedRecords.length} waiting` : "Review count unavailable"}`
-                          : undefined
+                          : undefined)
                   }
                   item={item}
                   key={item.id}

@@ -72,7 +72,14 @@ export type QuickActionItem = {
 }
 
 /** Four 54pt tiles; the first can be gold (create/sell). */
-export function QuickActionRow({ actions }: { actions: QuickActionItem[] }) {
+export function QuickActionRow({
+  actions,
+  columns,
+}: {
+  actions: QuickActionItem[]
+  /** Keep a short last row aligned to a grid of this many columns. */
+  columns?: number
+}) {
   const largeText = useLargeTextLayout()
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
@@ -132,6 +139,15 @@ export function QuickActionRow({ actions }: { actions: QuickActionItem[] }) {
           </Pressable>
         </View>
       ))}
+      {columns && !largeText
+        ? Array.from(
+            { length: Math.max(0, columns - actions.length) },
+            (_, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed spacers
+              <View className="flex-1" key={`spacer-${index}`} />
+            ),
+          )
+        : null}
     </View>
   )
 }

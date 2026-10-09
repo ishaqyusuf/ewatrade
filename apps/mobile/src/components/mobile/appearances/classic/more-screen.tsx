@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColorScheme } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import type { AdminMoreItem } from "@/lib/admin-navigation"
@@ -119,7 +119,7 @@ export function ClassicMoreWorkspace({
   return (
     <HeroCard label="Current business" title={businessName} sub={roleLabel}>
       <View className="mt-4">
-        <ActionButton tone="cream" icon="RefreshCw" onPress={onPress}>
+        <ActionButton tone="cream" icon="ArrowLeftRight" onPress={onPress}>
           Switch business
         </ActionButton>
       </View>
@@ -136,6 +136,7 @@ export function ClassicMoreRow({
   item: AdminMoreItem
   onPress: () => void
 }) {
+  const colors = useColors()
   return (
     <RecordRow
       stackDetails
@@ -148,7 +149,13 @@ export function ClassicMoreRow({
       status={
         item.disabled ? (
           <StatusBadge label="Set up" tone="warning" />
-        ) : undefined
+        ) : item.id === "sign-out" ? undefined : (
+          <Icon
+            className="size-[16px]"
+            color={colors.mutedForeground}
+            name="ChevronRight"
+          />
+        )
       }
       onPress={item.disabled ? undefined : onPress}
     />
