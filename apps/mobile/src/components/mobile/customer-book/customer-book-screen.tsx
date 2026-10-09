@@ -534,6 +534,9 @@ export function CustomerBookContent(
       </View>
       <CreateSaleCustomerSheet
         headline="A familiar face, saved."
+        description={
+          market ? undefined : "Save them once. They show up in Create sale."
+        }
         phoneCountryCode={market ? undefined : countryCode}
         appearance={market ? "market-day" : "classic"}
         disabled={isOffline || creation.locked}

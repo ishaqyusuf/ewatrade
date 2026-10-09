@@ -12,7 +12,9 @@ import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { createCustomerFixture } from "@/internal-tooling/fixture-recipes"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
@@ -28,7 +30,7 @@ import type {
   BottomSheetFooterProps,
   BottomSheetModal,
 } from "@gorhom/bottom-sheet"
-import { BottomSheetFooter } from "@gorhom/bottom-sheet"
+import { BottomSheetFooter, useBottomSheetModal } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { forwardRef, useCallback, useRef, useState } from "react"
 import { View, useWindowDimensions } from "react-native"
@@ -159,7 +161,9 @@ export const CreateSaleCustomerSheet = forwardRef<
           ref={ref}
           onDismiss={onDismiss}
           snapPoints={[...CREATE_CUSTOMER_SHEET_SNAP_POINTS]}
-          title="Create customer"
+          accessibilityLabel="Add customer"
+          hideHeader={!market}
+          title={market ? "Create customer" : undefined}
         >
           <BottomSheetKeyboardAwareScrollView
             bottomOffset={footerHeight + 12}
@@ -169,18 +173,20 @@ export const CreateSaleCustomerSheet = forwardRef<
           >
             <View className="gap-4 px-5 pb-5">
               {market ? (
-                <Text className="border-l-4 border-market-marigold pl-3 font-market-display text-[26px] font-bold text-market-ink [-rn-line-height:32]">
-                  {headline}
-                </Text>
-              ) : null}
-              <Text
-                className={cn(
-                  "text-sm [-rn-line-height:20]",
-                  market ? "text-market-muted-ink" : "text-muted-foreground",
-                )}
-              >
-                {description}
-              </Text>
+                <>
+                  <Text className="border-l-4 border-market-marigold pl-3 font-market-display text-[26px] font-bold text-market-ink [-rn-line-height:32]">
+                    {headline}
+                  </Text>
+                  <Text className="text-sm text-market-muted-ink [-rn-line-height:20]">
+                    {description}
+                  </Text>
+                </>
+              ) : (
+                <ClassicSheetHeader
+                  description={description}
+                  dismissible={!isLoading}
+                />
+              )}
               {error ? (
                 <StatusBanner
                   icon="AlertCircle"
@@ -213,24 +219,21 @@ export const CreateSaleCustomerSheet = forwardRef<
                 }}
               />
               <FormField
-                variant={market ? "market" : "filled"}
+                variant={market ? "market" : "green-gate"}
                 maxLength={160}
                 editable={!isLoading && !disabled}
                 autoCapitalize="words"
-                label="Customer name · Required"
+                label={market ? "Customer name · Required" : "Name · required"}
                 leadingIcon="User"
                 onChangeText={(name) => onChange({ ...draft, name })}
                 placeholder="Enter customer name"
                 value={draft.name}
               />
-              <Text
-                className={cn(
-                  "text-xs font-bold uppercase tracking-[1.4px]",
-                  market ? "text-market-muted-ink" : "text-muted-foreground",
-                )}
-              >
-                Optional contact
-              </Text>
+              {market ? (
+                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-market-muted-ink">
+                  Optional contact
+                </Text>
+              ) : null}
               {useCountryPhone ? (
                 <CountrySelect
                   label="Phone country"
@@ -240,7 +243,7 @@ export const CreateSaleCustomerSheet = forwardRef<
                 />
               ) : null}
               <FormField
-                variant={market ? "market" : "filled"}
+                variant={market ? "market" : "green-gate"}
                 maxLength={40}
                 editable={!isLoading && !disabled}
                 keyboardType="phone-pad"
@@ -264,7 +267,7 @@ export const CreateSaleCustomerSheet = forwardRef<
                 }
               />
               <FormField
-                variant={market ? "market" : "filled"}
+                variant={market ? "market" : "green-gate"}
                 maxLength={320}
                 editable={!isLoading && !disabled}
                 autoCapitalize="none"
@@ -285,3 +288,39 @@ export const CreateSaleCustomerSheet = forwardRef<
 )
 
 CreateSaleCustomerSheet.displayName = "CreateSaleCustomerSheet"
+
+/** Green Till sheet header: left title and line, round close button. */
+function ClassicSheetHeader({
+  description,
+  dismissible,
+}: {
+  description: string
+  dismissible: boolean
+}) {
+  const { dismiss } = useBottomSheetModal()
+  return (
+    <View className="flex-row items-start gap-2.5">
+      <View className="min-w-0 flex-1">
+        <Text
+          accessibilityRole="header"
+          className="text-xl font-extrabold tracking-tight text-foreground"
+        >
+          Add customer
+        </Text>
+        <Text className="mt-0.5 text-[13px] text-muted-foreground">
+          {description}
+        </Text>
+      </View>
+      <Pressable
+        accessibilityLabel="Close add customer"
+        accessibilityRole="button"
+        className="size-10 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+        disabled={!dismissible}
+        haptic
+        onPress={() => dismiss()}
+      >
+        <Icon className="size-[18px] text-foreground" name="X" />
+      </Pressable>
+    </View>
+  )
+}
