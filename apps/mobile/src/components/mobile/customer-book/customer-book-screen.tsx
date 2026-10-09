@@ -13,13 +13,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { useBusinessStore } from "@/store/businessStore"
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from "@ewatrade/utils/countries"
 import { VariableContextProvider } from "nativewind"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton, MarketDayActionButton } from "../action-button"
 import {
   ClassicCustomerBookFilter,
@@ -32,17 +34,24 @@ import {
   MarketDayCustomerBookRow,
 } from "../appearances/market-day/customer-book-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
+import { ListCreateFab } from "../list-create-fab"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { CustomerOpenOrders } from "./customer-open-orders"
 import { type CustomerBookProps, useCustomerBook } from "./use-customer-book"
 export function CustomerBookChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="customers" />
 }
-export function activeCustomerFilterLabel(filter: CustomerBookFilter) {
-  if (filter === "pending") return "Pending sync"
+export function activeCustomerFilterLabel(
+  filter: CustomerBookFilter,
+  market = true,
+) {
+  if (filter === "pending") return market ? "Pending sync" : "Waiting to sync"
   if (filter === "synced") return "Synced"
+  if (filter === "none") return "No orders yet"
   return "All"
 }
+const MARKET_FILTERS = ["all", "synced", "pending"] as const
+const CLASSIC_FILTERS = ["all", "pending", "none"] as const
 
 export function CustomerBookContent(props: CustomerBookProps) {
   const { profile } = useAuthContext()
@@ -96,6 +105,21 @@ export function CustomerBookContent(props: CustomerBookProps) {
   const searchVisible = market || showSearch
   const reveal = useFirstReveal(!isLoading)
   const [footerHeight, setFooterHeight] = useState(88)
+  const scrollHide = useBottomSearchScroll()
+  const insets = useSafeAreaInsets()
+  const filterCounts = useMemo(
+    () => ({
+      all: customers.length,
+      none: customers.filter(
+        (customer) => !customer.orders.length && !customer.pendingOrders.length,
+      ).length,
+      pending: customers.filter((customer) => customer.pendingOrders.length)
+        .length,
+      synced: customers.filter((customer) => customer.orders.length).length,
+    }),
+    [customers],
+  )
+  const hasMoreCustomers = Boolean(directory.hasNextPage || orders.hasNextPage)
   const returnToOrder = () => {
     if (router.canGoBack()) router.back()
     else router.replace("/dashboard")
@@ -234,7 +258,7 @@ export function CustomerBookContent(props: CustomerBookProps) {
     <VariableContextProvider
       value={{
         "--customer-book-bottom":
-          market && searchVisible ? footerHeight + 24 : 24,
+          (market && searchVisible) || !market ? footerHeight + 24 : 24,
       }}
     >
       <View
@@ -243,11 +267,17 @@ export function CustomerBookContent(props: CustomerBookProps) {
       >
         <FlatList
           className="flex-1"
-          contentContainerClassName="grow gap-2 px-[18px] pb-[var(--customer-book-bottom)]"
+          contentContainerClassName={
+            market
+              ? "grow gap-2 px-[18px] pb-[var(--customer-book-bottom)]"
+              : "grow px-[18px] pb-[var(--customer-book-bottom)]"
+          }
           data={visibleCustomers}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
+          onScroll={market ? undefined : scrollHide.onScroll}
+          scrollEventThrottle={16}
           ListEmptyComponent={
             isLoading && !market ? (
               <View className="gap-3">
@@ -301,12 +331,15 @@ export function CustomerBookContent(props: CustomerBookProps) {
               {feedback}
               <Header
                 loadedCount={customers.length}
-                pendingCount={pendingCustomerCount}
+                pendingCount={
+                  market ? pendingCustomerCount : filterCounts.pending
+                }
+                noOrdersCount={filterCounts.none}
+                hasMore={hasMoreCustomers}
                 isLoading={isLoading}
                 hasError={hasError}
                 isOffline={isOffline}
                 search={search}
-                onSearch={market ? undefined : setSearch}
               />
               {isOffline ? (
                 <StatusBanner
@@ -336,11 +369,12 @@ export function CustomerBookContent(props: CustomerBookProps) {
               ) : null}
               {presentation.showFilters ? (
                 <View className="flex-row flex-wrap gap-2">
-                  {(["all", "synced", "pending"] as const).map((value) => (
+                  {(market ? MARKET_FILTERS : CLASSIC_FILTERS).map((value) => (
                     <Filter
                       active={filter === value}
+                      count={market ? undefined : filterCounts[value]}
                       key={value}
-                      label={activeCustomerFilterLabel(value)}
+                      label={activeCustomerFilterLabel(value, market)}
                       onPress={() => setFilter(value)}
                     />
                   ))}
@@ -354,6 +388,10 @@ export function CustomerBookContent(props: CustomerBookProps) {
                 customer={item}
                 historyComplete={historyComplete}
                 onPress={() => setSelectedCustomerId(item.id)}
+                position={{
+                  first: index === 0,
+                  last: index === visibleCustomers.length - 1,
+                }}
               />
             </RevealItem>
           )}
@@ -422,17 +460,45 @@ export function CustomerBookContent(props: CustomerBookProps) {
           </BottomSearchFooter>
         ) : null}
         {!market ? (
-          <View className="border-t border-border bg-background px-[18px] py-3">
-            <ActionButton
-              icon="UserPlus"
-              tone="gold"
+          <>
+            <ListCreateFab
+              accessibilityLabel={
+                isOffline
+                  ? "Add customer, needs a connection"
+                  : creation.uncertain
+                    ? "Review unconfirmed save"
+                    : "Add customer"
+              }
+              bottomOffset={
+                scrollHide.hidden
+                  ? 0
+                  : Math.max(
+                      0,
+                      footerHeight + 14 - Math.max(insets.bottom + 16, 24),
+                    )
+              }
               disabled={isOffline || creation.locked}
+              icon="UserPlus"
               onPress={creation.present}
               testID="customer-add-fab"
-            >
-              {isOffline ? "Reconnect to add customer" : "Add customer"}
-            </ActionButton>
-          </View>
+              tone="gold"
+            />
+            <BottomSearchFooter
+              alwaysShowSearch
+              hidden={scrollHide.hidden}
+              variant="action-bar"
+              localSearch={isOffline}
+              maxLength={160}
+              onHeightChange={setFooterHeight}
+              accessibilityLabel="Search customers"
+              onChangeText={setSearch}
+              placeholder={
+                isOffline ? "Search saved copy" : "Search name, phone or email"
+              }
+              totalCount={customers.length}
+              value={search}
+            />
+          </>
         ) : null}
       </View>
     </VariableContextProvider>

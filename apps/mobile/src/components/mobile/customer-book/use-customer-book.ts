@@ -369,6 +369,11 @@ export function useCustomerBook({
       }
       if (filter === "synced" && customer.orders.length === 0) return false
       if (
+        filter === "none" &&
+        (customer.orders.length > 0 || customer.pendingOrders.length > 0)
+      )
+        return false
+      if (
         isOffline &&
         normalizedSearch &&
         !`${customer.name} ${customer.phone ?? ""} ${customer.email ?? ""}`

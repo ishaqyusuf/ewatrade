@@ -1,4 +1,5 @@
-export type CustomerBookFilter = "all" | "pending" | "synced"
+/** "none": saved customers with no orders yet (Green Till chips). */
+export type CustomerBookFilter = "all" | "none" | "pending" | "synced"
 
 export function getCustomerBookPresentation({
   customerCount,
