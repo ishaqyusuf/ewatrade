@@ -51,6 +51,7 @@ export type AssistantChatRepository = {
   writeDraftEntities: (
     draftId: string,
     entities: SetupDraftEntityWrite[],
+    productRunId?: string,
   ) => ReturnType<typeof upsertSetupDraftEntities>
   removeDraftEntities: (
     draftId: string,
@@ -88,8 +89,12 @@ export function createAssistantChatRepository(
     readAreaMarks: async (draftId) => (await readSetupDraft(db, draftId)).areas,
     markArea: (draftId, area, mark) =>
       markSetupDraftArea(db, { draftId, area, mark }),
-    writeDraftEntities: (draftId, entities) =>
-      upsertSetupDraftEntities(db, { draftId, entities }),
+    writeDraftEntities: (draftId, entities, productRunId) =>
+      upsertSetupDraftEntities(db, {
+        draftId,
+        entities,
+        ...(productRunId ? { productRun: { runId: productRunId, scope } } : {}),
+      }),
     removeDraftEntities: (draftId, keys) =>
       removeSetupDraftEntities(db, { draftId, keys }),
     loadBusinessContext: () => loadSetupBusinessContext(db, scope),

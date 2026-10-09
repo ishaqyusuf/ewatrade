@@ -66,21 +66,32 @@ export function SetupChat({
   status,
   initialMessages,
   mediaEnabled,
+  stateQueryKey,
+  onBusyChange,
+  inputLabel,
 }: {
   conversationId: string
   status: "OFFERED" | "ACTIVE"
   initialMessages: SetupChatMessage[]
   /** Photos, files and voice notes; when off, the owner only types. */
   mediaEnabled: boolean
+  stateQueryKey?: readonly unknown[]
+  onBusyChange?: (busy: boolean) => void
+  inputLabel?: string
 }) {
   const settled = useRef(true)
   const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const refreshDraft = () =>
-    queryClient.invalidateQueries({
-      queryKey: trpc.setupAssistant.state.queryKey(),
-    })
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: stateQueryKey ?? trpc.setupAssistant.state.queryKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.productAssistant.capabilities.queryKey(),
+      }),
+    ])
 
   const transport = useMemo(
     () =>
@@ -135,7 +146,7 @@ export function SetupChat({
     try {
       if (await waitForRun(runId)) {
         await queryClient.refetchQueries({
-          queryKey: trpc.setupAssistant.state.queryKey(),
+          queryKey: stateQueryKey ?? trpc.setupAssistant.state.queryKey(),
         })
         setSyncFromServer(true)
       }
@@ -201,6 +212,9 @@ export function SetupChat({
   ])
 
   const busy = chat.status === "submitted" || chat.status === "streaming"
+  useEffect(() => {
+    onBusyChange?.(busy || recovering)
+  }, [busy, recovering, onBusyChange])
   const canType = status === "ACTIVE"
   const send = (parts: SetupComposerPart[]) => {
     if (parts.length === 0 || busy || !canType) return
@@ -255,6 +269,7 @@ export function SetupChat({
 
       {canType ? (
         <SetupComposer
+          inputLabel={inputLabel}
           conversationId={conversationId}
           busy={busy}
           mediaEnabled={mediaEnabled}

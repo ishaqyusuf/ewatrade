@@ -16,6 +16,7 @@ import {
 import { canOperateInventory } from "./inventory-operations"
 
 export type DashboardNavIcon =
+  | "assistant"
   | "analytics"
   | "customers"
   | "conversations"
@@ -51,6 +52,7 @@ type DashboardNavDefinition = Omit<DashboardNavItem, "children"> & {
 export type DashboardNavContext = Partial<
   Omit<WorkspaceFeatureAvailability, "hasInventoryActivity" | "storeId">
 > & {
+  assistantEnabled?: boolean
   staffAccessMode?: "LEGACY" | "SCOPED"
   catalogEditor?: boolean
   businessProfileKey?: string | null
@@ -116,6 +118,14 @@ function isPharmacyBusiness(context: DashboardNavContext) {
 }
 
 const DASHBOARD_NAV: DashboardNavDefinition[] = [
+  {
+    description: "Add products and continue business setup",
+    href: "/assistant",
+    icon: "assistant",
+    label: "AI assistant",
+    canAccess: (role) => role === "OWNER" || role === "ADMIN",
+    isVisible: (context) => context.assistantEnabled === true,
+  },
   {
     description: "Daily business overview",
     end: true,

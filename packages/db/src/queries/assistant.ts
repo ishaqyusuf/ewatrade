@@ -7,6 +7,10 @@ import {
   type SetupDraftEntityState,
 } from "../../generated/prisma/client"
 import { claimAssistantAttachmentsForMessage } from "./assistant-attachments"
+import {
+  type CreateCatalogItemInput,
+  createCatalogItemInTransaction,
+} from "./catalog"
 import { type ArgsAfterClient, runInOwnTransaction } from "./own-transaction"
 import type { DbClient } from "./types"
 
@@ -47,6 +51,17 @@ export class AssistantRecordError extends Error {
 }
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex")
+function sortedJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortedJson)
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entry]) => entry !== undefined)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, entry]) => [key, sortedJson(entry)]),
+    )
+  return value
+}
 
 const conversationSelect = {
   id: true,
@@ -55,6 +70,8 @@ const conversationSelect = {
   tenantId: true,
   storeId: true,
   title: true,
+  purpose: true,
+  workflowContext: true,
   setupDraft: { select: { id: true, revision: true } },
 } satisfies Prisma.AssistantConversationSelect
 
@@ -126,7 +143,8 @@ export async function createSetupConversation(
 
 export async function readAssistantConversation(
   db: DbClient,
-  scope: Pick<AssistantScope, "storeId" | "tenantId">,
+  scope: Pick<AssistantScope, "storeId" | "tenantId"> &
+    Partial<Pick<AssistantScope, "userId">>,
   conversationId: string,
 ) {
   const conversation = await db.assistantConversation.findFirst({
@@ -138,6 +156,14 @@ export async function readAssistantConversation(
     select: conversationSelect,
   })
   if (!conversation)
+    throw new AssistantRecordError(
+      "CONVERSATION_NOT_FOUND",
+      "This conversation is not available.",
+    )
+  if (
+    conversation.purpose === "PRODUCT_CREATE" &&
+    conversation.ownerUserId !== scope.userId
+  )
     throw new AssistantRecordError(
       "CONVERSATION_NOT_FOUND",
       "This conversation is not available.",
@@ -246,6 +272,18 @@ export async function beginAssistantRunInTransaction(
   },
 ) {
   const begin = async (tx: Prisma.TransactionClient) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+    )
+    const current = await tx.assistantConversation.findUnique({
+      where: { id: input.conversationId },
+      select: { status: true, purpose: true, ownerUserId: true },
+    })
+    if (current?.status !== "ACTIVE")
+      throw new AssistantRecordError(
+        "CONVERSATION_CLOSED",
+        "This conversation has finished.",
+      )
     const prior = await tx.assistantRun.findUnique({
       where: {
         actorUserId_requestId: {
@@ -256,6 +294,15 @@ export async function beginAssistantRunInTransaction(
       select: { id: true, conversationId: true, status: true },
     })
     if (prior) return { replay: true as const, run: prior }
+    if (
+      current.purpose === "PRODUCT_CREATE" &&
+      (current.ownerUserId !== input.actorUserId ||
+        (await productConversationHasRunningTurn(tx, input.conversationId)))
+    )
+      throw new AssistantRecordError(
+        "CONVERSATION_CLOSED",
+        "Wait for the current reply before sending another message.",
+      )
     await claimAssistantAttachmentsForMessage(tx, {
       conversationId: input.conversationId,
       actorUserId: input.actorUserId,
@@ -343,10 +390,15 @@ export async function isSetupActorStillAuthorized(
         storeId: scope.storeId,
         status: "ACTIVE",
       },
-      select: { id: true },
+      select: { id: true, purpose: true, ownerUserId: true },
     }),
   ])
-  return Boolean(membership && conversation)
+  return Boolean(
+    membership &&
+      conversation &&
+      (conversation.purpose !== "PRODUCT_CREATE" ||
+        conversation.ownerUserId === scope.userId),
+  )
 }
 
 export type AssistantUsage = {
@@ -374,18 +426,47 @@ export async function completeAssistantRunInTransaction(
   },
 ) {
   const complete = async (tx: Prisma.TransactionClient) => {
-    const run = await tx.assistantRun.update({
+    const candidate = await tx.assistantRun.findUnique({
       where: { id: input.runId },
+      select: {
+        conversationId: true,
+        conversation: { select: { purpose: true } },
+      },
+    })
+    if (!candidate) return
+    if (candidate.conversation.purpose === "PRODUCT_CREATE")
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${candidate.conversationId} FOR UPDATE`,
+      )
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "AssistantRun" WHERE "id" = ${input.runId} FOR UPDATE`,
+    )
+    const current = await tx.assistantRun.findUnique({
+      where: { id: input.runId },
+      select: { status: true, errorCode: true },
+    })
+    const settled = await tx.assistantRun.updateMany({
+      where: { id: input.runId, status: "RUNNING" },
       data: {
         status: input.status,
         errorCode: input.errorCode,
         completedAt: new Date(),
       },
-      select: { conversationId: true },
     })
-    if (input.assistantMessage)
+    if (!settled.count) {
+      if (
+        current?.status !== "FAILED" ||
+        current.errorCode !== "TURN_INTERRUPTED" ||
+        (await tx.assistantUsageEvent.findFirst({
+          where: { runId: input.runId },
+          select: { id: true },
+        }))
+      )
+        return
+    }
+    if (settled.count && input.assistantMessage)
       await appendAssistantMessage(tx, {
-        conversationId: run.conversationId,
+        conversationId: candidate.conversationId,
         message: input.assistantMessage,
       })
     await tx.assistantUsageEvent.create({
@@ -401,7 +482,8 @@ export async function completeAssistantRunInTransaction(
         totalTokens: input.usage?.totalTokens,
         stepCount: input.stepCount ?? 0,
         durationMs: input.durationMs,
-        outcome: input.status === "COMPLETED" ? "success" : "failed",
+        outcome:
+          settled.count && input.status === "COMPLETED" ? "success" : "failed",
       },
     })
     if (input.budgetScopeKey && input.usage?.totalTokens)
@@ -431,6 +513,289 @@ export type AssistantBudgetLimits = {
 
 export function assistantBudgetScopeKey(tenantId: string, purpose: string) {
   return hash(`assistant:${purpose}:${tenantId}`)
+}
+
+/** Read only; display expiry without creating or resetting the quota row. */
+export function readAssistantBudget(db: DbClient, tenantId: string) {
+  return db.assistantBudget.findUnique({
+    where: { scopeKey: assistantBudgetScopeKey(tenantId, "SETUP") },
+    select: { tokens: true, requests: true, windowStartedAt: true },
+  })
+}
+
+export async function createProductConversation(
+  db: PrismaClient,
+  scope: AssistantScope,
+  input: {
+    id: string
+    snapshot: Prisma.InputJsonValue
+    seed: SetupDraftEntityInput | null
+    opening: string
+  },
+) {
+  return runInOwnTransaction(db, async (tx) => {
+    await tx.$executeRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`product-handoff:${input.id}`}, 0))`,
+    )
+    const handoffDigest = hash(JSON.stringify(sortedJson(input.snapshot)))
+    const conversation = await tx.assistantConversation.upsert({
+      where: { id: input.id },
+      update: {},
+      create: {
+        id: input.id,
+        tenantId: scope.tenantId,
+        storeId: scope.storeId,
+        ownerUserId: scope.userId,
+        purpose: "PRODUCT_CREATE",
+        status: "ACTIVE",
+        title: "Add product",
+        workflowContext: { snapshot: input.snapshot, handoffDigest },
+        lastSequence: 1,
+        setupDraft: {
+          create: {
+            tenantId: scope.tenantId,
+            storeId: scope.storeId,
+            entities: input.seed
+              ? {
+                  create: {
+                    ...input.seed,
+                    source: input.seed.source ?? Prisma.DbNull,
+                    openQuestions: input.seed.openQuestions ?? Prisma.DbNull,
+                    sortOrder: 0,
+                  },
+                }
+              : undefined,
+          },
+        },
+        messages: {
+          create: {
+            id: newAssistantMessageId(),
+            role: "assistant",
+            sequence: 1,
+            parts: [{ type: "text", text: input.opening }],
+          },
+        },
+      },
+      select: conversationSelect,
+    })
+    if (
+      conversation.tenantId !== scope.tenantId ||
+      conversation.storeId !== scope.storeId ||
+      conversation.ownerUserId !== scope.userId ||
+      conversation.purpose !== "PRODUCT_CREATE"
+    )
+      throw new AssistantRecordError(
+        "CONVERSATION_NOT_FOUND",
+        "This product draft is not available.",
+      )
+    if (
+      (conversation.workflowContext as { handoffDigest?: string } | null)
+        ?.handoffDigest !== handoffDigest
+    )
+      throw new AssistantRecordError(
+        "CONVERSATION_CLOSED",
+        "This handoff was already saved with different form details. Open a new product draft to keep your changes.",
+      )
+    return conversation
+  })
+}
+
+export function listProductConversations(db: DbClient, scope: AssistantScope) {
+  return db.assistantConversation.findMany({
+    where: {
+      tenantId: scope.tenantId,
+      storeId: scope.storeId,
+      ownerUserId: scope.userId,
+      purpose: "PRODUCT_CREATE",
+      status: "ACTIVE",
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+    select: { id: true, title: true, updatedAt: true },
+  })
+}
+
+export function productConversationHasRunningTurn(
+  db: DbClient,
+  conversationId: string,
+) {
+  // Chat has a 45-second deadline. Leave a generous grace period for final
+  // persistence, then release a run orphaned by a server restart/deployment.
+  return db.assistantRun
+    .updateMany({
+      where: {
+        conversationId,
+        status: "RUNNING",
+        startedAt: { lt: new Date(Date.now() - 120_000) },
+      },
+      data: {
+        status: "FAILED",
+        errorCode: "TURN_INTERRUPTED",
+        completedAt: new Date(),
+      },
+    })
+    .then(() =>
+      db.assistantRun.count({ where: { conversationId, status: "RUNNING" } }),
+    )
+    .then((count) => count > 0)
+}
+
+export async function updateProductConversationSnapshot(
+  db: PrismaClient,
+  scope: AssistantScope,
+  input: {
+    conversationId: string
+    expectedRevision: number
+    snapshot: Prisma.InputJsonValue
+    seed: SetupDraftEntityInput | null
+  },
+) {
+  return runInOwnTransaction(db, async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+    )
+    const conversation = await readAssistantConversation(
+      tx,
+      scope,
+      input.conversationId,
+    )
+    if (
+      conversation.purpose !== "PRODUCT_CREATE" ||
+      conversation.status !== "ACTIVE" ||
+      !conversation.setupDraft ||
+      (await productConversationHasRunningTurn(tx, conversation.id))
+    )
+      throw new AssistantRecordError(
+        "CONVERSATION_CLOSED",
+        "Wait for the reply to finish before returning to chat.",
+      )
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${conversation.setupDraft.id} FOR UPDATE`,
+    )
+    const draft = await readSetupDraft(tx, conversation.setupDraft.id)
+    if (draft.revision !== input.expectedRevision)
+      throw new AssistantRecordError(
+        "CONVERSATION_CLOSED",
+        "The draft changed. Review it again before continuing.",
+      )
+    await tx.assistantConversation.update({
+      where: { id: conversation.id },
+      data: {
+        workflowContext: {
+          ...(conversation.workflowContext as { handoffDigest: string }),
+          snapshot: input.snapshot,
+        },
+      },
+    })
+    if (input.seed)
+      await upsertSetupDraftEntitiesInTransaction(tx, {
+        draftId: draft.id,
+        entities: [input.seed],
+      })
+    else {
+      await tx.setupDraftEntity.deleteMany({
+        where: { draftId: draft.id, state: { not: "COMMITTED" } },
+      })
+      await tx.setupDraft.update({
+        where: { id: draft.id },
+        data: { revision: { increment: 1 } },
+      })
+    }
+    return { conversationId: conversation.id }
+  })
+}
+
+/** Locks admission and draft together; domain write and receipt are atomic. */
+export async function commitProductConversation(
+  db: PrismaClient,
+  scope: AssistantScope,
+  input: {
+    conversationId: string
+    expectedRevision: number
+    manualEntity?: SetupDraftEntityInput
+  },
+  prepare: (
+    entity: Awaited<ReturnType<typeof readSetupDraft>>["entities"][number],
+    context: unknown,
+  ) => CreateCatalogItemInput,
+) {
+  return runInOwnTransaction(db, async (tx) => {
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+    )
+    const conversation = await readAssistantConversation(
+      tx,
+      scope,
+      input.conversationId,
+    )
+    if (conversation.purpose !== "PRODUCT_CREATE" || !conversation.setupDraft)
+      throw new AssistantRecordError(
+        "CONVERSATION_NOT_FOUND",
+        "This product draft is not available.",
+      )
+    await tx.$queryRaw(
+      Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${conversation.setupDraft.id} FOR UPDATE`,
+    )
+    const draft = await readSetupDraft(tx, conversation.setupDraft.id)
+    let entity = draft.entities.find((entity) => entity.key === "product")
+    const membership = await tx.membership.findFirst({
+      where: {
+        tenantId: scope.tenantId,
+        userId: scope.userId,
+        status: "ACTIVE",
+        role: { in: ["OWNER", "ADMIN"] },
+        tenant: { isActive: true },
+      },
+      select: { id: true },
+    })
+    if (!membership)
+      throw new AssistantRecordError(
+        "CONVERSATION_NOT_FOUND",
+        "You no longer have access to this product draft.",
+      )
+    if (entity?.state === "COMMITTED" && entity.committedRecordId)
+      return {
+        recordId: entity.committedRecordId,
+        name: String((entity.payload as { name?: string }).name ?? "Product"),
+      }
+    if (
+      conversation.status !== "ACTIVE" ||
+      draft.revision !== input.expectedRevision ||
+      (await productConversationHasRunningTurn(tx, conversation.id))
+    )
+      throw new AssistantRecordError(
+        "CONVERSATION_CLOSED",
+        "The product draft changed or a reply is still running. Review it again before creating.",
+      )
+    if (input.manualEntity) {
+      await upsertSetupDraftEntitiesInTransaction(tx, {
+        draftId: draft.id,
+        entities: [input.manualEntity],
+      })
+      entity = (await readSetupDraft(tx, draft.id)).entities.find(
+        (entity) => entity.key === "product",
+      )
+    }
+    if (!entity || draft.entities.length > 1 || entity.kind !== "PRODUCT")
+      throw new AssistantRecordError(
+        "ENTITY_NOT_FOUND",
+        "Describe one product before creating it.",
+      )
+    const command = prepare(entity, conversation.workflowContext)
+    const item = await createCatalogItemInTransaction(tx, {
+      ...command,
+      clientOperationId: `product-${conversation.id}`,
+    })
+    await tx.setupDraftEntity.update({
+      where: { id: entity.id },
+      data: { state: "COMMITTED", committedRecordId: item.id, errorCode: null },
+    })
+    await tx.assistantConversation.update({
+      where: { id: conversation.id },
+      data: { status: "COMPLETED", title: item.name },
+    })
+    return { recordId: item.id, name: item.name }
+  })
 }
 
 /** Row-locked rolling budget; exhaustion blocks new model calls, never drafts. */
@@ -793,9 +1158,43 @@ export async function recordAssistantMessageUsage(
 /** Model and owner edits both reopen confirmation; committed records are immutable. */
 export async function upsertSetupDraftEntitiesInTransaction(
   db: Prisma.TransactionClient,
-  input: { draftId: string; entities: SetupDraftEntityInput[] },
+  input: {
+    draftId: string
+    entities: SetupDraftEntityInput[]
+    productRun?: { runId: string; scope: AssistantScope }
+  },
 ) {
   const upsert = async (tx: Prisma.TransactionClient) => {
+    if (input.productRun) {
+      const { runId, scope } = input.productRun
+      const run = await readAssistantRun(tx, scope, runId)
+      if (!run)
+        throw new AssistantRecordError(
+          "CONVERSATION_CLOSED",
+          "This reply is no longer active.",
+        )
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${run.conversationId} FOR UPDATE`,
+      )
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "AssistantRun" WHERE "id" = ${runId} FOR UPDATE`,
+      )
+      const conversation = await readAssistantConversation(
+        tx,
+        scope,
+        run.conversationId,
+      )
+      if (
+        conversation.purpose !== "PRODUCT_CREATE" ||
+        conversation.setupDraft?.id !== input.draftId ||
+        (await readAssistantRun(tx, scope, runId))?.status !== "RUNNING" ||
+        !(await isSetupActorStillAuthorized(tx, scope, run.conversationId))
+      )
+        throw new AssistantRecordError(
+          "CONVERSATION_CLOSED",
+          "This reply is no longer active.",
+        )
+    }
     const draft = await tx.setupDraft.update({
       where: { id: input.draftId },
       data: { revision: { increment: 1 } },
