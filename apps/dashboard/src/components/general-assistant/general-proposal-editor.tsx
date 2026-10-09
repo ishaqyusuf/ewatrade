@@ -49,6 +49,8 @@ export function GeneralProposalEditor({
         : "",
   )
   const [error, setError] = useState<string | null>(null)
+  // On an update, a cleared phone or email means remove it; on create, omit it.
+  const cleared = payload.action === "customer_update" ? null : undefined
   const patch = (value: Record<string, unknown>) =>
     setPayload((current) => ({ ...current, ...value }) as GeneralAction)
   const field = (name: string) => `general-proposal-${proposal.id}-${name}`
@@ -98,7 +100,8 @@ export function GeneralProposalEditor({
             />
           </Field>
         ) : null}
-        {payload.action === "customer_create" ? (
+        {payload.action === "customer_create" ||
+        payload.action === "customer_update" ? (
           <>
             <Field>
               <FieldLabel htmlFor={field("phone")}>Phone</FieldLabel>
@@ -109,7 +112,7 @@ export function GeneralProposalEditor({
                 value={payload.phone ?? ""}
                 disabled={disabled}
                 onChange={(event) =>
-                  patch({ phone: event.target.value.trim() || undefined })
+                  patch({ phone: event.target.value.trim() || cleared })
                 }
               />
             </Field>
@@ -122,7 +125,7 @@ export function GeneralProposalEditor({
                 value={payload.email ?? ""}
                 disabled={disabled}
                 onChange={(event) =>
-                  patch({ email: event.target.value.trim() || undefined })
+                  patch({ email: event.target.value.trim() || cleared })
                 }
               />
             </Field>

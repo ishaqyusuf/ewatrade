@@ -10,6 +10,7 @@ import { resolveProtectedTenantContext } from "../trpc/init"
 import { orderScope } from "../trpc/order-scope"
 import { catalogRouter } from "../trpc/routers/catalog"
 import { customerLedgerRouter } from "../trpc/routers/customer-ledger"
+import { customersRouter } from "../trpc/routers/customers"
 import { inventoryRouter } from "../trpc/routers/inventory"
 import { ordersRouter } from "../trpc/routers/orders"
 import { searchRouter } from "../trpc/routers/search"
@@ -225,6 +226,29 @@ export function createGeneralTools(
             .queuePage({ ...input, storeId: scope.storeId, limit: 10 }),
         ),
     }),
+    readCustomer: tool({
+      description:
+        "Read one saved customer by real ID: name, phone, email and a few recent orders. Search first; when several customers share a name, ask which one before drafting.",
+      inputSchema: z.object({ customerId: id }).strict(),
+      execute: ({ customerId }) =>
+        wrap("readCustomer", async (fresh) => {
+          const customer = await customersRouter
+            .createCaller(fresh)
+            .getById({ customerId })
+          return {
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email,
+            recentOrders: customer.orders.slice(0, 5).map((order) => ({
+              id: order.id,
+              orderNumber: order.orderNumber,
+              status: order.status,
+              paymentStatus: order.paymentStatus,
+            })),
+          }
+        }),
+    }),
     readCustomerAccounts: tool({
       description:
         "Read authoritative customer ledger accounts. Unpaid orders and ledger debt are distinct; missing accounts are not zero debt.",
@@ -246,7 +270,7 @@ export function createGeneralTools(
     }),
     draftAction: tool({
       description:
-        "Stage an exact customer, simple product, order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens.",
+        "Stage an exact new customer, customer detail update, simple product, order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens.",
       inputSchema: actionSchema,
       execute: (input) =>
         wrap("draftAction", async (fresh) => {

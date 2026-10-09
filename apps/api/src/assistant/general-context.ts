@@ -82,6 +82,8 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "services.queue.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
   "customers.accounts.read": (tenant) => assertFinanceAccess(tenant),
+  "customers.read": (tenant) => assertCanUseCustomers(tenant.membership.role),
+  "customers.update": (tenant) => assertCanUseCustomers(tenant.membership.role),
   "customers.create": (tenant) => assertCanUseCustomers(tenant.membership.role),
   "catalog.product.create": (tenant) => assertCanManageCatalog(tenant),
   "sales.order.create": (tenant) =>

@@ -83,8 +83,8 @@ formOnly("catalog", "Photo capture and upload belong to the product form.", [
 ])
 
 // Customers
-planned("customers", "B01", ["customers.getById", "customers.listPage"])
 planned("customers", "B04", [
+  "customers.listPage",
   "customers.count",
   "orders.customerCount",
   "customerLedger.receivables",

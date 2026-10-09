@@ -1,6 +1,27 @@
 import { expect, test } from "bun:test"
 import { generalActionSchema, generalActionSummary } from "./contracts"
 import { respondGeneralRehearsal } from "./rehearsal"
+test("customer updates need at least one field; null removes optional details", () => {
+  expect(
+    generalActionSchema.safeParse({
+      action: "customer_update",
+      customerId: "customer_1",
+    }).success,
+  ).toBe(false)
+  expect(
+    generalActionSchema.safeParse({
+      action: "customer_update",
+      customerId: "customer_1",
+      email: null,
+    }).success,
+  ).toBe(true)
+  expect(
+    generalActionSummary(
+      { action: "customer_update", customerId: "customer_1", phone: null },
+      "NGN",
+    ),
+  ).toBe("Customer customer_1\nPhone: removed")
+})
 test("proposal payloads reject execution controls, scope injection and unsafe amounts", () => {
   expect(
     generalActionSchema.safeParse({
@@ -64,6 +85,7 @@ test("rehearsal is deterministic and does not treat injected record instructions
     ["add product Eggs at 200 per Piece", "product_create"],
     ["sell 2 of offering_1 at 200", "order_create"],
     ["pay order_1 300 cash", "payment_record"],
+    ["update customer customer_1 phone none", "customer_update"],
   ] as const) {
     const turn = respondGeneralRehearsal([{ role: "user", content }])
     expect(turn.kind === "tool" && turn.input).toMatchObject({ action })

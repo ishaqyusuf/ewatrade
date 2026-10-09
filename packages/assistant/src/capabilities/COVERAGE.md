@@ -6,38 +6,39 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 513 (372 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 12
-- Merchant planned: 200
+- Router procedures: 514 (373 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 14
+- Merchant planned: 199
 - Merchant form-only: 116
 - Merchant excluded: 44
-- Capabilities: 12 (8 read, 4 write)
+- Capabilities: 14 (9 read, 5 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
-| `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `search.global` |
-| `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `catalog.getItem` |
-| `inventory.offering_stock.read` | 1 | read | `readOfferingStock` | OWNER, ADMIN, MANAGER | read | mobile | source | `inventory.configuredOfferingAvailability` |
-| `sales.orders.read` | 1 | read | `readOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `orders.listPage` |
-| `sales.summary.read` | 1 | read | `readSalesSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `orders.reportSummary` |
-| `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `orders.get` |
-| `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | mobile | source | `services.queuePage` |
-| `customers.accounts.read` | 1 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | mobile | source | `customerLedger.accounts` |
-| `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | mobile | source | `customers.create` |
-| `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | mobile | source | `catalog.createSimpleItem` |
-| `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | mobile | source | `orders.create` |
-| `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | mobile | source | `orders.recordPayment` |
+| `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `search.global` |
+| `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.getItem` |
+| `inventory.offering_stock.read` | 1 | read | `readOfferingStock` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `inventory.configuredOfferingAvailability` |
+| `sales.orders.read` | 1 | read | `readOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.listPage` |
+| `sales.summary.read` | 1 | read | `readSalesSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.reportSummary` |
+| `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.get` |
+| `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `services.queuePage` |
+| `customers.accounts.read` | 1 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `customerLedger.accounts` |
+| `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `customers.getById` |
+| `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.create` |
+| `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.createSimpleItem` |
+| `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile | source | `orders.create` |
+| `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | dashboard, mobile | source | `orders.recordPayment` |
+| `customers.update` | 1 | write (`customer_update`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.update` |
 
 ## Planned merchant procedures by ticket
 
 | Ticket | Procedures |
 |---|---|
-| B01 | 2 |
 | B02 | 5 |
 | B03 | 9 |
-| B04 | 11 |
+| B04 | 12 |
 | B05 | 2 |
 | C01 | 2 |
 | C02 | 2 |
@@ -116,8 +117,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customerLedger.statement` | query | Owner/Admin only | customers | planned | E02 |
 | `customers.count` | query | Owner/Admin only | customers | planned | B04 |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
-| `customers.getById` | query | read | customers | planned | B01 |
-| `customers.listPage` | query | Owner/Admin only | customers | planned | B01 |
+| `customers.getById` | query | read | customers | supported | customers.read |
+| `customers.listPage` | query | Owner/Admin only | customers | planned | B04 |
+| `customers.update` | mutation | Owner/Admin only | customers | supported | customers.update |
 | `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.connectExternal` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.createCheckout` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |

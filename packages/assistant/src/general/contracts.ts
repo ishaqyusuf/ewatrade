@@ -52,6 +52,23 @@ export const generalActionSchema = z.discriminatedUnion("action", [
       note: z.string().trim().max(500).optional(),
     })
     .strict(),
+  // Omitted fields stay unchanged; null clears phone or email.
+  z
+    .object({
+      action: z.literal("customer_update"),
+      customerId: id,
+      name: name.optional(),
+      phone: z.string().trim().min(3).max(40).nullable().optional(),
+      email: z.string().email().max(254).nullable().optional(),
+    })
+    .strict()
+    .refine(
+      (input) =>
+        input.name !== undefined ||
+        input.phone !== undefined ||
+        input.email !== undefined,
+      "Change at least one detail.",
+    ),
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
@@ -126,6 +143,19 @@ export function generalActionSummary(
       return `${action.name} · ${action.canonicalUnitName} · ${amount(action.priceMinor)} per unit`
     case "order_create":
       return `${action.lines.map((line) => `${line.quantity} × offering ${line.offeringId}`).join("\n")}\n${action.customerId ? `Customer ${action.customerId}` : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}`
+    case "customer_update":
+      return [
+        `Customer ${action.customerId}`,
+        action.name !== undefined ? `Name: ${action.name}` : null,
+        action.phone !== undefined
+          ? `Phone: ${action.phone ?? "removed"}`
+          : null,
+        action.email !== undefined
+          ? `Email: ${action.email ?? "removed"}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n")
     case "payment_record":
       return `${amount(action.amountMinor)} · ${action.method.replaceAll("_", " ")} · order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
   }

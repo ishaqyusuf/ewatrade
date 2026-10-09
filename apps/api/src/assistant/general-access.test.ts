@@ -79,6 +79,7 @@ test("owners get every capability; Free plan hides finance-gated ledger reads", 
     "readOrder",
     "readServices",
     "readCustomerAccounts",
+    "readCustomer",
     "draftAction",
   ])
   expect(listed(actor("OWNER", { plan: "free" }))).not.toContain(
@@ -89,6 +90,7 @@ test("owners get every capability; Free plan hides finance-gated ledger reads", 
     "product_create",
     "order_create",
     "payment_record",
+    "customer_update",
   ])
 })
 
@@ -110,7 +112,7 @@ test("sales reps can read orders and draft sales only", () => {
 
 test("scoped managers inherit the canonical Store grants of each procedure", () => {
   const manager = actor("MANAGER", { scoped: { storeRole: "MANAGER" } })
-  // Customer creation and service queue pages are Owner/Admin-only for scoped staff.
+  // Customer create/update and service queue pages are Owner/Admin-only for scoped staff.
   expect(allowedActions(manager)).toEqual(["order_create", "payment_record"])
   expect(listed(manager)).not.toContain("readServices")
   expect(listed(manager)).not.toContain("readCustomerAccounts")

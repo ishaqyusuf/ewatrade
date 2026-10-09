@@ -93,6 +93,28 @@ export function respondGeneralRehearsal(
       },
     }
   }
+  const readCustomer = /^read customer (\S{1,128})$/i.exec(command)
+  if (readCustomer?.[1])
+    return {
+      kind: "tool",
+      toolName: "readCustomer",
+      input: { customerId: readCustomer[1] },
+    }
+  const updateCustomer =
+    /^update customer (\S{1,128}) (name|phone|email) (.{1,160})$/i.exec(command)
+  if (updateCustomer?.[1] && updateCustomer[2] && updateCustomer[3]) {
+    const value = updateCustomer[3].trim()
+    return {
+      kind: "tool",
+      toolName: "draftAction",
+      input: {
+        action: "customer_update",
+        customerId: updateCustomer[1],
+        [updateCustomer[2].toLowerCase()]:
+          value.toLowerCase() === "none" ? null : value,
+      },
+    }
+  }
   const customer = /^add customer ([^\n]{1,160})$/i.exec(text.trim())
   if (customer?.[1])
     return {
@@ -109,6 +131,6 @@ export function respondGeneralRehearsal(
     }
   return {
     kind: "text",
-    text: "This is the Development rehearsal; no live AI provider is called. Try ‘search rice’, ‘add customer Amina’, ‘add product Eggs at 200 per Piece’, ‘read item <itemId>’, ‘sell 2 of <offeringId> at 200’, ‘read order <orderId>’, ‘pay <orderId> 300 cash’ or ‘sales today’.",
+    text: "This is the Development rehearsal; no live AI provider is called. Try ‘search rice’, ‘add customer Amina’, ‘add product Eggs at 200 per Piece’, ‘read item <itemId>’, ‘sell 2 of <offeringId> at 200’, ‘read order <orderId>’, ‘pay <orderId> 300 cash’, ‘read customer <customerId>’, ‘update customer <customerId> phone 0803… (or none)’ or ‘sales today’.",
   }
 }

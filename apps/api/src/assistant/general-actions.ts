@@ -8,11 +8,14 @@ import {
   readGeneralOrderReview,
 } from "@ewatrade/db/assistant-general"
 import {
+  CustomerDirectoryError,
   createCommercialOrderInTransaction,
   createCustomerInTransaction,
   createSimpleCatalogItemInTransaction,
+  customerRevision,
   recordCommercialOrderPaymentInTransaction,
   resolveOrderScope,
+  updateCustomerInTransaction,
 } from "@ewatrade/db/queries"
 import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
@@ -130,6 +133,96 @@ async function paymentTarget(
   }
 }
 
+/** Directory rule violations are the user's to resolve, not server faults. */
+async function customerCommand<T>(operation: () => Promise<T>) {
+  try {
+    return await operation()
+  } catch (error) {
+    if (error instanceof CustomerDirectoryError)
+      throw new TRPCError({
+        code: error.code === "CUSTOMER_NOT_FOUND" ? "NOT_FOUND" : "CONFLICT",
+        message: error.message,
+      })
+    throw error
+  }
+}
+const customerFields = ["name", "phone", "email"] as const
+const fieldLabel = { name: "Name", phone: "Phone", email: "Email" }
+async function customerUpdateTarget(
+  ctx: GeneralTransactionContext,
+  payload: Action<"customer_update">,
+) {
+  const scope = requireGeneralScope(ctx)
+  const customer = await ctx.db.customer.findFirst({
+    where: { id: payload.customerId, tenantId: scope.tenantId },
+    select: { id: true, name: true, phone: true, email: true, updatedAt: true },
+  })
+  if (!customer)
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "This customer is unavailable. Search for them first.",
+    })
+  const changes = customerFields.flatMap((field) => {
+    const requested = payload[field]
+    if (requested === undefined) return []
+    const after = requested?.trim() || null
+    const before = customer[field] ?? null
+    return after === before ? [] : [{ field, before, after }]
+  })
+  if (!changes.length)
+    throw conflict("These details already match the customer.")
+  return {
+    customer,
+    changes,
+    target: { id: customer.id, revision: customerRevision(customer) },
+  }
+}
+
+const customerUpdate: GeneralActionAdapter<Action<"customer_update">> = {
+  async validate(ctx, payload) {
+    return (await customerUpdateTarget(ctx, payload)).target
+  },
+  async review(ctx, payload) {
+    const { customer, changes, target } = await customerUpdateTarget(
+      ctx,
+      payload,
+    )
+    return {
+      target,
+      lines: [
+        customer.name,
+        ...changes.map(
+          (change) =>
+            `${fieldLabel[change.field]}: ${change.before ?? "none"} → ${change.after ?? "removed"}`,
+        ),
+        "Past orders keep the customer name they were saved with.",
+      ],
+    }
+  },
+  stale: "This customer changed. Edit and review the update again.",
+  unavailable:
+    "This customer is unavailable or already matches. Check it before trying again.",
+  async execute(ctx, payload) {
+    const scope = requireGeneralScope(ctx)
+    const { customer } = await customerUpdateTarget(ctx, payload)
+    const { action: _, customerId, ...fields } = payload
+    const result = await customerCommand(() =>
+      updateCustomerInTransaction(ctx.db, {
+        ...fields,
+        customerId,
+        tenantId: scope.tenantId,
+        expectedRevision: customerRevision(customer),
+      }),
+    )
+    return {
+      kind: "customer",
+      recordId: result.customer.id,
+      title: "Customer updated",
+      detail: `${result.customer.name} · ${result.changes.map((change) => fieldLabel[change.field].toLowerCase()).join(", ")} changed`,
+    }
+  },
+}
+
 const customerCreate: GeneralActionAdapter<Action<"customer_create">> = {
   validate: async () => null,
   stale: "This draft changed. Review it again.",
@@ -137,10 +230,12 @@ const customerCreate: GeneralActionAdapter<Action<"customer_create">> = {
   async execute(ctx, payload) {
     const scope = requireGeneralScope(ctx)
     const { action: _, ...input } = payload
-    const result = await createCustomerInTransaction(ctx.db, {
-      ...customerCreateSchema.parse(input),
-      tenantId: scope.tenantId,
-    })
+    const result = await customerCommand(() =>
+      createCustomerInTransaction(ctx.db, {
+        ...customerCreateSchema.parse(input),
+        tenantId: scope.tenantId,
+      }),
+    )
     return {
       kind: "customer",
       recordId: result.id,
@@ -327,6 +422,7 @@ const adapters: {
   product_create: productCreate,
   order_create: orderCreate,
   payment_record: paymentRecord,
+  customer_update: customerUpdate,
 }
 export function generalActionAdapter<A extends GeneralAction>(payload: A) {
   return adapters[payload.action] as unknown as GeneralActionAdapter<A>

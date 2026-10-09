@@ -155,6 +155,29 @@ export function GeneralProposalEditor({
             />
           </>
         ) : null}
+        {payload.action === "customer_update" ? (
+          <>
+            <Text className="text-sm text-muted-foreground">
+              Leave a field as it is to keep it. Clear phone or email to remove
+              it.
+            </Text>
+            <FormField
+              label="Phone"
+              value={payload.phone ?? ""}
+              editable={!disabled}
+              keyboardType="phone-pad"
+              onChangeText={(phone) => patch({ phone: phone.trim() || null })}
+            />
+            <FormField
+              label="Email"
+              value={payload.email ?? ""}
+              editable={!disabled}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onChangeText={(email) => patch({ email: email.trim() || null })}
+            />
+          </>
+        ) : null}
         {payload.action === "product_create" ? (
           <FormField
             label="Unit"

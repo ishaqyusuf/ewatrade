@@ -11,7 +11,7 @@ import type { Capability, ProcedureRule } from "./types"
 const read = capabilityManifest[0]
 const write = capabilityForAction("customer_create")
 
-test("the manifest registers the four reviewed actions with schema, policy and receipt", () => {
+test("the manifest registers every reviewed action with schema, policy and receipt", () => {
   expect(validateCapabilityManifest()).toEqual([])
   expect(
     capabilityManifest
@@ -22,6 +22,7 @@ test("the manifest registers the four reviewed actions with schema, policy and r
     "product_create",
     "order_create",
     "payment_record",
+    "customer_update",
   ])
   expect(
     write.schema.safeParse({ action: "customer_create", name: "Amina" }),
