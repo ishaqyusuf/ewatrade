@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import type { URL } from "node:url"
 import { assertQaProviderAllowed } from "@ewatrade/utils/qa-provider-policy"
 import type { CatalogPhotoScope, CatalogStoredPhoto } from "./photo-contracts"
 import { processCatalogPhoto } from "./photo-processing"

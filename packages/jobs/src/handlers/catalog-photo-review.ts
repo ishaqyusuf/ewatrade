@@ -39,7 +39,7 @@ export async function catalogPhotoReviewHandler(
       photo: target.photo,
       provider: createOpenAiCatalogPhotoReviewProvider(),
       heicWorkerUrl: existsSync(packagedWorker)
-        ? new URL(pathToFileURL(packagedWorker).href)
+        ? pathToFileURL(packagedWorker)
         : undefined,
       read: (signal) =>
         storage.read({
