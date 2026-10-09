@@ -1,5 +1,6 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ActionButton } from "@/components/mobile/action-button"
+import { CountrySelect } from "@/components/mobile/country-select"
 import {
   CREATE_CUSTOMER_SHEET_SNAP_POINTS,
   type SaleCustomerDraft,
@@ -13,17 +14,22 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
+import { createCustomerFixture } from "@/internal-tooling/fixture-recipes"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
-import { VariableContextProvider } from "nativewind"
-import { createCustomerFixture } from "@/internal-tooling/fixture-recipes"
+import {
+  getCountry,
+  toInternationalPhone,
+  toLocalPhone,
+} from "@ewatrade/utils/countries"
 import type {
   BottomSheetBackdropProps,
   BottomSheetFooterProps,
   BottomSheetModal,
 } from "@gorhom/bottom-sheet"
 import { BottomSheetFooter } from "@gorhom/bottom-sheet"
+import { VariableContextProvider } from "nativewind"
 import { forwardRef, useCallback, useRef, useState } from "react"
 import { View, useWindowDimensions } from "react-native"
 
@@ -31,6 +37,7 @@ export type { SaleCustomerDraft } from "@/components/mobile/create-sale-customer
 
 type CreateSaleCustomerSheetProps = {
   appearance?: MobileDesign
+  phoneCountryCode?: string
   description?: string
   headline?: string
   disabled?: boolean
@@ -51,6 +58,7 @@ export const CreateSaleCustomerSheet = forwardRef<
   (
     {
       appearance = "classic",
+      phoneCountryCode,
       description = "Save this contact so it can be selected on future orders.",
       headline = "An order with a name.",
       disabled = false,
@@ -65,6 +73,9 @@ export const CreateSaleCustomerSheet = forwardRef<
     },
     ref,
   ) => {
+    const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+    const country = getCountry(selectedCountry ?? phoneCountryCode)
+    const useCountryPhone = phoneCountryCode !== undefined
     const { height } = useWindowDimensions()
     const palette = useMarketDayPalette()
     const market = appearance === "market-day"
@@ -220,16 +231,37 @@ export const CreateSaleCustomerSheet = forwardRef<
               >
                 Optional contact
               </Text>
+              {useCountryPhone ? (
+                <CountrySelect
+                  label="Phone country"
+                  value={country.code}
+                  onChange={setSelectedCountry}
+                  disabled={disabled || isLoading}
+                />
+              ) : null}
               <FormField
                 variant={market ? "market" : "filled"}
                 maxLength={40}
                 editable={!isLoading && !disabled}
                 keyboardType="phone-pad"
-                label="Phone"
+                label={
+                  useCountryPhone ? `Phone · +${country.dialCode}` : "Phone"
+                }
                 leadingIcon="Phone"
-                onChangeText={(phone) => onChange({ ...draft, phone })}
+                onChangeText={(phone) =>
+                  onChange({
+                    ...draft,
+                    phone: useCountryPhone
+                      ? toInternationalPhone(country.dialCode, phone)
+                      : phone,
+                  })
+                }
                 placeholder="Phone number"
-                value={draft.phone}
+                value={
+                  useCountryPhone
+                    ? toLocalPhone(country.dialCode, draft.phone)
+                    : draft.phone
+                }
               />
               <FormField
                 variant={market ? "market" : "filled"}
