@@ -62,7 +62,9 @@ const contracts = [
   },
   {
     file: "components/ui/switch.tsx",
-    markers: ["bg-muted-foreground/45"],
+    // Off track keeps 3:1 contrast (palette.switchOff); styles are explicit
+    // because NativeWind does not reach the old node_modules primitive.
+    markers: ["palette.switchOff", "accessibilityRole=\"switch\""],
   },
 ]
 

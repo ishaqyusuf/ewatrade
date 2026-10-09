@@ -44,6 +44,9 @@ export const GREEN_TILL_THEME = {
     // Chips over photos and illustrations (Cover, remove).
     overlayChip: "rgba(20,24,22,0.62)",
     overlayForeground: "#FFFFFF",
+    // Switch: the off track keeps 3:1 contrast on white cards.
+    switchOff: "#9AA5A0",
+    switchThumb: "#FFFFFF",
   },
   dark: {
     heroFrom: "#17543F",
@@ -86,6 +89,8 @@ export const GREEN_TILL_THEME = {
     // Chips over photos and illustrations (Cover, remove).
     overlayChip: "rgba(20,24,22,0.62)",
     overlayForeground: "#FFFFFF",
+    switchOff: "#3E4A45",
+    switchThumb: "#F3FBF6",
   },
 } as const
 

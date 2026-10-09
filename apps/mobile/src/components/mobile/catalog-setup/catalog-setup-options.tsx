@@ -4,17 +4,13 @@ import { SetupCheckboxRow } from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { getCatalogOptionValueHint } from "@ewatrade/utils/business-catalog-guidance"
-import {
-  Switch as NativeSwitch,
-  Text as NativeText,
-  TextInput,
-  View,
-} from "react-native"
+import { Text as NativeText, TextInput, View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogVariantDraft } from "./catalog-variant-model"
 import type { CatalogSetupModel } from "./use-catalog-setup"
@@ -510,16 +506,13 @@ export function ClassicProductChoices({
                       value={entry.price}
                     />
                   </View>
-                  <NativeSwitch
+                  <Switch
                     accessibilityLabel={`Sell ${combination.name}`}
+                    checked={entry.enabled}
                     disabled={model.locked}
-                    ios_backgroundColor={colors.border}
-                    onValueChange={(checked) =>
+                    onCheckedChange={(checked) =>
                       update(combination.key, { enabled: checked })
                     }
-                    thumbColor={colors.card}
-                    trackColor={{ false: colors.border, true: colors.primary }}
-                    value={entry.enabled}
                   />
                 </View>
               )
