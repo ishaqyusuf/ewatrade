@@ -221,6 +221,10 @@ const InitialLayout = ({
           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
         >
           <Stack.Screen
+            name="setup-assistant"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="customer-ledger-modal"
             options={{ headerShown: false, presentation: "modal" }}
           />

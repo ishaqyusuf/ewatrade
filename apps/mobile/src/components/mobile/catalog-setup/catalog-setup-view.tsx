@@ -6,6 +6,7 @@ import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { KeyboardInlineComposer } from "@/components/mobile/keyboard-inline-composer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { RetainedEditorStack } from "@/components/mobile/retained-editor-stack"
+import { SetupAssistantEntry } from "@/components/mobile/setup-assistant/setup-assistant-entry"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -185,6 +186,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                   : undefined
               }
             />
+            <SetupAssistantEntry describe />
           </View>
         </View>
       </ScrollView>

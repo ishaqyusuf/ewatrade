@@ -17,6 +17,7 @@ import {
   StatusPill,
   type StatusPillTone,
 } from "@/components/mobile/green-till/kit"
+import { SetupAssistantEntry } from "@/components/mobile/setup-assistant/setup-assistant-entry"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -320,6 +321,11 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
             : `Let’s get ${props.businessName} selling`
         }
       />
+      {!first ? (
+        <View className="py-3">
+          <SetupAssistantEntry />
+        </View>
+      ) : null}
       <SetupSteps steps={steps} />
       <GhostPreview message="Today’s sales will appear here after your first order." />
     </View>
