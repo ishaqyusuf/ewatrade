@@ -12,6 +12,12 @@ import { getCatalogIllustrations } from "@ewatrade/utils/catalog-illustrations"
 import { rankBySearch } from "@ewatrade/utils/search-rank"
 import { useMemo, useState } from "react"
 import { ScrollView, StyleSheet } from "react-native"
+import Animated, {
+  Easing,
+  ReduceMotion,
+  SlideInDown,
+  SlideOutDown,
+} from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { CatalogIllustrationPreview } from "./catalog-illustration-library"
 
@@ -94,7 +100,13 @@ export function CatalogIllustrationBrowser({
   )?.illustration.label
 
   return (
-    <View
+    <Animated.View
+      entering={SlideInDown.duration(300)
+        .easing(Easing.out(Easing.cubic))
+        .reduceMotion(ReduceMotion.System)}
+      exiting={SlideOutDown.duration(240)
+        .easing(Easing.in(Easing.cubic))
+        .reduceMotion(ReduceMotion.System)}
       style={[
         StyleSheet.absoluteFill,
         {
@@ -282,6 +294,6 @@ export function CatalogIllustrationBrowser({
           variant="search"
         />
       </BottomSearchFooter>
-    </View>
+    </Animated.View>
   )
 }
