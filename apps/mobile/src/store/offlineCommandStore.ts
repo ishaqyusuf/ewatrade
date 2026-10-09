@@ -167,7 +167,8 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
         hasHydrated: false,
       }),
       merge: (persisted, current) => {
-        const saved = persisted as Partial<OfflineCommandState>
+        // Nothing is saved on a fresh device: zustand passes undefined.
+        const saved = (persisted ?? {}) as Partial<OfflineCommandState>
         return {
           ...current,
           ...saved,
@@ -181,8 +182,12 @@ export const useOfflineCommandStore = create<OfflineCommandState>()(
         }
       },
       name: "ewatrade-mobile-offline-commands",
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true)
+      // A failed restore passes no state; still mark the queue ready so
+      // screens waiting on it (Sync & offline) never stay on "Checking".
+      onRehydrateStorage: (initial) => (state, error) => {
+        if (error && __DEV__)
+          console.warn("Offline command queue was not restored", error)
+        ;(state ?? initial).setHasHydrated(true)
         void zustandStorage.removeItem("ewatrade-mobile-retail-ops")
       },
       partialize: (state) => ({
