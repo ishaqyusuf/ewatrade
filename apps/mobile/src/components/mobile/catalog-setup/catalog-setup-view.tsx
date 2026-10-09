@@ -117,6 +117,11 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     setEditors((current) => current.slice(0, -1))
   }
   const activeFooterHeight = variantComposerMode ? composerHeight : footerHeight
+  const enabledChoices = model.combinations.filter(
+    (combination) =>
+      (model.variantDrafts[combination.key] ?? model.makeDefaultVariantDraft())
+        .enabled,
+  ).length
   if (model.scopeChanged || !model.canManage)
     return (
       <View className={catalogSetupClassName("p-5", market)}>
@@ -513,7 +518,23 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                     ? "Sell another way"
                     : CATALOG_EDITOR_TITLES[entry.key]),
               footer:
-                !market && entry.key === "category" ? (
+                !market && entry.key === "options" && kind === "product" ? (
+                  <BottomSearchFooter
+                    accessibilityLabel="Customer choices actions"
+                    onChangeText={() => undefined}
+                    placeholder=""
+                    searchVisible={false}
+                    totalCount={0}
+                    value=""
+                    variant="action-bar"
+                  >
+                    <ActionButton icon="Check" onPress={backEditor}>
+                      {enabledChoices
+                        ? `Done · ${enabledChoices} ${enabledChoices === 1 ? "choice" : "choices"}`
+                        : "Done"}
+                    </ActionButton>
+                  </BottomSearchFooter>
+                ) : !market && entry.key === "category" ? (
                   <BottomSearchFooter
                     accessibilityLabel="Search categories"
                     onChangeText={() => undefined}

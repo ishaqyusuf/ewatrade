@@ -22,7 +22,10 @@ import {
 } from "./catalog-illustration-library"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
 import { CatalogInventoryCodes } from "./catalog-inventory-codes"
-import { CatalogSetupOptions } from "./catalog-setup-options"
+import {
+  CatalogSetupOptions,
+  ClassicProductChoices,
+} from "./catalog-setup-options"
 import { CatalogSetupPricing } from "./catalog-setup-pricing"
 import { CatalogSetupService } from "./catalog-setup-service"
 import { CatalogSetupUnits } from "./catalog-setup-units"
@@ -931,6 +934,13 @@ export function CatalogFocusedEditor({
     case "units":
       return <CatalogSetupUnits model={model} market={false} />
     case "options":
+      if (!market && model.kind === "product")
+        return (
+          <ClassicProductChoices
+            model={model}
+            onOpenPricing={() => open("pricing")}
+          />
+        )
       return (
         <>
           <CatalogSetupOptions model={model} market={false} />
