@@ -1,5 +1,5 @@
 /** Source versions stay immutable once approved and used for acceptance. */
-export const LEGAL_DOCUMENT_VERSION = "2026-10-01-approved-1"
+export const LEGAL_DOCUMENT_VERSION = "2026-10-09-support-contact-1"
 export const LEGAL_DOCUMENT_STATUS: "draft" | "approved" = "approved"
 
 export type LegalDocumentKey =
@@ -97,7 +97,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
       {
         title: "Platform support",
         text: "For general account access, software billing or abuse concerns, email the EwaTrade support address below. Include a short description and any error reference. Never send passwords, one-time codes, full card details or prescription documents.",
-        contactEmail: "founders@ewatrade.com",
+        contactEmail: "support@ewatrade.com",
       },
       {
         title: "Merchant support",
@@ -106,7 +106,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
       {
         title: "Privacy and account requests",
         text: "For an EwaTrade account, privacy or account-deletion issue, use the privacy contact shown on this page or the account-deletion request form. Include the email associated with the account and enough context to identify the request; we may ask you to verify control of that address before changing or disclosing account information. Please do not send a password, one-time code, full payment-card information or prescription document by email. For an order or clinical-service question, contact the seller or licensed pharmacy shown in that request.",
-        contactEmail: "founders@ewatrade.com",
+        contactEmail: "support@ewatrade.com",
       },
     ],
   },
