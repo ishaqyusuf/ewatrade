@@ -398,11 +398,11 @@ export function GlobalSearchScreen() {
                       ) : null,
                   )}
                 </View>
-                <ClassicSearchHint icon={isOffline ? "Lock" : "Search"}>
-                  {isOffline
-                    ? "Other actions need a connection."
-                    : `Type 2 or more letters to search orders, customers, items${isSalesRep ? " and service work" : ", service work and staff"}.`}
-                </ClassicSearchHint>
+                {isOffline ? (
+                  <ClassicSearchHint icon="Lock">
+                    Other actions need a connection.
+                  </ClassicSearchHint>
+                ) : null}
               </>
             ) : (
               <>
