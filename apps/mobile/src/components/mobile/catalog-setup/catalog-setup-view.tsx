@@ -516,7 +516,11 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                   ? "Photos"
                   : !market && entry.key === "units"
                     ? "Sell another way"
-                    : CATALOG_EDITOR_TITLES[entry.key]),
+                    : !market && entry.key === "codes"
+                      ? "SKU and barcode"
+                      : !market && entry.key === "pricing"
+                        ? "Prices and availability"
+                        : CATALOG_EDITOR_TITLES[entry.key]),
               footer:
                 !market && entry.key === "options" && kind === "product" ? (
                   <BottomSearchFooter
@@ -555,6 +559,23 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                       value={categoryQuery}
                       variant="search"
                     />
+                  </BottomSearchFooter>
+                ) : !market &&
+                  ["stock", "codes", "pricing", "description"].includes(
+                    entry.key,
+                  ) ? (
+                  <BottomSearchFooter
+                    accessibilityLabel={`${CATALOG_EDITOR_TITLES[entry.key]} actions`}
+                    onChangeText={() => undefined}
+                    placeholder=""
+                    searchVisible={false}
+                    totalCount={0}
+                    value=""
+                    variant="action-bar"
+                  >
+                    <ActionButton icon="Check" onPress={backEditor}>
+                      Done
+                    </ActionButton>
                   </BottomSearchFooter>
                 ) : entry.key === "units" || entry.key === "images" ? (
                   <BottomSearchFooter

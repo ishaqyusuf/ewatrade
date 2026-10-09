@@ -29,6 +29,12 @@ import {
 import { CatalogSetupPricing } from "./catalog-setup-pricing"
 import { CatalogSetupService } from "./catalog-setup-service"
 import { CatalogSetupUnits } from "./catalog-setup-units"
+import {
+  ClassicCodes,
+  ClassicDescription,
+  ClassicOpeningStock,
+  ClassicPricing,
+} from "./classic-detail-editors"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export type CatalogEditorKey =
@@ -874,7 +880,11 @@ export function CatalogFocusedEditor({
 }) {
   switch (editor) {
     case "codes":
-      return <CatalogInventoryCodes model={model} />
+      return market ? (
+        <CatalogInventoryCodes model={model} />
+      ) : (
+        <ClassicCodes model={model} />
+      )
     case "images":
       return (
         <CatalogImageEditor
@@ -884,6 +894,7 @@ export function CatalogFocusedEditor({
         />
       )
     case "description":
+      if (!market) return <ClassicDescription model={model} />
       return (
         <FormField
           label="Description (optional)"
@@ -911,6 +922,8 @@ export function CatalogFocusedEditor({
         />
       )
     case "stock":
+      if (!market && model.kind === "product")
+        return <ClassicOpeningStock model={model} />
       return model.showAdvanced ? (
         <CatalogSetupPricing
           model={model}
@@ -960,6 +973,8 @@ export function CatalogFocusedEditor({
         </>
       )
     case "pricing":
+      if (!market && model.kind === "product")
+        return <ClassicPricing model={model} />
       return (
         <CatalogSetupPricing
           model={model}
