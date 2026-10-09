@@ -118,6 +118,7 @@ const WandSparkles = hugeIcon("MagicWand01Icon")
 const Sparkles = hugeIcon("SparklesIcon")
 const ArrowUp = hugeIcon("ArrowUp02Icon")
 const ArrowDown = hugeIcon("ArrowDown02Icon")
+const ArrowLeftRight = hugeIcon("ArrowDataTransferHorizontalIcon")
 const Store = hugeIcon("Store01Icon")
 const Package = hugeIcon("PackageIcon")
 const Pencil = hugeIcon("Pencil")
@@ -280,6 +281,7 @@ const appIcons = {
   analytics: BarChart2,
   AlertCircle,
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Ban,
   BarChart3,

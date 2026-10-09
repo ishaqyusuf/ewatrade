@@ -296,7 +296,7 @@ export function GeneralChat() {
                   "Reply interrupted. Check reply status before sending again."}
               </p>
             ) : null}
-            {vm.runId && !vm.busy ? (
+            {vm.runId && !vm.busy && (vm.notice || vm.chat.error) ? (
               <Button
                 size="sm"
                 variant="outline"
