@@ -1,12 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import * as Classic from "@/components/mobile/appearances/classic/unit-conversion"
+import * as Market from "@/components/mobile/appearances/market-day/unit-conversion"
+import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
-import * as Classic from "@/components/mobile/appearances/classic/unit-conversion"
-import * as Market from "@/components/mobile/appearances/market-day/unit-conversion"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
@@ -16,6 +17,8 @@ import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
 import { Keyboard, type ScrollView } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { HeroCard } from "../green-till/hero-card"
+import { ExactQuantityStepper } from "../stock-intake/exact-quantity-stepper"
 import { ConversionBalanceChoices } from "./conversion-balance-choices"
 import type { ConversionProps } from "./unit-conversion-model"
 import { UnitConversionReview } from "./unit-conversion-review"
@@ -65,12 +68,28 @@ export function UnitConversionContent(props: ConversionProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View className="gap-6 px-4 pt-3 pb-[var(--conversion-footer)]">
-            <Header storeName={model.storeName} />
+            {!market && model.source ? (
+              <HeroCard
+                label={model.source.productName}
+                title={`${model.draft.sourceQuantity || "—"} ${model.source.inventoryUnitName} → ${model.draft.targetQuantity || "—"} ${model.target?.inventoryUnitName ?? "choose unit"}`}
+                sub={
+                  model.projection.value
+                    ? `After: ${model.projection.value.sourceAfter} ${model.source.inventoryUnitName} · ${model.projection.value.targetAfter} ${model.target?.inventoryUnitName}`
+                    : "Choose units and enter the amount to convert."
+                }
+                pill={{
+                  label: model.offline ? "Saved copy" : "Draft",
+                  tone: model.offline ? "offline" : "draft",
+                }}
+              />
+            ) : (
+              <Header storeName={model.storeName} />
+            )}
             {model.offline ? (
               <StatusBanner
                 tone="warning"
                 title="Online action"
-                message="Connect before transforming packaged stock. Cached balances are for reference only."
+                message={`Connect before converting stock. ${model.balancesUpdatedAt ? `Saved balances as of ${new Date(model.balancesUpdatedAt).toLocaleString()}.` : "Reconnect to load balances."}`}
               />
             ) : null}
             {!model.canManage ? (
@@ -135,9 +154,7 @@ export function UnitConversionContent(props: ConversionProps) {
                   description="Choose the packaged stock to convert."
                 >
                   {model.loading ? (
-                    <Text className={muted}>
-                      Loading current-Store balances…
-                    </Text>
+                    <Skeleton className="h-16 w-full" />
                   ) : model.missingStore ? (
                     <Text className={muted}>Current Store unavailable.</Text>
                   ) : !model.hasBalanceData ? (
@@ -156,20 +173,31 @@ export function UnitConversionContent(props: ConversionProps) {
                       emptyMessage="No packaged balances in this Store. Configure packaged inventory before converting units."
                     />
                   )}
-                  <FormField
-                    label={
-                      model.source
-                        ? `Source quantity · ${model.source.inventoryUnitName}`
-                        : "Source quantity"
-                    }
-                    keyboardType="decimal-pad"
-                    maxLength={40}
-                    editable={!model.locked && Boolean(model.source)}
-                    value={model.draft.sourceQuantity}
-                    onChangeText={(sourceQuantity) =>
-                      model.edit({ sourceQuantity })
-                    }
-                  />
+                  {!market ? (
+                    <ExactQuantityStepper
+                      label={`Source quantity · ${model.source?.inventoryUnitName ?? "units"}`}
+                      value={model.draft.sourceQuantity}
+                      disabled={model.locked || !model.source}
+                      onChange={(sourceQuantity) =>
+                        model.edit({ sourceQuantity })
+                      }
+                    />
+                  ) : (
+                    <FormField
+                      label={
+                        model.source
+                          ? `Source quantity · ${model.source.inventoryUnitName}`
+                          : "Source quantity"
+                      }
+                      keyboardType="decimal-pad"
+                      maxLength={40}
+                      editable={!model.locked && Boolean(model.source)}
+                      value={model.draft.sourceQuantity}
+                      onChangeText={(sourceQuantity) =>
+                        model.edit({ sourceQuantity })
+                      }
+                    />
+                  )}{" "}
                 </Section>
                 <Section
                   title="Target packaged balance"

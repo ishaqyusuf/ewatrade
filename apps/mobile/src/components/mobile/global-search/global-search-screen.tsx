@@ -1,6 +1,21 @@
+import {
+  ClassicSearchActionRow,
+  ClassicSearchFrame,
+  ClassicSearchHeader,
+  ClassicSearchRow,
+  ClassicSearchSection,
+} from "@/components/mobile/appearances/classic/global-search-screen"
+import {
+  MarketDaySearchActionRow,
+  MarketDaySearchFrame,
+  MarketDaySearchHeader,
+  MarketDaySearchRow,
+  MarketDaySearchSection,
+} from "@/components/mobile/appearances/market-day/global-search-screen"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -14,26 +29,15 @@ import { useRouter } from "expo-router"
 import { useEffect, useMemo, useState } from "react"
 import { Keyboard } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { CommerceFilterChip } from "../commerce"
+import { QuickActionRow } from "../green-till/kit"
+import { availableSearchActions } from "./search-display"
 import {
   SEARCH_GROUP_ORDER,
-  resultGroupLabel,
   type SearchAction,
   type SearchResult,
+  resultGroupLabel,
 } from "./search-presentation"
-import {
-  ClassicSearchFrame,
-  ClassicSearchHeader,
-  ClassicSearchSection,
-  ClassicSearchRow,
-  ClassicSearchActionRow,
-} from "@/components/mobile/appearances/classic/global-search-screen"
-import {
-  MarketDaySearchFrame,
-  MarketDaySearchHeader,
-  MarketDaySearchSection,
-  MarketDaySearchRow,
-  MarketDaySearchActionRow,
-} from "@/components/mobile/appearances/market-day/global-search-screen"
 
 export function GlobalSearchScreen() {
   const router = useRouter()
@@ -48,6 +52,7 @@ export function GlobalSearchScreen() {
   const [footerHeight, setFooterHeight] = useState(100)
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: appearance changes invalidate measured header geometry
   useEffect(() => {
     setHeaderHeight(0)
     setShowCanvasStatusBar(false)
@@ -56,13 +61,16 @@ export function GlobalSearchScreen() {
   const { profile } = useAuthContext()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const [query, setQuery] = useState("")
+  const [resultType, setResultType] = useState<SearchResult["type"] | "all">(
+    "all",
+  )
   const normalizedQuery = query.trim()
   const debouncedQuery = useDebounce(normalizedQuery, 180)
   const canSearch = !isOffline && normalizedQuery.length >= 2
   const querySettled = debouncedQuery === normalizedQuery
   useEffect(() => {
-    if (isOffline && query) setQuery("")
-  }, [isOffline, query])
+    if (isOffline) setResultType("all")
+  }, [isOffline])
   const canManage = canManageMobileOperations(profile?.role)
   const isSalesRep = isSalesRepRole(profile?.role)
   const search = useQuery(
@@ -138,11 +146,12 @@ export function GlobalSearchScreen() {
   )
   const filteredActions = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return actions
-    return actions.filter((action) =>
+    const available = availableSearchActions(actions, isOffline)
+    if (!normalized) return available
+    return available.filter((action) =>
       `${action.label} ${action.detail}`.toLowerCase().includes(normalized),
     )
-  }, [actions, query])
+  }, [actions, query, isOffline])
   const groupedResults = useMemo(
     () =>
       SEARCH_GROUP_ORDER.flatMap((type) => {
@@ -202,8 +211,7 @@ export function GlobalSearchScreen() {
     !search.isPlaceholderData &&
     !search.isFetching &&
     !search.isError &&
-    groupedResults.length === 0 &&
-    filteredActions.length === 0
+    groupedResults.length === 0
 
   const searching = canSearch && (!querySettled || search.isFetching)
   return (
@@ -250,7 +258,20 @@ export function GlobalSearchScreen() {
             tone="destructive"
           />
         ) : null}
-        {filteredActions.length > 0 ? (
+        {!market && filteredActions.length > 0 && !normalizedQuery ? (
+          <View>
+            <QuickActionRow
+              actions={filteredActions
+                .slice(0, 3)
+                .map((a) => ({ ...a, gold: a.id === "create-order" }))}
+            />
+            <QuickActionRow
+              actions={filteredActions
+                .slice(3)
+                .map((a) => ({ ...a, gold: false }))}
+            />
+          </View>
+        ) : filteredActions.length > 0 ? (
           <Section title="Quick actions">
             {filteredActions.map((action) => (
               <ActionRow
@@ -266,7 +287,12 @@ export function GlobalSearchScreen() {
             ))}
           </Section>
         ) : null}
-        {searching ? (
+        {!market && searching ? (
+          <View className="gap-3">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </View>
+        ) : searching ? (
           <Text
             accessibilityLiveRegion="polite"
             className={
@@ -289,17 +315,54 @@ export function GlobalSearchScreen() {
             Type at least two characters to find workspace records.
           </Text>
         ) : null}
-        {groupedResults.map((group) => (
-          <Section key={group.type} title={resultGroupLabel(group.type)}>
-            {group.items.map((item) => (
-              <ResultRow
-                item={item}
-                key={item.id}
-                onPress={() => openResult(item)}
+        {!market && groupedResults.length ? (
+          <View className="gap-2">
+            <Text className="text-xs text-muted-foreground">
+              Top 6 matches · filters apply to these results
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              <CommerceFilterChip
+                active={resultType === "all"}
+                label="All"
+                onPress={() => setResultType("all")}
               />
-            ))}
-          </Section>
-        ))}
+              {groupedResults.map((group) => (
+                <CommerceFilterChip
+                  key={group.type}
+                  active={resultType === group.type}
+                  label={resultGroupLabel(group.type)}
+                  onPress={() => setResultType(group.type)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {groupedResults
+          .filter(
+            (group) =>
+              market || resultType === "all" || group.type === resultType,
+          )
+          .map((group) => (
+            <Section key={group.type} title={resultGroupLabel(group.type)}>
+              {group.items.map((item) =>
+                !market ? (
+                  <ClassicSearchRow
+                    key={item.id}
+                    item={item}
+                    query={normalizedQuery}
+                    sell={isSalesRep && item.type === "catalog_item"}
+                    onPress={() => openResult(item)}
+                  />
+                ) : (
+                  <ResultRow
+                    item={item}
+                    key={item.id}
+                    onPress={() => openResult(item)}
+                  />
+                ),
+              )}
+            </Section>
+          ))}
         {noMatches ? (
           <EmptyState
             icon="Search"
@@ -314,8 +377,12 @@ export function GlobalSearchScreen() {
         autoFocus
         maxLength={160}
         onHeightChange={setFooterHeight}
-        onChangeText={setQuery}
-        placeholder="Search anything..."
+        onChangeText={(value) => {
+          setQuery(value)
+          setResultType("all")
+        }}
+        showDisabledOfflineSearch={!market}
+        placeholder={isOffline ? "Reconnect to search" : "Search anything..."}
         totalCount={search.data?.length ?? 0}
         value={query}
         variant={market ? "market-day" : "default"}

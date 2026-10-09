@@ -1,34 +1,37 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import * as Classic from "@/components/mobile/appearances/classic/stock-intake"
+import * as Market from "@/components/mobile/appearances/market-day/stock-intake"
+import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
-import * as Classic from "@/components/mobile/appearances/classic/stock-intake"
-import * as Market from "@/components/mobile/appearances/market-day/stock-intake"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
+import { Modal, useModal } from "@/components/ui/modal"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { cn } from "@/lib/utils"
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
-import {
-  type FlatList as NativeFlatList,
-  type ScrollViewProps,
-} from "react-native"
+import type { FlatList as NativeFlatList, ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { FormField } from "../form-field"
+import { HeroCard } from "../green-till/hero-card"
+import { StockIntakeFields } from "./stock-intake-fields"
 import {
   STOCK_MODES,
-  stockCustodyLabel,
-  type StockIntakeProps,
   type StockBalance,
+  type StockIntakeProps,
+  stockCustodyLabel,
 } from "./stock-intake-model"
-import { useStockIntake } from "./use-stock-intake"
-import { StockIntakeFields } from "./stock-intake-fields"
 import { StockIntakeReview } from "./stock-intake-review"
+import { stockAfter } from "./stock-preview"
+import { useStockIntake } from "./use-stock-intake"
 
 export function StockIntakeChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="stock-intake" />
@@ -47,6 +50,15 @@ export function StockIntakeContent(props: StockIntakeProps) {
   const [footerHeight, setFooterHeight] = useState(150)
   const list = useRef<NativeFlatList<StockBalance>>(null)
   const completed = model.phase === "complete"
+  const chooser = useModal()
+  const after = model.selected
+    ? stockAfter(
+        model.selected.onHandQuantity,
+        model.draft.quantity,
+        model.draft.mode,
+        model.draft.direction,
+      )
+    : null
   useEffect(() => {
     if (model.error && !model.review)
       list.current?.scrollToOffset({ offset: 0, animated: true })
@@ -61,8 +73,8 @@ export function StockIntakeContent(props: StockIntakeProps) {
         <FlatList
           ref={list}
           className="flex-1"
-          contentContainerClassName="grow gap-1 px-4 pb-[var(--stock-intake-footer)]"
-          data={completed ? [] : model.rows}
+          contentContainerClassName="grow gap-1 px-[18px] pb-[var(--stock-intake-footer)]"
+          data={completed || !market ? [] : model.rows}
           keyExtractor={(row) => row.balanceSourceId}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -76,16 +88,49 @@ export function StockIntakeContent(props: StockIntakeProps) {
           )}
           ListHeaderComponent={
             <View className="gap-5 pb-4 pt-2">
-              <Header
-                storeName={model.storeName}
-                description="Choose an operation, select the exact balance, then review the quantity and reason."
-              />
+              {market ? (
+                <Header
+                  storeName={model.storeName}
+                  description="Choose an operation, select the exact balance, then review the quantity and reason."
+                />
+              ) : (
+                <HeroCard
+                  label={model.selected?.productName ?? "Record stock"}
+                  title={
+                    model.selected
+                      ? `${model.selected.onHandQuantity} → ${after ?? "—"} ${model.selected.inventoryUnitName}`
+                      : "Choose a stock balance"
+                  }
+                  sub={
+                    model.selected
+                      ? `${model.selected.variantName} · ${stockCustodyLabel(model.selected, model.people)}`
+                      : "See what changes before you record it."
+                  }
+                  pill={{
+                    label: model.offline ? "Saved copy" : "Draft",
+                    tone: model.offline ? "offline" : "draft",
+                  }}
+                >
+                  {model.loading ? (
+                    <Skeleton className="mt-4 h-10 w-full" />
+                  ) : null}
+                  <View className="mt-4">
+                    <ActionButton
+                      tone="cream"
+                      disabled={model.locked || model.loading}
+                      onPress={() => chooser.present()}
+                    >
+                      {model.selected ? "Change balance" : "Choose balance"}
+                    </ActionButton>
+                  </View>
+                </HeroCard>
+              )}
               {model.offline ? (
                 <StatusBanner
                   tone="warning"
                   icon="Lock"
                   title="Online connection required"
-                  message="Stock receipts, counts, adjustments and custody moves are online-only. Cached balances are for reference."
+                  message={`Stock operations require a connection. ${model.balancesUpdatedAt ? `Saved balances as of ${new Date(model.balancesUpdatedAt).toLocaleString()}.` : "Reconnect to load balances."}`}
                 />
               ) : null}
               {!model.canManage ? (
@@ -167,27 +212,29 @@ export function StockIntakeContent(props: StockIntakeProps) {
                       }
                     </Text>
                   </Section>
-                  <Section
-                    title="Select stock balance"
-                    description="Choose Product, variant, unit and custody together. Units are never combined."
-                  >
-                    <Text
-                      className={
-                        market
-                          ? "text-xs text-market-muted-ink"
-                          : "text-xs text-muted-foreground"
-                      }
+                  {market ? (
+                    <Section
+                      title="Select stock balance"
+                      description="Choose Product, variant, unit and custody together. Units are never combined."
                     >
-                      {model.loading ||
-                      model.loadError ||
-                      !model.hasBalanceData ||
-                      !model.canManage ||
-                      model.scopeChanged ||
-                      model.missingStore
-                        ? "Balance report unavailable"
-                        : `${model.rows.length} matching balances`}
-                    </Text>
-                  </Section>
+                      <Text
+                        className={
+                          market
+                            ? "text-xs text-market-muted-ink"
+                            : "text-xs text-muted-foreground"
+                        }
+                      >
+                        {model.loading ||
+                        model.loadError ||
+                        !model.hasBalanceData ||
+                        !model.canManage ||
+                        model.scopeChanged ||
+                        model.missingStore
+                          ? "Balance report unavailable"
+                          : `${model.rows.length} matching balances`}
+                      </Text>
+                    </Section>
+                  ) : null}
                 </>
               )}
             </View>
@@ -205,6 +252,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
           )}
           ListEmptyComponent={
             !completed &&
+            (market || !model.selected) &&
             model.canManage &&
             !model.scopeChanged &&
             !model.loadError ? (
@@ -240,7 +288,8 @@ export function StockIntakeContent(props: StockIntakeProps) {
         {!completed ? (
           <BottomSearchFooter
             localSearch
-            alwaysShowSearch
+            searchVisible={market}
+            alwaysShowSearch={market}
             includeSafeArea={props.presentation !== "sheet"}
             variant={market ? "market-day" : "default"}
             accessibilityLabel="Search stock balances"
@@ -276,6 +325,42 @@ export function StockIntakeContent(props: StockIntakeProps) {
             </ActionButton>
           </BottomSearchFooter>
         ) : null}
+        <Modal
+          ref={chooser.ref}
+          title="Choose stock balance"
+          snapPoints={["80%"]}
+          keyboardBehavior="fillParent"
+        >
+          <BottomSheetScrollView
+            contentContainerStyle={{ padding: 18, gap: 12 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <FormField
+              label="Find balance"
+              value={model.query}
+              onChangeText={model.setQuery}
+              placeholder="Product, variant, unit, custody"
+            />
+            {model.rows.map((item) => (
+              <Row
+                key={item.balanceSourceId}
+                icon="Warehouse"
+                title={item.productName}
+                subtitle={`${item.variantName} · ${stockCustodyLabel(item, model.people)}`}
+                quantityLabel={`${item.onHandQuantity} ${item.inventoryUnitName}`}
+                selected={model.draft.balanceId === item.balanceSourceId}
+                disabled={model.locked}
+                onPress={() => {
+                  model.edit({ balanceId: item.balanceSourceId })
+                  chooser.dismiss()
+                }}
+              />
+            ))}
+            {!model.rows.length ? (
+              <Text>No matching stock balances.</Text>
+            ) : null}
+          </BottomSheetScrollView>
+        </Modal>
         <StockIntakeReview model={model} market={market} />
       </View>
     </VariableContextProvider>

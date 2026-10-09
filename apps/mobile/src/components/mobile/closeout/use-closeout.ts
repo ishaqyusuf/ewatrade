@@ -1,18 +1,18 @@
+import { useModal } from "@/components/ui/modal"
 import { useAuthContext } from "@/hooks/use-auth"
-import { canManageMobileOperations } from "@/lib/mobile-roles"
 import { createInventoryFixture } from "@/internal-tooling/fixture-recipes"
+import { canManageMobileOperations } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import { useModal } from "@/components/ui/modal"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard } from "react-native"
 import {
-  closeoutLines,
   type CloseoutContentProps,
   type CloseoutCreateInput,
   type CloseoutReview,
+  closeoutLines,
 } from "./closeout-model"
 
 type Attempt = {
@@ -322,6 +322,7 @@ export function useCloseout({
     setCanUndo(false)
   }
   return {
+    balancesUpdatedAt: balances.dataUpdatedAt,
     attendantName: attendantName ?? profile?.name ?? "Staff member",
     storeName: custody[0]?.storeName ?? "Current Store",
     lines,

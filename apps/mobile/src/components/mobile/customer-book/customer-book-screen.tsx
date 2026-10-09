@@ -6,14 +6,17 @@ import {
 import { CreateSaleCustomerSheet } from "@/components/mobile/create-sale-customer-sheet"
 import type { CustomerBookFilter } from "@/components/mobile/customer-book-presentation-model"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { RevealItem, useFirstReveal } from "@/components/ui/motion"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
+import { useBusinessStore } from "@/store/businessStore"
+import { COUNTRIES, DEFAULT_COUNTRY_CODE } from "@ewatrade/utils/countries"
 import { VariableContextProvider } from "nativewind"
 import { useState } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -43,6 +46,13 @@ export function activeCustomerFilterLabel(filter: CustomerBookFilter) {
 
 export function CustomerBookContent(props: CustomerBookProps) {
   const { profile } = useAuthContext()
+  const businessCountry = useBusinessStore(
+    (s) => s.businesses.find((b) => b.id === profile?.businessId)?.country,
+  )
+  const countryCode =
+    COUNTRIES.find(
+      (c) => c.code === businessCountry || c.name === businessCountry,
+    )?.code ?? DEFAULT_COUNTRY_CODE
   const canManageTenant = ["OWNER", "ADMIN"].includes(
     profile?.role?.trim().toUpperCase() ?? "",
   )
@@ -84,6 +94,7 @@ export function CustomerBookContent(props: CustomerBookProps) {
     presentation,
   } = useCustomerBook(props)
   const searchVisible = market || showSearch
+  const reveal = useFirstReveal(!isLoading)
   const [footerHeight, setFooterHeight] = useState(88)
   const returnToOrder = () => {
     if (router.canGoBack()) router.back()
@@ -157,7 +168,7 @@ export function CustomerBookContent(props: CustomerBookProps) {
             phone={selectedCustomer.phone}
             onOpenOrder={(id) => router.push(commercialOrderHref(id) as never)}
           />
-          {canManageTenant && selectedIsSaved && selectedCustomer ? (
+          {market && canManageTenant && selectedIsSaved && selectedCustomer ? (
             <View className="px-4 pb-3">
               <ActionButton
                 variant="outline"
@@ -173,6 +184,15 @@ export function CustomerBookContent(props: CustomerBookProps) {
             </View>
           ) : null}
         </>
+      }
+      onStatement={
+        canManageTenant && selectedIsSaved
+          ? () =>
+              router.push({
+                pathname: "/customer-ledger/[customerId]",
+                params: { customerId: selectedCustomer.id },
+              })
+          : undefined
       }
       appearance={market ? "market-day" : "classic"}
       customer={selectedCustomer}
@@ -213,7 +233,8 @@ export function CustomerBookContent(props: CustomerBookProps) {
   const directoryContent = (
     <VariableContextProvider
       value={{
-        "--customer-book-bottom": searchVisible ? footerHeight + 24 : 24,
+        "--customer-book-bottom":
+          market && searchVisible ? footerHeight + 24 : 24,
       }}
     >
       <View
@@ -222,57 +243,70 @@ export function CustomerBookContent(props: CustomerBookProps) {
       >
         <FlatList
           className="flex-1"
-          contentContainerClassName="grow px-2 pb-[var(--customer-book-bottom)]"
+          contentContainerClassName="grow gap-2 px-[18px] pb-[var(--customer-book-bottom)]"
           data={visibleCustomers}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
-            <EmptyState
-              actionLabel={
-                presentation.showInitialCreateAction
-                  ? "Add first customer"
-                  : undefined
-              }
-              actionProps={{
-                accessibilityLabel: "Add first customer",
-                icon: "Plus",
-                onPress: creation.present,
-                testID: "customer-add-first-action",
-              }}
-              className="flex-1 justify-center px-6 pb-16"
-              icon="Users"
-              message={
-                isLoading
-                  ? "Loading customers."
-                  : search || filter !== "all"
-                    ? "Try another search or customer state."
-                    : hasError
-                      ? "Try again to load the customer directory."
-                      : isOffline
-                        ? "Reconnect to load the shared customer directory."
-                        : "Your saved customers and their order activity will appear here."
-              }
-              title={
-                isLoading
-                  ? "Loading customers"
-                  : search || filter !== "all"
-                    ? "No matching customers"
-                    : hasError
-                      ? "Customers unavailable"
-                      : isOffline
-                        ? "No cached customers"
-                        : "No customers yet"
-              }
-              variant="flat"
-            />
+            isLoading && !market ? (
+              <View className="gap-3">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </View>
+            ) : (
+              <EmptyState
+                actionLabel={
+                  presentation.showInitialCreateAction
+                    ? "Add first customer"
+                    : undefined
+                }
+                actionProps={{
+                  accessibilityLabel: "Add first customer",
+                  icon: "Plus",
+                  onPress: creation.present,
+                  testID: "customer-add-first-action",
+                }}
+                className="flex-1 justify-center px-6 pb-16"
+                icon="Users"
+                message={
+                  isLoading
+                    ? "Loading customers."
+                    : search || filter !== "all"
+                      ? "Try another search or customer state."
+                      : hasError
+                        ? "Try again to load the customer directory."
+                        : isOffline
+                          ? "Reconnect to load the shared customer directory."
+                          : "Your saved customers and their order activity will appear here."
+                }
+                title={
+                  isLoading
+                    ? "Loading customers"
+                    : search || filter !== "all"
+                      ? "No matching customers"
+                      : hasError
+                        ? "Customers unavailable"
+                        : isOffline
+                          ? "No cached customers"
+                          : "No customers yet"
+                }
+                variant="flat"
+              />
+            )
           }
           ListHeaderComponent={
-            <View className="gap-4 px-2 pb-3">
+            <View className="gap-4 pb-3">
               {feedback}
               <Header
                 loadedCount={customers.length}
                 pendingCount={pendingCustomerCount}
+                isLoading={isLoading}
+                hasError={hasError}
+                isOffline={isOffline}
+                search={search}
+                onSearch={market ? undefined : setSearch}
               />
               {isOffline ? (
                 <StatusBanner
@@ -314,12 +348,14 @@ export function CustomerBookContent(props: CustomerBookProps) {
               ) : null}
             </View>
           }
-          renderItem={({ item }) => (
-            <Row
-              customer={item}
-              historyComplete={historyComplete}
-              onPress={() => setSelectedCustomerId(item.id)}
-            />
+          renderItem={({ item, index }) => (
+            <RevealItem index={index} active={reveal}>
+              <Row
+                customer={item}
+                historyComplete={historyComplete}
+                onPress={() => setSelectedCustomerId(item.id)}
+              />
+            </RevealItem>
           )}
           onEndReached={() => {
             if (isOffline || creation.blocked) return
@@ -353,7 +389,7 @@ export function CustomerBookContent(props: CustomerBookProps) {
           refreshControl={isOffline ? undefined : <QueryRefreshControl />}
           showsVerticalScrollIndicator={false}
         />
-        {searchVisible ? (
+        {market && searchVisible ? (
           <BottomSearchFooter
             alwaysShowSearch
             variant={market ? "market-day" : "default"}
@@ -385,13 +421,18 @@ export function CustomerBookContent(props: CustomerBookProps) {
             ) : null}
           </BottomSearchFooter>
         ) : null}
-        {!market && presentation.showStandardCreateFab ? (
-          <ListCreateFab
-            accessibilityLabel="Add customer"
-            bottomOffset={showSearch ? footerHeight : 0}
-            onPress={creation.present}
-            testID="customer-add-fab"
-          />
+        {!market ? (
+          <View className="border-t border-border bg-background px-[18px] py-3">
+            <ActionButton
+              icon="UserPlus"
+              tone="gold"
+              disabled={isOffline || creation.locked}
+              onPress={creation.present}
+              testID="customer-add-fab"
+            >
+              {isOffline ? "Reconnect to add customer" : "Add customer"}
+            </ActionButton>
+          </View>
         ) : null}
       </View>
     </VariableContextProvider>
@@ -417,6 +458,7 @@ export function CustomerBookContent(props: CustomerBookProps) {
       </View>
       <CreateSaleCustomerSheet
         headline="A familiar face, saved."
+        phoneCountryCode={market ? undefined : countryCode}
         appearance={market ? "market-day" : "classic"}
         disabled={isOffline || creation.locked}
         draft={creation.draft}

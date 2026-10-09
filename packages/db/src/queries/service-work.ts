@@ -229,6 +229,7 @@ function serializeJob(job: JobGraph) {
     ),
     createdAt: job.createdAt,
     currentAssigneeUserId: job.currentAssigneeUserId,
+    customerName: job.commercialOrder.customerName,
     customerMilestone: customerMilestone(summary),
     dueCommitmentAt: currentDue?.promisedAt ?? null,
     dueHistory: job.dueCommitments.map((commitment) => ({

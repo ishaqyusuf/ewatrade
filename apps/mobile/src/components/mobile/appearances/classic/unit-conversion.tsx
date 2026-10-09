@@ -1,7 +1,3 @@
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
-import { View } from "@/components/ui/view"
-import { cn } from "@/lib/utils"
 import { conversionCustody } from "@/components/mobile/unit-conversion/unit-conversion-model"
 import type {
   ConversionHeaderProps,
@@ -9,13 +5,19 @@ import type {
   ConversionSectionProps,
   ConversionSummaryProps,
 } from "@/components/mobile/unit-conversion/unit-conversion-presentation"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
+import { cn } from "@/lib/utils"
+import { HeroCard } from "../../green-till/hero-card"
 
-export function ConversionHeader(_props: ConversionHeaderProps) {
+export function ConversionHeader({ storeName }: ConversionHeaderProps) {
   return (
-    <Text className="text-sm text-muted-foreground [-rn-line-height:20]">
-      Transform exact stock between independently balanced packaged units. The
-      server proves canonical conservation.
-    </Text>
+    <HeroCard
+      label="Convert units"
+      title="One balance, another unit"
+      sub={storeName}
+    />
   )
 }
 export function ConversionSection({
@@ -93,7 +95,7 @@ export function ConversionSummary({
         Target on hand: {target.onHandQuantity} → {projection.targetAfter}
       </Text>
       <Text className="text-xs text-muted-foreground">
-        Canonical amount conserved: {projection.canonicalQuantity}
+        The total stock stays the same.
       </Text>
     </View>
   )

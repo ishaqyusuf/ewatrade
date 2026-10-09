@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { FinanceFormBody } from "@/components/mobile/finance/finance-form-body"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
+import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -18,6 +19,8 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import { View } from "react-native"
+import { HeroCard } from "../green-till/hero-card"
+import { LedgerEffectiveTimeField } from "./ledger-effective-time-field"
 import {
   type CustomerLedgerMode,
   type LedgerAccount,
@@ -63,6 +66,7 @@ export function CustomerLedgerCommandForm({
     revision: account.revision,
     date: new Date().toISOString(),
   })
+  const [fillSnapshot, setFillSnapshot] = useState<LedgerFields | null>(null)
   const [review, setReview] = useState<LedgerRequest | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -237,9 +241,30 @@ export function CustomerLedgerCommandForm({
               reverse: "Correct entry",
             }[mode]}
       </Text>
-      <Text className="font-semibold">
-        {account.customer.name} · {account.currencyCode}
-      </Text>
+      <HeroCard
+        label={account.customer.name}
+        amount={formatFinanceMoney(
+          account.totals.outstandingDebtMinor,
+          account.currencyCode,
+        )}
+        sub="Recorded amount owed"
+        stats={[
+          {
+            label: "Credit",
+            value: formatFinanceMoney(
+              account.totals.availableCreditMinor,
+              account.currencyCode,
+            ),
+          },
+          {
+            label: "Net",
+            value: formatFinanceMoney(
+              account.totals.netBalanceMinor,
+              account.currencyCode,
+            ),
+          },
+        ]}
+      />
       <Text className="text-sm text-muted-foreground">
         {mode === "receipt"
           ? "Record actual money already received. Apply it separately to outstanding debt. Recording does not send money."
@@ -286,7 +311,32 @@ export function CustomerLedgerCommandForm({
         </ActionButton>
       ) : null}
       {saved ? (
-        <ActionButton onPress={() => router.back()}>Done</ActionButton>
+        <View className="gap-3">
+          <StatusBanner
+            tone="success"
+            title={mode === "receipt" ? "Payment recorded" : "Record saved"}
+            message={
+              mode === "receipt"
+                ? "This payment is available as credit. Apply it to a charge to settle the recorded debt."
+                : "The reviewed record is saved."
+            }
+          />
+          {mode === "receipt" ? (
+            <ActionButton
+              onPress={() =>
+                router.replace({
+                  pathname: "/customer-ledger-action/[accountId]",
+                  params: { accountId: account.id, mode: "apply" },
+                })
+              }
+            >
+              Apply payment to a charge
+            </ActionButton>
+          ) : null}
+          <ActionButton variant="outline" onPress={() => router.back()}>
+            Done
+          </ActionButton>
+        </View>
       ) : review ? (
         <>
           <Text className="text-2xl font-bold">
@@ -329,11 +379,38 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {"effectiveAt" in review.payload &&
             review.payload.effectiveAt instanceof Date ? (
-              <Text>{review.payload.effectiveAt.toISOString()} UTC</Text>
+              <Text>{review.payload.effectiveAt.toLocaleString()}</Text>
             ) : null}
           </View>
           {after ? (
-            <View className="gap-2 py-3">
+            <View className="gap-2 rounded-[20px] bg-tint-mint p-4">
+              <Text className="font-bold text-tint-mint-foreground">
+                Before → After
+              </Text>
+              <Text className="text-tint-mint-foreground">
+                Owed:{" "}
+                {formatFinanceMoney(
+                  account.totals.outstandingDebtMinor,
+                  account.currencyCode,
+                )}{" "}
+                →{" "}
+                {formatFinanceMoney(
+                  after.outstandingDebtMinor,
+                  account.currencyCode,
+                )}
+              </Text>
+              <Text className="text-tint-mint-foreground">
+                Credit:{" "}
+                {formatFinanceMoney(
+                  account.totals.availableCreditMinor,
+                  account.currencyCode,
+                )}{" "}
+                →{" "}
+                {formatFinanceMoney(
+                  after.availableCreditMinor,
+                  account.currencyCode,
+                )}
+              </Text>
               <Text>
                 Amount owed after:{" "}
                 {formatFinanceMoney(
@@ -378,6 +455,32 @@ export function CustomerLedgerCommandForm({
         </>
       ) : (
         <>
+          {canSubmit && !command.retained ? (
+            <QaQuickFillButton
+              formId={`mobile.customer-ledger.${mode}`}
+              isDirty={Boolean(
+                fields.amount || fields.reason || fields.reference,
+              )}
+              canUndo={Boolean(fillSnapshot)}
+              onFill={(context, sequence) => {
+                if (!canSubmit || command.retained) return
+                setFillSnapshot(fields)
+                setFields({
+                  ...fields,
+                  amount: fields.amount || "1",
+                  reason: `QA customer record ${sequence}`,
+                  reference: `QA-${context.invocationId.slice(0, 8)}`,
+                  date: context.now.toISOString(),
+                })
+              }}
+              onUndo={() => {
+                if (fillSnapshot && canSubmit && !command.retained) {
+                  setFields(fillSnapshot)
+                  setFillSnapshot(null)
+                }
+              }}
+            />
+          ) : null}
           {mode === "opening" ? (
             <>
               <Choice
@@ -546,11 +649,11 @@ export function CustomerLedgerCommandForm({
             />
           ) : null}
           {mode === "refund" || mode === "reverse" ? (
-            <FormField
-              label="Effective time (ISO UTC)"
+            <LedgerEffectiveTimeField
               value={fields.date}
-              onChangeText={(v) => change("date", v)}
-              maxLength={24}
+              onChange={(v) => change("date", v)}
+              disabled={!canSubmit}
+              exactRecovery={Boolean(command.retained)}
             />
           ) : null}
           {command.retained &&

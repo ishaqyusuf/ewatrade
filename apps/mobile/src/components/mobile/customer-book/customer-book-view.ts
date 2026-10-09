@@ -3,6 +3,11 @@ import type { CommerceCustomer } from "../commerce/commerce-model"
 export type CustomerBookHeaderProps = {
   loadedCount: number
   pendingCount: number
+  isLoading?: boolean
+  hasError?: boolean
+  isOffline?: boolean
+  search?: string
+  onSearch?: (value: string) => void
 }
 
 export type CustomerBookRowProps = {

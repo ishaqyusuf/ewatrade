@@ -376,6 +376,7 @@ export function useStockIntake({ onComplete }: StockIntakeProps) {
     rows: visibleRows,
     totalRows: rows.length,
     hasBalanceData: Boolean(balances.data),
+    balancesUpdatedAt: balances.dataUpdatedAt,
     selected,
     query,
     setQuery,

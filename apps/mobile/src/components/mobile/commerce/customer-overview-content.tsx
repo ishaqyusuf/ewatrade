@@ -8,22 +8,23 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useRef, useState, type ReactNode } from "react"
-import { CustomerOrderHistory } from "../customer-book/customer-order-history"
-import { ScrollView } from "react-native"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
+import { type ReactNode, useRef, useState } from "react"
+import { Linking, ScrollView } from "react-native"
 import {
-  ClassicCustomerProfile,
-  ClassicCustomerMetrics,
   ClassicCustomerInformation,
+  ClassicCustomerMetrics,
+  ClassicCustomerProfile,
 } from "../appearances/classic/customer-profile"
 import {
-  MarketDayCustomerProfile,
-  MarketDayCustomerMetrics,
   MarketDayCustomerInformation,
+  MarketDayCustomerMetrics,
   MarketDayCustomerNavigation,
+  MarketDayCustomerProfile,
 } from "../appearances/market-day/customer-profile"
-import { type CommerceCustomer } from "./commerce-model"
+import { CustomerOrderHistory } from "../customer-book/customer-order-history"
+import { QuickActionRow } from "../green-till/kit"
+import type { CommerceCustomer } from "./commerce-model"
 import { CommercePageHeader } from "./commerce-primitives"
 
 const CUSTOMER_OVERVIEW_TABS = [
@@ -74,6 +75,7 @@ export function CustomerOverviewContent({
   onClose,
   onCreateOrder,
   onOpenOrder,
+  onStatement,
   orderLinked = false,
 }: {
   customer: CommerceCustomer
@@ -86,6 +88,7 @@ export function CustomerOverviewContent({
   onClose?: () => void
   onCreateOrder: () => void
   onOpenOrder: (orderId: string) => void
+  onStatement?: () => void
   orderLinked?: boolean
 }) {
   const scroll = useRef<ScrollView>(null)
@@ -98,20 +101,27 @@ export function CustomerOverviewContent({
     : ClassicCustomerInformation
   const ink = market ? "text-market-ink" : "text-foreground"
   const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
-  const [activeTab, setActiveTab] = useState<CustomerOverviewTab>("information")
+  const [activeTab, setActiveTab] = useState<CustomerOverviewTab>(
+    market ? "information" : "orders",
+  )
   const emptyTab =
     activeTab === "information" || activeTab === "orders"
       ? null
       : EMPTY_TAB_CONTENT[activeTab]
-  const visibleTabs = orderLinked
-    ? CUSTOMER_OVERVIEW_TABS.filter(
-        (tab) =>
-          tab.key === "information" ||
-          tab.key === "orders" ||
-          tab.key === "wishlist" ||
-          tab.key === "reviews",
-      )
-    : CUSTOMER_OVERVIEW_TABS
+  const visibleTabs = !market
+    ? ([
+        { key: "orders", label: "Orders" },
+        { key: "information", label: "Details" },
+      ] as const)
+    : orderLinked
+      ? CUSTOMER_OVERVIEW_TABS.filter(
+          (tab) =>
+            tab.key === "information" ||
+            tab.key === "orders" ||
+            tab.key === "wishlist" ||
+            tab.key === "reviews",
+        )
+      : CUSTOMER_OVERVIEW_TABS
 
   return (
     <ScrollView
@@ -124,7 +134,7 @@ export function CustomerOverviewContent({
       showsVerticalScrollIndicator={false}
       testID="customer-overview-screen"
     >
-      {headerContent}
+      {market ? headerContent : null}
       {market ? (
         <MarketDayCustomerNavigation
           onBack={onBack}
@@ -151,9 +161,45 @@ export function CustomerOverviewContent({
       )}
 
       <Profile customer={customer} historyComplete={historyComplete} />
-      <Metrics customer={customer} historyComplete={historyComplete} />
+      {market ? (
+        <Metrics customer={customer} historyComplete={historyComplete} />
+      ) : null}
 
-      {market || (!appearance && orderLinked) ? (
+      {!market ? (
+        <QuickActionRow
+          actions={[
+            {
+              label: "New order",
+              icon: "Plus",
+              gold: true,
+              onPress: onCreateOrder,
+            },
+            ...(customer.phone
+              ? [
+                  {
+                    label: "Call",
+                    icon: "Phone" as const,
+                    onPress: () => {
+                      void Linking.openURL(`tel:${customer.phone}`).catch(
+                        () => {},
+                      )
+                    },
+                  },
+                ]
+              : []),
+            ...(onStatement
+              ? [
+                  {
+                    label: "Statement",
+                    icon: "ReceiptText" as const,
+                    disabled: isOffline,
+                    onPress: onStatement,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ) : market || (!appearance && orderLinked) ? (
         <MarketDayActionButton
           icon="PlusCircle"
           onPress={onCreateOrder}
@@ -167,8 +213,9 @@ export function CustomerOverviewContent({
         </ActionButton>
       )}
 
+      {!market ? headerContent : null}
       {!historyComplete ? (
-        <Text className={"text-xs font-semibold " + muted}>
+        <Text className={`text-xs font-semibold ${muted}`}>
           {historyNotice}
         </Text>
       ) : null}
@@ -203,9 +250,8 @@ export function CustomerOverviewContent({
               <Text
                 className={
                   selected
-                    ? "text-sm font-extrabold " +
-                      (market ? "text-market-accent-ink" : "text-primary")
-                    : "text-sm font-semibold " + muted
+                    ? `text-sm font-extrabold ${market ? "text-market-accent-ink" : "text-primary"}`
+                    : `text-sm font-semibold ${muted}`
                 }
               >
                 {tab.label}
@@ -245,11 +291,11 @@ export function CustomerOverviewContent({
             <View className="gap-3 py-5">
               <Text
                 accessibilityRole="header"
-                className={"font-market-display text-2xl " + ink}
+                className={`font-market-display text-2xl ${ink}`}
               >
                 {emptyTab.title}
               </Text>
-              <Text className={"text-sm leading-6 " + muted}>
+              <Text className={`text-sm leading-6 ${muted}`}>
                 {emptyTab.message}
               </Text>
             </View>

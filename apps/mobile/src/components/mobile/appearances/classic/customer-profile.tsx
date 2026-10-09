@@ -1,43 +1,49 @@
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { StatusBadge } from "../../status-badge"
+import {
+  customerOrderCount,
+  customerValueLabel,
+} from "../../commerce/commerce-model"
 import {
   CommerceInfoRow,
   CommerceMetricTile,
   CommerceSection,
 } from "../../commerce/commerce-primitives"
-import {
-  customerOrderCount,
-  customerValueLabel,
-} from "../../commerce/commerce-model"
 import type { CustomerProfileProps } from "../../customer-book/customer-book-view"
+import { customerSyncLabel } from "../../customer-book/customer-sync-label"
+import { HeroCard } from "../../green-till/hero-card"
 
-export function ClassicCustomerProfile({ customer }: CustomerProfileProps) {
-  const count = customerOrderCount(customer)
-  const pendingOnly =
-    !customer.orders.length && customer.pendingOrders.length > 0
+export function ClassicCustomerProfile({
+  customer,
+  historyComplete,
+}: CustomerProfileProps) {
   return (
-    <View className="flex-row items-center gap-4">
-      <View className="size-16 items-center justify-center rounded-full bg-primary">
-        <Text className="text-lg font-extrabold text-primary-foreground">
-          {customer.initials}
-        </Text>
-      </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <View className="flex-row flex-wrap items-center gap-2">
-          <Text className="text-2xl font-extrabold text-foreground">
-            {customer.name}
-          </Text>
-          <StatusBadge
-            label={!count ? "Saved" : pendingOnly ? "Pending sync" : "Synced"}
-            tone={!count ? "primary" : pendingOnly ? "warning" : "success"}
-          />
-        </View>
-        <Text className="text-sm text-muted-foreground">
-          {customer.phone ?? customer.email ?? "No contact details"}
-        </Text>
-      </View>
-    </View>
+    <HeroCard
+      label={customer.name}
+      amount={customer.orders.length ? customerValueLabel(customer) : "—"}
+      sub={
+        customer.orders.length
+          ? `${historyComplete ? "Order value" : "Loaded order value"} · ${customer.phone ?? customer.email ?? "No contact details"}`
+          : "No synced orders yet"
+      }
+      pill={{
+        label: customerSyncLabel(
+          customer.orders.length,
+          customer.pendingOrders.length,
+        ),
+        tone: customer.pendingOrders.length ? "offline" : "synced",
+      }}
+      stats={[
+        {
+          label: historyComplete ? "Orders" : "Loaded orders",
+          value: String(customerOrderCount(customer)),
+        },
+        {
+          label: "Waiting to sync",
+          value: String(customer.pendingOrders.length),
+        },
+      ]}
+    />
   )
 }
 

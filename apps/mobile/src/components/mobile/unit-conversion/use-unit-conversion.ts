@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Keyboard } from "react-native"
+import { suggestedTargetQuantity } from "../stock-intake/stock-preview"
 import {
   type ConversionDraft,
   type ConversionInput,
@@ -149,6 +150,17 @@ export function useUnitConversion({ onComplete }: ConversionProps) {
     )
       return
     const next = { ...draftRef.current, ...patch }
+    if ("sourceQuantity" in patch || "targetId" in patch) {
+      const source = rows.find((row) => row.balanceSourceId === next.sourceId)
+      const target = rows.find((row) => row.balanceSourceId === next.targetId)
+      if (source && target)
+        next.targetQuantity = suggestedTargetQuantity(
+          next.sourceQuantity,
+          source.inventoryUnitFactor,
+          target.inventoryUnitFactor,
+          target.inventoryUnitTransactionScale,
+        )
+    }
     draftRef.current = next
     setDraft(next)
     setError(null)
@@ -355,6 +367,7 @@ export function useUnitConversion({ onComplete }: ConversionProps) {
     loadError,
     missingStore: !loading && !storeId,
     hasBalanceData: Boolean(balances.data),
+    balancesUpdatedAt: balances.dataUpdatedAt,
     storeName: source?.storeName ?? rows[0]?.storeName ?? "Current Store",
     canReview,
     hasAttempt: Boolean(attempt.current),

@@ -6,6 +6,7 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { ExactQuantityStepper } from "./exact-quantity-stepper"
 import { StockCategoriesInput } from "./stock-categories-input"
 import { stockCustodyLabel } from "./stock-intake-model"
 import type { StockIntakeModel } from "./use-stock-intake"
@@ -167,18 +168,27 @@ export function StockIntakeFields({
             : "Select a balance before entering its quantity."
         }
       >
-        <FormField
-          label={draft.mode === "count" ? "Observed quantity" : "Quantity"}
-          keyboardType="decimal-pad"
-          maxLength={40}
-          variant="filled"
-          value={draft.quantity}
-          editable={!model.locked && Boolean(selected)}
-          onChangeText={(quantity) => model.edit({ quantity })}
-          placeholder={
-            selected ? `In ${selected.inventoryUnitName}` : "Choose a balance"
-          }
-        />
+        {!market ? (
+          <ExactQuantityStepper
+            label={draft.mode === "count" ? "Observed quantity" : "Quantity"}
+            value={draft.quantity}
+            onChange={(quantity) => model.edit({ quantity })}
+            disabled={model.locked || !selected}
+          />
+        ) : (
+          <FormField
+            label={draft.mode === "count" ? "Observed quantity" : "Quantity"}
+            keyboardType="decimal-pad"
+            maxLength={40}
+            variant="filled"
+            value={draft.quantity}
+            editable={!model.locked && Boolean(selected)}
+            onChangeText={(quantity) => model.edit({ quantity })}
+            placeholder={
+              selected ? `In ${selected.inventoryUnitName}` : "Choose a balance"
+            }
+          />
+        )}
         {draft.mode === "count" ? (
           <Text className={`text-xs ${muted}`}>
             Count sets the observed quantity, not an additional receipt. The

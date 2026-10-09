@@ -23,6 +23,7 @@ export function ServiceAction({
   return (
     <ActionButton
       {...props}
+      tone={!market && tone === "gold" ? "gold" : undefined}
       foregroundColor={market ? foreground : props.foregroundColor}
       disabledForegroundColor={
         market ? palette.mutedInk : props.disabledForegroundColor

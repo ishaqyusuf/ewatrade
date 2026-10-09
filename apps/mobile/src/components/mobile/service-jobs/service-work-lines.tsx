@@ -6,11 +6,12 @@ import { View } from "@/components/ui/view"
 import { useState } from "react"
 import { ServiceAction } from "./service-action"
 import {
-  actions,
-  actionLabel,
-  textLabel,
   type WorkJob,
+  actionLabel,
+  actions,
+  textLabel,
 } from "./service-jobs-model"
+import { workStatusLabel } from "./service-work-summary"
 import { useServiceAppearance } from "./use-service-appearance"
 
 const PAGE_SIZE = 12
@@ -96,14 +97,21 @@ export function ServiceWorkLines({
             >
               <View className="flex-row flex-wrap items-start justify-between gap-3">
                 <View className="min-w-0 flex-1 gap-1">
-                  <Text className={ink + " font-bold"}>
+                  <Text className={`${ink} font-bold`}>
                     {line.catalogItemName}
                   </Text>
-                  <Text className={muted + " text-xs"}>
+                  <Text className={`${muted} text-xs`}>
                     {line.offeringName} · {line.allocatedQuantity}
                   </Text>
                 </View>
-                <StatusBadge label={textLabel(line.status)} tone="muted" />
+                <StatusBadge
+                  label={
+                    market
+                      ? textLabel(line.status)
+                      : workStatusLabel(line.status)
+                  }
+                  tone="muted"
+                />
               </View>
               {line.authorizationStatus !== "AUTHORIZED" ? (
                 <StatusBanner
@@ -115,9 +123,7 @@ export function ServiceWorkLines({
               {actions(line.status).length ? (
                 <View className="gap-2">
                   <Text
-                    className={
-                      muted + " text-xs font-bold uppercase tracking-wider"
-                    }
+                    className={`${muted} text-xs font-bold uppercase tracking-wider`}
                   >
                     Update status
                   </Text>
@@ -130,9 +136,17 @@ export function ServiceWorkLines({
                             line.authorizationStatus !== "AUTHORIZED"
                           }
                           onPress={() => onTransition(line, action)}
-                          variant={actionIndex === 0 ? "default" : "outline"}
+                          variant={
+                            actionIndex === 0 &&
+                            line.status !== "READY_FOR_HANDOFF"
+                              ? "default"
+                              : "outline"
+                          }
                         >
-                          {actionLabel(action)}
+                          {line.status === "READY_FOR_HANDOFF" &&
+                          action === "in_progress"
+                            ? "Reopen work"
+                            : actionLabel(action)}
                         </ServiceAction>
                       </View>
                     ))}
@@ -146,7 +160,7 @@ export function ServiceWorkLines({
           <View className="gap-3">
             <Text
               accessibilityLiveRegion="polite"
-              className={muted + " text-xs"}
+              className={`${muted} text-xs`}
             >
               Showing {start + 1}–{Math.min(start + PAGE_SIZE, matches.length)}{" "}
               of {matches.length} matching lines

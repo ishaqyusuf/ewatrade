@@ -89,3 +89,20 @@ describe("Green Till native QA links", () => {
       expect(resolveGreenTillQaPath(path, true)).toBeNull()
   })
 })
+
+test("batch four routes remain development only", () => {
+  for (const route of [
+    "customer-book-modal",
+    "customer-ledger-modal",
+    "stock-intake-modal",
+    "unit-conversion-modal",
+    "closeout-modal",
+    "global-search",
+    "service-jobs-modal",
+  ]) {
+    expect(resolveGreenTillQaPath(`ewatrade-dev://${route}`, true)).toBe(
+      `/${route}`,
+    )
+    expect(resolveGreenTillQaPath(`ewatrade-dev://${route}`, false)).toBeNull()
+  }
+})
