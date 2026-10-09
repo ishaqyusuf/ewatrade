@@ -1,8 +1,12 @@
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
 import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
+import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { View } from "react-native"
+import { useColorScheme } from "@/hooks/use-color"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { Text as NativeText, View } from "react-native"
 import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
@@ -10,7 +14,13 @@ export function CatalogSetupEssentials({
   model,
   market,
   focused = false,
-}: { model: CatalogSetupModel; market: boolean; focused?: boolean }) {
+  onOpenCategory,
+}: {
+  model: CatalogSetupModel
+  market: boolean
+  focused?: boolean
+  onOpenCategory?: () => void
+}) {
   const {
     kind,
     name,
@@ -37,9 +47,31 @@ export function CatalogSetupEssentials({
     ? Market
     : Classic
   if (!kind) return null
-  return (
+  const bestMatch = model.categorySuggestions[0]
+  const categoryChip =
+    market || kind !== "product" ? null : model.category ? (
+      <CategoryChip
+        icon="Check"
+        lead="Category"
+        value={model.category.split(" / ").join(" › ")}
+        action="Change"
+        onPress={onOpenCategory}
+      />
+    ) : bestMatch ? (
+      <CategoryChip
+        icon="FolderPlus"
+        lead="Best match"
+        value={bestMatch.category.split(" / ").join(" › ")}
+        action="Use"
+        onPress={() => {
+          if (!model.applyCategorySuggestion(bestMatch)) onOpenCategory?.()
+        }}
+      />
+    ) : null
+  const fields = (
     <>
       <CatalogEssentialsFields
+        afterName={categoryChip}
         currencyCode={currencyCode}
         guidance={formGuidance}
         defaultQuoteRequired={defaultQuoteRequired}
@@ -62,6 +94,17 @@ export function CatalogSetupEssentials({
           onPress={() => model.setDefaultQuoteRequired(!defaultQuoteRequired)}
         />
       ) : null}
+    </>
+  )
+  return (
+    <>
+      {market ? (
+        fields
+      ) : (
+        <View className="gap-3 rounded-[20px] bg-card p-3.5 shadow-sm">
+          {fields}
+        </View>
+      )}
       {!focused && kind === "product" && !showAdvanced && showOpeningStock ? (
         <FormField
           actionLabel="Remove"
@@ -144,5 +187,73 @@ export function CatalogSetupEssentials({
         </View>
       ) : null}
     </>
+  )
+}
+
+/** "Best match · Poultry › Eggs · Use", then "Category · … · Change". */
+function CategoryChip({
+  action,
+  icon,
+  lead,
+  onPress,
+  value,
+}: {
+  action: string
+  icon: IconKeys
+  lead: string
+  onPress?: () => void
+  value: string
+}) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        backgroundColor: palette.lilac,
+        borderRadius: 13,
+        flexDirection: "row",
+        gap: 8,
+        paddingLeft: 12,
+        paddingRight: 6,
+        paddingVertical: 6,
+      }}
+    >
+      <Icon
+        className="size-[15px]"
+        color={palette.lilacForeground}
+        name={icon}
+      />
+      <NativeText
+        numberOfLines={1}
+        style={{ color: palette.lilacForeground, flex: 1, fontSize: 12.5 }}
+      >
+        {`${lead} · `}
+        <NativeText style={{ fontWeight: "800" }}>{value}</NativeText>
+      </NativeText>
+      <Pressable
+        accessibilityLabel={`${action} category ${value}`}
+        accessibilityRole="button"
+        haptic
+        onPress={onPress}
+        style={{
+          backgroundColor: palette.lilacChip,
+          borderRadius: 999,
+          minHeight: 32,
+          justifyContent: "center",
+          paddingHorizontal: 12,
+        }}
+      >
+        <NativeText
+          style={{
+            color: palette.lilacForeground,
+            fontSize: 12.5,
+            fontWeight: "800",
+          }}
+        >
+          {action}
+        </NativeText>
+      </Pressable>
+    </View>
   )
 }

@@ -11,6 +11,7 @@ import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { getCurrencySymbol } from "@ewatrade/utils"
 import type { CatalogFormGuidance } from "@ewatrade/utils/business-catalog-guidance"
+import type { ReactNode } from "react"
 import { Text as NativeText, View } from "react-native"
 
 /** Green Till kind card: tinted icon, title, one line, optional recommendation. */
@@ -445,6 +446,7 @@ export function ToggleRow({
 }
 
 export function CatalogEssentialsFields({
+  afterName,
   guidance,
   currencyCode,
   defaultQuoteRequired,
@@ -459,6 +461,8 @@ export function CatalogEssentialsFields({
   showProductEssentials,
   unitName,
 }: {
+  /** Shown under the name, e.g. the best-match category chip. */
+  afterName?: ReactNode
   currencyCode: string
   defaultQuoteRequired: boolean
   kind: CatalogItemKind
@@ -488,6 +492,7 @@ export function CatalogEssentialsFields({
         variant="green-gate"
         value={name}
       />
+      {afterName}
       {kind === "product" && showProductEssentials ? (
         <View className={largeTextLayout ? "gap-3" : "flex-row gap-3"}>
           <FormField

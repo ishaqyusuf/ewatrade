@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
 import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { KeyboardInlineComposer } from "@/components/mobile/keyboard-inline-composer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -27,8 +28,11 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import {
   CatalogCategoryEditor,
   CatalogSubcategoryEditor,
+  ClassicCategoryEditor,
 } from "./catalog-category-editor"
 import { CatalogSetupHelperPicker } from "./catalog-helper-picker"
+import { CatalogIllustrationBrowser } from "./catalog-illustration-browser"
+import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
 import { CatalogSetupConfirmation } from "./catalog-setup-confirmation"
 import {
   CATALOG_EDITOR_TITLES,
@@ -49,6 +53,9 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const [footerHeight, setFooterHeight] = useState(88)
   const [composerHeight, setComposerHeight] = useState(88)
   const scrollRef = useRef<ScrollView>(null)
+  // Classic: Category search lives in its footer; illustrations open full screen.
+  const [categoryQuery, setCategoryQuery] = useState("")
+  const [illustrationsOpen, setIllustrationsOpen] = useState(false)
   const [editors, setEditors] = useState<
     Array<{ key: CatalogEditorKey; parent?: CatalogCategoryPreset }>
   >([])
@@ -102,6 +109,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     hideVariantComposer()
     Keyboard.dismiss()
     if (key === "pricing") model.openPricingDetails()
+    if (key === "category") setCategoryQuery("")
     setEditors((current) => [...current, { key }])
   }
   const backEditor = () => {
@@ -427,8 +435,17 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               onUndo={undoFill}
             />
 
-            <CatalogSetupEssentials model={model} market={market} focused />
-            <CatalogSetupDetailRows model={model} open={openEditor} />
+            <CatalogSetupEssentials
+              model={model}
+              market={market}
+              focused
+              onOpenCategory={() => openEditor("category")}
+            />
+            <CatalogSetupDetailRows
+              model={model}
+              open={openEditor}
+              market={market}
+            />
           </View>
         </KeyboardAwareScrollView>
         {!variantComposerMode && editors.length === 0 ? (
@@ -490,7 +507,29 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               key: `${index}-${entry.key}-${entry.parent?.key ?? "root"}`,
               title: entry.parent?.label ?? CATALOG_EDITOR_TITLES[entry.key],
               footer:
-                entry.key === "units" || entry.key === "images" ? (
+                !market && entry.key === "category" ? (
+                  <BottomSearchFooter
+                    accessibilityLabel="Search categories"
+                    onChangeText={() => undefined}
+                    placeholder=""
+                    searchVisible={false}
+                    totalCount={0}
+                    value=""
+                    variant="action-bar"
+                  >
+                    <FormField
+                      accessibilityLabel="Search all categories"
+                      autoCapitalize="none"
+                      label="Search all categories"
+                      leadingIcon="Search"
+                      onChangeText={setCategoryQuery}
+                      placeholder="Search all categories"
+                      returnKeyType="search"
+                      value={categoryQuery}
+                      variant="search"
+                    />
+                  </BottomSearchFooter>
+                ) : entry.key === "units" || entry.key === "images" ? (
                   <BottomSearchFooter
                     searchVisible={false}
                     totalCount={0}
@@ -502,6 +541,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                         ? "Image actions"
                         : "Selling units actions"
                     }
+                    variant={market ? "default" : "action-bar"}
                   >
                     <ActionButton
                       disabled={
@@ -510,13 +550,17 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                       onPress={backEditor}
                     >
                       {entry.key === "images"
-                        ? "Done with image"
+                        ? market
+                          ? "Done with image"
+                          : "Done"
                         : "Done with selling units"}
                     </ActionButton>
                   </BottomSearchFooter>
                 ) : undefined,
               content:
-                entry.key === "category" ? (
+                !market && entry.key === "category" ? (
+                  <ClassicCategoryEditor model={model} query={categoryQuery} />
+                ) : entry.key === "category" ? (
                   entry.parent ? (
                     <CatalogSubcategoryEditor
                       category={entry.parent}
@@ -542,6 +586,11 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                     editor={entry.key}
                     model={model}
                     open={openEditor}
+                    market={market}
+                    onOpenIllustrations={() => {
+                      Keyboard.dismiss()
+                      setIllustrationsOpen(true)
+                    }}
                   />
                 ),
             }))}
@@ -553,6 +602,21 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             {unitOverlay}
             <CatalogSetupConfirmation model={model} market={market} />
             {composer}
+            {illustrationsOpen ? (
+              <CatalogIllustrationBrowser
+                kind={kind === "service" ? "service" : "product"}
+                businessProfileKey={businessProfileKey}
+                categoryKey={catalogIllustrationCategoryKey(model.category)}
+                itemName={model.name}
+                selectedId={model.imageDraft.illustrationId}
+                onClose={() => setIllustrationsOpen(false)}
+                onUse={(id) => {
+                  model.imageDraft.chooseIllustration(id)
+                  model.setImageUrl("")
+                  setIllustrationsOpen(false)
+                }}
+              />
+            ) : null}
           </RetainedEditorStack>
         ) : (
           <>
