@@ -50,18 +50,24 @@ export async function startDirectSignup(
   const since = new Date(now.getTime() - HOUR_MS)
 
   const profile = findBusinessProfile(input.businessProfileKey)
-  const draft = profile
-    ? onboardingDraftSchema.parse({
-        businessProfileKey: profile.key,
-        operatingModel:
-          profile.recommendedItemKinds.length === 1
-            ? profile.recommendedItemKinds[0] === "service"
-              ? "services"
-              : "products"
-            : "products_and_services",
-        ...(input.phone ? { phone: input.phone } : {}),
-      })
-    : undefined
+  const draft =
+    profile || input.phoneCountry
+      ? onboardingDraftSchema.parse({
+          ...(profile
+            ? {
+                businessProfileKey: profile.key,
+                operatingModel:
+                  profile.recommendedItemKinds.length === 1
+                    ? profile.recommendedItemKinds[0] === "service"
+                      ? "services"
+                      : "products"
+                    : "products_and_services",
+              }
+            : {}),
+          ...(input.phoneCountry ? { phoneCountry: input.phoneCountry } : {}),
+          ...(input.phone ? { phone: input.phone } : {}),
+        })
+      : undefined
 
   return prisma.$transaction(
     async (tx) => {

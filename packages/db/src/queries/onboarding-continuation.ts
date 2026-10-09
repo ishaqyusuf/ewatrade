@@ -11,6 +11,10 @@ export const onboardingDraftSchema = z
     countryCode: z.string().trim().max(5).optional(),
     region: z.string().trim().max(120).optional(),
     phone: z.string().trim().max(40).optional(),
+    phoneCountry: z
+      .string()
+      .regex(/^[A-Z]{2}$/)
+      .optional(),
     businessProfileKey: z.string().trim().max(120).optional(),
     currencyCode: z
       .string()

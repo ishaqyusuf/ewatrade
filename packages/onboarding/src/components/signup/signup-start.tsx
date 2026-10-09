@@ -4,20 +4,27 @@ import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Button,
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
   Input,
 } from "@ewatrade/ui"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { Controller } from "react-hook-form"
 import { useZodForm } from "../../hooks/use-zod-form"
 import {
   type DirectSignupInput,
   type DirectSignupStartResponse,
-  directSignupSchema,
+  websiteSignupSchema,
 } from "../../lib/direct-signup-schema"
+import { phoneCountry } from "../../lib/international-phone"
+import { SignupPhoneInput } from "./signup-phone-input"
 
-type SignupStartValues = Omit<DirectSignupInput, "businessProfileKey">
+type SignupStartValues = Omit<
+  DirectSignupInput,
+  "businessProfileKey" | "phone" | "phoneCountry"
+> & { phone: string; phoneCountry: string }
 
 // First signup screen: collect who is signing up, then hand over to the
 // verified setup session the rest of the flow already uses.
@@ -32,13 +39,33 @@ export function SignupStart({
 }) {
   const workflow = useDashboardWorkflow()
   const [submitError, setSubmitError] = useState("")
-  const form = useZodForm<SignupStartValues>(
-    directSignupSchema.omit({ businessProfileKey: true }),
-    {
-      defaultValues: { fullName: "", email: "", businessName: "", phone: "" },
+  const form = useZodForm<SignupStartValues>(websiteSignupSchema, {
+    defaultValues: {
+      fullName: "",
+      email: "",
+      businessName: "",
+      phone: "",
+      phoneCountry: "",
     },
-  )
+  })
   const errors = form.formState.errors
+  useEffect(() => {
+    const abort = new AbortController()
+    fetch("/api/signup/start", { cache: "no-store", signal: abort.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const suggested = phoneCountry(data?.country)
+        if (
+          suggested &&
+          !form.getValues("phoneCountry") &&
+          !form.getValues("phone")
+        ) {
+          form.setValue("phoneCountry", suggested)
+        }
+      })
+      .catch(() => {}) // Country detection is optional; manual selection always works.
+    return () => abort.abort()
+  }, [form])
 
   async function start(values: SignupStartValues) {
     setSubmitError("")
@@ -98,7 +125,7 @@ export function SignupStart({
               {...form.register("fullName")}
               autoComplete="name"
               className="signup-input mt-1.5"
-              placeholder="Ada Nwosu"
+              placeholder="Enter your full name"
             />
             {errors.fullName && (
               <FieldError>{errors.fullName.message}</FieldError>
@@ -114,7 +141,7 @@ export function SignupStart({
               {...form.register("businessName")}
               autoComplete="organization"
               className="signup-input mt-1.5"
-              placeholder="Ada’s Farm Fresh"
+              placeholder="Enter your business name"
             />
             {errors.businessName && (
               <FieldError>{errors.businessName.message}</FieldError>
@@ -129,22 +156,41 @@ export function SignupStart({
               type="email"
               autoComplete="email"
               className="signup-input mt-1.5"
-              placeholder="ada@business.com"
+              placeholder="Enter your email address"
             />
             {errors.email && <FieldError>{errors.email.message}</FieldError>}
           </Field>
-          <Field>
-            <FieldLabel htmlFor="signup-start-phone">
-              Phone (optional)
-            </FieldLabel>
-            <Input
-              id="signup-start-phone"
-              {...form.register("phone")}
-              type="tel"
-              autoComplete="tel"
-              className="signup-input mt-1.5"
-              placeholder="0803 000 0000"
+          <Field data-invalid={Boolean(errors.phone || errors.phoneCountry)}>
+            <FieldLabel htmlFor="signup-start-phone">Phone number</FieldLabel>
+            <Controller
+              name="phone"
+              control={form.control}
+              render={({ field }) => (
+                <SignupPhoneInput
+                  id="signup-start-phone"
+                  name={field.name}
+                  value={field.value}
+                  country={form.watch("phoneCountry")}
+                  onChange={field.onChange}
+                  onCountryChange={(country) =>
+                    form.setValue("phoneCountry", country, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  onBlur={field.onBlur}
+                  inputRef={field.ref}
+                  invalid={Boolean(errors.phone || errors.phoneCountry)}
+                  describedBy="signup-start-phone-hint signup-start-phone-error"
+                />
+              )}
             />
+            <FieldDescription id="signup-start-phone-hint">
+              Choose the flag to change your phone’s country or region.
+            </FieldDescription>
+            <FieldError id="signup-start-phone-error">
+              {errors.phoneCountry?.message || errors.phone?.message}
+            </FieldError>
           </Field>
           {submitError ? (
             <p role="alert" className="text-sm text-destructive">

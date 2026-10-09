@@ -7,6 +7,10 @@ import {
   isBusinessProfileKey,
 } from "@ewatrade/utils"
 import { z } from "zod"
+import {
+  normalizeInternationalPhone,
+  phoneCountry,
+} from "./international-phone"
 import { resolveSignupPhone } from "./signup-phone"
 
 // ─── Step 1: Workspace ────────────────────────────────────────────────────────
@@ -62,6 +66,14 @@ export const businessSchema = z
       message: "Select your business size",
     }),
     city: z.string().trim().min(2, "Enter your city").max(120),
+    phoneCountry: z
+      .string()
+      .toUpperCase()
+      .refine(
+        (value) => Boolean(phoneCountry(value)),
+        "Select a phone country.",
+      )
+      .optional(),
     countryCode: z.string().min(1, "Select your country"),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES, {
       message: "Select your operating currency",
@@ -83,7 +95,11 @@ export const businessSchema = z
     otherBusinessDescription: z.string().trim().max(240).optional(),
   })
   .superRefine((value, ctx) => {
-    if (!resolveSignupPhone(value.phone, value.countryCode)) {
+    if (
+      !(value.phoneCountry
+        ? normalizeInternationalPhone(value.phone, value.phoneCountry)
+        : resolveSignupPhone(value.phone, value.countryCode))
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["phone"],
@@ -104,7 +120,10 @@ export const businessSchema = z
   })
   .transform((value) => ({
     ...value,
-    phone: resolveSignupPhone(value.phone, value.countryCode) ?? value.phone,
+    phone:
+      (value.phoneCountry
+        ? normalizeInternationalPhone(value.phone, value.phoneCountry)
+        : resolveSignupPhone(value.phone, value.countryCode)) ?? value.phone,
   }))
 
 export type BusinessValues = z.infer<typeof businessSchema>
@@ -157,6 +176,14 @@ export const signupPayloadSchema = z
       .refine(isBusinessProfileKey, "Select your business category"),
     businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION),
     businessSize: z.enum(BUSINESS_TEAM_SIZE_KEYS),
+    phoneCountry: z
+      .string()
+      .toUpperCase()
+      .refine(
+        (value) => Boolean(phoneCountry(value)),
+        "Select a phone country.",
+      )
+      .optional(),
     countryCode: z.string().min(1),
     currencyCode: z.enum(OPERATING_CURRENCY_CODES),
     phone: z.string().min(7).max(20),
@@ -173,7 +200,11 @@ export const signupPayloadSchema = z
     acknowledgedPrivacyNotice: z.literal(true).optional(),
   })
   .superRefine((value, ctx) => {
-    if (!resolveSignupPhone(value.phone, value.countryCode)) {
+    if (
+      !(value.phoneCountry
+        ? normalizeInternationalPhone(value.phone, value.phoneCountry)
+        : resolveSignupPhone(value.phone, value.countryCode))
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["phone"],
@@ -194,7 +225,10 @@ export const signupPayloadSchema = z
   })
   .transform((value) => ({
     ...value,
-    phone: resolveSignupPhone(value.phone, value.countryCode) ?? value.phone,
+    phone:
+      (value.phoneCountry
+        ? normalizeInternationalPhone(value.phone, value.phoneCountry)
+        : resolveSignupPhone(value.phone, value.countryCode)) ?? value.phone,
   }))
 
 export type SignupPayload = z.infer<typeof signupPayloadSchema>
