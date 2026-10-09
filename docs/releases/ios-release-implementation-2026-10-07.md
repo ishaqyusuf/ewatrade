@@ -144,3 +144,67 @@ synthetic request remains historical; do not treat it as an existing account.
 New passwords must be entered by the owner in the private setup flow, never in chat.
 See the companion iOS privacy/reviewer packet for source inventory and actual
 signed-build evidence still needed.
+
+## Deletion retention implemented and Development verified — 9 October 2026
+
+Preparation remains **3/6 (50%)**; release acceptance remains **0/4**, steps 1–2
+in progress and 3–4 pending. This update supersedes the missing-table blocker and
+“expiry implementation pending” observations above.
+
+Current remote main 9c17f56f is merged into the isolated release branch (8bc298f3).
+The moderation adapter/approval gate from assistant PR56 is already in main; no
+duplicate provider activation is required. The inherited CLI-help assertion was
+corrected. Concurrent changes in the primary checkout remain untouched.
+
+`AccountPrivacyRetention` now binds completed requests to an exact approved policy
+digest and deadlines calculated from completion: contact cleanup after 90 days,
+necessity review at 12 calendar months, receipt/deletion-evidence expiry at 24
+calendar months. Leap days clamp to the target month's last day. Completion creates
+its retention row atomically and refuses absent/mismatched retention approval.
+At 90 days, identifying contact/outcome data, recipient digest and provider lookup
+identifiers are cleared. At expiry, request-scoped notices/outcomes/access evidence
+and receipts accepted on or before completion are removed; later receipts and
+pseudonymous User/business linkage are preserved. This is not full anonymization.
+
+Platform-admin review rereads authority in a fresh transaction; a documented hold
+has a named operator and review date no more than 90 days ahead. A hold stops
+applying at that date unless renewed. Reviews do not restart the expiry clock.
+A bounded daily job shares the existing daily cadence and logs counts of failures
+or due reviews. Production flags remain disabled; no inbox email was sent.
+Policy changes require deliberate reconciliation of existing digest-bound rows;
+this processor refuses a different currently approved policy rather than guessing.
+After contact expiry, historical OTP lookup and old completion/delivery-proof
+rechecks are unavailable; they cannot silently reidentify an expired contact.
+
+Remote main lacks the newer sales-rep fields already applied to shared Development.
+A direct schema push would drop them. An isolated rollout overlay preserved the
+exact committed ecf42196 fields/index and its generated migration history. Fresh
+read-only diff showed only two new tables plus their indexes/FKs. Guarded root
+`db:migrate --local` generated/applied
+`20261009083444_account_privacy_retention_and_analytics`; guarded root
+`db:push --local` then reported in sync. The exact generated additive migration is
+copied into the release branch. No hand-written SQL, reset or data-loss bypass.
+Development only; Preview/Production schema rollout remains separate.
+
+Validation: 334 unit/API/job checks pass, 9 integration cases skip in the unit run,
+1,024 assertions. EAS wrapper checks: 51 pass, 312 assertions. Scoped generated-client
+TypeScript passes. Live guarded retention fixture: 1 pass/19 assertions, including
+90-day cleanup, 12-month review, bounded hold/24-month expiry and zero remaining
+owned users. Profile/retry fixture: 2 pass/32 assertions, both receipt choices,
+analytics-residual rejection and unrelated-account preservation; owned fixture
+cleanup executes. One earlier concurrent fixture run exposed P2034 serialization
+conflict; atomic source processors now retry only rolled-back P2034, at most three
+fresh transactions, rereading authorization and current state each time.
+
+Added `preview-simulator` extending Preview and guarded `--ios-simulator` selection
+only for iOS Preview builds. Environment, exact clean commit, Preview host and iOS
+identity guards remain intact; Production/OTA/submission gates are unchanged.
+This enables native QA without the missing ad-hoc Preview signing credentials.
+[Expo simulator-build documentation](https://docs.expo.dev/build-reference/simulators/).
+No successful native binary, OTA, TestFlight upload or submission is claimed here.
+
+Still required: real domain processing and result-email delivery; ordinary/staff/
+sole-owner/Apple-linked end-to-end acceptance; positive assistant/chat/analytics and
+business/clinical dispositions; provider/age safeguards; signed native flows and
+real EAS Update; screenshots/privacy report/restricted reviewer access; submission.
+Ishaq Yusuf remains the approved privacy/abuse lead; a named backup is still pending.

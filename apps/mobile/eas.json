@@ -42,6 +42,12 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "preview-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
     }
   },
   "submit": {

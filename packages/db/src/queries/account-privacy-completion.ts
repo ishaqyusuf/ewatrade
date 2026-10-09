@@ -8,7 +8,12 @@ import {
   getApprovedAccountPrivacyProfilePolicy,
   isAccountPrivacyProfileMinimizationConfirmed,
 } from "./account-privacy-profile-policy"
+import {
+  accountPrivacyRetentionDeadlines,
+  getApprovedAccountPrivacyRetentionPolicy,
+} from "./account-privacy-retention-policy"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
+import { runInOwnSerializableTransaction } from "./own-transaction"
 
 export type AccountPrivacyCompletionCode =
   | "DISABLED"
@@ -733,64 +738,75 @@ export async function completeAccountPrivacyRequest(
   if (!approvedPolicyVersion)
     throw new AccountPrivacyCompletionError("POLICY_NOT_APPROVED")
   const now = input.now ?? new Date()
-  return db.$transaction(
-    async (tx) => {
-      const operator = await tx.user.findUnique({
-        where: { id: input.operatorUserId },
-        select: { isPlatformAdmin: true },
-      })
-      if (!operator?.isPlatformAdmin)
-        throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
-      const request = await tx.accountPrivacyRequest.findUnique({
-        where: { id: input.requestId },
-        select: {
-          status: true,
-          verifiedSubjectUserId: true,
-          completedAt: true,
-        },
-      })
-      if (!request) throw new AccountPrivacyCompletionError("NOT_FOUND")
-      if (request.verifiedSubjectUserId === input.operatorUserId)
-        throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
-      const assessment = await assessAccountPrivacyCompletion(
-        tx,
-        input.requestId,
-        { approvedPolicyVersion, now },
-      )
-      const blockers = assessment.blockers.filter(
-        (blocker) =>
-          blocker !== "REQUEST_NOT_PROCESSING" ||
-          request.status !== "COMPLETED",
-      )
-      if (blockers.length || assessment.missingDomains.length)
+  const retentionPolicy = getApprovedAccountPrivacyRetentionPolicy()
+  if (!retentionPolicy)
+    throw new AccountPrivacyCompletionError("POLICY_NOT_APPROVED")
+  return runInOwnSerializableTransaction(db, async (tx) => {
+    const operator = await tx.user.findUnique({
+      where: { id: input.operatorUserId },
+      select: { isPlatformAdmin: true },
+    })
+    if (!operator?.isPlatformAdmin)
+      throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
+    const request = await tx.accountPrivacyRequest.findUnique({
+      where: { id: input.requestId },
+      select: {
+        status: true,
+        verifiedSubjectUserId: true,
+        completedAt: true,
+      },
+    })
+    if (!request) throw new AccountPrivacyCompletionError("NOT_FOUND")
+    if (request.verifiedSubjectUserId === input.operatorUserId)
+      throw new AccountPrivacyCompletionError("OPERATOR_REQUIRED")
+    const assessment = await assessAccountPrivacyCompletion(
+      tx,
+      input.requestId,
+      { approvedPolicyVersion, now },
+    )
+    const blockers = assessment.blockers.filter(
+      (blocker) =>
+        blocker !== "REQUEST_NOT_PROCESSING" || request.status !== "COMPLETED",
+    )
+    if (blockers.length || assessment.missingDomains.length)
+      throw new AccountPrivacyCompletionError("NOT_READY")
+    if (request.status === "COMPLETED") {
+      if (!request.completedAt)
         throw new AccountPrivacyCompletionError("NOT_READY")
-      if (request.status === "COMPLETED") {
-        if (!request.completedAt)
-          throw new AccountPrivacyCompletionError("NOT_READY")
-        return {
-          requestId: input.requestId,
-          status: "COMPLETED" as const,
-          completedAt: request.completedAt,
-          replay: true,
-        }
-      }
-      const completed = await tx.accountPrivacyRequest.updateMany({
-        where: {
-          id: input.requestId,
-          status: "PROCESSING",
-          verifiedSubjectUserId: request.verifiedSubjectUserId,
-        },
-        data: { status: "COMPLETED", completedAt: now },
-      })
-      if (completed.count !== 1)
-        throw new AccountPrivacyCompletionError("CLAIM_CONFLICT")
       return {
         requestId: input.requestId,
         status: "COMPLETED" as const,
-        completedAt: now,
-        replay: false,
+        completedAt: request.completedAt,
+        replay: true,
       }
-    },
-    { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
-  )
+    }
+    if (!request.verifiedSubjectUserId)
+      throw new AccountPrivacyCompletionError("NOT_READY")
+    await tx.accountPrivacyRetention.create({
+      data: {
+        requestId: input.requestId,
+        subjectUserId: request.verifiedSubjectUserId,
+        policyVersion: retentionPolicy.version,
+        policyDigest: retentionPolicy.digest,
+        completedAt: now,
+        ...accountPrivacyRetentionDeadlines(now),
+      },
+    })
+    const completed = await tx.accountPrivacyRequest.updateMany({
+      where: {
+        id: input.requestId,
+        status: "PROCESSING",
+        verifiedSubjectUserId: request.verifiedSubjectUserId,
+      },
+      data: { status: "COMPLETED", completedAt: now },
+    })
+    if (completed.count !== 1)
+      throw new AccountPrivacyCompletionError("CLAIM_CONFLICT")
+    return {
+      requestId: input.requestId,
+      status: "COMPLETED" as const,
+      completedAt: now,
+      replay: false,
+    }
+  })
 }

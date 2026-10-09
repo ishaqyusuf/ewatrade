@@ -96,6 +96,15 @@ if (operation === "auth") {
 
 const target = resolveTarget(operation, actionArgs)
 const buildPlatform = resolveBuildPlatform(operation, actionArgs)
+const iosSimulator = actionArgs.includes("--ios-simulator")
+if (
+  iosSimulator &&
+  (actionArgs.filter((arg) => arg === "--ios-simulator").length !== 1 ||
+    operation !== "build" ||
+    target !== "preview" ||
+    buildPlatform !== "ios")
+)
+  throw new Error("--ios-simulator is available only for an iOS Preview build.")
 // Production updates (and any update given --expected-commit) publish only clean
 // committed HEAD. Preview without a commit stays a quick working-tree OTA.
 const reviewedUpdate =
@@ -331,8 +340,8 @@ try {
                           env,
                         },
                       )
-                    : publishPreviewBuild
-                      ? await previewPublisher!.runPreviewBuildAndPublish({
+                    : previewPublisher && expectedNativeBuildCommit
+                      ? await previewPublisher.runPreviewBuildAndPublish({
                           command: [
                             ...getActionCommand(
                               operation,
@@ -343,7 +352,7 @@ try {
                             ...forwardedArgs,
                           ],
                           root: REPO_DIR,
-                          expectedCommit: expectedNativeBuildCommit!,
+                          expectedCommit: expectedNativeBuildCommit,
                           runJson: async (cmd) => {
                             const proc = Bun.spawn({
                               cmd,
@@ -708,7 +717,7 @@ function getActionCommand(
       "--platform",
       platform,
       "--profile",
-      TARGET_PROFILES[target],
+      iosSimulator ? "preview-simulator" : TARGET_PROFILES[target],
     ]
   }
 
@@ -795,7 +804,7 @@ function getForwardedArgs(args: string[]): string[] {
       continue
     }
 
-    if (["--dev", "--preview", "--prod"].includes(arg)) {
+    if (["--dev", "--preview", "--prod", "--ios-simulator"].includes(arg)) {
       continue
     }
 
@@ -838,7 +847,7 @@ function getUsage(): string {
   return [
     "Usage:",
     "  bun run eas:auth [--account <name>]",
-    "  bun run eas:build <--preview|--prod> --expected-commit <full-sha> [--platform android|ios] [--account <name>]",
+    "  bun run eas:build <--preview|--prod> --expected-commit <full-sha> [--platform android|ios] [--ios-simulator (Preview iOS only)] [--account <name>]",
     "  bun run eas:build --dev [--platform android|ios] [--account <name>]",
     "  bun run eas:submit [--prod] [--platform android|ios] --id <build-id> --expected-version <version> --expected-commit <full-sha> [--account <name>]",
     "  bun run eas:view <--dev|--preview|--prod> --id <build-id> [--account <name>]",

@@ -38,6 +38,10 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [1, "android", "build", "dirty_after_login"],
   [1, "android", "build", "attachment"],
   [0, "android", "build", "preview"],
+  [0, "ios", "build", "preview_simulator"],
+  [1, "android", "build", "preview_simulator"],
+  [1, "ios", "build", "simulator_prod"],
+  [1, "ios", "update", "preview_simulator_update"],
   [1, "android", "build", "preview_attachment"],
   [1, "android", "update", "attachment"],
   [1, "android", "update", "teen"],
@@ -211,6 +215,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
           ? ["--profile", "development"]
           : []),
         ...(mismatch === "local_override" ? ["--local"] : []),
+        ...(mismatch?.includes("simulator") ? ["--ios-simulator"] : []),
         ...(mismatch === "auto_submit" ? ["--auto-submit"] : []),
         ...(operation === "submit" || operation === "view"
           ? ["--id", exactBuildId]
@@ -268,6 +273,11 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     const exitCode = await proc.exited
     const stderr = await stderrPromise
     expect(exitCode, stderr).toBe(expectedExitCode)
+    if (expectedExitCode === 1 && mismatch?.includes("simulator")) {
+      for (const file of [capturePath, authCapturePath, preflightCapturePath])
+        await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
+      return
+    }
     if (operation === "build" && mismatch === "preview") {
       expect(
         await readFile(path.join(root, "preview-publication.txt"), "utf8"),
@@ -305,11 +315,9 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         code: "ENOENT",
       })
       if (
-        [
-          "attachment",
-          "preview_attachment",
-          "dirty_after_login",
-        ].includes(mismatch ?? "")
+        ["attachment", "preview_attachment", "dirty_after_login"].includes(
+          mismatch ?? "",
+        )
       )
         expect(await readFile(authCapturePath, "utf8")).toBe("login\n")
       else
@@ -436,9 +444,11 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
                 "--profile",
                 development
                   ? "development"
-                  : preview
-                    ? "preview"
-                    : "production",
+                  : mismatch === "preview_simulator"
+                    ? "preview-simulator"
+                    : preview
+                      ? "preview"
+                      : "production",
                 ...(operation === "submit" ? ["--id", exactBuildId] : []),
                 "--non-interactive",
               ],

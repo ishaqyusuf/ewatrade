@@ -481,3 +481,45 @@ test("tenant managers cannot certify a no-prescription deletion outcome", async 
     caller.confirmNoPrescriptions({ requestId: "request-1" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
 })
+
+test("retention review is platform-admin only and cannot accept client deadlines or an operator", async () => {
+  const old = process.env.ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED
+  process.env.ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED = "false"
+  const caller = (isPlatformAdmin: boolean) =>
+    createCallerFactory(accountPrivacyRouter)({
+      db: {
+        $transaction: () => {
+          throw new Error("Database must not be touched")
+        },
+      },
+      session: {
+        session: { id: "session-1", token: "session" },
+        user: { id: "operator-1", isPlatformAdmin },
+      },
+    } as never)
+  try {
+    await expect(caller(false).retentionReviews()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    })
+    await expect(
+      caller(false).reviewRetention({ requestId: "request-1", hold: null }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" })
+    await expect(
+      caller(true).reviewRetention({ requestId: "request-1", hold: null }),
+    ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
+    await expect(
+      caller(true).reviewRetention({
+        requestId: "request-1",
+        hold: null,
+        operatorUserId: "other",
+      } as never),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  } finally {
+    if (old === undefined)
+      Reflect.deleteProperty(
+        process.env,
+        "ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED",
+      )
+    else process.env.ACCOUNT_PRIVACY_RETENTION_PROCESSING_ENABLED = old
+  }
+})

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
@@ -1652,6 +1652,7 @@ function completionFixture(
   let transactionOptions: unknown
   const client = {
     ...base,
+    accountPrivacyRetention: { create: async () => ({}) },
     user: { findUnique: async () => ({ isPlatformAdmin: operatorIsAdmin }) },
     accountPrivacyRequest: {
       findUnique: async () => request,
@@ -1692,6 +1693,28 @@ function completionFixture(
 }
 
 describe("account privacy completion transition", () => {
+  const retentionSource = JSON.stringify({
+    version: policyVersion,
+    approvalReference: "qa-policy-approved",
+  })
+  const oldRetentionSource = process.env.ACCOUNT_PRIVACY_RETENTION_POLICY_JSON
+  const oldRetentionDigest =
+    process.env.ACCOUNT_PRIVACY_APPROVED_RETENTION_POLICY_SHA256
+  beforeEach(() => {
+    process.env.ACCOUNT_PRIVACY_RETENTION_POLICY_JSON = retentionSource
+    process.env.ACCOUNT_PRIVACY_APPROVED_RETENTION_POLICY_SHA256 = createHash(
+      "sha256",
+    )
+      .update(retentionSource)
+      .digest("hex")
+  })
+  afterEach(() => {
+    restore("ACCOUNT_PRIVACY_RETENTION_POLICY_JSON", oldRetentionSource)
+    restore(
+      "ACCOUNT_PRIVACY_APPROVED_RETENTION_POLICY_SHA256",
+      oldRetentionDigest,
+    )
+  })
   const previous = {
     processing: process.env.ACCOUNT_PRIVACY_PROCESSING_ENABLED,
     completion: process.env.ACCOUNT_PRIVACY_COMPLETION_ENABLED,

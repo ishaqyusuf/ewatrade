@@ -1,6 +1,7 @@
 import { idempotencyKeys, logger, schedules } from "@trigger.dev/sdk/v3"
 import { automaticJobCron } from "../schedule-policy"
 import { accountPrivacyNoticeAlert } from "./account-privacy-notice-alert"
+import { accountPrivacyRetention } from "./account-privacy-retention"
 import { accountPrivacyVerificationExpiry } from "./account-privacy-verification-expiry"
 import { assistantAttachmentProcessRecovery } from "./assistant-attachment-process"
 import { assistantMaintenance } from "./assistant-maintenance"
@@ -78,7 +79,7 @@ export const SCHEDULED_CADENCES = {
   },
   "schedules.daily": {
     cron: "15 2 * * *",
-    tasks: [prescriptionRetention],
+    tasks: [prescriptionRetention, accountPrivacyRetention],
   },
 } as const satisfies Record<
   string,
