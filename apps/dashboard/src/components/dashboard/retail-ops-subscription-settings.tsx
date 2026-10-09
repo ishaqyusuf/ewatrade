@@ -126,7 +126,7 @@ function SettingsPanel({
   title: string
 }) {
   return (
-    <section className="border border-border/70 bg-background p-4 ">
+    <section className="rounded-lg border border-border/70 bg-background p-4">
       <div className="flex items-center gap-2">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
           <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
@@ -279,7 +279,7 @@ function PlanCard({
   return (
     <div
       className={cn(
-        "flex flex-col border bg-background p-4 ",
+        "flex flex-col rounded-lg border bg-background p-4",
         current ? "border-primary" : "border-border/70",
       )}
     >
@@ -344,7 +344,6 @@ function PlanCard({
       {plan.id === "free" ? null : (
         <div className="mt-auto pt-4">
           <Button
-            appearance="form"
             type="button"
             variant={current ? "outline" : "default"}
             size="sm"
@@ -352,7 +351,7 @@ function PlanCard({
             onClick={() => {
               if (plan.id !== "free") onCheckout(plan.id)
             }}
-            className="w-full rounded-none"
+            className="w-full"
           >
             {current
               ? "Active plan"
@@ -368,7 +367,7 @@ function PlanCard({
 
 function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
   return (
-    <div className="border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
       <p className="font-medium text-foreground">
         {intent.targetPlan.name} checkout
       </p>
@@ -410,19 +409,19 @@ export function RetailOpsSubscriptionSettings({
       <SettingsOverview context={settingsContext} />
 
       {subscriptionQuery.error ? (
-        <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {subscriptionQuery.error.message}
         </div>
       ) : null}
 
       {checkoutIntentMutation.error ? (
-        <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {checkoutIntentMutation.error.message}
         </div>
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <section className="border border-border/70 bg-background p-5 ">
+        <section className="rounded-lg border border-border/70 bg-background p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -482,7 +481,7 @@ export function RetailOpsSubscriptionSettings({
           </dl>
         </section>
 
-        <section className="overflow-hidden border border-border/70 bg-background ">
+        <section className="overflow-hidden rounded-lg border border-border/70 bg-background">
           <div className="border-b border-border/70 px-4 py-3">
             <h2 className="text-sm font-semibold">Usage and limits</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -517,7 +516,7 @@ export function RetailOpsSubscriptionSettings({
         <CheckoutIntentNotice intent={checkoutIntentMutation.data} />
       ) : null}
 
-      <div className="border border-border/70 bg-background px-4 py-3 text-xs text-muted-foreground">
+      <div className="rounded-lg border border-border/70 bg-background px-4 py-3 text-xs text-muted-foreground">
         Free stays free forever. Starter, Growth and Pro are free during launch
         and paid checkout is off, so no plan charges you yet. Plan limits and
         Free-plan features are enforced by the Retail Ops APIs; Free orders

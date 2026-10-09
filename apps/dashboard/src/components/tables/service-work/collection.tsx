@@ -54,7 +54,6 @@ export function ServiceWorkCollection({
             ]}
             actions={
               <Button
-                className="rounded-none"
                 size="sm"
                 variant="ghost"
                 aria-label={`Open job ${job.orderNumber}`}

@@ -182,7 +182,7 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
         <SubmitButton
           type="button"
           isSubmitting={quoteMutation.isPending}
-          className="rounded-none"
+          className="rounded-md"
           disabled={quoteMutation.isPending}
           onClick={issueQuote}
         >

@@ -38,7 +38,7 @@ export function OrdersHeader({
               aria-label="New order"
               variant="outline"
               onClick={() => void setParams({ orderSheet: "create" })}
-              className="size-9 rounded-none"
+              className="size-9"
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
             </Button>

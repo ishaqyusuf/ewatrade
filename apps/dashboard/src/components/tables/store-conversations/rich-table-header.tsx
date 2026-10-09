@@ -213,12 +213,7 @@ export function StoreConversationColumnSettings({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-none"
-            appearance="form"
-          >
+          <Button type="button" variant="outline">
             Columns
           </Button>
         }

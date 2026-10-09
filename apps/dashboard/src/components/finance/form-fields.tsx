@@ -67,7 +67,6 @@ export function FinanceReview({
         <Button
           appearance="form"
           type="button"
-          className="rounded-none"
           variant="outline"
           onClick={onBack}
           disabled={command.pending || command.saved || backDisabled}

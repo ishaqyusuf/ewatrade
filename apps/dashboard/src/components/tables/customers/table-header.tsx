@@ -197,11 +197,7 @@ export function CustomerTableSettings({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          <Button variant="outline" className="rounded-none">
-            Columns
-          </Button>
-        }
+        render={<Button variant="outline">Columns</Button>}
       />
       <DropdownMenuContent
         appearance="dashboard"

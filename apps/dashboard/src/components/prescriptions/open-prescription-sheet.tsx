@@ -11,7 +11,7 @@ export function OpenPrescriptionSheet() {
     <Button
       type="button"
       variant="outline"
-      className="size-9 rounded-none"
+      className="size-9 rounded-md"
       aria-label="New intake"
       onClick={() => setParams({ prescriptionSheet: "intake" })}
     >

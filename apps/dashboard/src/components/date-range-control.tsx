@@ -64,7 +64,7 @@ export function DateRangeControl({
           <Button
             type="button"
             variant="outline"
-            className="h-9 max-w-full rounded-none"
+            className="h-9 max-w-full rounded-md"
           />
         }
         aria-label={label}
@@ -83,7 +83,7 @@ export function DateRangeControl({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         appearance="dashboard"
-        className="max-w-[calc(100vw-32px)] p-0"
+        className="max-w-[calc(100vw-32px)] rounded-lg p-0 [&_[data-slot$=-trigger]]:rounded-md"
         align="start"
         sideOffset={8}
       >
@@ -103,7 +103,7 @@ export function DateRangeControl({
           <Button
             type="button"
             variant="outline"
-            className="h-9 rounded-none"
+            className="h-9 rounded-md"
             disabled={!valid}
             onClick={() => {
               if (valid && draft.start && draft.end) {

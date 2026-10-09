@@ -141,7 +141,7 @@ export function CatalogDetailRow({
     <Button
       type="button"
       variant="ghost"
-      className="h-auto w-full justify-between gap-4 rounded-none py-3 text-left"
+      className="h-auto w-full justify-between gap-4 py-3 text-left"
       onClick={onClick}
     >
       {icon ? <HugeiconsIcon icon={icon} data-icon="inline-start" /> : null}

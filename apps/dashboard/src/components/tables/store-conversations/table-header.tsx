@@ -213,7 +213,7 @@ export function StoreConversationTableHeader({
           <DropdownMenuSubTrigger>Store</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
           >
             <DropdownMenuCheckboxItem
               checked={!selectedStore}
@@ -240,7 +240,7 @@ export function StoreConversationTableHeader({
           <DropdownMenuSubTrigger>Assignment</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
           >
             {assignments.map(([value, label]) => (
               <DropdownMenuCheckboxItem
@@ -262,7 +262,7 @@ export function StoreConversationTableHeader({
           <DropdownMenuSubTrigger>Response SLA</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
           >
             {slas.map(([value, label]) => (
               <DropdownMenuCheckboxItem
@@ -282,7 +282,7 @@ export function StoreConversationTableHeader({
           <DropdownMenuSubTrigger>Sort</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
           >
             {sorts.map(([value, label]) => {
               const [sort, direction] = value.split(":")
@@ -308,7 +308,7 @@ export function StoreConversationTableHeader({
           <DropdownMenuSubTrigger>Request kinds</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-48 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
           >
             {requestKinds.map(([kind, label]) => (
               <DropdownMenuCheckboxItem

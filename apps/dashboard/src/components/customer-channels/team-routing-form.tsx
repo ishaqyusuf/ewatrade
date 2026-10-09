@@ -64,7 +64,7 @@ export function TeamRoutingForm({
   )
 
   return (
-    <section className="grid gap-4 rounded-none border border-border bg-card p-5">
+    <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Team & routing
@@ -79,7 +79,7 @@ export function TeamRoutingForm({
         <div className="grid gap-2">
           {team.map((member) => (
             <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-border px-4 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-4 py-3"
               key={member.id}
             >
               <div>
@@ -106,7 +106,7 @@ export function TeamRoutingForm({
           ))}
         </div>
       ) : (
-        <p className="rounded-none border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
           Add at least one active attendant before publishing a customer entry
           point.
         </p>

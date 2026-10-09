@@ -215,7 +215,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
             variant="ghost"
             size="icon-sm"
             aria-label="Close search"
-            className="absolute right-3 top-3 rounded-none"
+            className="absolute right-3 top-3"
             onClick={() => setOpen(false)}
           >
             <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
@@ -248,7 +248,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
                   key={command.id}
                   value={command.id}
                   onSelect={() => goTo(command.href)}
-                  className="gap-3 rounded-none"
+                  className="gap-3"
                 >
                   <HugeiconsIcon
                     icon={SquareArrowRight01Icon}
@@ -273,7 +273,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
                   key={page.href}
                   value={`page:${page.href}`}
                   onSelect={() => goTo(page.href)}
-                  className="justify-between gap-3 rounded-none"
+                  className="justify-between gap-3"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">
@@ -297,7 +297,7 @@ export function DashboardCommandSearch({ commandPaths, navItems }: Props) {
                   key={item.id}
                   value={item.id}
                   onSelect={() => goTo(item.href)}
-                  className="justify-between gap-3 rounded-none"
+                  className="justify-between gap-3"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">

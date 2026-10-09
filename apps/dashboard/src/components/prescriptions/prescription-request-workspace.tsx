@@ -290,7 +290,7 @@ export function PrescriptionRequestWorkspace({
             .sort((left, right) => right.revision - left.revision)
             .map((revision) => (
               <details
-                className="rounded-none border border-border p-3"
+                className="rounded-lg border border-border p-3"
                 key={revision.id}
                 open={revision.revision === request.currentTranscriptRevision}
               >
@@ -313,7 +313,7 @@ export function PrescriptionRequestWorkspace({
       {mode === "media-review" &&
       (request.status === "RECEIVED" || request.status === "MEDIA_REVIEW") &&
       currentMedia.length ? (
-        <section className="grid gap-3 rounded-none border border-border p-4">
+        <section className="grid gap-3 rounded-lg border border-border p-4">
           <h4 className="font-medium">Media review</h4>
           <p className="text-sm text-muted-foreground">
             Every page must pass the private safety scan before transcription.
@@ -394,7 +394,7 @@ export function PrescriptionRequestWorkspace({
               Save transcription revision
             </Button>
             {transcript.lines.map((line) => (
-              <div key={line.id} className="grid gap-2 rounded-none border p-3">
+              <div key={line.id} className="grid gap-2 rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">
                   Draft line {line.lineNumber}
                 </p>
@@ -478,7 +478,7 @@ export function PrescriptionRequestWorkspace({
               quantity: "1",
             }
             return (
-              <div key={line.id} className="grid gap-2 rounded-none border p-3">
+              <div key={line.id} className="grid gap-2 rounded-lg border p-3">
                 <p className="font-medium">
                   {line.verifiedText ?? "Unreadable line"}
                 </p>
@@ -613,7 +613,7 @@ export function PrescriptionRequestWorkspace({
           </div>
           {pendingDecision ? (
             <div
-              className="grid gap-3 rounded-none border border-amber-300 bg-amber-50 p-4 text-amber-950"
+              className="grid gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950"
               role="alertdialog"
               aria-labelledby="pharmacist-decision-title"
             >

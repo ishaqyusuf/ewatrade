@@ -35,7 +35,7 @@ export function ConversationAccountTerms({
 
   return (
     <section
-      className="grid gap-3 rounded-none border border-border bg-muted/30 p-4"
+      className="grid gap-3 rounded-lg border border-border bg-muted/30 p-4"
       aria-label="Terms required before posting"
     >
       <h3 className="font-medium">Before you reply</h3>

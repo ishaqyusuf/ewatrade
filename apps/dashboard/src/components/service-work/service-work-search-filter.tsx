@@ -136,7 +136,7 @@ export function ServiceWorkSearchFilter({
           <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-40 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
           >
             {SERVICE_PRIORITY_FILTERS.map((priority) => (
               <DropdownMenuCheckboxItem
@@ -156,7 +156,7 @@ export function ServiceWorkSearchFilter({
           <DropdownMenuSubTrigger>Due date</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-40 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
           >
             {SERVICE_DUE_FILTERS.map((due) => (
               <DropdownMenuCheckboxItem
@@ -177,7 +177,7 @@ export function ServiceWorkSearchFilter({
             <DropdownMenuSubTrigger>Assignee</DropdownMenuSubTrigger>
             <DropdownMenuSubContent
               appearance="dashboard"
-              className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+              className="min-w-40 max-w-[calc(100vw-32px)] rounded-lg bg-popover p-0 shadow-md before:hidden"
             >
               {(assignees.data ?? []).map((assignee) => (
                 <DropdownMenuCheckboxItem

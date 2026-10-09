@@ -144,7 +144,6 @@ export function expenseColumns(
         <Button
           aria-label={`View expense ${row.original.description}`}
           data-row-interactive="true"
-          className="rounded-none"
           size="sm"
           variant="ghost"
           onClick={() => open(row.original.id)}

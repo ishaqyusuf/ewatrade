@@ -179,7 +179,7 @@ export function ServiceCommerceSetup({
   if (state === "error" || !accessQuery.data || !selectedStore) {
     return (
       <div className="grid min-w-0 gap-3">
-        <p className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {accessQuery.error?.message ??
             "Service Commerce setup is unavailable."}
         </p>
@@ -221,7 +221,7 @@ export function ServiceCommerceSetup({
                     <Link href={`/service-commerce/reports?store=${storeId}`} />
                   }
                   variant="outline"
-                  className="h-9 rounded-none"
+                  className="h-9 rounded-md"
                 >
                   Reports
                 </Button>
@@ -250,7 +250,7 @@ export function ServiceCommerceSetup({
               </Badge>
               {canManage && !suspended ? (
                 <Button
-                  className="h-9 rounded-none"
+                  className="h-9 rounded-md"
                   disabled={
                     isPending || (!active && data.activationBlockers.length > 0)
                   }
@@ -277,7 +277,7 @@ export function ServiceCommerceSetup({
         </FormFeedback>
       ) : null}
       {data.activationBlockers.length > 0 ? (
-        <section className="border border-border bg-background p-5">
+        <section className="rounded-xl border border-border bg-background p-5">
           <h2 className="font-medium">Activation requirements</h2>
           <ul className="mt-2 grid gap-1 text-sm">
             {data.activationBlockers.map((blocker) => (
@@ -332,7 +332,7 @@ export function ServiceCommerceSetup({
                 appearance="form"
                 type="button"
                 variant="outline"
-                className="rounded-none"
+                className="rounded-md"
                 disabled={activationMutation.isPending}
                 onClick={() => setConfirmation(null)}
               >
@@ -361,7 +361,7 @@ export function ServiceCommerceSetup({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]">
         <form
-          className="border border-border bg-background p-5"
+          className="rounded-xl border border-border bg-background p-5"
           onSubmit={form.handleSubmit((settings) =>
             updateMutation.mutate({
               expectedRevision: data.revision,
@@ -437,7 +437,7 @@ export function ServiceCommerceSetup({
           </FieldGroup>
         </form>
 
-        <aside className="grid content-start gap-4 border border-border bg-background p-5">
+        <aside className="grid content-start gap-4 rounded-xl border border-border bg-background p-5">
           <div>
             <h2 className="font-semibold">Readiness</h2>
             <p className="text-sm text-muted-foreground">

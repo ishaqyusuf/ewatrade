@@ -39,14 +39,14 @@ export function ServiceWorkHeader({
             {canManage ? (
               <>
                 <Button
-                  className="h-9 rounded-none"
+                  className="h-9 rounded-md"
                   variant="outline"
                   onClick={() => setParams({ serviceSheet: "settings" })}
                 >
                   Settings
                 </Button>
                 <Button
-                  className="h-9 rounded-none"
+                  className="h-9 rounded-md"
                   variant="outline"
                   onClick={() => setParams({ serviceSheet: "request" })}
                 >
@@ -57,7 +57,7 @@ export function ServiceWorkHeader({
             <Button
               aria-label="New service"
               variant="outline"
-              className="size-9 rounded-none"
+              className="size-9 rounded-md"
               onClick={() => setParams({ serviceSheet: "intake" })}
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />

@@ -181,7 +181,7 @@ export function FinanceSupplierTableSettings({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="rounded-none">
+          <Button type="button" variant="outline">
             Columns
           </Button>
         }

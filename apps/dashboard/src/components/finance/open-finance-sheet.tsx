@@ -25,7 +25,7 @@ export function OpenFinanceSheet({
     <Button
       variant="outline"
       size={icon ? "icon" : "default"}
-      className={icon ? "size-9 rounded-none" : "h-9 rounded-none"}
+      className={icon ? "size-9" : "h-9"}
       aria-label={icon && typeof children === "string" ? children : undefined}
       onClick={() =>
         setParams({

@@ -62,7 +62,7 @@ export function SearchField({
         aria-label={placeholder.replace(/\.\.\.$/, "")}
         placeholder={placeholder}
         className={cn(
-          "h-9 rounded-none bg-transparent py-1 pl-9 focus:ring-0 focus:border-border",
+          "h-9 rounded-md bg-transparent py-1 pl-9 focus:ring-0 focus:border-border",
           children ? "pr-10" : "pr-3",
         )}
         value={input}

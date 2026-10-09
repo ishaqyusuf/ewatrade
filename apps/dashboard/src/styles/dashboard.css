@@ -85,6 +85,14 @@
   --status-refunded-dot: oklch(0.7 0.18 15);
 }
 
+/* Buttons left on the Luma pill default use the theme radius like the rest of the
+   dashboard controls. Signup keeps its own button shapes. */
+@layer utilities {
+  .ewatrade-dashboard [data-slot="button"].rounded-4xl:not(.signup-shell *) {
+    border-radius: calc(var(--radius) * 0.8);
+  }
+}
+
 .ewatrade-dashboard .scrollbar-hide {
   scrollbar-width: none;
 }

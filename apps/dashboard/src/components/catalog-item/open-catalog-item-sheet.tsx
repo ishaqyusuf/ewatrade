@@ -52,7 +52,6 @@ export function OpenCatalogItemSheet() {
               variant="outline"
               size="icon"
               aria-label="Add item"
-              className="rounded-none"
             />
           }
         >
@@ -78,7 +77,6 @@ export function OpenCatalogItemSheet() {
             variant="outline"
             size="icon"
             aria-label="Add item"
-            className="rounded-none"
           />
         }
       >

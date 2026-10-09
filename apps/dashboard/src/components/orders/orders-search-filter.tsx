@@ -57,7 +57,7 @@ export function OrdersSearchFilter() {
           <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
-            className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+            className="min-w-40 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
             sideOffset={14}
             alignOffset={-4}
           >

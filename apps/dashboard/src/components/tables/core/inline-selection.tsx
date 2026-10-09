@@ -131,7 +131,6 @@ export function InlineSelectionStatus({
             type="button"
             variant="ghost"
             size="sm"
-            className="rounded-none"
             onClick={selection.clear}
           >
             Deselect all

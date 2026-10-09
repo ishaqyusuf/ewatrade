@@ -62,12 +62,7 @@ export function ExpenseBottomBar({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      className="rounded-none"
-      onClick={download}
-    >
+    <Button type="button" variant="outline" onClick={download}>
       Export selected
     </Button>
   )

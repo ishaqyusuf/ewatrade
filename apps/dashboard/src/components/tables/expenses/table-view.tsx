@@ -250,7 +250,6 @@ export function ExpenseTableView({
                 actions={
                   <Button
                     aria-label={`View expense ${bill.description}`}
-                    className="rounded-none"
                     size="sm"
                     variant="ghost"
                     onClick={open}

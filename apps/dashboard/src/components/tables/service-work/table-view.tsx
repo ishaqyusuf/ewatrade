@@ -111,7 +111,6 @@ export function ServiceWorkTableView({
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{errorMessage}</p>
           <Button
-            className="rounded-none"
             variant="outline"
             onClick={() => (isFetchNextPageError ? retry() : void refetch())}
           >
@@ -122,11 +121,7 @@ export function ServiceWorkTableView({
       {persistenceError ? (
         <div role="alert" className="flex items-center justify-between gap-3">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button
-            className="rounded-none"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </div>
@@ -198,7 +193,7 @@ export function ServiceWorkTableView({
       )}
       {hasNextPage && !isFetchNextPageError ? (
         <Button
-          className="w-fit rounded-none"
+          className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}
           onClick={() => void fetchNextPage()}

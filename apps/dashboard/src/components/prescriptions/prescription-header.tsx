@@ -64,7 +64,7 @@ export function PrescriptionHeader({
             <Button
               render={<Link href="/prescriptions/reports" />}
               variant="outline"
-              className="h-9 rounded-none"
+              className="h-9 rounded-md"
             >
               Reports
             </Button>
@@ -72,7 +72,7 @@ export function PrescriptionHeader({
               <Button
                 render={<Link href="/settings/compliance" />}
                 variant="outline"
-                className="h-9 rounded-none"
+                className="h-9 rounded-md"
               >
                 Compliance
               </Button>

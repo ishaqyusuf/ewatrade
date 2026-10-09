@@ -64,7 +64,7 @@ export function StaffDirectoryHeader({
               aria-label="Invite staff"
               type="button"
               variant="outline"
-              className="size-9 rounded-none"
+              className="size-9"
               onClick={onInvite}
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
@@ -136,7 +136,7 @@ export function StaffDirectoryHeader({
               <DropdownMenuSubTrigger>Role</DropdownMenuSubTrigger>
               <DropdownMenuSubContent
                 appearance="dashboard"
-                className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+                className="min-w-40 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
                 sideOffset={14}
                 alignOffset={-4}
               >
@@ -165,7 +165,7 @@ export function StaffDirectoryHeader({
               <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
               <DropdownMenuSubContent
                 appearance="dashboard"
-                className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+                className="min-w-40 max-w-[calc(100vw-32px)] rounded-md bg-popover p-0 shadow-md before:hidden"
                 sideOffset={14}
                 alignOffset={-4}
               >
