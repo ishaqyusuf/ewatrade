@@ -1,25 +1,25 @@
+import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { View } from "@/components/ui/view"
 import { VariableContextProvider } from "nativewind"
 import { useRef, useState } from "react"
 import { Keyboard, type ScrollView } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import type { ServiceJobsProps } from "./service-jobs-model"
-import { ServiceIntakeForm } from "./service-intake-form"
-import { ServiceJobWorkspace } from "./service-job-workspace"
-import { ServiceJobsQueue } from "./service-jobs-queue"
 import { ServiceAction } from "./service-action"
 import { ServiceCommandReview } from "./service-command-review"
-import { ServiceStatusSheet } from "./service-status-sheet"
-import { ServicePaymentSheet } from "./service-payment-sheet"
-import { ServiceTextSheet } from "./service-text-sheet"
 import { ServiceEvidenceSheet } from "./service-evidence-sheet"
 import { ServiceHistorySheet } from "./service-history-sheet"
-import { useServiceJobs } from "./use-service-jobs"
+import { ServiceIntakeForm } from "./service-intake-form"
+import { ServiceJobWorkspace } from "./service-job-workspace"
+import type { ServiceJobsProps } from "./service-jobs-model"
+import { ServiceJobsQueue } from "./service-jobs-queue"
+import { ServicePaymentSheet } from "./service-payment-sheet"
+import { ServiceStatusSheet } from "./service-status-sheet"
+import { ServiceTextSheet } from "./service-text-sheet"
 import { useServiceAppearance } from "./use-service-appearance"
+import { useServiceJobs } from "./use-service-jobs"
 
 export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="service-jobs" />
@@ -77,10 +77,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           <StatusBanner
             icon="Info"
             title="Evidence needs attention"
-            message={
-              model.attachmentCount +
-              " private attachment(s) are not confirmed. The order is already accepted."
-            }
+            message={`${model.attachmentCount} private attachment(s) are not confirmed. The order is already accepted.`}
           />
           <ServiceAction
             variant="outline"
@@ -271,7 +268,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
             ) : (
               <ServiceJobsQueue model={model} feedback={feedback} />
             )}
-            {showQueueSearch ? (
+            {market && showQueueSearch ? (
               <BottomSearchFooter
                 variant={market ? "market-day" : "default"}
                 accessibilityLabel="Search service jobs"

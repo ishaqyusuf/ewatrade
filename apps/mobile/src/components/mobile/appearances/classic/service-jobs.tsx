@@ -1,19 +1,24 @@
+import {
+  statusTone,
+  textLabel,
+} from "@/components/mobile/service-jobs/service-jobs-model"
+import type {
+  ServiceChoiceProps,
+  ServiceHeaderProps,
+  ServiceJobRowProps,
+  ServiceSectionProps,
+} from "@/components/mobile/service-jobs/service-jobs-presentation"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import type {
-  ServiceHeaderProps,
-  ServiceJobRowProps,
-  ServiceSectionProps,
-  ServiceChoiceProps,
-} from "@/components/mobile/service-jobs/service-jobs-presentation"
-import {
-  textLabel,
-  statusTone,
-} from "@/components/mobile/service-jobs/service-jobs-model"
 import { cn } from "@/lib/utils"
+import { ListCard, RecordRow, StatusPill } from "../../green-till/kit"
+import {
+  overdueWork,
+  workStatusLabel,
+} from "../../service-jobs/service-work-summary"
 
 export function ServiceHeader({
   mode,
@@ -41,34 +46,32 @@ export function ServiceHeader({
   )
 }
 export function ServiceJobRow({ job, onPress }: ServiceJobRowProps) {
+  const late = overdueWork(job, Date.now())
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${job.orderNumber}, ${textLabel(job.summary)}`}
-      className="gap-3 border-b border-border py-4"
-      haptic
-      onPress={onPress}
-    >
-      <View className="flex-row items-start justify-between gap-3">
-        <View className="min-w-0 flex-1 gap-1">
-          <Text className="font-bold text-foreground">{job.orderNumber}</Text>
-          <Text className="text-xs text-muted-foreground">
-            {job.lines.map((line) => line.catalogItemName).join(", ")}
-          </Text>
-        </View>
-        <StatusBadge
-          label={textLabel(job.summary)}
-          tone={statusTone(job.summary)}
-        />
-      </View>
-      <Text className="text-xs text-muted-foreground">
-        {job.priority === "urgent"
-          ? "Urgent"
-          : job.currentAssigneeUserId
-            ? "Assigned"
-            : "Unassigned"}
-      </Text>
-    </Pressable>
+    <ListCard>
+      <RecordRow
+        stackDetails
+        title={job.customerName || "Walk-in customer"}
+        meta={`${job.orderNumber} · ${job.lines.map((line) => line.catalogItemName).join(", ")}${job.dueCommitmentAt ? ` · Due ${new Date(job.dueCommitmentAt).toLocaleString()}` : " · No due time"}`}
+        avatar={{
+          icon: "Wrench",
+          tint: late || job.summary === "blocked" ? "rose" : "sky",
+        }}
+        status={
+          <StatusPill
+            label={late ? "Overdue" : workStatusLabel(job.summary)}
+            tone={
+              late || job.summary === "blocked"
+                ? "danger"
+                : job.summary === "ready_for_handoff"
+                  ? "ok"
+                  : "info"
+            }
+          />
+        }
+        onPress={onPress}
+      />
+    </ListCard>
   )
 }
 export function ServiceSection({
@@ -112,9 +115,10 @@ export function ServiceChoice({
         role === "checkbox"
           ? "min-h-11 flex-row items-center justify-between gap-3 border-b border-border py-4"
           : "min-h-12 flex-row items-center gap-3 rounded-xl border px-4 py-3",
-        role !== "checkbox" && (selected
-          ? "border-primary bg-primary/5"
-          : "border-border bg-background"),
+        role !== "checkbox" &&
+          (selected
+            ? "border-primary bg-primary/5"
+            : "border-border bg-background"),
         disabled && "opacity-50",
       )}
     >

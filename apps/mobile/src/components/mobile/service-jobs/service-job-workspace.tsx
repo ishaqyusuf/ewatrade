@@ -1,5 +1,3 @@
-import { useServiceAppearance } from "./use-service-appearance"
-import { ServiceAction as ActionButton } from "./service-action"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -10,8 +8,11 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { ClassicServiceJobWorkspace } from "./classic-service-job-workspace"
+import { ServiceAction as ActionButton } from "./service-action"
 import { textLabel } from "./service-jobs-model"
 import { ServiceWorkLines } from "./service-work-lines"
+import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
 export function ServiceJobWorkspace({
@@ -59,6 +60,14 @@ export function ServiceJobWorkspace({
     undoMessageFill,
   } = model
   if (!selectedJob) return null
+  if (!market)
+    return (
+      <ClassicServiceJobWorkspace
+        model={model}
+        onLinesLayout={onLinesLayout}
+        onPageChange={onPageChange}
+      />
+    )
   return (
     <View className="gap-4">
       <Pressable
