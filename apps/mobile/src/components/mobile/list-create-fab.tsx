@@ -1,9 +1,11 @@
-import { Icon } from "@/components/ui/icon"
+import { FOOTER_SLIDE_MS } from "@/components/mobile/bottom-search-footer"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { useColors } from "@/hooks/use-color"
 import { cn } from "@/lib/utils"
 import { useEffect } from "react"
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -17,6 +19,7 @@ type ListCreateFabProps = {
   bottomOffset?: number
   disabled?: boolean
   dockHidden?: boolean
+  icon?: IconKeys
   onPress: () => void
   sitsAboveDock?: boolean
   testID?: string
@@ -28,6 +31,7 @@ export function ListCreateFab({
   bottomOffset = 0,
   disabled = false,
   dockHidden = false,
+  icon = "Plus",
   onPress,
   sitsAboveDock = false,
   testID,
@@ -46,7 +50,8 @@ export function ListCreateFab({
 
   useEffect(() => {
     animatedBottom.value = withTiming(targetBottom, {
-      duration: reduceMotion ? 0 : 220,
+      duration: reduceMotion ? 0 : FOOTER_SLIDE_MS,
+      easing: Easing.out(Easing.cubic),
     })
   }, [animatedBottom, reduceMotion, targetBottom])
 
@@ -94,7 +99,7 @@ export function ListCreateFab({
               ? "size-[24px] text-gold-foreground"
               : "size-md text-primary-foreground"
           }
-          name="Plus"
+          name={icon}
         />
       </Pressable>
     </Animated.View>

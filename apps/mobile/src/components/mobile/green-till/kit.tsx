@@ -239,7 +239,8 @@ export function RecordRow({
   accessibilityLabel?: string
   amount?: string
   avatar: { icon?: IconKeys; initials?: string; tint: GreenTillTint }
-  meta?: string
+  /** One line, or several stacked lines (contact, then activity). */
+  meta?: string | string[]
   onPress?: () => void
   status?: ReactNode
   testID?: string
@@ -291,14 +292,15 @@ export function RecordRow({
         >
           {title}
         </Text>
-        {meta ? (
+        {(Array.isArray(meta) ? meta : meta ? [meta] : []).map((line) => (
           <Text
+            key={line}
             className="text-xs [-rn-line-height:17] text-muted-foreground"
             numberOfLines={lines}
           >
-            {meta}
+            {line}
           </Text>
-        ) : null}
+        ))}
       </View>
       {amount || status ? (
         <View

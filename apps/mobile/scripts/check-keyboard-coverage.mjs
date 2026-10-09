@@ -313,8 +313,8 @@ const contracts = [
       'testID="bottom-search-footer"',
       'variant?: "default" | "market-day"',
       '"market-search"',
-      'variant === "market-day" ? marketDay.canvas : colors.background',
-      'className="gap-3 px-4 pb-2 pt-2"',
+      "variant === \"market-day\"\n                    ? marketDay.canvas\n                    : colors.background",
+      ': "gap-3 px-4 pb-2 pt-2"',
     ],
     reason:
       "all no-tab searches must share one compact keyboard-safe bottom footer",

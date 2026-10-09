@@ -4,10 +4,20 @@ import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type { ReactNode } from "react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+/** Shared with ListCreateFab so a FAB above the footer moves with it. */
+export const FOOTER_SLIDE_MS = 240
 
 type BottomSearchFooterProps = {
   accessibilityLabel: string
@@ -15,6 +25,9 @@ type BottomSearchFooterProps = {
   autoFocus?: boolean
   bottomOffset?: number
   children?: ReactNode
+  /** Slides the footer down out of view (see useBottomSearchScroll). It stays
+   * visible while the search is focused or has text. */
+  hidden?: boolean
   includeSafeArea?: boolean
   label?: string
   layout?: "inline" | "stacked"
@@ -37,6 +50,7 @@ export function BottomSearchFooter({
   autoFocus = false,
   bottomOffset = 0,
   children,
+  hidden = false,
   includeSafeArea = true,
   label = "Search",
   layout = "stacked",
@@ -56,6 +70,23 @@ export function BottomSearchFooter({
   const marketDay = useMarketDayPalette()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const paddingBottom = includeSafeArea ? Math.max(insets.bottom, 8) : 8
+  const reduceMotion = useReducedMotion()
+  const [focused, setFocused] = useState(false)
+  const [height, setHeight] = useState(0)
+  const shouldHide = hidden && !focused && !value
+  const hiddenProgress = useSharedValue(shouldHide ? 1 : 0)
+
+  useEffect(() => {
+    hiddenProgress.value = withTiming(shouldHide ? 1 : 0, {
+      duration: reduceMotion ? 0 : FOOTER_SLIDE_MS,
+      easing: Easing.out(Easing.cubic),
+    })
+  }, [hiddenProgress, reduceMotion, shouldHide])
+
+  const slideStyle = useAnimatedStyle(() => ({
+    opacity: 1 - hiddenProgress.value * hiddenProgress.value,
+    transform: [{ translateY: hiddenProgress.value * (height + 12) }],
+  }))
 
   const effectiveSearchVisible =
     (!isOffline || localSearch || showDisabledOfflineSearch) &&
@@ -82,13 +113,13 @@ export function BottomSearchFooter({
       }}
       testID="bottom-search-footer"
     >
-      <View
-        onLayout={
-          onHeightChange
-            ? (event) => onHeightChange(event.nativeEvent.layout.height)
-            : undefined
-        }
-        style={
+      <Animated.View
+        pointerEvents={shouldHide ? "none" : "auto"}
+        onLayout={(event) => {
+          setHeight(event.nativeEvent.layout.height)
+          onHeightChange?.(event.nativeEvent.layout.height)
+        }}
+        style={[
           variant === "action-bar"
             ? {
                 backgroundColor: colors.card,
@@ -101,8 +132,9 @@ export function BottomSearchFooter({
                   variant === "market-day"
                     ? marketDay.canvas
                     : colors.background,
-              }
-        }
+              },
+          slideStyle,
+        ]}
       >
         <View style={{ paddingBottom }}>
           <View
@@ -130,7 +162,9 @@ export function BottomSearchFooter({
                   label={label}
                   leadingIcon="Search"
                   maxLength={maxLength}
+                  onBlur={() => setFocused(false)}
                   onChangeText={onChangeText}
+                  onFocus={() => setFocused(true)}
                   placeholder={placeholder}
                   returnKeyType="search"
                   value={value}
@@ -143,7 +177,7 @@ export function BottomSearchFooter({
             </View>
           </View>
         </View>
-      </View>
+      </Animated.View>
     </KeyboardStickyView>
   )
 }

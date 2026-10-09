@@ -3,10 +3,10 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useColors, useColorScheme } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
-import type { MobileDesignScreen } from "@/lib/mobile-design/screens"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import type { MobileDesignScreen } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
@@ -40,7 +40,29 @@ export function MobileWorkflowChrome({
           backgroundColor={market ? palette.palm : colors.background}
           style={market || colorScheme === "dark" ? "light" : "dark"}
         />
-        {!hideHeader ? (
+        {!hideHeader && !market ? (
+          // Green Till: X on the left, centred title, balancing spacer.
+          <View className="flex-row items-center gap-2.5 px-4 pb-3.5 pt-2">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={closeLabel}
+              onPress={onClose}
+              haptic
+              className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+            >
+              <Icon name="X" className="size-[18px] text-foreground" />
+            </Pressable>
+            <Text
+              accessibilityRole="header"
+              numberOfLines={1}
+              className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
+            >
+              {title}
+            </Text>
+            <View className="size-11" />
+          </View>
+        ) : null}
+        {!hideHeader && market ? (
           <View
             className={cn(
               "flex-row items-center justify-between gap-3 px-4",
