@@ -44,7 +44,7 @@ export function buildReportsPresentation(input: ReportsPresentationInput) {
             ? "No balance sources yet"
             : `${input.balanceSources} balance ${input.balanceSources === 1 ? "source" : "sources"}`,
         id: "inventory" as const,
-        label: "Inventory",
+        label: "Stock on record",
         value: String(input.balanceSources),
       },
       {
@@ -60,7 +60,7 @@ export function buildReportsPresentation(input: ReportsPresentationInput) {
         detail: `${service.ready} ready · ${service.blocked} blocked · ${service.overdueJobs} overdue`,
         id: "service" as const,
         label: "Service work",
-        value: `${service.wip} WIP`,
+        value: `${service.wip} open`,
       },
     ],
   }

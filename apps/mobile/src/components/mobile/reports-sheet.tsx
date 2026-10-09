@@ -1,8 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import type { IconKeys } from "@/components/ui/icon"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColors } from "@/hooks/use-color"
@@ -24,7 +25,7 @@ import { REPORTS_COPY, buildReportsPresentation } from "./reports-presentation"
 
 const OPERATION_ICONS = {
   inventory: "Warehouse",
-  pending: "RefreshCw",
+  pending: "Clock",
   service: "Wrench",
 } as const satisfies Record<string, IconKeys>
 
@@ -192,28 +193,27 @@ function OperationalReportsContent({
           amount={
             orders.data ? formatMinorMoney(orderValueMinor, currency) : "—"
           }
+          pill={{ label: "Store snapshot", tone: "synced" }}
           sub={
             orders.data
-              ? "All recorded orders in this store"
+              ? `${orderCount} order${orderCount === 1 ? "" : "s"} · average ${formatMinorMoney(
+                  orderCount ? Math.round(orderValueMinor / orderCount) : 0,
+                  currency,
+                )}`
               : "Order summary unavailable"
           }
-          stats={[
-            { label: "Orders", value: orders.data ? String(orderCount) : "—" },
-            {
-              label: "Average order",
-              value: orders.data
-                ? formatMinorMoney(
-                    orderCount ? Math.round(orderValueMinor / orderCount) : 0,
-                    currency,
-                  )
-                : "—",
-            },
-          ]}
         />
       )}
       {attention.length ? (
         <View>
-          <SectionHeader title="Needs attention" />
+          <SectionHeader
+            title="Needs attention"
+            trailing={
+              <Text className="text-xs font-bold text-muted-foreground">
+                {attention.length}
+              </Text>
+            }
+          />
           <AttentionRail items={attention} />
         </View>
       ) : null}
@@ -254,12 +254,16 @@ function OperationalReportsContent({
           message={REPORTS_COPY.emptyMessage}
         />
       ) : null}
-      <StatusBanner
-        icon="Info"
-        message={REPORTS_COPY.boundaryMessage}
-        title={REPORTS_COPY.boundaryTitle}
-        tone="muted"
-      />
+      <View className="flex-row gap-2 px-0.5">
+        <Icon
+          className="mt-0.5 size-[14px]"
+          color={colors.mutedForeground}
+          name="Info"
+        />
+        <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+          {REPORTS_COPY.boundaryMessage}
+        </Text>
+      </View>
       {presentation === "sheet" && onComplete ? (
         <ActionButton variant="outline" onPress={onComplete}>
           Done

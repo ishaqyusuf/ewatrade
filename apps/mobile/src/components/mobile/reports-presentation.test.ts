@@ -16,7 +16,7 @@ describe("reports presentation", () => {
       {
         detail: "No balance sources yet",
         id: "inventory",
-        label: "Inventory",
+        label: "Stock on record",
         value: "0",
       },
       {
@@ -29,7 +29,7 @@ describe("reports presentation", () => {
         detail: "0 ready · 0 blocked · 0 overdue",
         id: "service",
         label: "Service work",
-        value: "0 WIP",
+        value: "0 open",
       },
     ])
     expect(REPORTS_COPY.emptyTitle).toBe("No activity yet")
@@ -48,7 +48,7 @@ describe("reports presentation", () => {
     expect(result.operations[0]).toEqual({
       detail: "3 balance sources",
       id: "inventory",
-      label: "Inventory",
+      label: "Stock on record",
       value: "3",
     })
     expect(result.operations[1]?.value).toBe("2")
@@ -56,7 +56,7 @@ describe("reports presentation", () => {
       detail: "3 ready · 1 blocked · 2 overdue",
       id: "service",
       label: "Service work",
-      value: "4 WIP",
+      value: "4 open",
     })
   })
 })
