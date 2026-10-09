@@ -257,7 +257,8 @@ export function ClassicCatalogFilter({
   onPress: () => void
 }) {
   // Counts give way at large text so the three labels still fit.
-  const showCount = count !== undefined && !useLargeTextLayout()
+  const largeText = useLargeTextLayout()
+  const showCount = count !== undefined && !largeText
   return (
     <Pressable
       accessibilityLabel={count === undefined ? label : `${label}, ${count}`}
