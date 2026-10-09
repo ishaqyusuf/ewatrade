@@ -46,6 +46,7 @@ test("days read Today and Yesterday, then dates", () => {
   const now = new Date(2026, 9, 9, 15)
   expect(ledgerDayLabel(new Date(2026, 9, 9, 8), now)).toBe("Today")
   expect(ledgerDayLabel(new Date(2026, 9, 8, 23), now)).toBe("Yesterday")
+  expect(ledgerDayLabel(new Date(2026, 9, 10, 9), now)).toBe("Tomorrow")
   expect(ledgerDayLabel(new Date(2026, 9, 1), now)).not.toBe("Yesterday")
 })
 test("each day's card rounds its first and last row", () => {

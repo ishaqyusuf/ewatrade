@@ -29,7 +29,7 @@ export function ledgerMoney(
     first.currencyCode,
   ).replace(/\.00$/, "")
 }
-/** "Today", "Yesterday", else "8 Oct 2026". */
+/** "Today", "Yesterday", "Tomorrow", else "8 Oct 2026". */
 export function ledgerDayLabel(date: Date | string, now = new Date()) {
   const day = new Date(date)
   day.setHours(0, 0, 0, 0)
@@ -38,6 +38,7 @@ export function ledgerDayLabel(date: Date | string, now = new Date()) {
   const days = Math.round((today.getTime() - day.getTime()) / 86_400_000)
   if (days === 0) return "Today"
   if (days === 1) return "Yesterday"
+  if (days === -1) return "Tomorrow"
   return new Intl.DateTimeFormat(undefined, {
     day: "numeric",
     month: "short",
@@ -137,4 +138,14 @@ export function ledgerFulfillment(status: string) {
     PENDING: "Awaiting confirmation",
   }
   return labels[status] ?? "Order recorded"
+}
+
+/** "Today, 09:58" for headers and delivery rows. */
+export function ledgerWhen(date: Date | string, now = new Date()) {
+  const value = new Date(date)
+  const time = new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(value)
+  return `${ledgerDayLabel(value, now)}, ${time}`
 }
