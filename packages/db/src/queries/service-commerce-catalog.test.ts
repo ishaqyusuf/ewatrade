@@ -317,6 +317,17 @@ describe("Service Commerce Progressive Catalog repositories", () => {
     const calls: string[] = []
     const tx = {
       ...policyFakes("progressive_draft_capture"),
+      // Launch Starter plan: the Free product cap does not apply.
+      subscriptionPlan: { findMany: async () => [] },
+      tenant: {
+        findUniqueOrThrow: async () => ({
+          createdAt: new Date(),
+          id: "tenant-1",
+          metadata: {},
+          updatedAt: new Date(),
+        }),
+      },
+      tenantSubscription: { findUnique: async () => null },
       catalogItem: {
         create: async ({ data }: { data: unknown }) => {
           calls.push("catalogItem.create")

@@ -214,6 +214,75 @@ describe("setup options become catalog variants", () => {
     )
   })
 
+  test("items used but not sold need no price and keep their stock", async () => {
+    const command = catalogCommandForSetupEntity(
+      "ent_11",
+      {
+        kind: "product",
+        name: "Grower feed",
+        unitName: "Bag",
+        openingStock: "12",
+        usage: "INTERNAL_USE",
+      },
+      scope,
+    )
+    expect(command).toMatchObject({
+      kind: "product",
+      usage: "INTERNAL_USE",
+      openingStockQuantity: "12",
+    })
+    await expect(createCatalogItem(validationOnlyDb, command)).rejects.toBe(
+      reachedDatabase,
+    )
+  })
+
+  test("a recommended illustration is added with the product or service", async () => {
+    const egg = catalogCommandForSetupEntity(
+      "ent_12",
+      {
+        kind: "product",
+        name: "Crate of eggs",
+        unitName: "Crate",
+        priceMinor: 450_000,
+        illustrationId: "ill-egg",
+      },
+      scope,
+    )
+    expect(egg).toMatchObject({ illustrationId: "ill-egg" })
+    await expect(createCatalogItem(validationOnlyDb, egg)).rejects.toBe(
+      reachedDatabase,
+    )
+    const shirt = catalogCommandForSetupEntity(
+      "ent_13",
+      {
+        kind: "service",
+        name: "Shirt wash",
+        pricing: "fixed",
+        priceMinor: 50_000,
+        illustrationId: "ill-shirt",
+      },
+      scope,
+    )
+    expect(shirt).toMatchObject({ illustrationId: "ill-shirt" })
+    await expect(createCatalogItem(validationOnlyDb, shirt)).rejects.toBe(
+      reachedDatabase,
+    )
+    // The owner removed it: nothing is attached.
+    expect(
+      catalogCommandForSetupEntity(
+        "ent_14",
+        {
+          kind: "product",
+          name: "Eggs",
+          unitName: "Crate",
+          priceMinor: 450_000,
+          illustrationId: null,
+        },
+        scope,
+      ),
+    ).not.toHaveProperty("illustrationId")
+  })
+
   test("a total stock with options and oversized grids are refused clearly", () => {
     expect(() =>
       catalogCommandForSetupEntity(

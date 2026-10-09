@@ -47,6 +47,11 @@ describe("store entitlement authority", () => {
         '[{"store":"app_store","productId":"x","planId":"admin"}]',
       ),
     ).toThrow()
+    expect(() =>
+      getStoreProducts(
+        '[{"store":"play_store","productId":"free.play","planId":"free"}]',
+      ),
+    ).toThrow()
     const product = { store: "app_store", productId: "x", planId: "pro" }
     expect(() => getStoreProducts(JSON.stringify([product, product]))).toThrow()
   })

@@ -8,6 +8,7 @@ import {
 } from "@ewatrade/db/performance-tracing"
 import type { TenantContext } from "@ewatrade/db/queries"
 import {
+  RetailOpsSubscriptionError,
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
   validateQaDerivedSession,
@@ -385,7 +386,7 @@ const captureDashboardOutcome = t.middleware(async (opts) => {
       principal: {
         userId: opts.ctx.session.user.id,
         email: opts.ctx.session.user.email,
-        internal: opts.ctx.session.user.isPlatformAdmin,
+        internal: opts.ctx.session.user.isPlatformAdmin === true,
         tenantId: tenant?.id,
         tenantName: tenant?.name,
         dataClassification: tenant?.dataClassification,
@@ -464,6 +465,20 @@ const enforceQaProviderBoundary = t.middleware(async (opts) => {
   })
 })
 
+// Plan limits and Free-plan feature gates surface as 403s carrying the
+// server-authored upgrade text (see @ewatrade/errors PLAN_* codes).
+const mapRetailOpsPlanErrors = t.middleware(async (opts) => {
+  const result = await opts.next()
+  if (!result.ok && result.error.cause instanceof RetailOpsSubscriptionError) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: result.error.cause.message,
+      cause: result.error.cause,
+    })
+  }
+  return result
+})
+
 const requireInternalMiddleware = t.middleware(async (opts) => {
   if (!opts.ctx.isInternalRequest) {
     throw new TRPCError({
@@ -519,6 +534,7 @@ export const protectedProcedure = publicProcedure
   .use(enforceStaffWriteTransaction)
   .use(enforceStaffStoreAccess)
   .use(enforceQaProviderBoundary)
+  .use(mapRetailOpsPlanErrors)
 
 export const internalProcedure = publicProcedure.use(requireInternalMiddleware)
 
@@ -581,3 +597,4 @@ export const protectedOrInternalProcedure = publicProcedure
   .use(enforceStaffWriteTransaction)
   .use(enforceStaffStoreAccess)
   .use(enforceQaProviderBoundary)
+  .use(mapRetailOpsPlanErrors)

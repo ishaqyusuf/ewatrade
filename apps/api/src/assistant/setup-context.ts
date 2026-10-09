@@ -10,9 +10,14 @@ import {
 import { TRPCError } from "@trpc/server"
 import type { TRPCContext } from "../trpc/init"
 
+/**
+ * Per business, per 30 days. Measured (S06-03): a complete four-area setup is
+ * about 6 turns and 65k-105k tokens, so turns are the binding limit (about 10
+ * setups); 1M tokens costs at most about $0.30 uncached at DeepSeek peak.
+ */
 export const SETUP_BUDGET_LIMITS = {
   maxRequests: 60,
-  maxTokens: 400_000,
+  maxTokens: 1_000_000,
   windowMs: 30 * 24 * 60 * 60 * 1000,
 }
 
@@ -20,6 +25,31 @@ export function isSetupAssistantEnabled(
   environment: Readonly<Record<string, string | undefined>> = process.env,
 ) {
   return environment.ASSISTANT_SETUP_ENABLED === "true"
+}
+
+/**
+ * Photos, files and voice notes in the setup chat. Off by default: reading
+ * them needs OpenAI, so the owner types until this is switched on.
+ */
+export function isSetupAssistantMediaEnabled(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+) {
+  return environment.ASSISTANT_SETUP_MEDIA_ENABLED === "true"
+}
+
+export const SETUP_MEDIA_DISABLED = {
+  code: "MEDIA_DISABLED",
+  message:
+    "Photos, files and voice notes are switched off for now. Type your message instead.",
+} as const
+
+/** Refuses uploads when media is off, whatever the UI shows. */
+export function requireSetupAssistantMedia() {
+  if (!isSetupAssistantMediaEnabled())
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: SETUP_MEDIA_DISABLED.message,
+    })
 }
 
 type ProtectedContext = TRPCContext & {
@@ -75,9 +105,11 @@ export async function loadSetupBusinessContext(
       ? { key: profile.key, title: profile.title }
       : null,
     operatingModel: onboarding?.operatingModel ?? null,
+    orderChannels: onboarding?.orderChannels ?? [],
     currencyCode: facts.currencyCode,
     countryCode: facts.countryCode,
     existing: facts.existing,
+    mediaEnabled: isSetupAssistantMediaEnabled(),
   }
   return { context, firstName: facts.firstName }
 }

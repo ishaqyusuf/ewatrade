@@ -38,11 +38,11 @@ export function MarketingInfoPage({ kind }: { kind: "contact" | "support" }) {
         </p>
         <section>
           <h2>Email {support ? "support" : "the team"}</h2>
-          <a href="mailto:founders@ewatrade.com">founders@ewatrade.com ↗</a>
+          <a href="mailto:support@ewatrade.com">support@ewatrade.com ↗</a>
           <p>
             {support
               ? "Include a short description of the issue and any error reference you received. Do not send passwords, one-time codes, full payment card details or prescription documents."
-              : "Share a little about the work you want to connect. We will reply when the next early access window opens."}
+              : "Share a little about the work you want to connect. Ask about Growth or Pro here too — they are free during launch."}
           </p>
         </section>
         {support ? (
@@ -56,10 +56,10 @@ export function MarketingInfoPage({ kind }: { kind: "contact" | "support" }) {
           </section>
         ) : (
           <section>
-            <h2>Prefer a form?</h2>
+            <h2>Ready to start?</h2>
             <p>
-              The <a href="/#early-access">early access form</a> sends your
-              request through our existing contact workflow.
+              You can <a href="/#pricing">create your store</a> yourself in a
+              few minutes. The Free plan is free forever.
             </p>
           </section>
         )}

@@ -128,4 +128,18 @@ describe("dashboard command search helpers", () => {
       }),
     ])
   })
+  test("offers the setup assistant only when the API says it is available", () => {
+    expect(
+      getDashboardCommands([], [], { setupAssistant: true }).map(
+        (command) => command.href,
+      ),
+    ).toEqual(["/?setup=assistant"])
+    expect(getDashboardCommands([], [])).toEqual([])
+    expect(
+      filterDashboardCommands(
+        getDashboardCommands([], [], { setupAssistant: true }),
+        "voice",
+      )[0]?.id,
+    ).toBe("setup-assistant")
+  })
 })

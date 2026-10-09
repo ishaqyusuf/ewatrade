@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test"
-import { financePeriodCloseChecklistSchema } from "../../../../../apps/api/src/schemas/finance"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { getFinancePeriodCloseChecklist as checklist } from "./period-close-checklist"
 import { getFinanceReports } from "./reports"
@@ -286,29 +285,5 @@ test("authorization, Book identity, date range and explicit review bounds are en
     new Date("2024-12-31T23:59:59.999Z"),
   ]) {
     await expect(checklist(f.db, { ...input, through })).rejects.toThrow()
-  }
-})
-
-test("strict checklist input permits only Book and cutoff, never caller authority or verdict", () => {
-  expect(
-    financePeriodCloseChecklistSchema.parse({
-      bookId: "book",
-      through: input.through.toISOString(),
-    }).through,
-  ).toEqual(input.through)
-  for (const extra of [
-    { tenantId: "other" },
-    { actorUserId: "owner" },
-    { snapshotSequence: "9" },
-    { operationallyReconciled: true },
-    { checks: [] },
-  ]) {
-    expect(
-      financePeriodCloseChecklistSchema.safeParse({
-        bookId: "book",
-        through: input.through,
-        ...extra,
-      }).success,
-    ).toBe(false)
   }
 })

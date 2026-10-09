@@ -1,6 +1,7 @@
 "use client"
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import { AssistantProductEntry } from "@/components/product-assistant/assistant-home"
 import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { CatalogSearchFilter } from "./catalog-search-filter"
@@ -31,6 +32,7 @@ export function CatalogHeader({
               onValueChange={onViewChange}
             />
             <OpenCatalogItemSheet />
+            <AssistantProductEntry />
           </>
         }
       >

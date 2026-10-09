@@ -1,9 +1,11 @@
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { findCatalogSetupHelper } from "@ewatrade/utils/catalog-setup-helpers"
 import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
+import { setupProductQuestions } from "./variants"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v2"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v11"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */
@@ -62,6 +64,19 @@ export const setupOpenQuestionSchema = z.object({
 })
 export type SetupOpenQuestion = z.infer<typeof setupOpenQuestionSchema>
 
+/**
+ * A library illustration shown and added with a product or service; null when
+ * the owner chose none, so it is not picked again.
+ */
+const illustrationIdField = z
+  .string()
+  .max(80)
+  .refine((id) => Boolean(findCatalogIllustration(id)), {
+    message: "Choose an illustration from the library.",
+  })
+  .nullable()
+  .optional()
+
 export const setupProductPayloadSchema = z
   .object({
     kind: z.literal("product"),
@@ -91,7 +106,35 @@ export const setupProductPayloadSchema = z
       )
       .max(3)
       .optional(),
+    variants: z
+      .array(
+        z.object({
+          selections: z
+            .array(z.object({ optionName: name, value: name }))
+            .max(3),
+          priceMinor: z.number().int().min(0).max(100_000_000).optional(),
+          sellingUnitPrices: z
+            .array(
+              z.object({
+                unitName: name,
+                priceMinor: z.number().int().min(0).max(100_000_000),
+              }),
+            )
+            .max(5)
+            .optional(),
+          openingStock: z.string().optional(),
+          stockByUnit: z
+            .array(z.object({ unitName: name, quantity: z.string() }))
+            .max(6)
+            .optional(),
+        }),
+      )
+      .max(36)
+      .optional(),
     usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    /** A product photo the owner sent in this setup; attached only on add. */
+    photoAttachmentId: z.string().max(64).optional(),
+    illustrationId: illustrationIdField,
   })
   .strict()
 
@@ -104,6 +147,7 @@ export const setupServicePayloadSchema = z
     priceMinor: z.number().int().min(0).max(100_000_000).optional(),
     categoryKey: z.string().max(120).optional(),
     quickSetupKey: z.string().max(120).optional(),
+    illustrationId: illustrationIdField,
   })
   .strict()
 
@@ -122,19 +166,42 @@ export const setupCustomerPayloadSchema = z
   })
   .strict()
 
+/**
+ * Where the business keeps its money. Opening balances are dated at the
+ * Finance book's start date by the add step, so no date is staged here.
+ */
+export const setupMoneyAccountPayloadSchema = z
+  .object({
+    kind: z.literal("money_account"),
+    name: z.string().trim().min(1).max(100),
+    purpose: z.enum(["CASH", "BANK"]),
+    bankName: z.string().trim().min(1).max(60).optional(),
+    openingBalanceMinor: z.number().int().min(0).max(10_000_000_000).optional(),
+  })
+  .strict()
+
 export const setupEntityPayloadSchema = z.discriminatedUnion("kind", [
   setupProductPayloadSchema,
   setupServicePayloadSchema,
   setupCustomerPayloadSchema,
+  setupMoneyAccountPayloadSchema,
 ])
 export type SetupEntityPayload = z.infer<typeof setupEntityPayloadSchema>
 export type SetupProductPayload = z.infer<typeof setupProductPayloadSchema>
 export type SetupServicePayload = z.infer<typeof setupServicePayloadSchema>
 export type SetupCustomerPayload = z.infer<typeof setupCustomerPayloadSchema>
+export type SetupMoneyAccountPayload = z.infer<
+  typeof setupMoneyAccountPayloadSchema
+>
 
 export const setupEntitySourceSchema = z.object({
   messageId: z.string().max(80).nullable(),
   quote: z.string().max(240).optional(),
+  /** The attachment the values were read from, and where in it. */
+  attachmentId: z.string().max(64).optional(),
+  location: z.string().max(40).optional(),
+  /** Read from a hard-to-read line or cell: the owner should check it. */
+  uncertain: z.boolean().optional(),
 })
 export type SetupEntitySource = z.infer<typeof setupEntitySourceSchema>
 
@@ -173,12 +240,9 @@ export function deriveSetupEntityState(
   questions: SetupOpenQuestion[],
 ): { state: "NEEDS_INPUT" | "PROPOSED"; questions: SetupOpenQuestion[] } {
   const derived: SetupOpenQuestion[] = []
-  if (payload.kind === "product" && payload.priceMinor === undefined)
-    derived.push({
-      field: "price",
-      question: `What is your selling price for one ${payload.unitName.toLowerCase()} of ${payload.name}?`,
-      required: true,
-    })
+  // Items the business only uses (feed, packaging) are never sold: no price.
+  if (payload.kind === "product")
+    derived.push(...setupProductQuestions(payload))
   if (
     payload.kind === "service" &&
     payload.pricing === "fixed" &&
@@ -196,7 +260,7 @@ export function deriveSetupEntityState(
   )
     derived.push({
       field: "stock",
-      question: `Stock for ${payload.name} is counted per option (${payload.options.map((option) => option.name).join(", ")}). Remove the total here and add each option's stock in Inventory after adding.`,
+      question: `How much stock of ${payload.name} belongs to each option (${payload.options.map((option) => option.name).join(", ")})? Replace the shared total with stock per option.`,
       required: true,
     })
   const merged = [
@@ -204,7 +268,9 @@ export function deriveSetupEntityState(
     ...questions.filter(
       (question) =>
         !derived.some((entry) => entry.field === question.field) &&
-        !answered(payload, question.field),
+        !answered(payload, question.field) &&
+        // Only products are counted; a service never has stock to ask about.
+        (question.field !== "stock" || payload.kind === "product"),
     ),
   ]
   return {
@@ -218,24 +284,56 @@ export function deriveSetupEntityState(
 function answered(payload: SetupEntityPayload, field: SetupFollowUpField) {
   switch (field) {
     case "price":
-      return payload.kind !== "customer" && payload.priceMinor !== undefined
+      return (
+        (payload.kind === "product" || payload.kind === "service") &&
+        ((payload.kind === "product"
+          ? !setupProductQuestions(payload).some(
+              (question) => question.field === "price",
+            )
+          : payload.priceMinor !== undefined) ||
+          (payload.kind === "product" && payload.usage === "INTERNAL_USE"))
+      )
     case "stock":
-      return payload.kind === "product" && payload.openingStock !== undefined
+      return (
+        payload.kind === "product" &&
+        (payload.openingStock !== undefined ||
+          Boolean(
+            payload.variants?.length &&
+              payload.variants.every(
+                (variant) =>
+                  variant.openingStock !== undefined ||
+                  variant.stockByUnit?.length,
+              ),
+          ))
+      )
     case "category":
-      return payload.kind !== "customer" && payload.categoryKey !== undefined
+      return (
+        (payload.kind === "product" || payload.kind === "service") &&
+        payload.categoryKey !== undefined
+      )
     case "phone":
       return payload.kind === "customer" && payload.phone !== undefined
     case "balance":
-      return payload.kind === "customer" && payload.opening !== undefined
+      return payload.kind === "customer"
+        ? payload.opening !== undefined
+        : payload.kind === "money_account" &&
+            payload.openingBalanceMinor !== undefined
     default:
       return false
   }
 }
 
 export function setupEntityKind(payload: SetupEntityPayload) {
-  return payload.kind === "product"
-    ? ("PRODUCT" as const)
-    : payload.kind === "service"
-      ? ("SERVICE" as const)
-      : ("CUSTOMER" as const)
+  switch (payload.kind) {
+    case "product":
+      return "PRODUCT" as const
+    case "service":
+      return "SERVICE" as const
+    case "customer":
+      return "CUSTOMER" as const
+    case "money_account":
+      return "MONEY_ACCOUNT" as const
+  }
 }
+
+export type SetupEntityKind = ReturnType<typeof setupEntityKind>

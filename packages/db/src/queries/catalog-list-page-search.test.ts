@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { PrismaClient } from "../generated/prisma/client"
+import type { PrismaClient } from "../../generated/prisma/client"
 import { listCatalogItemsPage } from "./catalog"
 
 describe("catalog list page search", () => {

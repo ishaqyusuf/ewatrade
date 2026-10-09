@@ -125,3 +125,54 @@ test("requires every API variable to be scoped to Production before migration", 
     }),
   ).not.toThrow()
 })
+
+test("shared production variables must be linked, protected and cannot override plain values", () => {
+  const data = REQUIRED_PRODUCTION_API_ENV_KEYS.map((key) => ({
+    key: key === "EWATRADE_DATABASE_URL" ? key : `EWATRADE_${key}`,
+    target: ["production"],
+    type: "sensitive",
+    projectId: ["api"],
+  }))
+  const inventory = { data, pagination: { next: null } }
+  expect(() =>
+    assertProductionApiProjectEnvironment({ envs: [] }, inventory, "api"),
+  ).not.toThrow()
+  expect(() =>
+    assertProductionApiProjectEnvironment({ envs: [] }, inventory, "other"),
+  ).toThrow("API_DEPLOY_PRODUCTION_ENV_MISSING")
+  expect(() =>
+    assertProductionApiProjectEnvironment(
+      { envs: [] },
+      { ...inventory, pagination: { next: 123 } },
+      "api",
+    ),
+  ).toThrow("API_DEPLOY_SHARED_ENV_INVENTORY_UNAVAILABLE")
+  for (const override of [{ target: ["preview"] }, { type: "encrypted" }]) {
+    expect(() =>
+      assertProductionApiProjectEnvironment(
+        { envs: [] },
+        {
+          data: data.map((e) =>
+            e.key === "EWATRADE_BETTER_AUTH_SECRET" ? { ...e, ...override } : e,
+          ),
+        },
+        "api",
+      ),
+    ).toThrow()
+  }
+  expect(() =>
+    assertProductionApiProjectEnvironment(
+      {
+        envs: [
+          {
+            key: "BETTER_AUTH_SECRET",
+            target: ["production"],
+            type: "encrypted",
+          },
+        ],
+      },
+      inventory,
+      "api",
+    ),
+  ).toThrow("API_DEPLOY_PRODUCTION_ENV_NOT_SENSITIVE")
+})

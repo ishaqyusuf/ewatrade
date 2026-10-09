@@ -149,6 +149,7 @@
         "@tanstack/react-query": "^5.100.14",
         "@trpc/client": "^11.16.0",
         "@trpc/tanstack-react-query": "^11.16.0",
+        "hls.js": "^1.7.3",
         "next": "catalog:",
         "react": "catalog:",
         "react-dom": "catalog:",
@@ -359,13 +360,15 @@
       "name": "@ewatrade/assistant",
       "version": "0.1.0",
       "dependencies": {
+        "@ewatrade/ai": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "ai": "6.0.141",
+        "fflate": "0.8.3",
+        "pdfjs-dist": "5.4.296",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
-        "@ewatrade/ai": "workspace:*",
         "@ewatrade/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "typescript": "catalog:",
@@ -501,6 +504,8 @@
       "name": "@ewatrade/jobs",
       "version": "1.0.0",
       "dependencies": {
+        "@ewatrade/ai": "workspace:*",
+        "@ewatrade/assistant": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
         "@ewatrade/communications": "workspace:*",
         "@ewatrade/db": "workspace:*",
@@ -511,6 +516,7 @@
         "@ewatrade/notifications": "workspace:*",
         "@ewatrade/observability": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
+        "@ewatrade/private-media": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@sentry/node": "^10.72.0",
@@ -2996,6 +3002,8 @@
     "hermes-estree": ["hermes-estree@0.29.1", "", {}, "sha512-jl+x31n4/w+wEqm0I2r4CMimukLbLQEYpisys5oCre611CI5fc9TxhqkBBCJ1edDG4Kza0f7CgNz8xVMLZQOmQ=="],
 
     "hermes-parser": ["hermes-parser@0.29.1", "", { "dependencies": { "hermes-estree": "0.29.1" } }, "sha512-xBHWmUtRC5e/UL0tI7Ivt2riA/YBq9+SiYFU7C1oBa/j2jYGlIF9043oak1F47ihuDIxQ5nbsKueYJDRY02UgA=="],
+
+    "hls.js": ["hls.js@1.7.3", "", {}, "sha512-MsPlx6yVW4Qv4C7mEVou4/gk/5cN2dVxOTnrNjPSmyH2f0Ln+/UkG10Ax1PE6OvrmTVPKgQYozTtBaPOuCzq7A=="],
 
     "hoist-non-react-statics": ["hoist-non-react-statics@3.3.2", "", { "dependencies": { "react-is": "^16.7.0" } }, "sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw=="],
 

@@ -14,6 +14,7 @@ import { offlineRouter } from "./offline"
 import { ordersRouter } from "./orders"
 import { prescriptionAccessRouter } from "./prescription-access"
 import { prescriptionsRouter } from "./prescriptions"
+import { productAssistantRouter } from "./product-assistant"
 import { qaAccessRouter } from "./qa-access"
 import { qaMaintenanceRouter } from "./qa-maintenance"
 import { qaToolsRouter } from "./qa-tools"
@@ -60,6 +61,7 @@ export const appRouter = createTRPCRouter({
   retailOps: retailOpsRouter,
   search: searchRouter,
   setupAssistant: setupAssistantRouter,
+  productAssistant: productAssistantRouter,
   tenant: tenantRouter,
   stores: storesRouter,
 })

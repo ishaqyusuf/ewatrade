@@ -43,7 +43,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(
     initialError === "no_tenant"
-      ? "Your account does not have an active workspace. Contact your workspace owner or request early access."
+      ? "Your account does not have an active workspace. Contact your workspace owner or create your own store."
       : null,
   )
 
@@ -96,10 +96,10 @@ export function LoginForm({
         <p className="mt-6 text-center text-sm text-muted-foreground">
           New to EwaTrade?{" "}
           <a
-            href={`${marketingUrl}/#early-access`}
+            href="/signup"
             className="font-medium text-foreground underline-offset-2 hover:underline"
           >
-            Request early access
+            Create your store
           </a>
         </p>
       }

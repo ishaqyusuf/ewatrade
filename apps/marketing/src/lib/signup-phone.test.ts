@@ -126,7 +126,9 @@ test("QA business fill selects Nigeria with national digits and one matching pre
   })
   expect(parsed.phone).toBe(`+234${fixture.phone}`)
   expect(resolveSignupPhone(parsed.phone, "NG")).toBe(parsed.phone)
-  expect(getNationalSignupPhone(parsed.phone, "NG")).toBe(fixture.phone)
+  expect<string | undefined>(getNationalSignupPhone(parsed.phone, "NG")).toBe(
+    fixture.phone,
+  )
 })
 
 test("QA request fill uses the same country and prefix convention as business setup", () => {

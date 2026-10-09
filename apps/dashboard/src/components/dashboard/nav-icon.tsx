@@ -7,12 +7,14 @@ import {
   Package01Icon,
   Settings01Icon,
   ShoppingCart01Icon,
+  SparklesIcon,
   Store04Icon,
   UserCircle02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 const NAV_ICONS = {
+  assistant: SparklesIcon,
   analytics: Analytics01Icon,
   customers: UserCircle02Icon,
   conversations: BubbleChatIcon,

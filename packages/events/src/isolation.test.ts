@@ -56,7 +56,7 @@ function configure() {
 test("fixed namespaces and exact origins isolate dashboard and marketing despite shared env", async () => {
   configure()
   for (const [surface, origin] of [
-    ["dashboard", "https://dashboard.ewatrade.com"],
+    ["dashboard", "https://dash.ewatrade.com"],
     ["marketing", "https://ewatrade.com"],
     ["marketing", "https://www.ewatrade.com"],
   ] as const) {
@@ -78,7 +78,7 @@ test("fixed namespaces and exact origins isolate dashboard and marketing despite
       "https://ewatrade.com.evil.test",
       surface === "dashboard"
         ? "https://ewatrade.com"
-        : "https://dashboard.ewatrade.com",
+        : "https://dash.ewatrade.com",
     ])
       expect((await createEventsRoute(surface)(request(foreign))).status).toBe(
         403,
@@ -88,7 +88,7 @@ test("fixed namespaces and exact origins isolate dashboard and marketing despite
   expect(
     (
       await createEventsRoute("dashboard")(
-        request("https://dashboard.ewatrade.com"),
+        request("https://dash.ewatrade.com"),
       )
     ).status,
   ).toBe(503)

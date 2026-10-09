@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { BillingProvider } from "../../generated/prisma/enums"
 import {
-  type RetailOpsPlanId,
+  type RetailOpsPaidPlanId,
   processRetailOpsBillingProviderEvent,
   projectDurableReviewerAccess,
   projectDurableStoreAccess,
@@ -214,7 +214,7 @@ export async function applyVerifiedStoreSubscription(
     linkedPurchaseId?: string
     latestOrderId?: string
     productId: string
-    planId: RetailOpsPlanId
+    planId: RetailOpsPaidPlanId
     environment: "production" | "sandbox"
     expiresAt: Date
     purchasedAt: Date
@@ -227,6 +227,9 @@ export async function applyVerifiedStoreSubscription(
     input.provider === "app_store"
       ? BillingProvider.APP_STORE
       : BillingProvider.PLAY_STORE
+  // Free is never sold; refuse a mis-typed mapping instead of downgrading.
+  if ((input.planId as string) === "free")
+    throw new Error("Free is not a store subscription plan.")
   const purchaseDigest = storePurchaseDigest(input.provider, input.purchaseId)
   const latestOrderDigest =
     input.provider === "play_store" && input.latestOrderId

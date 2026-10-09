@@ -1,5 +1,6 @@
 /** Client-safe constants and server-authored copy shared by API and dashboard. */
 
+import type { SetupAttachmentPartData } from "./attachments"
 import type { SetupFollowUp } from "./follow-up"
 
 export const SETUP_OFFER_PART = "data-setup-offer" as const
@@ -11,7 +12,8 @@ export type SetupDraftChange = { revision: number; keys: string[] }
 export type SetupAssistantDataParts = {
   "setup-offer": Record<string, never>
   "setup-draft": SetupDraftChange
-  "setup-run": { remainingRequests: number }
+  "setup-run": { runId: string; remainingRequests: number }
+  "setup-attachment": SetupAttachmentPartData
 }
 
 export const SETUP_TOOL_LABELS: Record<string, string> = {
@@ -20,14 +22,10 @@ export const SETUP_TOOL_LABELS: Record<string, string> = {
   setup_search_categories: "Choosing categories",
   setup_draft_upsert_items: "Adding to your setup",
   setup_draft_upsert_customers: "Adding customers",
+  setup_draft_upsert_money_accounts: "Adding money accounts",
+  setup_set_area: "Updating your setup steps",
   setup_draft_remove: "Removing from your setup",
 }
-
-export const SETUP_QUICK_PROMPTS = [
-  "Here is what I sell…",
-  "I offer these services…",
-  "These customers owe me money…",
-] as const
 
 type TextMessage = {
   role: "assistant"
@@ -35,67 +33,6 @@ type TextMessage = {
     | { type: "text"; text: string }
     | { type: typeof SETUP_OFFER_PART; data: Record<string, never> }
   >
-}
-
-export function setupGreetingMessages(input: {
-  businessName: string
-  firstName: string | null
-  businessType: string | null
-}): TextMessage[] {
-  const hello = input.firstName ? `Welcome, ${input.firstName}!` : "Welcome!"
-  const type = input.businessType
-    ? ` I see you run a ${input.businessType.toLowerCase()} business.`
-    : ""
-  return [
-    {
-      role: "assistant",
-      parts: [
-        {
-          type: "text",
-          text: `${hello} ${input.businessName} is ready on EwaTrade.${type}`,
-        },
-      ],
-    },
-    {
-      role: "assistant",
-      parts: [
-        {
-          type: "text",
-          text: "Would you like me to set up your products, services, prices, stock and customers for you? Just tell me about your business in your own words, any language is fine. Or you can skip this and set things up yourself.",
-        },
-        { type: SETUP_OFFER_PART, data: {} },
-      ],
-    },
-  ]
-}
-
-export function setupBeginMessage(): TextMessage {
-  return {
-    role: "assistant",
-    parts: [
-      {
-        type: "text",
-        text: "Great! Tell me what you sell or the services you offer, with prices and how many you have now if you know. You can list them like:\n\n- Crate of eggs, 4500, 20 crates\n- Broiler chicken, 9000 each\n- Mama Ade owes me 15,000\n\nI'll put everything in a setup list you can check before anything is added.",
-      },
-    ],
-  }
-}
-
-export function setupResumeMessage(followUp?: SetupFollowUp): TextMessage {
-  const pending = followUp ? followUpLines(followUp) : []
-  return {
-    role: "assistant",
-    parts: [
-      {
-        type: "text",
-        text: pending.length
-          ? ["Welcome back! Let's finish your setup list.", ...pending].join(
-              "\n\n",
-            )
-          : "Welcome back! Your setup list is saved. Tell me anything else you sell, prices you'd like to change, or customers to add.",
-      },
-    ],
-  }
 }
 
 function listJoin(items: string[]) {
@@ -125,22 +62,66 @@ function followUpLines(followUp: SetupFollowUp) {
   return lines
 }
 
+const MORE_INVITES = {
+  products:
+    "Do you sell anything else? Tell me about all of it in one message: how you sell each item, the price for each way you sell it, and how many you have now.",
+  services:
+    "Do you offer any other services? Tell me about all of them in one message: what each one is, and its price or whether you quote per job.",
+  both: "Do you sell or offer anything else? Tell me about all of it in one message: for each product, how you sell it, the price for each way and how many you have now; for each service, its price or whether you quote per job.",
+} as const
+
+/**
+ * One batched question for everything else the owner sells (7 October
+ * direction), worded for what was just added: services have no stock.
+ */
+export function setupMoreProductsInvite(
+  mediaEnabled: boolean,
+  added: keyof typeof MORE_INVITES = "products",
+) {
+  const ask = MORE_INVITES[added]
+  return mediaEnabled
+    ? `${ask} You can also send a price list, a photo or a file.`
+    : ask
+}
+
 export function setupCommitSummaryMessage(input: {
   products: number
   services: number
+  /** Products the business uses but does not sell. */
+  internalUse?: number
   customers: number
+  /** Cash pockets and bank or mobile money accounts. */
+  moneyAccounts?: number
   balancesPending: number
   failed: number
   followUp?: SetupFollowUp
+  /** A product or service was just added from the chat: ask for the rest at once. */
+  inviteMore?: boolean
+  /** Photos, files and voice notes are on, so the invite may offer them. */
+  mediaEnabled?: boolean
 }): TextMessage {
+  const internalUse = input.internalUse ?? 0
+  const moneyAccounts = input.moneyAccounts ?? 0
   const added = [
     input.products ? plural(input.products, "product") : null,
     input.services ? plural(input.services, "service") : null,
+    internalUse
+      ? `${internalUse} ${internalUse === 1 ? "item" : "items"} you use`
+      : null,
     input.customers ? plural(input.customers, "customer") : null,
-  ].filter(Boolean)
+    moneyAccounts
+      ? `${moneyAccounts} cash and bank ${moneyAccounts === 1 ? "account" : "accounts"}`
+      : null,
+  ].filter((entry): entry is string => entry !== null)
+  const places = [
+    input.products || input.services || internalUse ? "Catalog" : null,
+    input.customers ? "Customers" : null,
+    moneyAccounts ? "Finance" : null,
+  ].filter((entry): entry is string => entry !== null)
+  const stock = input.products || internalUse
   const lines = [
     added.length
-      ? `Done! Your business now has ${listJoin(added as string[])} from this setup. You can find them in Catalog and Customers, and stock is ready in Inventory.`
+      ? `Done! Your business now has ${listJoin(added)} from this setup. You can find them in ${listJoin(places)}${stock ? ", and stock is ready in Inventory" : ""}.`
       : "Nothing new was added this time.",
   ]
   if (input.balancesPending)
@@ -154,7 +135,15 @@ export function setupCommitSummaryMessage(input: {
   const pending = input.followUp ? followUpLines(input.followUp) : []
   if (pending.length)
     lines.push("Let's finish the rest of your list.", ...pending)
-  else lines.push("Tell me if there is anything else you'd like to add.")
+  else
+    lines.push(
+      input.inviteMore
+        ? setupMoreProductsInvite(
+            input.mediaEnabled === true,
+            !input.services ? "products" : input.products ? "both" : "services",
+          )
+        : "Tell me if there is anything else you'd like to add.",
+    )
   return {
     role: "assistant",
     parts: [{ type: "text", text: lines.join("\n\n") }],

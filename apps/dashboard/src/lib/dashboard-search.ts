@@ -66,12 +66,24 @@ export function filterSearchablePages(
 export function getDashboardCommands(
   navItems: DashboardNavItem[],
   accessiblePaths: string[] = [],
+  options: { setupAssistant?: boolean } = {},
 ) {
   const available = new Set([
     ...flattenPages(navItems).map((item) => item.href),
     ...accessiblePaths,
   ])
   const commands: DashboardCommand[] = []
+
+  // The setup assistant stays reachable after the first Catalog item.
+  if (options.setupAssistant) {
+    commands.push({
+      description:
+        "Add products, stock, customers and balances by chat, voice note or photo.",
+      href: "/?setup=assistant",
+      id: "setup-assistant",
+      title: "Set up with the assistant",
+    })
+  }
 
   if (available.has("/catalog")) {
     commands.push({

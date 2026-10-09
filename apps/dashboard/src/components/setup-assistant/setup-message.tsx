@@ -1,15 +1,18 @@
 "use client"
 
 import {
-  SETUP_OFFER_PART,
-  SETUP_TOOL_LABELS,
-} from "@ewatrade/assistant/setup/messages"
-import { Button, cn } from "@ewatrade/ui"
+  SETUP_ATTACHMENT_PART,
+  type SetupAttachmentPartData,
+} from "@ewatrade/assistant/setup/attachments"
+import { SETUP_TOOL_LABELS } from "@ewatrade/assistant/setup/messages"
+import { cn } from "@ewatrade/ui"
 import { CheckmarkCircle02Icon, SparklesIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { UIMessage } from "ai"
 import { memo } from "react"
 import { Streamdown } from "streamdown"
+import { SetupSentAttachment } from "./setup-attachment-chips"
+import { SetupChatItems } from "./setup-chat-items"
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
@@ -29,36 +32,37 @@ const markdownComponents = {
   img: () => null,
 }
 
-type OfferProps = {
-  offerOpen: boolean
-  pending: boolean
-  onBegin: () => void
-  onSkip: () => void
-}
-
 export const SetupMessage = memo(function SetupMessage({
   message,
   streaming,
-  offer,
 }: {
   message: UIMessage
   streaming: boolean
-  offer: OfferProps
 }) {
-  if (message.role === "user")
+  if (message.role === "user") {
+    const text = message.parts
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .join("")
+    const files = message.parts.flatMap((part) =>
+      part.type === SETUP_ATTACHMENT_PART
+        ? [(part as { data: SetupAttachmentPartData }).data]
+        : [],
+    )
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-          {message.parts
-            .map((part) => (part.type === "text" ? part.text : ""))
-            .join("")}
+        <div className="flex max-w-[85%] flex-col gap-2 rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+          {text ? <p className="whitespace-pre-wrap">{text}</p> : null}
+          {files.map((file) => (
+            <SetupSentAttachment key={file.attachmentId} data={file} inverted />
+          ))}
         </div>
       </div>
     )
+  }
 
   const tools = message.parts.filter((part) => part.type.startsWith("tool-"))
   const texts = message.parts.filter((part) => part.type === "text")
-  const hasOffer = message.parts.some((part) => part.type === SETUP_OFFER_PART)
+  const staged = stagedKeys(tools)
 
   return (
     <div className="flex gap-3">
@@ -111,27 +115,25 @@ export const SetupMessage = memo(function SetupMessage({
             </Streamdown>
           ) : null,
         )}
-        {hasOffer && offer.offerOpen ? (
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button
-              type="button"
-              disabled={offer.pending}
-              onClick={offer.onBegin}
-            >
-              <HugeiconsIcon icon={SparklesIcon} className="size-4" />
-              Set up with AI
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={offer.pending}
-              onClick={offer.onSkip}
-            >
-              I'll do it myself
-            </Button>
-          </div>
+        {staged.length > 0 && !streaming ? (
+          <SetupChatItems keys={staged} />
         ) : null}
       </div>
     </div>
   )
 })
+
+/** Keys of the records this message's draft tools staged (their `data.staged`). */
+function stagedKeys(tools: UIMessage["parts"]) {
+  const keys = new Set<string>()
+  for (const part of tools) {
+    if (!("state" in part) || part.state !== "output-available") continue
+    const staged = (part as { output?: { data?: { staged?: unknown } } }).output
+      ?.data?.staged
+    if (!Array.isArray(staged)) continue
+    for (const entry of staged)
+      if (typeof (entry as { key?: unknown })?.key === "string")
+        keys.add((entry as { key: string }).key)
+  }
+  return [...keys]
+}

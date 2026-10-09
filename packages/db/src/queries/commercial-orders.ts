@@ -66,6 +66,7 @@ import {
   assertSaleProductUsage,
   saleEligibleCatalogItem,
 } from "./product-usage"
+import { assertRetailOpsOrderAllowance } from "./retail-ops-subscriptions"
 import { loadTenantActors } from "./tenant-actors"
 
 export type CreateCommercialOrderInput = {
@@ -783,6 +784,9 @@ export async function createCommercialOrderInTransaction(
   }
 
   const orderNumber = await allocateCommercialOrderNumber(tx, input.tenantId)
+  // The order-number update locks the tenant row, so the monthly cap counts
+  // concurrent orders one at a time. Idempotent replays returned above.
+  await assertRetailOpsOrderAllowance(tx, { now, tenantId: input.tenantId })
   const order = await tx.commercialOrder.create({
     data: {
       clientOrderId: input.clientOrderId,

@@ -5,11 +5,17 @@ import {
   type SetupServicePayload,
   setupEntityPayloadSchema,
 } from "@ewatrade/assistant/setup/contracts"
+import {
+  setupProductQuestions,
+  setupProductVariants,
+  setupSelectionsEqual,
+} from "@ewatrade/assistant/setup/variants"
 import type { prisma } from "@ewatrade/db"
 import {
   type AssistantScope,
   readSetupDraft,
   recordSetupDraftCommitOutcome,
+  recordSetupDraftCommitOutcomeInTransaction,
 } from "@ewatrade/db/assistant"
 import {
   CatalogError,
@@ -18,11 +24,33 @@ import {
   FinanceError,
   createCatalogItem,
   createCustomer,
+  createFinanceMoneyAccount,
   ensureCustomerLedgerAccount,
   getFinanceBook,
   recordCustomerLedgerOpening,
+  recordFinanceMoneyMovement,
 } from "@ewatrade/db/queries"
+import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
+import {
+  OPENING_BALANCE_FAILED,
+  OPENING_BALANCE_NEEDS_FINANCE,
+  OPENING_BALANCE_PENDING,
+  isOpeningBalancePending,
+} from "./setup-commit-codes"
+import {
+  commitSetupMoneyAccount,
+  defaultCashEntityId,
+} from "./setup-money-account"
+
+export {
+  MONEY_ACCOUNT_NEEDS_FINANCE,
+  OPENING_BALANCE_FAILED,
+  OPENING_BALANCE_NEEDS_FINANCE,
+  OPENING_BALANCE_PENDING,
+  isOpeningBalancePending,
+} from "./setup-commit-codes"
+import { SETUP_PHOTO_NOT_ADDED, prepareSetupProductPhoto } from "./setup-photo"
 
 type Db = typeof prisma
 
@@ -31,14 +59,6 @@ export const SETUP_COMMIT_BATCH_SIZE = 6
 const CANONICAL_BALANCE_SCALE = 18
 const TRANSACTION_SCALE = 2
 
-export const OPENING_BALANCE_NEEDS_FINANCE = "OPENING_BALANCE_NEEDS_FINANCE"
-export const OPENING_BALANCE_FAILED = "OPENING_BALANCE_FAILED"
-/** Set with the customer so an interrupted request still retries the balance. */
-export const OPENING_BALANCE_PENDING = "OPENING_BALANCE_PENDING"
-export const isOpeningBalancePending = (code: string | null | undefined) =>
-  code === OPENING_BALANCE_NEEDS_FINANCE ||
-  code === OPENING_BALANCE_FAILED ||
-  code === OPENING_BALANCE_PENDING
 /** Every option combination becomes a Sellable Variant; keep the grid reviewable. */
 export const MAX_SETUP_VARIANTS = 36
 /** Stop starting new records well before the dashboard proxy's request timeout. */
@@ -75,6 +95,9 @@ type OptionGroup = {
 
 /** Option Groups and every value combination, first combination as the default. */
 export function setupProductOptionGrid(payload: SetupProductPayload) {
+  const questions = setupProductQuestions(payload)
+  if (questions.length)
+    throw new CatalogError("INVALID_CATALOG_ITEM", questions[0]!.question)
   const groupKeys = new Set<string>()
   const optionGroups: OptionGroup[] = (payload.options ?? []).map((group) => {
     const valueKeys = new Set<string>()
@@ -108,7 +131,7 @@ export function setupProductOptionGrid(payload: SetupProductPayload) {
   if (optionGroups.length > 0 && payload.openingStock !== undefined)
     throw new CatalogError(
       "INVALID_STOCK_OPERATION",
-      `Stock for ${payload.name} is counted per option. Remove the total here and add each option's stock in Inventory.`,
+      `Stock for ${payload.name} is counted per option. Replace the shared total with stock per option.`,
     )
   return { optionGroups, combinations }
 }
@@ -149,6 +172,9 @@ export function catalogCommandForSetupEntity(
     name: payload.name,
     storeId: scope.storeId,
     tenantId: scope.tenantId,
+    ...(payload.illustrationId
+      ? { illustrationId: payload.illustrationId }
+      : {}),
   }
   if (payload.kind === "service")
     return {
@@ -178,6 +204,7 @@ export function catalogCommandForSetupEntity(
     }
 
   const { optionGroups, combinations } = setupProductOptionGrid(payload)
+  const variantRows = setupProductVariants(payload)
   const variantKeys = new Set<string>()
   const used = new Set<string>()
   const canonicalKey = unitKey(payload.unitName, used)
@@ -213,6 +240,15 @@ export function catalogCommandForSetupEntity(
     },
     ...(optionGroups.length > 0 ? { optionGroups } : {}),
     variants: combinations.map((combination, index) => {
+      const row = variantRows.find((row) =>
+        setupSelectionsEqual(
+          row.selections,
+          combination.map((value) => ({
+            optionName: value.group.name,
+            value: value.label,
+          })),
+        ),
+      )!
       // Offering keys are unique across the item, so option variants prefix them.
       const variantKey =
         combination.length === 0
@@ -226,6 +262,7 @@ export function catalogCommandForSetupEntity(
       return {
         isDefault: index === 0,
         key: variantKey,
+        openingStockQuantity: row.openingStock,
         name:
           combination.length === 0
             ? payload.name
@@ -240,14 +277,16 @@ export function catalogCommandForSetupEntity(
           : {}),
         offerings: [
           {
-            fixedPriceMinor: payload.priceMinor,
+            fixedPriceMinor: row.priceMinor,
             inventoryUnitKey: canonicalKey,
             key: offeringKey(canonicalKey),
             name: payload.unitName,
             pricingPolicy: "fixed" as const,
           },
           ...sellingUnits.map((unit) => ({
-            fixedPriceMinor: unit.priceMinor,
+            fixedPriceMinor: row.sellingUnits.find(
+              (entry) => entry.name === unit.name,
+            )?.priceMinor,
             inventoryUnitKey: unit.key,
             key: offeringKey(unit.key),
             name: unit.name,
@@ -307,7 +346,7 @@ async function commitCustomer(
           phone: payload.phone,
           email: payload.email,
         })
-        await deps.recordOutcome(tx, {
+        await deps.recordOutcomeInTransaction(tx, {
           draftId,
           key,
           outcome: {
@@ -351,6 +390,10 @@ async function commitCustomer(
     })
     return { recordId: customerId, errorCode: null }
   } catch (error) {
+    console.error("[setup-commit] customer balance not recorded", {
+      entityId: entity.id,
+      ...describeCommitError(error),
+    })
     return {
       recordId: customerId,
       errorCode: OPENING_BALANCE_FAILED,
@@ -361,23 +404,34 @@ async function commitCustomer(
 
 export type SetupCommitDeps = {
   readSetupDraft: typeof readSetupDraft
+  prepareProductPhoto: typeof prepareSetupProductPhoto
+  enqueuePhotoReview: (assetId: string) => Promise<void>
   recordOutcome: typeof recordSetupDraftCommitOutcome
+  /** Inside the customer-creation transaction; never nests a transaction. */
+  recordOutcomeInTransaction: typeof recordSetupDraftCommitOutcomeInTransaction
   createCatalogItem: typeof createCatalogItem
   createCustomer: typeof createCustomer
   getFinanceBook: typeof getFinanceBook
   ensureCustomerLedgerAccount: typeof ensureCustomerLedgerAccount
   recordCustomerLedgerOpening: typeof recordCustomerLedgerOpening
+  createFinanceMoneyAccount: typeof createFinanceMoneyAccount
+  recordFinanceMoneyMovement: typeof recordFinanceMoneyMovement
   now: () => number
 }
 
 const defaultDeps: SetupCommitDeps = {
   readSetupDraft,
+  prepareProductPhoto: prepareSetupProductPhoto,
+  enqueuePhotoReview: enqueueCatalogPhotoReview,
   recordOutcome: recordSetupDraftCommitOutcome,
+  recordOutcomeInTransaction: recordSetupDraftCommitOutcomeInTransaction,
   createCatalogItem,
   createCustomer,
   getFinanceBook,
   ensureCustomerLedgerAccount,
   recordCustomerLedgerOpening,
+  createFinanceMoneyAccount,
+  recordFinanceMoneyMovement,
   now: Date.now,
 }
 
@@ -394,18 +448,26 @@ const isDomainError = (error: unknown) =>
  */
 export async function commitSetupDraft(
   db: Db,
-  scope: AssistantScope,
+  scope: AssistantScope & {
+    /** For product photos sent in this setup's chat. */
+    conversationId?: string
+    dataClassification?: "LIVE" | "QA"
+  },
   draftId: string,
   deps: SetupCommitDeps = defaultDeps,
+  /** Only these records, e.g. the one product the owner added from the chat. */
+  options: { keys?: readonly string[] } = {},
 ) {
   const draft = await deps.readSetupDraft(db, draftId)
   const pending = draft.entities.filter(
     (entity) =>
-      entity.state === "CONFIRMED" ||
-      (entity.state === "COMMITTED" &&
-        isOpeningBalancePending(entity.errorCode)),
+      (!options.keys || options.keys.includes(entity.key)) &&
+      (entity.state === "CONFIRMED" ||
+        (entity.state === "COMMITTED" &&
+          isOpeningBalancePending(entity.errorCode))),
   )
   const batch = pending.slice(0, SETUP_COMMIT_BATCH_SIZE)
+  const defaultCashId = defaultCashEntityId(draft.entities)
   const results: SetupCommitResult[] = []
   const startedAt = deps.now()
   let handled = 0
@@ -440,16 +502,61 @@ export async function commitSetupDraft(
           deps,
         )
         outcome = { state: "COMMITTED", ...customer }
+      } else if (parsed.data.kind === "money_account") {
+        outcome = await commitSetupMoneyAccount(
+          db,
+          scope,
+          entity,
+          parsed.data,
+          { useDefaultCash: entity.id === defaultCashId },
+          deps,
+        )
       } else {
+        const photoAttachmentId =
+          parsed.data.kind === "product"
+            ? parsed.data.photoAttachmentId
+            : undefined
+        // A photo problem never blocks adding the product itself.
+        const photo =
+          photoAttachmentId && scope.conversationId
+            ? await deps.prepareProductPhoto(
+                db,
+                {
+                  ...scope,
+                  dataClassification: scope.dataClassification ?? "QA",
+                },
+                {
+                  entityId: entity.id,
+                  conversationId: scope.conversationId,
+                  attachmentId: photoAttachmentId,
+                },
+              )
+            : null
+        const command = catalogCommandForSetupEntity(entity.id, parsed.data, {
+          actorUserId: scope.userId,
+          storeId: scope.storeId,
+          tenantId: scope.tenantId,
+        })
+        // A photo the owner sent replaces the library illustration.
+        const { illustrationId: _illustration, ...withoutIllustration } =
+          command
         const item = await deps.createCatalogItem(
           db,
-          catalogCommandForSetupEntity(entity.id, parsed.data, {
-            actorUserId: scope.userId,
-            storeId: scope.storeId,
-            tenantId: scope.tenantId,
-          }),
+          photo && "assetId" in photo
+            ? { ...withoutIllustration, photoAssetIds: [photo.assetId] }
+            : command,
         )
-        outcome = { state: "COMMITTED", recordId: item.id }
+        if (photo && "assetId" in photo)
+          await deps.enqueuePhotoReview(photo.assetId).catch(() => undefined)
+        outcome =
+          photo && "skipped" in photo
+            ? {
+                state: "COMMITTED",
+                recordId: item.id,
+                errorCode: SETUP_PHOTO_NOT_ADDED,
+                message: "Added without its photo. Add the photo from Catalog.",
+              }
+            : { state: "COMMITTED", recordId: item.id }
       }
     } catch (error) {
       if (!isDomainError(error)) {

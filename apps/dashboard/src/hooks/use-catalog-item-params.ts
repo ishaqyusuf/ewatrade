@@ -12,6 +12,8 @@ export function useCatalogItemParams() {
   const [params, updateParams] = useQueryStates({
     catalogItem: parseAsStringEnum(["create"]),
     catalogCreateKind: parseAsStringEnum([...CATALOG_KINDS]),
+    catalogCreateMode: parseAsStringEnum(["form", "chat"]),
+    catalogConversation: parseAsString,
     ...catalogFilterParams,
     productUnits: parseAsString,
   })
@@ -19,6 +21,8 @@ export function useCatalogItemParams() {
     values: {
       catalogItem?: "create" | null
       catalogCreateKind?: (typeof CATALOG_KINDS)[number] | null
+      catalogCreateMode?: "form" | "chat" | null
+      catalogConversation?: string | null
       catalogKind?: (typeof CATALOG_KINDS)[number] | null
       catalogStatus?: (typeof CATALOG_STATUSES)[number] | null
       catalogQuery?: string | null
@@ -29,14 +33,19 @@ export function useCatalogItemParams() {
       values ?? {
         catalogItem: null,
         catalogCreateKind: null,
+        catalogCreateMode: null,
+        catalogConversation: null,
         productUnits: null,
       },
+      { history: "push" },
     )
   }
   return {
     catalogKind: params.catalogKind,
     catalogStatus: params.catalogStatus,
     catalogCreateKind: params.catalogCreateKind,
+    catalogCreateMode: params.catalogCreateMode,
+    catalogConversation: params.catalogConversation,
     catalogItemMode: params.catalogItem,
     catalogQuery: params.catalogQuery ?? "",
     filter: {
@@ -51,7 +60,13 @@ export function useCatalogItemParams() {
     setCatalogItemMode: (mode: "create" | null) =>
       setParams({
         catalogItem: mode,
-        ...(mode === null ? { catalogCreateKind: null } : {}),
+        ...(mode === null
+          ? {
+              catalogCreateKind: null,
+              catalogCreateMode: null,
+              catalogConversation: null,
+            }
+          : {}),
       }),
     setFilter: (values: Partial<CatalogFilters> | null) =>
       updateParams(

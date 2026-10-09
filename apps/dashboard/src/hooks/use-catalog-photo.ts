@@ -22,6 +22,7 @@ export function useCatalogPhoto(storeId: string) {
   current.current.storeId = storeId
   const operation = useRef<string | null>(null)
   const asset = useRef<string | null>(null)
+  const restoredAssets = useRef<string[]>([])
   const busy = useRef(false)
   useEffect(() => {
     current.current.mounted = true
@@ -50,13 +51,14 @@ export function useCatalogPhoto(storeId: string) {
       return false
     }
     setFile(next)
+    restoredAssets.current = []
     setError(null)
     asset.current = null
     operation.current = next ? crypto.randomUUID() : null
     return true
   }
   async function upload(clientOperationId: string) {
-    if (!file) return []
+    if (!file) return restoredAssets.current
     if (busy.current) throw new Error("Your photo is still uploading.")
     const originalStore = storeId
     const selected = file
@@ -139,5 +141,16 @@ export function useCatalogPhoto(storeId: string) {
       if (current.current.mounted) setUploading(false)
     }
   }
-  return { file, preview, error, uploading, select, upload }
+  return {
+    file,
+    preview,
+    error,
+    uploading,
+    select,
+    upload,
+    restore: (ids: string[]) => {
+      restoredAssets.current = ids
+    },
+    hasPhoto: Boolean(file || restoredAssets.current.length),
+  }
 }

@@ -8,7 +8,7 @@ export default function Preview() {
         expiresAt: "3 October 2026, 10:30 UTC",
         fullName: "Amina Bello",
         verificationUrl:
-          "https://dashboard.ewatrade.com/api/early-access/verify?token=preview-only",
+          "https://dash.ewatrade.com/api/early-access/verify?token=preview-only",
       }}
     />
   )

@@ -1,13 +1,19 @@
 import type {
   SetupEntityPayload,
+  SetupMoneyAccountPayload,
   SetupOpenQuestion,
 } from "@ewatrade/assistant/setup/contracts"
+import { setupProductVariants } from "@ewatrade/assistant/setup/variants"
 import { catalogCategoryEmoji } from "@ewatrade/utils/catalog-category-emojis"
 import { formatMinorMoney } from "@ewatrade/utils/currency"
 
+/** Every Setup list record, money accounts included. */
+export type SetupCardPayload = SetupEntityPayload
+export type { SetupMoneyAccountPayload }
+
 export type SetupDraftEntity = {
   key: string
-  kind: "PRODUCT" | "SERVICE" | "CUSTOMER"
+  kind: "PRODUCT" | "SERVICE" | "CUSTOMER" | "MONEY_ACCOUNT"
   state:
     | "PROPOSED"
     | "NEEDS_INPUT"
@@ -19,6 +25,29 @@ export type SetupDraftEntity = {
   openQuestions: unknown
   errorCode?: string | null
   committedRecordId?: string | null
+  source?: unknown
+}
+
+export type SetupAttachmentName = {
+  id: string
+  fileName: string
+  kind: string
+  contentType: string
+}
+
+/** Where a record's values were read from, for the "check this" hints. */
+export function entitySource(entity: SetupDraftEntity) {
+  const source = (entity.source ?? {}) as {
+    attachmentId?: unknown
+    location?: unknown
+    uncertain?: unknown
+  }
+  return {
+    attachmentId:
+      typeof source.attachmentId === "string" ? source.attachmentId : null,
+    location: typeof source.location === "string" ? source.location : null,
+    uncertain: source.uncertain === true,
+  }
 }
 
 const ERROR_COPY: Record<string, string> = {
@@ -34,14 +63,34 @@ const ERROR_COPY: Record<string, string> = {
     "Customer added. Set up Finance at the top of this list and their balance is recorded right after.",
   OPENING_BALANCE_PENDING:
     "Customer added. Their opening balance is still being recorded; press Add to finish.",
+  PHOTO_NOT_ADDED:
+    "Added without its photo. You can add the photo from Catalog.",
   OPENING_BALANCE_FAILED:
     "Customer added, but their balance was not recorded yet. Try again.",
+  MONEY_ACCOUNT_NEEDS_FINANCE:
+    "Set up Finance at the top of this list; this account is then added.",
+  CONFLICT:
+    "An account with these details already exists in Finance. Rename it or skip it.",
 }
 
-export function entityErrorCopy(code: string | null | undefined) {
+const MONEY_ERROR_COPY: Record<string, string> = {
+  MONEY_ACCOUNT_SHOP_CASH:
+    "Added to Shop cash, the cash account Finance already keeps for your business.",
+  OPENING_BALANCE_NEEDS_FINANCE:
+    "Account added. Set up Finance at the top of this list and its balance is recorded right after.",
+  OPENING_BALANCE_FAILED:
+    "Account added, but its balance was not recorded yet. Try again.",
+}
+
+export function entityErrorCopy(
+  code: string | null | undefined,
+  payload?: SetupCardPayload,
+) {
   if (!code) return null
   return (
-    ERROR_COPY[code] ?? "This record could not be added. Edit it and try again."
+    (payload?.kind === "money_account" ? MONEY_ERROR_COPY[code] : undefined) ??
+    ERROR_COPY[code] ??
+    "This record could not be added. Edit it and try again."
   )
 }
 
@@ -55,8 +104,13 @@ export function isBalancePending(entity: SetupDraftEntity) {
 }
 
 export function entityPayload(entity: SetupDraftEntity) {
-  return entity.payload as SetupEntityPayload
+  return entity.payload as SetupCardPayload
 }
+
+const USAGE_LABEL = {
+  INTERNAL_USE: "Used, not sold",
+  BOTH: "Sold and used",
+} as const
 
 export function entityQuestions(entity: SetupDraftEntity) {
   return Array.isArray(entity.openQuestions)
@@ -64,16 +118,26 @@ export function entityQuestions(entity: SetupDraftEntity) {
     : []
 }
 
-export function entityEmoji(payload: SetupEntityPayload) {
+export function entityEmoji(payload: SetupCardPayload) {
   if (payload.kind === "customer") return null
+  if (payload.kind === "money_account")
+    return payload.purpose === "CASH" ? "💵" : "🏦"
   if (payload.categoryKey) return catalogCategoryEmoji(payload.categoryKey)
   return payload.kind === "service" ? "🛠️" : "📦"
 }
 
-export function entitySummary(
-  payload: SetupEntityPayload,
-  currencyCode: string,
-) {
+export function entitySummary(payload: SetupCardPayload, currencyCode: string) {
+  if (payload.kind === "money_account") {
+    const parts: string[] = [payload.purpose === "CASH" ? "Cash" : "Bank"]
+    if (payload.bankName && payload.purpose === "BANK")
+      parts.push(payload.bankName)
+    parts.push(
+      payload.openingBalanceMinor !== undefined
+        ? `${formatMinorMoney(payload.openingBalanceMinor, currencyCode)} now`
+        : "Balance not given",
+    )
+    return parts.join(" · ")
+  }
   if (payload.kind === "customer") {
     const parts = [payload.phone, payload.email].filter(Boolean) as string[]
     if (payload.opening)
@@ -90,10 +154,48 @@ export function entitySummary(
       : payload.priceMinor !== undefined
         ? formatMinorMoney(payload.priceMinor, currencyCode)
         : "Price needed"
+  const usage =
+    payload.usage && payload.usage !== "FOR_SALE"
+      ? USAGE_LABEL[payload.usage]
+      : null
+  if (payload.options?.length || payload.variants?.length) {
+    const rows = setupProductVariants(payload).map((variant) => {
+      const prices =
+        payload.usage === "INTERNAL_USE"
+          ? []
+          : [
+              variant.priceMinor === undefined
+                ? `Price needed per ${payload.unitName.toLowerCase()}`
+                : `${formatMinorMoney(variant.priceMinor, currencyCode)}/${payload.unitName.toLowerCase()}`,
+              ...variant.sellingUnits.map((unit) =>
+                unit.priceMinor === undefined
+                  ? `Price needed per ${unit.name.toLowerCase()}`
+                  : `${formatMinorMoney(unit.priceMinor, currencyCode)}/${unit.name.toLowerCase()}`,
+              ),
+              ...variant.pendingUnitPrices.map(
+                (unit) =>
+                  `${formatMinorMoney(unit.priceMinor, currencyCode)}/${unit.unitName.toLowerCase()} (pack size needed)`,
+              ),
+            ]
+      return [
+        variant.label,
+        ...prices,
+        variant.openingStock === undefined
+          ? null
+          : `${variant.openingStock} ${payload.unitName.toLowerCase()} in stock`,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    })
+    return [usage, ...rows].filter(Boolean).join("; ")
+  }
+  // Items the business only uses have no selling price.
   const price =
     payload.priceMinor !== undefined
       ? `${formatMinorMoney(payload.priceMinor, currencyCode)} per ${payload.unitName.toLowerCase()}`
-      : "Price needed"
+      : payload.usage === "INTERNAL_USE"
+        ? null
+        : "Price needed"
   const stock =
     payload.openingStock !== undefined
       ? `${payload.openingStock} in stock`
@@ -101,11 +203,31 @@ export function entitySummary(
   const units = payload.sellingUnits?.length
     ? `Also sold by ${payload.sellingUnits.map((unit) => `${unit.name.toLowerCase()} (${unit.containsQuantity})`).join(", ")}`
     : null
-  return [price, stock, units].filter(Boolean).join(" · ")
+  return [usage, price, stock, units].filter(Boolean).join(" · ")
 }
 
 export const ENTITY_GROUPS = [
-  { kind: "PRODUCT", title: "Products" },
-  { kind: "SERVICE", title: "Services" },
-  { kind: "CUSTOMER", title: "Customers" },
+  { group: "PRODUCT", title: "Products" },
+  { group: "SERVICE", title: "Services" },
+  { group: "INTERNAL_USE", title: "Things you use" },
+  { group: "CUSTOMER", title: "Customers" },
+  { group: "MONEY_ACCOUNT", title: "Cash and bank" },
 ] as const
+
+export type SetupEntityGroup = (typeof ENTITY_GROUPS)[number]["group"]
+
+export function entityGroup(entity: SetupDraftEntity): SetupEntityGroup {
+  const payload = entityPayload(entity)
+  if (payload.kind === "money_account") return "MONEY_ACCOUNT"
+  if (payload.kind === "product" && payload.usage === "INTERNAL_USE")
+    return "INTERNAL_USE"
+  return entity.kind === "MONEY_ACCOUNT" ? "MONEY_ACCOUNT" : entity.kind
+}
+
+/** Records that only failed because the business had no Finance book yet. */
+export function isWaitingForFinance(entity: SetupDraftEntity) {
+  return (
+    entity.state === "FAILED" &&
+    entity.errorCode === "MONEY_ACCOUNT_NEEDS_FINANCE"
+  )
+}

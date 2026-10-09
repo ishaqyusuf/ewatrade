@@ -1,3 +1,5 @@
+import { summarizeSetupAreas } from "@ewatrade/assistant/setup/areas"
+import { SETUP_ATTACHMENT_EXPIRED } from "@ewatrade/assistant/setup/attachments"
 import {
   type SetupOpenQuestion,
   deriveSetupEntityState,
@@ -7,26 +9,25 @@ import {
   setupOpenQuestionSchema,
 } from "@ewatrade/assistant/setup/contracts"
 import { summarizeSetupFollowUp } from "@ewatrade/assistant/setup/follow-up"
-import {
-  setupBeginMessage,
-  setupCommitSummaryMessage,
-  setupGreetingMessages,
-  setupResumeMessage,
-} from "@ewatrade/assistant/setup/messages"
+import { setupCommitSummaryMessage } from "@ewatrade/assistant/setup/messages"
 import {
   appendAssistantMessage,
+  appendAssistantMessageIfLatest,
   createSetupConversation,
   findSetupConversation,
   listAssistantMessages,
   newAssistantMessageId,
+  readLastAssistantMessage,
   readSetupDraft,
   removeSetupDraftEntities,
   setAssistantConversationStatus,
   setSetupDraftEntityStates,
   upsertSetupDraftEntities,
 } from "@ewatrade/db/assistant"
+import { listSentAssistantAttachments } from "@ewatrade/db/assistant-attachments"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import { withExpiredAttachments } from "../../assistant/chat-attachments"
 import {
   commitSetupDraft,
   describeCommitError,
@@ -34,11 +35,17 @@ import {
 } from "../../assistant/setup-commit"
 import {
   isSetupAssistantEnabled,
-  loadSetupBusinessContext,
+  isSetupAssistantMediaEnabled,
   requireSetupAssistantScope,
 } from "../../assistant/setup-context"
+import {
+  SETUP_VISIT_GAP_MS,
+  composeSetupOpening,
+  composeSetupWelcome,
+} from "../../assistant/setup-opening"
 import { readSetupPrerequisites } from "../../assistant/setup-prerequisites"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { setupAssistantAttachmentsRouter } from "./setup-assistant-attachments"
 
 const keysSchema = z.array(z.string().min(1).max(140)).min(1).max(200)
 const conversationIdSchema = z.string().min(1).max(64)
@@ -78,6 +85,15 @@ async function requireDraft(
 
 type DraftEntities = Awaited<ReturnType<typeof readSetupDraft>>["entities"]
 
+function isInternalUse(payload: unknown) {
+  const parsed = setupEntityPayloadSchema.safeParse(payload)
+  return (
+    parsed.success &&
+    parsed.data.kind === "product" &&
+    parsed.data.usage === "INTERNAL_USE"
+  )
+}
+
 /** What the owner still has to finish, for the launchpad and follow-up copy. */
 function setupFollowUpState(entities: DraftEntities) {
   const committed = entities.filter((entity) => entity.state === "COMMITTED")
@@ -91,6 +107,8 @@ function setupFollowUpState(entities: DraftEntities) {
 }
 
 export const setupAssistantRouter = createTRPCRouter({
+  attachments: setupAssistantAttachmentsRouter,
+
   state: protectedProcedure.query(async ({ ctx }) => {
     const role = ctx.tenantContext.membership.role
     if (
@@ -110,11 +128,25 @@ export const setupAssistantRouter = createTRPCRouter({
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
         prerequisites: { termsRequired: false, financeBookMissing: false },
         followUp: setupFollowUpState([]),
+        areas: summarizeSetupAreas(null, []),
+        attachments: [],
+        mediaEnabled: isSetupAssistantMediaEnabled(),
+        businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
       }
-    const [messages, draft] = await Promise.all([
+    const [messages, draft, sent] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
       readSetupDraft(ctx.db, conversation.setupDraft.id),
+      listSentAssistantAttachments(ctx.db, conversation.id),
     ])
+    const attachments = sent.map(({ errorCode, ...attachment }) => ({
+      ...attachment,
+      expired: errorCode === SETUP_ATTACHMENT_EXPIRED,
+    }))
+    const expired = new Set(
+      attachments
+        .filter((attachment) => attachment.expired)
+        .map((attachment) => attachment.id),
+    )
     const prerequisites = await readSetupPrerequisites(
       ctx.db,
       {
@@ -130,11 +162,19 @@ export const setupAssistantRouter = createTRPCRouter({
         id: conversation.id,
         status: conversation.status,
       },
-      messages: messages.map(({ id, role, parts }) => ({ id, role, parts })),
+      messages: withExpiredAttachments(
+        messages.map(({ id, role, parts }) => ({ id, role, parts })),
+        expired,
+      ),
       draft,
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
       prerequisites,
       followUp: setupFollowUpState(draft.entities),
+      areas: summarizeSetupAreas(draft.areas, draft.entities),
+      attachments,
+      mediaEnabled: isSetupAssistantMediaEnabled(),
+      /** Ranks library illustrations in the setup list's picker. */
+      businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
     }
   }),
 
@@ -142,15 +182,19 @@ export const setupAssistantRouter = createTRPCRouter({
     const scope = requireSetupAssistantScope(ctx)
     const existing = await findSetupConversation(ctx.db, scope)
     if (existing) return { conversationId: existing.id }
-    const { context, firstName } = await loadSetupBusinessContext(ctx.db, scope)
+    // The chat opens straight into the guided setup: no offer step.
+    const opening = await composeSetupOpening(ctx.db, scope)
     const conversation = await createSetupConversation(
       ctx.db,
       scope,
-      setupGreetingMessages({
-        businessName: context.businessName,
-        firstName,
-        businessType: context.businessProfile?.title ?? null,
-      }).map((message) => ({ ...message, id: newAssistantMessageId() })),
+      [
+        {
+          id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text: opening }],
+        },
+      ],
+      { status: "ACTIVE" },
     )
     return { conversationId: conversation.id }
   }),
@@ -159,19 +203,21 @@ export const setupAssistantRouter = createTRPCRouter({
     const scope = requireSetupAssistantScope(ctx)
     const { conversation, draftId } = await requireDraft(ctx.db, scope)
     if (conversation.status === "ACTIVE") return { status: "ACTIVE" as const }
-    const resuming =
-      conversation.status === "SKIPPED" || conversation.status === "COMPLETED"
-    const followUp = resuming
-      ? summarizeSetupFollowUp((await readSetupDraft(ctx.db, draftId)).entities)
-      : undefined
+    // Older conversations still OFFERED get the guided opening; finished or
+    // skipped ones come back with a tailored welcome.
+    const text =
+      conversation.status === "OFFERED"
+        ? await composeSetupOpening(ctx.db, scope)
+        : await composeSetupWelcome(ctx.db, scope, draftId)
     const changed = await setAssistantConversationStatus(ctx.db, {
       conversationId: conversation.id,
       from: ["OFFERED", "SKIPPED", "COMPLETED"],
       to: "ACTIVE",
       appendMessages: [
         {
-          ...(resuming ? setupResumeMessage(followUp) : setupBeginMessage()),
           id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text }],
         },
       ],
     })
@@ -182,6 +228,38 @@ export const setupAssistantRouter = createTRPCRouter({
       })
     return { status: "ACTIVE" as const }
   }),
+
+  /**
+   * A new visit (not a reload): after a quiet gap the chat greets the owner
+   * again and mentions what is unfinished. Idempotent inside the gap.
+   */
+  visit: protectedProcedure
+    .input(z.object({ conversationId: conversationIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const { conversation, draftId } = await requireDraft(
+        ctx.db,
+        scope,
+        input.conversationId,
+      )
+      if (conversation.status !== "ACTIVE") return { appended: false }
+      const last = await readLastAssistantMessage(ctx.db, conversation.id)
+      if (!last || Date.now() - last.createdAt.getTime() < SETUP_VISIT_GAP_MS)
+        return { appended: false }
+      const text = await composeSetupWelcome(ctx.db, scope, draftId)
+      // Another tab or a double mount may have greeted while this one was
+      // written: append only if nothing new arrived, under a row lock.
+      const appended = await appendAssistantMessageIfLatest(ctx.db, {
+        conversationId: conversation.id,
+        expectedLastMessageId: last.id,
+        message: {
+          id: newAssistantMessageId(),
+          role: "assistant",
+          parts: [{ type: "text", text }],
+        },
+      })
+      return { appended }
+    }),
 
   skip: protectedProcedure.mutation(async ({ ctx }) => {
     const scope = requireSetupAssistantScope(ctx)
@@ -321,7 +399,13 @@ export const setupAssistantRouter = createTRPCRouter({
 
   /** Adds confirmed records to the business in bounded batches; call until remaining is 0. */
   commit: protectedProcedure
-    .input(z.object({ conversationId: conversationIdSchema }))
+    .input(
+      z.object({
+        conversationId: conversationIdSchema,
+        /** Add only these records, e.g. one product from the chat. */
+        keys: keysSchema.optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
       const { conversation, draftId } = await requireDraft(
@@ -334,15 +418,19 @@ export const setupAssistantRouter = createTRPCRouter({
           code: "CONFLICT",
           message: "Resume the setup assistant before adding records.",
         })
-      const outcome = await commitSetupDraft(ctx.db, scope, draftId).catch(
-        (error: unknown) => {
-          console.error("[setup-commit] batch failed", {
-            requestId: ctx.requestId,
-            ...describeCommitError(error),
-          })
-          throw error
-        },
-      )
+      const outcome = await commitSetupDraft(
+        ctx.db,
+        { ...scope, conversationId: conversation.id },
+        draftId,
+        undefined,
+        { keys: input.keys },
+      ).catch((error: unknown) => {
+        console.error("[setup-commit] batch failed", {
+          requestId: ctx.requestId,
+          ...describeCommitError(error),
+        })
+        throw error
+      })
       if (
         !outcome.interrupted &&
         outcome.remaining === 0 &&
@@ -356,12 +444,21 @@ export const setupAssistantRouter = createTRPCRouter({
           conversationId: conversation.id,
           message: {
             ...setupCommitSummaryMessage({
-              products: committed.filter((entity) => entity.kind === "PRODUCT")
-                .length,
+              products: committed.filter(
+                (entity) =>
+                  entity.kind === "PRODUCT" && !isInternalUse(entity.payload),
+              ).length,
               services: committed.filter((entity) => entity.kind === "SERVICE")
                 .length,
+              internalUse: committed.filter(
+                (entity) =>
+                  entity.kind === "PRODUCT" && isInternalUse(entity.payload),
+              ).length,
               customers: committed.filter(
                 (entity) => entity.kind === "CUSTOMER",
+              ).length,
+              moneyAccounts: committed.filter(
+                (entity) => entity.kind === "MONEY_ACCOUNT",
               ).length,
               balancesPending: committed.filter((entity) =>
                 isOpeningBalancePending(entity.errorCode),
@@ -370,6 +467,21 @@ export const setupAssistantRouter = createTRPCRouter({
                 (entity) => entity.state === "FAILED",
               ).length,
               followUp: summarizeSetupFollowUp(draft.entities),
+              mediaEnabled: isSetupAssistantMediaEnabled(),
+              // Adding a product from the chat leads straight into the rest of the list.
+              inviteMore:
+                input.keys !== undefined &&
+                outcome.results.some(
+                  (result) =>
+                    result.state === "COMMITTED" &&
+                    committed.some(
+                      (entity) =>
+                        entity.key === result.key &&
+                        (entity.kind === "SERVICE" ||
+                          (entity.kind === "PRODUCT" &&
+                            !isInternalUse(entity.payload))),
+                    ),
+                ),
             }),
             id: newAssistantMessageId(),
           },

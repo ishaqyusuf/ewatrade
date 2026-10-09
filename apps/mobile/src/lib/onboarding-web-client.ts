@@ -4,7 +4,7 @@ export function onboardingDashboardUrl(path: string) {
   const config = onboardingLinkConfiguration()
   const configured =
     config.dashboardUrl ||
-    (config.variant === "production" ? "https://dashboard.ewatrade.com" : "")
+    (config.variant === "production" ? "https://dash.ewatrade.com" : "")
   if (!configured)
     throw new Error("The setup website is not configured for this app.")
   const base = new URL(configured)
@@ -16,7 +16,7 @@ export function onboardingDashboardUrl(path: string) {
     !["http:", "https:"].includes(base.protocol) ||
     (config.variant !== "development" && base.protocol !== "https:") ||
     (config.variant !== "production" &&
-      base.hostname === "dashboard.ewatrade.com")
+      ["dash.ewatrade.com", "dashboard.ewatrade.com"].includes(base.hostname))
   )
     throw new Error("The setup website does not match this app environment.")
   return `${base.origin}${base.pathname.replace(/\/$/, "")}${path}`

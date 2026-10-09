@@ -8,6 +8,7 @@ import {
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { PageHeader } from "@/components/page-header"
+import { AssistantProductEntry } from "@/components/product-assistant/assistant-home"
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
@@ -27,12 +28,7 @@ import { Suspense } from "react"
 
 export const metadata: Metadata = { title: "Overview | EwaTrade" }
 
-export default async function DashboardHomePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
-}) {
-  const setupRequested = (await searchParams).setup === "assistant"
+export default async function DashboardHomePage() {
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
   const store = ctx?.activeStore
@@ -79,7 +75,10 @@ export default async function DashboardHomePage({
           }
         />
         {store ? (
-          <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
+          <div className="flex flex-wrap gap-2">
+            <AssistantProductEntry label="Add products with AI" />
+            <OverviewActions orders={canCreateOrder} stock={canUpdateStock} />
+          </div>
         ) : null}
       </div>
       {store && ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "") ? (
@@ -88,7 +87,6 @@ export default async function DashboardHomePage({
       {store ? (
         <SetupAssistant
           hasCatalogItems={availability?.hasCatalogItems ?? false}
-          requested={setupRequested}
           offerSetup={actions.length > 0}
           fallback={
             actions.length === 0 ? null : (

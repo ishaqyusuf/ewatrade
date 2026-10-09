@@ -244,6 +244,7 @@ export const dashboardBrowserActions = {
   login: { category: "access", action: "login" },
   logout: { category: "access", action: "logout" },
   signup: { category: "access", action: "signup" },
+  signup_start: { category: "access", action: "signup_started" },
   verify_email: { category: "access", action: "verification_requested" },
   store_create: { category: "business_setup", action: "store_create" },
   business_switch: { category: "business_setup", action: "business_switch" },

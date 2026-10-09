@@ -25,8 +25,8 @@ test("marketing links directly to the configured local dashboard login", () => {
 test("production preserves the configured shared dashboard hostname", () => {
   Reflect.set(process.env, "NODE_ENV", "production")
   process.env.NEXT_PUBLIC_PLATFORM_DOMAIN = "ewatrade.com"
-  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dashboard.ewatrade.com"
-  expect(getDashboardLoginUrl()).toBe("https://dashboard.ewatrade.com/login")
+  process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
+  expect(getDashboardLoginUrl()).toBe("https://dash.ewatrade.com/login")
 })
 
 test("explicit shared-path dashboard deployments remain supported", () => {
