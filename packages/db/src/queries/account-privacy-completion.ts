@@ -475,6 +475,8 @@ export async function assessAccountPrivacyCompletion(
           emailVerifiedAt: true,
           phoneVerifiedAt: true,
           isPlatformAdmin: true,
+          ageBand: true,
+          ageDeclaredAt: true,
         },
       })
       if (!profile) blockers.push("ACCOUNT_PROFILE_ANONYMIZATION_USER_MISSING")
@@ -490,7 +492,9 @@ export async function assessAccountPrivacyCompletion(
           profile.metadata !== null ||
           profile.emailVerifiedAt ||
           profile.phoneVerifiedAt ||
-          profile.isPlatformAdmin)
+          profile.isPlatformAdmin ||
+          profile.ageBand !== "UNDECLARED" ||
+          profile.ageDeclaredAt)
       )
         blockers.push("ACCOUNT_PROFILE_PERSONAL_FIELDS_REMAIN")
       if (verifiedEmail) {

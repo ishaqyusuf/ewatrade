@@ -3,6 +3,7 @@ import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
@@ -121,27 +122,25 @@ function WorkspaceBody({
       </View>
     </View>
   )
-  const empty = (
+  const empty = vm.isLoading ? (
+    <ListSkeleton count={4} label="Loading workspaces" variant="person" />
+  ) : (
     <EmptyState
       variant="flat"
       icon="Building2"
       title={
-        vm.isLoading
-          ? "Loading workspaces"
-          : vm.isOffline && !vm.local
-            ? "No cached workspaces"
-            : vm.memberships.isError && !vm.local
-              ? "Workspaces unavailable"
-              : vm.search
-                ? "No matching businesses"
-                : "No business yet"
+        vm.isOffline && !vm.local
+          ? "No cached workspaces"
+          : vm.memberships.isError && !vm.local
+            ? "Workspaces unavailable"
+            : vm.search
+              ? "No matching businesses"
+              : "No business yet"
       }
       message={
-        vm.isLoading
-          ? "Reading the businesses available to this account."
-          : vm.search
-            ? "Try another name, role, currency or category."
-            : "Your businesses will appear here. Add a business to set up a new workspace."
+        vm.search
+          ? "Try another name, role, currency or category."
+          : "Your businesses will appear here. Add a business to set up a new workspace."
       }
     />
   )

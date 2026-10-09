@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Input } from "@/components/ui/input-2"
@@ -264,11 +265,10 @@ export function DomainManagementContent({
             </Text>
 
             {domains.isPending ? (
-              <StatusBanner
-                icon="Globe"
-                message="Checking the domains connected to this Storefront."
-                title="Loading domains"
-                tone="muted"
+              <ListSkeleton
+                count={2}
+                label="Loading domains"
+                variant="ledger"
               />
             ) : domains.isError ? (
               <StatusBanner

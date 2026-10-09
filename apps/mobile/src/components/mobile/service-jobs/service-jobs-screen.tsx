@@ -1,5 +1,6 @@
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { View } from "@/components/ui/view"
@@ -242,20 +243,14 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                         }}
                       />
                     </View>
+                  ) : model.jobQuery.isPending && !isOfflineMode ? (
+                    <DetailSkeleton label="Loading the selected job" rows={3} />
                   ) : (
                     <View className="gap-4">
                       <StatusBanner
-                        icon={
-                          model.jobQuery.isPending && !isOfflineMode
-                            ? "Loader2"
-                            : "Info"
-                        }
+                        icon="Info"
                         title="Selected job"
-                        message={
-                          model.jobQuery.isPending && !isOfflineMode
-                            ? "Loading the selected work record."
-                            : "This job is not available in the current Store or offline cache."
-                        }
+                        message="This job is not available in the current Store or offline cache."
                       />
                       <ServiceAction
                         variant="outline"

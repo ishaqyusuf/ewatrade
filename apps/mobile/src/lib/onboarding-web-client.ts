@@ -51,3 +51,39 @@ export function requestOnboardingVerification(accessToken: string) {
     { accessToken },
   )
 }
+
+// Direct signup (7 October 2026): the dashboard creates the setup session and
+// emails the verification link; the app continues with the returned token.
+export async function startNativeSignup(input: {
+  fullName: string
+  email: string
+  businessName: string
+  phone: string
+}) {
+  const response = await fetch(onboardingDashboardUrl("/api/signup/start"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    credentials: "omit",
+    redirect: "error",
+  })
+  const data = await response.json().catch(() => null)
+  if (
+    !response.ok ||
+    typeof data?.accessToken !== "string" ||
+    typeof data?.expiresAt !== "string"
+  )
+    throw new Error(
+      typeof data?.message === "string"
+        ? data.message
+        : "Signup is unavailable. Try again.",
+    )
+  return {
+    accessToken: data.accessToken as string,
+    expiresAt: new Date(data.expiresAt).getTime(),
+    message:
+      typeof data.message === "string"
+        ? data.message
+        : "Check your email to continue.",
+  }
+}

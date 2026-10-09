@@ -66,3 +66,35 @@ board (`.brain/tasks/green-till-batch-board.md`).
   counts use tabular numbers.
 - **Controls:** primary buttons 50 tall (64 at large text); quick tiles 54; icon
   buttons 38 with hit slop to 44+; minimum touch target 44.
+
+## Motion
+
+Screen changes and content motion follow T3 Code's mobile app (`pingdotgg/t3code`, `apps/mobile`): native transitions for screens, short Reanimated fades for content, and the system Reduce Motion setting respected everywhere.
+
+- Screen transitions stay on the native stack. Do not add JS stack interpolators or shared-element transitions. Choose the animation through the presets in `src/lib/screen-transitions.ts` instead of per-screen `animation` values:
+  - `push` (stack default): iOS-style slide on Android; iOS keeps its native push and swipe-back.
+  - `modal`: `presentation: "modal"`, sliding up from the bottom on Android; iOS keeps its native modal sheet.
+  - `gate`: cross-fade for entry, auth and shell routes reached by `Redirect`, `router.replace` or a `Stack.Protected` guard flip (index, login, sign-up, verify-email, onboarding, staff onboarding, no-access, dashboard, admin tabs, customer shell, sales-rep home).
+- Admin bottom tabs cross-fade (180ms ease-out) and switch instantly when Reduce Motion is on.
+- Content motion lives in `src/components/ui/motion.tsx` with timing in `src/lib/content-motion.ts`:
+  - `RevealItem` + `useFirstReveal(ready)`: a list's first page drifts up and fades in with a capped stagger. Rows mounted later by scrolling or pagination appear without motion.
+  - `MotionView`: fades in content that replaces a loading state. Pass `animate={false}` when the data was already cached as the screen opened, so it rides the native push without an extra fade.
+  - No exit motion: content leaves with its native screen transition.
+- Wrapping adds an `Animated.View`. Do not wrap a root that relies on negative margins (Android drops touches outside the parent's bounds) or one that needs `flex-1`, unless you pass `fill`.
+
+## Loading states
+
+Owner direction L3, 8 October 2026 (concept board: `.brain/artifacts/mobile-screen-transitions-2026-10-07/loading-receipt-concepts.html`). Keep each screen's real chrome visible while it loads (title, filters, labels, tile captions), and draw only the incoming data as placeholders shaped like the real content.
+
+- Use `ListSkeleton` (variants `order`, `item`, `person`, `ledger`), `DetailSkeleton` and `HomeSkeleton` from `src/components/mobile/loading-skeletons.tsx`. For a single figure use `Skeleton` inside `SkeletonGroup` from `src/components/ui/skeleton.tsx`, as metric tiles do with their `loading` prop.
+- Every group passes a `label` ("Loading orders"); screen readers hear that instead of the shapes.
+- One shared sweep per group, coloured by the theme's `skeleton` and `skeletonHighlight` tokens. It stops under Reduce Motion.
+- Do not use a centred "Loading…" card, a spinner banner or plain "Loading…" text for screen content. Small inline progress (an action button's own spinner, "Loading more…" under a paginated list) is fine.
+
+## Receipts
+
+- The receipt screen is a paper preview on a soft canvas (pages swipe sideways, with dots), plus one toolbar: a PDF / Image switch and icon buttons for Save and Share.
+- On Android 10+, Save writes straight to `Download/EwaTrade` through the local `DownloadSaver` module, without a folder prompt. Older Android falls back to the system folder picker; iOS uses the share sheet.
+- Files are named from the order: `ORD-012 Receipt - Business.pdf`, or `ORD-013 & ORD-012 Receipts - Business.pdf` for groups.
+- The receipt document, shared with the dashboard, leads with the business, a PAID / UNPAID tag and the amount due, then the ledger, and ends with a small "Made with ẸwáTrade" footer.
+- Show people the fix, not raw native errors: a missing native module asks them to update the app.

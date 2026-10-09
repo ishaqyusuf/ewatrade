@@ -33,6 +33,7 @@ import {
   canAccessAdminTabs,
 } from "@/lib/admin-navigation"
 import { getMobileRoleLabel, normalizeMobileRole } from "@/lib/mobile-roles"
+import { getPlan } from "@/lib/retail-ops-subscription"
 import { type ThemeOverride, setThemeOverride } from "@/lib/theme-preference"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -77,8 +78,22 @@ export function MoreScreen() {
     normalizedRole === "ADMIN" || normalizedRole === "MANAGER"
       ? normalizedRole
       : "OWNER"
+  const subscription = useQuery(
+    trpc.retailOps.subscription.queryOptions(undefined, {
+      enabled: !isOffline && (role === "OWNER" || role === "ADMIN"),
+      retry: false,
+      staleTime: 60_000,
+    }),
+  )
+  const planSnapshot =
+    subscription.data?.tenant.id === auth.profile?.businessId
+      ? subscription.data
+      : undefined
   const sections = buildAdminMoreSections({
     availability,
+    planFeatures: planSnapshot
+      ? getPlan(planSnapshot.subscription.planId).features
+      : undefined,
     role,
     staffAccessMode: auth.profile?.staffAccessMode,
   })
@@ -92,7 +107,13 @@ export function MoreScreen() {
   const offlineRecords = useQuery(
     trpc.offline.conflicts.queryOptions(
       {},
-      { enabled: !isOffline && (auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER"), retry: false, staleTime: 30_000 },
+      {
+        enabled:
+          !isOffline &&
+          (auth.profile?.staffAccessMode !== "SCOPED" || role !== "MANAGER"),
+        retry: false,
+        staleTime: 30_000,
+      },
     ),
   )
   const reviewingOrder = useRef(false)

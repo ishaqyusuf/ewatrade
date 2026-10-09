@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { useTRPC } from "@/trpc/client"
@@ -155,13 +156,19 @@ function AccountRows({
         </View>
       }
       ListEmptyComponent={
-        <Text className="py-5 text-muted-foreground">
-          {query.isPending
-            ? "Loading account entries…"
-            : query.isError
+        query.isPending ? (
+          <ListSkeleton
+            count={6}
+            label="Loading account entries"
+            variant="ledger"
+          />
+        ) : (
+          <Text className="py-5 text-muted-foreground">
+            {query.isError
               ? "Retry to load account entries."
               : "No entries in this period."}
-        </Text>
+          </Text>
+        )
       }
       renderItem={({ item }) => (
         <View className="gap-2 border-b border-border py-5">

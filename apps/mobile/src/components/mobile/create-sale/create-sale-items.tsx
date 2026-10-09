@@ -3,6 +3,7 @@ import { ClassicSaleItems } from "@/components/mobile/appearances/classic/create
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -154,22 +155,24 @@ export function CreateSaleItems({
         keyboardShouldPersistTaps="handled"
         keyExtractor={(line) => line.id}
         ListEmptyComponent={
-          <View className={tone("flex-1 justify-center pb-24")}>
-            <EmptyState
-              className={tone("bg-transparent")}
-              icon="ReceiptText"
-              message={
-                choicesLoading
-                  ? "Loading available products and services."
-                  : model.allRows.length === 0
+          choicesLoading ? (
+            <ListSkeleton count={3} label="Loading Catalog" variant="item" />
+          ) : (
+            <View className={tone("flex-1 justify-center pb-24")}>
+              <EmptyState
+                className={tone("bg-transparent")}
+                icon="ReceiptText"
+                message={
+                  model.allRows.length === 0
                     ? "Items need a selling price and available stock in this store. Ask an owner to check the catalog."
                     : itemKind === "service"
                       ? "Tap the + button to add a service."
                       : "Tap the + button to add a product or service."
-              }
-              title={choicesLoading ? "Loading Catalog" : "No items added yet"}
-            />
-          </View>
+                }
+                title="No items added yet"
+              />
+            </View>
+          )
         }
         ListHeaderComponent={itemsHeader}
         renderItem={({ item }) => (

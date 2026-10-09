@@ -4,6 +4,7 @@ import {
   SUBSCRIPTION_SCREEN_COPY,
   getSubscriptionPlanPresentation,
   getSubscriptionStatusTone,
+  getSubscriptionTermLabel,
   getSubscriptionUsagePresentation,
 } from "./subscription-plan-presentation"
 
@@ -48,10 +49,39 @@ describe("subscription plan presentation", () => {
       }),
     ).toMatchObject({
       actionLabel: "Request upgrade",
-      badgeLabel: "Most popular",
+      badgeLabel: "Free during launch",
       canSelect: true,
       current: false,
     })
+  })
+
+  test("shows an uncapped allowance without an at-limit state", () => {
+    expect(getSubscriptionUsagePresentation(42, null)).toEqual({
+      isAtLimit: false,
+      statusLabel: null,
+      valueLabel: "42 · no limit",
+    })
+  })
+
+  test("never shows a trial end for the launch Starter plan", () => {
+    const format = (value: string) => value.slice(0, 10)
+    expect(
+      getSubscriptionTermLabel(
+        { status: "active" },
+        getPlan("starter"),
+        format,
+      ),
+    ).toBe("Free during launch")
+    expect(
+      getSubscriptionTermLabel({ status: "active" }, getPlan("free"), format),
+    ).toBe("Free forever")
+    expect(
+      getSubscriptionTermLabel(
+        { status: "trialing", trialEndsAt: "2026-11-01T00:00:00.000Z" },
+        getPlan("growth"),
+        format,
+      ),
+    ).toBe("Trial ends 2026-11-01")
   })
 
   test("does not present a cancelled subscription as healthy", () => {

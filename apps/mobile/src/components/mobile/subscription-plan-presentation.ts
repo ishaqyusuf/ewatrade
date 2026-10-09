@@ -9,14 +9,35 @@ export const SUBSCRIPTION_SCREEN_COPY = {
   title: "Plan & billing",
 } as const
 
-export function getSubscriptionUsagePresentation(used: number, limit: number) {
+export function getSubscriptionUsagePresentation(
+  used: number,
+  limit: number | null,
+) {
   const limitState = getUsageLimitState(used, limit)
 
   return {
     isAtLimit: limitState.isAtLimit,
     statusLabel: limitState.isAtLimit ? "At limit" : null,
-    valueLabel: `${used} / ${limit}`,
+    valueLabel: limit === null ? `${used} · no limit` : `${used} / ${limit}`,
   }
+}
+
+/** Plan summary line; the launch plan has no trial end or renewal date. */
+export function getSubscriptionTermLabel(
+  subscription: Pick<
+    RetailOpsSubscription,
+    "currentPeriodEndsAt" | "status" | "trialEndsAt"
+  >,
+  plan: Pick<RetailOpsPlan, "priceLabel">,
+  formatDate: (value: string) => string,
+) {
+  if (subscription.status === "trialing" && subscription.trialEndsAt) {
+    return `Trial ends ${formatDate(subscription.trialEndsAt)}`
+  }
+  if (subscription.currentPeriodEndsAt) {
+    return `Renews ${formatDate(subscription.currentPeriodEndsAt)}`
+  }
+  return plan.priceLabel
 }
 
 export function getSubscriptionStatusTone(

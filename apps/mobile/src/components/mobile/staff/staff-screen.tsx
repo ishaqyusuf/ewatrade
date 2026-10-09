@@ -5,6 +5,7 @@ import {
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
@@ -66,24 +67,34 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
     !invitation.recoveryEmail
   const showFab = !market && !showInitialInvite && !recovery
   const bottomSpace = (showSearch ? footerHeight : 0) + (showFab ? 100 : 24)
-  const emptyTitle = vm.isLoading
-    ? "Loading staff"
-    : vm.isOffline
-      ? "No cached staff"
-      : vm.directory.isError
-        ? "Staff unavailable"
-        : vm.search
-          ? "No matching attendants"
-          : "Your crew starts here."
-  const emptyMessage = vm.isLoading
-    ? "Waiting for the shared attendant directory."
-    : vm.isOffline
-      ? "Reconnect to load current staff membership."
-      : vm.directory.isError
-        ? "Try again to load the shared directory."
-        : vm.search
-          ? "Change or clear your search. No match here does not prove that an uncertain invitation was not saved."
-          : "Invite an attendant using their own email address."
+  const emptyTitle = vm.isOffline
+    ? "No cached staff"
+    : vm.directory.isError
+      ? "Staff unavailable"
+      : vm.search
+        ? "No matching attendants"
+        : "Your crew starts here."
+  const emptyMessage = vm.isOffline
+    ? "Reconnect to load current staff membership."
+    : vm.directory.isError
+      ? "Try again to load the shared directory."
+      : vm.search
+        ? "Change or clear your search. No match here does not prove that an uncertain invitation was not saved."
+        : "Invite an attendant using their own email address."
+
+  if (
+    vm.blocked &&
+    !vm.scopeChanged &&
+    vm.canManage &&
+    vm.availability.isPending &&
+    !vm.isOffline
+  ) {
+    return (
+      <View className="flex-1 px-4 py-6">
+        <ListSkeleton count={5} label="Loading workspace" variant="person" />
+      </View>
+    )
+  }
 
   if (vm.blocked) {
     return (
@@ -96,9 +107,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               ? "Workspace changed"
               : !vm.canManage
                 ? "Staff access required"
-                : vm.availability.isPending && !vm.isOffline
-                  ? "Loading workspace"
-                  : "Workspace unavailable"
+                : "Workspace unavailable"
           }
           message={
             vm.scopeChanged
@@ -224,11 +233,21 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               </View>
             }
             ListEmptyComponent={
-              <Empty
-                title={emptyTitle}
-                message={emptyMessage}
-                onInvite={showInitialInvite ? invitation.present : undefined}
-              />
+              vm.isLoading ? (
+                <View className="px-4">
+                  <ListSkeleton
+                    count={5}
+                    label="Loading staff"
+                    variant="person"
+                  />
+                </View>
+              ) : (
+                <Empty
+                  title={emptyTitle}
+                  message={emptyMessage}
+                  onInvite={showInitialInvite ? invitation.present : undefined}
+                />
+              )
             }
             refreshControl={
               !vm.isOffline ? (

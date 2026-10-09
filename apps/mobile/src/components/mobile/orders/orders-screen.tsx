@@ -18,9 +18,11 @@ import {
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { toggleReceiptSelection } from "@/components/mobile/receipts/receipt-selection"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -258,6 +260,7 @@ export function OrdersScreen() {
     [visibleOrders],
   )
   const lastDayId = [...dayHeaders.keys()].at(-1)
+  const revealRows = useFirstReveal(visibleOrders.length > 0)
   useEffect(() => {
     const eligible = new Set(
       loadedOrders
@@ -349,33 +352,27 @@ export function OrdersScreen() {
               ) : null}
               {!isMarketDay && orders.isPending && !isOffline ? (
                 <ClassicOrdersSkeleton />
+              ) : orders.isPending && !isOffline ? (
+                <ListSkeleton count={6} label="Loading orders" />
               ) : (
                 <EmptyState
-                  actionLabel={
-                    (orders.isPending && !isOffline) || isOffline
-                      ? undefined
-                      : "Clear filters"
-                  }
+                  actionLabel={isOffline ? undefined : "Clear filters"}
                   actionProps={{ onPress: resetFilters, variant: "outline" }}
                   className="mt-3"
                   icon="ReceiptText"
                   message={
-                    orders.isPending && !isOffline
-                      ? "Loading Commercial Orders."
-                      : isOffline
-                        ? "Reconnect to refresh Orders from your workspace."
-                        : query || filter !== "all" || dateFilter !== "all"
-                          ? "Try another date, search, or status filter."
-                          : "New Product and Service Orders will appear here."
+                    isOffline
+                      ? "Reconnect to refresh Orders from your workspace."
+                      : query || filter !== "all" || dateFilter !== "all"
+                        ? "Try another date, search, or status filter."
+                        : "New Product and Service Orders will appear here."
                   }
                   title={
-                    orders.isPending && !isOffline
-                      ? "Loading orders"
-                      : isOffline
-                        ? "No cached orders"
-                        : query || filter !== "all" || dateFilter !== "all"
-                          ? "No matching orders"
-                          : "No orders yet"
+                    isOffline
+                      ? "No cached orders"
+                      : query || filter !== "all" || dateFilter !== "all"
+                        ? "No matching orders"
+                        : "No orders yet"
                   }
                 />
               )}
@@ -419,7 +416,11 @@ export function OrdersScreen() {
             ) : null}
             {!showFirstOrderGate ? (
               isMarketDay ? (
-                <Summary dateFilter={dateFilter} orders={visibleOrders} />
+                <Summary
+                  dateFilter={dateFilter}
+                  loading={orders.isPending && !isOffline}
+                  orders={visibleOrders}
+                />
               ) : (
                 <ClassicOrdersSummary
                   report={
@@ -543,6 +544,20 @@ export function OrdersScreen() {
                       variant={isMarketDay ? "filled" : "till-search"}
                     />
                   ) : null}
+                  {loadedOrders.length > 0 ? (
+                    <ActionButton
+                      variant="outline"
+                      disabled={isOffline}
+                      onPress={() => {
+                        setSelectingReceipts((value) => !value)
+                        setReceiptIds([])
+                      }}
+                    >
+                      {selectingReceipts
+                        ? "Cancel selection"
+                        : "Select receipts"}
+                    </ActionButton>
+                  ) : null}
                 </>
               )}
               {visibleProvisionalOrders.map((order) =>
@@ -584,76 +599,79 @@ export function OrdersScreen() {
           ) : null
         }
         renderItem={({ index, item }) => (
-          <Section>
-            {!isMarketDay && dayHeaders.has(item.id) ? (
-              <View className="mt-3 -mb-1.5 flex-row flex-wrap items-baseline justify-between gap-2">
-                <Text className="text-[15px] font-extrabold text-foreground">
-                  {dayHeaders.get(item.id)?.label}
-                </Text>
-                <Text className="text-xs font-bold tabular-nums text-muted-foreground">
-                  {`${item.id === lastDayId && orders.hasNextPage ? "Loaded · " : ""}${dayHeaders.get(item.id)?.total} · ${dayHeaders.get(item.id)?.count}`}
-                </Text>
-              </View>
-            ) : null}
-            {isMarketDay && selectingReceipts ? (
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityLabel={`Select ${item.orderNumber}`}
-                accessibilityState={{
-                  checked: receiptIds.includes(item.id),
-                  disabled:
+          <RevealItem active={revealRows} index={index}>
+            <Section>
+              {!isMarketDay && dayHeaders.has(item.id) ? (
+                <View className="mt-3 -mb-1.5 flex-row flex-wrap items-baseline justify-between gap-2">
+                  <Text className="text-[15px] font-extrabold text-foreground">
+                    {dayHeaders.get(item.id)?.label}
+                  </Text>
+                  <Text className="text-xs font-bold tabular-nums text-muted-foreground">
+                    {`${item.id === lastDayId && orders.hasNextPage ? "Loaded · " : ""}${dayHeaders.get(item.id)?.total} · ${dayHeaders.get(item.id)?.count}`}
+                  </Text>
+                </View>
+              ) : null}
+              {isMarketDay && selectingReceipts ? (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={`Select ${item.orderNumber}`}
+                  accessibilityState={{
+                    checked: receiptIds.includes(item.id),
+                    disabled:
+                      !isReceiptOrderEligible(item.status) ||
+                      (!receiptIds.includes(item.id) &&
+                        receiptIds.length >= 20),
+                  }}
+                  disabled={
                     !isReceiptOrderEligible(item.status) ||
-                    (!receiptIds.includes(item.id) && receiptIds.length >= 20),
-                }}
-                disabled={
-                  !isReceiptOrderEligible(item.status) ||
-                  (!receiptIds.includes(item.id) && receiptIds.length >= 20)
-                }
-                className="min-h-12 justify-center border-b border-border py-3"
-                onPress={() =>
-                  setReceiptIds((current) =>
-                    toggleReceiptSelection(current, item.id),
-                  )
-                }
-              >
-                <Text className="font-semibold text-primary">
-                  {receiptIds.includes(item.id)
-                    ? "✓ Selected"
-                    : isReceiptOrderEligible(item.status)
-                      ? "Select receipt"
-                      : "Receipt unavailable"}{" "}
-                  · {item.orderNumber}
-                </Text>
-              </Pressable>
-            ) : null}
-            <Row
-              index={index}
-              position={dayPositions.get(item.id)}
-              selecting={selectingReceipts}
-              selected={receiptIds.includes(item.id)}
-              disabled={
-                selectingReceipts &&
-                (!isReceiptOrderEligible(item.status) ||
-                  (!receiptIds.includes(item.id) && receiptIds.length >= 20))
-              }
-              onPress={() => {
-                if (selectingReceipts) {
-                  if (isReceiptOrderEligible(item.status))
+                    (!receiptIds.includes(item.id) && receiptIds.length >= 20)
+                  }
+                  className="min-h-12 justify-center border-b border-border py-3"
+                  onPress={() =>
                     setReceiptIds((current) =>
                       toggleReceiptSelection(current, item.id),
                     )
-                } else {
-                  queryClient.setQueryData(
-                    trpc.orders.get.queryKey({ orderId: item.id }),
-                    item,
-                    { updatedAt: orders.dataUpdatedAt },
-                  )
-                  router.push(commercialOrderHref(item.id))
+                  }
+                >
+                  <Text className="font-semibold text-primary">
+                    {receiptIds.includes(item.id)
+                      ? "✓ Selected"
+                      : isReceiptOrderEligible(item.status)
+                        ? "Select receipt"
+                        : "Receipt unavailable"}{" "}
+                    · {item.orderNumber}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Row
+                index={index}
+                position={dayPositions.get(item.id)}
+                selecting={selectingReceipts}
+                selected={receiptIds.includes(item.id)}
+                disabled={
+                  selectingReceipts &&
+                  (!isReceiptOrderEligible(item.status) ||
+                    (!receiptIds.includes(item.id) && receiptIds.length >= 20))
                 }
-              }}
-              order={item}
-            />
-          </Section>
+                onPress={() => {
+                  if (selectingReceipts) {
+                    if (isReceiptOrderEligible(item.status))
+                      setReceiptIds((current) =>
+                        toggleReceiptSelection(current, item.id),
+                      )
+                  } else {
+                    queryClient.setQueryData(
+                      trpc.orders.get.queryKey({ orderId: item.id }),
+                      item,
+                      { updatedAt: orders.dataUpdatedAt },
+                    )
+                    router.push(commercialOrderHref(item.id))
+                  }
+                }}
+                order={item}
+              />
+            </Section>
+          </RevealItem>
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}

@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
+import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { prepareFinanceStatementRange } from "@/lib/finance-money-input"
@@ -166,12 +167,10 @@ function ReportWindowView({
       ) : null}
       {report ? (
         <ReportContents report={report} />
+      ) : query.isError ? (
+        <Text>Reports could not be loaded.</Text>
       ) : (
-        <Text>
-          {query.isError
-            ? "Reports could not be loaded."
-            : "Loading report snapshot…"}
-        </Text>
+        <DetailSkeleton label="Loading report snapshot" rows={4} />
       )}
     </ScrollView>
   )

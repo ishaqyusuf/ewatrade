@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -158,13 +159,19 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
         </View>
       }
       ListEmptyComponent={
-        <Text className="py-5 text-muted-foreground">
-          {counts.isPending
-            ? "Loading cash counts…"
-            : counts.isError
+        counts.isPending ? (
+          <ListSkeleton
+            count={4}
+            label="Loading cash counts"
+            variant="ledger"
+          />
+        ) : (
+          <Text className="py-5 text-muted-foreground">
+            {counts.isError
               ? "Refresh to load the count history."
               : "No physical counts yet. Record the cash you can see, including zero."}
-        </Text>
+          </Text>
+        )
       }
       ListFooterComponent={
         <View className="gap-3 py-6">

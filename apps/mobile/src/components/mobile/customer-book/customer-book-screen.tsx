@@ -6,10 +6,11 @@ import {
 import { CreateSaleCustomerSheet } from "@/components/mobile/create-sale-customer-sheet"
 import type { CustomerBookFilter } from "@/components/mobile/customer-book-presentation-model"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { Toast } from "@/components/ui/toast"
 import { View } from "@/components/ui/view"
@@ -302,10 +303,20 @@ export function CustomerBookContent(
           scrollEventThrottle={16}
           ListEmptyComponent={
             isLoading && !market ? (
-              <View className="gap-3">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
+              <SkeletonGroup accessibilityLabel="Loading customers">
+                <View className="gap-3">
+                  <Skeleton height={64} />
+                  <Skeleton height={64} />
+                  <Skeleton height={64} />
+                </View>
+              </SkeletonGroup>
+            ) : isLoading ? (
+              <View className="px-4">
+                <ListSkeleton
+                  count={7}
+                  label="Loading customers"
+                  variant="person"
+                />
               </View>
             ) : (
               <EmptyState
@@ -323,26 +334,22 @@ export function CustomerBookContent(
                 className="flex-1 justify-center px-6 pb-16"
                 icon="Users"
                 message={
-                  isLoading
-                    ? "Loading customers."
-                    : search || filter !== "all"
-                      ? "Try another search or customer state."
-                      : hasError
-                        ? "Try again to load the customer directory."
-                        : isOffline
-                          ? "Reconnect to load the shared customer directory."
-                          : "Your saved customers and their order activity will appear here."
+                  search || filter !== "all"
+                    ? "Try another search or customer state."
+                    : hasError
+                      ? "Try again to load the customer directory."
+                      : isOffline
+                        ? "Reconnect to load the shared customer directory."
+                        : "Your saved customers and their order activity will appear here."
                 }
                 title={
-                  isLoading
-                    ? "Loading customers"
-                    : search || filter !== "all"
-                      ? "No matching customers"
-                      : hasError
-                        ? "Customers unavailable"
-                        : isOffline
-                          ? "No cached customers"
-                          : "No customers yet"
+                  search || filter !== "all"
+                    ? "No matching customers"
+                    : hasError
+                      ? "Customers unavailable"
+                      : isOffline
+                        ? "No cached customers"
+                        : "No customers yet"
                 }
                 variant="flat"
               />

@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -445,13 +446,13 @@ function SpendingWorkspace({
       }}
       onEndReachedThreshold={0.4}
       ListEmptyComponent={
-        !bills.isError ? (
+        bills.isError ? null : bills.isPending ? (
+          <ListSkeleton count={5} label="Loading spending" variant="ledger" />
+        ) : (
           <Text className="py-6 text-muted-foreground">
-            {bills.isPending
-              ? "Loading spending…"
-              : "No spending recorded. Record your first expense above."}
+            No spending recorded. Record your first expense above.
           </Text>
-        ) : null
+        )
       }
       renderItem={({ item }) => (
         <Pressable

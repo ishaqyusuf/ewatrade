@@ -14,7 +14,8 @@ import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { useModal } from "@/components/ui/modal"
-import { Skeleton } from "@/components/ui/skeleton"
+import { MotionView } from "@/components/ui/motion"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import {
@@ -104,6 +105,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     orderQuery.data ??
     cachedOrders.data?.find((candidate) => candidate.id === orderId) ??
     null
+  // Fade the overview in only when it replaces the loading state; a cached
+  // Order rides the native push without an extra fade.
+  const [orderReadyOnOpen] = useState(() => Boolean(order))
 
   async function refreshOrderQueries() {
     await Promise.all([
@@ -325,10 +329,14 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         <CommercialOrderOverviewHeader onBack={goBack} title="Order overview" />
         <View className="flex-1 items-center justify-center py-16">
           {orderQuery.isPending && !isOffline ? (
-            <View className="w-full gap-4">
-              <Skeleton className="h-[240px] rounded-[26px]" />
-              <Skeleton className="h-[88px] rounded-[20px]" />
-              <Skeleton className="h-[160px] rounded-[20px]" />
+            <View className="w-full">
+              <SkeletonGroup accessibilityLabel="Loading order">
+                <View className="gap-4">
+                  <Skeleton height={240} radius={26} />
+                  <Skeleton height={88} radius={20} />
+                  <Skeleton height={160} radius={20} />
+                </View>
+              </SkeletonGroup>
             </View>
           ) : (
             <EmptyState
@@ -344,9 +352,11 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             />
           )}
         </View>
-        <ActionButton onPress={goBack} variant="outline">
-          Back to orders
-        </ActionButton>
+        {orderQuery.isPending && !isOffline ? null : (
+          <ActionButton onPress={goBack} variant="outline">
+            Back to orders
+          </ActionButton>
+        )}
       </MobileScreen>
     )
   }
@@ -361,7 +371,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   return (
-    <View className="flex-1">
+    <MotionView animate={!orderReadyOnOpen} fill>
       <Screen
         hasBalanceDue={hasBalanceDue}
         mastheadVisible={mastheadVisible}
@@ -526,6 +536,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         presentation={fulfilAllPresentation}
         ref={fulfilAllModal.ref}
       />
-    </View>
+    </MotionView>
   )
 }

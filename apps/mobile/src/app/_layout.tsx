@@ -67,6 +67,7 @@ export const unstable_settings = {
 initMobileObservability()
 
 const transitions = stackTransitions(Platform.OS)
+const modalOptions = { headerShown: false, ...transitions.modal }
 const gateOptions = { headerShown: false, ...transitions.gate }
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -156,35 +157,17 @@ const InitialLayout = ({
         >
           <Stack.Screen name="(admin-tabs)" options={gateOptions} />
 
-          <Stack.Screen
-            name="business-switch-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="business-switch-modal" options={modalOptions} />
           <Stack.Screen
             name="new-business-onboarding-modal"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
 
-          <Stack.Screen
-            name="reports-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="payments-received-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="stock-intake-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="staff-invite-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="unit-conversion-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="reports-modal" options={modalOptions} />
+          <Stack.Screen name="payments-received-modal" options={modalOptions} />
+          <Stack.Screen name="stock-intake-modal" options={modalOptions} />
+          <Stack.Screen name="staff-invite-modal" options={modalOptions} />
+          <Stack.Screen name="unit-conversion-modal" options={modalOptions} />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="no-access" options={gateOptions} />
@@ -204,138 +187,83 @@ const InitialLayout = ({
             name="catalog-item/[catalogItemId]"
             options={{ headerShown: false }}
           />
-          <Stack.Screen
-            name="catalog-items-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="catalog-items-modal" options={modalOptions} />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && canEditCatalog}
         >
           <Stack.Screen
             name="first-product-setup-modal"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && canManageTenant}
         >
-          <Stack.Screen
-            name="customer-ledger-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="customer-ledger-modal" options={modalOptions} />
           <Stack.Screen
             name="customer-ledger/[customerId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
           <Stack.Screen
             name="customer-ledger-action/[accountId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
-          <Stack.Screen
-            name="finance-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="finance-accounts-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="finance-bank-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="finance-modal" options={modalOptions} />
+          <Stack.Screen name="finance-accounts-modal" options={modalOptions} />
+          <Stack.Screen name="finance-bank-modal" options={modalOptions} />
           <Stack.Screen
             name="finance-bank-import-modal"
-            options={{
-              headerShown: false,
-              presentation: "modal",
-              gestureEnabled: false,
-            }}
+            options={{ ...modalOptions, gestureEnabled: false }}
           />
           <Stack.Screen
             name="finance-bank/[statementId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
           <Stack.Screen
             name="finance-bank-source/[entryId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
-          <Stack.Screen
-            name="finance-reports-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="finance-periods-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="finance-reports-modal" options={modalOptions} />
+          <Stack.Screen name="finance-periods-modal" options={modalOptions} />
           <Stack.Screen
             name="finance-report-account/[accountId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
-          <Stack.Screen
-            name="finance-counts-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="finance-count/[countId]"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="finance-counts-modal" options={modalOptions} />
+          <Stack.Screen name="finance-count/[countId]" options={modalOptions} />
           <Stack.Screen
             name="finance-account/[accountId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
           <Stack.Screen
             name="finance-movement/[entryId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
           <Stack.Screen
             name="finance-expense/[billId]"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
-          <Stack.Screen
-            name="subscription-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="domain-management-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="subscription-modal" options={modalOptions} />
+          <Stack.Screen name="domain-management-modal" options={modalOptions} />
           <Stack.Screen
             name="order-reminder-settings-modal"
-            options={{ headerShown: false, presentation: "modal" }}
+            options={modalOptions}
           />
-          <Stack.Screen
-            name="receipt-settings-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="receipt-settings-modal" options={modalOptions} />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && isSalesRep}
         >
-          <Stack.Screen
-            name="sales-rep-home"
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="sales-rep-home" options={gateOptions} />
           <Stack.Screen name="your-sales" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
-          <Stack.Screen
-            name="order-receipts-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="app-lock-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="order-receipts-modal" options={modalOptions} />
+          <Stack.Screen name="app-lock-modal" options={modalOptions} />
           <Stack.Screen name="updates" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="create-sale-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="global-search"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="create-sale-modal" options={modalOptions} />
+          <Stack.Screen name="global-search" options={modalOptions} />
           <Stack.Screen
             name="operation-success"
             options={{
@@ -344,27 +272,15 @@ const InitialLayout = ({
               headerShown: false,
             }}
           />
-          <Stack.Screen
-            name="service-jobs-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="customer-book-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
+          <Stack.Screen name="service-jobs-modal" options={modalOptions} />
+          <Stack.Screen name="customer-book-modal" options={modalOptions} />
           <Stack.Screen
             name="order/[orderId]"
             options={{ headerShown: false }}
           />
-          <Stack.Screen
-            name="closeout-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="sync-status-modal"
-            options={{ headerShown: false, presentation: "modal" }}
-          />
-          <Stack.Screen name="dashboard" options={{ headerShown: false }} />
+          <Stack.Screen name="closeout-modal" options={modalOptions} />
+          <Stack.Screen name="sync-status-modal" options={modalOptions} />
+          <Stack.Screen name="dashboard" options={gateOptions} />
         </Stack.Protected>
         <Stack.Screen name="+not-found" />
       </Stack>

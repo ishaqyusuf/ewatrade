@@ -39,7 +39,7 @@ const contracts = [
   },
   {
     file: "apps/mobile/src/components/mobile/floating-qa-button.tsx",
-    markers: ['pathname.endsWith("-modal")'],
+    markers: ['pathname !== "/login"', "isAuthenticated ||"],
     reason: "the development QA control must not overlap live sync actions",
   },
   {

@@ -20,11 +20,11 @@ export type OrdersMastheadProps = {
 
 export type OrdersSummaryProps = {
   dateFilter: OrderDispatchDateFilter
+  loading?: boolean
   orders: CommercialOrder[]
   totalCount?: number
   isOffline?: boolean
   savedAt?: string
-  loading?: boolean
   onDateChange?: (value: OrderDispatchDateFilter) => void
   /** Classic: server sales totals for the chosen period. */
   report?: {

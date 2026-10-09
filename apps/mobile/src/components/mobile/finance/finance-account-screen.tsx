@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -212,13 +213,15 @@ function StatementWindow({
         </View>
       }
       ListEmptyComponent={
-        <Text className="py-5 text-muted-foreground">
-          {query.isPending || initializing
-            ? "Loading statement…"
-            : query.isError
+        query.isPending || initializing ? (
+          <ListSkeleton count={6} label="Loading statement" variant="ledger" />
+        ) : (
+          <Text className="py-5 text-muted-foreground">
+            {query.isError
               ? "Refresh to load this account statement."
               : "No entries in this date range."}
-        </Text>
+          </Text>
+        )
       }
       ListFooterComponent={
         <View className="gap-3 py-6">

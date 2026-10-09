@@ -23,6 +23,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import {
   SUBSCRIPTION_SCREEN_COPY,
   getSubscriptionStatusTone,
+  getSubscriptionTermLabel,
   getSubscriptionUsagePresentation,
 } from "./subscription-plan-presentation"
 
@@ -42,7 +43,7 @@ type ProductionSubscriptionSnapshot = {
   entitlements: Array<{
     isAtLimit: boolean
     key: keyof RetailOpsPlan["limits"]
-    limit: number
+    limit: number | null
     used: number
   }>
   plan: RetailOpsPlan
@@ -57,6 +58,7 @@ type ProductionSubscriptionSnapshot = {
   usage: {
     businesses: number
     offlineDevices: number
+    ordersThisMonth: number
     products: number
     staff: number
   }
@@ -204,10 +206,8 @@ export function SubscriptionPlanContent({
             {currentPlan.name}
           </Text>
           <Text className="text-xs leading-5 text-muted-foreground">
-            {subscription.status === "trialing"
-              ? `Trial ends ${formatDate(subscription.trialEndsAt)}`
-              : `Renews ${formatDate(subscription.currentPeriodEndsAt)}`}{" "}
-            · {currentPlan.supportLabel}
+            {getSubscriptionTermLabel(subscription, currentPlan, formatDate)} ·{" "}
+            {currentPlan.supportLabel}
           </Text>
         </View>
         <StatusBadge

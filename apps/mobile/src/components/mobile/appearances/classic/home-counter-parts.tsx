@@ -1,8 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import type { DashboardHeroProps } from "@/components/mobile/dashboard/dashboard-presentation"
+import { HOME_METRIC_LOADING } from "@/components/mobile/dashboard/home-journey-metrics"
 import type { HomeMetric } from "@/components/mobile/dashboard/home-journey-presentation"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
@@ -247,7 +249,15 @@ function CounterFact({ metric, icon }: { metric: HomeMetric; icon: IconKeys }) {
           {metric.label}
         </Text>
       </View>
-      <Text className="text-2xl font-bold text-foreground">{metric.value}</Text>
+      {metric.value === HOME_METRIC_LOADING ? (
+        <SkeletonGroup accessibilityLabel={`Loading ${metric.label}`}>
+          <Skeleton height={28} width="45%" />
+        </SkeletonGroup>
+      ) : (
+        <Text className="text-2xl font-bold text-foreground">
+          {metric.value}
+        </Text>
+      )}
       {metric.detail ? (
         <Text className="text-xs text-muted-foreground">{metric.detail}</Text>
       ) : null}
@@ -277,14 +287,20 @@ export function CounterFacts({
           }
         >
           <Text className="text-xs text-muted-foreground">{revenue.label}</Text>
-          <Text
-            className={cn(
-              "min-w-0 text-xl font-bold text-primary",
-              !largeText && "shrink text-right",
-            )}
-          >
-            {revenue.value}
-          </Text>
+          {revenue.value === HOME_METRIC_LOADING ? (
+            <SkeletonGroup accessibilityLabel={`Loading ${revenue.label}`}>
+              <Skeleton height={24} width={110} />
+            </SkeletonGroup>
+          ) : (
+            <Text
+              className={cn(
+                "min-w-0 text-xl font-bold text-primary",
+                !largeText && "shrink text-right",
+              )}
+            >
+              {revenue.value}
+            </Text>
+          )}
         </View>
         <Text className="text-xs text-muted-foreground">{revenue.detail}</Text>
       </View>

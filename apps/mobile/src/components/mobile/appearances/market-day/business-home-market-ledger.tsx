@@ -1,15 +1,17 @@
+import { MarketDayActionButton } from "@/components/mobile/action-button"
+import { HOME_METRIC_LOADING } from "@/components/mobile/dashboard/home-journey-metrics"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { getBusinessHomeLedgerStepSemantics } from "@/lib/business-home-market-ledger-semantics"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
-import { View } from "@/components/ui/view"
-import { VariableContextProvider } from "nativewind"
 import { cn } from "@/lib/utils"
+import { VariableContextProvider } from "nativewind"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { MarketDayActionButton } from "@/components/mobile/action-button"
 
 type BusinessHomeMarketLedgerHeroProps = {
   businessName: string
@@ -570,15 +572,21 @@ function MarketLedgerFacts({
             index === facts.length - 1 ? styles.factLast : null,
           )}
         >
-          <Text
-            className={cn(
-              styles.factValue,
-              largeTextLayout ? styles.factValueLargeText : null,
-              "text-market-ink",
-            )}
-          >
-            {fact.value}
-          </Text>
+          {fact.value === HOME_METRIC_LOADING ? (
+            <SkeletonGroup accessibilityLabel={`Loading ${fact.label}`}>
+              <Skeleton height={26} width="70%" />
+            </SkeletonGroup>
+          ) : (
+            <Text
+              className={cn(
+                styles.factValue,
+                largeTextLayout ? styles.factValueLargeText : null,
+                "text-market-ink",
+              )}
+            >
+              {fact.value}
+            </Text>
+          )}
           <Text
             className={cn(
               styles.factLabel,

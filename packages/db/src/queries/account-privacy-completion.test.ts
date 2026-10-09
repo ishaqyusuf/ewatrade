@@ -150,6 +150,7 @@ function fixture(
   const expandedCommercialQueries: Record<string, unknown[]> = {}
   const directConversationQueries: Record<string, unknown[]> = {}
   const userQueries: unknown[] = []
+  const profileQueries: unknown[] = []
   const verificationQueries: unknown[] = []
   const request = {
     id: "request-1",
@@ -181,8 +182,9 @@ function fixture(
   const db = {
     accountPrivacyRequest: { findUnique: async () => request },
     user: {
-      findUnique: async () =>
-        live.profileFields === undefined
+      findUnique: async (query: unknown) => {
+        profileQueries.push(query)
+        return live.profileFields === undefined
           ? {
               name: "",
               image: null,
@@ -196,8 +198,11 @@ function fixture(
               emailVerifiedAt: null,
               phoneVerifiedAt: null,
               isPlatformAdmin: false,
+              ageBand: "UNDECLARED",
+              ageDeclaredAt: null,
             }
-          : live.profileFields,
+          : live.profileFields
+      },
       count: async (query: unknown) => {
         userQueries.push(query)
         return (query as { where: { email?: unknown } }).where.email
@@ -493,6 +498,7 @@ function fixture(
     commercialQueries,
     expandedCommercialQueries,
     userQueries,
+    profileQueries,
     verificationQueries,
   }
 }
@@ -975,6 +981,59 @@ describe("account privacy completion assessment", () => {
       "ACCOUNT_PROFILE_ANONYMIZATION_UNCONFIRMED",
     )
   })
+
+  test.each([
+    ["younger teen band", "AGE_13_TO_15", null],
+    ["older teen band", "AGE_16_TO_17", null],
+    ["adult band", "ADULT", null],
+    ["declaration timestamp", "UNDECLARED", new Date("2026-09-01T00:00:00Z")],
+    ["cleared declaration", "UNDECLARED", null],
+  ])(
+    "anonymization checks %s independently of identity fields",
+    async (_label, ageBand, ageDeclaredAt) => {
+      const rows = outcomes()
+      const profile = rows.find((row) => row.domain === "ACCOUNT_PROFILE")
+      if (!profile) throw new Error("Missing profile fixture")
+      profile.disposition = "ANONYMIZATION_CONFIRMED"
+      profile.nextReviewAt = null
+      const { db, profileQueries } = fixture(
+        { domainOutcomes: rows },
+        {
+          unchangedProfileEmail: 0,
+          profileFields: {
+            name: "",
+            image: null,
+            phone: null,
+            firstName: null,
+            lastName: null,
+            displayName: null,
+            avatarUrl: null,
+            metadata: null,
+            emailVerifiedAt: null,
+            phoneVerifiedAt: null,
+            isPlatformAdmin: false,
+            ageBand,
+            ageDeclaredAt,
+          },
+        },
+      )
+      const assessment = await assessAccountPrivacyCompletion(db, "request-1", {
+        approvedPolicyVersion: policyVersion,
+        now,
+      })
+      expect(
+        assessment.blockers.includes("ACCOUNT_PROFILE_PERSONAL_FIELDS_REMAIN"),
+      ).toBe(ageBand !== "UNDECLARED" || ageDeclaredAt !== null)
+      expect(profileQueries).toContainEqual(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            ageBand: true,
+            ageDeclaredAt: true,
+          }),
+        }),
+      )
+    },
+  )
 
   test("requires a real subscription outcome when the subject initiated checkout", async () => {
     const rows = outcomes()

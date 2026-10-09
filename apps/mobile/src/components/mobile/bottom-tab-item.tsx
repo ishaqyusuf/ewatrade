@@ -148,9 +148,9 @@ export function MobileBottomTabItem({
               color: isActive
                 ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground
                 : MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.inactiveForeground,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: "600",
-              lineHeight: 12,
+              lineHeight: 14,
               textAlign: "center",
               textAlignVertical: "center",
               width: "100%",

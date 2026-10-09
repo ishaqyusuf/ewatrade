@@ -1,8 +1,9 @@
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
@@ -119,7 +120,7 @@ export function ServiceJobsQueue({
             >
               {jobsQuery.isPending ? (
                 <View className="mt-4">
-                  <Skeleton className="h-10 w-full" />
+                  <Skeleton height={40} />
                 </View>
               ) : null}
             </HeroCard>
@@ -188,16 +189,14 @@ export function ServiceJobsQueue({
       }
       ListEmptyComponent={
         !market && jobsQuery.isLoading && !isOfflineMode ? (
-          <View className="gap-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </View>
+          <SkeletonGroup accessibilityLabel="Loading service work">
+            <View className="gap-3">
+              <Skeleton height={64} />
+              <Skeleton height={64} />
+            </View>
+          </SkeletonGroup>
         ) : jobsQuery.isLoading && !isOfflineMode ? (
-          <StatusBanner
-            icon="Loader2"
-            message="Loading current service work."
-            title="Work queue"
-          />
+          <ListSkeleton count={4} label="Loading service work" />
         ) : jobsQuery.isError && !isOfflineMode ? null : (
           <EmptyState
             icon="ClipboardList"

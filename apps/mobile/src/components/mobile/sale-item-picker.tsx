@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import {
   type SaleItemPickerLine,
   getSaleItemPickerLineCounts,
@@ -473,26 +474,26 @@ export function FullScreenSaleItemPicker({
               ) : null
             }
             ListEmptyComponent={
-              !error ? (
+              error ? null : isLoading ? (
+                <ListSkeleton
+                  count={5}
+                  label="Loading Catalog"
+                  variant="item"
+                />
+              ) : (
                 <EmptyState
                   className="my-8"
                   icon={query ? "Search" : "FolderPlus"}
                   message={
-                    isLoading
-                      ? "Loading available products and services."
-                      : query
-                        ? "Try another product, service, unit, or variant name."
-                        : "Add an active offering with a price and store availability before creating this order."
+                    query
+                      ? "Try another product, service, unit, or variant name."
+                      : "Add an active offering with a price and store availability before creating this order."
                   }
                   title={
-                    isLoading
-                      ? "Loading Catalog"
-                      : query
-                        ? "No matching items"
-                        : "No sellable items available"
+                    query ? "No matching items" : "No sellable items available"
                   }
                 />
-              ) : null
+              )
             }
             ListFooterComponent={
               isFetchingNextPage ? (

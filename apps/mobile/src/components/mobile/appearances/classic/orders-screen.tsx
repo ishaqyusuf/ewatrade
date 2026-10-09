@@ -24,7 +24,7 @@ import type {
 } from "@/components/mobile/orders/orders-presentation"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
@@ -129,7 +129,9 @@ export function ClassicOrdersSummary({
   if (loading)
     return (
       <View className="gap-3 px-[18px]">
-        <Skeleton className="h-[220px] rounded-[26px]" />
+        <SkeletonGroup accessibilityLabel="Loading sales">
+          <Skeleton height={220} radius={26} />
+        </SkeletonGroup>
       </View>
     )
   return (
@@ -252,11 +254,13 @@ export function ClassicOrdersSummary({
 
 export function ClassicOrdersSkeleton() {
   return (
-    <View className="gap-3">
-      {[1, 2, 3].map((key) => (
-        <Skeleton key={key} className="h-[88px] rounded-[20px]" />
-      ))}
-    </View>
+    <SkeletonGroup accessibilityLabel="Loading orders">
+      <View className="gap-3">
+        {[1, 2, 3].map((key) => (
+          <Skeleton key={key} height={88} radius={20} />
+        ))}
+      </View>
+    </SkeletonGroup>
   )
 }
 

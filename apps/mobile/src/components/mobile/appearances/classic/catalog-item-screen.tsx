@@ -16,8 +16,9 @@ import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
+import { MotionView } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
@@ -446,15 +447,18 @@ function AboutRow({
 export function ClassicCatalogItemScreen(props: CatalogItemScreenProps) {
   const { colorScheme } = useColorScheme()
   const unavailable = catalogItemUnavailable(props)
+  const [itemReadyOnOpen] = useState(() => Boolean(props.item))
   return (
     <View className="flex-1 bg-background">
       <StatusBar animated style={colorScheme === "dark" ? "light" : "dark"} />
       {props.item && props.storeId ? (
-        <ClassicCatalogItemOverview
-          key={props.item.id}
-          {...props}
-          item={props.item}
-        />
+        <MotionView animate={!itemReadyOnOpen} fill>
+          <ClassicCatalogItemOverview
+            key={props.item.id}
+            {...props}
+            item={props.item}
+          />
+        </MotionView>
       ) : (
         <MobileScreen
           contentClassName="gap-4 px-[18px] pb-12"
@@ -465,15 +469,13 @@ export function ClassicCatalogItemScreen(props: CatalogItemScreenProps) {
             Back to catalog
           </ActionButton>
           {props.isPending && !props.isOffline ? (
-            <View
-              accessibilityLabel="Loading item"
-              accessibilityRole="progressbar"
-              className="gap-4"
-            >
-              <Skeleton className="h-7 w-2/3 rounded" />
-              <Skeleton className="h-56 rounded-[26px]" />
-              <Skeleton className="h-36 rounded-[20px]" />
-            </View>
+            <SkeletonGroup accessibilityLabel="Loading item">
+              <View className="gap-4">
+                <Skeleton height={28} radius={4} width="66%" />
+                <Skeleton height={224} radius={26} />
+                <Skeleton height={144} radius={20} />
+              </View>
+            </SkeletonGroup>
           ) : (
             <EmptyState
               icon="Package"

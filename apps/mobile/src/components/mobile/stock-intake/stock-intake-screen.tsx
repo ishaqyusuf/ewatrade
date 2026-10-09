@@ -4,11 +4,12 @@ import * as Market from "@/components/mobile/appearances/market-day/stock-intake
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Modal, useModal } from "@/components/ui/modal"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
@@ -116,7 +117,11 @@ export function StockIntakeContent(props: StockIntakeProps) {
                   }}
                 >
                   {model.loading ? (
-                    <Skeleton className="mt-4 h-10 w-full" />
+                    <View className="mt-4">
+                      <SkeletonGroup accessibilityLabel="Loading stock balance">
+                        <Skeleton height={40} />
+                      </SkeletonGroup>
+                    </View>
                   ) : null}
                   <View className="mt-4">
                     <ActionButton
@@ -228,14 +233,15 @@ export function StockIntakeContent(props: StockIntakeProps) {
                             : "text-xs text-muted-foreground"
                         }
                       >
-                        {model.loading ||
-                        model.loadError ||
-                        !model.hasBalanceData ||
-                        !model.canManage ||
-                        model.scopeChanged ||
-                        model.missingStore
-                          ? "Balance report unavailable"
-                          : `${model.rows.length} matching balances`}
+                        {model.loading
+                          ? "Finding balances…"
+                          : model.loadError ||
+                              !model.hasBalanceData ||
+                              !model.canManage ||
+                              model.scopeChanged ||
+                              model.missingStore
+                            ? "Balance report unavailable"
+                            : `${model.rows.length} matching balances`}
                       </Text>
                     </Section>
                   ) : null}
@@ -260,27 +266,35 @@ export function StockIntakeContent(props: StockIntakeProps) {
             model.canManage &&
             !model.scopeChanged &&
             !model.loadError ? (
-              <EmptyState
-                icon="Warehouse"
-                title={
-                  model.loading
-                    ? "Loading stock"
-                    : model.missingStore
+              model.loading ? (
+                <View className="px-4">
+                  <ListSkeleton
+                    count={5}
+                    label="Loading stock balances"
+                    variant="item"
+                  />
+                </View>
+              ) : (
+                <EmptyState
+                  icon="Warehouse"
+                  title={
+                    model.missingStore
                       ? "Store unavailable"
                       : model.offline && !model.hasBalanceData
                         ? "No cached stock balances"
                         : model.query
                           ? "No matching balances"
                           : "No stock balances"
-                }
-                message={
-                  model.offline && !model.hasBalanceData
-                    ? "Reconnect to load balances for this Store."
-                    : model.query
-                      ? "Try another Product, unit or custody search."
-                      : "Add a stock-tracked Product in the current Store before recording inventory."
-                }
-              />
+                  }
+                  message={
+                    model.offline && !model.hasBalanceData
+                      ? "Reconnect to load balances for this Store."
+                      : model.query
+                        ? "Try another Product, unit or custody search."
+                        : "Add a stock-tracked Product in the current Store before recording inventory."
+                  }
+                />
+              )
             ) : null
           }
           ListFooterComponent={

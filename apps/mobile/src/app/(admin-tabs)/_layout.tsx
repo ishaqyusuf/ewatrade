@@ -9,6 +9,7 @@ import {
   getAdminCatalogTabLabel,
   getAdminTabDefinitions,
 } from "@/lib/admin-navigation"
+import { tabTransitions } from "@/lib/screen-transitions"
 import { mergeMobileWorkspaceFeatureAvailability } from "@/lib/workspace-feature-availability"
 import {
   activeBusinessOfflineCommands,
@@ -20,10 +21,12 @@ import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { Tabs } from "expo-router"
 import { useMemo, useState } from "react"
+import { useReducedMotion } from "react-native-reanimated"
 
 export default function AdminTabsLayout() {
   const createModal = useModal()
   const [isDockHidden, setDockHidden] = useState(false)
+  const reduceMotion = useReducedMotion()
   const trpc = useTRPC()
   const { profile } = useAuthContext()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
@@ -98,7 +101,7 @@ export default function AdminTabsLayout() {
       <Tabs
         backBehavior="initialRoute"
         initialRouteName="admin-home"
-        screenOptions={{ headerShown: false }}
+        screenOptions={{ headerShown: false, ...tabTransitions(reduceMotion) }}
         tabBar={(props) => (
           <AdminTabBar
             {...props}
