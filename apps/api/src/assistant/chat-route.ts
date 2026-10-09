@@ -48,6 +48,7 @@ import {
   loadSetupBusinessContext,
   requireSetupAssistantScope,
 } from "./setup-context"
+import { setupRunLookup } from "./setup-run-lookup"
 
 export type SetupUIMessage = UIMessage<never, SetupAssistantDataParts>
 
@@ -146,6 +147,40 @@ function usageRecord(usage: LanguageModelUsage | undefined) {
 }
 
 export function registerAssistantChatRoutes(app: OpenAPIHono) {
+  app.get("/api/assistant/runs/:runId", async (context) => {
+    context.header("Cache-Control", "no-store")
+    try {
+      const ctx = await resolveProtectedTenantContext(
+        await createTRPCContext(undefined, context),
+      )
+      const scope = requireSetupAssistantScope(ctx)
+      const run = await ctx.db.assistantRun.findFirst(
+        setupRunLookup(scope, context.req.param("runId")),
+      )
+      return run
+        ? context.json(run)
+        : failure(
+            context,
+            404,
+            "NOT_FOUND",
+            "This reply is unavailable in the current Store.",
+          )
+    } catch (error) {
+      if (error instanceof TRPCError)
+        return failure(
+          context,
+          getHTTPStatusCodeFromError(error),
+          error.code,
+          error.message,
+        )
+      return failure(
+        context,
+        503,
+        "ASSISTANT_UNAVAILABLE",
+        "Reply status could not be loaded. Refresh your setup list.",
+      )
+    }
+  })
   app.post("/api/assistant/chat", async (context) => {
     context.header("Cache-Control", "no-store")
     let ctx: Awaited<ReturnType<typeof resolveProtectedTenantContext>>
@@ -281,7 +316,10 @@ export function registerAssistantChatRoutes(app: OpenAPIHono) {
       execute: async ({ writer }) => {
         writer.write({
           type: "data-setup-run",
-          data: { remainingRequests: budget.remainingRequests },
+          data: {
+            remainingRequests: budget.remainingRequests,
+            runId: begun.run.id,
+          },
           transient: true,
         })
         const tools = createSetupAssistantTools({

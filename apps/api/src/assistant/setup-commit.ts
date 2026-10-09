@@ -397,13 +397,16 @@ export async function commitSetupDraft(
   scope: AssistantScope,
   draftId: string,
   deps: SetupCommitDeps = defaultDeps,
+  options: { keys?: string[] } = {},
 ) {
   const draft = await deps.readSetupDraft(db, draftId)
+  const selected = options.keys ? new Set(options.keys) : null
   const pending = draft.entities.filter(
     (entity) =>
-      entity.state === "CONFIRMED" ||
-      (entity.state === "COMMITTED" &&
-        isOpeningBalancePending(entity.errorCode)),
+      (!selected || selected.has(entity.key)) &&
+      (entity.state === "CONFIRMED" ||
+        (entity.state === "COMMITTED" &&
+          isOpeningBalancePending(entity.errorCode))),
   )
   const batch = pending.slice(0, SETUP_COMMIT_BATCH_SIZE)
   const results: SetupCommitResult[] = []

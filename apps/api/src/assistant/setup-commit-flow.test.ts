@@ -205,3 +205,21 @@ describe("setup commit flow", () => {
     expect(result.results).toHaveLength(1)
   })
 })
+
+test("adding selected setup keys leaves other confirmed records untouched", async () => {
+  const { deps, outcomes } = harness([product("first"), product("second")])
+  const result = await commitSetupDraft(db, scope, "draft", deps, {
+    keys: ["second"],
+  })
+  expect(result.results.map((item) => item.key)).toEqual(["second"])
+  expect(outcomes.map((item) => item.key)).toEqual(["second"])
+  expect(result.remaining).toBe(0)
+})
+test("a missing selected key does not add a different confirmed record", async () => {
+  const { deps, outcomes } = harness([product("first")])
+  const result = await commitSetupDraft(db, scope, "draft", deps, {
+    keys: ["removed"],
+  })
+  expect(result.results).toEqual([])
+  expect(outcomes).toEqual([])
+})

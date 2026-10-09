@@ -100,6 +100,12 @@ export const setupAssistantRouter = createTRPCRouter({
     )
       return { enabled: false as const }
     const scope = requireSetupAssistantScope(ctx)
+    const location = await ctx.db.store.findFirst({
+      where: { id: scope.storeId, tenantId: scope.tenantId },
+      select: { countryCode: true, tenant: { select: { countryCode: true } } },
+    })
+    const countryCode =
+      location?.countryCode ?? location?.tenant.countryCode ?? "NG"
     const conversation = await findSetupConversation(ctx.db, scope)
     if (!conversation?.setupDraft)
       return {
@@ -108,12 +114,22 @@ export const setupAssistantRouter = createTRPCRouter({
         messages: [],
         draft: null,
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
+        countryCode,
         prerequisites: { termsRequired: false, financeBookMissing: false },
         followUp: setupFollowUpState([]),
       }
-    const [messages, draft] = await Promise.all([
+    const [messages, draft, activeRun] = await Promise.all([
       listAssistantMessages(ctx.db, conversation.id),
       readSetupDraft(ctx.db, conversation.setupDraft.id),
+      ctx.db.assistantRun.findFirst({
+        where: {
+          conversationId: conversation.id,
+          actorUserId: scope.userId,
+          status: "RUNNING",
+        },
+        orderBy: { startedAt: "desc" },
+        select: { id: true },
+      }),
     ])
     const prerequisites = await readSetupPrerequisites(
       ctx.db,
@@ -130,9 +146,11 @@ export const setupAssistantRouter = createTRPCRouter({
         id: conversation.id,
         status: conversation.status,
       },
+      activeRunId: activeRun?.id ?? null,
       messages: messages.map(({ id, role, parts }) => ({ id, role, parts })),
       draft,
       currencyCode: ctx.tenantContext.activeStore.currencyCode,
+      countryCode,
       prerequisites,
       followUp: setupFollowUpState(draft.entities),
     }
@@ -321,7 +339,12 @@ export const setupAssistantRouter = createTRPCRouter({
 
   /** Adds confirmed records to the business in bounded batches; call until remaining is 0. */
   commit: protectedProcedure
-    .input(z.object({ conversationId: conversationIdSchema }))
+    .input(
+      z.object({
+        conversationId: conversationIdSchema,
+        keys: keysSchema.optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
       const { conversation, draftId } = await requireDraft(
@@ -334,15 +357,19 @@ export const setupAssistantRouter = createTRPCRouter({
           code: "CONFLICT",
           message: "Resume the setup assistant before adding records.",
         })
-      const outcome = await commitSetupDraft(ctx.db, scope, draftId).catch(
-        (error: unknown) => {
-          console.error("[setup-commit] batch failed", {
-            requestId: ctx.requestId,
-            ...describeCommitError(error),
-          })
-          throw error
-        },
-      )
+      const outcome = await commitSetupDraft(
+        ctx.db,
+        scope,
+        draftId,
+        undefined,
+        { keys: input.keys },
+      ).catch((error: unknown) => {
+        console.error("[setup-commit] batch failed", {
+          requestId: ctx.requestId,
+          ...describeCommitError(error),
+        })
+        throw error
+      })
       if (
         !outcome.interrupted &&
         outcome.remaining === 0 &&

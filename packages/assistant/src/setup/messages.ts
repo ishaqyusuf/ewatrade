@@ -11,7 +11,7 @@ export type SetupDraftChange = { revision: number; keys: string[] }
 export type SetupAssistantDataParts = {
   "setup-offer": Record<string, never>
   "setup-draft": SetupDraftChange
-  "setup-run": { remainingRequests: number }
+  "setup-run": { remainingRequests: number; runId?: string }
 }
 
 export const SETUP_TOOL_LABELS: Record<string, string> = {
@@ -42,7 +42,7 @@ export function setupGreetingMessages(input: {
   firstName: string | null
   businessType: string | null
 }): TextMessage[] {
-  const hello = input.firstName ? `Welcome, ${input.firstName}!` : "Welcome!"
+  const hello = input.firstName ? `Welcome, ${input.firstName}.` : "Welcome."
   const type = input.businessType
     ? ` I see you run a ${input.businessType.toLowerCase()} business.`
     : ""
@@ -75,7 +75,7 @@ export function setupBeginMessage(): TextMessage {
     parts: [
       {
         type: "text",
-        text: "Great! Tell me what you sell or the services you offer, with prices and how many you have now if you know. You can list them like:\n\n- Crate of eggs, 4500, 20 crates\n- Broiler chicken, 9000 each\n- Mama Ade owes me 15,000\n\nI'll put everything in a setup list you can check before anything is added.",
+        text: "Tell me what you sell or the services you offer, with prices and how many you have now if you know. You can list them like:\n\n- Crate of eggs, 4500, 20 crates\n- Broiler chicken, 9000 each\n- Mama Ade owes me 15,000\n\nI'll put everything in a setup list you can check before anything is added.",
       },
     ],
   }
@@ -89,10 +89,10 @@ export function setupResumeMessage(followUp?: SetupFollowUp): TextMessage {
       {
         type: "text",
         text: pending.length
-          ? ["Welcome back! Let's finish your setup list.", ...pending].join(
+          ? ["Welcome back. Let's finish your setup list.", ...pending].join(
               "\n\n",
             )
-          : "Welcome back! Your setup list is saved. Tell me anything else you sell, prices you'd like to change, or customers to add.",
+          : "Welcome back. Your setup list is saved. Tell me anything else you sell, prices you'd like to change, or customers to add.",
       },
     ],
   }
@@ -140,7 +140,7 @@ export function setupCommitSummaryMessage(input: {
   ].filter(Boolean)
   const lines = [
     added.length
-      ? `Done! Your business now has ${listJoin(added as string[])} from this setup. You can find them in Catalog and Customers, and stock is ready in Inventory.`
+      ? `Done. Your business now has ${listJoin(added as string[])} from this setup. You can find them in Catalog and Customers, and stock is ready in Inventory.`
       : "Nothing new was added this time.",
   ]
   if (input.balancesPending)

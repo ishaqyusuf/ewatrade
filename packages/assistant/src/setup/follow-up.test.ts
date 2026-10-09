@@ -111,7 +111,7 @@ describe("setup follow-up", () => {
     expect(
       text(setupResumeMessage(summarizeSetupFollowUp([product("Turkey", {})]))),
     ).toBe(
-      "Welcome back! Let's finish your setup list.\n\nWhat is your selling price for one piece of Turkey?",
+      "Welcome back. Let's finish your setup list.\n\nWhat is your selling price for one piece of Turkey?",
     )
     expect(text(setupResumeMessage())).toContain("Your setup list is saved.")
   })
