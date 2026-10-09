@@ -19,12 +19,13 @@ import {
   MarketDayMoreWorkspace,
 } from "@/components/mobile/appearances/market-day/more-screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
 import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useColorScheme } from "@/hooks/use-color"
+import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import {
   type AdminManagementRole,
@@ -49,7 +50,12 @@ import { useEffect, useRef, useState } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
 import { HeroCard } from "../green-till/hero-card"
-import { QuickActionRow, SectionHeader } from "../green-till/kit"
+import {
+  ListCard,
+  QuickActionRow,
+  RecordRow,
+  SectionHeader,
+} from "../green-till/kit"
 import { MoreApprovalCard } from "./more-approval-card"
 import { MoreSignOutSheet, MoreThemeSheet } from "./more-sheets"
 /** Short tile names so the four-up grid never wraps or truncates. */
@@ -92,6 +98,7 @@ function MoreContent({
   const insets = useSafeAreaInsets()
   const appearance = useMobileDesign("more")
   const market = appearance === "market-day"
+  const colors = useColors()
   const Frame = market ? MarketDayMoreFrame : ClassicMoreFrame
   const Header = market ? MarketDayMoreHeader : ClassicMoreHeader
   const Workspace = market ? MarketDayMoreWorkspace : ClassicMoreWorkspace
@@ -257,7 +264,31 @@ function MoreContent({
           )
         }}
       >
-        {account ? (
+        {account && !market ? (
+          // Green Till bar: round back button, centred title, spacer.
+          <View className="flex-row items-center gap-2.5">
+            <Pressable
+              accessibilityLabel="Back"
+              accessibilityRole="button"
+              className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+              haptic
+              onPress={() => router.back()}
+            >
+              <Icon
+                className="size-[20px]"
+                color={colors.foreground}
+                name="ChevronLeft"
+              />
+            </Pressable>
+            <Text
+              accessibilityRole="header"
+              className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
+            >
+              Account
+            </Text>
+            <View className="size-11" />
+          </View>
+        ) : account ? (
           <ActionButton
             variant="ghost"
             icon="ArrowLeft"
@@ -287,13 +318,15 @@ function MoreContent({
             title={auth.profile?.name ?? "Your account"}
             sub={`${auth.profile?.businessName ?? "Current business"} · ${getMobileRoleLabel(auth.profile?.role)}`}
           >
-            <ActionButton
-              tone="cream"
-              icon="RefreshCw"
-              onPress={() => router.push("/business-switch-modal")}
-            >
-              Switch business
-            </ActionButton>
+            <View className="mt-4">
+              <ActionButton
+                tone="cream"
+                icon="ArrowLeftRight"
+                onPress={() => router.push("/business-switch-modal")}
+              >
+                Switch business
+              </ActionButton>
+            </View>
           </HeroCard>
         ) : (
           <Workspace
@@ -407,7 +440,23 @@ function MoreContent({
             </Section>
           ),
         )}
-        {account ? (
+        {account && !market ? (
+          <ListCard>
+            <RecordRow
+              title="Sync & offline"
+              meta={`${syncAlertCount} waiting`}
+              avatar={{ icon: "RefreshCw", tint: "lilac" }}
+              status={
+                <Icon
+                  className="size-[16px]"
+                  color={colors.mutedForeground}
+                  name="ChevronRight"
+                />
+              }
+              onPress={() => router.push("/sync-status-modal")}
+            />
+          </ListCard>
+        ) : account ? (
           <ActionButton
             variant="outline"
             icon="RefreshCw"
