@@ -221,12 +221,25 @@ export function CatalogItemForm({
       { conversationId: catalogConversation ?? "" },
       {
         enabled: Boolean(catalogConversation),
-        refetchInterval: catalogCreateMode === "chat" ? 2500 : false,
+        retry: (failureCount, error) =>
+          !["NOT_FOUND", "FORBIDDEN", "UNAUTHORIZED"].includes(
+            error.data?.code ?? "",
+          ) && failureCount < 2,
+        refetchInterval: (query) =>
+          catalogCreateMode === "chat" && !query.state.error ? 2500 : false,
       },
     ),
   )
   const handoffRequest = useRef(crypto.randomUUID())
   const handoffStarted = useRef(false)
+  const handoffAttempt = useRef(0)
+  useEffect(
+    () => () => {
+      handoffAttempt.current += 1
+      handoffStarted.current = false
+    },
+    [],
+  )
   const restored = useRef(false)
   const previousCreateMode = useRef(catalogCreateMode)
   const [handoffError, setHandoffError] = useState<string | null>(null)
@@ -240,7 +253,10 @@ export function CatalogItemForm({
     const returningFromChat =
       previousCreateMode.current === "chat" && catalogCreateMode !== "chat"
     previousCreateMode.current = catalogCreateMode
-    if (returningFromChat) handoffStarted.current = false
+    if (returningFromChat) {
+      handoffAttempt.current += 1
+      handoffStarted.current = false
+    }
     if (
       catalogCreateMode === "chat" &&
       !catalogConversation &&
@@ -289,9 +305,11 @@ export function CatalogItemForm({
   const openProductChat = async () => {
     if (startProductChat.isPending || handoffStarted.current) return
     handoffStarted.current = true
+    const attempt = ++handoffAttempt.current
     setHandoffError(null)
     try {
       const photoAssetIds = await photo.upload(clientOperationId.current)
+      if (attempt !== handoffAttempt.current) return
       const snapshot = productFormSnapshotSchema.parse({
         form,
         storeId,
@@ -324,11 +342,13 @@ export function CatalogItemForm({
       await queryClient.invalidateQueries({
         queryKey: trpc.productAssistant.pathKey(),
       })
+      if (attempt !== handoffAttempt.current) return
       await setParams({
         catalogCreateMode: "chat",
         catalogConversation: result.conversationId,
       })
     } catch (error) {
+      if (attempt !== handoffAttempt.current) return
       handoffStarted.current = false
       setHandoffError(
         error instanceof Error
@@ -349,6 +369,7 @@ export function CatalogItemForm({
       void openProductChat()
   })
   const backToForm = () => {
+    handoffAttempt.current += 1
     handoffStarted.current = false
     void setParams({ catalogCreateMode: "form" })
   }
@@ -1165,10 +1186,7 @@ export function CatalogItemForm({
           />
         ) : (
           <div className="space-y-4">
-            <Button
-              variant="outline"
-              onClick={() => void setParams({ catalogCreateMode: "form" })}
-            >
+            <Button variant="outline" onClick={backToForm}>
               Back to form
             </Button>
             {productState.isError ? (

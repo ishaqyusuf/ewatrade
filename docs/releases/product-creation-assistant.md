@@ -82,3 +82,5 @@ Canonical implementation, roadmap and live evidence remain in local Brain:
 [implementation contract](../../.brain/plans/2026-10-09-product-assistant-migration-contract.md),
 and [decision](../../.brain/decisions/2026-10-09-focused-product-assistant.md).
 Brain and local QA/design artifacts are intentionally excluded from Git.
+
+Loading recovery: terminal missing/access errors stop retries and polling, display their message and retain Back to form. Closing or returning while admission is pending invalidates that handoff; a late response cannot navigate the dismissed editor. Browser error recovery and cancellation passed.
