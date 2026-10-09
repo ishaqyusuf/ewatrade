@@ -336,6 +336,7 @@ const InitialLayout = ({
             name="create-sale-modal"
             options={{ headerShown: false, presentation: "modal" }}
           />
+          <Stack.Screen name="ask-assistant" options={{ headerShown: false }} />
           <Stack.Screen
             name="global-search"
             options={{ headerShown: false, presentation: "modal" }}

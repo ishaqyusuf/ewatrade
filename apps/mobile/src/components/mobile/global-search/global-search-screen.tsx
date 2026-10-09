@@ -1,3 +1,17 @@
+import {
+  ClassicSearchActionRow,
+  ClassicSearchFrame,
+  ClassicSearchHeader,
+  ClassicSearchRow,
+  ClassicSearchSection,
+} from "@/components/mobile/appearances/classic/global-search-screen"
+import {
+  MarketDaySearchActionRow,
+  MarketDaySearchFrame,
+  MarketDaySearchHeader,
+  MarketDaySearchRow,
+  MarketDaySearchSection,
+} from "@/components/mobile/appearances/market-day/global-search-screen"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -14,26 +28,13 @@ import { useRouter } from "expo-router"
 import { useEffect, useMemo, useState } from "react"
 import { Keyboard } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { AssistantEntry } from "../assistant/assistant-entry"
 import {
   SEARCH_GROUP_ORDER,
-  resultGroupLabel,
   type SearchAction,
   type SearchResult,
+  resultGroupLabel,
 } from "./search-presentation"
-import {
-  ClassicSearchFrame,
-  ClassicSearchHeader,
-  ClassicSearchSection,
-  ClassicSearchRow,
-  ClassicSearchActionRow,
-} from "@/components/mobile/appearances/classic/global-search-screen"
-import {
-  MarketDaySearchFrame,
-  MarketDaySearchHeader,
-  MarketDaySearchSection,
-  MarketDaySearchRow,
-  MarketDaySearchActionRow,
-} from "@/components/mobile/appearances/market-day/global-search-screen"
 
 export function GlobalSearchScreen() {
   const router = useRouter()
@@ -48,6 +49,7 @@ export function GlobalSearchScreen() {
   const [footerHeight, setFooterHeight] = useState(100)
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset measured chrome when the appearance changes.
   useEffect(() => {
     setHeaderHeight(0)
     setShowCanvasStatusBar(false)
@@ -306,6 +308,9 @@ export function GlobalSearchScreen() {
             message="Try an order number, customer contact, product, service, or team member."
             title="No results"
           />
+        ) : null}
+        {normalizedQuery.length >= 2 ? (
+          <AssistantEntry query={normalizedQuery} />
         ) : null}
       </Frame>
       <BottomSearchFooter
