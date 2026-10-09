@@ -478,15 +478,17 @@ const styles = StyleSheet.create({
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 6 },
   chip: {
     borderRadius: 999,
+    height: 20,
+    justifyContent: "center",
     paddingHorizontal: 8,
-    paddingVertical: 3,
   },
   chipText: {
     fontSize: 10.5,
     // 800 mis-measures short labels on Android ("2 staff" drew as "2").
     fontWeight: "700",
     includeFontPadding: false,
-    lineHeight: 14,
+    lineHeight: 13,
+    textAlignVertical: "center",
   },
   iconChip: {
     alignItems: "center",

@@ -170,8 +170,8 @@ export function QaQuickFillButton({
 
 function QaTag() {
   return (
-    <View className="rounded-full bg-primary px-1.5 py-px">
-      <Text className="text-[9.5px] font-bold [-rn-line-height:14] text-primary-foreground">
+    <View className="h-4 items-center justify-center rounded-full bg-primary px-1.5">
+      <Text className="text-[9.5px] font-bold [-rn-line-height:12] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-primary-foreground">
         QA
       </Text>
     </View>

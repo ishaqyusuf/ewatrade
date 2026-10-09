@@ -65,8 +65,8 @@ export function KindChoice({
           {description}
         </Text>
         {recommendation ? (
-          <View className="mt-1 self-start rounded-full bg-tint-mint px-2 py-0.5">
-            <Text className="text-[10.5px] font-bold text-tint-mint-foreground">
+          <View className="mt-1 min-h-5 justify-center self-start rounded-full bg-tint-mint px-2 py-0.5">
+            <Text className="text-[10.5px] font-bold [-rn-line-height:14] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-tint-mint-foreground">
               {recommendation}
             </Text>
           </View>

@@ -341,9 +341,12 @@ export function StatusPill({
         borderRadius: 999,
         flexDirection: "row",
         gap: 4,
+        // A fixed height with centred content keeps short labels optically
+        // centred on Android, where font padding pushes text up.
+        height: 20,
+        justifyContent: "center",
         marginTop: 3,
         paddingHorizontal: 8,
-        paddingVertical: 2,
       }}
     >
       {icon ? (
@@ -361,13 +364,15 @@ export function StatusPill({
             color: fg,
             fontSize: 10.5,
             fontWeight: "700",
-            lineHeight: 14,
+            includeFontPadding: false,
+            lineHeight: 13,
+            textAlignVertical: "center",
           }}
         >
           {label}
         </NativeText>
       ) : (
-        <Text className="text-[10.5px] font-bold [-rn-line-height:14] text-muted-foreground">
+        <Text className="text-[10.5px] font-bold [-rn-line-height:13] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-muted-foreground">
           {label}
         </Text>
       )}

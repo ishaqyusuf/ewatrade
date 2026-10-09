@@ -292,20 +292,28 @@ export function InviteCard({
           {email}
         </NativeText>
       </View>
-      <NativeText
+      <View
         style={{
           backgroundColor: palette.lilacChip,
           borderRadius: 999,
-          color: palette.lilacForeground,
-          fontSize: 11,
-          fontWeight: "800",
-          overflow: "hidden",
+          height: 22,
+          justifyContent: "center",
           paddingHorizontal: 9,
-          paddingVertical: 4,
         }}
       >
-        {role}
-      </NativeText>
+        <NativeText
+          style={{
+            color: palette.lilacForeground,
+            fontSize: 11,
+            fontWeight: "700",
+            includeFontPadding: false,
+            lineHeight: 14,
+            textAlignVertical: "center",
+          }}
+        >
+          {role}
+        </NativeText>
+      </View>
     </View>
   )
 }

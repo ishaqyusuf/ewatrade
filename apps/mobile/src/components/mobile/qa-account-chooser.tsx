@@ -225,10 +225,10 @@ function QaFab({
       {count === undefined ? null : (
         // Outside the button, which clips its children.
         <View
-          className="absolute -right-1 -top-1 min-w-[22px] items-center rounded-full border-2 border-background bg-primary px-1"
+          className="absolute -right-1 -top-1 h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-background bg-primary px-1"
           pointerEvents="none"
         >
-          <Text className="text-[11px] font-bold [-rn-line-height:16] text-primary-foreground">
+          <Text className="text-[11px] font-bold [-rn-line-height:14] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-primary-foreground">
             {count}
           </Text>
         </View>
