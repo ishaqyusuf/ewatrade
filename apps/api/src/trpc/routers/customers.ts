@@ -17,7 +17,7 @@ import {
 import { createTRPCRouter, protectedProcedure } from "../init"
 import { orderScope } from "../order-scope"
 
-function assertCanUseCustomers(role: string) {
+export function assertCanUseCustomers(role: string) {
   const normalized = normalizeRole(role)
   if (!normalized || !canOperatePos(normalized)) {
     throw new TRPCError({

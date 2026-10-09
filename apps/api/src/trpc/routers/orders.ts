@@ -62,7 +62,7 @@ import {
 import { createTRPCRouter, protectedProcedure } from "../init"
 import { orderScope } from "../order-scope"
 
-function assertCanOperateOrders(role: string) {
+export function assertCanOperateOrders(role: string) {
   const normalized = normalizeRole(role)
   if (!normalized || !canOperatePos(normalized)) {
     throw new TRPCError({

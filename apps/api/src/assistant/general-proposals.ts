@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto"
 import {
   type GeneralAction,
   type GeneralProposal,
-  type GeneralReceipt,
   generalActionSchema,
   generalReceiptSchema,
 } from "@ewatrade/assistant/general/contracts"
@@ -10,29 +9,21 @@ import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-acce
 import {
   generalProposalWhere,
   lockGeneralMembership,
-  lockGeneralPaymentOrder,
   readGeneralConversation,
-  readGeneralOrderReview,
 } from "@ewatrade/db/assistant-general"
 import type { readGeneralProposals } from "@ewatrade/db/assistant-general"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import {
-  createCommercialOrderInTransaction,
-  createCustomerInTransaction,
-  createSimpleCatalogItemInTransaction,
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
-  recordCommercialOrderPaymentInTransaction,
-  resolveOrderScope,
 } from "@ewatrade/db/queries"
-import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
-import { catalogCreateSimpleItemSchema } from "../schemas/catalog"
-import { customerCreateSchema } from "../schemas/customers"
 import {
-  commercialOrderCreateSchema,
-  commercialOrderPaymentSchema,
-} from "../schemas/orders"
+  type GeneralTransactionContext,
+  conflict,
+  generalActionAdapter,
+  sameTarget,
+} from "./general-actions"
 import {
   type GeneralContext,
   assertGeneralAction,
@@ -46,11 +37,6 @@ import {
 type AssistantActionProposal = Awaited<
   ReturnType<typeof readGeneralProposals>
 >[number]
-type GeneralTransactionContext = Omit<GeneralContext, "db"> & {
-  db: Prisma.TransactionClient
-}
-const conflict = (message: string) =>
-  new TRPCError({ code: "CONFLICT", message })
 const signingKey = () => process.env.ASSISTANT_APPROVAL_SIGNING_KEY ?? ""
 /** This DTO is issued only to the authenticated app. Never include it in a model result. */
 export function generalProposalForApp(
@@ -152,101 +138,13 @@ async function inFreshGeneralTransaction<T>(
     }
   }
 }
-async function paymentTarget(
-  ctx: GeneralTransactionContext,
-  action: Extract<GeneralAction, { action: "payment_record" }>,
-  lock: boolean,
-) {
-  const scope = requireGeneralScope(ctx)
-  if (lock)
-    await lockGeneralPaymentOrder(ctx.db, {
-      tenantId: scope.tenantId,
-      storeId: scope.storeId,
-      orderId: action.orderId,
-    })
-  const visibility = await resolveOrderScope(ctx.db, {
-    tenantId: scope.tenantId,
-    storeId: scope.storeId,
-    activeStoreId: scope.storeId,
-    userId: scope.userId,
-    role: ctx.tenantContext.membership.role,
-    allowedStoreIds: ctx.tenantContext.stores.map((store) => store.id),
-  })
-  const target = await ctx.db.commercialOrder.findFirst({
-    where: { ...visibility, id: action.orderId },
-    select: {
-      id: true,
-      orderNumber: true,
-      customerName: true,
-      updatedAt: true,
-      amountPaidMinor: true,
-      totalMinor: true,
-      status: true,
-      paymentStatus: true,
-      _count: { select: { payments: true } },
-    },
-  })
-  if (!target)
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "This order is unavailable in your current Store.",
-    })
-  if (target.paymentStatus === "PAID" && target._count.payments === 0)
-    throw conflict("This order is already paid.")
-  if (["CANCELLED", "REFUNDED"].includes(target.status))
-    throw conflict("This order no longer accepts payments.")
-  if (action.amountMinor > target.totalMinor - target.amountPaidMinor)
-    throw conflict("Payment exceeds the remaining balance. Check the order.")
-  return {
-    id: target.id,
-    review: {
-      orderNumber: target.orderNumber,
-      customerName: target.customerName,
-      balanceDueMinor: target.totalMinor - target.amountPaidMinor,
-    },
-    revision: proposalDigest({
-      ...target,
-      updatedAt: target.updatedAt.toISOString(),
-    }),
-  }
-}
 async function validateDraft(
   ctx: GeneralTransactionContext,
   action: GeneralAction,
-  key: string,
+  lock = false,
 ) {
-  const scope = assertGeneralAction(ctx, action.action)
-  if (action.action === "payment_record")
-    return paymentTarget(ctx, action, false)
-  if (action.action === "order_create") {
-    if (
-      action.customerId &&
-      !(await ctx.db.customer.findFirst({
-        where: { id: action.customerId, tenantId: scope.tenantId },
-        select: { id: true },
-      }))
-    )
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Customer unavailable.",
-      })
-    await readGeneralOrderReview(ctx.db, scope, action.lines)
-    for (const line of action.lines) {
-      const offering = await ctx.db.sellableOffering.findFirst({
-        where: { id: line.offeringId, tenantId: scope.tenantId },
-        select: { id: true },
-      })
-      if (!offering)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "An offering could not be found. Search the Catalog first.",
-        })
-    }
-  }
-  // Domain commands still validate current prices, precision, availability, Terms,
-  // Finance prerequisites and plan limits on Confirm; a draft changes no record.
-  void key
-  return null
+  assertGeneralAction(ctx, action.action)
+  return generalActionAdapter(action).validate(ctx, action, lock)
 }
 export async function draftGeneralProposal(
   ctx: GeneralContext,
@@ -262,7 +160,7 @@ export async function draftGeneralProposal(
         message: "Conversation unavailable.",
       })
     const key = `assistant_${randomUUID()}`
-    const target = await validateDraft(fresh, payload, key)
+    const target = await validateDraft(fresh, payload)
     const row = await fresh.db.assistantActionProposal.create({
       data: {
         id: randomUUID(),
@@ -297,87 +195,6 @@ export async function draftGeneralProposal(
       status: "needs_user_confirmation",
     }
   })
-}
-async function executeAction(
-  ctx: GeneralTransactionContext,
-  payload: GeneralAction,
-  key: string,
-): Promise<GeneralReceipt> {
-  const scope = assertGeneralAction(ctx, payload.action)
-  switch (payload.action) {
-    case "customer_create": {
-      const { action: _, ...input } = payload
-      const result = await createCustomerInTransaction(ctx.db, {
-        ...customerCreateSchema.parse(input),
-        tenantId: scope.tenantId,
-      })
-      return {
-        kind: "customer",
-        recordId: result.id,
-        title: "Customer added",
-        detail: result.name,
-      }
-    }
-    case "product_create": {
-      const { action: _, ...input } = payload
-      const result = await createSimpleCatalogItemInTransaction(ctx.db, {
-        ...catalogCreateSimpleItemSchema.parse({
-          ...input,
-          kind: "product",
-          storeId: scope.storeId,
-          clientOperationId: key,
-        }),
-        storeId: scope.storeId,
-        tenantId: scope.tenantId,
-        actorUserId: scope.userId,
-      })
-      return {
-        kind: "product",
-        recordId: result.id,
-        title: "Product added",
-        detail: result.name,
-      }
-    }
-    case "order_create": {
-      const { action: _, ...input } = payload
-      const result = await createCommercialOrderInTransaction(ctx.db, {
-        ...commercialOrderCreateSchema.parse({
-          ...input,
-          storeId: scope.storeId,
-          clientOrderId: key,
-          schemaVersion: 1,
-        }),
-        storeId: scope.storeId,
-        tenantId: scope.tenantId,
-        actorUserId: scope.userId,
-      })
-      return {
-        kind: "order",
-        recordId: result.id,
-        orderId: result.id,
-        title: "Order created",
-        detail: result.orderNumber,
-      }
-    }
-    case "payment_record": {
-      const { action: _, ...input } = payload
-      const result = await recordCommercialOrderPaymentInTransaction(ctx.db, {
-        ...commercialOrderPaymentSchema.parse({
-          ...input,
-          clientPaymentId: key,
-        }),
-        tenantId: scope.tenantId,
-        actorUserId: scope.userId,
-      })
-      return {
-        kind: "payment",
-        recordId: result.id,
-        orderId: payload.orderId,
-        title: "Payment recorded",
-        detail: `${ctx.tenantContext.activeStore?.currencyCode ?? ctx.tenantContext.tenant.currencyCode} ${(payload.amountMinor / 100).toFixed(2)} · ${payload.method.replaceAll("_", " ")} · remaining ${(result.balanceDueMinor / 100).toFixed(2)}`,
-      }
-    }
-  }
 }
 export async function decideGeneralProposal(
   ctx: GeneralContext,
@@ -426,15 +243,9 @@ export async function decideGeneralProposal(
       throw conflict(
         "Approval expired or changed. Review and save the draft again.",
       )
-    if (payload.action === "payment_record") {
-      const target = await paymentTarget(fresh, payload, true)
-      if (
-        target.id !== row.targetRecordId ||
-        target.revision !== row.targetRevision
-      )
-        throw conflict("This order changed. Edit and review the payment again.")
-    }
-    await validateDraft(fresh, payload, row.idempotencyKey)
+    const adapter = generalActionAdapter(payload)
+    if (!sameTarget(await validateDraft(fresh, payload, true), row))
+      throw conflict(adapter.stale)
     const claimed = await fresh.db.assistantActionProposal.updateMany({
       where: {
         id: row.id,
@@ -446,7 +257,7 @@ export async function decideGeneralProposal(
     })
     if (claimed.count !== 1)
       throw conflict("Draft changed. Refresh before confirming.")
-    const receipt = await executeAction(fresh, payload, row.idempotencyKey)
+    const receipt = await adapter.execute(fresh, payload, row.idempotencyKey)
     const completed = await fresh.db.assistantActionProposal.update({
       where: { id: row.id },
       data: {
@@ -474,7 +285,7 @@ export async function editGeneralProposal(
       row.action !== input.payload.action
     )
       throw conflict("Draft changed. Refresh before editing.")
-    const target = await validateDraft(fresh, input.payload, row.idempotencyKey)
+    const target = await validateDraft(fresh, input.payload)
     const binding = {
       ...row,
       payload: input.payload,
@@ -514,74 +325,18 @@ export async function generalProposalWithReview(
   row: AssistantActionProposal,
 ): Promise<GeneralProposal> {
   const proposal = generalProposalForApp(row)
-  if (
-    proposal.payload.action === "payment_record" &&
-    proposal.status === "PENDING"
-  ) {
-    try {
-      const target = await paymentTarget(ctx, proposal.payload, false)
-      const valid =
-        target.id === row.targetRecordId &&
-        target.revision === row.targetRevision
-      const currency =
-        ctx.tenantContext.activeStore?.currencyCode ??
-        ctx.tenantContext.tenant.currencyCode
-      return {
-        ...proposal,
-        approvalToken: valid ? proposal.approvalToken : undefined,
-        review: valid
-          ? [
-              `${target.review.customerName || "Walk-in customer"} · ${target.review.orderNumber}`,
-              `${currency} ${(proposal.payload.amountMinor / 100).toFixed(2)} · ${proposal.payload.method.replaceAll("_", " ")}`,
-              `Balance after: ${currency} ${((target.review.balanceDueMinor - proposal.payload.amountMinor) / 100).toFixed(2)}`,
-              ...(proposal.payload.note ? [proposal.payload.note] : []),
-            ]
-          : ["This order changed. Edit and review the payment again."],
-      }
-    } catch {
-      return {
-        ...proposal,
-        approvalToken: undefined,
-        review: [
-          "This order is unavailable or no longer accepts this payment. Check it before trying again.",
-        ],
-      }
-    }
-  }
-  if (
-    proposal.payload.action !== "order_create" ||
-    proposal.status !== "PENDING"
-  )
-    return proposal
-  const scope = requireGeneralScope(ctx)
+  const adapter = generalActionAdapter(proposal.payload)
+  if (proposal.status !== "PENDING" || !adapter.review) return proposal
   try {
-    const review = await readGeneralOrderReview(
-      ctx.db,
-      scope,
-      proposal.payload.lines,
-    )
-    const customer = proposal.payload.customerId
-      ? await ctx.db.customer.findFirst({
-          where: { id: proposal.payload.customerId, tenantId: scope.tenantId },
-          select: { name: true },
-        })
-      : null
-    return {
-      ...proposal,
-      review: [
-        ...review.lines,
-        `Total: ${ctx.tenantContext.activeStore?.currencyCode ?? ctx.tenantContext.tenant.currencyCode} ${(review.totalMinor / 100).toFixed(2)}`,
-        `Customer: ${customer?.name ?? "Walk-in"}`,
-        ...(proposal.payload.notes ? [proposal.payload.notes] : []),
-      ],
-    }
+    const { lines, target } = await adapter.review(ctx, proposal.payload)
+    return sameTarget(target, row)
+      ? { ...proposal, review: lines }
+      : { ...proposal, approvalToken: undefined, review: [adapter.stale] }
   } catch {
     return {
       ...proposal,
       approvalToken: undefined,
-      review: [
-        "Sale details changed or are unavailable. Edit quantities and save again, or use the sale form.",
-      ],
+      review: [adapter.unavailable],
     }
   }
 }

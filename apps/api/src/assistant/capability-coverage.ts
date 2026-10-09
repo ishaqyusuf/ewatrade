@@ -1,5 +1,6 @@
 import { resolve } from "node:path"
 import type { RouterProcedure } from "@ewatrade/assistant/capabilities/coverage"
+import { staffProcedureAction } from "../utils/staff-procedure-policy"
 
 export const coverageDocumentPath = resolve(
   import.meta.dir,
@@ -33,5 +34,6 @@ export async function listRouterProcedures(): Promise<RouterProcedure[]> {
     merchant: tenant.every((middleware) =>
       procedure._def.middlewares.includes(middleware),
     ),
+    staffAction: staffProcedureAction(path, procedure._def.type),
   }))
 }

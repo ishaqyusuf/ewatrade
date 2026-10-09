@@ -61,7 +61,7 @@ function catalogRole(role: string): EwaTradeRole {
   return normalized
 }
 
-function assertCanReadCatalog(role: string) {
+export function assertCanReadCatalog(role: string) {
   if (!canOperatePos(catalogRole(role))) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -70,7 +70,7 @@ function assertCanReadCatalog(role: string) {
   }
 }
 
-function assertCanManageCatalog(tenant: TenantContext) {
+export function assertCanManageCatalog(tenant: TenantContext) {
   if (
     !(tenant.staffAccess?.mode === "SCOPED"
       ? canStaffPerform(tenant.staffAccess, "catalog")

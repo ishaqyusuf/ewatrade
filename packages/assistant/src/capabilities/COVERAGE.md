@@ -15,17 +15,17 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Capabilities
 
-| ID | v | Mode | Tool | Roles | Staff grant | Clients | Rollout | Procedures |
+| ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
-| `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | — | mobile | source | `search.global` |
-| `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | — | mobile | source | `catalog.getItem` |
-| `inventory.offering_stock.read` | 1 | read | `readOfferingStock` | OWNER, ADMIN, MANAGER | — | mobile | source | `inventory.configuredOfferingAvailability` |
-| `sales.orders.read` | 1 | read | `readOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | — | mobile | source | `orders.listPage` |
-| `sales.summary.read` | 1 | read | `readSalesSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | — | mobile | source | `orders.reportSummary` |
-| `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | — | mobile | source | `orders.get` |
-| `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | — | mobile | source | `services.queuePage` |
-| `customers.accounts.read` | 1 | read | `readCustomerAccounts` | OWNER, ADMIN | — | mobile | source | `customerLedger.accounts` |
-| `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER; scoped: OWNER, ADMIN | orders | mobile | source | `customers.create` |
+| `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `search.global` |
+| `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `catalog.getItem` |
+| `inventory.offering_stock.read` | 1 | read | `readOfferingStock` | OWNER, ADMIN, MANAGER | read | mobile | source | `inventory.configuredOfferingAvailability` |
+| `sales.orders.read` | 1 | read | `readOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `orders.listPage` |
+| `sales.summary.read` | 1 | read | `readSalesSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `orders.reportSummary` |
+| `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | mobile | source | `orders.get` |
+| `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | mobile | source | `services.queuePage` |
+| `customers.accounts.read` | 1 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | mobile | source | `customerLedger.accounts` |
+| `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | mobile | source | `customers.create` |
 | `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | mobile | source | `catalog.createSimpleItem` |
 | `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | mobile | source | `orders.create` |
 | `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | mobile | source | `orders.recordPayment` |
@@ -66,377 +66,377 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Merchant procedures
 
-| Procedure | Type | Owner | Status | Capability, ticket or reason |
-|---|---|---|---|---|
-| `assistant.allowance` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.availability` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.conversation` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.conversations` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.decideProposal` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.editProposal` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `assistant.start` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `catalog.archiveOffering` | mutation | catalog | planned | G04 |
-| `catalog.archiveVariant` | mutation | catalog | planned | G04 |
-| `catalog.categories.list` | query | catalog | planned | B02 |
-| `catalog.categories.suggest` | mutation | catalog | planned | B02 |
-| `catalog.createItem` | mutation | catalog | planned | B03 |
-| `catalog.createSimpleItem` | mutation | catalog | supported | catalog.product.create |
-| `catalog.createUnitConfigurationDraft` | mutation | catalog | planned | B03 |
-| `catalog.createUnitDefinition` | mutation | catalog | planned | B03 |
-| `catalog.detail.activity` | query | catalog | planned | B04 |
-| `catalog.detail.orders` | query | catalog | planned | B04 |
-| `catalog.detail.overview` | query | catalog | planned | B04 |
-| `catalog.getItem` | query | catalog | supported | catalog.item.read |
-| `catalog.listItems` | query | catalog | planned | B04 |
-| `catalog.listItemsPage` | query | catalog | planned | B04 |
-| `catalog.listUnitConfigurations` | query | catalog | planned | B03 |
-| `catalog.listUnitDefinitions` | query | catalog | planned | B03 |
-| `catalog.photos.createIntent` | mutation | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.getMetadata` | query | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.remove` | mutation | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.photos.replace` | mutation | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.publishUnitConfiguration` | mutation | catalog | planned | B03 |
-| `catalog.setOfferingAvailability` | mutation | catalog | planned | B03 |
-| `catalog.setProductUsage` | mutation | catalog | planned | B03 |
-| `catalog.updateUnitConfigurationDraft` | mutation | catalog | planned | B03 |
-| `customerLedger.accountDetail` | query | customers | planned | E02 |
-| `customerLedger.accounts` | query | customers | supported | customers.accounts.read |
-| `customerLedger.allocationHistory` | query | customers | planned | E02 |
-| `customerLedger.applyCredit` | mutation | customers | planned | E02 |
-| `customerLedger.commandStatus` | query | customers | planned | E02 |
-| `customerLedger.ensureAccount` | mutation | customers | planned | E02 |
-| `customerLedger.entryDetail` | query | customers | planned | E02 |
-| `customerLedger.receivables` | query | customers | planned | B04 |
-| `customerLedger.recordOpening` | mutation | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
-| `customerLedger.recordReceipt` | mutation | customers | planned | E02 |
-| `customerLedger.refundUnusedCredit` | mutation | customers | planned | E02 |
-| `customerLedger.releaseAllocation` | mutation | customers | planned | E02 |
-| `customerLedger.reverseEntry` | mutation | customers | planned | E02 |
-| `customerLedger.sources` | query | customers | planned | E02 |
-| `customerLedger.statement` | query | customers | planned | E02 |
-| `customers.count` | query | customers | planned | B04 |
-| `customers.create` | mutation | customers | supported | customers.create |
-| `customers.getById` | query | customers | planned | B01 |
-| `customers.listPage` | query | customers | planned | B01 |
-| `domains.checkAvailability` | mutation | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.connectExternal` | mutation | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.createCheckout` | mutation | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.list` | query | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.order` | query | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.registrantProfile` | query | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.saveRegistrantProfile` | mutation | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `domains.verifyConnection` | mutation | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
-| `finance.accountActivity` | query | finance | planned | E01 |
-| `finance.accountLedger` | query | finance | planned | E01 |
-| `finance.adjustCashCount` | mutation | finance | planned | G02 |
-| `finance.allocateSupplierAdvance` | mutation | finance | planned | E05 |
-| `finance.balances` | query | finance | planned | E01 |
-| `finance.bankStatements.get` | query | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bankStatements.history` | query | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bankStatements.import` | mutation | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bankStatements.list` | query | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bankStatements.match` | mutation | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bankStatements.resolveCorrectionSource` | query | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bankStatements.unmatch` | mutation | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bill` | query | finance | planned | E04 |
-| `finance.bills` | query | finance | planned | E04 |
-| `finance.book` | query | finance | planned | E01 |
-| `finance.cashCount` | query | finance | planned | G02 |
-| `finance.cashCounts` | query | finance | planned | G02 |
-| `finance.changePeriod` | mutation | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
-| `finance.commandStatus` | query | finance | planned | E01 |
-| `finance.configureFiscalCalendar` | mutation | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
-| `finance.createExpenseCategory` | mutation | finance | planned | E04 |
-| `finance.createMoneyAccount` | mutation | finance | planned | E01 |
-| `finance.createSupplier` | mutation | finance | planned | E05 |
-| `finance.expenseReceipts.attach` | mutation | finance | planned | H04 |
-| `finance.expenseReceipts.createIntent` | mutation | finance | planned | H04 |
-| `finance.expenseReceipts.get` | query | finance | planned | H04 |
-| `finance.expenseReceipts.list` | query | finance | planned | H04 |
-| `finance.expenseReceipts.withdraw` | mutation | finance | planned | H04 |
-| `finance.fiscalCalendar` | query | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
-| `finance.journal` | query | finance | planned | G01 |
-| `finance.moneyMovement` | query | finance | planned | E03 |
-| `finance.payBill` | mutation | finance | planned | E04 |
-| `finance.payPurchase` | mutation | finance | planned | E05 |
-| `finance.periodAudit` | query | finance | planned | G02 |
-| `finance.periodCloseChecklist` | query | finance | planned | G02 |
-| `finance.periods` | query | finance | planned | G02 |
-| `finance.purchase` | query | finance | planned | E05 |
-| `finance.purchaseRecognition` | query | finance | planned | E05 |
-| `finance.purchaseRecognitions` | query | finance | planned | E05 |
-| `finance.purchases` | query | finance | planned | E05 |
-| `finance.recognizePurchase` | mutation | finance | planned | E05 |
-| `finance.recordCashCount` | mutation | finance | planned | G02 |
-| `finance.recordExpense` | mutation | finance | planned | E04 |
-| `finance.recordMoney` | mutation | finance | planned | E03 |
-| `finance.recordPurchase` | mutation | finance | planned | E05 |
-| `finance.recordSupplierAdvance` | mutation | finance | planned | E05 |
-| `finance.recordSupplierOpening` | mutation | finance | planned | E05 |
-| `finance.registerPurchase` | mutation | finance | planned | E05 |
-| `finance.releaseSupplierAllocation` | mutation | finance | planned | E05 |
-| `finance.reports` | query | finance | planned | G01 |
-| `finance.reverseBillPayment` | mutation | finance | planned | E04 |
-| `finance.reverseCashAdjustment` | mutation | finance | planned | G02 |
-| `finance.reverseMoney` | mutation | finance | planned | E03 |
-| `finance.reversePurchasePayment` | mutation | finance | planned | E05 |
-| `finance.reversePurchaseRecognition` | mutation | finance | planned | E05 |
-| `finance.reverseSupplierEntry` | mutation | finance | planned | E05 |
-| `finance.setup` | mutation | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
-| `finance.supplierPayableAging` | query | finance | planned | G01 |
-| `finance.suppliers` | query | finance | planned | E05 |
-| `finance.supplierStatement` | query | finance | planned | E05 |
-| `finance.voidExpense` | mutation | finance | planned | E04 |
-| `finance.yearEndPreview` | query | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
-| `inventory.auditExport` | query | inventory | form_only | Bulk file export; download it from the page. |
-| `inventory.balanceReport` | query | inventory | planned | B04 |
-| `inventory.categorySuggestions` | query | inventory | planned | C01 |
-| `inventory.commitReservation` | mutation | inventory | planned | G04 |
-| `inventory.configuredOfferingAvailability` | query | inventory | supported | inventory.offering_stock.read |
-| `inventory.correctOperation` | mutation | inventory | planned | C03 |
-| `inventory.createCloseout` | mutation | inventory | planned | C05 |
-| `inventory.createStockCount` | mutation | inventory | planned | C02 |
-| `inventory.dispatchTransfer` | mutation | inventory | planned | C04 |
-| `inventory.finalizeCloseout` | mutation | inventory | planned | C05 |
-| `inventory.finalizeStockCount` | mutation | inventory | planned | C02 |
-| `inventory.moveCustody` | mutation | inventory | planned | G04 |
-| `inventory.offeringAvailability` | query | inventory | planned | B04 |
-| `inventory.operationAudit` | query | staff | planned | S05 |
-| `inventory.operationHistory` | query | inventory | planned | C03 |
-| `inventory.postBalanceOperation` | mutation | inventory | planned | C01 |
-| `inventory.reconciliationReport` | query | inventory | planned | C05 |
-| `inventory.releaseReservation` | mutation | inventory | planned | G04 |
-| `inventory.reserveOffering` | mutation | inventory | planned | G04 |
-| `inventory.transfers` | query | inventory | planned | C04 |
-| `inventory.transformPackagedStock` | mutation | inventory | planned | G04 |
-| `inventory.transitionTransfer` | mutation | inventory | planned | C04 |
-| `offline.conflicts` | query | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `offline.registerDevice` | mutation | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `offline.replay` | mutation | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `offline.review` | mutation | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `offline.settings` | query | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `offline.updateSettings` | mutation | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `orders.authorizeChargeOnlyServiceLine` | mutation | sales | planned | D02 |
-| `orders.create` | mutation | sales | supported | sales.order.create |
-| `orders.customerCount` | query | customers | planned | B04 |
-| `orders.fulfillChargeOnlyServiceLine` | mutation | sales | planned | D02 |
-| `orders.fulfillProductLine` | mutation | sales | planned | D02 |
-| `orders.fulfillProducts` | mutation | sales | planned | D02 |
-| `orders.get` | query | sales | supported | sales.order.read |
-| `orders.list` | query | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
-| `orders.listPage` | query | sales | supported | sales.orders.read |
-| `orders.lookupOpen` | query | sales | planned | B04 |
-| `orders.payments` | query | sales | planned | B05 |
-| `orders.prepareReceipts` | query | sales | planned | B05 |
-| `orders.receiptSettings` | query | sales | planned | G05 |
-| `orders.recordPayment` | mutation | sales | supported | sales.payment.record |
-| `orders.reminderSettings` | query | sales | planned | G05 |
-| `orders.reportSummary` | query | sales | supported | sales.summary.read |
-| `orders.returnProductLine` | mutation | sales | planned | D03 |
-| `orders.saveReceiptSettings` | mutation | sales | planned | G05 |
-| `orders.updateReminderSettings` | mutation | sales | planned | G05 |
-| `prescriptions.activateIncident` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.approveManualDeliveryFee` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.assignDelivery` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.assignRole` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.channel` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.channelInfo` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.complianceEvents` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.connectWhatsAppManually` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.createPrivacyRequest` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.deliveryQueue` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.deliveryZones` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.detail` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.handoffPickup` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.issueQuote` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.manualDeliveryReviews` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.markDeliveryReady` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.markPickupReady` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.mediaAccess` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.pharmacistReview` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.pickupQueue` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.privacyRequestResult` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.queue` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.queueContext` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.reconcileUsage` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.recordPickupException` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.refund` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.report` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.requestClearerMedia` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.resolveIncident` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.retentionPolicy` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.retestWhatsAppConnection` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.reviseTranscription` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.revokeRole` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.selectableOfferings` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.selectWhatsAppEmbeddedSignupNumber` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.setActivation` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.setup` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.staffIntake` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.startTranscription` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.submitForPharmacistReview` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.suspendWhatsAppStoreBinding` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.transitionDelivery` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.updateRetentionPolicy` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.updateSettings` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.updateWhatsAppConnectionLifecycle` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.uploadMedia` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.upsertDeliveryZone` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.verifyLine` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.verifyPrivacyRequest` | mutation | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.whatsappConnections` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.whatsappEmbeddedSignupSession` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.whatsappEmbeddedSignupUrl` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `prescriptions.workspaceAccess` | query | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
-| `productAssistant.capabilities` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `productAssistant.create` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `productAssistant.createFromForm` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `productAssistant.start` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `productAssistant.state` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `productAssistant.updateSnapshot` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `qaTools.fixtureContext` | query | platform | excluded | Internal QA tooling. |
-| `retailOps.createSubscriptionCheckoutIntent` | mutation | platform | form_only | Subscription purchase and verification use the billing checkout. |
-| `retailOps.inviteStaff` | mutation | staff | planned | S02 |
-| `retailOps.staff` | query | staff | planned | S01 |
-| `retailOps.subscription` | query | platform | form_only | Subscription purchase and verification use the billing checkout. |
-| `retailOps.updateStaffStatus` | mutation | staff | planned | S03 |
-| `search.global` | query | search | supported | search.records |
-| `serviceAccess.createRequestForm` | mutation | commerce | planned | G03 |
-| `serviceAccess.createTracking` | mutation | commerce | planned | G03 |
-| `serviceAccess.issueQuote` | mutation | commerce | planned | G03 |
-| `serviceAccess.requestForms` | query | commerce | planned | G03 |
-| `serviceAccess.requests` | query | commerce | planned | G03 |
-| `serviceAccess.revokeTracking` | mutation | commerce | planned | G03 |
-| `serviceAccess.updateRequest` | mutation | commerce | planned | G03 |
-| `serviceCommerce.acknowledgeStoreConversationStaffRead` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.approveQuoteVersion` | mutation | commerce | planned | G03 |
-| `serviceCommerce.assignChannelAttendant` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.attestCatalogAvailability` | mutation | commerce | planned | G03 |
-| `serviceCommerce.bookingConfiguration` | query | commerce | planned | G05 |
-| `serviceCommerce.catalogGraduationReadiness` | query | commerce | planned | G03 |
-| `serviceCommerce.catalogMatches` | query | commerce | planned | G03 |
-| `serviceCommerce.catalogPricePromotionImpact` | query | catalog | planned | B02 |
-| `serviceCommerce.catalogPriceSuggestions` | query | catalog | planned | B02 |
-| `serviceCommerce.channelEmbeddedSignupSession` | query | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.channelEmbeddedSignupUrl` | query | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.channelWorkspace` | query | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.claimStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.completeChannelEmbeddedSignup` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.confirmBooking` | mutation | commerce | planned | G03 |
-| `serviceCommerce.createBookingCapability` | mutation | commerce | planned | G05 |
-| `serviceCommerce.createBookingResource` | mutation | commerce | planned | G05 |
-| `serviceCommerce.createCatalogDraft` | mutation | commerce | planned | G03 |
-| `serviceCommerce.createInquiry` | mutation | commerce | planned | G03 |
-| `serviceCommerce.deliveryFulfillment` | mutation | commerce | planned | G03 |
-| `serviceCommerce.eligibleStoreConversationAttendants` | query | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.fulfillmentDetail` | query | commerce | planned | G03 |
-| `serviceCommerce.graduateCatalogOffering` | mutation | commerce | planned | G03 |
-| `serviceCommerce.handoffStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.holdBookingSlot` | mutation | commerce | planned | G03 |
-| `serviceCommerce.issueCustomerActions` | mutation | commerce | planned | G05 |
-| `serviceCommerce.issueInquiryQuote` | mutation | commerce | planned | G03 |
-| `serviceCommerce.linkCatalogOffering` | mutation | commerce | planned | G03 |
-| `serviceCommerce.mediaAttachment` | query | privacy | form_only | Private media review requires viewer grants. |
-| `serviceCommerce.moderateStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.pendingQuoteApprovals` | query | commerce | planned | G03 |
-| `serviceCommerce.pickupFulfillment` | mutation | commerce | planned | G03 |
-| `serviceCommerce.policyDecision` | query | privacy | form_only | Policy decisions are compliance controls. |
-| `serviceCommerce.policyDecisions` | query | privacy | form_only | Policy decisions are compliance controls. |
-| `serviceCommerce.promoteCatalogPrice` | mutation | catalog | planned | B02 |
-| `serviceCommerce.publishCatalogOffering` | mutation | commerce | planned | G03 |
-| `serviceCommerce.publishCustomerEntryPoint` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.quoteApprovalDetail` | query | commerce | planned | G03 |
-| `serviceCommerce.quoteReleaseSettings` | query | commerce | planned | G05 |
-| `serviceCommerce.reassignStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.rejectQuoteVersion` | mutation | commerce | planned | G03 |
-| `serviceCommerce.releaseStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.replyToStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.report` | query | finance | planned | G01 |
-| `serviceCommerce.reportDrilldown` | query | finance | planned | G01 |
-| `serviceCommerce.reportStoreConversation` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.requestMediaViewerGrant` | mutation | privacy | form_only | Private media review requires viewer grants. |
-| `serviceCommerce.requestStoreConversationAttachmentViewerGrant` | mutation | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.retestCustomerChannelConnection` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.reviseBooking` | mutation | commerce | planned | G03 |
-| `serviceCommerce.revokeChannelAttendant` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.revokeCustomerEntryPoint` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.revokePolicyDecision` | mutation | privacy | form_only | Policy decisions are compliance controls. |
-| `serviceCommerce.saveCustomerChannelBindings` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.saveCustomerWhatsAppConnection` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.setActivation` | mutation | commerce | planned | G05 |
-| `serviceCommerce.setCustomerChannelConnectionLifecycle` | mutation | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
-| `serviceCommerce.setPolicyDecision` | mutation | privacy | form_only | Policy decisions are compliance controls. |
-| `serviceCommerce.setStoreConversationManualPause` | mutation | commerce | planned | G05 |
-| `serviceCommerce.sourceProjection` | query | commerce | planned | G03 |
-| `serviceCommerce.storeConversationAvailabilitySettings` | query | commerce | planned | G05 |
-| `serviceCommerce.storeConversationChannelModeSettings` | query | commerce | planned | G05 |
-| `serviceCommerce.storeConversationMessagesAfter` | query | commerce | planned | G05 |
-| `serviceCommerce.storeConversationQueue` | query | commerce | planned | G05 |
-| `serviceCommerce.storeConversationTimeline` | query | commerce | planned | G05 |
-| `serviceCommerce.submitStaffIntake` | mutation | commerce | planned | G03 |
-| `serviceCommerce.transitionInquiry` | mutation | commerce | planned | G03 |
-| `serviceCommerce.updateBookingConfiguration` | mutation | commerce | planned | G05 |
-| `serviceCommerce.updateProfile` | mutation | commerce | planned | G05 |
-| `serviceCommerce.updateQuoteReleaseSettings` | mutation | commerce | planned | G05 |
-| `serviceCommerce.updateStoreConversationAvailabilitySchedule` | mutation | commerce | planned | G05 |
-| `serviceCommerce.updateStoreConversationChannelMode` | mutation | commerce | planned | G05 |
-| `serviceCommerce.verifyMediaObservation` | mutation | privacy | form_only | Private media review requires viewer grants. |
-| `serviceCommerce.workspaceAccess` | query | commerce | planned | G05 |
-| `serviceCommunications.createBatchIntents` | mutation | commerce | planned | G05 |
-| `serviceCommunications.createIntent` | mutation | commerce | planned | G05 |
-| `serviceCommunications.providerStatus` | query | commerce | planned | G05 |
-| `serviceCommunications.recordDeliveryAttempt` | mutation | commerce | planned | G05 |
-| `serviceCommunications.recordManualShare` | mutation | commerce | planned | G05 |
-| `serviceReporting.auditExport` | query | inventory | form_only | Bulk file export; download it from the page. |
-| `serviceReporting.summary` | query | finance | planned | G01 |
-| `services.addNote` | mutation | services | planned | D05 |
-| `services.assignees` | query | services | planned | D05 |
-| `services.assignJob` | mutation | services | planned | D05 |
-| `services.authorizeLine` | mutation | services | planned | D05 |
-| `services.batchUpdate` | mutation | services | form_only | Bulk queue updates stay in the queue view. |
-| `services.captureEvidence` | mutation | services | planned | H04 |
-| `services.confirmIntake` | mutation | services | planned | D04 |
-| `services.createAndConfirmIntake` | mutation | services | planned | D04 |
-| `services.createIntakeDraft` | mutation | services | planned | D04 |
-| `services.createRework` | mutation | services | planned | D05 |
-| `services.getJob` | query | services | planned | D05 |
-| `services.getSettings` | query | services | planned | G05 |
-| `services.handoff` | mutation | services | planned | D05 |
-| `services.publishEvidence` | mutation | services | planned | H04 |
-| `services.queue` | query | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
-| `services.queuePage` | query | services | supported | services.queue.read |
-| `services.recordException` | mutation | services | planned | D05 |
-| `services.rescheduleJob` | mutation | services | planned | D05 |
-| `services.revokeEvidence` | mutation | services | planned | H04 |
-| `services.splitLine` | mutation | services | planned | D05 |
-| `services.transitionLine` | mutation | services | planned | D05 |
-| `services.updateEvidenceUpload` | mutation | services | planned | H04 |
-| `services.updateSettings` | mutation | services | planned | G05 |
-| `setupAssistant.attachments.createIntent` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.list` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.pending` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.remove` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.retry` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.voiceCapabilities` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.attachments.voiceUsage` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.begin` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.commit` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.finish` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.removeEntities` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.setEntityState` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.skip` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.start` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.state` | query | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.updateEntity` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `setupAssistant.visit` | mutation | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `stores.orderVisibility` | query | sales | planned | G05 |
-| `stores.updateOrderVisibility` | mutation | sales | planned | G05 |
-| `storeSubscriptions.catalog` | query | platform | form_only | Subscription purchase and verification use the billing checkout. |
-| `storeSubscriptions.verifyPurchase` | mutation | platform | form_only | Subscription purchase and verification use the billing checkout. |
-| `tenant.analyticsContext` | query | platform | excluded | Client session context; the server supplies assistant scope. |
-| `tenant.createInventoryStore` | mutation | platform | form_only | Creating a Store changes plan usage and setup; use Store management. |
-| `tenant.createStore` | mutation | platform | form_only | Creating a Store changes plan usage and setup; use Store management. |
-| `tenant.current` | query | platform | excluded | Client session context; the server supplies assistant scope. |
-| `tenant.featureAvailability` | query | platform | excluded | Client session context; the server supplies assistant scope. |
-| `tenant.storeContext` | query | platform | excluded | Client session context; the server supplies assistant scope. |
-| `tenant.stores` | query | platform | excluded | Client session context; the server supplies assistant scope. |
+| Procedure | Type | Scoped staff | Owner | Status | Capability, ticket or reason |
+|---|---|---|---|---|---|
+| `assistant.allowance` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.availability` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.conversation` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.conversations` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.decideProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.start` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `catalog.archiveOffering` | mutation | catalog | catalog | planned | G04 |
+| `catalog.archiveVariant` | mutation | catalog | catalog | planned | G04 |
+| `catalog.categories.list` | query | read | catalog | planned | B02 |
+| `catalog.categories.suggest` | mutation | Owner/Admin only | catalog | planned | B02 |
+| `catalog.createItem` | mutation | catalog | catalog | planned | B03 |
+| `catalog.createSimpleItem` | mutation | catalog | catalog | supported | catalog.product.create |
+| `catalog.createUnitConfigurationDraft` | mutation | catalog | catalog | planned | B03 |
+| `catalog.createUnitDefinition` | mutation | catalog | catalog | planned | B03 |
+| `catalog.detail.activity` | query | read | catalog | planned | B04 |
+| `catalog.detail.orders` | query | read | catalog | planned | B04 |
+| `catalog.detail.overview` | query | read | catalog | planned | B04 |
+| `catalog.getItem` | query | read | catalog | supported | catalog.item.read |
+| `catalog.listItems` | query | read | catalog | planned | B04 |
+| `catalog.listItemsPage` | query | read | catalog | planned | B04 |
+| `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
+| `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
+| `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.getMetadata` | query | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.publishUnitConfiguration` | mutation | catalog | catalog | planned | B03 |
+| `catalog.setOfferingAvailability` | mutation | catalog | catalog | planned | B03 |
+| `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
+| `catalog.updateUnitConfigurationDraft` | mutation | catalog | catalog | planned | B03 |
+| `customerLedger.accountDetail` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.accounts` | query | Owner/Admin only | customers | supported | customers.accounts.read |
+| `customerLedger.allocationHistory` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.applyCredit` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.commandStatus` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.ensureAccount` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.entryDetail` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.receivables` | query | Owner/Admin only | customers | planned | B04 |
+| `customerLedger.recordOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
+| `customerLedger.recordReceipt` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.refundUnusedCredit` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.releaseAllocation` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.sources` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.statement` | query | Owner/Admin only | customers | planned | E02 |
+| `customers.count` | query | Owner/Admin only | customers | planned | B04 |
+| `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
+| `customers.getById` | query | read | customers | planned | B01 |
+| `customers.listPage` | query | Owner/Admin only | customers | planned | B01 |
+| `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.connectExternal` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.createCheckout` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.list` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.order` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.registrantProfile` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.saveRegistrantProfile` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `domains.verifyConnection` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
+| `finance.accountActivity` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.accountLedger` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.adjustCashCount` | mutation | Owner/Admin only | finance | planned | G02 |
+| `finance.allocateSupplierAdvance` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.balances` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.bankStatements.get` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bankStatements.history` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bankStatements.import` | mutation | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bankStatements.list` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bankStatements.match` | mutation | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bankStatements.resolveCorrectionSource` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bankStatements.unmatch` | mutation | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
+| `finance.bill` | query | Owner/Admin only | finance | planned | E04 |
+| `finance.bills` | query | Owner/Admin only | finance | planned | E04 |
+| `finance.book` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.cashCount` | query | Owner/Admin only | finance | planned | G02 |
+| `finance.cashCounts` | query | Owner/Admin only | finance | planned | G02 |
+| `finance.changePeriod` | mutation | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `finance.commandStatus` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.configureFiscalCalendar` | mutation | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `finance.createExpenseCategory` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | planned | E01 |
+| `finance.createSupplier` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.expenseReceipts.attach` | mutation | Owner/Admin only | finance | planned | H04 |
+| `finance.expenseReceipts.createIntent` | mutation | Owner/Admin only | finance | planned | H04 |
+| `finance.expenseReceipts.get` | query | Owner/Admin only | finance | planned | H04 |
+| `finance.expenseReceipts.list` | query | Owner/Admin only | finance | planned | H04 |
+| `finance.expenseReceipts.withdraw` | mutation | Owner/Admin only | finance | planned | H04 |
+| `finance.fiscalCalendar` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `finance.journal` | query | Owner/Admin only | finance | planned | G01 |
+| `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
+| `finance.payBill` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.payPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.periodAudit` | query | Owner/Admin only | finance | planned | G02 |
+| `finance.periodCloseChecklist` | query | Owner/Admin only | finance | planned | G02 |
+| `finance.periods` | query | Owner/Admin only | finance | planned | G02 |
+| `finance.purchase` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.purchaseRecognition` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.purchaseRecognitions` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.purchases` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.recognizePurchase` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.recordCashCount` | mutation | Owner/Admin only | finance | planned | G02 |
+| `finance.recordExpense` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.recordMoney` | mutation | Owner/Admin only | finance | planned | E03 |
+| `finance.recordPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.recordSupplierAdvance` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.recordSupplierOpening` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.registerPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.releaseSupplierAllocation` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.reports` | query | Owner/Admin only | finance | planned | G01 |
+| `finance.reverseBillPayment` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.reverseCashAdjustment` | mutation | Owner/Admin only | finance | planned | G02 |
+| `finance.reverseMoney` | mutation | Owner/Admin only | finance | planned | E03 |
+| `finance.reversePurchasePayment` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.reversePurchaseRecognition` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.reverseSupplierEntry` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.setup` | mutation | Owner/Admin only | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
+| `finance.supplierPayableAging` | query | Owner/Admin only | finance | planned | G01 |
+| `finance.suppliers` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.supplierStatement` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.voidExpense` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.yearEndPreview` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `inventory.auditExport` | query | stock | inventory | form_only | Bulk file export; download it from the page. |
+| `inventory.balanceReport` | query | stock | inventory | planned | B04 |
+| `inventory.categorySuggestions` | query | stock | inventory | planned | C01 |
+| `inventory.commitReservation` | mutation | orders | inventory | planned | G04 |
+| `inventory.configuredOfferingAvailability` | query | read | inventory | supported | inventory.offering_stock.read |
+| `inventory.correctOperation` | mutation | stock | inventory | planned | C03 |
+| `inventory.createCloseout` | mutation | reconciliation | inventory | planned | C05 |
+| `inventory.createStockCount` | mutation | stock | inventory | planned | C02 |
+| `inventory.dispatchTransfer` | mutation | stock | inventory | planned | C04 |
+| `inventory.finalizeCloseout` | mutation | reconciliation | inventory | planned | C05 |
+| `inventory.finalizeStockCount` | mutation | stock | inventory | planned | C02 |
+| `inventory.moveCustody` | mutation | stock | inventory | planned | G04 |
+| `inventory.offeringAvailability` | query | read | inventory | planned | B04 |
+| `inventory.operationAudit` | query | stock | staff | planned | S05 |
+| `inventory.operationHistory` | query | stock | inventory | planned | C03 |
+| `inventory.postBalanceOperation` | mutation | stock | inventory | planned | C01 |
+| `inventory.reconciliationReport` | query | reconciliation | inventory | planned | C05 |
+| `inventory.releaseReservation` | mutation | orders | inventory | planned | G04 |
+| `inventory.reserveOffering` | mutation | orders | inventory | planned | G04 |
+| `inventory.transfers` | query | stock | inventory | planned | C04 |
+| `inventory.transformPackagedStock` | mutation | stock | inventory | planned | G04 |
+| `inventory.transitionTransfer` | mutation | stock | inventory | planned | C04 |
+| `offline.conflicts` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `offline.registerDevice` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `offline.replay` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `offline.review` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `offline.settings` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `offline.updateSettings` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `orders.authorizeChargeOnlyServiceLine` | mutation | reconciliation | sales | planned | D02 |
+| `orders.create` | mutation | orders | sales | supported | sales.order.create |
+| `orders.customerCount` | query | read | customers | planned | B04 |
+| `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | planned | D02 |
+| `orders.fulfillProductLine` | mutation | orders | sales | planned | D02 |
+| `orders.fulfillProducts` | mutation | orders | sales | planned | D02 |
+| `orders.get` | query | read | sales | supported | sales.order.read |
+| `orders.list` | query | read | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
+| `orders.listPage` | query | read | sales | supported | sales.orders.read |
+| `orders.lookupOpen` | query | read | sales | planned | B04 |
+| `orders.payments` | query | read | sales | planned | B05 |
+| `orders.prepareReceipts` | query | read | sales | planned | B05 |
+| `orders.receiptSettings` | query | read | sales | planned | G05 |
+| `orders.recordPayment` | mutation | orders | sales | supported | sales.payment.record |
+| `orders.reminderSettings` | query | Owner/Admin only | sales | planned | G05 |
+| `orders.reportSummary` | query | read | sales | supported | sales.summary.read |
+| `orders.returnProductLine` | mutation | orders | sales | planned | D03 |
+| `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | planned | G05 |
+| `orders.updateReminderSettings` | mutation | Owner/Admin only | sales | planned | G05 |
+| `prescriptions.activateIncident` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.approveManualDeliveryFee` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.assignDelivery` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.assignRole` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.channel` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.channelInfo` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.complianceEvents` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.connectWhatsAppManually` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.createPrivacyRequest` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.deliveryQueue` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.deliveryZones` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.detail` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.handoffPickup` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.issueQuote` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.manualDeliveryReviews` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.markDeliveryReady` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.markPickupReady` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.mediaAccess` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.pharmacistReview` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.pickupQueue` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.privacyRequestResult` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.queue` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.queueContext` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.reconcileUsage` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.recordPickupException` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.refund` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.report` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.requestClearerMedia` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.resolveIncident` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.retentionPolicy` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.retestWhatsAppConnection` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.reviseTranscription` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.revokeRole` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.selectableOfferings` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.selectWhatsAppEmbeddedSignupNumber` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.setActivation` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.setup` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.staffIntake` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.startTranscription` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.submitForPharmacistReview` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.suspendWhatsAppStoreBinding` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.transitionDelivery` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.updateRetentionPolicy` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.updateSettings` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.updateWhatsAppConnectionLifecycle` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.uploadMedia` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.upsertDeliveryZone` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.verifyLine` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.verifyPrivacyRequest` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.whatsappConnections` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.whatsappEmbeddedSignupSession` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.whatsappEmbeddedSignupUrl` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `prescriptions.workspaceAccess` | query | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
+| `productAssistant.capabilities` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `productAssistant.create` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `productAssistant.createFromForm` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `productAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `productAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
+| `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
+| `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |
+| `retailOps.staff` | query | Owner/Admin only | staff | planned | S01 |
+| `retailOps.subscription` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
+| `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | planned | S03 |
+| `search.global` | query | read | search | supported | search.records |
+| `serviceAccess.createRequestForm` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.createTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.issueQuote` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.requestForms` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.requests` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.revokeTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.updateRequest` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.acknowledgeStoreConversationStaffRead` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.approveQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.assignChannelAttendant` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.attestCatalogAvailability` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.bookingConfiguration` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.catalogGraduationReadiness` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.catalogMatches` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.catalogPricePromotionImpact` | query | Owner/Admin only | catalog | planned | B02 |
+| `serviceCommerce.catalogPriceSuggestions` | query | Owner/Admin only | catalog | planned | B02 |
+| `serviceCommerce.channelEmbeddedSignupSession` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.channelEmbeddedSignupUrl` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.channelWorkspace` | query | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.claimStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.completeChannelEmbeddedSignup` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.confirmBooking` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.createBookingCapability` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.createBookingResource` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.createCatalogDraft` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.createInquiry` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.deliveryFulfillment` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.eligibleStoreConversationAttendants` | query | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.fulfillmentDetail` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.graduateCatalogOffering` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.handoffStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.holdBookingSlot` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.issueCustomerActions` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.issueInquiryQuote` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.linkCatalogOffering` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.mediaAttachment` | query | Owner/Admin only | privacy | form_only | Private media review requires viewer grants. |
+| `serviceCommerce.moderateStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.pendingQuoteApprovals` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.pickupFulfillment` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.policyDecision` | query | Owner/Admin only | privacy | form_only | Policy decisions are compliance controls. |
+| `serviceCommerce.policyDecisions` | query | Owner/Admin only | privacy | form_only | Policy decisions are compliance controls. |
+| `serviceCommerce.promoteCatalogPrice` | mutation | Owner/Admin only | catalog | planned | B02 |
+| `serviceCommerce.publishCatalogOffering` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.publishCustomerEntryPoint` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.quoteApprovalDetail` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.quoteReleaseSettings` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.reassignStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.rejectQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.releaseStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.replyToStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.report` | query | Owner/Admin only | finance | planned | G01 |
+| `serviceCommerce.reportDrilldown` | query | Owner/Admin only | finance | planned | G01 |
+| `serviceCommerce.reportStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.requestMediaViewerGrant` | mutation | Owner/Admin only | privacy | form_only | Private media review requires viewer grants. |
+| `serviceCommerce.requestStoreConversationAttachmentViewerGrant` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
+| `serviceCommerce.retestCustomerChannelConnection` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.reviseBooking` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.revokeChannelAttendant` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.revokeCustomerEntryPoint` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.revokePolicyDecision` | mutation | Owner/Admin only | privacy | form_only | Policy decisions are compliance controls. |
+| `serviceCommerce.saveCustomerChannelBindings` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.saveCustomerWhatsAppConnection` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.setActivation` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.setCustomerChannelConnectionLifecycle` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.setPolicyDecision` | mutation | Owner/Admin only | privacy | form_only | Policy decisions are compliance controls. |
+| `serviceCommerce.setStoreConversationManualPause` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.sourceProjection` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.storeConversationAvailabilitySettings` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.storeConversationChannelModeSettings` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.storeConversationMessagesAfter` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.storeConversationQueue` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.storeConversationTimeline` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.submitStaffIntake` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.transitionInquiry` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.updateBookingConfiguration` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.updateProfile` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.updateQuoteReleaseSettings` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.updateStoreConversationAvailabilitySchedule` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.updateStoreConversationChannelMode` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.verifyMediaObservation` | mutation | Owner/Admin only | privacy | form_only | Private media review requires viewer grants. |
+| `serviceCommerce.workspaceAccess` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.createBatchIntents` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.createIntent` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.providerStatus` | query | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.recordDeliveryAttempt` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.recordManualShare` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceReporting.auditExport` | query | Owner/Admin only | inventory | form_only | Bulk file export; download it from the page. |
+| `serviceReporting.summary` | query | Owner/Admin only | finance | planned | G01 |
+| `services.addNote` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.assignees` | query | Owner/Admin only | services | planned | D05 |
+| `services.assignJob` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.authorizeLine` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.batchUpdate` | mutation | Owner/Admin only | services | form_only | Bulk queue updates stay in the queue view. |
+| `services.captureEvidence` | mutation | Owner/Admin only | services | planned | H04 |
+| `services.confirmIntake` | mutation | Owner/Admin only | services | planned | D04 |
+| `services.createAndConfirmIntake` | mutation | Owner/Admin only | services | planned | D04 |
+| `services.createIntakeDraft` | mutation | Owner/Admin only | services | planned | D04 |
+| `services.createRework` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.getJob` | query | Owner/Admin only | services | planned | D05 |
+| `services.getSettings` | query | Owner/Admin only | services | planned | G05 |
+| `services.handoff` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.publishEvidence` | mutation | Owner/Admin only | services | planned | H04 |
+| `services.queue` | query | Owner/Admin only | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
+| `services.queuePage` | query | Owner/Admin only | services | supported | services.queue.read |
+| `services.recordException` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.rescheduleJob` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.revokeEvidence` | mutation | Owner/Admin only | services | planned | H04 |
+| `services.splitLine` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.transitionLine` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.updateEvidenceUpload` | mutation | Owner/Admin only | services | planned | H04 |
+| `services.updateSettings` | mutation | Owner/Admin only | services | planned | G05 |
+| `setupAssistant.attachments.createIntent` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.list` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.pending` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.remove` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.retry` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.voiceCapabilities` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.attachments.voiceUsage` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.begin` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.commit` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.finish` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.removeEntities` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.setEntityState` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.skip` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.updateEntity` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `setupAssistant.visit` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `stores.orderVisibility` | query | read | sales | planned | G05 |
+| `stores.updateOrderVisibility` | mutation | Owner/Admin only | sales | planned | G05 |
+| `storeSubscriptions.catalog` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
+| `storeSubscriptions.verifyPurchase` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
+| `tenant.analyticsContext` | query | Owner/Admin only | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.createInventoryStore` | mutation | Owner/Admin only | platform | form_only | Creating a Store changes plan usage and setup; use Store management. |
+| `tenant.createStore` | mutation | Owner/Admin only | platform | form_only | Creating a Store changes plan usage and setup; use Store management. |
+| `tenant.current` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.featureAvailability` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.storeContext` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.stores` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |

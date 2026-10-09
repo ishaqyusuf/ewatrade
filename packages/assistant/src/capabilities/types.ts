@@ -7,14 +7,6 @@ export type CapabilityRole =
   | "MANAGER"
   | "CASHIER"
   | "OPERATOR"
-/** Mirrors `StaffAction` in `@ewatrade/auth/store-access`. */
-export type CapabilityStaffAction =
-  | "orders"
-  | "stock"
-  | "reconciliation"
-  | "catalog"
-  | "staff"
-  | "business"
 export type CapabilityDomain =
   | "search"
   | "catalog"
@@ -30,14 +22,12 @@ export type CapabilityRollout = "planned" | "source" | "pilot" | "enabled"
 export type CapabilityEffect = "none" | "record" | "book" | "provider"
 
 /**
- * Who may use a capability. Unscoped staff need a listed role; scoped staff
- * additionally need the Store grant, and `scopedRoles` narrows them further
- * where the canonical procedure does.
+ * The assistant's role ceiling, which may be narrower than the domain's. The
+ * API also applies each procedure's canonical domain check and, for scoped
+ * staff, its Store grant; the manifest never widens either.
  */
 export type CapabilityPolicy = {
   roles: readonly CapabilityRole[]
-  staffAction?: CapabilityStaffAction
-  scopedRoles?: readonly CapabilityRole[]
 }
 
 type CapabilityBase = {
