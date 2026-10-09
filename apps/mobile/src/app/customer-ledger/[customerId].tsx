@@ -5,8 +5,9 @@ export default function CustomerLedgerRoute() {
   const { customerId } = useLocalSearchParams<{ customerId: string }>()
   return (
     <WorkflowModalScreen
-      title="Customer statement"
-      closeLabel="Close statement"
+      title="Statement"
+      back
+      closeLabel="Back to customer accounts"
       closeHref="/finance-modal"
     >
       <CustomerLedgerScreen customerId={customerId} />

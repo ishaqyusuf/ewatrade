@@ -30,7 +30,7 @@ function customerSince(value: Date | string | undefined, now = new Date()) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
   if (date.toDateString() === now.toDateString()) return "Today"
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-GB", {
     month: "short",
     year: "numeric",
   }).format(date)

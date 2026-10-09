@@ -27,7 +27,7 @@ export function customerLastSeen(date: Date, now = new Date()) {
   if (days === 1) return "Yesterday"
   if (days > 1 && days < 7)
     return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date)
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),

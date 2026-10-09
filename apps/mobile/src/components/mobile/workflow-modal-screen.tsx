@@ -12,15 +12,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MobileScreen } from "./screen"
 
 export type WorkflowModalChromeProps = {
+  /** Shows a back arrow that returns to the previous screen. */
+  back?: boolean
   children: ReactNode
   closeLabel: string
   hideHeader: boolean
   keyboardBottomOffset: number
+  /** A short line under the centred title, e.g. "NGN account". */
+  subtitle?: string
   title: string
   onClose: () => void
 }
 
 type WorkflowModalScreenProps = {
+  back?: boolean
   chrome?: ComponentType<WorkflowModalChromeProps>
   allowSalesRep?: boolean
   children: ReactNode
@@ -37,17 +42,20 @@ type WorkflowModalScreenProps = {
   closeLabel: string
   hideHeader?: boolean
   keyboardBottomOffset?: number
+  subtitle?: string
   title: string
 }
 
 export function WorkflowModalScreen({
   allowSalesRep = false,
+  back = false,
   chrome: Chrome = DefaultWorkflowModalChrome,
   children,
   closeHref = "/dashboard",
   closeLabel,
   hideHeader = false,
   keyboardBottomOffset = 140,
+  subtitle,
   title,
 }: WorkflowModalScreenProps) {
   const router = useRouter()
@@ -64,11 +72,15 @@ export function WorkflowModalScreen({
 
   return (
     <Chrome
+      back={back}
       closeLabel={closeLabel}
       hideHeader={hideHeader}
       keyboardBottomOffset={keyboardBottomOffset}
+      subtitle={subtitle}
       title={title}
-      onClose={() => router.replace(closeHref)}
+      onClose={() =>
+        back && router.canGoBack() ? router.back() : router.replace(closeHref)
+      }
     >
       {children}
     </Chrome>
@@ -76,10 +88,12 @@ export function WorkflowModalScreen({
 }
 
 function DefaultWorkflowModalChrome({
+  back,
   children,
   closeLabel,
   hideHeader,
   keyboardBottomOffset,
+  subtitle,
   title,
   onClose,
 }: WorkflowModalChromeProps) {
@@ -127,15 +141,32 @@ function DefaultWorkflowModalChrome({
               onPress={onClose}
               transition
             >
-              <Icon className="size-[18px] text-foreground" name="X" />
+              <Icon
+                className={
+                  back
+                    ? "size-[20px] text-foreground"
+                    : "size-[18px] text-foreground"
+                }
+                name={back ? "ArrowLeft" : "X"}
+              />
             </Pressable>
-            <Text
-              accessibilityRole="header"
-              numberOfLines={1}
-              className="min-w-0 flex-1 text-center text-base font-extrabold tracking-tight text-foreground"
-            >
-              {title}
-            </Text>
+            <View className="min-w-0 flex-1 items-center">
+              <Text
+                accessibilityRole="header"
+                numberOfLines={1}
+                className="text-center text-base font-extrabold tracking-tight text-foreground"
+              >
+                {title}
+              </Text>
+              {subtitle ? (
+                <Text
+                  numberOfLines={1}
+                  className="text-center text-xs text-muted-foreground"
+                >
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
             <View className="size-11" />
           </View>
         )}
