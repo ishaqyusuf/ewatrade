@@ -4,7 +4,9 @@ import { SetupPrerequisites } from "@/components/setup-assistant/setup-prerequis
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { setupProductPayloadSchema } from "@ewatrade/assistant/setup/contracts"
-import { Button } from "@ewatrade/ui"
+import { Button, cn } from "@ewatrade/ui"
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import type { ComponentProps } from "react"
@@ -30,6 +32,8 @@ export function ProductChat({
   const queryClient = useQueryClient()
   const [busy, setBusy] = useState(false)
   const [separateName, setSeparateName] = useState<string | null>(null)
+  // Phones show one pane at a time; both stay mounted so the chat keeps its draft.
+  const [mobileView, setMobileView] = useState<"chat" | "draft">("chat")
   const [created, setCreated] = useState<{
     recordId: string
     name: string
@@ -108,19 +112,52 @@ export function ProductChat({
           currency: currencyCode,
         }).format(value / 100)
   return (
-    <div className="flex h-[min(700px,calc(100svh-12rem))] min-h-96 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex h-[min(700px,calc(100svh-12rem))] min-h-96 flex-col gap-3 max-md:h-full">
+      <div className="flex items-center justify-between gap-3">
         <Button
           variant="ghost"
+          size="sm"
+          className="-ml-3"
           onClick={onBack}
           disabled={busy || data.running || create.isPending}
         >
+          <HugeiconsIcon icon={ArrowLeft01Icon} />
           Back to form
         </Button>
         <AssistantAllowance compact />
       </div>
-      <div className="grid min-h-0 flex-1 gap-4 md:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border">
+      <fieldset
+        aria-label="Product chat view"
+        className="grid grid-cols-2 rounded-full bg-muted p-1 md:hidden"
+      >
+        {(["chat", "draft"] as const).map((view) => (
+          <button
+            key={view}
+            type="button"
+            aria-pressed={mobileView === view}
+            className="flex h-8 items-center justify-center gap-2 rounded-full text-sm font-medium text-muted-foreground transition-colors aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm"
+            onClick={() => setMobileView(view)}
+          >
+            {view === "chat" ? "Chat" : data.ready ? "Review draft" : "Draft"}
+            {view === "draft" ? (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-1.5 rounded-full",
+                  data.ready ? "bg-primary" : "bg-muted-foreground/40",
+                )}
+              />
+            ) : null}
+          </button>
+        ))}
+      </fieldset>
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1fr)_280px]">
+        <div
+          className={cn(
+            "flex min-h-0 flex-col overflow-hidden rounded-lg border",
+            mobileView === "draft" && "max-md:hidden",
+          )}
+        >
           {data.runFailure ? (
             <output className="border-b p-3 text-sm">
               The reply could not finish. Your draft is safe. Send your message
@@ -145,7 +182,10 @@ export function ProductChat({
           />
         </div>
         <aside
-          className="min-h-0 overflow-y-auto rounded-lg border bg-muted/20 p-4"
+          className={cn(
+            "min-h-0 overflow-y-auto rounded-lg border bg-muted/20 p-4",
+            mobileView === "chat" && "max-md:hidden",
+          )}
           aria-label="Live product draft"
         >
           <SetupPrerequisites

@@ -33,9 +33,12 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
     : `Your ${allowance.windowDays}-day allowance starts with your next message.`
   if (compact)
     return (
-      <p className="text-xs text-muted-foreground">
-        {allowance.tokensRemaining.toLocaleString()} tokens ·{" "}
-        {allowance.requestsRemaining} messages left · {reset}
+      <p className="text-right text-xs text-muted-foreground">
+        <span className="max-md:hidden">
+          {allowance.tokensRemaining.toLocaleString()} tokens ·{" "}
+        </span>
+        {allowance.requestsRemaining} messages left
+        <span className="max-md:hidden"> · {reset}</span>
       </p>
     )
   return (

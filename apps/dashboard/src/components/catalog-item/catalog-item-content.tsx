@@ -43,11 +43,14 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
             : "Add item"
       }
       description={
-        form.kind === "product"
-          ? "Name it and choose how you count it. Add details when you need them."
-          : form.kind === "service"
-            ? "Name the service, then set a fixed price or quote each job."
-            : "Choose what you want to add."
+        // Chat mode keeps the top compact; the chat itself explains the step.
+        catalogCreateMode === "chat"
+          ? undefined
+          : form.kind === "product"
+            ? "Name it and choose how you count it. Add details when you need them."
+            : form.kind === "service"
+              ? "Name the service, then set a fixed price or quote each job."
+              : "Choose what you want to add."
       }
       header={
         props.allowKindChange === false ||
@@ -55,8 +58,11 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
           <CatalogItemSheetHeader />
         )
       }
+      // Chat mode has no form action, so it skips the empty footer bar.
       footer={
-        form.kind ? <div className="w-full" ref={setFooterHost} /> : undefined
+        form.kind && catalogCreateMode !== "chat" ? (
+          <div className="w-full" ref={setFooterHost} />
+        ) : undefined
       }
     >
       {form.kind ? (
