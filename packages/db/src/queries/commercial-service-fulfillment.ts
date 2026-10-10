@@ -1,14 +1,10 @@
 import { createHash } from "node:crypto"
 
-import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
+import { assertChargeOnlyServicePerformance } from "./commercial-service-line-policy"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
-import {
-  isCommercialOrderFulfillmentAllowed,
-  readCommercialOrderLinesComplete,
-} from "./commercial-order-completion"
-import { effectiveCommercialAmountPaid } from "./commercial-payments"
+import { readCommercialOrderLinesComplete } from "./commercial-order-completion"
 import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 
 const FULFILLMENT_COMMAND_ID_MIN_LENGTH = 8
@@ -303,130 +299,11 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
       return serializeFulfillment(priorCommand)
     }
 
-    if (line.serviceFulfillment) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "This Service Order line has already been performed.",
-      )
-    }
-    if (line.kind !== "SERVICE" || !line.snapshot) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Only snapshotted Service Order lines can be performed here.",
-      )
-    }
-    if (
-      line.snapshot.serviceWorkPolicy !== "CHARGE_ONLY" ||
-      line.serviceJobLines.length > 0
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Only unallocated CHARGE_ONLY Service lines can be performed here.",
-      )
-    }
-    if (
-      line.order.acceptedCommerceQuoteVersion?.quote.sourceType ===
-        "PRESCRIPTION_REQUEST" ||
-      line.order.prescriptionPickupFulfillment ||
-      line.order.prescriptionDeliveryAssignment
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Prescription Orders require their clinical fulfillment source.",
-      )
-    }
-    if (
-      !isCommercialOrderFulfillmentAllowed(line.order.status) ||
-      line.order.status === "COMPLETED" ||
-      (line.order.deliveryDueAt &&
-        line.order.deliveryDueAt.getTime() > Date.now())
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "This Order cannot accept new Service performance in its current state.",
-      )
-    }
+    const { quantity, performedAt } = assertChargeOnlyServicePerformance(
+      line,
+      input,
+    )
 
-    let quantity: string
-    try {
-      quantity = parseExactDecimal(line.quantity.toString(), {
-        allowZero: false,
-        maxScale: 6,
-      })
-    } catch {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "The Service Order line has an invalid quantity.",
-      )
-    }
-
-    if (line.snapshot.serviceAuthorizationPolicy === "AFTER_REQUIRED_PAYMENT") {
-      const amountPaidMinor = effectiveCommercialAmountPaid({
-        amountPaidMinor: line.order.amountPaidMinor,
-        paymentCount: line.order.payments.length,
-        paymentStatus: line.order.paymentStatus,
-        totalMinor: line.order.totalMinor,
-      })
-      if (amountPaidMinor < line.order.totalMinor) {
-        throw new CatalogError(
-          "SERVICE_WORK_NOT_AUTHORIZED",
-          "The Order must be fully settled before this Service can be performed.",
-        )
-      }
-    } else if (line.snapshot.serviceAuthorizationPolicy === "MANUAL_RELEASE") {
-      const authorization = line.serviceAuthorization
-      if (
-        !authorization ||
-        authorization.tenantId !== input.tenantId ||
-        authorization.orderId !== line.order.id ||
-        authorization.orderLineId !== line.id
-      ) {
-        throw new CatalogError(
-          "SERVICE_WORK_NOT_AUTHORIZED",
-          "A matching manager release is required before this Service can be performed.",
-        )
-      }
-      let authorizedQuantity: string
-      try {
-        authorizedQuantity = parseExactDecimal(
-          authorization.quantity.toString(),
-          { allowZero: false, maxScale: 6 },
-        )
-      } catch {
-        throw new CatalogError(
-          "SERVICE_WORK_NOT_AUTHORIZED",
-          "The stored Service release is invalid.",
-        )
-      }
-      if (
-        authorizedQuantity !== quantity ||
-        Number.isNaN(authorization.authorizedAt.getTime())
-      ) {
-        throw new CatalogError(
-          "SERVICE_WORK_NOT_AUTHORIZED",
-          "The stored Service release does not match this Order line.",
-        )
-      }
-    } else if (
-      line.snapshot.serviceAuthorizationPolicy !== "ON_ORDER_CONFIRMATION"
-    ) {
-      throw new CatalogError(
-        "SERVICE_WORK_NOT_AUTHORIZED",
-        "This Service authorization policy requires a tracked work release.",
-      )
-    }
-
-    const performedAt = new Date()
-    if (
-      line.snapshot.serviceAuthorizationPolicy === "MANUAL_RELEASE" &&
-      line.serviceAuthorization &&
-      line.serviceAuthorization.authorizedAt.getTime() > performedAt.getTime()
-    ) {
-      throw new CatalogError(
-        "SERVICE_WORK_NOT_AUTHORIZED",
-        "The Service release must be effective before performance is recorded.",
-      )
-    }
     const fulfillment = await tx.commercialServiceFulfillment.create({
       data: {
         actorUserId: input.actorUserId,

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 
-import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
+import { assertChargeOnlyServiceRelease } from "./commercial-service-line-policy"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
@@ -287,58 +287,7 @@ export async function authorizeCommercialOrderChargeOnlyServiceLineInTransaction
       return serializeAuthorization(priorCommand)
     }
 
-    if (line.serviceAuthorization) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "This Service Order line already has a manager release.",
-      )
-    }
-    if (
-      line.kind !== "SERVICE" ||
-      !line.snapshot ||
-      line.snapshot.serviceWorkPolicy !== "CHARGE_ONLY" ||
-      line.snapshot.serviceAuthorizationPolicy !== "MANUAL_RELEASE" ||
-      line.serviceJobLines.length > 0
-    ) {
-      throw new CatalogError(
-        "SERVICE_WORK_NOT_AUTHORIZED",
-        "Only unallocated CHARGE_ONLY Services with manual-release policy can be released here.",
-      )
-    }
-    if (
-      line.serviceFulfillment ||
-      line.order.completedAt ||
-      !["CONFIRMED", "FULFILLING"].includes(line.order.status)
-    ) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "This Order line cannot receive a new Service release in its current state.",
-      )
-    }
-    if (
-      line.order.acceptedCommerceQuoteVersion?.quote.sourceType ===
-        "PRESCRIPTION_REQUEST" ||
-      line.order.prescriptionPickupFulfillment ||
-      line.order.prescriptionDeliveryAssignment
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Prescription Orders require their clinical fulfillment source.",
-      )
-    }
-
-    let quantity: string
-    try {
-      quantity = parseExactDecimal(line.quantity.toString(), {
-        allowZero: false,
-        maxScale: 6,
-      })
-    } catch {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "The Service Order line has an invalid quantity.",
-      )
-    }
+    const quantity = assertChargeOnlyServiceRelease(line)
 
     const authorization = await tx.commercialServiceAuthorization.create({
       data: {
