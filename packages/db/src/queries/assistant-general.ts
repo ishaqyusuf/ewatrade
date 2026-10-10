@@ -49,6 +49,29 @@ export function readGeneralProposals(
     take: 60,
   })
 }
+/** Drafts still waiting for review in any of the user's chats, newest first. */
+export function readPendingGeneralProposals(
+  db: DbClient,
+  scope: AssistantScope,
+  now = new Date(),
+) {
+  return db.assistantActionProposal.findMany({
+    where: {
+      ...generalProposalWhere(scope),
+      status: "PENDING",
+      expiresAt: { gt: now },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: {
+      id: true,
+      conversationId: true,
+      payload: true,
+      expiresAt: true,
+      conversation: { select: { title: true } },
+    },
+  })
+}
 export function readGeneralRun(
   db: DbClient,
   scope: AssistantScope,

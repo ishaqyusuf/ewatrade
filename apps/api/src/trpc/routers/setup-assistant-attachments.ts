@@ -24,10 +24,10 @@ import {
   setupAttachmentStorage,
   setupAttachmentTarget,
 } from "../../assistant/attachment-storage"
+import { requireAssistantAttachmentScope } from "../../assistant/attachment-scope"
 import {
   isAssistantVoiceEnabled,
   requireSetupAssistantMedia,
-  requireSetupAssistantScope,
 } from "../../assistant/setup-context"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
@@ -66,7 +66,7 @@ export function presentSetupAttachment(row: AssistantAttachmentRecord) {
 
 export const setupAssistantAttachmentsRouter = createTRPCRouter({
   voiceCapabilities: protectedProcedure.query(({ ctx }) => {
-    const scope = requireSetupAssistantScope(ctx)
+    const scope = requireAssistantAttachmentScope(ctx)
     return {
       enabled:
         isAssistantVoiceEnabled() &&
@@ -77,12 +77,12 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
   voiceUsage: protectedProcedure
     .input(z.object({ days: z.number().int().min(1).max(90).default(30) }))
     .query(({ ctx, input }) =>
-      readVoiceUsage(ctx.db, requireSetupAssistantScope(ctx), input.days),
+      readVoiceUsage(ctx.db, requireAssistantAttachmentScope(ctx), input.days),
     ),
   pending: protectedProcedure
     .input(z.object({ conversationId: z.string().min(1).max(64) }))
     .query(async ({ ctx, input }) => {
-      const scope = requireSetupAssistantScope(ctx)
+      const scope = requireAssistantAttachmentScope(ctx)
       const ids = await ctx.db.assistantAttachment.findMany({
         where: {
           conversationId: input.conversationId,
@@ -108,7 +108,7 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
   retry: protectedProcedure
     .input(z.object({ attachmentId: z.string().min(1).max(64) }))
     .mutation(async ({ ctx, input }) => {
-      const scope = requireSetupAssistantScope(ctx)
+      const scope = requireAssistantAttachmentScope(ctx)
       requireSetupAssistantMedia("AUDIO")
       const result = await ctx.db.assistantAttachment.updateMany({
         where: {
@@ -148,7 +148,7 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const scope = requireSetupAssistantScope(ctx)
+      const scope = requireAssistantAttachmentScope(ctx)
       const checked = validateSetupAttachmentIntent(input)
       if (!checked.ok) return { ok: false as const, reason: checked.reason }
       requireSetupAssistantMedia(checked.kind)
@@ -157,10 +157,10 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
           id: input.conversationId,
           tenantId: scope.tenantId,
           storeId: scope.storeId,
-          purpose: { in: ["SETUP", "PRODUCT_CREATE"] },
+          purpose: { in: scope.purposes },
           OR: [{ purpose: "SETUP" }, { ownerUserId: scope.userId }],
         },
-        select: { id: true, status: true },
+        select: { id: true, status: true, purpose: true },
       })
       if (
         !conversation ||
@@ -168,6 +168,9 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
         conversation.status !== "ACTIVE"
       )
         return { ok: false as const, reason: "CONVERSATION_CLOSED" as const }
+      // General chats take voice notes only; they are written out, not sent.
+      if (conversation.purpose === "GENERAL" && checked.kind !== "AUDIO")
+        return { ok: false as const, reason: "UNSUPPORTED_TYPE" as const }
       if (!isSetupAttachmentStorageAvailable(scope.dataClassification))
         return { ok: false as const, reason: "UPLOADS_UNAVAILABLE" as const }
       try {
@@ -209,7 +212,7 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
       z.object({ attachmentIds: z.array(z.string().min(1).max(64)).max(8) }),
     )
     .query(async ({ ctx, input }) => {
-      const scope = requireSetupAssistantScope(ctx)
+      const scope = requireAssistantAttachmentScope(ctx)
       const rows = await listAssistantAttachments(
         ctx.db,
         scope,
@@ -222,7 +225,7 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
   remove: protectedProcedure
     .input(z.object({ attachmentId: z.string().min(1).max(64) }))
     .mutation(async ({ ctx, input }) => {
-      const scope = requireSetupAssistantScope(ctx)
+      const scope = requireAssistantAttachmentScope(ctx)
       const removed = await removeAssistantAttachment(
         ctx.db,
         scope,

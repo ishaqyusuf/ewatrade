@@ -19,6 +19,7 @@ import type { Context } from "hono"
 import { parseBuffer } from "music-metadata"
 import { z } from "zod"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
+import { requireAssistantAttachmentScope } from "./attachment-scope"
 import {
   setupAttachmentStorage,
   setupAttachmentTarget,
@@ -27,7 +28,6 @@ import {
   SETUP_MEDIA_DISABLED,
   isAssistantVoiceEnabled,
   isSetupAssistantMediaEnabled,
-  requireSetupAssistantScope,
 } from "./setup-context"
 
 const attachmentIdSchema = z.string().min(1).max(64)
@@ -46,7 +46,7 @@ async function admit(context: Context) {
   const ctx = await resolveProtectedTenantContext(
     await createTRPCContext(undefined, context),
   )
-  return { db: ctx.db, scope: requireSetupAssistantScope(ctx) }
+  return { db: ctx.db, scope: requireAssistantAttachmentScope(ctx) }
 }
 
 function mapError(context: Context, error: unknown) {

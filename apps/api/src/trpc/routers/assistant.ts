@@ -1,11 +1,15 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
-import { generalActionSchema } from "@ewatrade/assistant/general/contracts"
+import {
+  generalActionSchema,
+  generalActionSummary,
+} from "@ewatrade/assistant/general/contracts"
 import { listAssistantMessages } from "@ewatrade/db/assistant"
 import {
   listGeneralConversations,
   readGeneralActiveRun,
   readGeneralConversation,
   readGeneralProposals,
+  readPendingGeneralProposals,
   startGeneralConversation,
 } from "@ewatrade/db/assistant-general"
 import { TRPCError } from "@trpc/server"
@@ -43,6 +47,32 @@ export const assistantRouter = createTRPCRouter({
   allowance: protectedProcedure.query(({ ctx }) =>
     readGeneralAllowance(ctx.db, requireGeneralScope(ctx)),
   ),
+  /** Drafts waiting for review across the user's chats, for the review rail. */
+  pendingProposals: protectedProcedure.query(async ({ ctx }) => {
+    const scope = requireGeneralScope(ctx)
+    const currencyCode =
+      ctx.tenantContext.activeStore?.currencyCode ??
+      ctx.tenantContext.tenant.currencyCode
+    const rows = await readPendingGeneralProposals(ctx.db, scope)
+    return rows.flatMap((row) => {
+      const parsed = generalActionSchema.safeParse(row.payload)
+      if (!parsed.success) return []
+      const capability = capabilityForAction(parsed.data.action)
+      if (!supportsGeneralCapability(ctx, capability)) return []
+      return [
+        {
+          id: row.id,
+          conversationId: row.conversationId,
+          conversationTitle: row.conversation.title,
+          title: capability.title,
+          summary: generalActionSummary(parsed.data, currencyCode).split(
+            "\n",
+          )[0],
+          expiresAt: row.expiresAt.toISOString(),
+        },
+      ]
+    })
+  }),
   conversation: protectedProcedure
     .input(z.object({ conversationId: id }).strict())
     .query(async ({ ctx, input }) => {

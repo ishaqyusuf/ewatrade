@@ -29,6 +29,8 @@ export async function readGeneralAllowance(
       0,
       GENERAL_BUDGET_LIMITS.maxTokens - (row?.tokens ?? 0),
     ),
+    requestLimit: GENERAL_BUDGET_LIMITS.maxRequests,
+    tokenLimit: GENERAL_BUDGET_LIMITS.maxTokens,
     resetsAt: new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     ).toISOString(),
