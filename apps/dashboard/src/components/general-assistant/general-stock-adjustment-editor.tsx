@@ -9,11 +9,11 @@ import {
   FieldGroup,
   FieldLabel,
   Input,
-  Textarea,
   SelectControl,
+  Textarea,
 } from "@ewatrade/ui"
-import { useState } from "react"
 import { format } from "date-fns"
+import { useState } from "react"
 type Action = Extract<
   GeneralAction,
   { action: "stock_adjust" | "stock_correct" }

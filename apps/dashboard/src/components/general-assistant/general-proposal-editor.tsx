@@ -16,13 +16,13 @@ import {
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { useState } from "react"
-import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
+import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
+import { GeneralSaleCustomer } from "./general-sale-customer"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
-import { GeneralStockTransferEditor } from "./general-stock-transfer-editor"
 import { GeneralStockCountEditor } from "./general-stock-count-editor"
 import { GeneralStockReceiptEditor } from "./general-stock-receipt-editor"
-import { GeneralSaleCustomer } from "./general-sale-customer"
+import { GeneralStockTransferEditor } from "./general-stock-transfer-editor"
 import { GeneralUnitEditor } from "./general-unit-editor"
 
 const methods = [
@@ -40,11 +40,69 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
-  if (props.proposal.payload.action === "order_cancel" || props.proposal.payload.action === "order_metadata_update" || props.proposal.payload.action === "order_replace") return <GeneralOrderAmendmentEditor initial={props.proposal.payload} currencyCode={props.currencyCode} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
-  if (props.proposal.payload.action === "inventory_closeout_create" || props.proposal.payload.action === "inventory_closeout_finalize") return <GeneralCloseoutEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
-  if (props.proposal.payload.action === "stock_transfer_dispatch" || props.proposal.payload.action === "stock_transfer_receive" || props.proposal.payload.action === "stock_transfer_cancel") return <GeneralStockTransferEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
-  if (props.proposal.payload.action === "stock_adjust" || props.proposal.payload.action === "stock_correct") return <GeneralStockAdjustmentEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
-  if (props.proposal.payload.action === "stock_count_create" || props.proposal.payload.action === "stock_count_finalize") return <GeneralStockCountEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+  if (
+    props.proposal.payload.action === "order_cancel" ||
+    props.proposal.payload.action === "order_metadata_update" ||
+    props.proposal.payload.action === "order_replace"
+  )
+    return (
+      <GeneralOrderAmendmentEditor
+        initial={props.proposal.payload}
+        currencyCode={props.currencyCode}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "inventory_closeout_create" ||
+    props.proposal.payload.action === "inventory_closeout_finalize"
+  )
+    return (
+      <GeneralCloseoutEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "stock_transfer_dispatch" ||
+    props.proposal.payload.action === "stock_transfer_receive" ||
+    props.proposal.payload.action === "stock_transfer_cancel"
+  )
+    return (
+      <GeneralStockTransferEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "stock_adjust" ||
+    props.proposal.payload.action === "stock_correct"
+  )
+    return (
+      <GeneralStockAdjustmentEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "stock_count_create" ||
+    props.proposal.payload.action === "stock_count_finalize"
+  )
+    return (
+      <GeneralStockCountEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "stock_receive")
     return (
       <GeneralStockReceiptEditor
@@ -166,12 +224,22 @@ function GeneralProposalFields({
       }}
     >
       <FieldGroup>
-        {payload.action === "product_line_fulfill" || payload.action === "service_line_authorize" || payload.action === "service_line_fulfill" ? (
+        {payload.action === "product_line_fulfill" ||
+        payload.action === "service_line_authorize" ||
+        payload.action === "service_line_fulfill" ? (
           <>
-            <p className="text-sm text-muted-foreground">This applies to the selected order line at its full saved quantity. Review the refreshed details before confirming.</p>
+            <p className="text-sm text-muted-foreground">
+              This applies to the selected order line at its full saved
+              quantity. Review the refreshed details before confirming.
+            </p>
             <Field>
               <FieldLabel htmlFor={field("reason")}>Reason</FieldLabel>
-              <Input id={field("reason")} value={payload.reason} disabled={disabled} onChange={(event) => patch({ reason: event.target.value })} />
+              <Input
+                id={field("reason")}
+                value={payload.reason}
+                disabled={disabled}
+                onChange={(event) => patch({ reason: event.target.value })}
+              />
             </Field>
           </>
         ) : null}
