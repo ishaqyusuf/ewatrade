@@ -16,11 +16,16 @@ setDefaultTimeout(900_000)
 
 if (process.env.RUN_DATABASE_INTEGRATION_TESTS === "1") {
   const target = new URL(process.env.EWATRADE_DATABASE_URL ?? "")
-  if (
-    target.hostname !==
-      "ep-ancient-snow-awbalfv3-pooler.c-12.us-east-1.aws.neon.tech" ||
-    target.pathname !== "/neondb"
-  )
+  const legacyDevelopment =
+    target.hostname ===
+      "ep-ancient-snow-awbalfv3-pooler.c-12.us-east-1.aws.neon.tech" &&
+    target.pathname === "/neondb"
+  const isolatedAssistantDevelopment =
+    process.env.DATABASE_PROFILE_VERIFIED === "1" &&
+    process.env.DEV_PROFILE === "local" &&
+    target.hostname.endsWith(".neon.tech") &&
+    target.pathname === "/ewatrade_general_assistant_main_20261009"
+  if (!legacyDevelopment && !isolatedAssistantDevelopment)
     throw new Error(
       "Closeout acceptance requires the exact development database.",
     )
@@ -29,6 +34,16 @@ if (process.env.RUN_DATABASE_INTEGRATION_TESTS === "1") {
 describeWithServiceCommerceDatabase("custody closeout cost acceptance", () => {
   test("keeps exact cost, journals and replay atomic under real custody, concurrency and failure", async () => {
     const { prisma: db } = await import("../../client")
+    const [actual] = await db.$queryRaw<
+      Array<{ database: string }>
+    >`SELECT current_database() AS database`
+    if (
+      actual?.database !==
+      new URL(process.env.EWATRADE_DATABASE_URL ?? "").pathname.slice(1)
+    )
+      throw new Error(
+        "Runtime database does not match the verified closeout target",
+      )
     const runId = randomUUID()
     console.info(`closeout-cost QA run ${runId}`)
     const tenantIds: string[] = []

@@ -327,3 +327,16 @@ test("creation refuses custody changes and preserves reservation conflicts for r
     previewInventoryCloseoutCreation(f.db, f.input),
   ).rejects.toMatchObject({ code: "INVALID_STOCK_OPERATION" })
 })
+
+test("session custody preserves its original identity and refuses another session", async () => {
+  const f = fixture()
+  f.row.custodyType = "SESSION"
+  f.row.custodyReferenceId = "shift-session"
+  f.source.custodyType = "SESSION"
+  f.source.custodyReferenceId = "shift-session"
+  expect((await getInventoryCloseoutReview(f.db, scope)).canFinalize).toBe(true)
+  f.source.custodyReferenceId = "another-session"
+  await expect(getInventoryCloseoutReview(f.db, scope)).rejects.toThrow(
+    "original custody",
+  )
+})
