@@ -123,6 +123,7 @@ const Store = hugeIcon("Store01Icon")
 const Package = hugeIcon("PackageIcon")
 const Pencil = hugeIcon("Pencil")
 const SquarePen = hugeIcon("PencilEdit02Icon")
+const Star = hugeIcon("StarIcon")
 const Phone = hugeIcon("Phone")
 const PieChart = hugeIcon("PieChart")
 const Pin = hugeIcon("Pin")
@@ -351,6 +352,7 @@ const appIcons = {
 
   Pencil,
   SquarePen,
+  Star,
   Phone,
   PieChart,
   Pin,
