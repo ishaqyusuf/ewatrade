@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { getCommercialProductLineReview } from "./commercial-product-line-review"
 
 import {
   addExactDecimals,
@@ -355,6 +356,7 @@ async function applyCommercialOrderProductLineInTransaction(
     schemaVersion: number
     tenantId: string
     storeId: string
+    expectedReviewRevision?: string
   },
 ) {
   if (!input.line.stockReservation) {
@@ -386,6 +388,13 @@ async function applyCommercialOrderProductLineInTransaction(
     {
       expectedStoreId: input.storeId,
       expectedCommercialOrderLineId: input.line.id,
+      beforeCommit: input.expectedReviewRevision === undefined ? undefined : async () => {
+        const review = await getCommercialProductLineReview(tx, {
+          tenantId: input.tenantId, storeId: input.storeId, orderLineId: input.line.id,
+        })
+        if (review.revision !== input.expectedReviewRevision)
+          throw new CatalogError("REVISION_CONFLICT", "Product stock or cost evidence changed. Review fulfilment again.")
+      },
     },
   )
   const fulfillment = await tx.productFulfillment.upsert({
@@ -1518,6 +1527,7 @@ export type FulfillCommercialOrderProductLineInput = {
   schemaVersion: number
   tenantId: string
   storeId?: string
+  expectedReviewRevision?: string
 }
 
 export function fulfillCommercialOrderProductLine(
@@ -1594,6 +1604,7 @@ export async function fulfillCommercialOrderProductLineInTransaction(
     schemaVersion: input.schemaVersion,
     tenantId: input.tenantId,
     storeId: lockedOrder.order.storeId,
+    expectedReviewRevision: input.expectedReviewRevision,
   })
   await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
   return {

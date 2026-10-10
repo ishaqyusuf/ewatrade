@@ -308,3 +308,19 @@ describe("reservation commitment physical/source composition", () => {
     ).rejects.toMatchObject({ code: "INVALID_STOCK_OPERATION" })
   })
 })
+
+test("review assertion runs after source locks and prevents every write on rejection", async () => {
+  const f = fixture({ lineId: "line" })
+  await expect(commit(f.tx, { ...input, operationType: "sale_fulfillment" }, {
+    expectedStoreId: "store", expectedCommercialOrderLineId: "line",
+    beforeCommit: async () => {
+      expect(f.events).toContain("lock:balance")
+      expect(f.balanceUpdates).toHaveLength(0)
+      throw new Error("Reviewed evidence changed")
+    },
+  })).rejects.toThrow("Reviewed evidence changed")
+  expect(f.balanceUpdates).toHaveLength(0)
+  expect(f.operationWrites).toHaveLength(0)
+  expect(f.movementWrites).toHaveLength(0)
+  expect(f.reservationUpdates).toHaveLength(0)
+})

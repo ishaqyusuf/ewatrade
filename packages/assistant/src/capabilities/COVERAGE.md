@@ -7,16 +7,17 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 533 (392 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 59
-- Merchant planned: 169
+- Merchant supported by a capability: 60
+- Merchant planned: 168
 - Merchant form-only: 120
 - Merchant excluded: 44
-- Capabilities: 55 (29 read, 26 write)
+- Capabilities: 56 (29 read, 27 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `sales.product.fulfill` | 1 | write (`product_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProductLine` |
 | `sales.service.authorize` | 1 | write (`service_line_authorize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `orders.authorizeChargeOnlyServiceLine` |
 | `sales.service.fulfill` | 1 | write (`service_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillChargeOnlyServiceLine` |
 | `sales.order.cancel` | 1 | write (`order_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.cancel`, `orders.cancellationReview` |
@@ -81,7 +82,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | B03 | 5 |
 | B05 | 2 |
 | C05 | 1 |
-| D02 | 2 |
+| D02 | 1 |
 | D03 | 1 |
 | D04 | 3 |
 | D05 | 11 |
@@ -271,7 +272,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `orders.create` | mutation | orders | sales | supported | sales.order.create |
 | `orders.customerCount` | query | read | sales | supported | sales.order_contacts.count |
 | `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | supported | sales.service.fulfill |
-| `orders.fulfillProductLine` | mutation | orders | sales | planned | D02 |
+| `orders.fulfillProductLine` | mutation | orders | sales | supported | sales.product.fulfill |
 | `orders.fulfillProducts` | mutation | orders | sales | planned | D02 |
 | `orders.get` | query | read | sales | supported | sales.order.read |
 | `orders.list` | query | read | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |

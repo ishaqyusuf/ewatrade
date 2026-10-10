@@ -1,3 +1,4 @@
+import { reservationCommitImpact } from "./reservation-commit-impact"
 import { createHash } from "node:crypto"
 
 import {
@@ -553,6 +554,8 @@ export async function commitCatalogStockReservationInTransaction(
     expectedStoreId?: string
     expectedCommercialOrderLineId?: string
     financialContext?: { bookId: string } | null
+    /** Caller-owned review assertion after reservation/balance locks, before effects. */
+    beforeCommit?: () => Promise<void>
   } = {},
 ) {
   assertSchemaVersion(input.schemaVersion)
@@ -665,28 +668,8 @@ export async function commitCatalogStockReservationInTransaction(
       "Only an active uncommitted Stock Reservation can be committed.",
     )
 
-  const isPackaged =
-    reservation.enteredInventoryUnit.stockBehavior ===
-    InventoryUnitStockBehavior.PACKAGED_STOCK
-  const balanceQuantity = isPackaged
-    ? reservation.enteredQuantity.toFixed()
-    : reservation.canonicalQuantity.toFixed()
-  const resultingOnHand = subtractExactDecimals(
-    reservation.balanceSource.onHandQuantity.toFixed(),
-    balanceQuantity,
-  )
-  const resultingReserved = subtractExactDecimals(
-    reservation.balanceSource.reservedQuantity.toFixed(),
-    balanceQuantity,
-  )
-  if (
-    compareExactDecimals(resultingOnHand, "0") < 0 ||
-    compareExactDecimals(resultingReserved, "0") < 0
-  )
-    throw new CatalogError(
-      "INSUFFICIENT_STOCK",
-      "The reserved stock is no longer available for commitment.",
-    )
+  const { resultingOnHand, resultingReserved } = reservationCommitImpact(reservation)
+  await options.beforeCommit?.()
   const effectiveAt = new Date()
   const updated = await tx.stockBalanceSource.updateMany({
     data: {
