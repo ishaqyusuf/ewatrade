@@ -23,6 +23,13 @@ const tooling = [
   "DEBUG_PERF", // local performance debugging
   "ASSISTANT_LIVE_SMOKE", // opt-in live model tests, never set on a deployment
   "ASSISTANT_LIVE_MEASURE", // opt-in live setup measurement, tests only
+  // Opt-in assistant integration checks, tests only; never set on a deployment.
+  "RUN_GENERAL_FULFILLMENT",
+  "RUN_GENERAL_ORDER_AMENDMENT",
+  "RUN_GENERAL_ORDER_AMENDMENT_REPLACEMENT_ONLY",
+  "RUN_GENERAL_ORDER_CANCELLATION",
+  "RUN_GENERAL_ORDER_METADATA",
+  "RUN_GENERAL_ORDER_REPLACEMENT",
 ]
 const optional = [
   "LOGLY_COLLECTOR_URL", // Logly logging stays off without these
