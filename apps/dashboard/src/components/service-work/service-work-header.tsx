@@ -1,5 +1,6 @@
 "use client"
 
+import { PageFab } from "@/components/page-fab/page-fab"
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
@@ -21,6 +22,7 @@ export function ServiceWorkHeader({
   onViewChange: (view: DirectoryView) => void
 }) {
   const { setParams } = useServiceWorkParams()
+  const startIntake = () => setParams({ serviceSheet: "intake" })
   return (
     <PageHeader
       eyebrow={storeName}
@@ -57,11 +59,12 @@ export function ServiceWorkHeader({
             <Button
               aria-label="New service"
               variant="outline"
-              className="size-9 rounded-none"
-              onClick={() => setParams({ serviceSheet: "intake" })}
+              className="size-9 rounded-none max-sm:hidden"
+              onClick={startIntake}
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
             </Button>
+            <PageFab label="New service" onClick={startIntake} />
           </>
         }
       >

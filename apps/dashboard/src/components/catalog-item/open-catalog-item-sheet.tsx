@@ -1,5 +1,6 @@
 "use client"
 
+import { PageFab } from "@/components/page-fab/page-fab"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useSmallScreen } from "@/hooks/use-small-screen"
@@ -45,19 +46,7 @@ export function OpenCatalogItemSheet() {
           setChooserOpen(open)
         }}
       >
-        <SheetTrigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Add item"
-              className="rounded-none"
-            />
-          }
-        >
-          {label}
-        </SheetTrigger>
+        <SheetTrigger render={<PageFab label="Add item" />} />
         <SheetFrame
           popupClassName={themeClass}
           title="Add item"

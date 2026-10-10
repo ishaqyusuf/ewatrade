@@ -1,5 +1,6 @@
 "use client"
 
+import { PageFab } from "@/components/page-fab/page-fab"
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useOrderParams } from "@/hooks/use-order-params"
@@ -21,6 +22,7 @@ export function OrdersHeader({
   onViewChange: (view: DirectoryView) => void
 }) {
   const { setParams } = useOrderParams()
+  const createOrder = () => void setParams({ orderSheet: "create" })
   return (
     <PageHeader
       eyebrow={storeName}
@@ -39,11 +41,12 @@ export function OrdersHeader({
             <Button
               aria-label="New order"
               variant="outline"
-              onClick={() => void setParams({ orderSheet: "create" })}
-              className="size-9 rounded-none"
+              onClick={createOrder}
+              className="size-9 rounded-none max-sm:hidden"
             >
               <HugeiconsIcon icon={Add01Icon} className="size-4" />
             </Button>
+            <PageFab label="New order" onClick={createOrder} />
           </>
         }
       >

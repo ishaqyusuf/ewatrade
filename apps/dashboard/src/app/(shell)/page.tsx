@@ -1,6 +1,7 @@
 import { CollapsibleSummary } from "@/components/collapsible-summary"
 import { GettingStarted } from "@/components/dashboard/getting-started"
 import { OverviewActions } from "@/components/dashboard/overview-actions"
+import { OverviewFab } from "@/components/dashboard/overview-fab"
 import {
   OverviewMetrics,
   OverviewMetricsSkeleton,
@@ -16,6 +17,10 @@ import { OrderDetailsSheet } from "@/components/sheets/order-details-sheet"
 import { OrderVisibilityCard } from "@/components/staff/order-visibility-card"
 import { getGettingStartedActions } from "@/lib/dashboard-overview"
 import { canOperateInventory } from "@/lib/inventory-operations"
+import {
+  canAccessDashboardPath,
+  getDashboardNavigation,
+} from "@/lib/navigation"
 import { canUseSalesOperations } from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
@@ -48,6 +53,12 @@ export default async function DashboardHomePage() {
     ctx?.membership.role,
     ctx?.membership.staffAccessMode,
   )
+  // Matches the shell's catalog sheet and assistant launcher gating.
+  const navigationContext = {
+    assistantEnabled: process.env.ASSISTANT_SETUP_ENABLED === "true",
+    staffAccessMode: ctx?.membership.staffAccessMode,
+    catalogEditor: ctx?.membership.catalogEditor,
+  }
   const customerDirectory =
     ctx?.membership.staffAccessMode !== "SCOPED" ||
     ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "")
@@ -151,6 +162,20 @@ export default async function DashboardHomePage() {
       ) : null}
       {store && canCreateOrder ? (
         <OrderDetailsSheet key={`details:${store.id}`} storeId={store.id} />
+      ) : null}
+      {store ? (
+        <OverviewFab
+          catalog={canAccessDashboardPath(
+            "/catalog",
+            ctx?.membership.role,
+            navigationContext,
+          )}
+          orders={canCreateOrder}
+          assistant={getDashboardNavigation(
+            ctx?.membership.role,
+            navigationContext,
+          ).some((item) => item.href === "/assistant")}
+        />
       ) : null}
     </div>
   )
