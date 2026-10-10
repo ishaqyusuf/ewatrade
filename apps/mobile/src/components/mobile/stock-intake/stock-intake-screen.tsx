@@ -16,6 +16,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
@@ -51,6 +52,7 @@ export function StockIntakeChrome(props: WorkflowModalChromeProps) {
 
 export function StockIntakeContent(props: StockIntakeProps) {
   const model = useStockIntake(props)
+  const largeText = useLargeTextLayout()
   const router = useRouter()
   const market = useMobileDesign("stock-intake") === "market-day"
   const {
@@ -215,7 +217,10 @@ export function StockIntakeContent(props: StockIntakeProps) {
                       <View
                         accessibilityLabel="Operation"
                         accessibilityRole="radiogroup"
-                        className="flex-row gap-0.5 rounded-[13px] bg-muted p-[3px]"
+                        className={cn(
+                          "flex-row gap-0.5 rounded-[13px] bg-muted p-[3px]",
+                          largeText && "flex-wrap",
+                        )}
                       >
                         {STOCK_MODES.map((mode) => {
                           const on = model.draft.mode === mode.key
@@ -227,7 +232,9 @@ export function StockIntakeContent(props: StockIntakeProps) {
                                 disabled: model.locked,
                               }}
                               className={cn(
-                                "min-h-[38px] flex-1 items-center justify-center rounded-[10px] px-1",
+                                "min-h-[38px] items-center justify-center rounded-[10px] px-1",
+                                // Two per row at large text so labels never truncate.
+                                largeText ? "w-[49%]" : "flex-1",
                                 on && "bg-card shadow-sm",
                               )}
                               disabled={model.locked}
@@ -242,7 +249,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
                                     ? "text-foreground"
                                     : "text-muted-foreground",
                                 )}
-                                numberOfLines={1}
+                                numberOfLines={largeText ? undefined : 1}
                               >
                                 {mode.label}
                               </Text>
