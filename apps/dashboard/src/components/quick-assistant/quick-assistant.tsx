@@ -8,6 +8,7 @@ import { Button, cn } from "@ewatrade/ui"
 import { BubbleChatIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import dynamic from "next/dynamic"
+import { usePathname } from "next/navigation"
 import { useCallback, useRef, useState } from "react"
 
 const QuickAssistantPanel = dynamic(
@@ -31,6 +32,9 @@ export function QuickAssistant() {
   }, [])
   useQuickAssistantRequests(open)
   const pageFab = usePageFabSlotMode()
+  // The assistant page is the full version of this chat.
+  const onAssistantPage = usePathname() === "/assistant"
+  if (onAssistantPage) return null
 
   return (
     <>

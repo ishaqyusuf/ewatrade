@@ -2,11 +2,7 @@
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { Button, cn } from "@ewatrade/ui"
-import {
-  ArrowExpand01Icon,
-  MinusSignIcon,
-  SparklesIcon,
-} from "@hugeicons/core-free-icons"
+import { ArrowExpand01Icon, MinusSignIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { useEffect, useRef, useState } from "react"
@@ -53,36 +49,35 @@ export function QuickAssistantPanel({
         !opened && "hidden",
       )}
     >
-      <header className="flex shrink-0 items-center gap-2 border-b px-4 py-2">
-        <HugeiconsIcon icon={SparklesIcon} className="size-4 text-primary" />
-        <h2 className="min-w-0 flex-1 text-sm font-semibold">
-          EwaTrade assistant
-        </h2>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={expanded ? "Restore chat size" : "Expand chat"}
-          aria-pressed={expanded}
-          title={expanded ? "Restore chat size" : "Expand chat"}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          <HugeiconsIcon icon={ArrowExpand01Icon} className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Minimize quick assistant"
-          title="Minimize"
-          onClick={onMinimize}
-        >
-          <HugeiconsIcon icon={MinusSignIcon} className="size-4" />
-        </Button>
-      </header>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ErrorBoundary errorComponent={WorkspaceError}>
-          <QuickAssistantContent />
+          <QuickAssistantContent
+            actions={
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={expanded ? "Restore chat size" : "Expand chat"}
+                  aria-pressed={expanded}
+                  title={expanded ? "Restore chat size" : "Expand chat"}
+                  onClick={() => setExpanded((value) => !value)}
+                >
+                  <HugeiconsIcon icon={ArrowExpand01Icon} className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Minimize quick assistant"
+                  title="Minimize"
+                  onClick={onMinimize}
+                >
+                  <HugeiconsIcon icon={MinusSignIcon} className="size-4" />
+                </Button>
+              </>
+            }
+          />
         </ErrorBoundary>
       </div>
     </dialog>,

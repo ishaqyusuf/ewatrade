@@ -50,8 +50,11 @@ export function SetupAssistant({
   hasCatalogItems,
   offerSetup,
   fallback,
+  banner = true,
 }: {
   hasCatalogItems: boolean
+  /** The assistant page shows setup progress in its rail instead. */
+  banner?: boolean
   /**
    * Whether to offer a setup that has not started yet (the launchpad still has
    * steps). Setups already started always show their progress.
@@ -160,13 +163,15 @@ export function SetupAssistant({
 
   return (
     <>
-      <ResumeBanner
-        mediaEnabled={mediaEnabled}
-        followUp={conversation ? followUp : undefined}
-        areas={conversation ? areas : []}
-        pending={start.isPending || begin.isPending}
-        onResume={() => setSetupOpen(true)}
-      />
+      {banner ? (
+        <ResumeBanner
+          mediaEnabled={mediaEnabled}
+          followUp={conversation ? followUp : undefined}
+          areas={conversation ? areas : []}
+          pending={start.isPending || begin.isPending}
+          onResume={() => setSetupOpen(true)}
+        />
+      ) : null}
       {fallback}
       <Dialog
         open={setupOpen}
