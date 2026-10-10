@@ -375,7 +375,7 @@ export function generalActionSummary(
     case "product_create":
       return `${action.name} · ${action.canonicalUnitName} · ${amount(action.priceMinor)} per unit`
     case "order_create":
-      return `${action.lines.map((line) => `${line.quantity} × offering ${line.offeringId}`).join("\n")}\n${action.customerId ? `Customer ${action.customerId}` : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}`
+      return `${action.lines.length} line${action.lines.length === 1 ? "" : "s"} on the order\n${action.customerId ? "Saved customer" : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}`
     case "customer_update":
       return [
         `Customer ${action.customerId}`,
