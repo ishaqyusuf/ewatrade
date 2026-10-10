@@ -46,28 +46,34 @@ export function ReportExportActions({
   }
   return (
     <View className="gap-3">
-      <ActionButton
-        variant="outline"
-        disabled={working}
-        onPress={() => void run(false)}
-      >
-        {working
-          ? "Preparing full snapshot…"
-          : Platform.OS === "web"
-            ? "Download CSV"
-            : Platform.OS === "ios"
-              ? "Share CSV file"
-              : "Share CSV text"}
-      </ActionButton>
-      {Platform.OS === "android" ? (
-        <ActionButton
-          variant="outline"
-          disabled={working}
-          onPress={() => void run(true)}
-        >
-          Save CSV file
-        </ActionButton>
-      ) : null}
+      <View className="flex-row flex-wrap gap-3">
+        <View className="min-w-[140px] flex-1">
+          <ActionButton
+            variant="outline"
+            icon={Platform.OS === "web" ? "Download" : "Share"}
+            disabled={working}
+            onPress={() => void run(false)}
+          >
+            {working
+              ? "Preparing…"
+              : Platform.OS === "web"
+                ? "Download CSV"
+                : "Share CSV"}
+          </ActionButton>
+        </View>
+        {Platform.OS === "android" ? (
+          <View className="min-w-[140px] flex-1">
+            <ActionButton
+              variant="outline"
+              icon="Download"
+              disabled={working}
+              onPress={() => void run(true)}
+            >
+              Save CSV
+            </ActionButton>
+          </View>
+        ) : null}
+      </View>
       {working ? (
         <ActionButton
           variant="outline"

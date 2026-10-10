@@ -25,6 +25,31 @@ import { ReportExportActions } from "./report-export-actions"
 import { ReportAmount, ReportSection } from "./report-section"
 
 type ReportWindow = { from: Date; through: Date; revision: number }
+const CASH_SOURCE_LABELS: Record<string, string> = {
+  BILL_PAYMENT: "Bill payments",
+  COMMERCIAL_PAYMENT: "Sale payments",
+  CUSTOMER_HELD_CREDIT_REFUND: "Customer credit refunds",
+  CUSTOMER_RECEIPT: "Customer receipts",
+  OPENING_BALANCE: "Opening balances",
+  OWNER_CONTRIBUTION: "Owner money in",
+  OWNER_WITHDRAWAL: "Owner money out",
+  TRANSFER: "Transfers",
+}
+const CASH_CATEGORY_LABELS: Record<string, string> = {
+  FINANCING: "Owner financing",
+  OPENING_ADJUSTMENT: "Opening import",
+  OPERATING: "Operating",
+  TRANSFERS_AND_CLEARING: "Transfers and clearing",
+  UNCLASSIFIED: "Unclassified",
+}
+/** "Customer receipts" for CUSTOMER_RECEIPT; unknown kinds read as words. */
+function cashSourceLabel(kind: string) {
+  const known = CASH_SOURCE_LABELS[kind]
+  if (known) return known
+  const words = kind.replaceAll("_", " ").toLowerCase()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
 export function FinanceReportsScreen() {
   return (
     <FinanceWorkspaceGate requireOnline>
@@ -156,7 +181,7 @@ function ReportWindowView({
             report.profitAndLoss.netProfitMinor,
             report.currencyCode,
           )}
-          sub="Not your complete business profit"
+          sub="Recorded entries only"
           pill={{ label: "Partial records", tone: "draft" }}
           stats={[
             {
@@ -208,19 +233,14 @@ function ReportWindowView({
           </ActionButton>
         </View>
       </View>
-      <StatusBanner
-        title="Partial financial records"
-        message="Sales, payments, stock costs and opening balances are incomplete. These totals aren’t your full profit or financial position."
-        tone="warning"
-      />
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: showCoverage }}
         className="min-h-11 flex-row items-center justify-between gap-3"
         onPress={() => setShowCoverage(!showCoverage)}
       >
-        <Text className="text-sm font-semibold text-primary">
-          What’s included in this report
+        <Text className="min-w-0 flex-1 text-sm font-semibold text-primary">
+          What’s missing from this report
         </Text>
         <Icon
           name={showCoverage ? "ChevronUp" : "ChevronDown"}
@@ -229,6 +249,10 @@ function ReportWindowView({
       </Pressable>
       {showCoverage ? (
         <View className="gap-2 rounded-2xl bg-card p-4">
+          <Text className="text-sm leading-5 text-foreground">
+            Sales, payments, stock costs and opening balances are incomplete, so
+            these totals aren’t your full profit or financial position.
+          </Text>
           <Text className="text-sm leading-5 text-muted-foreground">
             Posted finance entries only. Automatic Commerce posting is off.
             Refresh to include newer entries; changing dates starts a new
@@ -309,10 +333,6 @@ function ReportContents({ report }: { report: FinanceReport }) {
   const t = report.trialBalance
   return (
     <View className="gap-6">
-      <ReportExportActions
-        filename={`finance-report-${report.through.toISOString().slice(0, 10)}-snapshot-${report.snapshotSequence}.csv`}
-        build={async () => buildFinanceReportCsv(report)}
-      />
       <ReportSection title="Profit and loss — recorded entries">
         {[
           ["Revenue", p.revenueMinor],
@@ -354,7 +374,10 @@ function ReportContents({ report }: { report: FinanceReport }) {
           />
         ) : null}
         {c.groups.map((g) =>
-          amount(`${g.sourceKind} · ${g.category}`, g.netMinor),
+          amount(
+            `${cashSourceLabel(g.sourceKind)} · ${CASH_CATEGORY_LABELS[g.category] ?? "Unclassified"}`,
+            g.netMinor,
+          ),
         )}
       </ReportSection>
       <ReportSection title="Balance sheet — recorded entries">
@@ -425,6 +448,10 @@ function ReportContents({ report }: { report: FinanceReport }) {
           />
         ) : null}
       </ReportSection>
+      <ReportExportActions
+        filename={`finance-report-${report.through.toISOString().slice(0, 10)}-snapshot-${report.snapshotSequence}.csv`}
+        build={async () => buildFinanceReportCsv(report)}
+      />
     </View>
   )
 }

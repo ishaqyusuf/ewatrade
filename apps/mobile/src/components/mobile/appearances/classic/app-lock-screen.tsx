@@ -1,7 +1,5 @@
 import type { AppLockPresentationProps } from "@/components/mobile/app-lock/app-lock-presentation"
 import { MobileScreen } from "@/components/mobile/screen"
-import { Icon } from "@/components/ui/icon"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
