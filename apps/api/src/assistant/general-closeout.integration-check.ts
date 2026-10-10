@@ -1,6 +1,7 @@
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
+import { withPerformanceTrace } from "@ewatrade/db/performance-tracing"
 import {
   createSimpleCatalogItem,
   getInventoryCloseoutReview,
@@ -178,14 +179,27 @@ export async function verifyCloseoutComposition(
     where: { operation: { tenantId } },
   })
   await expect(
-    decideGeneralProposal({ ...ctx, db: failingDb }, final),
+    withPerformanceTrace(
+      "job",
+      () => decideGeneralProposal({ ...ctx, db: failingDb }, final),
+      (trace) =>
+        console.info("Closeout finalization rollback:", JSON.stringify(trace)),
+    ),
   ).rejects.toThrow("Injected receipt failure")
   expect((await balance()).onHandQuantity.toFixed()).toBe("5")
   expect((await read()).status).toBe("DRAFT")
   expect(
     await db.stockMovement.count({ where: { operation: { tenantId } } }),
   ).toBe(movements)
-  const finished = await decideGeneralProposal(ctx, final)
+  const finished = await withPerformanceTrace(
+    "job",
+    () => decideGeneralProposal(ctx, final),
+    (trace) =>
+      console.info(
+        "Closeout finalization confirmation:",
+        JSON.stringify(trace),
+      ),
+  )
   expect(finished.receipt?.title).toBe("Custody closeout finalized")
   expect((await decideGeneralProposal(ctx, final)).receipt).toEqual(
     finished.receipt,
