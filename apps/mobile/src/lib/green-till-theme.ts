@@ -29,6 +29,8 @@ export const GREEN_TILL_THEME = {
     // On the always-green hero: watermark, chips, change and status dots.
     heroWatermark: "rgba(255,255,255,0.07)",
     heroChip: "rgba(255,255,255,0.14)",
+    // A held key on the green gate keypad.
+    heroPressed: "rgba(255,255,255,0.32)",
     heroUp: "#8EF0BE",
     heroDown: "#FFB4A8",
     dotSynced: "#8EF0BE",
@@ -84,6 +86,8 @@ export const GREEN_TILL_THEME = {
     cardShadow: "rgba(0,0,0,0.6)",
     heroWatermark: "rgba(255,255,255,0.07)",
     heroChip: "rgba(255,255,255,0.14)",
+    // A held key on the green gate keypad.
+    heroPressed: "rgba(255,255,255,0.32)",
     heroUp: "#8EF0BE",
     heroDown: "#FFB4A8",
     dotSynced: "#8EF0BE",

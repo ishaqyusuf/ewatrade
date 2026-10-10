@@ -6,8 +6,11 @@ import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { appLockBiometricName } from "@/lib/app-lock-messages"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
+import * as Haptics from "expo-haptics"
 import type { ReactNode } from "react"
+import { Platform } from "react-native"
 import { BackspaceGlyph } from "./otp-keypad"
 
 const PIN_KEYPAD_ROWS = [
@@ -310,6 +313,62 @@ function PinCodeCells({
   )
 }
 
+/** Keypad tick on touch-down. Android's "light" impact is too faint to feel. */
+function keypadHaptic() {
+  void Haptics.impactAsync(
+    Platform.OS === "android"
+      ? Haptics.ImpactFeedbackStyle.Medium
+      : Haptics.ImpactFeedbackStyle.Light,
+  ).catch(() => {
+    // Haptic support is optional; a feedback failure must not block the key.
+  })
+}
+
+/** Round gate key: the circle brightens and dips while held. */
+function GateKey({
+  accessibilityLabel,
+  children,
+  disabled,
+  filled,
+  onPress,
+}: {
+  accessibilityLabel: string
+  children: ReactNode
+  disabled: boolean
+  /** Digits sit on a tinted circle; icon keys show one only while held. */
+  filled: boolean
+  onPress: () => void
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      allowOverflow
+      className={cn("size-16", disabled && "opacity-40")}
+      disabled={disabled}
+      noRipple
+      onPress={onPress}
+      onPressIn={disabled ? undefined : keypadHaptic}
+    >
+      {({ pressed }) => (
+        <View
+          className={cn(
+            "size-16 items-center justify-center rounded-full",
+            pressed
+              ? "scale-[0.94] bg-[var(--gate-pressed)]"
+              : filled
+                ? "bg-[var(--gate-chip)]"
+                : "bg-transparent",
+          )}
+        >
+          {children}
+        </View>
+      )}
+    </Pressable>
+  )
+}
+
 function PinKey({
   disabled,
   label,
@@ -320,25 +379,20 @@ function PinKey({
   onPress: () => void
 }) {
   return (
-    <Pressable
+    <GateKey
       accessibilityLabel={`Enter digit ${label}`}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      className={cn(
-        "size-16 items-center justify-center rounded-full bg-[var(--gate-chip)]",
-        disabled && "opacity-40",
-      )}
       disabled={disabled}
-      haptic
+      filled
       onPress={onPress}
     >
+      {/* No font padding and a fixed line box, so the digit sits dead centre. */}
       <Text
-        maxFontSizeMultiplier={1.4}
-        className="text-[26px] font-semibold [-rn-line-height:32] text-[var(--gate-fg)]"
+        maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
+        className="text-center text-[26px] font-semibold [-rn-include-font-padding:false] [-rn-line-height:30] [-rn-text-align-vertical:center] text-[var(--gate-fg)]"
       >
         {label}
       </Text>
-    </Pressable>
+    </GateKey>
   )
 }
 
@@ -355,16 +409,10 @@ function PinIconKey({
 }) {
   const palette = useGatePalette()
   return (
-    <Pressable
+    <GateKey
       accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      className={cn(
-        "size-16 items-center justify-center rounded-full",
-        disabled && "opacity-40",
-      )}
       disabled={disabled}
-      haptic
+      filled={false}
       onPress={onPress}
     >
       {icon === "Delete" ? (
@@ -376,7 +424,7 @@ function PinIconKey({
           name={icon}
         />
       )}
-    </Pressable>
+    </GateKey>
   )
 }
 

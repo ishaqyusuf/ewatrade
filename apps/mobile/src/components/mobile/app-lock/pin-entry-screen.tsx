@@ -8,9 +8,10 @@ import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import * as Haptics from "expo-haptics"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
-import type { ReactNode } from "react"
+import { type ReactNode, useEffect } from "react"
 import { ScrollView } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
@@ -53,6 +54,7 @@ function GateShell({
         "--gate-error": palette.heroDown,
         "--gate-fg": palette.heroForeground,
         "--gate-muted": palette.heroMuted,
+        "--gate-pressed": palette.heroPressed,
       }}
     >
       <View className="flex-1 bg-[var(--gate-bg)]" testID={testID}>
@@ -159,6 +161,17 @@ export function PinEntryScreen({
   value: string
 }) {
   const palette = useGatePalette()
+
+  // A wrong or mismatched PIN buzzes once, like the dots turning rose.
+  useEffect(() => {
+    if (!error || !message) return
+    void Haptics.notificationAsync(
+      Haptics.NotificationFeedbackType.Error,
+    ).catch(() => {
+      // Haptic support is optional.
+    })
+  }, [error, message])
+
   return (
     <GateShell leading={leading} testID={testID}>
       {/* Centred on tall phones; scrolls at large text. */}
