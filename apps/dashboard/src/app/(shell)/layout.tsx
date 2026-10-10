@@ -118,7 +118,8 @@ export default async function ShellLayout({
           storeIds={ctx.stores.map((item) => item.id)}
           tenantId={ctx.tenant.id}
         >
-          <main className="flex min-h-[calc(100vh-70px)] min-w-0 flex-col px-4 md:px-8">
+          {/* 70px header + this + the wrapper's pb-4 fill exactly one screen. */}
+          <main className="flex min-h-[calc(100vh-70px-1rem)] min-w-0 flex-col px-4 md:px-8">
             {children}
           </main>
         </GlobalSheetsProvider>
