@@ -1,12 +1,7 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import type { getCommercialOrderOperationalSummary } from "@ewatrade/db/queries"
 
-const money = (minor: string) => {
-  const amount = BigInt(minor)
-  const sign = amount < 0n ? "-" : ""
-  const absolute = amount < 0n ? -amount : amount
-  return `${sign}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`
-}
 export function generalOperationalAnswers(input: {
   summary: Awaited<ReturnType<typeof getCommercialOrderOperationalSummary>>
   storeName: string
@@ -33,10 +28,10 @@ export function generalOperationalAnswers(input: {
     ...input.summary.currencies.map((currency) => ({
       id: `order_unpaid_${crypto.randomUUID()}`,
       title: `Unpaid orders · ${currency.currencyCode}`,
-      value: `${currency.currencyCode} ${money(currency.outstandingMinor)}`,
+      value: `${generalMoney(currency.outstandingMinor, currency.currencyCode)}`,
       scope,
       asOf,
-      detail: `${currency.outstandingCount} unpaid of ${currency.orderCount} matching orders. Order value ${currency.currencyCode} ${money(currency.orderValueMinor)}. This is unpaid order value, not customer ledger debt or cash collected; currencies are never combined.${statuses}`,
+      detail: `${currency.outstandingCount} unpaid of ${currency.orderCount} matching orders. Order value ${generalMoney(currency.orderValueMinor, currency.currencyCode)}. This is unpaid order value, not customer ledger debt or cash collected; currencies are never combined.${statuses}`,
     })),
   ]
 }

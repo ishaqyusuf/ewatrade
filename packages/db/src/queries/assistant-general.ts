@@ -1,3 +1,4 @@
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Prisma } from "../../generated/prisma/client"
 import type { AssistantScope } from "./assistant"
 import type { DbClient } from "./types"
@@ -172,7 +173,10 @@ export async function readGeneralOrderReview(
     enteredTotalMinor?: number
     expectedConfigurationVersionId?: string
   }>,
+  currencyCode = "NGN",
 ) {
+  const money = (minor: number) =>
+    formatFinanceMoney(String(minor), currencyCode)
   const { resolveCommercialLinePrice } = await import(
     "./commercial-line-pricing"
   )
@@ -222,8 +226,8 @@ export async function readGeneralOrderReview(
     totalMinor += price.totalMinor
     lines.push(
       price.unitPriceMinor === null
-        ? `${offering.catalogItem.name} · ${offering.name} · quantity ${line.quantity} · entered item total ${(price.totalMinor / 100).toFixed(2)}`
-        : `${offering.catalogItem.name} · ${offering.name} · ${line.quantity} × ${(price.unitPriceMinor / 100).toFixed(2)} = ${(price.totalMinor / 100).toFixed(2)}`,
+        ? `${offering.catalogItem.name} · ${offering.name} · quantity ${line.quantity} · entered item total ${money(price.totalMinor)}`
+        : `${offering.catalogItem.name} · ${offering.name} · ${line.quantity} × ${money(price.unitPriceMinor)} = ${money(price.totalMinor)}`,
     )
   }
   if (!Number.isSafeInteger(totalMinor) || totalMinor > 100_000_000)

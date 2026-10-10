@@ -33,7 +33,7 @@ test("known empty result is zero, with dated scope and order-value qualification
       orderCount: 0,
     },
   })
-  expect(answer.value).toBe("NGN 0.00")
+  expect(answer.value).toBe("₦0.00")
   expect(answer.detail).toBe("0 orders · order value, not cash collected.")
   expect(answer.scope).toContain(period.createdAfter)
   expect(answer.scope).toContain(period.createdBefore)

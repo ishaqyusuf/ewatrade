@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
   GeneralReceipt,
@@ -107,12 +108,12 @@ async function review(ctx: GeneralTransactionContext, payload: Action) {
   } else {
     const currency = ctx.tenantContext.activeStore?.currencyCode ?? ""
     lines.push(
-      `Original total ${currency} ${(result.terms.originalTotalMinor / 100).toFixed(2)} → replacement ${currency} ${(result.terms.totalMinor / 100).toFixed(2)}.`,
+      `Original total ${generalMoney(result.terms.originalTotalMinor, currency)} → replacement ${generalMoney(result.terms.totalMinor, currency)}.`,
     )
     lines.push(
       ...result.terms.lines.map(
         (row) =>
-          `${labels.get(row.orderLineId) ?? "Order item"}: quantity ${row.originalQuantity} → ${row.quantity}; item total ${(row.originalTotalMinor / 100).toFixed(2)} → ${(row.totalMinor / 100).toFixed(2)}.`,
+          `${labels.get(row.orderLineId) ?? "Order item"}: quantity ${row.originalQuantity} → ${row.quantity}; item total ${generalMoney(row.originalTotalMinor, currency)} → ${generalMoney(row.totalMinor, currency)}.`,
       ),
     )
     lines.push(

@@ -1,13 +1,9 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import { fulfillCommercialOrderProductLineInTransaction, getCommercialProductLineReview } from "@ewatrade/db/queries"
 import type { GeneralActionAdapter, GeneralTransactionContext } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
 type ProductAction = Extract<GeneralAction, { action: "product_line_fulfill" }>
-function formatMinor(value: string) {
-  const minor = BigInt(value)
-  const absolute = minor < 0n ? -minor : minor
-  return `${minor < 0n ? "-" : ""}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, "0")}`
-}
 async function current(ctx: GeneralTransactionContext, payload: ProductAction) {
   const scope = requireGeneralScope(ctx)
   const review = await getCommercialProductLineReview(ctx.db, { ...scope, orderLineId: payload.orderLineId })
@@ -39,7 +35,7 @@ export const productLineFulfill = {
     return { target, lines: [
       `${review.orderNumber} · ${review.productName} · ${review.offeringName} · full saved quantity ${review.quantity}.`,
       `Stock: ${review.stock.onHandBefore} → ${review.stock.onHandAfter} ${review.stock.unitName}. Reserved: ${review.stock.reservedBefore} → ${review.stock.reservedAfter}.`,
-      cost.status === "NO_FINANCE_BOOK" ? "No Finance Book: physical fulfilment only; no financial valuation recorded." : cost.valueDeltaMinor === null ? `Cost is unknown (${cost.unknownReason ?? "missing evidence"}); it will not be invented.` : `Inventory value change: ${cost.currencyCode} ${formatMinor(cost.valueDeltaMinor)}.`,
+      cost.status === "NO_FINANCE_BOOK" ? "No Finance Book: physical fulfilment only; no financial valuation recorded." : cost.valueDeltaMinor === null ? `Cost is unknown (${cost.unknownReason ?? "missing evidence"}); it will not be invented.` : `Inventory value change: ${generalMoney(cost.valueDeltaMinor, cost.currencyCode)}.`,
       ...(review.scheduledFor ? [`Scheduled for ${review.scheduledFor.toISOString()}.`] : []),
       "Only this saved line is fulfilled. Order completion is derived from all lines. The server records the performance time.",
       `Reason: ${payload.reason}`,

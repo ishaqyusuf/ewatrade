@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import type { listCustomerLedgerReceivables } from "@ewatrade/db/queries"
 import { customerLedgerReceivablesSchema } from "../schemas/customer-ledger"
@@ -6,11 +7,6 @@ export const generalReceivablesInput = customerLedgerReceivablesSchema.pick({
   query: true,
   cursor: true,
 })
-const money = (minor: string) => {
-  const value = BigInt(minor)
-  const absolute = value < 0n ? -value : value
-  return `${value < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`
-}
 export function generalReceivablesAnswers(
   page: Awaited<ReturnType<typeof listCustomerLedgerReceivables>>,
   input: { query?: string; cursor?: string },
@@ -28,10 +24,10 @@ export function generalReceivablesAnswers(
     ...page.items.map((item) => ({
       id: `receivable_${crypto.randomUUID()}`,
       title: item.customer.name.slice(0, 160),
-      value: `Debt ${item.currencyCode} ${money(item.totals.outstandingDebtMinor)}`,
+      value: `Debt ${generalMoney(item.totals.outstandingDebtMinor, item.currencyCode)}`,
       scope: `Account ${item.id} · Customer ${item.customer.id}`,
       asOf,
-      detail: `Available credit ${item.currencyCode} ${money(item.totals.availableCreditMinor)}; net ledger balance ${item.currencyCode} ${money(item.totals.netBalanceMinor)}. Debt and credit are separate; neither is cash collected or an unpaid-order total. Posted entries only, all Stores.`,
+      detail: `Available credit ${generalMoney(item.totals.availableCreditMinor, item.currencyCode)}; net ledger balance ${generalMoney(item.totals.netBalanceMinor, item.currencyCode)}. Debt and credit are separate; neither is cash collected or an unpaid-order total. Posted entries only, all Stores.`,
     })),
   ]
 }

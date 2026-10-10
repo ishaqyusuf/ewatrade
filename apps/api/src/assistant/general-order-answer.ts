@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 
 export function generalOrderAnswer(
@@ -17,9 +18,9 @@ export function generalOrderAnswer(
   return {
     id: `order_${crypto.randomUUID()}`,
     title: order.orderNumber,
-    value: `${order.currencyCode} ${(order.totalMinor / 100).toFixed(2)}`,
+    value: generalMoney(order.totalMinor, order.currencyCode),
     scope: `${storeName.slice(0, 300)} · Order ${order.id}`,
     asOf: new Date().toISOString(),
-    detail: `${order.status} · ${order.paymentStatus} · unpaid ${order.currencyCode} ${(unpaid / 100).toFixed(2)}. ${excluded ? "Cancelled/refunded orders contribute no unpaid amount. " : ""}Individual order only; use the summary read for totals.`,
+    detail: `${order.status} · ${order.paymentStatus} · unpaid ${generalMoney(unpaid, order.currencyCode)}. ${excluded ? "Cancelled/refunded orders contribute no unpaid amount. " : ""}Individual order only; use the summary read for totals.`,
   }
 }

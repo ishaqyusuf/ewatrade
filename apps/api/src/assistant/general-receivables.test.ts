@@ -33,8 +33,8 @@ test("receivable cards retain bigint precision and distinguish account debt from
   expect(
     answers.every((answer) => generalAnswerSchema.safeParse(answer).success),
   ).toBe(true)
-  expect(answers[1]?.value).toBe("Debt NGN 90071992547409.18")
-  expect(answers[1]?.detail).toContain("credit NGN 1.25")
+  expect(answers[1]?.value).toBe("Debt ₦90,071,992,547,409.18")
+  expect(answers[1]?.detail).toContain("credit ₦1.25")
   expect(answers[0]?.detail).toContain("Continuation page")
   expect(answers[0]?.detail).toContain("not a business total")
   expect(answers[0]?.detail).toContain("Unintegrated orders are excluded")

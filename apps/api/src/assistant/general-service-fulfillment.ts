@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import {
   authorizeCommercialOrderChargeOnlyServiceLineInTransaction,
@@ -58,7 +59,7 @@ export const serviceLineAction = {
       `Full saved quantity: ${review.quantity}.`,
       payload.action === "service_line_authorize" ? "Record manager release only. Service performance remains a separate action." : "Record service performance now. Order completion is derived from all saved lines.",
       `Authorization: ${review.authorizationPolicy?.replaceAll("_", " ")}.`,
-      `Order balance: ${review.payment.currencyCode} ${(review.payment.balanceDueMinor / 100).toFixed(2)}.`,
+      `Order balance: ${generalMoney(review.payment.balanceDueMinor, review.payment.currencyCode)}.`,
       ...(review.scheduledFor ? [`Scheduled for ${review.scheduledFor.toISOString()}.`] : []),
       "No physical stock movement. Performance time is recorded by the server.",
       `Reason: ${payload.reason}`,

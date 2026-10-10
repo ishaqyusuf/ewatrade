@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import {
   correctStockOperationInTransaction,
@@ -23,12 +24,9 @@ function costReview(cost: { status: string; currencyCode: string; valueBeforeMin
     ? "Cost unavailable: this Store has no finance book."
     : cost.status === "SOURCE_OWNED" ? "Cost impact follows the original source workflow."
     : "Cost unknown: the recorded valuation history does not establish a cost."
-  const amount = (value: string | null) => {
-    if (value === null) return "unknown"
-    const minor = BigInt(value), absolute = minor < 0n ? -minor : minor
-    return `${minor < 0n ? "-" : ""}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, "0")}`
-  }
-  return `Inventory value: ${cost.currencyCode} ${amount(cost.valueBeforeMinor)} → ${amount(cost.valueAfterMinor)}; change ${amount(cost.valueDeltaMinor)}`
+  const amount = (value: string | null) =>
+    value === null ? "unknown" : generalMoney(value, cost.currencyCode)
+  return `Inventory value: ${amount(cost.valueBeforeMinor)} → ${amount(cost.valueAfterMinor)}; change ${amount(cost.valueDeltaMinor)}`
 }
 type Adjust = Extract<GeneralAction, { action: "stock_adjust" }>
 type Correct = Extract<GeneralAction, { action: "stock_correct" }>

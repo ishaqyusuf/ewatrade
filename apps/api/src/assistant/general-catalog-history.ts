@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { z } from "zod"
 import { catalogActivitySchema } from "../schemas/catalog-detail"
@@ -15,9 +16,7 @@ const amount = (minor: number | null, currency: string | null) => {
   if (minor === null || !currency) return "Amount unavailable"
   if (!Number.isSafeInteger(minor))
     throw Error("Exact historical amount unavailable")
-  const value = BigInt(minor),
-    absolute = value < 0n ? -value : value
-  return `${currency} ${value < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`
+  return generalMoney(minor, currency)
 }
 export async function readGeneralCatalogHistory(
   ctx: GeneralContext,

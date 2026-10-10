@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import {
   lockInventorySourcesForReview,
@@ -63,7 +64,7 @@ export const stockReceive: GeneralActionAdapter<Action> = {
         `Effective: ${payload.effectiveAt}`,
         payload.unitCostMinor === undefined
           ? "Unit cost unknown; no purchase payment recorded."
-          : `Reported unit cost: ${p.currencyCode} ${(payload.unitCostMinor / 100).toFixed(2)}. This is a stock cost snapshot, not purchase recognition or payment.`,
+          : `Reported unit cost: ${generalMoney(payload.unitCostMinor, p.currencyCode)}. This is a stock cost snapshot, not purchase recognition or payment.`,
         "Receive into the current Store. Stock valuation follows the ordinary receipt rules; unknown cost remains unknown.",
       ],
     }

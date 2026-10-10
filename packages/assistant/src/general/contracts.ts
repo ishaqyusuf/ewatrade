@@ -5,6 +5,7 @@ export { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./or
 import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
 import { stockTransferDispatchAction, stockTransferReceiveAction, stockTransferCancelAction } from "./stock-transfer"
 import { z } from "zod"
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
 import {
   unitConfigurationDraftAction,
@@ -309,12 +310,25 @@ export type GeneralDataParts = {
   "general-run": { runId: string; remainingRequests: number }
   "general-proposal": { proposalId: string }
 }
+/** Money in assistant answers and reviews ("₦4,500.00"), exact for large values. */
+export function generalMoney(
+  minor: number | bigint | string,
+  currencyCode: string,
+) {
+  const value = String(typeof minor === "number" ? Math.round(minor) : minor)
+  try {
+    return formatFinanceMoney(value, currencyCode || "NGN")
+  } catch {
+    const amount = BigInt(value)
+    const absolute = amount < 0n ? -amount : amount
+    return `${currencyCode} ${amount < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`
+  }
+}
 export function generalActionSummary(
   action: GeneralAction,
   currencyCode: string,
 ) {
-  const amount = (minor: number) =>
-    `${currencyCode} ${(minor / 100).toFixed(2)}`
+  const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_line_fulfill": return `Fulfil reserved product line · ${action.reason}`
     case "service_line_authorize": return `Authorize service line · ${action.reason}`

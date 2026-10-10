@@ -140,7 +140,7 @@ test("rehearsal is deterministic and does not treat injected record instructions
       },
       "NGN",
     ),
-  ).toContain("NGN 125.00")
+  ).toContain("₦125.00")
 })
 
 test("product edits distinguish product details from exact-unit identifiers", () => {

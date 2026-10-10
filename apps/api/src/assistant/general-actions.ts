@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import { productLineFulfill } from "./general-product-fulfillment"
 import { serviceLineAction } from "./general-service-fulfillment"
 import type {
@@ -111,7 +112,6 @@ export const conflict = (message: string) =>
 const currency = (ctx: GeneralTransactionContext) =>
   ctx.tenantContext.activeStore?.currencyCode ??
   ctx.tenantContext.tenant.currencyCode
-const major = (minor: number) => (minor / 100).toFixed(2)
 
 async function paymentTarget(
   ctx: GeneralTransactionContext,
@@ -351,7 +351,12 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         code: "NOT_FOUND",
         message: "Customer unavailable.",
       })
-    const review = await readGeneralOrderReview(ctx.db, scope, payload.lines)
+    const review = await readGeneralOrderReview(
+      ctx.db,
+      scope,
+      payload.lines,
+      currency(ctx),
+    )
     if (payload.initialPayment) {
       assertGeneralAction(ctx, "payment_record")
       if (payload.initialPayment.amountMinor > review.totalMinor)
@@ -374,7 +379,12 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   },
   async review(ctx, payload) {
     const scope = requireGeneralScope(ctx)
-    const review = await readGeneralOrderReview(ctx.db, scope, payload.lines)
+    const review = await readGeneralOrderReview(
+      ctx.db,
+      scope,
+      payload.lines,
+      currency(ctx),
+    )
     if (payload.initialPayment) {
       assertGeneralAction(ctx, "payment_record")
       if (payload.initialPayment.amountMinor > review.totalMinor)
@@ -390,19 +400,19 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       target: null,
       lines: [
         ...review.lines,
-        `Total: ${currency(ctx)} ${major(review.totalMinor)}`,
+        `Total: ${generalMoney(review.totalMinor, currency(ctx))}`,
         `Customer: ${customer?.name ?? "Walk-in"}`,
         ...(payload.initialPayment
           ? [
-              `Record received: ${currency(ctx)} ${major(payload.initialPayment.amountMinor)} · ${payload.initialPayment.method.replaceAll("_", " ")}`,
-              `Remaining balance: ${currency(ctx)} ${major(review.totalMinor - payload.initialPayment.amountMinor)}`,
+              `Record received: ${generalMoney(payload.initialPayment.amountMinor, currency(ctx))} · ${payload.initialPayment.method.replaceAll("_", " ")}`,
+              `Remaining balance: ${generalMoney(review.totalMinor - payload.initialPayment.amountMinor, currency(ctx))}`,
               ...(payload.initialPayment.note
                 ? [`Payment note: ${payload.initialPayment.note}`]
                 : []),
               "Creates the order and records this payment together. No bank transfer or card charge is initiated.",
             ]
           : [
-              `Remaining balance: ${currency(ctx)} ${major(review.totalMinor)} · no payment recorded`,
+              `Remaining balance: ${generalMoney(review.totalMinor, currency(ctx))} · no payment recorded`,
             ]),
         ...(payload.notes ? [payload.notes] : []),
       ],
@@ -453,7 +463,7 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       recordId: result.id,
       orderId: result.id,
       title: "Order created",
-      detail: `${result.orderNumber} · total ${currency(ctx)} ${major(result.totalMinor)} · received ${major(result.amountPaidMinor)} · remaining ${major(result.balanceDueMinor)}`,
+      detail: `${result.orderNumber} · total ${generalMoney(result.totalMinor, currency(ctx))} · received ${generalMoney(result.amountPaidMinor, currency(ctx))} · remaining ${generalMoney(result.balanceDueMinor, currency(ctx))}`,
     }
   },
 }
@@ -469,8 +479,8 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
       target: { id: target.id, revision: target.revision },
       lines: [
         `${target.review.customerName || "Walk-in customer"} · ${target.review.orderNumber}`,
-        `${currency(ctx)} ${major(payload.amountMinor)} · ${payload.method.replaceAll("_", " ")}`,
-        `Balance after: ${currency(ctx)} ${major(target.review.balanceDueMinor - payload.amountMinor)}`,
+        `${generalMoney(payload.amountMinor, currency(ctx))} · ${payload.method.replaceAll("_", " ")}`,
+        `Balance after: ${generalMoney(target.review.balanceDueMinor - payload.amountMinor, currency(ctx))}`,
         ...(payload.note ? [payload.note] : []),
       ],
     }
@@ -494,7 +504,7 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
       recordId: result.id,
       orderId: payload.orderId,
       title: "Payment recorded",
-      detail: `${currency(ctx)} ${major(payload.amountMinor)} · ${payload.method.replaceAll("_", " ")} · remaining ${major(result.balanceDueMinor)}`,
+      detail: `${generalMoney(payload.amountMinor, currency(ctx))} · ${payload.method.replaceAll("_", " ")} · remaining ${generalMoney(result.balanceDueMinor, currency(ctx))}`,
     }
   },
 }

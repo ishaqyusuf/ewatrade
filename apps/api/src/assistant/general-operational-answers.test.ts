@@ -31,8 +31,8 @@ test("exact counts and each currency are presented without rounding or ledger cl
   })
   expect(cards.map((card) => card.value)).toEqual([
     "9007199254740993",
-    "NGN 90071992547409931.23",
-    "USD 0.01",
+    "₦90,071,992,547,409,931.23",
+    "US$0.01",
   ])
   expect(cards[1]?.detail).toContain("not customer ledger debt")
   expect(cards[0]?.detail).toContain("Statuses: CONFIRMED")

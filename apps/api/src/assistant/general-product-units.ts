@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import {
   createProductUnitConfigurationDraftInTransaction,
@@ -126,7 +127,7 @@ async function reviewUnits(
     `${affected.length} affected selling offerings. Publication replaces their unit references and carries each offering's own price, identifiers and Store availability forward.`,
     ...affected.map(
       (offering) =>
-        `${offering.variant.name} · ${offering.name}: ${offering.currencyCode} ${offering.fixedPriceMinor === null ? "no fixed price" : (offering.fixedPriceMinor / 100).toFixed(2)} · unit ${offering.productUnitOffering?.inventoryUnit.key ?? "unconfigured"}`,
+        `${offering.variant.name} · ${offering.name}: ${offering.fixedPriceMinor === null ? "no fixed price" : generalMoney(offering.fixedPriceMinor, offering.currencyCode)} · unit ${offering.productUnitOffering?.inventoryUnit.key ?? "unconfigured"}`,
     ),
     `${product.stockBalanceSources.length} stock balance sources; no quantity is converted automatically.`,
     ...product.stockBalanceSources.map(

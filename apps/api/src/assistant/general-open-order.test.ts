@@ -67,10 +67,10 @@ test("individual order cards agree with aggregate cancelled/refunded unpaid sema
     status: "CONFIRMED",
     paymentStatus: "PARTIAL",
   }
-  expect(generalOrderAnswer(order, "Store").detail).toContain("unpaid NGN 8.00")
+  expect(generalOrderAnswer(order, "Store").detail).toContain("unpaid ₦8.00")
   for (const status of ["CANCELLED", "REFUNDED"])
     expect(generalOrderAnswer({ ...order, status }, "Store").detail).toContain(
-      "unpaid NGN 0.00",
+      "unpaid ₦0.00",
     )
   expect(
     generalOpenOrderInput.safeParse({ customerId: "c", limit: 50 }).success,

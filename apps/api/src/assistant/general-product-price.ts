@@ -1,3 +1,4 @@
+import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import {
   CatalogError,
@@ -65,8 +66,7 @@ export const productPriceUpdate: GeneralActionAdapter<PriceAction> = {
   },
   async review(ctx, payload) {
     const { offering, target } = await priceTarget(ctx, payload)
-    const amount = (minor: number) =>
-      `${offering.currencyCode} ${(minor / 100).toFixed(2)}`
+    const amount = (minor: number) => generalMoney(minor, offering.currencyCode)
     return {
       target,
       lines: [
@@ -102,7 +102,7 @@ export const productPriceUpdate: GeneralActionAdapter<PriceAction> = {
       kind: "product",
       recordId: offering.catalogItemId,
       title: "Product price updated",
-      detail: `${offering.catalogItem.name} · ${offering.name} · ${offering.currencyCode} ${(payload.priceMinor / 100).toFixed(2)}`,
+      detail: `${offering.catalogItem.name} · ${offering.name} · ${generalMoney(payload.priceMinor, offering.currencyCode)}`,
     }
   },
 }
