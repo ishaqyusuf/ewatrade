@@ -8,8 +8,9 @@ export default function FinanceBankStatementRoute() {
   }>()
   return (
     <WorkflowModalScreen
-      title="Original bank statement"
-      closeLabel="Close original statement"
+      back
+      title="Bank statement"
+      closeLabel="Back to bank statements"
       closeHref="/finance-bank-modal"
     >
       <FinanceBankStatementScreen
