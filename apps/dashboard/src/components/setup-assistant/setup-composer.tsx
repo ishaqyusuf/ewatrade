@@ -19,7 +19,7 @@ import {
   StopIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { SetupComposerAttachment } from "./setup-attachment-chips"
 import { useSetupAttachments } from "./use-setup-attachments"
 import {
@@ -60,6 +60,19 @@ export function SetupComposer({
   const [input, setInput] = useState("")
   const [transcriptHint, setTranscriptHint] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  // One line by default; grows with the message up to three lines, then scrolls.
+  useLayoutEffect(() => {
+    const textarea = inputRef.current
+    if (!textarea) return
+    textarea.style.height = ""
+    if (!input) return
+    const style = getComputedStyle(textarea)
+    const maxHeight =
+      Number.parseFloat(style.lineHeight) * 3 +
+      Number.parseFloat(style.paddingTop) +
+      Number.parseFloat(style.paddingBottom)
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`
+  }, [input])
   const fileRef = useRef<HTMLInputElement | null>(null)
   const attachments = useSetupAttachments({
     conversationId,
@@ -172,16 +185,14 @@ export function SetupComposer({
           <InputGroupTextarea
             ref={inputRef}
             aria-label={inputLabel}
-            placeholder="Tell me what you sell, your prices and how many you have…"
-            rows={2}
+            placeholder="Tell me what you sell…"
+            rows={1}
+            className="min-h-0"
             maxLength={8000}
             value={input}
             onChange={(event) => setInput(event.target.value)}
           />
-          <InputGroupAddon
-            align="block-end"
-            className={mediaEnabled ? "justify-between" : "justify-end"}
-          >
+          <InputGroupAddon align="inline-end" className="self-end">
             {mediaEnabled ? (
               <div className="flex items-center gap-1">
                 <InputGroupButton
