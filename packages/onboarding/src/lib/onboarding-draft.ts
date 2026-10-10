@@ -16,6 +16,7 @@ export function businessValuesFromOnboardingDraft(
     countryCode: draft.countryCode,
     region: draft.region,
     phone: draft.phone,
+    phoneCountry: draft.phoneCountry,
     businessProfileKey: draft.businessProfileKey,
     businessProfileVersion: 1,
     currencyCode:
@@ -50,6 +51,7 @@ export function onboardingDraftFromBusinessValues(
     countryCode: values.countryCode,
     region: values.region,
     phone: values.phone,
+    phoneCountry: values.phoneCountry,
     businessProfileKey: values.businessProfileKey,
     currencyCode: values.currencyCode,
     operatingModel: values.operatingModel,

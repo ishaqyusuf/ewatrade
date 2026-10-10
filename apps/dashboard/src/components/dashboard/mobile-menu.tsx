@@ -40,13 +40,13 @@ export function MobileMenu({ navItems, ctx, user }: Props) {
         render={
           <Button
             aria-label="Open dashboard navigation"
-            className="md:hidden rounded-full"
-            size="icon-sm"
-            variant="outline"
+            className="size-11 md:hidden"
+            size="icon"
+            variant="ghost"
           />
         }
       >
-        <HugeiconsIcon icon={Menu01Icon} className="size-4" />
+        <HugeiconsIcon icon={Menu01Icon} className="size-[18px]" />
       </SheetTrigger>
       <SheetContent
         side="left"

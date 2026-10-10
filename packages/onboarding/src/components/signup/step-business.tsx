@@ -13,11 +13,6 @@ import {
   FieldLegend,
   FieldSet,
   Input,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-  InputGroupText,
 } from "@ewatrade/ui"
 import {
   BUSINESS_OPERATING_MODELS,
@@ -29,19 +24,20 @@ import {
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
 import type { ResolvedAddress } from "@ewatrade/utils/geo-address"
+import { parsePhoneNumberFromString } from "libphonenumber-js/max"
 import { useState } from "react"
 import { Controller } from "react-hook-form"
 import { useZodForm } from "../../hooks/use-zod-form"
 import {
-  getCountryCallingCode,
-  getNationalSignupPhone,
-  getSignupPhoneForCountry,
-} from "../../lib/signup-phone"
+  normalizeInternationalPhone,
+  phoneCountry,
+} from "../../lib/international-phone"
 import {
   type BusinessValues,
   COUNTRIES,
   businessSchema,
 } from "../../lib/signup-schemas"
+import { SignupPhoneInput } from "./signup-phone-input"
 
 import { SignupUseLocation } from "./signup-location"
 import { SignupSelect } from "./signup-select"
@@ -61,6 +57,10 @@ export function StepBusiness({
   onNext,
   totalSteps = 2,
 }: StepBusinessProps) {
+  const initialPhoneCountry =
+    defaultValues?.phoneCountry ??
+    parsePhoneNumberFromString(defaultValues?.phone ?? "")?.country ??
+    phoneCountry(defaultValues?.countryCode)
   const form = useZodForm<BusinessValues>(businessSchema, {
     defaultValues: {
       addressLine1: "",
@@ -71,27 +71,24 @@ export function StepBusiness({
       city: "",
       countryCode: "",
       currencyCode: "NGN",
-      phone: "",
       region: "",
       operatingModel: "products",
       orderChannels: ["walk_in"],
       otherBusinessDescription: "",
       ...defaultValues,
+      phoneCountry: initialPhoneCountry,
+      phone: initialPhoneCountry
+        ? (normalizeInternationalPhone(
+            defaultValues?.phone ?? "",
+            initialPhoneCountry,
+          ) ??
+          defaultValues?.phone ??
+          "")
+        : (defaultValues?.phone ?? ""),
     },
   })
   const [preferencesOpen, setPreferencesOpen] = useState(false)
-  const selectedCountry = form.watch("countryCode") ?? ""
-  const phonePrefix = getCountryCallingCode(selectedCountry)
   const changeCountry = (nextCountry: string) => {
-    form.setValue(
-      "phone",
-      getSignupPhoneForCountry(
-        form.getValues("phone"),
-        form.getValues("countryCode") ?? "",
-        nextCountry,
-      ),
-      { shouldDirty: true },
-    )
     form.setValue("countryCode", nextCountry, {
       shouldDirty: true,
       shouldValidate: true,
@@ -383,10 +380,12 @@ export function StepBusiness({
             </Field>
           </FieldGroup>
 
-          {/* Country + Phone grid */}
+          {/* Business location and phone country are independent. */}
           <FieldGroup className="signup-row">
             <Field data-invalid={Boolean(form.formState.errors.countryCode)}>
-              <FieldLabel htmlFor="signup-countryCode">Country</FieldLabel>
+              <FieldLabel htmlFor="signup-countryCode">
+                Business country
+              </FieldLabel>
               <Controller
                 name="countryCode"
                 control={form.control}
@@ -417,44 +416,37 @@ export function StepBusiness({
                 name="phone"
                 control={form.control}
                 render={({ field }) => (
-                  <InputGroup className="signup-phone-input">
-                    <InputGroupInput
-                      {...field}
-                      id="signup-phone"
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete={
-                        selectedCountry === "OTHER" ? "tel" : "tel-national"
-                      }
-                      value={getNationalSignupPhone(
-                        field.value ?? "",
-                        selectedCountry,
-                      )}
-                      aria-invalid={Boolean(form.formState.errors.phone)}
-                      aria-describedby="signup-phone-hint"
-                      placeholder={
-                        selectedCountry === "OTHER"
-                          ? "Country code and number"
-                          : "Phone number"
-                      }
-                      className="signup-input"
-                    />
-                    <InputGroupAddon align="inline-start">
-                      <InputGroupText aria-label="Country calling code">
-                        {phonePrefix || "+"}
-                      </InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
+                  <SignupPhoneInput
+                    id="signup-phone"
+                    name={field.name}
+                    value={field.value ?? ""}
+                    country={form.watch("phoneCountry")}
+                    onChange={field.onChange}
+                    onCountryChange={(country) =>
+                      form.setValue("phoneCountry", country, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    onBlur={field.onBlur}
+                    inputRef={field.ref}
+                    invalid={Boolean(
+                      form.formState.errors.phone ||
+                        form.formState.errors.phoneCountry,
+                    )}
+                    describedBy="signup-phone-hint"
+                  />
                 )}
               />
               <FieldDescription id="signup-phone-hint">
-                {selectedCountry === "OTHER"
-                  ? "Include your country code before the number."
-                  : !selectedCountry
-                    ? "Choose your country to set the calling code."
-                    : "Your country’s calling code is included automatically."}
+                Choose the flag to change your phone’s country or region.
               </FieldDescription>
-              <FieldError errors={[form.formState.errors.phone]} />
+              <FieldError
+                errors={[
+                  form.formState.errors.phoneCountry,
+                  form.formState.errors.phone,
+                ]}
+              />
             </Field>
           </FieldGroup>
 

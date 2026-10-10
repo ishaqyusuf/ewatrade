@@ -329,6 +329,7 @@ function SignupFlowContent() {
         countryCode: formState.business?.countryCode ?? "",
         currencyCode: formState.business?.currencyCode ?? "NGN",
         phone: formState.business?.phone ?? "",
+        phoneCountry: formState.business?.phoneCountry,
         region: formState.business?.region ?? "",
         firstName: data.firstName,
         lastName: data.lastName,

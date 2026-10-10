@@ -205,23 +205,6 @@ export function SetupDraftPanel({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <SetupPrerequisites
           prerequisites={prerequisites}
-          onTermsAccepted={() => {
-            // Records that failed only for missing Terms go back into the queue.
-            const blocked = entities
-              .filter(
-                (entity) =>
-                  entity.state === "FAILED" &&
-                  entity.errorCode === "CATALOG_TERMS_REQUIRED",
-              )
-              .map((entity) => entity.key)
-            if (blocked.length > 0)
-              setState.mutate({
-                conversationId,
-                keys: blocked,
-                state: "CONFIRMED",
-              })
-            else refresh()
-          }}
           onFinanceReady={() => {
             // Cash and bank accounts that waited for Finance go back into the queue.
             const waiting = entities

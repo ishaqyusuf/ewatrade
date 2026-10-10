@@ -13,8 +13,21 @@ import {
   earlyAccessFailure,
   earlyAccessHeaders,
 } from "../../../lib/early-access-response"
+import { phoneCountry } from "../../../lib/international-phone"
 import { issueOnboardingVerification } from "../../../lib/onboarding-verification"
 import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
+
+// Hosting-derived suggestion only, never an identity or authorization signal.
+export function GET(request: NextRequest) {
+  const country =
+    process.env.VERCEL === "1"
+      ? (phoneCountry(request.headers.get("x-vercel-ip-country")) ?? null)
+      : null
+  return NextResponse.json(
+    { country },
+    { headers: { "Cache-Control": "private, no-store" } },
+  )
+}
 
 // Web and native signup start here: create the setup session, then email the
 // verification link. The returned token only lets this browser/device continue
@@ -40,7 +53,10 @@ export async function POST(request: NextRequest) {
   )
   if (!parsed.success)
     return NextResponse.json(
-      { message: "Enter your name, email and business name to continue." },
+      {
+        message:
+          parsed.error.issues[0]?.message ?? "Check your signup details.",
+      },
       { status: 400, headers: earlyAccessHeaders },
     )
   try {

@@ -150,7 +150,6 @@ export function ProductChat({
     <>
       <SetupPrerequisites
         prerequisites={data.prerequisites}
-        onTermsAccepted={refreshState}
         onFinanceReady={refreshState}
       />
       {card ? (
