@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
-import { authorizeCommercialOrderChargeOnlyServiceLine } from "./commercial-service-authorization"
+import {
+  authorizeCommercialOrderChargeOnlyServiceLine,
+  authorizeCommercialOrderChargeOnlyServiceLineInTransaction,
+} from "./commercial-service-authorization"
 
 const input = {
   actorUserId: "manager-1",
@@ -142,6 +145,7 @@ function fixture(
     $transaction: async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
   } as unknown as PrismaClient
   return {
+    tx: tx as unknown as Prisma.TransactionClient,
     db,
     calls,
     get writes() {
@@ -220,5 +224,41 @@ test("a competing release uniqueness conflict is mapped to a safe Commerce error
   await expect(
     authorizeCommercialOrderChargeOnlyServiceLine(f.db, input),
   ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+  expect(f.writes).toBe(0)
+})
+
+test("caller-owned transaction retains service authority and exact replay", async () => {
+  const f = fixture()
+  const first =
+    await authorizeCommercialOrderChargeOnlyServiceLineInTransaction(
+      f.tx,
+      input,
+    )
+  const writes = f.writes
+  expect(
+    await authorizeCommercialOrderChargeOnlyServiceLineInTransaction(
+      f.tx,
+      input,
+    ),
+  ).toEqual(first)
+  expect(f.writes).toBe(writes)
+  const revoked = fixture({ active: false })
+  await expect(
+    authorizeCommercialOrderChargeOnlyServiceLineInTransaction(
+      revoked.tx,
+      input,
+    ),
+  ).rejects.toMatchObject({ code: "SERVICE_WORK_NOT_AUTHORIZED" })
+  expect(revoked.writes).toBe(0)
+})
+
+test("composed service command refuses another active Store before writes", async () => {
+  const f = fixture()
+  await expect(
+    authorizeCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, {
+      ...input,
+      storeId: "other-store",
+    }),
+  ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(f.writes).toBe(0)
 })

@@ -28,6 +28,7 @@ import {
   WorkAuthorizationPolicy,
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
+import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
 import {
   commitCatalogStockReservationInTransaction,
@@ -339,7 +340,7 @@ async function updateOrderStatusAfterProductFulfillment(
   return status
 }
 
-async function fulfillCommercialOrderProductLineInTransaction(
+async function applyCommercialOrderProductLineInTransaction(
   tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
@@ -447,7 +448,7 @@ async function fulfillCommercialOrderProductsInTransaction(
   )
 
   for (const line of unfulfilledProductLines) {
-    await fulfillCommercialOrderProductLineInTransaction(tx, {
+    await applyCommercialOrderProductLineInTransaction(tx, {
       actorUserId: input.actorUserId,
       clientOperationId: `${input.clientOperationIdPrefix}:${line.id}`,
       line,
@@ -1509,82 +1510,97 @@ export async function listCommercialOrdersPage(
   }
 }
 
-export async function fulfillCommercialOrderProductLine(
+export type FulfillCommercialOrderProductLineInput = {
+  actorUserId: string
+  clientOperationId: string
+  orderLineId: string
+  reason?: string
+  schemaVersion: number
+  tenantId: string
+  storeId?: string
+}
+
+export function fulfillCommercialOrderProductLine(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientOperationId: string
-    orderLineId: string
-    reason?: string
-    schemaVersion: number
-    tenantId: string
-  },
+  input: FulfillCommercialOrderProductLineInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    fulfillCommercialOrderProductLineInTransaction(tx, input),
+  )
+}
+
+export async function fulfillCommercialOrderProductLineInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FulfillCommercialOrderProductLineInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
-  return db.$transaction(async (tx) => {
-    const identity = await tx.commercialOrderLine.findFirst({
-      select: { orderId: true },
-      where: {
-        id: input.orderLineId,
-        kind: SellableOfferingKind.PRODUCT_UNIT,
-        order: { tenantId: input.tenantId },
-      },
-    })
-    if (!identity)
-      throw new CatalogError(
-        "ORDER_NOT_FOUND",
-        "Reserved Product Order line not found.",
-      )
-    const lockedOrder = await lockCommerceFinancialOrder(tx, {
-      tenantId: input.tenantId,
-      orderId: identity.orderId,
-    })
-    if (!lockedOrder) {
-      throw new CatalogError(
-        "ORDER_NOT_FOUND",
-        "Reserved Product Order line not found.",
-      )
-    }
-    if (!isCommercialOrderFulfillmentAllowed(lockedOrder.order.status))
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "This Order cannot be fulfilled in its current state.",
-      )
-    const line = await tx.commercialOrderLine.findFirst({
-      include: { order: true, stockReservation: true },
-      where: {
-        id: input.orderLineId,
-        orderId: identity.orderId,
-        kind: SellableOfferingKind.PRODUCT_UNIT,
-        order: { tenantId: input.tenantId },
-      },
-    })
-    if (!line?.stockReservation) {
-      throw new CatalogError(
-        "ORDER_NOT_FOUND",
-        "Reserved Product Order line not found.",
-      )
-    }
-    assertOrderCanBeFulfilled(line.order.deliveryDueAt)
-    const fulfillment = await fulfillCommercialOrderProductLineInTransaction(
-      tx,
-      {
-        actorUserId: input.actorUserId,
-        clientOperationId: input.clientOperationId,
-        line,
-        reason: input.reason,
-        schemaVersion: input.schemaVersion,
-        tenantId: input.tenantId,
-        storeId: lockedOrder.order.storeId,
-      },
-    )
-    await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
-    return {
-      id: fulfillment.id,
-      quantity: fulfillment.quantity.toString(),
-      stockOperationId: fulfillment.stockOperationId,
-    }
+  const identity = await tx.commercialOrderLine.findFirst({
+    select: { orderId: true },
+    where: {
+      id: input.orderLineId,
+      kind: SellableOfferingKind.PRODUCT_UNIT,
+      order: { tenantId: input.tenantId },
+    },
   })
+  if (!identity)
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Reserved Product Order line not found.",
+    )
+  const lockedOrder = await lockCommerceFinancialOrder(tx, {
+    tenantId: input.tenantId,
+    orderId: identity.orderId,
+  })
+  if (!lockedOrder) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Reserved Product Order line not found.",
+    )
+  }
+  if (
+    input.storeId !== undefined &&
+    lockedOrder.order.storeId !== input.storeId
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Order is outside the selected Store.",
+    )
+  if (!isCommercialOrderFulfillmentAllowed(lockedOrder.order.status))
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "This Order cannot be fulfilled in its current state.",
+    )
+  const line = await tx.commercialOrderLine.findFirst({
+    include: { order: true, stockReservation: true },
+    where: {
+      id: input.orderLineId,
+      orderId: identity.orderId,
+      kind: SellableOfferingKind.PRODUCT_UNIT,
+      order: { tenantId: input.tenantId },
+    },
+  })
+  if (!line?.stockReservation) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Reserved Product Order line not found.",
+    )
+  }
+  assertOrderCanBeFulfilled(line.order.deliveryDueAt)
+  const fulfillment = await applyCommercialOrderProductLineInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    clientOperationId: input.clientOperationId,
+    line,
+    reason: input.reason,
+    schemaVersion: input.schemaVersion,
+    tenantId: input.tenantId,
+    storeId: lockedOrder.order.storeId,
+  })
+  await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
+  return {
+    id: fulfillment.id,
+    quantity: fulfillment.quantity.toString(),
+    stockOperationId: fulfillment.stockOperationId,
+  }
 }
 
 export async function fulfillCommercialOrderProducts(

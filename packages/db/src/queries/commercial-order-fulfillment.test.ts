@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   fulfillCommercialOrderProductLine,
+  fulfillCommercialOrderProductLineInTransaction,
   fulfillCommercialOrderProducts,
 } from "./commercial-orders"
 
@@ -66,6 +67,7 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
     stockReservation: { id: reservationId, status: "ACTIVE" },
   }
   const order = {
+    storeId: "store-a",
     id: orderId,
     tenantId,
     customerId: "customer-a",
@@ -226,6 +228,7 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
 
   // Only this structural transaction/client fixture boundary is cast to Prisma.
   return {
+    tx: tx as unknown as Prisma.TransactionClient,
     db: db as unknown as PrismaClient,
     events,
     rawCalls,
@@ -367,4 +370,27 @@ test("fresh no-book fulfillment reaches issue capture after its source write", a
   expect(fixture.events.indexOf("write:order-status")).toBeGreaterThan(
     fixture.events.indexOf("read:issue-source"),
   )
+})
+
+test("product line composes in caller transaction and rejects a different Store", async () => {
+  const f = fulfillmentFixture()
+  const first = await fulfillCommercialOrderProductLineInTransaction(f.tx, {
+    ...fulfillmentInput,
+    storeId: "store-a",
+  })
+  expect(
+    await fulfillCommercialOrderProductLineInTransaction(f.tx, {
+      ...fulfillmentInput,
+      storeId: "store-a",
+    }),
+  ).toEqual(first)
+  const wrong = fulfillmentFixture()
+  await expect(
+    fulfillCommercialOrderProductLineInTransaction(wrong.tx, {
+      ...fulfillmentInput,
+      storeId: "other-store",
+    }),
+  ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  expect(wrong.fulfillmentUpsertCount).toBe(0)
+  expect(wrong.orderUpdates).toHaveLength(0)
 })
