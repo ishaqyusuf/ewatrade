@@ -180,7 +180,13 @@ export async function listAssistantMessages(
     where: { conversationId },
     orderBy: { sequence: "desc" },
     take: options.limit ?? 200,
-    select: { id: true, role: true, parts: true, sequence: true },
+    select: {
+      id: true,
+      role: true,
+      parts: true,
+      sequence: true,
+      createdAt: true,
+    },
   })
   return rows.reverse()
 }

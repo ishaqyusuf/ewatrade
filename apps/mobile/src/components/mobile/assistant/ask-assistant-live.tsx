@@ -25,6 +25,7 @@ import { AssistantChatRow, AssistantHome } from "./assistant-home"
 import {
   AssistantBubble,
   AssistantComposer,
+  AssistantDayMarker,
   AssistantHeader,
   AssistantThinking,
 } from "./assistant-ui"
@@ -78,6 +79,10 @@ export function AskAssistantLive() {
       : vm.chat.messages
   const role = vm.profile?.role?.trim().toLowerCase()
   const firstName = vm.profile?.name?.trim().split(/\s+/)[0]
+  const times = new Map(
+    (vm.data?.messages ?? []).map((m) => [m.id, m.createdAt] as const),
+  )
+  const ids = messages.map((m) => m.id)
   // Chats with no question yet are empty and stay out of the lists.
   const chats = (vm.conversations.data ?? []).filter((chat) => chat.title)
   const home =
@@ -256,12 +261,13 @@ export function AskAssistantLive() {
               ) : null}
             </View>
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const text = generalPlainText(item.parts)
             const answers =
               item.role === "assistant" ? generalAnswers(item.parts) : []
             return (
               <View className="gap-3">
+                <AssistantDayMarker times={times} ids={ids} index={index} />
                 {text ? (
                   <AssistantBubble text={text} user={item.role === "user"} />
                 ) : null}

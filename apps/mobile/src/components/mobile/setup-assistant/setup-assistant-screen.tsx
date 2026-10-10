@@ -13,6 +13,7 @@ import { ActionButton } from "../action-button"
 import {
   AssistantBubble,
   AssistantComposer,
+  AssistantDayMarker,
   AssistantHeader,
   AssistantThinking,
 } from "../assistant/assistant-ui"
@@ -100,6 +101,11 @@ function SetupAssistantLive() {
   const atBottom = useRef(true)
   const entities = vm.data?.draft?.entities ?? []
   const counts = setupCounts(entities)
+  const thread = vm.chat.messages.filter((m) => m.role !== "system")
+  const times = new Map(
+    (vm.data?.messages ?? []).map((m) => [m.id, m.createdAt] as const),
+  )
+  const ids = thread.map((m) => m.id)
   const addKeys = setupCommitKeys(entities)
   const disabled =
     vm.offline ||
@@ -164,7 +170,7 @@ function SetupAssistantLive() {
             <FlatList
               ref={list}
               className="flex-1"
-              data={vm.chat.messages.filter((m) => m.role !== "system")}
+              data={thread}
               contentContainerClassName="gap-4 px-[18px] py-4"
               keyExtractor={(m) => m.id}
               keyboardShouldPersistTaps="handled"
@@ -238,11 +244,14 @@ function SetupAssistantLive() {
                   ) : null}
                 </View>
               }
-              renderItem={({ item }) => (
-                <AssistantBubble
-                  text={setupPlainText(item.parts)}
-                  user={item.role === "user"}
-                />
+              renderItem={({ item, index }) => (
+                <View className="gap-4">
+                  <AssistantDayMarker times={times} ids={ids} index={index} />
+                  <AssistantBubble
+                    text={setupPlainText(item.parts)}
+                    user={item.role === "user"}
+                  />
+                </View>
               )}
               ListFooterComponent={
                 <View className="gap-3">

@@ -120,6 +120,7 @@ function fakeRepository(
             ? (calls.storedUserParts as never)
             : [{ type: "text", text: "Crate of eggs, 4500, 20 crates" }],
         sequence: 3,
+        createdAt: new Date(),
       },
     ],
     readDraftEntities: async () => [],

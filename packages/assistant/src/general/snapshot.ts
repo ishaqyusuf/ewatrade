@@ -17,6 +17,7 @@ export const generalSnapshotSchema = z.object({
         id: z.string(),
         role: z.enum(["user", "assistant", "system"]),
         parts: z.array(generalStoredPartSchema),
+        createdAt: z.coerce.date().optional(),
       }),
     )
     .max(40),

@@ -44,6 +44,7 @@ const snapshot = z.object({
       id: z.string(),
       role: z.enum(["user", "assistant", "system"]),
       parts: z.array(z.unknown()),
+      createdAt: z.coerce.date().optional(),
     }),
   ),
   draft: z

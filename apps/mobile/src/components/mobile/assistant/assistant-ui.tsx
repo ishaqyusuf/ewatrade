@@ -205,3 +205,44 @@ export function AssistantThinking() {
     </View>
   )
 }
+
+/** "Today", "Yesterday" or "Mon 6 Oct", for the thread's day markers. */
+export function assistantDay(date: Date | undefined, now = new Date()) {
+  const day = date ?? now
+  const days = Math.round(
+    (new Date(now.toDateString()).getTime() -
+      new Date(day.toDateString()).getTime()) /
+      86_400_000,
+  )
+  if (days === 0) return "Today"
+  if (days === 1) return "Yesterday"
+  return day.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  })
+}
+
+/** Day marker above the first message of each day; new replies count as today. */
+export function AssistantDayMarker({
+  times,
+  ids,
+  index,
+}: {
+  times: Map<string, Date | undefined>
+  ids: string[]
+  index: number
+}) {
+  const day = assistantDay(times.get(ids[index] ?? ""))
+  if (index > 0 && assistantDay(times.get(ids[index - 1] ?? "")) === day)
+    return null
+  return (
+    <View className="mb-1 items-center">
+      <View className="rounded-full bg-muted px-2.5 py-0.5">
+        <Text className="text-[11px] font-extrabold text-muted-foreground">
+          {day}
+        </Text>
+      </View>
+    </View>
+  )
+}
