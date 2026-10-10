@@ -22,7 +22,7 @@ async function execute(ctx: GeneralTransactionContext, payload: ProductAction, k
   })
   return {
     kind: "order" as const, recordId: review.orderId, title: "Product fulfilment recorded",
-    detail: `${review.orderNumber} · ${review.offeringName} · ${review.quantity}. Reserved stock consumed; order completion follows all saved lines.`,
+    detail: `${review.orderNumber} · ${review.productName} · ${review.offeringName} · ${review.quantity}. Reserved stock consumed; order completion follows all saved lines.`,
   }
 }
 export const productLineFulfill = {
@@ -37,7 +37,7 @@ export const productLineFulfill = {
     const { review, target } = await current(ctx, payload)
     const cost = review.cost
     return { target, lines: [
-      `${review.orderNumber} · ${review.offeringName} · full saved quantity ${review.quantity}.`,
+      `${review.orderNumber} · ${review.productName} · ${review.offeringName} · full saved quantity ${review.quantity}.`,
       `Stock: ${review.stock.onHandBefore} → ${review.stock.onHandAfter} ${review.stock.unitName}. Reserved: ${review.stock.reservedBefore} → ${review.stock.reservedAfter}.`,
       cost.status === "NO_FINANCE_BOOK" ? "No Finance Book: physical fulfilment only; no financial valuation recorded." : cost.valueDeltaMinor === null ? `Cost is unknown (${cost.unknownReason ?? "missing evidence"}); it will not be invented.` : `Inventory value change: ${cost.currencyCode} ${formatMinor(cost.valueDeltaMinor)}.`,
       ...(review.scheduledFor ? [`Scheduled for ${review.scheduledFor.toISOString()}.`] : []),

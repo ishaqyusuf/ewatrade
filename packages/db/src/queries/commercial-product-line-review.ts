@@ -67,7 +67,7 @@ export async function getCommercialProductLineReview(
   })
   return {
     orderId: line.order.id, orderNumber: line.order.orderNumber, orderLineId: line.id,
-    offeringName: snapshot.offeringName, quantity: line.quantity.toFixed(),
+    productName: snapshot.catalogItemName, offeringName: snapshot.offeringName, quantity: line.quantity.toFixed(),
     quantityScope: "full_saved_line" as const, scheduledFor: line.order.deliveryDueAt,
     stock: {
       balanceSourceId: balance.id, unitName: balance.inventoryUnit.name,
