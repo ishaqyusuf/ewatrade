@@ -6,6 +6,7 @@ import {
   amendCommercialOrderMetadataInTransaction,
   cancelCommercialOrderInTransaction,
   prepareCommercialOrderReplacementInTransaction,
+  prepareCommercialOrderCancellationInTransaction,
   previewCommercialOrderCancellation,
   previewCommercialOrderMetadataAmendment,
   previewCommercialOrderReplacement,
@@ -198,6 +199,24 @@ function adapter<A extends Action>(): GeneralActionAdapter<A> {
             actorUserId: scope.userId,
             reason: payload.reason,
             changes: payload.changes,
+            ...command,
+          },
+        )
+        return {
+          target: prepared.target,
+          execute: async () => receipt(payload, await prepared.execute()),
+        }
+      }
+      if (payload.action === "order_cancel") {
+        const scope = requireGeneralScope(ctx)
+        const prepared = await prepareCommercialOrderCancellationInTransaction(
+          ctx.db,
+          {
+            tenantId: scope.tenantId,
+            storeId: scope.storeId,
+            orderId: payload.orderId,
+            actorUserId: scope.userId,
+            reason: payload.reason,
             ...command,
           },
         )

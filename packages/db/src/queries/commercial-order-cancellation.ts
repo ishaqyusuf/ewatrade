@@ -65,7 +65,8 @@ export function buildCommercialOrderCancellationPreview(
         reservationId: reservation.id,
         orderLineId: line.id,
         balanceSourceId: reservation.balanceSourceId,
-        unitName: reservation.balanceSource.inventoryUnit?.name ?? "stock units",
+        unitName:
+          reservation.balanceSource.inventoryUnit?.name ?? "stock units",
         quantity,
       },
     ]
@@ -126,10 +127,12 @@ export type CancelCommercialOrderInput = Scope & {
 }
 
 /** Caller owns current actor authorization. Financial/order locks precede stock. */
-export async function cancelCommercialOrderInTransaction(
+export async function prepareCommercialOrderCancellationInTransaction(
   tx: Prisma.TransactionClient,
-  input: CancelCommercialOrderInput,
+  request: CancelCommercialOrderInput,
 ) {
+  const input = { ...request }
+  const target = { id: input.orderId, revision: input.expectedReviewDigest }
   if (
     !input.actorUserId.trim() ||
     !input.clientOperationId.trim() ||
@@ -167,7 +170,7 @@ export async function cancelCommercialOrderInTransaction(
     return previous
   }
   const previous = await readPrevious()
-  if (previous) return replay(previous)
+  if (previous) return { target, execute: async () => replay(previous) }
   const locked = await lockCommerceFinancialOrder(tx, input)
   if (!locked || locked.order.storeId !== input.storeId)
     throw new CatalogError(
@@ -175,7 +178,7 @@ export async function cancelCommercialOrderInTransaction(
       "Order not found for this business and Store.",
     )
   const concurrent = await readPrevious()
-  if (concurrent) return replay(concurrent)
+  if (concurrent) return { target, execute: async () => replay(concurrent) }
   const reservations = await tx.$queryRaw<
     Array<{ id: string; balanceSourceId: string }>
   >`
@@ -214,50 +217,62 @@ export async function cancelCommercialOrderInTransaction(
       "REVISION_CONFLICT",
       "Order or reserved stock changed. Review cancellation again.",
     )
-  for (const release of preview.releases) {
-    if (
-      !reservations.some(
-        (row) =>
-          row.id === release.reservationId &&
-          row.balanceSourceId === release.balanceSourceId,
+  const execute = async () => {
+    for (const release of preview.releases) {
+      if (
+        !reservations.some(
+          (row) =>
+            row.id === release.reservationId &&
+            row.balanceSourceId === release.balanceSourceId,
+        )
       )
-    )
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Order reservation changed during confirmation.",
+        throw new CatalogError(
+          "INVALID_ORDER",
+          "Order reservation changed during confirmation.",
+        )
+      await releaseCatalogStockReservationInTransaction(
+        tx,
+        { tenantId: input.tenantId, reservationId: release.reservationId },
+        {
+          expectedStoreId: input.storeId,
+          expectedCommercialOrderLineId: release.orderLineId,
+          requireUncommitted: true,
+        },
       )
-    await releaseCatalogStockReservationInTransaction(
-      tx,
-      { tenantId: input.tenantId, reservationId: release.reservationId },
-      {
-        expectedStoreId: input.storeId,
-        expectedCommercialOrderLineId: release.orderLineId,
-        requireUncommitted: true,
+    }
+    await tx.commercialOrder.update({
+      where: { id: input.orderId },
+      data: { status: "CANCELLED" },
+    })
+    return tx.commercialOrderAmendment.create({
+      data: {
+        tenantId: input.tenantId,
+        orderId: input.orderId,
+        clientOperationId: input.clientOperationId,
+        payloadHash,
+        kind: "CANCEL",
+        actorUserId: input.actorUserId,
+        reason: input.reason.trim(),
+        beforeSnapshot: preview.beforeSnapshot,
+        afterSnapshot: json({
+          status: "CANCELLED",
+          releasedReservations: preview.releases,
+          stockOnHandChange: "0",
+          moneyRefundMinor: 0,
+        }),
       },
-    )
+    })
   }
-  await tx.commercialOrder.update({
-    where: { id: input.orderId },
-    data: { status: "CANCELLED" },
-  })
-  return tx.commercialOrderAmendment.create({
-    data: {
-      tenantId: input.tenantId,
-      orderId: input.orderId,
-      clientOperationId: input.clientOperationId,
-      payloadHash,
-      kind: "CANCEL",
-      actorUserId: input.actorUserId,
-      reason: input.reason.trim(),
-      beforeSnapshot: preview.beforeSnapshot,
-      afterSnapshot: json({
-        status: "CANCELLED",
-        releasedReservations: preview.releases,
-        stockOnHandChange: "0",
-        moneyRefundMinor: 0,
-      }),
-    },
-  })
+  let execution: ReturnType<typeof execute> | undefined
+  return { target, execute: () => (execution ??= execute()) }
+}
+export async function cancelCommercialOrderInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CancelCommercialOrderInput,
+) {
+  return (
+    await prepareCommercialOrderCancellationInTransaction(tx, input)
+  ).execute()
 }
 export async function cancelCommercialOrder(
   db: PrismaClient,

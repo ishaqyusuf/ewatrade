@@ -12,10 +12,7 @@ import {
   orderReplacementChangesSchema,
 } from "./commercial-order-replacement-terms"
 import { createCommercialOrderGraphInTransaction } from "./commercial-orders"
-import {
-  lockCommerceFinancialContext,
-  lockCommerceFinancialOrder,
-} from "./customer-ledger/commerce-locks"
+import { lockCommerceFinancialContext } from "./customer-ledger/commerce-locks"
 import { runInOwnTransaction } from "./own-transaction"
 
 export type ReplaceCommercialOrderInput = {
@@ -102,15 +99,32 @@ export async function prepareCommercialOrderReplacementInTransaction(
   >`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} FOR UPDATE`
   if (tenant.length !== 1)
     throw new CatalogError("INVALID_ORDER", "Business unavailable.")
-  const locked = await lockCommerceFinancialOrder(tx, {
-    ...input,
-    expectedIdentity: identity,
+  // Financial context is already locked above. Acquire the order without reading
+  // and locking that same context a second time, then prove its identity stayed put.
+  await tx.$queryRaw<
+    Array<{ id: string }>
+  >`SELECT "id" FROM "CommercialOrder" WHERE "id"=${input.orderId} AND "tenantId"=${input.tenantId} FOR UPDATE`
+  const order = await tx.commercialOrder.findFirst({
+    where: {
+      id: input.orderId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+    },
   })
-  if (!locked || locked.order.storeId !== input.storeId)
+  if (!order)
     throw new CatalogError(
       "ORDER_NOT_FOUND",
       "Order not found for this business and Store.",
     )
+  if (
+    order.currencyCode !== identity.currencyCode ||
+    order.customerId !== identity.customerId
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Order financial ownership changed. Review replacement again.",
+    )
+  const locked = { order }
   const concurrent = await readPrevious()
   if (concurrent) return { target, execute: async () => replay(concurrent) }
   const reservations = await tx.$queryRaw<
@@ -146,11 +160,12 @@ export async function prepareCommercialOrderReplacementInTransaction(
             (expected) => expected.balanceSourceId === row.id,
           )?.revision !== row.revision,
       )
-    )
+    ) {
       throw new CatalogError(
         "REVISION_CONFLICT",
         "Stock changed during replacement confirmation.",
       )
+    }
   }
   // The closure retains this transaction's locks and private reviewed evidence.
   const execute = async () => {
