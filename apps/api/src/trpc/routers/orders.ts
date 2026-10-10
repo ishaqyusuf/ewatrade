@@ -1,3 +1,4 @@
+import { orderAmendmentProcedures } from "./order-amendments"
 import {
   canManageSalesOperations,
   canManageTenant,
@@ -179,6 +180,7 @@ const receiptProcedure = protectedProcedure.use(({ ctx, next }) => {
 })
 
 export const ordersRouter = createTRPCRouter({
+  ...orderAmendmentProcedures,
   receiptSettings: protectedProcedure
     .input(orderReceiptSettingsGetSchema)
     .query(async ({ ctx, input }) => {

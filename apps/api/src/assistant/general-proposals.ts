@@ -6,7 +6,6 @@ import {
   generalReceiptSchema,
 } from "@ewatrade/assistant/general/contracts"
 import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
-import { tracePhase } from "@ewatrade/db/performance-tracing"
 import {
   generalProposalWhere,
   lockGeneralMembership,
@@ -14,6 +13,7 @@ import {
 } from "@ewatrade/db/assistant-general"
 import type { readGeneralProposals } from "@ewatrade/db/assistant-general"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
+import { tracePhase } from "@ewatrade/db/performance-tracing"
 import {
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
@@ -255,9 +255,19 @@ export async function decideGeneralProposal(
     const adapter = generalActionAdapter(payload)
     const prepareExecution = adapter.prepareExecution?.bind(adapter)
     const prepared = prepareExecution
-      ? await tracePhase("proposalReview", () => prepareExecution(fresh, payload))
+      ? await tracePhase("proposalReview", () =>
+          prepareExecution(fresh, payload, {
+            clientOperationId: row.idempotencyKey,
+            expectedReviewDigest: row.targetRevision ?? "",
+          }),
+        )
       : null
-    if (!sameTarget(prepared ? prepared.target : await validateDraft(fresh, payload, true), row))
+    if (
+      !sameTarget(
+        prepared ? prepared.target : await validateDraft(fresh, payload, true),
+        row,
+      )
+    )
       throw conflict(adapter.stale)
     const claimed = await fresh.db.assistantActionProposal.updateMany({
       where: {

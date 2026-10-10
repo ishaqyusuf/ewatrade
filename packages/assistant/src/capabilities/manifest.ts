@@ -27,6 +27,9 @@ const proposalTests = [
  * bumping `version`; IDs are permanent. Server executors live in the API.
  */
 export const capabilityManifest = [
+  {id:"sales.order.cancel",version:1,mode:"write",action:"order_cancel",schema:actionSchema("order_cancel"),effect:"record",receipt:"order",title:"Cancel an unpaid order",domain:"sales",tool:"draftAction",policy:{roles:managers},scope:"store",clients:["dashboard"],rollout:"source",procedures:["orders.cancel"],examples:["Cancel an unpaid order"],tests:["apps/api/src/assistant/general-order-amendment.integration-check.ts"],brain},
+  {id:"sales.order.metadata.update",version:1,mode:"write",action:"order_metadata_update",schema:actionSchema("order_metadata_update"),effect:"record",receipt:"order",title:"Update order details",domain:"sales",tool:"draftAction",policy:{roles:managers},scope:"store",clients:["dashboard"],rollout:"source",procedures:["orders.amendMetadata"],examples:["Update order details"],tests:["apps/api/src/assistant/general-order-amendment.integration-check.ts"],brain},
+  {id:"sales.order.replace",version:1,mode:"write",action:"order_replace",schema:actionSchema("order_replace"),effect:"record",receipt:"order",title:"Replace reviewed order quantities and prices",domain:"sales",tool:"draftAction",policy:{roles:managers},scope:"store",clients:["dashboard"],rollout:"source",procedures:["orders.replace"],examples:["Replace reviewed order quantities and prices"],tests:["apps/api/src/assistant/general-order-amendment.integration-check.ts"],brain},
   {
     id: "search.records",
     version: 1,

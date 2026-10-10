@@ -26,6 +26,11 @@ export function respondGeneralRehearsal(
   if (/^read stock operations$/i.test(command)) return { kind: "tool", toolName: "readStockOperations", input: {} }
   const operationRead = /^read stock operation (\S{1,128})$/i.exec(command)
   if (operationRead?.[1]) return { kind: "tool", toolName: "readStockOperation", input: { operationId: operationRead[1] } }
+  const orderAmendment = /^(cancel|amend|replace) order (\{[\s\S]+\})$/i.exec(command)
+  if(orderAmendment?.[1] && orderAmendment[2]) {
+    try { return {kind:"tool",toolName:"draftAction",input:generalActionSchema.parse({...JSON.parse(orderAmendment[2]),action:orderAmendment[1].toLowerCase()==="cancel"?"order_cancel":orderAmendment[1].toLowerCase()==="amend"?"order_metadata_update":"order_replace"})} }
+    catch {return {kind:"text",text:"Supply the exact order, requested changes and a reason. Paid or fulfilled orders need their return or correction workflow."}}
+  }
   const closeoutCreate = /^create closeout (\{[\s\S]+\})$/i.exec(command)
   if (closeoutCreate?.[1]) {
     try {

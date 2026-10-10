@@ -33,6 +33,7 @@ export async function previewCommercialOrderReplacement(
     string,
     {
       balanceSourceId: string
+      unitName: string
       revision: number
       availableBeforeRelease: string
       releaseQuantity: string
@@ -141,6 +142,7 @@ export async function previewCommercialOrderReplacement(
       )
     balances.set(availability.balanceSourceId, {
       balanceSourceId: availability.balanceSourceId,
+      unitName: availability.balanceUnitName,
       revision: availability.revision,
       availableBeforeRelease: availability.availableBalanceQuantity,
       releaseQuantity: "0",
@@ -164,6 +166,7 @@ export async function previewCommercialOrderReplacement(
         )
       balance = {
         balanceSourceId: original.id,
+        unitName: original.inventoryUnit?.name ?? "stock units",
         revision: original.revision,
         availableBeforeRelease: subtractExactDecimals(
           original.onHandQuantity.toString(),

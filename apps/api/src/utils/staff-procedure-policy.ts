@@ -71,6 +71,8 @@ const stock = new Set([
   "inventory.transitionTransfer",
 ])
 const reconciliation = new Set([
+  "orders.cancel", "orders.amendMetadata", "orders.replace",
+  "orders.cancellationReview", "orders.metadataReview", "orders.replacementReview",
   "inventory.reconciliationReport",
   "inventory.closeouts",
   "inventory.closeoutReview",

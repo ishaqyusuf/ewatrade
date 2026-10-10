@@ -1,4 +1,3 @@
-import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import type {
   GeneralAction,
   GeneralActionName,
@@ -26,15 +25,17 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import {
-  assertGeneralAction,
   type GeneralContext,
+  assertGeneralAction,
   requireGeneralScope,
 } from "./general-context"
-import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
-import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
-import { stockReceive } from "./general-stock-receipt"
-import { stockTransferDispatch, stockTransferReceive, stockTransferCancel } from "./general-stock-transfer"
+import {
+  orderCancel,
+  orderMetadataUpdate,
+  orderReplace,
+} from "./general-order-amendment"
 import { productAvailabilityUpdate } from "./general-product-availability"
 import {
   productDetailsUpdate,
@@ -45,6 +46,14 @@ import {
   productUnitConfigurationDraft,
   productUnitConfigurationPublish,
 } from "./general-product-units"
+import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
+import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
+import { stockReceive } from "./general-stock-receipt"
+import {
+  stockTransferCancel,
+  stockTransferDispatch,
+  stockTransferReceive,
+} from "./general-stock-transfer"
 import { proposalDigest } from "./proposal-security"
 
 export type GeneralTransactionContext = Omit<GeneralContext, "db"> & {
@@ -76,7 +85,11 @@ export type GeneralActionAdapter<A extends GeneralAction> = {
     payload: A,
   ): Promise<{ lines: string[]; target: ProposalTarget | null }>
   /** A locked review and its transaction-local command; never retained across confirmations. */
-  prepareExecution?(ctx: GeneralTransactionContext, payload: A): Promise<{
+  prepareExecution?(
+    ctx: GeneralTransactionContext,
+    payload: A,
+    command: { clientOperationId: string; expectedReviewDigest: string },
+  ): Promise<{
     target: ProposalTarget | null
     execute(key: string): Promise<GeneralReceipt>
   }>
@@ -488,6 +501,9 @@ const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
   stock_receive: stockReceive,
+  order_cancel: orderCancel,
+  order_metadata_update: orderMetadataUpdate,
+  order_replace: orderReplace,
   inventory_closeout_create: closeoutCreate,
   inventory_closeout_finalize: closeoutFinalize,
   stock_transfer_dispatch: stockTransferDispatch,

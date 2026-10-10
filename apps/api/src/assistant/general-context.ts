@@ -1,3 +1,4 @@
+import { assertCanAmendOrders } from "../trpc/routers/order-amendments"
 import {
   type CapabilityId,
   capabilityForAction,
@@ -85,6 +86,9 @@ export function requireGeneralScope(
  * transaction commands directly, so these must stay in step with the routers.
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
+  "sales.order.cancel": tenant=>assertCanAmendOrders(tenant.membership.role),
+  "sales.order.metadata.update": tenant=>assertCanAmendOrders(tenant.membership.role),
+  "sales.order.replace": tenant=>assertCanAmendOrders(tenant.membership.role),
   "search.records": () => {},
   "catalog.history.read": (tenant) => assertCanReadCatalog(tenant.membership.role),
   "catalog.page": (tenant) => assertCanReadCatalog(tenant.membership.role),

@@ -1,3 +1,4 @@
+import { verifyOrderAmendmentProposals } from "./general-order-amendment.integration-check"
 import { verifyOrderReplacementPreview } from "./general-order-replacement.integration-check"
 import { verifyOrderMetadataAmendment } from "./general-order-metadata.integration-check"
 import { verifyStockTransferComposition } from "./general-stock-transfer.integration-check"
@@ -303,6 +304,10 @@ if (enabled) setDefaultTimeout(600_000)
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_ORDER_AMENDMENT === "1") {
+          await verifyOrderAmendmentProposals(ctx, failingDb, conversation.id)
+          return
+        }
         if (process.env.RUN_GENERAL_STOCK_TRANSFER === "1") {
           await verifyStockTransferComposition(ctx, failingDb, conversation.id)
           return

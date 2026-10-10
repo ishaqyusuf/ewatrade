@@ -16,6 +16,7 @@ import {
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { useState } from "react"
+import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
 import { GeneralStockTransferEditor } from "./general-stock-transfer-editor"
@@ -39,6 +40,7 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "order_cancel" || props.proposal.payload.action === "order_metadata_update" || props.proposal.payload.action === "order_replace") return <GeneralOrderAmendmentEditor initial={props.proposal.payload} currencyCode={props.currencyCode} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "inventory_closeout_create" || props.proposal.payload.action === "inventory_closeout_finalize") return <GeneralCloseoutEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "stock_transfer_dispatch" || props.proposal.payload.action === "stock_transfer_receive" || props.proposal.payload.action === "stock_transfer_cancel") return <GeneralStockTransferEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "stock_adjust" || props.proposal.payload.action === "stock_correct") return <GeneralStockAdjustmentEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />

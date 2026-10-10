@@ -1,3 +1,5 @@
+import { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
+export { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
 import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
 import { stockTransferDispatchAction, stockTransferReceiveAction, stockTransferCancelAction } from "./stock-transfer"
 import { z } from "zod"
@@ -228,6 +230,9 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   stockTransferDispatchAction,
   stockTransferReceiveAction,
   stockTransferCancelAction,
+  orderCancelAction,
+  orderMetadataAction,
+  orderReplaceAction,
   closeoutCreateAction,
   closeoutFinalizeAction,
 ])
@@ -306,6 +311,9 @@ export function generalActionSummary(
   const amount = (minor: number) =>
     `${currencyCode} ${(minor / 100).toFixed(2)}`
   switch (action.action) {
+    case "order_cancel": return `Cancel order ${action.orderId} · ${action.reason}`
+    case "order_metadata_update": return `Update order details · ${action.reason}`
+    case "order_replace": return `Replace order with ${action.changes.length} line change(s) · ${action.reason}`
     case "stock_transfer_dispatch":
       return `Dispatch ${action.quantity} to Store ${action.targetStoreId} · ${action.reason}`
     case "stock_transfer_receive":

@@ -65,6 +65,7 @@ export function buildCommercialOrderCancellationPreview(
         reservationId: reservation.id,
         orderLineId: line.id,
         balanceSourceId: reservation.balanceSourceId,
+        unitName: reservation.balanceSource.inventoryUnit?.name ?? "stock units",
         quantity,
       },
     ]

@@ -274,6 +274,10 @@ export async function getConfiguredCatalogOfferingAvailability(
       })
   return {
     availableBalanceQuantity,
+    balanceUnitName:
+      resolved.configuration.units.find(
+        (unit) => unit.id === resolved.balance.inventoryUnitId,
+      )?.name ?? "stock units",
     availableOfferingQuantity,
     balanceSourceId: resolved.balance.id,
     configurationVersionId: resolved.configuration.id,

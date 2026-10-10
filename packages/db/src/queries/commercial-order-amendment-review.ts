@@ -85,6 +85,7 @@ export async function getCommercialOrderAmendmentEligibility(
                   reservedQuantity: true,
                   onHandQuantity: true,
                   revision: true,
+                  inventoryUnit: {select: {name:true}},
                 },
               },
               enteredInventoryUnit: { select: { stockBehavior: true } },
