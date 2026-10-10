@@ -11,7 +11,7 @@ export function FinanceFormBody({ children }: { children: ReactNode }) {
       keyboardShouldPersistTaps="handled"
       disableScrollOnKeyboardHide
     >
-      <View className="gap-4 px-4 pb-12">{children}</View>
+      <View className="gap-4 px-[18px] pb-12">{children}</View>
     </KeyboardAwareScrollView>
   )
 }

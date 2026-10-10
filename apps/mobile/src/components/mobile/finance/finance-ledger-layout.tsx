@@ -2,6 +2,7 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 import { View } from "react-native"
 import { HeroCard } from "../green-till/hero-card"
@@ -65,10 +66,13 @@ export function HistoryTimeline({
     <View>
       <SectionHeader title="History" />
       <View className="rounded-[20px] bg-card px-4">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <View
             key={item.id}
-            className="flex-row gap-3 border-b border-border py-4"
+            className={cn(
+              "flex-row gap-3 py-4",
+              index < items.length - 1 && "border-b border-border",
+            )}
           >
             <View className="mt-1 size-2.5 rounded-full bg-primary" />
             <View className="min-w-0 flex-1 gap-1">
