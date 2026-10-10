@@ -1,15 +1,31 @@
 import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
-import { ClassicAppLockScreen } from "@/components/mobile/appearances/classic/app-lock-screen"
 import { MarketDayAppLockScreen } from "@/components/mobile/appearances/market-day/app-lock-screen"
 import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
+import { useAppLockCountdown } from "@/hooks/use-app-lock-countdown"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
+import {
+  appLockBiometricName,
+  appLockLockoutMessage,
+  appLockTriesLeft,
+  appLockWrongPinMessage,
+} from "@/lib/app-lock-messages"
 import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
-import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
+import {
+  APP_LOCK_CODE_LENGTH,
+  APP_LOCK_MAX_FAILED_ATTEMPTS,
+} from "@/lib/app-lock-store"
 import { useRouter } from "expo-router"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AppLockManagement } from "./app-lock-management"
+import { AppLockSettingsPage } from "./app-lock-settings-page"
+import {
+  AppLockBiometricOffer,
+  type PinEntryFooter,
+  PinEntryScreen,
+} from "./pin-entry-screen"
+import { APP_LOCK_FORGOT_PIN_LABEL, useForgotPin } from "./use-forgot-pin"
 
 type AppLockSetupMode =
   | "create"
@@ -17,6 +33,10 @@ type AppLockSetupMode =
   | "manage"
   | "verify-change"
   | "verify-disable"
+  | "biometric-offer"
+
+const MISMATCH_MESSAGE = "Those PINs didn’t match. Create it again."
+const DEVICE_NOTE = "Works offline. Stored only on this phone."
 
 function normalizeLockCode(value: string) {
   return value.replace(/\D/g, "").slice(0, APP_LOCK_CODE_LENGTH)
@@ -24,72 +44,106 @@ function normalizeLockCode(value: string) {
 
 export function AppLockSettingsScreen() {
   const design = useMobileDesign("app-lock")
-  const Presentation =
-    design === "market-day" ? MarketDayAppLockScreen : ClassicAppLockScreen
+  const market = design === "market-day"
   const router = useRouter()
   const auth = useAuthContext()
   const appLock = useAppLockContext()
+  const forgotPin = useForgotPin()
   const [mode, setMode] = useState<AppLockSetupMode>(
-    design !== "market-day" || appLock.isConfigured ? "manage" : "create",
+    !market || appLock.isConfigured ? "manage" : "create",
   )
+  // A new PIN after "Change PIN" finishes with "PIN changed", not the offer.
+  const [isChangingPin, setIsChangingPin] = useState(false)
   const [code, setCode] = useState("")
   const [draftCode, setDraftCode] = useState("")
   const [message, setMessage] = useState<string | null>(null)
+  const [isError, setIsError] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const [lockedUntil, setLockedUntil] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const isManageMode = mode === "manage"
+  const lockoutSeconds = useAppLockCountdown(lockedUntil)
+  const isVerifying = mode === "verify-change" || mode === "verify-disable"
+  const biometricLabel = appLock.biometricsStatus.label
   const presentation = useMemo(
-    () => resolveAppLockQuietSealPresentation(mode, auth.profile?.businessName),
+    () =>
+      resolveAppLockQuietSealPresentation(
+        mode === "biometric-offer" ? "manage" : mode,
+        auth.profile?.businessName,
+      ),
     [auth.profile?.businessName, mode],
   )
   const entryMessage = isSubmitting
     ? mode === "confirm"
       ? "Saving app lock."
-      : mode === "verify-change" || mode === "verify-disable"
-        ? "Checking your current PIN."
-        : "Preparing confirmation."
-    : message
+      : isVerifying
+        ? "Checking your PIN."
+        : null
+    : isVerifying && lockoutSeconds > 0
+      ? appLockLockoutMessage(lockoutSeconds)
+      : message
 
   useEffect(() => {
     if (!appLock.isHydrated) return
-    setMode(
-      design !== "market-day" || appLock.isConfigured ? "manage" : "create",
-    )
-  }, [appLock.isConfigured, appLock.isHydrated, design])
+    setMode(!market || appLock.isConfigured ? "manage" : "create")
+  }, [appLock.isConfigured, appLock.isHydrated, market])
 
   const resetEntry = useCallback(() => {
     setCode("")
     setMessage(null)
+    setIsError(false)
   }, [])
 
   const appendDigit = useCallback((digit: string) => {
     setCode((currentCode) => normalizeLockCode(`${currentCode}${digit}`))
     setMessage(null)
+    setIsError(false)
   }, [])
 
   const removeLastDigit = useCallback(() => {
     setCode((currentCode) => currentCode.slice(0, -1))
     setMessage(null)
+    setIsError(false)
   }, [])
 
   const startCreate = useCallback(() => {
     setDraftCode("")
+    setIsChangingPin(false)
+    setNote(null)
     setMode("create")
     resetEntry()
   }, [resetEntry])
 
   const startChange = useCallback(() => {
+    setNote(null)
+    setLockedUntil(appLock.config?.lockedUntil ?? null)
     setMode("verify-change")
+    resetEntry()
+  }, [appLock.config?.lockedUntil, resetEntry])
+
+  const startDisable = useCallback(() => {
+    setNote(null)
+    setLockedUntil(appLock.config?.lockedUntil ?? null)
+    setMode("verify-disable")
+    resetEntry()
+  }, [appLock.config?.lockedUntil, resetEntry])
+
+  const backToSettings = useCallback(() => {
+    setDraftCode("")
+    setIsChangingPin(false)
+    setMode("manage")
     resetEntry()
   }, [resetEntry])
 
-  const startDisable = useCallback(() => {
-    setMode("verify-disable")
+  const backToCreate = useCallback(() => {
+    setDraftCode("")
+    setMode("create")
     resetEntry()
   }, [resetEntry])
 
   const toggleBiometrics = useCallback(
     async (enabled: boolean) => {
       if (enabled && !appLock.biometricsStatus.isAvailable) {
+        setNote(null)
         setMessage(
           appLock.biometricsStatus.reason ??
             "Biometric unlock is not available on this device.",
@@ -98,9 +152,30 @@ export function AppLockSettingsScreen() {
       }
 
       await appLock.setBiometricsEnabled(enabled)
-      setMessage(
-        enabled ? "Biometric unlock enabled." : "Biometric unlock off.",
+      const name = appLockBiometricName(appLock.biometricsStatus.label)
+      if (market) {
+        setMessage(
+          enabled ? "Biometric unlock enabled." : "Biometric unlock off.",
+        )
+        return
+      }
+      setNote(
+        enabled ? `Unlock with ${name} is on` : `Unlock with ${name} is off`,
       )
+    },
+    [appLock, market],
+  )
+
+  const finishBiometricOffer = useCallback(
+    async (enabled: boolean) => {
+      setIsSubmitting(true)
+      try {
+        if (enabled) await appLock.setBiometricsEnabled(true)
+      } finally {
+        setIsSubmitting(false)
+      }
+      setNote("App lock is on")
+      setMode("manage")
     },
     [appLock],
   )
@@ -115,6 +190,7 @@ export function AppLockSettingsScreen() {
       setCode("")
       setMode("confirm")
       setMessage(null)
+      setIsError(false)
       setIsSubmitting(false)
       return
     }
@@ -122,8 +198,10 @@ export function AppLockSettingsScreen() {
     if (mode === "confirm") {
       if (code !== draftCode) {
         setCode("")
+        setDraftCode("")
         setMode("create")
-        setMessage("PIN codes did not match. Create it again.")
+        setMessage(MISMATCH_MESSAGE)
+        setIsError(true)
         setIsSubmitting(false)
         return
       }
@@ -131,44 +209,81 @@ export function AppLockSettingsScreen() {
       await appLock.setCode(code)
       setCode("")
       setDraftCode("")
-      setMode("manage")
-      setMessage("App lock is on.")
       setIsSubmitting(false)
+      if (isChangingPin) {
+        setIsChangingPin(false)
+        setMode("manage")
+        setNote("PIN changed")
+        setMessage(market ? "PIN changed." : null)
+        return
+      }
+      // The offer needs a PIN first, and only appears when the phone has
+      // biometrics set up; Settings keeps the switch for later.
+      if (!market && appLock.biometricsStatus.isAvailable) {
+        setMode("biometric-offer")
+        return
+      }
+      setMode("manage")
+      setNote("App lock is on")
+      setMessage(market ? "App lock is on." : null)
       return
     }
 
-    if (mode === "verify-change" || mode === "verify-disable") {
+    if (isVerifying) {
       const result = await appLock.unlockWithCode(code)
       if (!result.ok) {
         setCode("")
-        setMessage(
-          result.reason === "locked"
-            ? "Too many wrong attempts. Try again shortly."
-            : "That PIN code did not match.",
-        )
+        setIsError(true)
+        if (result.reason === "locked") {
+          setLockedUntil(result.lockedUntil ?? null)
+          setMessage(null)
+        } else {
+          setMessage(
+            appLockWrongPinMessage(
+              appLockTriesLeft(
+                result.config?.failedAttemptCount,
+                APP_LOCK_MAX_FAILED_ATTEMPTS,
+              ),
+            ),
+          )
+        }
         setIsSubmitting(false)
         return
       }
 
+      setLockedUntil(null)
       if (mode === "verify-disable") {
         await appLock.clearLock()
         setCode("")
-        setMode("create")
-        setMessage("App lock is off.")
+        setMode(market ? "create" : "manage")
+        setNote("App lock is off")
+        setMessage(market ? "App lock is off." : null)
+        setIsError(false)
         setIsSubmitting(false)
         return
       }
 
       setDraftCode("")
       setCode("")
+      setIsChangingPin(true)
       setMode("create")
-      setMessage("Create your new PIN code.")
+      setMessage(market ? "Create your new PIN code." : null)
+      setIsError(false)
       setIsSubmitting(false)
       return
     }
 
     setIsSubmitting(false)
-  }, [appLock, code, draftCode, isSubmitting, mode])
+  }, [
+    appLock,
+    code,
+    draftCode,
+    isChangingPin,
+    isSubmitting,
+    isVerifying,
+    market,
+    mode,
+  ])
 
   useEffect(() => {
     if (code.length === APP_LOCK_CODE_LENGTH) {
@@ -180,82 +295,141 @@ export function AppLockSettingsScreen() {
     router.back()
   }, [router])
 
-  return (
-    <Presentation
-      mode={isManageMode ? "manage" : "entry"}
-      eyebrow={presentation.eyebrow}
-      onClose={close}
-      subtitle={
-        design === "market-day"
-          ? presentation.subtitle
-          : isManageMode
-            ? appLock.isConfigured
-              ? "Your PIN protects this app on this phone."
-              : "Add a PIN to protect your business on this phone."
-            : mode === "confirm"
-              ? "Enter the same six digits again."
-              : mode === "create"
-                ? "Choose six digits to keep your business private on this phone."
-                : "Verify your PIN before changing app lock."
-      }
-      title={
-        design === "market-day"
-          ? presentation.title
-          : isManageMode
-            ? appLock.isConfigured
-              ? "App lock is on"
-              : "App lock is off"
-            : mode === "confirm"
-              ? "Confirm your PIN"
-              : mode === "create"
-                ? "Create your PIN"
-                : "Enter your current PIN"
-      }
-      management={
-        <AppLockManagement
-          hasLock={appLock.isConfigured}
-          biometricsEnabled={!!appLock.config?.biometricsEnabled}
-          biometricsAvailable={appLock.biometricsStatus.isAvailable}
-          biometricLabel={appLock.biometricsStatus.label}
-          biometricDetail={
-            appLock.biometricsStatus.isAvailable
-              ? `Use ${appLock.biometricsStatus.label.toLowerCase()} from the PIN keypad.`
-              : (appLock.biometricsStatus.reason ??
-                "Biometric unlock is not available on this device.")
-          }
-          message={message}
-          onChangePin={startChange}
-          onCreatePin={startCreate}
-          onDisable={startDisable}
-          onToggleBiometrics={toggleBiometrics}
-        />
-      }
-      pinpad={
-        <AppLockPinPad
-          codeLength={APP_LOCK_CODE_LENGTH}
-          disabled={isSubmitting}
-          onDeletePress={removeLastDigit}
-          onDigitPress={appendDigit}
-          value={code}
-          variant={design === "market-day" ? "quiet-seal" : "default"}
-        />
-      }
-      feedback={
-        <Text
-          accessibilityLiveRegion="polite"
-          className={
-            design === "market-day"
-              ? entryMessage
+  if (market) {
+    return (
+      <MarketDayAppLockScreen
+        mode={mode === "manage" ? "manage" : "entry"}
+        eyebrow={presentation.eyebrow}
+        onClose={close}
+        subtitle={presentation.subtitle}
+        title={presentation.title}
+        management={
+          <AppLockManagement
+            hasLock={appLock.isConfigured}
+            biometricsEnabled={!!appLock.config?.biometricsEnabled}
+            biometricsAvailable={appLock.biometricsStatus.isAvailable}
+            biometricLabel={biometricLabel}
+            biometricDetail={
+              appLock.biometricsStatus.isAvailable
+                ? `Use ${appLockBiometricName(biometricLabel)} from the PIN keypad.`
+                : (appLock.biometricsStatus.reason ??
+                  "Biometric unlock is not available on this device.")
+            }
+            message={message}
+            onChangePin={startChange}
+            onCreatePin={startCreate}
+            onDisable={startDisable}
+            onToggleBiometrics={toggleBiometrics}
+          />
+        }
+        pinpad={
+          <AppLockPinPad
+            codeLength={APP_LOCK_CODE_LENGTH}
+            disabled={isSubmitting || lockoutSeconds > 0}
+            onDeletePress={removeLastDigit}
+            onDigitPress={appendDigit}
+            value={code}
+            variant="quiet-seal"
+          />
+        }
+        feedback={
+          <Text
+            accessibilityLiveRegion="polite"
+            className={
+              entryMessage
                 ? "min-h-5 text-center text-xs font-semibold leading-[18px] text-market-paprika"
                 : "min-h-5 text-center text-xs leading-[18px] text-market-muted-ink"
-              : entryMessage
-                ? "min-h-5 text-center text-xs font-medium leading-5 text-destructive"
-                : "min-h-5 text-center text-xs leading-5 text-muted-foreground"
+            }
+          >
+            {entryMessage ?? " "}
+          </Text>
+        }
+      />
+    )
+  }
+
+  if (mode === "manage") {
+    return (
+      <AppLockSettingsPage
+        biometricLabel={biometricLabel}
+        biometricReason={appLock.biometricsStatus.reason}
+        biometricsAvailable={appLock.biometricsStatus.isAvailable}
+        biometricsEnabled={!!appLock.config?.biometricsEnabled}
+        businessName={auth.profile?.businessName}
+        hasLock={appLock.isConfigured}
+        note={note ?? message}
+        onChangePin={startChange}
+        onClose={close}
+        onCreatePin={startCreate}
+        onDisable={startDisable}
+        onToggleBiometrics={(enabled) => void toggleBiometrics(enabled)}
+      />
+    )
+  }
+
+  if (mode === "biometric-offer") {
+    return (
+      <AppLockBiometricOffer
+        biometricName={appLockBiometricName(biometricLabel)}
+        businessName={auth.profile?.businessName}
+        busy={isSubmitting}
+        onAccept={() => void finishBiometricOffer(true)}
+        onDecline={() => void finishBiometricOffer(false)}
+      />
+    )
+  }
+
+  const businessName = auth.profile?.businessName?.trim() || "your business"
+  const entry: {
+    glyph: "Lock" | "SecurityPassword"
+    subtitle: string
+    title: string
+  } =
+    mode === "verify-disable"
+      ? {
+          glyph: "Lock",
+          subtitle: "Enter your PIN to confirm",
+          title: "Turn off app lock",
+        }
+      : mode === "verify-change"
+        ? {
+            glyph: "Lock",
+            subtitle: "Then you can choose a new one",
+            title: "Enter your current PIN",
           }
-        >
-          {entryMessage ?? " "}
-        </Text>
+        : mode === "confirm"
+          ? {
+              glyph: "SecurityPassword",
+              subtitle: "Type the same 6 digits.",
+              title: "Enter it again",
+            }
+          : {
+              glyph: "SecurityPassword",
+              subtitle: `Choose 6 digits to open ${businessName} on this phone.`,
+              title: isChangingPin ? "Create a new PIN" : "Create your PIN",
+            }
+  const footer: PinEntryFooter = isVerifying
+    ? { kind: "action", label: APP_LOCK_FORGOT_PIN_LABEL, onPress: forgotPin }
+    : { kind: "note", text: DEVICE_NOTE }
+
+  return (
+    <PinEntryScreen
+      disabled={isSubmitting || (isVerifying && lockoutSeconds > 0)}
+      error={isError && !!entryMessage}
+      footer={footer}
+      glyph={entry.glyph}
+      leading={
+        mode === "confirm"
+          ? { kind: "back", label: "Back to create PIN", onPress: backToCreate }
+          : { kind: "close", label: "Close", onPress: backToSettings }
       }
+      message={entryMessage}
+      onDeletePress={removeLastDigit}
+      onDigitPress={appendDigit}
+      subtitle={entry.subtitle}
+      testID={`app-lock-pin-${mode}`}
+      title={entry.title}
+      value={code}
     />
   )
 }

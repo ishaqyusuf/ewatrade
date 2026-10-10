@@ -291,6 +291,7 @@ export function RecordRow({
   accessibilityLabel,
   amount,
   avatar,
+  danger = false,
   meta,
   onPress,
   status,
@@ -301,6 +302,8 @@ export function RecordRow({
   accessibilityLabel?: string
   amount?: string
   avatar: { icon?: IconKeys; initials?: string; tint: GreenTillTint }
+  /** Destructive action, such as "Turn off app lock": the title turns red. */
+  danger?: boolean
   /** One line, or several stacked lines (contact, then activity). */
   meta?: string | string[]
   onPress?: () => void
@@ -351,7 +354,10 @@ export function RecordRow({
       </View>
       <View className={stackDetails && largeText ? "w-full" : "min-w-0 flex-1"}>
         <Text
-          className="text-sm font-bold [-rn-line-height:19] text-foreground"
+          className={cn(
+            "text-sm font-bold [-rn-line-height:19]",
+            danger ? "text-destructive" : "text-foreground",
+          )}
           numberOfLines={lines}
         >
           {title}

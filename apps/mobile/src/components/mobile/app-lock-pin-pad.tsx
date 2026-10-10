@@ -2,8 +2,12 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { appLockBiometricName } from "@/lib/app-lock-messages"
+import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
+import type { ReactNode } from "react"
 import { BackspaceGlyph } from "./otp-keypad"
 
 const PIN_KEYPAD_ROWS = [
@@ -13,25 +17,35 @@ const PIN_KEYPAD_ROWS = [
 ] as const
 
 type AppLockPinPadProps = {
+  /** Platform name for the biometric key, such as "Fingerprint" or "Face ID". */
+  biometricLabel?: string
   codeLength: number
+  /** Gate only: marks the dots rose after a wrong PIN. */
+  error?: boolean
+  /** Gate only: status line between the dots and the keys. */
+  message?: ReactNode
   disabled?: boolean
   onBiometricPress?: () => void
   onDeletePress: () => void
   onDigitPress: (digit: string) => void
   showBiometric?: boolean
   value: string
-  variant?: "default" | "quiet-seal"
+  /** "gate" is Settings 21 / 01 One Gate; "quiet-seal" is Market Day. */
+  variant?: "gate" | "quiet-seal"
 }
 
 export function AppLockPinPad({
+  biometricLabel = "Fingerprint",
   codeLength,
+  error = false,
+  message,
   disabled = false,
   onBiometricPress,
   onDeletePress,
   onDigitPress,
   showBiometric = false,
   value,
-  variant = "default",
+  variant = "gate",
 }: AppLockPinPadProps) {
   const largeTextLayout = useLargeTextLayout()
 
@@ -94,10 +108,10 @@ export function AppLockPinPad({
   }
 
   return (
-    <View className="w-full items-center gap-12">
-      <PinCodeCells codeLength={codeLength} value={value} />
-
-      <View className="w-full max-w-[260px] gap-7">
+    <View className="w-full items-center">
+      <PinCodeCells codeLength={codeLength} error={error} value={value} />
+      {message}
+      <View className="mt-3 w-full max-w-[270px] gap-2.5">
         {PIN_KEYPAD_ROWS.map((row) => (
           <View className="flex-row justify-between" key={row.join("-")}>
             {row.map((digit) => (
@@ -114,13 +128,13 @@ export function AppLockPinPad({
         <View className="flex-row justify-between">
           {showBiometric && onBiometricPress ? (
             <PinIconKey
-              accessibilityLabel="Use fingerprint"
+              accessibilityLabel={`Use ${appLockBiometricName(biometricLabel)}`}
               disabled={disabled}
               icon="FingerPrintScan"
               onPress={onBiometricPress}
             />
           ) : (
-            <View className="h-12 w-12" />
+            <View className="size-16" />
           )}
 
           <PinKey
@@ -131,7 +145,7 @@ export function AppLockPinPad({
 
           <PinIconKey
             accessibilityLabel="Delete last digit"
-            disabled={disabled}
+            disabled={disabled || value.length === 0}
             icon="Delete"
             onPress={onDeletePress}
           />
@@ -260,37 +274,38 @@ function QuietSealIconKey({
   )
 }
 
+/** Gate dots: hollow until typed, solid once filled, rose after a wrong PIN. */
 function PinCodeCells({
   codeLength,
+  error,
   value,
 }: {
   codeLength: number
+  error: boolean
   value: string
 }) {
+  // A wrong PIN keeps every dot filled so the shake reads as "this one".
+  const filled = error ? codeLength : value.length
   return (
-    <View className="flex-row justify-center gap-3">
-      {Array.from({ length: codeLength }, (_, index) => {
-        const isFilled = index < value.length
-        const isActive = index === value.length && value.length < codeLength
-
-        return (
-          <View
-            accessibilityLabel={`PIN digit ${index + 1}`}
-            className={cn(
-              "h-12 w-12 items-center justify-center rounded-full bg-muted",
-              isActive && "bg-accent",
-              isFilled && "bg-primary/15",
-            )}
-            key={`app-lock-pin-cell-${index + 1}`}
-          >
-            {isFilled ? (
-              <Text className="text-[20px] font-extrabold [-rn-line-height:24] text-foreground">
-                *
-              </Text>
-            ) : null}
-          </View>
-        )
-      })}
+    <View
+      accessibilityLabel={`${value.length} of ${codeLength} digits entered`}
+      accessible
+      className="my-5 flex-row justify-center gap-3.5"
+    >
+      {Array.from({ length: codeLength }, (_, index) => (
+        <View
+          key={`app-lock-pin-cell-${index + 1}`}
+          className={cn(
+            "size-3.5 rounded-full border-2",
+            error ? "border-[var(--gate-error)]" : "border-[var(--gate-fg)]",
+            index < filled
+              ? error
+                ? "bg-[var(--gate-error)]"
+                : "bg-[var(--gate-fg)]"
+              : "opacity-[0.55]",
+          )}
+        />
+      ))}
     </View>
   )
 }
@@ -310,15 +325,17 @@ function PinKey({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       className={cn(
-        "h-12 w-12 items-center justify-center rounded-full active:bg-accent",
+        "size-16 items-center justify-center rounded-full bg-[var(--gate-chip)]",
         disabled && "opacity-40",
       )}
       disabled={disabled}
       haptic
       onPress={onPress}
-      transition
     >
-      <Text className="text-[20px] font-medium [-rn-line-height:24] text-foreground">
+      <Text
+        maxFontSizeMultiplier={1.4}
+        className="text-[26px] font-semibold [-rn-line-height:32] text-[var(--gate-fg)]"
+      >
         {label}
       </Text>
     </Pressable>
@@ -336,25 +353,30 @@ function PinIconKey({
   icon: "Delete" | "FingerPrintScan"
   onPress: () => void
 }) {
+  const palette = useGatePalette()
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       className={cn(
-        "h-12 w-12 items-center justify-center rounded-full active:bg-accent",
+        "size-16 items-center justify-center rounded-full",
         disabled && "opacity-40",
       )}
       disabled={disabled}
       haptic
       onPress={onPress}
-      transition
     >
-      {icon === "Delete" ? (
-        <BackspaceGlyph />
-      ) : (
-        <Icon className="size-base text-foreground" name={icon} />
-      )}
+      <Icon
+        className="size-[26px]"
+        color={palette.heroForeground}
+        name={icon}
+      />
     </Pressable>
   )
+}
+
+function useGatePalette() {
+  const { colorScheme } = useColorScheme()
+  return GREEN_TILL_THEME[colorScheme]
 }

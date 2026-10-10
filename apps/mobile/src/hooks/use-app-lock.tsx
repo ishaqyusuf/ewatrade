@@ -63,6 +63,15 @@ const AppLockContext = createContext<AppLockContextValue | undefined>(undefined)
 function getBiometricLabel(
   supportedTypes: LocalAuthentication.AuthenticationType[],
 ) {
+  // Android face unlock is often too weak for the system prompt, which then
+  // asks for the fingerprint: name the sensor the owner will actually use.
+  if (
+    Platform.OS === "android" &&
+    supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)
+  ) {
+    return "Fingerprint"
+  }
+
   if (
     supportedTypes.includes(
       LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,

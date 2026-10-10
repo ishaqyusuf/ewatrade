@@ -1,30 +1,31 @@
 import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
-import { ClassicAppLockScreen } from "@/components/mobile/appearances/classic/app-lock-screen"
 import { MarketDayAppLockScreen } from "@/components/mobile/appearances/market-day/app-lock-screen"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
+import { useAppLockCountdown } from "@/hooks/use-app-lock-countdown"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
+import {
+  appLockBiometricName,
+  appLockLockoutMessage,
+  appLockOpenSubtitle,
+  appLockSecondsUntil,
+  appLockTriesLeft,
+  appLockWelcomeTitle,
+  appLockWrongPinMessage,
+} from "@/lib/app-lock-messages"
 import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
-import { APP_LOCK_CODE_LENGTH } from "@/lib/app-lock-store"
+import {
+  APP_LOCK_CODE_LENGTH,
+  APP_LOCK_MAX_FAILED_ATTEMPTS,
+} from "@/lib/app-lock-store"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Alert } from "react-native"
+import { PinEntryScreen } from "./pin-entry-screen"
+import { APP_LOCK_FORGOT_PIN_LABEL, useForgotPin } from "./use-forgot-pin"
 
 function normalizeLockCode(value: string) {
   return value.replace(/\D/g, "").slice(0, APP_LOCK_CODE_LENGTH)
-}
-
-function formatLockedUntil(value?: string | null) {
-  if (!value) return "Try again in a few seconds."
-
-  const remainingMs = new Date(value).getTime() - Date.now()
-  if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
-    return "Try again now."
-  }
-
-  const seconds = Math.max(1, Math.ceil(remainingMs / 1000))
-  return `Try again in ${seconds} second${seconds === 1 ? "" : "s"}.`
 }
 
 export function AppLockUnlockScreen({
@@ -36,67 +37,66 @@ export function AppLockUnlockScreen({
 }) {
   const auth = useAuthContext()
   const design = useMobileDesign("app-lock")
-  const Presentation =
-    design === "market-day" ? MarketDayAppLockScreen : ClassicAppLockScreen
-  const {
-    biometricsStatus,
-    config,
-    resetAfterSignOut,
-    unlockWithBiometrics,
-    unlockWithCode,
-  } = useAppLockContext()
+  const forgotPin = useForgotPin()
+  const { biometricsStatus, config, unlockWithBiometrics, unlockWithCode } =
+    useAppLockContext()
   const [biometricPromptAttempted, setBiometricPromptAttempted] =
     useState(false)
   const [code, setCode] = useState("")
   const [isSubmittingBiometrics, setIsSubmittingBiometrics] = useState(false)
   const [isSubmittingCode, setIsSubmittingCode] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [isWrongPin, setIsWrongPin] = useState(false)
   const [lockedUntil, setLockedUntil] = useState<string | null>(null)
+  const lockoutSeconds = useAppLockCountdown(lockedUntil)
   const presentation = useMemo(
     () =>
       resolveAppLockQuietSealPresentation("unlock", auth.profile?.businessName),
     [auth.profile?.businessName],
   )
-  const firstName = auth.profile?.name?.trim().split(/\s+/)[0]
+  const biometricName = appLockBiometricName(biometricsStatus.label)
   const hasBiometricsEnabled = !!config?.biometricsEnabled
   const canUseBiometrics =
     hasBiometricsEnabled && biometricsStatus.isAvailable && !isLoading
-  const isTemporarilyLocked =
-    lockedUntil !== null && new Date(lockedUntil).getTime() > Date.now()
+  const isTemporarilyLocked = lockoutSeconds > 0
   const helperMessage = useMemo(() => {
     if (isLoading) return "Checking your app lock."
-    if (isSubmittingBiometrics)
-      return `Checking ${biometricsStatus.label.toLowerCase()}.`
-    if (isSubmittingCode) return "Checking your lock code."
+    if (isSubmittingBiometrics) return `Checking ${biometricName}.`
+    if (isSubmittingCode) return "Checking your PIN."
     if (hasHydrationError) {
       return "App lock storage is unavailable. Sign out and reset app lock to continue."
     }
+    if (isTemporarilyLocked) return appLockLockoutMessage(lockoutSeconds)
     if (message) return message
-    if (isTemporarilyLocked) return formatLockedUntil(lockedUntil)
     if (hasBiometricsEnabled && !biometricsStatus.isAvailable) {
-      return biometricsStatus.reason ?? "Use your lock code to continue."
+      return biometricsStatus.reason ?? "Use your PIN to continue."
     }
-    // The classic gate's heading already says what to do.
-    return design === "market-day" ? "Enter your lock code to continue." : ""
+    return null
   }, [
-    design,
+    biometricName,
     biometricsStatus.isAvailable,
     biometricsStatus.reason,
-    biometricsStatus.label,
     hasBiometricsEnabled,
     hasHydrationError,
     isLoading,
     isSubmittingBiometrics,
     isSubmittingCode,
     isTemporarilyLocked,
-    lockedUntil,
+    lockoutSeconds,
     message,
   ])
 
+  // A lockout survives a restart: pick up the stored deadline.
+  useEffect(() => {
+    if (appLockSecondsUntil(config?.lockedUntil) > 0) {
+      setLockedUntil(config?.lockedUntil ?? null)
+    }
+  }, [config?.lockedUntil])
+
   const clearEntryFeedback = useCallback(() => {
     setMessage(null)
-    if (!isTemporarilyLocked) setLockedUntil(null)
-  }, [isTemporarilyLocked])
+    setIsWrongPin(false)
+  }, [])
 
   const appendDigit = useCallback(
     (digit: string) => {
@@ -123,23 +123,30 @@ export function AppLockUnlockScreen({
     setIsSubmittingCode(true)
     const result = await unlockWithCode(code)
     setIsSubmittingCode(false)
+    setCode("")
 
     if (result.ok) {
-      setCode("")
       setMessage(null)
+      setIsWrongPin(false)
       setLockedUntil(null)
       return
     }
 
+    setIsWrongPin(true)
     if (result.reason === "locked") {
-      setCode("")
       setLockedUntil(result.lockedUntil ?? null)
-      setMessage(formatLockedUntil(result.lockedUntil))
+      setMessage(null)
       return
     }
 
-    setCode("")
-    setMessage("That lock code did not match.")
+    setMessage(
+      appLockWrongPinMessage(
+        appLockTriesLeft(
+          result.config?.failedAttemptCount,
+          APP_LOCK_MAX_FAILED_ATTEMPTS,
+        ),
+      ),
+    )
   }, [code, isSubmittingCode, isTemporarilyLocked, unlockWithCode])
 
   const runBiometricUnlock = useCallback(async () => {
@@ -176,118 +183,78 @@ export function AppLockUnlockScreen({
     setBiometricPromptAttempted(false)
   }, [config?.biometricsEnabled])
 
-  useEffect(() => {
-    if (!lockedUntil) return
+  const pinDisabled =
+    isLoading ||
+    hasHydrationError ||
+    isSubmittingBiometrics ||
+    isSubmittingCode ||
+    isTemporarilyLocked
 
-    const remainingMs = new Date(lockedUntil).getTime() - Date.now()
-    if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
-      setLockedUntil(null)
-      setMessage(null)
-      return
-    }
-
-    const timeout = setTimeout(() => {
-      setLockedUntil(null)
-      setMessage(null)
-    }, remainingMs)
-
-    return () => {
-      clearTimeout(timeout)
-    }
-  }, [lockedUntil])
-
-  const handleForgotCode = useCallback(async () => {
-    auth.signOutLocal()
-    try {
-      await resetAfterSignOut()
-    } catch {
-      // Local sign-out must remain available when secure storage is unavailable.
-    }
-  }, [auth, resetAfterSignOut])
+  if (design !== "market-day") {
+    return (
+      <PinEntryScreen
+        biometricLabel={biometricsStatus.label}
+        disabled={pinDisabled}
+        error={(isWrongPin && !!message) || hasHydrationError}
+        footer={{
+          kind: "action",
+          label: APP_LOCK_FORGOT_PIN_LABEL,
+          onPress: forgotPin,
+        }}
+        glyph="brand"
+        message={helperMessage}
+        onBiometricPress={runBiometricUnlock}
+        onDeletePress={removeLastDigit}
+        onDigitPress={appendDigit}
+        showBiometric={canUseBiometrics}
+        subtitle={appLockOpenSubtitle(auth.profile?.businessName)}
+        testID="app-lock-unlock-gate"
+        title={appLockWelcomeTitle(auth.profile?.name)}
+        value={code}
+      />
+    )
+  }
 
   return (
-    <Presentation
+    <MarketDayAppLockScreen
       mode="unlock"
       eyebrow={presentation.eyebrow}
-      subtitle={
-        design === "market-day"
-          ? presentation.subtitle
-          : `Enter your PIN to open ${auth.profile?.businessName ?? "your business"}`
-      }
-      title={
-        design === "market-day"
-          ? presentation.title
-          : `Welcome back${firstName ? `, ${firstName}` : ""}`
-      }
+      subtitle={presentation.subtitle}
+      title={presentation.title}
       pinpad={
         <AppLockPinPad
           codeLength={APP_LOCK_CODE_LENGTH}
-          disabled={
-            isLoading ||
-            hasHydrationError ||
-            isSubmittingBiometrics ||
-            isSubmittingCode ||
-            isTemporarilyLocked
-          }
+          disabled={pinDisabled}
           onBiometricPress={runBiometricUnlock}
           onDeletePress={removeLastDigit}
           onDigitPress={appendDigit}
           showBiometric={canUseBiometrics}
           value={code}
-          variant={design === "market-day" ? "quiet-seal" : "default"}
+          variant="quiet-seal"
         />
       }
       feedback={
         <Text
           accessibilityLiveRegion="polite"
           className={
-            design === "market-day"
-              ? message || isTemporarilyLocked
-                ? "min-h-9 text-center text-xs font-semibold leading-[18px] text-market-paprika"
-                : "min-h-9 text-center text-xs font-semibold leading-[18px] text-market-muted-ink"
-              : message || isTemporarilyLocked
-                ? "min-h-5 text-center text-xs font-medium leading-5 text-destructive"
-                : "min-h-5 text-center text-xs leading-5 text-muted-foreground"
+            message || isTemporarilyLocked
+              ? "min-h-9 text-center text-xs font-semibold leading-[18px] text-market-paprika"
+              : "min-h-9 text-center text-xs font-semibold leading-[18px] text-market-muted-ink"
           }
         >
-          {helperMessage}
+          {helperMessage ?? "Enter your PIN to continue."}
         </Text>
       }
       recovery={
         <Pressable
           accessibilityRole="button"
           haptic
-          onPress={() =>
-            Alert.alert(
-              "Sign out and reset app lock?",
-              "You will need to sign in again. Pending work remains on this device; keep this installation until it is synced.",
-              [
-                { text: "Keep app locked", style: "cancel" },
-                {
-                  text: "Sign out",
-                  style: "destructive",
-                  onPress: () => void handleForgotCode(),
-                },
-              ],
-            )
-          }
+          onPress={forgotPin}
           transition
-          className={
-            design === "market-day"
-              ? "min-h-12 items-center justify-center border-b border-market-line bg-market-canvas px-3 py-2.5 active:bg-market-soft-band"
-              : "min-h-11 items-center justify-center px-4"
-          }
+          className="min-h-12 items-center justify-center border-b border-market-line bg-market-canvas px-3 py-2.5 active:bg-market-soft-band"
         >
-          <Text
-            className={
-              design === "market-day"
-                ? "text-center text-xs font-bold leading-[18px] text-market-muted-ink"
-                : "text-center text-xs font-semibold text-muted-foreground"
-            }
-          >
-            {design === "market-day"
-              ? "Forgot code? Sign out and reset app lock"
-              : "Forgot PIN? Sign out and reset"}
+          <Text className="text-center text-xs font-bold leading-[18px] text-market-muted-ink">
+            {APP_LOCK_FORGOT_PIN_LABEL}
           </Text>
         </Pressable>
       }
