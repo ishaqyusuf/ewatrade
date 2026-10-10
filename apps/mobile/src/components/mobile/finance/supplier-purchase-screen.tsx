@@ -504,9 +504,12 @@ function SupplierPurchaseDetail({
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-12">
-      <ActionButton variant="ghost" onPress={mode ? cancelForm : onBack}>
-        ‹ {mode ? "Purchase detail" : "Purchases"}
-      </ActionButton>
+      {/* The modal bar already steps back to Purchases. */}
+      {mode ? (
+        <ActionButton variant="ghost" onPress={cancelForm}>
+          ‹ Purchase detail
+        </ActionButton>
+      ) : null}
       {offline ? (
         <StatusBanner
           title="Offline"
