@@ -1,8 +1,10 @@
-import { ActionButton } from "@/components/mobile/action-button"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { useColors } from "@/hooks/use-color"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -12,7 +14,12 @@ import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
 import { FlatList, View } from "react-native"
 import { HeroCard } from "../green-till/hero-card"
-import { ListCard, RecordRow } from "../green-till/kit"
+import {
+  QuickActionRow,
+  RecordRow,
+  RowDivider,
+  SectionHeader,
+} from "../green-till/kit"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { FinanceMoneyForm } from "./finance-money-form"
 import {
@@ -20,6 +27,12 @@ import {
   FinanceWorkspaceGate,
 } from "./finance-workspace-gate"
 import { useMobileFinanceCommand } from "./use-mobile-finance-command"
+
+const PURPOSE_LABELS = {
+  BANK: "Bank",
+  CASH: "Cash",
+  CLEARING: "Clearing",
+} as const
 
 export type FinanceMoneyAccount =
   RouterOutputs["finance"]["balances"]["accounts"][number]
@@ -59,6 +72,28 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
   const [creating, setCreating] = useState(false)
   const accounts = balances.data?.accounts.filter(isMoneyAccount) ?? []
   const active = accounts.filter((a) => !a.archivedAt)
+  const archivedCount = accounts.length - active.length
+  const colors = useColors()
+  const purposeTotals = (["CASH", "BANK", "CLEARING"] as const)
+    .map((purpose) => {
+      const list = accounts.filter((a) => a.purpose === purpose)
+      return {
+        label: PURPOSE_LABELS[purpose],
+        count: list.length,
+        value: formatFinanceMoney(
+          list.reduce((sum, a) => sum + BigInt(a.balanceMinor), 0n).toString(),
+          book.currencyCode,
+        ),
+      }
+    })
+    .filter((total) => total.count > 0)
+  const canMove =
+    command.ready &&
+    !command.pending &&
+    !offline &&
+    !balances.isPending &&
+    !balances.isError &&
+    active.length > 0
   const feedback = (
     <FinanceCommandFeedback
       command={command}
@@ -81,20 +116,13 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
   return (
     <FlatList
       className="flex-1"
-      contentContainerClassName="gap-3 px-[18px] pb-12"
+      contentContainerClassName="px-[18px] pb-12"
       data={balances.isError ? [] : accounts}
       keyExtractor={(item) => item.id}
       refreshing={balances.isRefetching}
       onRefresh={offline ? undefined : () => void balances.refetch()}
       ListHeaderComponent={
-        <View className="gap-5 pb-4">
-          <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Business money
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            Recorded balances across cash, bank and clearing. Unposted sales and
-            payments are excluded.
-          </Text>
+        <View className="gap-4 pb-1">
           {feedback}
           {balances.isError ? (
             <StatusBanner
@@ -110,6 +138,11 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
           ) : (
             <HeroCard
               label="Total recorded balance"
+              pill={
+                offline
+                  ? { label: "Offline", tone: "offline" }
+                  : { label: book.currencyCode, tone: "synced" }
+              }
               amount={
                 balances.data
                   ? formatFinanceMoney(
@@ -120,20 +153,18 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
                     )
                   : "—"
               }
-              sub={`${book.currencyCode} · ${accounts.length} loaded accounts · includes archived balances`}
+              sub={
+                offline && balances.data
+                  ? `Saved balances · as of ${new Date(balances.dataUpdatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+                  : `${accounts.length} account${accounts.length === 1 ? "" : "s"}${archivedCount ? ` · includes ${archivedCount} archived` : ""}`
+              }
+              stats={
+                balances.data && purposeTotals.length > 1
+                  ? purposeTotals.map(({ label, value }) => ({ label, value }))
+                  : undefined
+              }
             />
           )}
-          {offline ? (
-            <StatusBanner
-              title="Reconnect to record"
-              message={
-                balances.data
-                  ? `Saved balances · as of ${new Date(balances.dataUpdatedAt).toLocaleString()}`
-                  : "Reconnect to load money accounts."
-              }
-              tone="warning"
-            />
-          ) : null}
           {balances.data && active.length === 0 ? (
             <StatusBanner
               title="No active money accounts"
@@ -141,32 +172,33 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
               tone="muted"
             />
           ) : null}
-          <ActionButton
-            disabled={
-              !command.ready ||
-              command.pending ||
-              offline ||
-              balances.isPending ||
-              balances.isError ||
-              active.length === 0
-            }
-            onPress={() => setCreating(true)}
-          >
-            Record money movement
-          </ActionButton>
-          <ActionButton
-            variant="outline"
-            onPress={() => router.push("/finance-counts-modal" as Href)}
-          >
-            Cash counts and investigation
-          </ActionButton>
-          <Text className="text-base font-bold">Your accounts</Text>
-          <ActionButton
-            variant="outline"
-            onPress={() => router.push("/finance-bank-modal" as Href)}
-          >
-            Bank statements and original evidence
-          </ActionButton>
+          <QuickActionRow
+            actions={[
+              {
+                disabled: !canMove,
+                gold: true,
+                icon: "ArrowLeftRight",
+                label: "Move money",
+                onPress: () => setCreating(true),
+              },
+              {
+                icon: "ClipboardList",
+                label: "Cash count",
+                onPress: () => router.push("/finance-counts-modal" as Href),
+              },
+              {
+                icon: "FileText",
+                label: "Bank import",
+                onPress: () => router.push("/finance-bank-modal" as Href),
+              },
+              {
+                icon: "BarChart3",
+                label: "Reports",
+                onPress: () => router.push("/finance-reports-modal" as Href),
+              },
+            ]}
+          />
+          {accounts.length ? <SectionHeader title="Your accounts" /> : null}
         </View>
       }
       ListEmptyComponent={
@@ -181,30 +213,59 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
         )
       }
       ListFooterComponent={
-        <Text className="py-6 text-sm text-muted-foreground">
-          Open an account to see its statement. Recording does not send money.
-        </Text>
-      }
-      renderItem={({ item }) => (
-        <ListCard>
-          <RecordRow
-            stackDetails
-            title={item.name}
-            meta={`${item.purpose.toLowerCase()}${item.archivedAt ? " · Archived" : ""}`}
-            amount={formatFinanceMoney(item.balanceMinor, book.currencyCode)}
-            avatar={{
-              icon: item.purpose === "CASH" ? "Wallet" : "Building2",
-              tint: item.purpose === "CASH" ? "mint" : "sky",
-            }}
-            onPress={() =>
-              router.push({
-                pathname: "/finance-account/[accountId]",
-                params: { accountId: item.id },
-              } as Href)
-            }
+        <View className="mt-3 flex-row gap-2 px-0.5">
+          <Icon
+            className="mt-0.5 size-[14px]"
+            color={colors.mutedForeground}
+            name="Info"
           />
-        </ListCard>
-      )}
+          <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Unposted sales and payments are excluded. Recording a movement does
+            not send money.
+          </Text>
+        </View>
+      }
+      renderItem={({ item, index }) => {
+        const last = index === accounts.length - 1
+        return (
+          <View
+            className={cn(
+              "overflow-hidden bg-card px-3.5",
+              index === 0 && "rounded-t-[20px]",
+              last && "rounded-b-[20px]",
+              item.archivedAt && "opacity-60",
+            )}
+          >
+            <RecordRow
+              stackDetails
+              title={item.name}
+              meta={`${PURPOSE_LABELS[item.purpose as keyof typeof PURPOSE_LABELS] ?? "Account"}${item.archivedAt ? " · Archived" : ""}`}
+              amount={formatFinanceMoney(item.balanceMinor, book.currencyCode)}
+              avatar={{
+                icon:
+                  item.purpose === "CASH"
+                    ? "Wallet"
+                    : item.purpose === "CLEARING"
+                      ? "CreditCard"
+                      : "Building2",
+                tint:
+                  item.purpose === "CASH"
+                    ? "mint"
+                    : item.purpose === "CLEARING"
+                      ? "amber"
+                      : "sky",
+              }}
+              onPress={() =>
+                router.push({
+                  pathname: "/finance-account/[accountId]",
+                  params: { accountId: item.id },
+                } as Href)
+              }
+            />
+            {last ? null : <RowDivider />}
+          </View>
+        )
+      }}
     />
   )
 }
