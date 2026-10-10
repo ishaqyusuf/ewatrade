@@ -53,7 +53,7 @@ export function QuickAssistant() {
         aria-haspopup="dialog"
         aria-expanded={opened}
         aria-controls={initialized ? "quick-assistant-panel" : undefined}
-        title="Ask EwaTrade"
+        title="Assistant"
         onClick={() => (opened ? minimize() : open())}
       >
         <HugeiconsIcon icon={BubbleChatIcon} className="size-6" />

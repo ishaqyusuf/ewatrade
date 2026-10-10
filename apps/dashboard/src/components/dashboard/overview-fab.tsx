@@ -50,7 +50,7 @@ export function OverviewFab({
     })
   if (assistant)
     actions.push({
-      label: "Ask AI",
+      label: "Assistant",
       icon: BubbleChatIcon,
       onSelect: () => {
         if (!requestQuickAssistant()) router.push("/assistant")

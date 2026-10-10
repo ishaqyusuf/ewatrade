@@ -80,7 +80,7 @@ export function AssistantWorkbench() {
           <GeneralChatList vm={vm} pendingChats={pendingChats} />
         </nav>
         <section
-          aria-label="Ask ẸwáTrade"
+          aria-label="Assistant"
           className="flex min-h-0 min-w-0 flex-col"
         >
           <GeneralReviewStrip

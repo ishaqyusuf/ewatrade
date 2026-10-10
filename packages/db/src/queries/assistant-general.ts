@@ -15,16 +15,12 @@ export const generalProposalWhere = (scope: AssistantScope) => ({
   actorUserId: scope.userId,
   conversation: generalConversationWhere(scope),
 })
-export function readGeneralConversation(
-  db: DbClient,
-  scope: AssistantScope,
-  id: string,
-) {
-  return db.assistantConversation.findFirst({
-    where: { ...generalConversationWhere(scope), id },
-    select: { id: true, title: true, updatedAt: true },
-  })
-}
+const firstQuestion = {
+  where: { role: "user" },
+  orderBy: { sequence: "asc" },
+  take: 1,
+  select: { parts: true },
+} as const
 /** First text of a stored message, as a short chat title. */
 function firstText(parts: unknown) {
   if (!Array.isArray(parts)) return null
@@ -44,6 +40,19 @@ function firstText(parts: unknown) {
   }
   return null
 }
+export async function readGeneralConversation(
+  db: DbClient,
+  scope: AssistantScope,
+  id: string,
+) {
+  const row = await db.assistantConversation.findFirst({
+    where: { ...generalConversationWhere(scope), id },
+    select: { id: true, updatedAt: true, messages: firstQuestion },
+  })
+  if (!row) return null
+  const { messages, ...conversation } = row
+  return { ...conversation, title: firstText(messages[0]?.parts) }
+}
 /** Chats are named by their first question; empty chats keep no title. */
 export async function listGeneralConversations(
   db: DbClient,
@@ -53,16 +62,7 @@ export async function listGeneralConversations(
     where: generalConversationWhere(scope),
     orderBy: { updatedAt: "desc" },
     take: 30,
-    select: {
-      id: true,
-      updatedAt: true,
-      messages: {
-        where: { role: "user" },
-        orderBy: { sequence: "asc" },
-        take: 1,
-        select: { parts: true },
-      },
-    },
+    select: { id: true, updatedAt: true, messages: firstQuestion },
   })
   return rows.map(({ messages, ...row }) => ({
     ...row,

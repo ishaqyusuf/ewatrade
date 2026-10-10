@@ -61,7 +61,7 @@ export async function resolveSetupAssistantModel(input: {
 }
 
 /**
- * General "Ask EwaTrade" assistant (gated off). Unlike setup, QA data never
+ * General assistant (gated off). Unlike setup, QA data never
  * reaches a live provider here: QA chats use the provider-free rehearsal model.
  */
 export async function resolveGeneralAssistantModel(input: {

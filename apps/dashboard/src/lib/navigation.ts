@@ -122,7 +122,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     description: "Add products and continue business setup",
     href: "/assistant",
     icon: "assistant",
-    label: "AI assistant",
+    label: "Assistant",
     canAccess: (role) => role === "OWNER" || role === "ADMIN",
     isVisible: (context) => context.assistantEnabled === true,
   },

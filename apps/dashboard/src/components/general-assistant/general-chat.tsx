@@ -90,7 +90,7 @@ export function generalChatTitle(vm: GeneralAssistantVM) {
   return (
     vm.data?.conversation.title ??
     vm.conversations.data?.find((row) => row.id === vm.conversationId)?.title ??
-    "Ask ẸwáTrade"
+    "New chat"
   )
 }
 
@@ -451,9 +451,11 @@ export function GeneralComposer({
       blocked={disabled}
       disabled={off}
       placeholder={
-        exhausted ? "Monthly allowance used" : "Ask about your business…"
+        exhausted
+          ? "Monthly allowance used"
+          : "Ask a question or say what to record…"
       }
-      label="Ask about your business"
+      label="Ask a question or say what to record"
       voiceConversationId={enabled ? vm.conversationId : null}
       footer={footer}
     />
@@ -491,7 +493,7 @@ export function GeneralChatList({
             )}
           >
             <span className="block truncate">
-              {conversation.title ?? "Ask ẸwáTrade"}
+              {conversation.title ?? "New chat"}
             </span>
             {pendingChats.has(conversation.id) ? (
               <span className="flex items-center gap-1.5 text-xs font-normal text-amber-700 dark:text-amber-400">
@@ -550,7 +552,7 @@ export function GeneralChatSwitcher({
               )}
             >
               <span className="w-full truncate">
-                {conversation.title ?? "Ask ẸwáTrade"}
+                {conversation.title ?? "New chat"}
               </span>
               <span
                 className={cn(
@@ -631,7 +633,7 @@ export function GeneralChat({ actions }: { actions?: ReactNode }) {
   const focus = useReviewFocus(vm)
   return (
     <section
-      aria-label="Ask ẸwáTrade"
+      aria-label="Assistant"
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
     >
       <header className="flex shrink-0 items-center gap-1 border-b py-1.5 pr-2 pl-3">
