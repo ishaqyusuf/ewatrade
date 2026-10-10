@@ -1,3 +1,4 @@
+import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import { generalActionSchema } from "@ewatrade/assistant/general/contracts"
 import { listAssistantMessages } from "@ewatrade/db/assistant"
 import {
@@ -11,7 +12,10 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { readGeneralAllowance } from "../../assistant/general-allowance"
 import { generalAssistantAvailability } from "../../assistant/general-availability"
-import { requireGeneralScope } from "../../assistant/general-context"
+import {
+  requireGeneralScope,
+  supportsGeneralCapability,
+} from "../../assistant/general-context"
 import {
   decideGeneralProposal,
   editGeneralProposal,
@@ -66,7 +70,15 @@ export const assistantRouter = createTRPCRouter({
         conversation,
         messages,
         proposals: await Promise.all(
-          proposals.map((proposal) => generalProposalWithReview(ctx, proposal)),
+          proposals
+            .filter((proposal) => {
+              const payload = generalActionSchema.parse(proposal.payload)
+              return supportsGeneralCapability(
+                ctx,
+                capabilityForAction(payload.action),
+              )
+            })
+            .map((proposal) => generalProposalWithReview(ctx, proposal)),
         ),
         activeRunId: run?.id ?? null,
         allowance: await readGeneralAllowance(ctx.db, scope),

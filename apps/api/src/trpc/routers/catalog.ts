@@ -10,6 +10,7 @@ import {
   CatalogError,
   archiveCatalogOffering,
   archiveCatalogVariant,
+  countCatalogItems,
   createCatalogItem,
   createCatalogUnitDefinition,
   createProductUnitConfigurationDraft,
@@ -22,6 +23,9 @@ import {
   publishProductUnitConfiguration,
   setCatalogOfferingStoreAvailability,
   setCatalogProductUsage,
+  updateCatalogPriceInTransaction,
+  updateProductDetailsInTransaction,
+  updateProductIdentifiersInTransaction,
   updateProductUnitConfigurationDraft,
 } from "@ewatrade/db/queries"
 import type { TenantContext } from "@ewatrade/db/tenant-context"
@@ -34,6 +38,7 @@ import { catalogPhotoTRPCError, catalogPhotosRouter } from "./catalog-photos"
 import {
   catalogArchiveOfferingSchema,
   catalogArchiveVariantSchema,
+  catalogCountSchema,
   catalogCreateItemSchema,
   catalogCreateSimpleItemSchema,
   catalogCreateUnitDefinitionSchema,
@@ -44,6 +49,9 @@ import {
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
   catalogSetProductUsageSchema,
+  catalogUpdatePriceSchema,
+  catalogUpdateProductDetailsSchema,
+  catalogUpdateProductIdentifiersSchema,
   catalogUpdateUnitConfigurationDraftSchema,
 } from "../../schemas/catalog"
 import { createTRPCRouter, protectedProcedure } from "../init"
@@ -136,7 +144,8 @@ function catalogTRPCError(error: CatalogError) {
 
   if (
     error.code === "DUPLICATE_CATALOG_KEY" ||
-    error.code === "IDEMPOTENCY_MISMATCH"
+    error.code === "IDEMPOTENCY_MISMATCH" ||
+    error.code === "REVISION_CONFLICT"
   ) {
     return new TRPCError({
       cause: error,
@@ -153,6 +162,54 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  updateProductDetails: protectedProcedure
+    .input(catalogUpdateProductDetailsSchema)
+    .mutation(async ({ ctx, input }) => {
+      const scope = catalogPhotoActorScope(ctx)
+      try {
+        return await ctx.db.$transaction((tx) =>
+          updateProductDetailsInTransaction(tx, { ...input, ...scope }),
+        )
+      } catch (error) {
+        if (error instanceof CatalogError) throw catalogTRPCError(error)
+        if (error instanceof CatalogPhotoError)
+          throw catalogPhotoTRPCError(error)
+        throw error
+      }
+    }),
+  updateProductIdentifiers: protectedProcedure
+    .input(catalogUpdateProductIdentifiersSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageCatalog(ctx.tenantContext)
+      try {
+        return await ctx.db.$transaction((tx) =>
+          updateProductIdentifiersInTransaction(tx, {
+            ...input,
+            tenantId: ctx.tenantContext.tenant.id,
+          }),
+        )
+      } catch (error) {
+        if (error instanceof CatalogError) throw catalogTRPCError(error)
+        throw error
+      }
+    }),
+  updatePrice: protectedProcedure
+    .input(catalogUpdatePriceSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageCatalog(ctx.tenantContext)
+      try {
+        return await ctx.db.$transaction((tx) =>
+          updateCatalogPriceInTransaction(tx, {
+            ...input,
+            tenantId: ctx.tenantContext.tenant.id,
+            actorUserId: ctx.session.user.id,
+          }),
+        )
+      } catch (error) {
+        if (error instanceof CatalogError) throw catalogTRPCError(error)
+        throw error
+      }
+    }),
   setProductUsage: protectedProcedure
     .input(catalogSetProductUsageSchema)
     .mutation(async ({ ctx, input }) => {
@@ -314,6 +371,16 @@ export const catalogRouter = createTRPCRouter({
       }
 
       return item
+    }),
+
+  count: protectedProcedure
+    .input(catalogCountSchema)
+    .query(({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+      return countCatalogItems(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
     }),
 
   listItems: protectedProcedure

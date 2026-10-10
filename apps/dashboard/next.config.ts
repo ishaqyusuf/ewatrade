@@ -59,7 +59,9 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
   ]
 }
 
-const nextConfig: NextConfig = {
+export const nextConfig: NextConfig = {
+  // GENERAL allows 45s after admission; preserve the stream through setup and finalization.
+  experimental: { proxyTimeout: 90_000 },
   logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
   async headers() {
     return [{ source: "/signup", headers: onboardingSignupResponseHeaders }]

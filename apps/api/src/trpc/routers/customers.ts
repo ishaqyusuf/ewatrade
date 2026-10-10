@@ -12,6 +12,7 @@ import {
 import { TRPCError } from "@trpc/server"
 
 import {
+  customerCountSchema,
   customerCreateSchema,
   customerGetByIdSchema,
   customerListPageSchema,
@@ -56,12 +57,15 @@ export const customersRouter = createTRPCRouter({
         }),
       }
     }),
-  count: protectedProcedure.query(async ({ ctx }) => {
-    assertCanUseCustomers(ctx.tenantContext.membership.role)
-    return countCustomers(ctx.db, {
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-  }),
+  count: protectedProcedure
+    .input(customerCountSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanUseCustomers(ctx.tenantContext.membership.role)
+      return countCustomers(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
 
   create: protectedProcedure
     .input(customerCreateSchema)
@@ -116,9 +120,18 @@ export const customersRouter = createTRPCRouter({
     .input(customerListPageSchema)
     .query(async ({ ctx, input }) => {
       assertCanUseCustomers(ctx.tenantContext.membership.role)
-      return listCustomersPage(ctx.db, {
-        ...input,
-        tenantId: ctx.tenantContext.tenant.id,
-      })
+      try {
+        return await listCustomersPage(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (
+          error instanceof CustomerDirectoryError &&
+          error.code === "INVALID_CUSTOMER_CURSOR"
+        )
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message })
+        throw error
+      }
     }),
 })

@@ -1,3 +1,4 @@
+import { literalContains } from "./literal-contains"
 import { CatalogError } from "./catalog-errors"
 export { CatalogError } from "./catalog-errors"
 import {
@@ -1425,6 +1426,19 @@ export async function listCatalogItems(
   return items.map(serializeCatalogItem)
 }
 
+export async function countCatalogItems(
+  db: PrismaClient,
+  input: { tenantId: string; kind?: CatalogItemKindValue; status?: CatalogItemStatusValue; nameContains?: string },
+) {
+  const name = input.nameContains?.trim()
+  return db.catalogItem.count({ where: {
+    tenantId: input.tenantId,
+    kind: input.kind ? catalogKind(input.kind) : undefined,
+    status: input.status ? catalogStatus(input.status) : undefined,
+    ...(name ? { name: { contains: literalContains(name), mode: "insensitive" as const } } : {}),
+  } })
+}
+
 export async function listCatalogItemsPage(
   db: PrismaClient,
   input: ListCatalogItemsPageInput,
@@ -1630,17 +1644,27 @@ async function listRankedCatalogItemsPage(
   }
 }
 
-export async function setCatalogOfferingStoreAvailability(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    isAvailable: boolean
-    offeringId: string
-    storeId: string
-    tenantId: string
-  },
-) {
-  return db.$transaction(async (tx) => {
+export type SetCatalogOfferingStoreAvailabilityInput = {
+  actorUserId: string
+  isAvailable: boolean
+  offeringId: string
+  storeId: string
+  tenantId: string
+  expectedAvailability?: { isAvailable: boolean; updatedAt: Date } | null
+}
+
+export async function setCatalogOfferingStoreAvailability(db: PrismaClient, input: SetCatalogOfferingStoreAvailabilityInput) {
+  return db.$transaction((tx) => setCatalogOfferingStoreAvailabilityInTransaction(tx, input), { timeout: 30000 })
+}
+
+export async function setCatalogOfferingStoreAvailabilityInTransaction(tx: Prisma.TransactionClient, input: SetCatalogOfferingStoreAvailabilityInput) {
+  const locked = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "SellableOffering"
+    WHERE "id" = ${input.offeringId} AND "tenantId" = ${input.tenantId}
+    FOR UPDATE
+  `
+  if (locked.length !== 1 || locked[0]?.id !== input.offeringId)
+    throw new CatalogError("CATALOG_OFFERING_NOT_FOUND", "Catalog Offering not found.")
     const offering = await tx.sellableOffering.findFirst({
       where: { id: input.offeringId, tenantId: input.tenantId },
       select: { id: true },
@@ -1663,6 +1687,16 @@ export async function setCatalogOfferingStoreAvailability(
       )
     }
 
+    if (input.expectedAvailability !== undefined) {
+      const current = await tx.storeOfferingAvailability.findUnique({
+        where: { storeId_offeringId: { storeId: input.storeId, offeringId: input.offeringId } },
+        select: { isAvailable: true, updatedAt: true },
+      })
+      const expected = input.expectedAvailability
+      if ((current === null) !== (expected === null) ||
+          (current && expected && (current.isAvailable !== expected.isAvailable || current.updatedAt.getTime() !== expected.updatedAt.getTime())))
+        throw new CatalogError("REVISION_CONFLICT", "Selling availability changed. Review the current value again.")
+    }
     if (input.isAvailable) {
       await assertExistingCatalogOfferingPublicationSafety(tx, input)
     }
@@ -1681,7 +1715,7 @@ export async function setCatalogOfferingStoreAvailability(
         },
       },
     })
-  })
+
 }
 
 export async function archiveCatalogOffering(

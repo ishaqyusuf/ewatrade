@@ -7,7 +7,7 @@ import { storesRouter } from "./stores"
 
 function fixture(role: string, visibility = "OWN_SALES") {
   type CaptureArgs = {
-    where: Record<string, unknown> & { order: { is: unknown } }
+    where: Record<string, unknown> & { order?: { is: unknown } }
   }
   const reads: Array<{ table: string; args: CaptureArgs }> = []
   const sql: Array<{ sql: string; values: unknown[] }> = []
@@ -52,7 +52,11 @@ function fixture(role: string, visibility = "OWN_SALES") {
     commercialOrderPayment: { findMany: read("payments", []) },
     customer: {
       findMany: read("customers", []),
-      findFirst: read("customer", { id: "customer-a", name: "Halima" }),
+      findFirst: read("customer", {
+        id: "customer-a",
+        name: "Halima",
+        updatedAt: new Date("2026-10-01T00:00:00Z"),
+      }),
     },
     catalogItem: { findMany: read("catalog", []) },
     serviceJob: { findMany: read("jobs", []) },
@@ -113,13 +117,14 @@ describe("order visibility API boundaries", () => {
         }
         expect(
           f.reads.find((read) => read.table === "payments")?.args.where.order
-            .is,
+            ?.is,
         ).toEqual({
           tenantId: "tenant-a",
           storeId: rep ? "store-a" : undefined,
           createdByUserId: creator,
         })
         const totals = f.sql[0]
+        if (!totals) throw new Error("Expected customer count SQL")
         expect(totals.sql.includes('orders."createdByUserId"')).toBe(
           Boolean(creator),
         )
@@ -165,6 +170,7 @@ describe("order visibility API boundaries", () => {
         expect(customer.orders).toEqual([])
         const history = f.reads.find((read) => read.table === "orders")?.args
           .where
+        if (!history) throw new Error("Expected customer history query")
         expect(history.storeId).toBe("store-a")
         expect(JSON.stringify(history)).toContain("customer-a")
         expect(

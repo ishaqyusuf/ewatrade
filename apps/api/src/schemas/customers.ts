@@ -38,3 +38,8 @@ export const customerListPageSchema = z
     query: z.string().trim().max(160).optional(),
   })
   .strict()
+
+export const customerCountSchema = z
+  .object({ query: z.string().trim().min(1).max(160).optional() })
+  .strict()
+  .optional()

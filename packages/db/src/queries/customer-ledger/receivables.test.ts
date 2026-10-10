@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { listCustomerLedgerReceivables } from "./receivables"
-function fixture(authorized = true) {
+function fixture(authorized = true, validCursor = true) {
+  const cursorReads: unknown[] = []
   const reads: unknown[] = []
   const scopes: unknown[] = []
   const tx = {
@@ -11,6 +12,10 @@ function fixture(authorized = true) {
         authorized ? { tenant: { isActive: true } } : null,
     },
     customerLedgerAccount: {
+      findFirst: async (args: unknown) => {
+        cursorReads.push(args)
+        return validCursor ? { id: "previous" } : null
+      },
       findMany: async (args: unknown) => {
         reads.push(args)
         return ["a", "b"].map((id) => ({
@@ -47,7 +52,7 @@ function fixture(authorized = true) {
   const db = {
     $transaction: async (run: (tx: typeof tx) => unknown) => run(tx),
   } as unknown as PrismaClient
-  return { db, reads, scopes }
+  return { db, reads, scopes, cursorReads }
 }
 const actor = { tenantId: "tenant", actorUserId: "owner" }
 test("receivables is tenant scoped, bounded, and retains exact debt and credit separately", async () => {
@@ -96,4 +101,18 @@ test("unbounded and invalid pages fail before reads", async () => {
     ).rejects.toThrow("Invalid receivables")
     expect(f.reads).toHaveLength(0)
   }
+})
+
+
+test("cursor validation is tenant/filter scoped and precedes account reads", async () => {
+  const f = fixture(true, false)
+  await expect(listCustomerLedgerReceivables(f.db, { ...actor, query: "%", cursor: "foreign" })).rejects.toThrow("list changed")
+  expect(f.reads).toHaveLength(0)
+  expect(f.cursorReads[0]).toMatchObject({ where: { AND: [
+    { tenantId: "tenant", customer: { OR: [
+      { name: { contains: "\\%", mode: "insensitive" } },
+      { phone: { contains: "\\%", mode: "insensitive" } },
+      { email: { contains: "\\%", mode: "insensitive" } },
+    ] } }, { id: "foreign" },
+  ] } })
 })

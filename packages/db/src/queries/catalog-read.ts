@@ -235,6 +235,7 @@ export function serializeCatalogItem(item: CatalogItemGraph) {
       offerings: variant.offerings.map((offering) => ({
         currencyCode: offering.currencyCode,
         fixedPriceMinor: offering.fixedPriceMinor,
+        revision: offering.revision,
         id: offering.id,
         key: offering.key,
         kind:

@@ -84,6 +84,7 @@ export function useGeneralAssistant() {
       new DefaultChatTransport<Message>({
         api: "/api/assistant/general/chat",
         credentials: "same-origin",
+        headers: { "x-assistant-client": "dashboard" },
         prepareSendMessagesRequest: ({ messages }) => {
           if (!conversationId) throw Error("Conversation unavailable")
           const last = [...messages].reverse().find((m) => m.role === "user")

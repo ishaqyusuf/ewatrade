@@ -153,6 +153,13 @@ export const inventoryTransformationSchema = z
   })
   .strict()
 
+export const inventoryStockCountReviewSchema = z
+  .object({
+    stockCountId: z.string().trim().min(1).max(128),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+
 export const inventoryCreateStockCountSchema = z
   .object({
     actorNote: z.string().trim().max(500).optional(),
@@ -248,6 +255,7 @@ export const inventoryTransitionTransferSchema = z
   .object({
     clientOperationId: z.string().trim().min(8).max(160),
     expectedTransitRevision: z.number().int().nonnegative(),
+    quantity: exactTransactionQuantitySchema.optional(),
     reason: z.string().trim().min(1).max(500),
     schemaVersion: z.literal(1),
     source: z.string().trim().min(1).max(80),
@@ -303,7 +311,7 @@ export const inventoryBalanceReportSchema = z
   .strict()
 
 export const inventoryOperationAuditSchema = z
-  .object({ operationId: z.string().trim().min(1) })
+  .object({ operationId: z.string().trim().min(1), storeId: z.string().trim().min(1).optional() })
   .strict()
 
 export const inventoryOperationHistorySchema = z
@@ -336,3 +344,57 @@ export const inventoryReconciliationReportSchema = z
 export const inventoryAuditExportSchema = z
   .object({ storeId: z.string().trim().min(1).optional() })
   .strict()
+
+export const inventoryLowStockPageSchema = z
+  .object({
+    storeId: z.string().trim().min(1).max(128),
+    threshold: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .superRefine((value, ctx) => {
+        try {
+          parseExactDecimal(value, { maxScale: EXACT_QUANTITY_MAX_SCALE })
+        } catch {
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "Use a nonnegative exact quantity with at most six decimal places.",
+          })
+        }
+      }),
+    afterOfferingId: z.string().trim().min(1).max(128).optional(),
+    catalogItemId: z.string().trim().min(1).max(128).optional(),
+    limit: z.number().int().min(1).max(20).optional(),
+  })
+  .strict()
+
+export const inventoryBalancePageSchema = z
+  .object({
+    storeId: z.string().min(1).max(128),
+    catalogItemId: z.string().min(1).max(128).optional(),
+    cursor: z.string().min(1).max(128).optional(),
+    limit: z.number().int().min(1).max(50).default(10),
+  })
+  .strict()
+
+export const inventoryCompatibleTotalsPageSchema = inventoryBalancePageSchema
+  .extend({ cursor: z.string().min(1).max(1024).optional() })
+  .strict()
+
+export const inventoryTransferReviewSchema = z.object({
+  transferId: z.string().trim().min(1).max(128),
+  storeId: z.string().trim().min(1).optional(),
+}).strict()
+
+export const inventoryCloseoutReviewSchema = z.object({
+  closeoutId: z.string().trim().min(1).max(128),
+  storeId: z.string().trim().min(1).optional(),
+}).strict()
+
+export const inventoryListCloseoutsSchema = z.object({
+  storeId: z.string().trim().min(1).optional(),
+  status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+}).strict()

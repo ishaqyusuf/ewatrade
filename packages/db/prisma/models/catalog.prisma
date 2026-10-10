@@ -439,6 +439,7 @@ model StockOperation {
   dispatchedTransfers     StockTransfer[]                  @relation("StockTransferDispatchedOperation")
   receivedTransfers       StockTransfer[]                  @relation("StockTransferReceivedOperation")
   cancelledTransfers      StockTransfer[]                  @relation("StockTransferCancelledOperation")
+  transferAcknowledgment  StockTransferAcknowledgment?
   finalizedCloseouts      InventoryCloseout[]
   productFulfillments     ProductFulfillment[]
   productReturns          ProductReturn[]
@@ -609,11 +610,40 @@ model StockTransfer {
   dispatchedOperation    StockOperation?            @relation("StockTransferDispatchedOperation", fields: [dispatchedOperationId], references: [id], onDelete: Restrict)
   receivedOperation      StockOperation?            @relation("StockTransferReceivedOperation", fields: [receivedOperationId], references: [id], onDelete: Restrict)
   cancelledOperation     StockOperation?            @relation("StockTransferCancelledOperation", fields: [cancelledOperationId], references: [id], onDelete: Restrict)
+  acknowledgments        StockTransferAcknowledgment[]
 
+  @@unique([tenantId, id])
   @@unique([tenantId, clientTransferId])
   @@index([tenantId, sourceStoreId, status, createdAt])
   @@index([tenantId, targetStoreId, status, createdAt])
   @@index([transitBalanceSourceId])
+}
+
+enum StockTransferAcknowledgmentKind {
+  RECEIVE
+  CANCEL
+}
+
+// Append-only evidence for each destination receipt or return of transit stock.
+// Quantities use the parent transfer's immutable inventory-unit snapshot.
+model StockTransferAcknowledgment {
+  id                   String                          @id @default(cuid())
+  tenantId             String
+  transferId           String
+  operationId          String
+  kind                 StockTransferAcknowledgmentKind
+  acknowledgedByUserId String
+  quantity             Decimal                         @db.Decimal(38, 6)
+  remainingBefore      Decimal                         @db.Decimal(38, 6)
+  remainingAfter       Decimal                         @db.Decimal(38, 6)
+  reason               String
+  effectiveAt          DateTime
+  createdAt            DateTime                        @default(now())
+  transfer             StockTransfer                   @relation(fields: [tenantId, transferId], references: [tenantId, id], onDelete: Cascade)
+  operation            StockOperation                  @relation(fields: [tenantId, operationId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, operationId])
+  @@index([tenantId, transferId, effectiveAt])
 }
 
 model InventoryCloseout {

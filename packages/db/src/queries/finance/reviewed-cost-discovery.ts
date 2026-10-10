@@ -84,6 +84,12 @@ export async function discoverReviewedCostSourcesInTransaction(
             AND (t."transitBalanceSourceId" IS NOT NULL OR t."dispatchedOperationId" IS NOT NULL OR t."receivedOperationId" IS NOT NULL OR t."cancelledOperationId" IS NOT NULL))
              OR (g.kind = 'OPERATION' AND (t."dispatchedOperationId" = g.id OR t."receivedOperationId" = g.id OR t."cancelledOperationId" = g.id))
         UNION ALL
+        SELECT 'TRANSFER', a."transferId" FROM "StockTransferAcknowledgment" a
+          WHERE g.kind = 'OPERATION' AND a."operationId" = g.id
+        UNION ALL
+        SELECT 'OPERATION', a."operationId" FROM "StockTransferAcknowledgment" a
+          WHERE g.kind = 'TRANSFER' AND a."transferId" = g.id
+        UNION ALL
         SELECT 'BALANCE', t."sourceBalanceSourceId" FROM "StockTransfer" t WHERE g.kind = 'TRANSFER' AND t.id = g.id
         UNION ALL
         SELECT 'BALANCE', t."transitBalanceSourceId" FROM "StockTransfer" t

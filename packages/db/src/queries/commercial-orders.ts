@@ -1075,18 +1075,12 @@ export async function listCommercialOrders(
   return attachOrderActors(db, input.tenantId, orders.map(serializeOrder))
 }
 
-/** Bounded lookup results have per-order amounts, never counts or aggregate totals. */
-export async function lookupCommercialOrders(
-  db: PrismaClient,
-  input: OrderScope & {
-    customerId?: string
-    phone?: string
-    orderNumber?: string
-    history?: boolean
-  },
-) {
-  const { createdByUserId: _, ...storeScope } = input
-  const identity: Prisma.CommercialOrderWhereInput = input.orderNumber
+function commercialOrderLookupIdentity(input: {
+  customerId?: string
+  phone?: string
+  orderNumber?: string
+}): Prisma.CommercialOrderWhereInput {
+  return input.orderNumber
     ? { orderNumber: { equals: input.orderNumber, mode: "insensitive" } }
     : input.customerId
       ? { customerId: input.customerId }
@@ -1100,6 +1094,92 @@ export async function lookupCommercialOrders(
             },
           ],
         }
+}
+
+/** Paginated lookup follows normal list visibility, without the fulfilment lookup exception. */
+export async function lookupCommercialOrdersPage(
+  db: PrismaClient,
+  input: OrderScope & {
+    customerId?: string
+    phone?: string
+    orderNumber?: string
+    cursor?: string
+    limit?: number
+  },
+) {
+  const limit = input.limit ?? 10
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50)
+    throw new CatalogError("INVALID_ORDER", "Choose a page size from 1 to 50.")
+  if (
+    [input.customerId, input.phone, input.orderNumber].filter(Boolean)
+      .length !== 1
+  )
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Choose exactly one order identity.",
+    )
+  const where: Prisma.CommercialOrderWhereInput = {
+    tenantId: input.tenantId,
+    storeId: input.storeId,
+    createdByUserId: input.createdByUserId,
+    AND: [
+      commercialOrderLookupIdentity(input),
+      ...(input.orderNumber ? [] : [openOrderWhere]),
+    ],
+  }
+  const cursor = input.cursor
+    ? await db.commercialOrder.findFirst({
+        where: { AND: [where, { id: input.cursor }] },
+        select: { id: true, createdAt: true },
+      })
+    : null
+  if (input.cursor && !cursor)
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "The order lookup changed. Refresh to continue.",
+    )
+  const records = await db.commercialOrder.findMany({
+    include: orderGraph,
+    where: cursor
+      ? {
+          AND: [
+            where,
+            {
+              OR: [
+                { createdAt: { lt: cursor.createdAt } },
+                { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+              ],
+            },
+          ],
+        }
+      : where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+  })
+  const hasMore = records.length > limit
+  const page = records.slice(0, limit)
+  return {
+    items: await attachOrderActors(
+      db,
+      input.tenantId,
+      page.map(serializeOrder),
+    ),
+    nextCursor: hasMore ? page.at(-1)?.id : undefined,
+  }
+}
+
+/** Bounded lookup results have per-order amounts, never counts or aggregate totals. */
+export async function lookupCommercialOrders(
+  db: PrismaClient,
+  input: OrderScope & {
+    customerId?: string
+    phone?: string
+    orderNumber?: string
+    history?: boolean
+  },
+) {
+  const { createdByUserId: _, ...storeScope } = input
+  const identity = commercialOrderLookupIdentity(input)
   if (!input.orderNumber && !input.customerId && !input.phone) return []
   const records = await db.commercialOrder.findMany({
     include: orderGraph,
@@ -1251,7 +1331,10 @@ export async function countCommercialOrderCustomers(
     ${input.createdByUserId ? Prisma.sql`AND "createdByUserId" = ${input.createdByUserId}` : Prisma.empty}
   `)
 
-  return Number(rows[0]?.count ?? 0)
+  const count = rows[0]?.count ?? 0n
+  if (count < 0n || count > BigInt(Number.MAX_SAFE_INTEGER))
+    throw new Error("Exact order contact count unavailable")
+  return Number(count)
 }
 
 export async function listCommercialOrdersPage(
@@ -1259,6 +1342,7 @@ export async function listCommercialOrdersPage(
   input: {
     createdByUserId?: string
     createdAfter?: Date
+    createdBefore?: Date
     cursor?: string
     limit?: number
     query?: string
@@ -1276,7 +1360,13 @@ export async function listCommercialOrdersPage(
   const normalizedQuery = input.query?.trim()
   const baseWhere: Prisma.CommercialOrderWhereInput = {
     createdByUserId: input.createdByUserId,
-    createdAt: input.createdAfter ? { gte: input.createdAfter } : undefined,
+    createdAt:
+      input.createdAfter || input.createdBefore
+        ? {
+            ...(input.createdAfter ? { gte: input.createdAfter } : {}),
+            ...(input.createdBefore ? { lt: input.createdBefore } : {}),
+          }
+        : undefined,
     status: input.statuses?.length ? { in: input.statuses } : undefined,
     storeId: input.storeId,
     tenantId: input.tenantId,

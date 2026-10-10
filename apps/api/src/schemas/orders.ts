@@ -108,7 +108,7 @@ export const commercialOrderListSchema = z
   })
   .strict()
 
-const commercialOrderStatusSchema = z.enum([
+export const commercialOrderStatusSchema = z.enum([
   "DRAFT",
   "PENDING",
   "CONFIRMED",
@@ -119,6 +119,23 @@ const commercialOrderStatusSchema = z.enum([
   "CANCELLED",
   "REFUNDED",
 ])
+
+export const commercialOrderOperationalSummarySchema = z
+  .object({
+    storeId: z.string().trim().min(1),
+    customerId: z.string().trim().min(1).max(128).optional(),
+    createdAfter: z.coerce.date().optional(),
+    createdBefore: z.coerce.date().optional(),
+    statuses: z.array(commercialOrderStatusSchema).min(1).max(9).optional(),
+  })
+  .strict()
+  .refine(
+    (input) =>
+      !input.createdAfter ||
+      !input.createdBefore ||
+      input.createdAfter < input.createdBefore,
+    "End must follow start",
+  )
 
 /** Without a date range: all-time totals. With one: paid/outstanding too. */
 export const commercialOrderReportSummarySchema = z
@@ -136,6 +153,7 @@ export const commercialOrderListPageSchema = z
   .object({
     mine: z.boolean().optional(),
     createdAfter: z.coerce.date().optional(),
+    createdBefore: z.coerce.date().optional(),
     cursor: z.string().trim().min(1).optional(),
     direction: z.enum(["forward", "backward"]).optional(),
     limit: z.number().int().min(1).max(50).default(20),
@@ -152,6 +170,13 @@ export const commercialOrderListPageSchema = z
     storeId: z.string().trim().min(1).optional(),
   })
   .strict()
+  .refine(
+    (input) =>
+      !input.createdAfter ||
+      !input.createdBefore ||
+      input.createdAfter < input.createdBefore,
+    { message: "End must follow start", path: ["createdBefore"] },
+  )
 
 export const commercialOrderFulfillLineSchema = z
   .object({

@@ -1,4 +1,12 @@
+import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
+import { stockTransferDispatchAction, stockTransferReceiveAction, stockTransferCancelAction } from "./stock-transfer"
 import { z } from "zod"
+import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
+import {
+  unitConfigurationDraftAction,
+  unitConfigurationPublishAction,
+} from "./unit-configuration"
+import { stockAdjustmentAction, stockCorrectionAction } from "./stock-adjustment"
 const id = z.string().trim().min(1).max(128)
 const name = z.string().trim().min(1).max(160)
 const money = z.number().int().min(0).max(100_000_000)
@@ -26,6 +34,17 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("order_create"),
+      initialPayment: z
+        .object({
+          amountMinor: money.refine(
+            (value) => value > 0,
+            "Payment must be positive",
+          ),
+          method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
+          note: z.string().trim().max(500).optional(),
+        })
+        .strict()
+        .optional(),
       customerId: id.optional(),
       notes: z.string().trim().max(2000).optional(),
       lines: z
@@ -35,9 +54,16 @@ export const generalActionSchema = z.discriminatedUnion("action", [
               offeringId: id,
               quantity,
               expectedConfigurationVersionId: id.optional(),
-              expectedFixedPriceMinor: money,
+              expectedFixedPriceMinor: money.optional(),
+              enteredTotalMinor: money.refine((value) => value > 0).optional(),
             })
-            .strict(),
+            .strict()
+            .refine(
+              (line) =>
+                (line.expectedFixedPriceMinor !== undefined) !==
+                (line.enteredTotalMinor !== undefined),
+              "Choose a fixed price snapshot or an explicit item total.",
+            ),
         )
         .min(1)
         .max(30),
@@ -69,15 +95,160 @@ export const generalActionSchema = z.discriminatedUnion("action", [
         input.email !== undefined,
       "Change at least one detail.",
     ),
+  z
+    .object({
+      action: z.literal("product_price_update"),
+      offeringId: id,
+      priceMinor: money,
+      reason: z.string().trim().min(1).max(500),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("product_details_update"),
+      catalogItemId: id,
+      name: name.optional(),
+      description: z.string().trim().max(2000).nullable().optional(),
+      category: z.string().trim().max(120).nullable().optional(),
+    })
+    .strict()
+    .refine(
+      (v) =>
+        v.name !== undefined ||
+        v.description !== undefined ||
+        v.category !== undefined,
+      "Change at least one detail.",
+    ),
+  z
+    .object({
+      action: z.literal("product_identifiers_update"),
+      offeringId: id,
+      sku: z.string().trim().max(120).nullable().optional(),
+      barcode: z.string().trim().max(120).nullable().optional(),
+    })
+    .strict()
+    .refine(
+      (v) => v.sku !== undefined || v.barcode !== undefined,
+      "Change at least one identifier.",
+    ),
+  z
+    .object({
+      action: z.literal("product_availability_update"),
+      offeringId: id,
+      isAvailable: z.boolean(),
+    })
+    .strict(),
+  unitConfigurationDraftAction,
+  unitConfigurationPublishAction,
+  z
+    .object({
+      action: z.literal("stock_receive"),
+      balanceSourceId: id,
+      enteredInventoryUnitId: id,
+      enteredQuantity: quantity,
+      reason: z.string().trim().min(1).max(500),
+      source: z.string().trim().min(1).max(80),
+      supplierName: name.optional(),
+      categories: z
+        .array(
+          z
+            .object({
+              name: z
+                .string()
+                .max(160)
+                .refine((value) => {
+                  try {
+                    normalizeStockCategoryName(value)
+                    return true
+                  } catch {
+                    return false
+                  }
+                }, "Use 1–80 visible characters for a category."),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(10)
+        .optional(),
+      effectiveAt: z.string().datetime().optional(),
+      unitCostMinor: money.optional(),
+    })
+    .strict()
+    .refine(
+      (value) =>
+        value.reason.length +
+          (value.supplierName ? value.supplierName.length + 11 : 0) <=
+        500,
+      "Keep the reason and supplier name within 500 characters.",
+    ),
+  z
+    .object({
+      action: z.literal("stock_count_create"),
+      reason: z.string().trim().min(1).max(500),
+      lines: z
+        .array(
+          z
+            .object({
+              balanceSourceId: id,
+              entries: z
+                .array(
+                  z
+                    .object({
+                      enteredInventoryUnitId: id,
+                      enteredQuantity: z
+                        .string()
+                        .regex(/^\d{1,12}(\.\d{1,6})?$/),
+                    })
+                    .strict(),
+                )
+                .min(1)
+                .max(48),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(500),
+    })
+    .strict()
+    .refine(
+      (value) =>
+        new Set(value.lines.map((line) => line.balanceSourceId)).size ===
+        value.lines.length,
+      "Choose each counted stock source once.",
+    ),
+  z
+    .object({
+      action: z.literal("stock_count_finalize"),
+      stockCountId: id,
+      reason: z.string().trim().min(1).max(500),
+    })
+    .strict(),
+  stockAdjustmentAction,
+  stockCorrectionAction,
+  stockTransferDispatchAction,
+  stockTransferReceiveAction,
+  stockTransferCancelAction,
+  closeoutCreateAction,
+  closeoutFinalizeAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
 export type GeneralActionName = GeneralAction["action"]
 export const generalReceiptSchema = z
   .object({
-    kind: z.enum(["customer", "product", "order", "payment"]),
+    kind: z.enum([
+      "customer",
+      "product",
+      "order",
+      "payment",
+      "inventory",
+      "stock_count",
+      "stock_transfer",
+      "inventory_closeout",
+    ]),
     recordId: id,
     orderId: id.optional(),
+    catalogItemId: id.optional(),
     title: z.string(),
     detail: z.string(),
   })
@@ -135,6 +306,38 @@ export function generalActionSummary(
   const amount = (minor: number) =>
     `${currencyCode} ${(minor / 100).toFixed(2)}`
   switch (action.action) {
+    case "stock_transfer_dispatch":
+      return `Dispatch ${action.quantity} to Store ${action.targetStoreId} · ${action.reason}`
+    case "stock_transfer_receive":
+      return `Receive ${action.quantity} from transfer ${action.transferId} · ${action.reason}`
+    case "stock_transfer_cancel":
+      return `Return remaining transfer stock · ${action.reason}`
+    case "stock_adjust":
+      return `${action.purpose === "waste" ? "Record waste" : "Adjust stock"} · ${action.direction} ${action.enteredQuantity} · ${action.reason}`
+    case "stock_correct":
+      return `Correct stock operation ${action.targetOperationId} · ${action.reason}`
+    case "inventory_closeout_create":
+      return `Save ${action.declarations.length} custody declaration(s)`
+    case "inventory_closeout_finalize":
+      return `Finalize custody closeout ${action.closeoutId}`
+    case "stock_count_create":
+      return `Create count for ${action.lines.length} stock source(s)`
+    case "stock_count_finalize":
+      return `Finalize stock count ${action.stockCountId}`
+    case "stock_receive":
+      return `Receive ${action.enteredQuantity} · balance ${action.balanceSourceId} · ${action.reason}`
+    case "product_unit_configuration_draft":
+      return `Product ${action.catalogItemId} · save a unit draft · ${action.units.length} units · publication requires separate review`
+    case "product_unit_configuration_publish":
+      return `Product ${action.catalogItemId} · publish the reviewed unit draft · no retroactive stock conversion`
+    case "product_availability_update":
+      return `Offering ${action.offeringId} · ${action.isAvailable ? "Available" : "Unavailable"} in the current Store`
+    case "product_details_update":
+      return `Product ${action.catalogItemId} · details update · past orders unchanged`
+    case "product_identifiers_update":
+      return `Offering ${action.offeringId} · identifiers update · other units unchanged`
+    case "product_price_update":
+      return `Offering ${action.offeringId}\nNew price: ${amount(action.priceMinor)}\nReason: ${action.reason}\nApplies wherever this offering is sold. Past orders keep their saved prices.`
     case "customer_create":
       return [action.name, action.phone, action.email]
         .filter(Boolean)
@@ -142,7 +345,7 @@ export function generalActionSummary(
     case "product_create":
       return `${action.name} · ${action.canonicalUnitName} · ${amount(action.priceMinor)} per unit`
     case "order_create":
-      return `${action.lines.map((line) => `${line.quantity} × offering ${line.offeringId}`).join("\n")}\n${action.customerId ? `Customer ${action.customerId}` : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}`
+      return `${action.lines.map((line) => `${line.quantity} × offering ${line.offeringId}`).join("\n")}\n${action.customerId ? `Customer ${action.customerId}` : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}`
     case "customer_update":
       return [
         `Customer ${action.customerId}`,

@@ -40,7 +40,6 @@ excluded(
     "tenant.storeContext",
     "tenant.featureAvailability",
     "tenant.analyticsContext",
-    "tenant.stores",
   ],
 )
 formOnly(
@@ -64,16 +63,20 @@ formOnly(
 )
 
 // Catalog
-planned("catalog", "B04", [
-  "catalog.listItems",
-  "catalog.listItemsPage",
-  "catalog.detail.*",
-])
+formOnly(
+  "catalog",
+  "Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering.",
+  ["catalog.getItem"],
+)
+excluded(
+  "catalog",
+  "Unbounded legacy list; assistant uses stable listItemsPage continuation.",
+  ["catalog.listItems"],
+)
 planned("catalog", "B02", ["catalog.categories.*"])
 planned("catalog", "B03", [
   "catalog.createItem",
   "catalog.setProductUsage",
-  "catalog.setOfferingAvailability",
   "catalog.*UnitConfiguration*",
   "catalog.*UnitDefinition*",
 ])
@@ -83,12 +86,6 @@ formOnly("catalog", "Photo capture and upload belong to the product form.", [
 ])
 
 // Customers
-planned("customers", "B04", [
-  "customers.listPage",
-  "customers.count",
-  "orders.customerCount",
-  "customerLedger.receivables",
-])
 planned("customers", "E02", ["customerLedger.*"])
 formOnly(
   "customers",
@@ -97,7 +94,11 @@ formOnly(
 )
 
 // Sales
-planned("sales", "B04", ["orders.lookupOpen"])
+formOnly(
+  "sales",
+  "Legacy payment/fulfilment lookup exception; assistant uses lookupOpenPage with normal list visibility and continuation.",
+  ["orders.lookupOpen"],
+)
 planned("sales", "B05", ["orders.payments", "orders.prepareReceipts"])
 planned("sales", "D02", [
   "orders.fulfillProducts",
@@ -117,25 +118,19 @@ excluded("sales", "Unbounded legacy list; the assistant reads bounded pages.", [
 ])
 
 // Inventory
-planned("inventory", "B04", [
-  "inventory.offeringAvailability",
-  "inventory.balanceReport",
-])
-planned("inventory", "C01", [
-  "inventory.postBalanceOperation",
-  "inventory.categorySuggestions",
-])
-planned("inventory", "C02", [
-  "inventory.createStockCount",
-  "inventory.finalizeStockCount",
-])
-planned("inventory", "C03", [
-  "inventory.correctOperation",
-  "inventory.operationHistory",
-])
-planned("inventory", "C04", ["inventory.*Transfer*", "inventory.transfers"])
+formOnly(
+  "inventory",
+  "Legacy full response; assistant uses balancePage and compatibleTotalsPage, preserving complete source-group totals with response pagination.",
+  ["inventory.balanceReport"],
+)
+formOnly(
+  "inventory",
+  "Legacy availability may initialize a zero source; assistant uses configuredOfferingAvailability, which never creates missing stock.",
+  ["inventory.offeringAvailability"],
+)
+
+
 planned("inventory", "C05", [
-  "inventory.*Closeout",
   "inventory.reconciliationReport",
 ])
 planned("inventory", "G04", [
@@ -144,7 +139,6 @@ planned("inventory", "G04", [
   "inventory.*Reservation",
   "inventory.reserveOffering",
 ])
-planned("staff", "S05", ["inventory.operationAudit"])
 formOnly("inventory", "Bulk file export; download it from the page.", [
   "inventory.auditExport",
   "serviceReporting.auditExport",

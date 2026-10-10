@@ -9,6 +9,8 @@ export type PerformancePhase =
   | "sql"
   | "lockingSql"
   | "serialization"
+  | "proposalReview"
+  | "proposalExecution"
 
 type Measurement = { count: number; milliseconds: number; failures: number }
 export type PerformanceTrace = {

@@ -1,16 +1,21 @@
+import { lockInventoryCloseoutReview } from "./inventory-closeout-review"
 import { expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   createAndDispatchStockTransfer,
+  createInventoryCloseoutInTransaction,
   finalizeInventoryCloseout,
+  finalizeInventoryCloseoutInTransaction,
   moveInventoryCustody,
   receiveOrCancelStockTransfer,
 } from "./inventory-custody-transfers"
 import { lockInventoryFinancialStores } from "./inventory-finance-locks"
 import {
   correctStockOperation,
+  correctStockOperationInTransaction,
   finalizeStockCount,
+  lockInventorySourcesForReview,
   transformPackagedStock,
 } from "./inventory-operations"
 import { graduateServiceCommerceCatalogOffering } from "./service-commerce-graduation"
@@ -80,6 +85,23 @@ const transitionInput = {
   transition: "receive" as const,
 }
 const closeoutInput = { ...common, closeoutId: "closeout-a" }
+
+test("assistant stock review holds financial, count and balance locks in command order", async () => {
+  const f = fixture(countInput)
+  await lockInventorySourcesForReview(f.tx, {
+    tenantId: actor.tenantId,
+    storeId: "store-a",
+    stockCountId: "count-a",
+    balanceSourceIds: ["balance-z", "balance-a", "balance-z"],
+  })
+  expect(f.events).toEqual([
+    "store-identity",
+    "book:NGN",
+    "source-lock",
+    "balances-lock",
+  ])
+  expect(f.queries.at(-1)).toContain('ORDER BY "id" FOR UPDATE')
+})
 
 function fixture(
   input: unknown,
@@ -330,6 +352,10 @@ function fixture(
       findFirstOrThrow: async () => ({ ...retained, status: "RECEIVED" }),
     },
     inventoryCloseout: {
+      findUnique: async () => {
+        events.push("closeout-replay")
+        return retained
+      },
       findFirst: async (args: unknown) => {
         const query = args as {
           select?: object
@@ -383,6 +409,39 @@ test("multi-Store coordination deduplicates currencies and orders reversed input
     expect(f.events).toEqual(["stores-identity", "book:NGN", "book:ZAR"])
     expect(contexts).toHaveLength(2)
   }
+})
+
+test("caller-owned closeout transaction keeps financial coordination before replay", async () => {
+  const f = fixture(closeoutInput)
+  const result = await finalizeInventoryCloseoutInTransaction(f.tx, closeoutInput)
+  expect(result.id).toBe("retained-source")
+  expect(f.events).toEqual(["closeout-identity", "stores-identity", "book:NGN", "replay"])
+  expect(f.transactionOptions).toBeUndefined()
+})
+
+test("caller-owned closeout creation retains exact replay without opening a transaction", async () => {
+  const input = {
+    ...common,
+    storeId: "store-a",
+    custodyType: "staff" as const,
+    custodyReferenceId: "staff-a",
+    declarations: [{ balanceSourceId: "balance-a", declaredQuantity: "0", expectedRevision: 0 }],
+  }
+  const f = fixture(input)
+  expect((await createInventoryCloseoutInTransaction(f.tx, input)).id).toBe("retained-source")
+  expect(f.events).toEqual(["closeout-replay"])
+  expect(f.transactionOptions).toBeUndefined()
+  await expect(createInventoryCloseoutInTransaction(f.tx, { ...input, reason: "Changed input" })).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+})
+
+test("closeout wrappers allocate fresh bounded transaction options", async () => {
+  const f = fixture(closeoutInput)
+  await finalizeInventoryCloseout(f.db, closeoutInput)
+  const first = f.transactionOptions
+  await finalizeInventoryCloseout(f.db, closeoutInput)
+  expect(first).toEqual({ maxWait: 10_000, timeout: 30_000 })
+  expect(f.transactionOptions).toEqual(first)
+  expect(f.transactionOptions).not.toBe(first)
 })
 
 test("missing Store fails before any book lock; no-book Stores keep operation", async () => {
@@ -724,4 +783,29 @@ test("graduation retains management authority and locks before source context re
       )
     }
   }
+})
+
+test("caller-owned correction transaction preserves purchase ownership rejection", async () => {
+  const f = fixture(correctionInput, { replay: false, purchaseMovement: true })
+  await expect(f.db.$transaction((tx) =>
+    correctStockOperationInTransaction(tx, correctionInput),
+  )).rejects.toMatchObject({ code: "INVALID_STOCK_OPERATION" })
+  expect(f.events.indexOf("operation-graph")).toBeGreaterThan(
+    f.events.indexOf("balances-lock"),
+  )
+})
+
+test("assistant correction locks financial book then original operation then balances", async () => {
+  const f = fixture(correctionInput)
+  await lockInventorySourcesForReview(f.tx, { tenantId: actor.tenantId, storeId: "store-a", stockOperationId: "target-a", balanceSourceIds: ["balance-a"] })
+  expect(f.events).toEqual(["store-identity", "book:NGN", "source-lock", "balances-lock"])
+  expect(f.queries.some((query) => query.includes('FROM "StockOperation"'))).toBe(true)
+})
+
+
+test("assistant closeout review locks its Book, exact source and balances before rereading", async () => {
+  const f = fixture(closeoutInput)
+  await lockInventoryCloseoutReview(f.tx, { tenantId: actor.tenantId, storeId: "store-a", closeoutId: "closeout-a" })
+  expect(f.events).toEqual(["store-identity", "book:NGN", "source-lock", "balances-lock"])
+  expect(f.queries.at(-1)).toContain('ORDER BY "id" FOR UPDATE')
 })

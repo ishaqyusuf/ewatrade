@@ -1,8 +1,37 @@
 import { describe, expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
 import { FinanceError } from "./rules"
-import { recordInventoryRelocationValuationInTransaction } from "./valuation-relocations"
+import { recordResolvedInventoryRelocationValuationInTransaction } from "./valuation-relocations"
 
+import { resolveLoadedInventoryRelocationSource } from "./inventory-relocation-source"
+// Verify source proof and posting independently of repository query shape.
+async function postFixtureRelocation(
+  tx: Prisma.TransactionClient,
+  input: Parameters<
+    typeof recordResolvedInventoryRelocationValuationInTransaction
+  >[1],
+) {
+  const operation = await tx.stockOperation.findFirst({
+    where: { id: input.stockOperationId },
+  })
+  const book = await tx.financeBook.findUnique({
+    where: {
+      tenantId_currencyCode: { tenantId: input.tenantId, currencyCode: "NGN" },
+    },
+  })
+  const source = resolveLoadedInventoryRelocationSource(
+    operation as unknown as Parameters<
+      typeof resolveLoadedInventoryRelocationSource
+    >[0],
+    input.tenantId,
+    book,
+  )
+  return recordResolvedInventoryRelocationValuationInTransaction(
+    tx,
+    input,
+    source,
+  )
+}
 const decimal = (value: string) => ({ toFixed: () => value })
 const effectiveAt = new Date("2026-09-15T12:00:00.000Z")
 const actorUserId = "relocation-actor"
@@ -413,15 +442,12 @@ function persistedEvent(event: Record<string, unknown>) {
 describe("inventory relocation valuation", () => {
   test("allocates the original weighted issue and transfers that exact cost to a new zero destination", async () => {
     const state = fixture({ packaged: true })
-    const result = await recordInventoryRelocationValuationInTransaction(
-      state.tx,
-      {
-        tenantId: "tenant-1",
-        stockOperationId: "operation-1",
-        expectedSourceStockRevision: 2,
-        expectedTargetStockRevision: 1,
-      },
-    )
+    const result = await postFixtureRelocation(state.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "operation-1",
+      expectedSourceStockRevision: 2,
+      expectedTargetStockRevision: 1,
+    })
     expect(result?.sourceEvent.kind).toBe("TRANSFER_OUT")
     expect(result?.sourceEvent.sourceKind).toBe("STOCK_TRANSFER_DISPATCH")
     expect(result?.sourceEvent.canonicalEffect.toFixed()).toBe("-24")
@@ -433,15 +459,12 @@ describe("inventory relocation valuation", () => {
 
   test("retains known inbound source cost when destination history is unknown", async () => {
     const state = fixture({ stage: "custody", targetCount: 2 })
-    const result = await recordInventoryRelocationValuationInTransaction(
-      state.tx,
-      {
-        tenantId: "tenant-1",
-        stockOperationId: "operation-1",
-        expectedSourceStockRevision: 2,
-        expectedTargetStockRevision: 2,
-      },
-    )
+    const result = await postFixtureRelocation(state.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "operation-1",
+      expectedSourceStockRevision: 2,
+      expectedTargetStockRevision: 2,
+    })
     expect(result?.sourceEvent.sourceCostMinor).toBe(BigInt(50))
     expect(result?.targetEvent.sourceCostMinor).toBe(BigInt(50))
     expect(result?.targetEvent.valueBeforeMinor).toBeNull()
@@ -481,15 +504,12 @@ describe("inventory relocation valuation", () => {
         latestEffectiveAt: new Date("2026-09-10T00:00:00.000Z"),
       },
     })
-    const result = await recordInventoryRelocationValuationInTransaction(
-      state.tx,
-      {
-        tenantId: "tenant-1",
-        stockOperationId: "operation-1",
-        expectedSourceStockRevision: 2,
-        expectedTargetStockRevision: 2,
-      },
-    )
+    const result = await postFixtureRelocation(state.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "operation-1",
+      expectedSourceStockRevision: 2,
+      expectedTargetStockRevision: 2,
+    })
     expect(result?.sourceEvent.sourceCostMinor).toBeNull()
     expect(result?.targetEvent.sourceCostMinor).toBeNull()
     expect(result?.targetEvent.valueBeforeMinor).toBe(BigInt(9))
@@ -499,15 +519,12 @@ describe("inventory relocation valuation", () => {
 
   test("uncaptured net-zero destination history does not establish known zero", async () => {
     const state = fixture({ stage: "dispatch", targetCount: 2 })
-    const result = await recordInventoryRelocationValuationInTransaction(
-      state.tx,
-      {
-        tenantId: "tenant-1",
-        stockOperationId: "operation-1",
-        expectedSourceStockRevision: 2,
-        expectedTargetStockRevision: 1,
-      },
-    )
+    const result = await postFixtureRelocation(state.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "operation-1",
+      expectedSourceStockRevision: 2,
+      expectedTargetStockRevision: 1,
+    })
     expect(result?.targetEvent.valueBeforeMinor).toBeNull()
     expect(result?.targetEvent.sourceCostMinor).toBe(BigInt(50))
     expect(result?.targetEvent.unknownReason).toBe("UNCAPTURED_MOVEMENTS")
@@ -515,15 +532,12 @@ describe("inventory relocation valuation", () => {
 
   test("saved pair replays before current stage, quantity, revision, or closed-date gates", async () => {
     const state = fixture()
-    const first = await recordInventoryRelocationValuationInTransaction(
-      state.tx,
-      {
-        tenantId: "tenant-1",
-        stockOperationId: "operation-1",
-        expectedSourceStockRevision: 2,
-        expectedTargetStockRevision: 1,
-      },
-    )
+    const first = await postFixtureRelocation(state.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "operation-1",
+      expectedSourceStockRevision: 2,
+      expectedTargetStockRevision: 1,
+    })
     const [sourceEvent, targetEvent] = state.createdEvents
     if (!sourceEvent || !targetEvent) throw new Error("Expected saved pair")
     state.sourceMovement.valuationEvent = persistedEvent(sourceEvent)
@@ -537,15 +551,12 @@ describe("inventory relocation valuation", () => {
     if (!transfer) throw new Error("Expected dispatch transfer")
     transfer.status = "CANCELLED"
     const countCalls = state.getCountCalls()
-    const replay = await recordInventoryRelocationValuationInTransaction(
-      state.tx,
-      {
-        tenantId: "tenant-1",
-        stockOperationId: "operation-1",
-        expectedSourceStockRevision: 2,
-        expectedTargetStockRevision: 1,
-      },
-    )
+    const replay = await postFixtureRelocation(state.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "operation-1",
+      expectedSourceStockRevision: 2,
+      expectedTargetStockRevision: 1,
+    })
     expect(replay?.sourceEvent.id).toBe(first?.sourceEvent.id)
     expect(replay?.targetEvent.id).toBe(first?.targetEvent.id)
     expect(state.getCountCalls()).toBe(countCalls)
@@ -554,15 +565,12 @@ describe("inventory relocation valuation", () => {
   test("maps receive and cancel to their persisted source kinds", async () => {
     for (const stage of ["receive", "cancel"] as const) {
       const state = fixture({ stage })
-      const result = await recordInventoryRelocationValuationInTransaction(
-        state.tx,
-        {
-          tenantId: "tenant-1",
-          stockOperationId: "operation-1",
-          expectedSourceStockRevision: state.sourceBalance.revision,
-          expectedTargetStockRevision: state.targetBalance.revision,
-        },
-      )
+      const result = await postFixtureRelocation(state.tx, {
+        tenantId: "tenant-1",
+        stockOperationId: "operation-1",
+        expectedSourceStockRevision: state.sourceBalance.revision,
+        expectedTargetStockRevision: state.targetBalance.revision,
+      })
       expect(result?.sourceEvent.sourceKind).toBe(
         stage === "receive"
           ? "STOCK_TRANSFER_RECEIVE"
@@ -576,7 +584,7 @@ describe("inventory relocation valuation", () => {
     const partial = fixture()
     partial.sourceMovement.valuationEvent = { id: "partial" }
     await expect(
-      recordInventoryRelocationValuationInTransaction(partial.tx, {
+      postFixtureRelocation(partial.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,
@@ -586,7 +594,7 @@ describe("inventory relocation valuation", () => {
 
     const missingBook = fixture({ bookMissing: true })
     expect(
-      await recordInventoryRelocationValuationInTransaction(missingBook.tx, {
+      await postFixtureRelocation(missingBook.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,
@@ -601,7 +609,7 @@ describe("inventory relocation valuation", () => {
     if (!sourcePool) throw new Error("Expected source pool")
     sourcePool.balanceSourceId = "custody-target"
     await expect(
-      recordInventoryRelocationValuationInTransaction(wrongBalance.tx, {
+      postFixtureRelocation(wrongBalance.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,
@@ -614,7 +622,7 @@ describe("inventory relocation valuation", () => {
     if (!revisionPool) throw new Error("Expected source pool")
     revisionPool.lastStockRevision = 2
     await expect(
-      recordInventoryRelocationValuationInTransaction(futureRevision.tx, {
+      postFixtureRelocation(futureRevision.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,
@@ -628,7 +636,7 @@ describe("inventory relocation valuation", () => {
     emptyPool.quantity = decimal("0")
     emptyPool.valueMinor = BigInt(1)
     await expect(
-      recordInventoryRelocationValuationInTransaction(zeroQuantity.tx, {
+      postFixtureRelocation(zeroQuantity.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,
@@ -639,7 +647,7 @@ describe("inventory relocation valuation", () => {
 
   test("unknown saved source allocations cannot retain a known before value", async () => {
     const state = fixture()
-    await recordInventoryRelocationValuationInTransaction(state.tx, {
+    await postFixtureRelocation(state.tx, {
       tenantId: "tenant-1",
       stockOperationId: "operation-1",
       expectedSourceStockRevision: 2,
@@ -665,7 +673,7 @@ describe("inventory relocation valuation", () => {
     state.sourceMovement.valuationEvent = savedSource
     state.targetMovement.valuationEvent = savedTarget
     await expect(
-      recordInventoryRelocationValuationInTransaction(state.tx, {
+      postFixtureRelocation(state.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,
@@ -702,7 +710,7 @@ describe("inventory relocation valuation", () => {
     ] as const) {
       const originalPools = [...state.pools.entries()]
       await expect(
-        recordInventoryRelocationValuationInTransaction(state.tx, {
+        postFixtureRelocation(state.tx, {
           tenantId: "tenant-1",
           stockOperationId: "operation-1",
           expectedSourceStockRevision: state.sourceBalance.revision,
@@ -716,7 +724,7 @@ describe("inventory relocation valuation", () => {
 
   test("saved replay rejects invented value on an empty inbound starting balance", async () => {
     const state = fixture()
-    await recordInventoryRelocationValuationInTransaction(state.tx, {
+    await postFixtureRelocation(state.tx, {
       tenantId: "tenant-1",
       stockOperationId: "operation-1",
       expectedSourceStockRevision: 2,
@@ -732,7 +740,7 @@ describe("inventory relocation valuation", () => {
     state.sourceMovement.valuationEvent = persistedEvent(sourceEvent)
     state.targetMovement.valuationEvent = savedTarget
     await expect(
-      recordInventoryRelocationValuationInTransaction(state.tx, {
+      postFixtureRelocation(state.tx, {
         tenantId: "tenant-1",
         stockOperationId: "operation-1",
         expectedSourceStockRevision: 2,

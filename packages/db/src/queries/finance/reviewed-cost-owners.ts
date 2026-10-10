@@ -1,3 +1,4 @@
+import { stockOwnerInclude as ownerInclude } from "./inventory-stock-owner-include"
 import { Prisma } from "../../../generated/prisma/client"
 import type { FinanceActor } from "./access"
 import { assertSavedStockCountSource } from "./inventory-count-source"
@@ -37,27 +38,6 @@ export type ReviewedOwnerBlocker = {
   sourceId: string
 }
 
-const ownerInclude = {
-  store: { select: { id: true, tenantId: true, currencyCode: true } },
-  committedReservation: { select: { id: true, commercialOrderLineId: true } },
-  purchaseReceipts: { take: 2, select: { id: true } },
-  productFulfillments: { take: 2, select: { id: true } },
-  productReturns: { take: 2, select: { id: true } },
-  _count: {
-    select: {
-      movements: true,
-      purchaseReceipts: true,
-      productFulfillments: true,
-      productReturns: true,
-      finalizedCounts: true,
-      finalizedCloseouts: true,
-      dispatchedTransfers: true,
-      receivedTransfers: true,
-      cancelledTransfers: true,
-      corrections: true,
-    },
-  },
-} satisfies Prisma.StockOperationInclude
 type Owner = Prisma.StockOperationGetPayload<{ include: typeof ownerInclude }>
 export type ReviewedCostOwner = Owner
 type Event =
@@ -179,10 +159,12 @@ export async function readReviewedCostOwningSourcesInTransaction(
       "receivedTransfers",
       "cancelledTransfers",
     ])
-    const stages =
+    const stages = Math.max(
       op._count.dispatchedTransfers +
-      op._count.receivedTransfers +
-      op._count.cancelledTransfers
+        op._count.receivedTransfers +
+        op._count.cancelledTransfers,
+      op.transferAcknowledgment ? 1 : 0,
+    )
     if (
       op._count.movements !== 2 ||
       stages !== (op.type === "TRANSFER" ? 1 : 0)
@@ -361,6 +343,7 @@ export async function readReviewedCostOwningSourcesInTransaction(
     reservation = false,
   ) {
     if (
+      (op.transferAcknowledgment != null && op.type !== "TRANSFER") ||
       Object.entries(op._count).some(
         ([key, count]) =>
           key !== "movements" &&
@@ -655,10 +638,12 @@ export async function readReviewedCostOwningSourcesInTransaction(
         "receivedTransfers",
         "cancelledTransfers",
       ])
-      const stages =
+      const stages = Math.max(
         op._count.dispatchedTransfers +
-        op._count.receivedTransfers +
-        op._count.cancelledTransfers
+          op._count.receivedTransfers +
+          op._count.cancelledTransfers,
+        op.transferAcknowledgment ? 1 : 0,
+      )
       if (rows.length !== 2 || stages !== (op.type === "TRANSFER" ? 1 : 0))
         conflict(
           "Original relocation has an ambiguous or incomplete owning stage.",

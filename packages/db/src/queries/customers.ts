@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
+import { literalContains } from "./literal-contains"
 import type { DbClient } from "./types"
 
 export class CustomerDirectoryError extends Error {
@@ -7,7 +8,8 @@ export class CustomerDirectoryError extends Error {
       | "DUPLICATE_CUSTOMER"
       | "CUSTOMER_NOT_FOUND"
       | "STALE_CUSTOMER"
-      | "NO_CUSTOMER_CHANGES",
+      | "NO_CUSTOMER_CHANGES"
+      | "INVALID_CUSTOMER_CURSOR",
     message: string,
   ) {
     super(message)
@@ -268,9 +270,25 @@ export async function ensureOrderCustomerInTransaction(
 
 export async function countCustomers(
   db: PrismaClient,
-  input: { tenantId: string },
+  input: { tenantId: string; query?: string },
 ) {
-  return db.customer.count({ where: { tenantId: input.tenantId } })
+  const query = input.query?.trim()
+    ? literalContains(input.query.trim())
+    : undefined
+  return db.customer.count({
+    where: {
+      tenantId: input.tenantId,
+      ...(query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" as const } },
+              { email: { contains: query, mode: "insensitive" as const } },
+              { phone: { contains: query, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    },
+  })
 }
 
 export type CustomerOrderDirectoryAggregate = {
@@ -438,6 +456,8 @@ export async function listCustomersPage(
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
   const query = input.query?.trim()
+    ? literalContains(input.query.trim())
+    : undefined
   const baseWhere: Prisma.CustomerWhereInput = { tenantId: input.tenantId }
   const where: Prisma.CustomerWhereInput = query
     ? {
@@ -449,6 +469,17 @@ export async function listCustomersPage(
         ],
       }
     : baseWhere
+  if (input.cursor) {
+    const cursor = await db.customer.findFirst({
+      where: { AND: [where, { id: input.cursor }] },
+      select: { id: true },
+    })
+    if (!cursor)
+      throw new CustomerDirectoryError(
+        "INVALID_CUSTOMER_CURSOR",
+        "The customer list changed. Refresh to continue.",
+      )
+  }
   const [records, totalCount] = await Promise.all([
     db.customer.findMany({
       cursor: input.cursor ? { id: input.cursor } : undefined,

@@ -7,7 +7,7 @@ import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Badge } from "@ewatrade/ui"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { InventoryLedgerTable } from "../inventory-ledger/data-table"
 import { inventoryDate, inventoryLabel } from "../inventory-ledger/format"
@@ -94,7 +94,24 @@ export function TransfersDataTable({
       ),
     [data, params.filter, query, storeId],
   )
-  const record = data.find((row) => row.id === params.record) ?? null
+  const listedRecord = data.find((row) => row.id === params.record) ?? null
+  const saved = useQuery(trpc.inventory.transferReview.queryOptions(
+    { transferId: params.record ?? "", storeId },
+    { enabled: Boolean(params.record && !listedRecord) },
+  ))
+  const record: StockTransfer | null = listedRecord ?? (saved.data && params.record === saved.data.id ? {
+    id: saved.data.id,
+    createdAt: saved.data.createdAt,
+    inventoryUnitName: saved.data.unitName,
+    productName: saved.data.productName,
+    variantName: saved.data.variantName,
+    quantity: saved.data.dispatchedQuantity,
+    remainingQuantity: saved.data.transit?.quantity ?? "0",
+    sourceStore: saved.data.sourceStore,
+    targetStore: saved.data.targetStore,
+    transitRevision: saved.data.transit?.revision ?? null,
+    status: saved.data.status,
+  } : null)
   return (
     <div className="grid gap-4">
       <InventoryLedgerFilters
@@ -136,7 +153,7 @@ export function TransfersDataTable({
       />
       {params.record && !record ? (
         <output>
-          This transfer is not in the latest records for this store.{" "}
+          {saved.isPending ? "Loading saved transfer…" : "This transfer is unavailable in the selected Store. Check access to both Stores."}{" "}
           <button
             type="button"
             className="underline"

@@ -5,7 +5,7 @@ import {
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 
-import type { PrismaClient } from "../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   OfflineCommandStatus,
   StockOperationType,
@@ -16,6 +16,8 @@ import {
   stockOperationCategoryGraph,
 } from "./inventory-categories"
 
+import { CatalogError } from "./catalog-errors"
+
 const balanceReportGraph = {
   inventoryUnit: { include: { configurationVersion: true } },
   product: { include: { catalogItem: true } },
@@ -23,25 +25,12 @@ const balanceReportGraph = {
   variant: true,
 } as const
 
-export async function listInventoryBalanceReport(
-  db: PrismaClient,
-  input: {
-    includeCompatibleTotals?: boolean
-    storeId?: string
-    tenantId: string
-  },
+function serializeInventoryBalanceRow(
+  balance: Prisma.StockBalanceSourceGetPayload<{
+    include: typeof balanceReportGraph
+  }>,
 ) {
-  const balances = await db.stockBalanceSource.findMany({
-    include: balanceReportGraph,
-    orderBy: [
-      { store: { name: "asc" } },
-      { product: { catalogItem: { name: "asc" } } },
-      { variant: { sortOrder: "asc" } },
-      { inventoryUnit: { sortOrder: "asc" } },
-    ],
-    where: { storeId: input.storeId, tenantId: input.tenantId },
-  })
-  const rows = balances.map((balance) => ({
+  return {
     availableQuantity:
       balance.custodyType === "TRANSIT"
         ? "0"
@@ -68,7 +57,83 @@ export async function listInventoryBalanceReport(
     storeName: balance.store.name,
     variantId: balance.variantId,
     variantName: balance.variant.name,
-  }))
+  }
+}
+
+/** Bounded live source page, never an aggregate or an initialization of missing stock. */
+export async function listInventoryBalancePage(
+  db: PrismaClient,
+  input: {
+    tenantId: string
+    storeId: string
+    catalogItemId?: string
+    cursor?: string
+    limit?: number
+  },
+) {
+  const limit = input.limit ?? 10
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Invalid inventory page size.",
+    )
+  const where: Prisma.StockBalanceSourceWhereInput = {
+    tenantId: input.tenantId,
+    storeId: input.storeId,
+    ...(input.catalogItemId
+      ? { product: { catalogItemId: input.catalogItemId } }
+      : {}),
+  }
+  if (
+    input.cursor &&
+    !(await db.stockBalanceSource.findFirst({
+      where: { AND: [where, { id: input.cursor }] },
+      select: { id: true },
+    }))
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "The inventory list changed. Refresh to continue.",
+    )
+  const rows = await db.stockBalanceSource.findMany({
+    where: { ...where, ...(input.cursor ? { id: { gt: input.cursor } } : {}) },
+    include: balanceReportGraph,
+    orderBy: { id: "asc" },
+    take: limit + 1,
+  })
+  const items = rows.slice(0, limit)
+  return {
+    rows: items.map(serializeInventoryBalanceRow),
+    nextCursor: rows.length > limit ? (items.at(-1)?.id ?? null) : null,
+  }
+}
+
+export async function listInventoryBalanceReport(
+  db: PrismaClient,
+  input: {
+    includeCompatibleTotals?: boolean
+    catalogItemId?: string
+    storeId?: string
+    tenantId: string
+  },
+) {
+  const balances = await db.stockBalanceSource.findMany({
+    include: balanceReportGraph,
+    orderBy: [
+      { store: { name: "asc" } },
+      { product: { catalogItem: { name: "asc" } } },
+      { variant: { sortOrder: "asc" } },
+      { inventoryUnit: { sortOrder: "asc" } },
+    ],
+    where: {
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      ...(input.catalogItemId
+        ? { product: { catalogItemId: input.catalogItemId } }
+        : {}),
+    },
+  })
+  const rows = balances.map(serializeInventoryBalanceRow)
   if (!input.includeCompatibleTotals) {
     return { compatibleCanonicalTotals: [], rows }
   }
@@ -84,6 +149,7 @@ export async function listInventoryBalanceReport(
       }>
       custodyReferenceId: string | null
       custodyType: string
+      configurationVersionId: string
       onHandCanonicalQuantity: string
       productId: string
       productName: string
@@ -97,6 +163,7 @@ export async function listInventoryBalanceReport(
     const key = [
       balance.storeId,
       balance.variantId,
+      balance.inventoryUnit.configurationVersionId,
       balance.custodyType,
       balance.custodyReferenceId,
     ].join(":")
@@ -112,6 +179,7 @@ export async function listInventoryBalanceReport(
       components: [],
       custodyReferenceId: balance.custodyReferenceId || null,
       custodyType: balance.custodyType,
+      configurationVersionId: balance.inventoryUnit.configurationVersionId,
       onHandCanonicalQuantity: "0",
       productId: balance.productId,
       productName: balance.product.catalogItem.name,
@@ -139,10 +207,13 @@ export async function listInventoryBalanceReport(
   return {
     compatibleCanonicalTotals: [...groups.values()].map((group) => ({
       ...group,
-      availableCanonicalQuantity: subtractExactDecimals(
-        group.onHandCanonicalQuantity,
-        group.reservedCanonicalQuantity,
-      ),
+      availableCanonicalQuantity:
+        group.custodyType === "TRANSIT"
+          ? "0"
+          : subtractExactDecimals(
+              group.onHandCanonicalQuantity,
+              group.reservedCanonicalQuantity,
+            ),
       informationalOnly: true as const,
     })),
     rows,
@@ -151,7 +222,7 @@ export async function listInventoryBalanceReport(
 
 export async function getStockOperationAudit(
   db: PrismaClient,
-  input: { operationId: string; tenantId: string },
+  input: { operationId: string; tenantId: string; storeId?: string },
 ) {
   const operation = await db.stockOperation.findFirst({
     include: {
@@ -168,7 +239,7 @@ export async function getStockOperationAudit(
         },
       },
     },
-    where: { id: input.operationId, tenantId: input.tenantId },
+    where: { id: input.operationId, tenantId: input.tenantId, storeId: input.storeId },
   })
   if (!operation) return null
   const canonicalNetEffect = operation.movements.reduce(

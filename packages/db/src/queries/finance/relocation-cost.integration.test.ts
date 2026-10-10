@@ -1,5 +1,6 @@
 import { expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
+import { withPerformanceTrace } from "../../performance-tracing"
 import type { FinanceInventoryUnknownReason } from "../../../generated/prisma/enums"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
 import {
@@ -259,6 +260,7 @@ describeWithServiceCommerceDatabase(
           actorUserId: owner.id,
           startsAt: BOOK_START,
         })
+        console.info("Relocation acceptance: finance Book ready")
         cleanupBookId = book.id
         const supplier = await createFinanceSupplier(db, {
           tenantId: tenant.id,
@@ -268,6 +270,7 @@ describeWithServiceCommerceDatabase(
           code: `RLC-${runId.slice(0, 8)}`,
           name: "Relocation cost QA supplier",
         })
+        console.info("Relocation acceptance: supplier ready")
         supplierId = supplier.id
 
         async function receive(
@@ -279,6 +282,7 @@ describeWithServiceCommerceDatabase(
           expectedRevision: number,
           incurredAt: Date,
         ) {
+          console.info(`Relocation acceptance: funding ${label}`)
           return recordFinancePurchase(db, {
             tenantId: tenant.id,
             actorUserId: owner.id,
@@ -348,6 +352,7 @@ describeWithServiceCommerceDatabase(
           })
         const assertValuationPair = async (input: {
           sourceKind: string
+          stockOperationId?: string
           sourceId: string
           sourceBalanceId: string
           targetBalanceId: string
@@ -356,7 +361,13 @@ describeWithServiceCommerceDatabase(
           sourceUnknownReason?: FinanceInventoryUnknownReason | null
           targetUnknownReason?: FinanceInventoryUnknownReason | null
         }) => {
-          const events = await eventsFor(input.sourceKind, input.sourceId)
+          const events = (
+            await eventsFor(input.sourceKind, input.sourceId)
+          ).filter(
+            (event) =>
+              !input.stockOperationId ||
+              event.stockOperationId === input.stockOperationId,
+          )
           expect(events).toHaveLength(2)
           const outbound = events.find(
             (event) => event.balanceSourceId === input.sourceBalanceId,
@@ -379,6 +390,7 @@ describeWithServiceCommerceDatabase(
           return { events, inbound, outbound }
         }
 
+        console.info("Relocation acceptance: opening fixtures ready; starting custody")
         // A Manager may move custody. Repeating the same fresh command in parallel
         // must save one operation and one complete, costed pair.
         const assignmentInput = {
@@ -396,10 +408,11 @@ describeWithServiceCommerceDatabase(
           tenantId: tenant.id,
         }
         const [assignment, assignmentReplay] = await Promise.all([
-          moveInventoryCustody(db, assignmentInput),
-          moveInventoryCustody(db, assignmentInput),
+          withPerformanceTrace("job", () => moveInventoryCustody(db, assignmentInput), (trace) => console.info("Relocation custody first:", JSON.stringify(trace))),
+          withPerformanceTrace("job", () => moveInventoryCustody(db, assignmentInput), (trace) => console.info("Relocation custody replay:", JSON.stringify(trace))),
         ])
         expect(assignmentReplay.id).toBe(assignment.id)
+        if (process.env.RUN_RELOCATION_CUSTODY_PROBE === "1") return
         const assignmentMovements = await movementsFor(assignment.id)
         expect(assignmentMovements).toHaveLength(2)
         const custodyBalance = await db.stockBalanceSource.findFirstOrThrow({
@@ -550,6 +563,7 @@ describeWithServiceCommerceDatabase(
 
         // The destination already has a known opening cost. Incoming carrying value
         // is added exactly, with the transfer's source allocation retained.
+        console.info("Relocation acceptance: starting partial transfer lifecycle")
         const firstDispatchInput = {
           actorUserId: manager.id,
           clientOperationId: `relocation-cost-dispatch-receive-${runId}`,
@@ -622,7 +636,52 @@ describeWithServiceCommerceDatabase(
           transferId: dispatch.id,
           transition: "receive" as const,
         }
-        const received = await receiveOrCancelStockTransfer(db, receiveInput)
+        const partialInput = {
+          ...receiveInput,
+          clientOperationId: `relocation-cost-partial-${runId}`,
+          quantity: "0.5",
+        }
+        await expect(
+          receiveOrCancelStockTransfer(db, { ...partialInput, quantity: "2" }),
+        ).rejects.toThrow()
+        const partial = await receiveOrCancelStockTransfer(db, partialInput)
+        expect(partial.status).toBe("IN_TRANSIT")
+        expect(partial.receivedOperationId).toBeNull()
+        const acknowledgment =
+          await db.stockTransferAcknowledgment.findFirstOrThrow({
+            where: { tenantId: tenant.id, transferId: dispatch.id },
+          })
+        expect(acknowledgment.quantity.toFixed()).toBe("0.5")
+        expect(acknowledgment.remainingBefore.toFixed()).toBe("1.5")
+        expect(acknowledgment.remainingAfter.toFixed()).toBe("1")
+        expect(acknowledgment.acknowledgedByUserId).toBe(manager.id)
+        await assertValuationPair({
+          sourceKind: "STOCK_TRANSFER_RECEIVE",
+          sourceId: dispatch.id,
+          stockOperationId: acknowledgment.operationId,
+          sourceBalanceId: dispatch.transitBalanceSourceId,
+          targetBalanceId: target.balanceSourceId,
+          canonical: "6",
+          sourceCostMinor: BigInt(290),
+        })
+        expect(
+          (
+            await pool({
+              ...source,
+              balanceSourceId: dispatch.transitBalanceSourceId,
+            })
+          ).valueMinor,
+        ).toBe(BigInt(581))
+        expect((await receiveOrCancelStockTransfer(db, partialInput)).id).toBe(
+          dispatch.id,
+        )
+        expect(
+          await db.stockTransferAcknowledgment.count({
+            where: { transferId: dispatch.id, tenantId: tenant.id },
+          }),
+        ).toBe(1)
+        const finalReceiveInput = { ...receiveInput, expectedTransitRevision: 2 }
+        const received = await receiveOrCancelStockTransfer(db, finalReceiveInput)
         expect(received.status).toBe("RECEIVED")
         const receiveOpId = received.receivedOperationId
         if (!receiveOpId || !received.receivedAt)
@@ -630,10 +689,11 @@ describeWithServiceCommerceDatabase(
         const receivePair = await assertValuationPair({
           sourceKind: "STOCK_TRANSFER_RECEIVE",
           sourceId: dispatch.id,
+          stockOperationId: receiveOpId,
           sourceBalanceId: dispatch.transitBalanceSourceId,
           targetBalanceId: target.balanceSourceId,
-          canonical: "18",
-          sourceCostMinor: BigInt(871),
+          canonical: "12",
+          sourceCostMinor: BigInt(581),
         })
         const receiveOperation = await db.stockOperation.findUniqueOrThrow({
           where: { id: receiveOpId },
@@ -740,7 +800,7 @@ describeWithServiceCommerceDatabase(
         try {
           const savedReceiveReplay = await receiveOrCancelStockTransfer(
             db,
-            receiveInput,
+            finalReceiveInput,
           )
           expect(savedReceiveReplay.id).toBe(dispatch.id)
           expect(savedReceiveReplay.receivedOperationId).toBe(

@@ -4,6 +4,17 @@ import type { relocationSourceInclude } from "./inventory-relocation-source"
 import type { ReviewedCostOwner } from "./reviewed-cost-owners"
 import { FinanceError } from "./rules"
 
+type LoadedMovement = Prisma.StockMovementGetPayload<{
+  include: {
+    purchaseReceipt: { select: { id: true } }
+    valuationEvent: true
+  }
+}>
+type LoadedBalance =
+  Prisma.StockBalanceSourceGetPayload<Prisma.StockBalanceSourceDefaultArgs>
+type LoadedTransfer =
+  Prisma.StockTransferGetPayload<Prisma.StockTransferDefaultArgs>
+
 type RelocationGraph = Prisma.StockOperationGetPayload<{
   include: typeof relocationSourceInclude
 }>
@@ -58,6 +69,12 @@ export async function readReviewedCostStockGraphs(
     owners: ReviewedCostOwner[]
     balanceSourceIds: string[]
     transferIds: string[]
+    /** Original records already read in this transaction; completeness is rechecked below. */
+    records?: {
+      movements: LoadedMovement[]
+      balances: LoadedBalance[]
+      transfers: LoadedTransfer[]
+    }
   },
 ): Promise<Graph[]> {
   if (!input.owners.length) return []
@@ -84,19 +101,22 @@ export async function readReviewedCostStockGraphs(
       "Complete stock source graph exceeds connected bounds.",
     )
   const operationIds = input.owners.map((op) => op.id)
-  const movements = await tx.stockMovement.findMany({
-    where: { operationId: { in: operationIds } },
-    include: {
-      purchaseReceipt: { select: { id: true } },
-      valuationEvent: true,
-    },
-    orderBy: { id: "asc" },
-    take: 4097,
-  })
+  const movements =
+    input.records?.movements ??
+    (await tx.stockMovement.findMany({
+      where: { operationId: { in: operationIds } },
+      include: {
+        purchaseReceipt: { select: { id: true } },
+        valuationEvent: true,
+      },
+      orderBy: { id: "asc" },
+      take: 4097,
+    }))
   if (
     movements.length !==
       input.owners.reduce((n, op) => n + op._count.movements, 0) ||
-    movements.length > 4096
+    movements.length > 4096 ||
+    new Set(movements.map((movement) => movement.id)).size !== movements.length
   )
     throw new FinanceError(
       "CONFLICT",
@@ -113,19 +133,23 @@ export async function readReviewedCostStockGraphs(
       "CONFLICT",
       "Original stock source operation movement coverage changed.",
     )
-  const balances = await tx.stockBalanceSource.findMany({
-    where: { id: { in: input.balanceSourceIds } },
-    orderBy: { id: "asc" },
-    take: 129,
-  })
+  const balances =
+    input.records?.balances ??
+    (await tx.stockBalanceSource.findMany({
+      where: { id: { in: input.balanceSourceIds } },
+      orderBy: { id: "asc" },
+      take: 129,
+    }))
   complete(input.balanceSourceIds, balances, "balance")
-  const transfers = input.transferIds.length
-    ? await tx.stockTransfer.findMany({
-        where: { id: { in: input.transferIds } },
-        orderBy: { id: "asc" },
-        take: 4097,
-      })
-    : []
+  const transfers =
+    input.records?.transfers ??
+    (input.transferIds.length
+      ? await tx.stockTransfer.findMany({
+          where: { id: { in: input.transferIds } },
+          orderBy: { id: "asc" },
+          take: 4097,
+        })
+      : [])
   complete(input.transferIds, transfers, "transfer")
   const unitIds = [
     ...new Set([
@@ -207,14 +231,12 @@ export async function readReviewedCostStockGraphs(
       "CONFLICT",
       "Original stock source event pools exceed connected bounds.",
     )
-  const pools = await tx.financeInventoryPool.findMany({
-    where: {
-      id: {
-        in: poolIds,
-      },
-    },
-    take: 129,
-  })
+  const pools = poolIds.length
+    ? await tx.financeInventoryPool.findMany({
+        where: { id: { in: poolIds } },
+        take: 129,
+      })
+    : []
   complete(poolIds, pools, "event pool")
   const storeById = new Map(stores.map((s) => [s.id, s]))
   const productById = new Map(products.map((p) => [p.id, p]))
@@ -255,12 +277,25 @@ export async function readReviewedCostStockGraphs(
       "transfer version",
     ),
   }))
+  const transferById = new Map(
+    transferGraphs.map((transfer) => [transfer.id, transfer]),
+  )
   const dispatched = grouped(transferGraphs, (t) => t.dispatchedOperationId)
   const received = grouped(transferGraphs, (t) => t.receivedOperationId)
   const cancelled = grouped(transferGraphs, (t) => t.cancelledOperationId)
   return input.owners.map((op) => ({
     ...op,
     store: required(storeById, op.storeId, "operation Store"),
+    transferAcknowledgment: op.transferAcknowledgment
+      ? {
+          ...op.transferAcknowledgment,
+          transfer: required(
+            transferById,
+            op.transferAcknowledgment.transferId,
+            "acknowledged transfer",
+          ),
+        }
+      : null,
     movements: (movementsByOperation.get(op.id) ?? []).map((m) => ({
       ...m,
       enteredInventoryUnit: required(

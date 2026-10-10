@@ -21,14 +21,29 @@ import {
   assertCanReadCatalog,
 } from "../trpc/routers/catalog"
 import { assertCanUseCustomers } from "../trpc/routers/customers"
+import { assertCanManageInventory } from "../trpc/routers/inventory"
 import { assertCanOperateOrders } from "../trpc/routers/orders"
 import { assertServiceOperator } from "../trpc/routers/service-permissions"
 import { staffProcedureAction } from "../utils/staff-procedure-policy"
+import { generalCapabilityEnabled } from "./general-rollout"
 export type GeneralContext = TRPCContext & {
   session: NonNullable<TRPCContext["session"]>
   tenantContext: NonNullable<TRPCContext["tenantContext"]>
 }
-type GeneralScopeContext = Pick<GeneralContext, "session" | "tenantContext">
+type GeneralScopeContext = Pick<GeneralContext, "session" | "tenantContext"> &
+  Partial<Pick<GeneralContext, "requestHeaders">>
+
+/** Client compatibility only; this never grants domain or role authority. */
+export function supportsGeneralCapability(
+  ctx: GeneralScopeContext,
+  capability: Capability,
+) {
+  const client =
+    ctx.requestHeaders?.get("x-assistant-client") === "dashboard"
+      ? "dashboard"
+      : "mobile"
+  return capability.clients.includes(client)
+}
 type TenantContext = GeneralContext["tenantContext"]
 export function requireGeneralScope(
   ctx: GeneralScopeContext,
@@ -71,8 +86,40 @@ export function requireGeneralScope(
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "search.records": () => {},
+  "catalog.history.read": (tenant) => assertCanReadCatalog(tenant.membership.role),
+  "catalog.page": (tenant) => assertCanReadCatalog(tenant.membership.role),
+  "catalog.count": (tenant) => assertCanReadCatalog(tenant.membership.role),
+  "customers.page": (tenant) => assertCanUseCustomers(tenant.membership.role),
+  "customers.count": (tenant) => assertCanUseCustomers(tenant.membership.role),
+  "stores.count": () => {},
+  "sales.order_contacts.count": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
   "catalog.item.read": (tenant) => assertCanReadCatalog(tenant.membership.role),
+  "inventory.closeout.create": (tenant) => assertCanManageInventory(tenant),
+  "inventory.closeout.finalize": (tenant) => assertCanManageInventory(tenant),
+  "inventory.closeout.list": (tenant) => assertCanManageInventory(tenant),
+  "inventory.closeout.read": (tenant) => assertCanManageInventory(tenant),
+  "inventory.count.read": (tenant) => assertCanManageInventory(tenant),
+  "inventory.count.create": (tenant) => assertCanManageInventory(tenant),
+  "inventory.count.finalize": (tenant) => assertCanManageInventory(tenant),
+  "inventory.operations.history": (tenant) => assertCanManageInventory(tenant),
+  "inventory.operations.read": (tenant) => assertCanManageInventory(tenant),
+  "inventory.transfer.list": (tenant) => assertCanManageInventory(tenant),
+  "inventory.transfer.read": (tenant) => assertCanManageInventory(tenant),
+  "inventory.transfer.dispatch": (tenant) => assertCanManageInventory(tenant),
+  "inventory.transfer.receive": (tenant) => assertCanManageInventory(tenant),
+  "inventory.transfer.cancel": (tenant) => assertCanManageInventory(tenant),
+  "inventory.stock.adjust": (tenant) => assertCanManageInventory(tenant),
+  "inventory.stock.correct": (tenant) => assertCanManageInventory(tenant),
+  "inventory.stock.receive": (tenant) => assertCanManageInventory(tenant),
   "inventory.offering_stock.read": () => {},
+  "inventory.totals.read": () => {},
+  "inventory.balances.read": () => {},
+  "inventory.low_stock.read": () => {},
+  "sales.orders.lookup": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "sales.orders.summary": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
   "sales.orders.read": (tenant) =>
     assertCanOperateOrders(tenant.membership.role),
   "sales.summary.read": (tenant) =>
@@ -81,11 +128,18 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertCanOperateOrders(tenant.membership.role),
   "services.queue.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
+  "customers.receivables.read": (tenant) => assertFinanceAccess(tenant),
   "customers.accounts.read": (tenant) => assertFinanceAccess(tenant),
   "customers.read": (tenant) => assertCanUseCustomers(tenant.membership.role),
   "customers.update": (tenant) => assertCanUseCustomers(tenant.membership.role),
   "customers.create": (tenant) => assertCanUseCustomers(tenant.membership.role),
   "catalog.product.create": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.units.draft": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.units.publish": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.availability.update": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.price.update": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.details.update": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.identifiers.update": (tenant) => assertCanManageCatalog(tenant),
   "sales.order.create": (tenant) =>
     assertCanOperateOrders(tenant.membership.role),
   "sales.payment.record": (tenant) =>
@@ -123,6 +177,16 @@ export function assertCapability(
   capability: Capability,
 ) {
   const scope = requireGeneralScope(ctx)
+  if (!generalCapabilityEnabled(capability))
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This capability is not enabled for this assistant pilot.",
+    })
+  if (!supportsGeneralCapability(ctx, capability))
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Use the dashboard to review this action.",
+    })
   const tenant = ctx.tenantContext
   const role = normalizeRole(tenant.membership.role)
   if (!role || !capability.policy.roles.includes(role as CapabilityRole))

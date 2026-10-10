@@ -6,6 +6,7 @@ import {
   generalReceiptSchema,
 } from "@ewatrade/assistant/general/contracts"
 import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
+import { tracePhase } from "@ewatrade/db/performance-tracing"
 import {
   generalProposalWhere,
   lockGeneralMembership,
@@ -252,7 +253,11 @@ export async function decideGeneralProposal(
         "Approval expired or changed. Review and save the draft again.",
       )
     const adapter = generalActionAdapter(payload)
-    if (!sameTarget(await validateDraft(fresh, payload, true), row))
+    const prepareExecution = adapter.prepareExecution?.bind(adapter)
+    const prepared = prepareExecution
+      ? await tracePhase("proposalReview", () => prepareExecution(fresh, payload))
+      : null
+    if (!sameTarget(prepared ? prepared.target : await validateDraft(fresh, payload, true), row))
       throw conflict(adapter.stale)
     const claimed = await fresh.db.assistantActionProposal.updateMany({
       where: {
@@ -265,7 +270,11 @@ export async function decideGeneralProposal(
     })
     if (claimed.count !== 1)
       throw conflict("Draft changed. Refresh before confirming.")
-    const receipt = await adapter.execute(fresh, payload, row.idempotencyKey)
+    const receipt = await tracePhase("proposalExecution", () =>
+      prepared
+        ? prepared.execute(row.idempotencyKey)
+        : adapter.execute(fresh, payload, row.idempotencyKey),
+    )
     const completed = await fresh.db.assistantActionProposal.update({
       where: { id: row.id },
       data: {

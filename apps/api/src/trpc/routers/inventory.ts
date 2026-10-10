@@ -1,3 +1,4 @@
+import { canStaffPerform } from "@ewatrade/auth/store-access"
 import {
   type EwaTradeRole,
   canManageSalesOperations,
@@ -21,7 +22,14 @@ import {
   getConfiguredCatalogOfferingAvailability,
   getInventoryReconciliationSummary,
   getStockOperationAudit,
+  getStockCountReview,
+  getStockTransferReview,
+  getInventoryCloseoutReview,
+  listInventoryCloseouts,
+  listCatalogLowStockPage,
   listInventoryBalanceReport,
+  listInventoryBalancePage,
+  listInventoryCompatibleTotalsPage,
   listInventoryOperationHistory,
   listStockOperationCategoryNames,
   listStockTransfers,
@@ -37,15 +45,22 @@ import { TRPCError } from "@trpc/server"
 import {
   inventoryAuditExportSchema,
   inventoryBalanceReportSchema,
+  inventoryBalancePageSchema,
+  inventoryCompatibleTotalsPageSchema,
   inventoryCategorySuggestionsSchema,
   inventoryCommitReservationSchema,
   inventoryCorrectOperationSchema,
   inventoryCreateCloseoutSchema,
   inventoryCreateStockCountSchema,
+  inventoryStockCountReviewSchema,
+  inventoryTransferReviewSchema,
+  inventoryCloseoutReviewSchema,
+  inventoryListCloseoutsSchema,
   inventoryDispatchTransferSchema,
   inventoryFinalizeCloseoutSchema,
   inventoryFinalizeStockCountSchema,
   inventoryListTransfersSchema,
+  inventoryLowStockPageSchema,
   inventoryMoveCustodySchema,
   inventoryOfferingAvailabilitySchema,
   inventoryOperationAuditSchema,
@@ -70,7 +85,7 @@ function inventoryRole(role: string): EwaTradeRole {
   return normalized
 }
 
-function assertCanManageInventory(tenant: TenantContext) {
+export function assertCanManageInventory(tenant: TenantContext) {
   if (tenant.staffAccess?.mode === "SCOPED") return // Central procedure guard checks the requested Store and action.
   const normalized = inventoryRole(tenant.membership.role)
   if (!canManageSalesOperations(normalized)) {
@@ -164,6 +179,26 @@ export const inventoryRouter = createTRPCRouter({
       })
     }),
 
+  transferReview: protectedProcedure
+    .input(inventoryTransferReviewSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
+      try {
+        return await getStockTransferReview(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          storeId,
+          transferId: input.transferId,
+          allowedStoreIds: ctx.tenantContext.stores
+            .filter((store) => !ctx.tenantContext.staffAccess || canStaffPerform(ctx.tenantContext.staffAccess, "stock", store.id))
+            .map((store) => store.id),
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
   transfers: protectedProcedure
     .input(inventoryListTransfersSchema)
     .query(({ ctx, input }) => {
@@ -188,6 +223,63 @@ export const inventoryRouter = createTRPCRouter({
       })
     }),
 
+  lowStockPage: protectedProcedure
+    .input(inventoryLowStockPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return listCatalogLowStockPage(ctx.db, {
+        ...input,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  compatibleTotalsPage: protectedProcedure
+    .input(inventoryCompatibleTotalsPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await listInventoryCompatibleTotalsPage(ctx.db, {
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+  balancePage: protectedProcedure
+    .input(inventoryBalancePageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await listInventoryBalancePage(ctx.db, {
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
   balanceReport: protectedProcedure
     .input(inventoryBalanceReportSchema)
     .query(async ({ ctx, input }) => {
@@ -202,6 +294,7 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryOperationAuditSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
+      if (input.storeId) resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
       return getStockOperationAudit(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -266,6 +359,27 @@ export const inventoryRouter = createTRPCRouter({
       }
     }),
 
+  closeouts: protectedProcedure
+    .input(inventoryListCloseoutsSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
+      return listInventoryCloseouts(ctx.db, { ...input, storeId, tenantId: ctx.tenantContext.tenant.id })
+    }),
+
+  closeoutReview: protectedProcedure
+    .input(inventoryCloseoutReviewSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
+      try {
+        return await getInventoryCloseoutReview(ctx.db, { ...input, storeId, tenantId: ctx.tenantContext.tenant.id })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
   createCloseout: protectedProcedure
     .input(inventoryCreateCloseoutSchema)
     .mutation(async ({ ctx, input }) => {
@@ -285,6 +399,27 @@ export const inventoryRouter = createTRPCRouter({
       } catch (error) {
         if (error instanceof CatalogError || error instanceof FinanceError)
           throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  stockCountReview: protectedProcedure
+    .input(inventoryStockCountReviewSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await getStockCountReview(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          storeId,
+          stockCountId: input.stockCountId,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
         throw error
       }
     }),

@@ -140,3 +140,44 @@ export async function listCatalogCategories(
     { maxWait: 10_000, timeout: 30_000 },
   )
 }
+
+/** Read-only label preview uses the same preset/key rules as category resolution. */
+export async function previewCatalogCategoryLabel(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  category: string | null,
+) {
+  const label = category?.trim()
+  if (!label) return null
+  const preset = CATALOG_CATEGORY_PRESETS.find(
+    (entry) =>
+      normalized(entry.label) === normalized(label) ||
+      normalized(label).startsWith(`${normalized(entry.label)} / `),
+  )
+  const rootLabel = preset?.label ?? label
+  const childLabel =
+    preset && label.includes(" / ")
+      ? label.slice(label.indexOf(" / ") + 3).trim()
+      : null
+  const rootKey = preset
+    ? `preset:${preset.key}`
+    : `custom:${customKey(rootLabel)}`
+  const root = await tx.catalogCategory.findUnique({
+    where: { tenantId_key: { tenantId, key: rootKey } },
+  })
+  if (!childLabel) return root?.label ?? rootLabel
+  const childPreset = preset?.subcategories.find(
+    (entry) => normalized(entry.label) === normalized(childLabel),
+  )
+  const childKey = childPreset
+    ? `preset:${childPreset.key}`
+    : root
+      ? `child:${root.id}:${customKey(childLabel)}`
+      : null
+  const child = childKey
+    ? await tx.catalogCategory.findUnique({
+        where: { tenantId_key: { tenantId, key: childKey } },
+      })
+    : null
+  return `${root?.label ?? rootLabel} / ${child?.label ?? childLabel}`
+}

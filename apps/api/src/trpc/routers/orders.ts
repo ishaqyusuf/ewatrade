@@ -18,12 +18,14 @@ import {
   fulfillCommercialOrderProductLine,
   fulfillCommercialOrderProducts,
   getCommercialOrder,
+  getCommercialOrderOperationalSummary,
   getCommercialOrderReminderSettings,
   getCommercialOrderReportSummary,
   listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
   lookupCommercialOrders,
+  lookupCommercialOrdersPage,
   recordCommercialOrderPayment,
   returnCommercialOrderProductLine,
   updateCommercialOrderReminderSettings,
@@ -42,7 +44,10 @@ import {
   orderReceiptSettingsSaveSchema,
 } from "../../schemas/order-receipts"
 
-import { orderLookupSchema } from "../../schemas/order-visibility"
+import {
+  orderLookupPageSchema,
+  orderLookupSchema,
+} from "../../schemas/order-visibility"
 import {
   commercialOrderAuthorizeChargeOnlyServiceLineSchema,
   commercialOrderCreateSchema,
@@ -52,6 +57,7 @@ import {
   commercialOrderGetSchema,
   commercialOrderListPageSchema,
   commercialOrderListSchema,
+  commercialOrderOperationalSummarySchema,
   commercialOrderPaymentSchema,
   commercialOrderPaymentsListPageSchema,
   commercialOrderReminderSettingsGetSchema,
@@ -263,6 +269,21 @@ export const ordersRouter = createTRPCRouter({
     })
   }),
 
+  operationalSummary: protectedProcedure
+    .input(commercialOrderOperationalSummarySchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return getCommercialOrderOperationalSummary(ctx.db, {
+        ...input,
+        ...(await orderScope(ctx, { storeId })),
+      })
+    }),
+
   reportSummary: protectedProcedure
     .input(commercialOrderReportSummarySchema.optional())
     .query(async ({ ctx, input }) => {
@@ -375,6 +396,27 @@ export const ordersRouter = createTRPCRouter({
       } catch (error) {
         if (error instanceof CatalogError || error instanceof FinanceError)
           throw orderError(error)
+        throw error
+      }
+    }),
+
+  lookupOpenPage: protectedProcedure
+    .input(orderLookupPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+      )
+      try {
+        return await lookupCommercialOrdersPage(ctx.db, {
+          ...input,
+          ...(await orderScope(ctx, {
+            storeId,
+          })),
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw orderError(error)
         throw error
       }
     }),

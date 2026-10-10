@@ -116,6 +116,14 @@ export function OrderDetails({
           ) : null}
         </div>
       ))}
+      {order.notes ? (
+        <div className="grid gap-1">
+          <h4 className="text-sm font-medium">Sale notes</h4>
+          <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+            {order.notes}
+          </p>
+        </div>
+      ) : null}
       <dl className="grid grid-cols-2 gap-2 text-sm">
         <dt>Total</dt>
         <dd className="text-right font-semibold">

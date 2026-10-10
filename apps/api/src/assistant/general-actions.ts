@@ -1,3 +1,4 @@
+import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import type {
   GeneralAction,
   GeneralActionName,
@@ -25,7 +26,25 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
-import { type GeneralContext, requireGeneralScope } from "./general-context"
+import {
+  assertGeneralAction,
+  type GeneralContext,
+  requireGeneralScope,
+} from "./general-context"
+import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
+import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
+import { stockReceive } from "./general-stock-receipt"
+import { stockTransferDispatch, stockTransferReceive, stockTransferCancel } from "./general-stock-transfer"
+import { productAvailabilityUpdate } from "./general-product-availability"
+import {
+  productDetailsUpdate,
+  productIdentifiersUpdate,
+} from "./general-product-details"
+import { productPriceUpdate } from "./general-product-price"
+import {
+  productUnitConfigurationDraft,
+  productUnitConfigurationPublish,
+} from "./general-product-units"
 import { proposalDigest } from "./proposal-security"
 
 export type GeneralTransactionContext = Omit<GeneralContext, "db"> & {
@@ -42,7 +61,7 @@ type Action<Name extends GeneralActionName> = Extract<
  * every call (see `assertCapability`); adapters only validate, describe and
  * execute through the same transaction commands as the forms.
  */
-type GeneralActionAdapter<A extends GeneralAction> = {
+export type GeneralActionAdapter<A extends GeneralAction> = {
   /** Server-owned completion of a draft before it is bound and signed. */
   prepare?(ctx: GeneralTransactionContext, payload: A): Promise<A>
   /** Check targets and references. `lock` is set while confirming. */
@@ -56,6 +75,11 @@ type GeneralActionAdapter<A extends GeneralAction> = {
     ctx: GeneralTransactionContext,
     payload: A,
   ): Promise<{ lines: string[]; target: ProposalTarget | null }>
+  /** A locked review and its transaction-local command; never retained across confirmations. */
+  prepareExecution?(ctx: GeneralTransactionContext, payload: A): Promise<{
+    target: ProposalTarget | null
+    execute(key: string): Promise<GeneralReceipt>
+  }>
   /** Shown when the bound target changed after drafting. */
   stale: string
   /** Shown when the review cannot be read. */
@@ -312,7 +336,12 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         code: "NOT_FOUND",
         message: "Customer unavailable.",
       })
-    await readGeneralOrderReview(ctx.db, scope, payload.lines)
+    const review = await readGeneralOrderReview(ctx.db, scope, payload.lines)
+    if (payload.initialPayment) {
+      assertGeneralAction(ctx, "payment_record")
+      if (payload.initialPayment.amountMinor > review.totalMinor)
+        throw conflict("Initial payment exceeds the order total.")
+    }
     for (const line of payload.lines) {
       const offering = await ctx.db.sellableOffering.findFirst({
         where: { id: line.offeringId, tenantId: scope.tenantId },
@@ -331,6 +360,11 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   async review(ctx, payload) {
     const scope = requireGeneralScope(ctx)
     const review = await readGeneralOrderReview(ctx.db, scope, payload.lines)
+    if (payload.initialPayment) {
+      assertGeneralAction(ctx, "payment_record")
+      if (payload.initialPayment.amountMinor > review.totalMinor)
+        throw conflict("Initial payment exceeds the order total.")
+    }
     const customer = payload.customerId
       ? await ctx.db.customer.findFirst({
           where: { id: payload.customerId, tenantId: scope.tenantId },
@@ -343,6 +377,18 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         ...review.lines,
         `Total: ${currency(ctx)} ${major(review.totalMinor)}`,
         `Customer: ${customer?.name ?? "Walk-in"}`,
+        ...(payload.initialPayment
+          ? [
+              `Record received: ${currency(ctx)} ${major(payload.initialPayment.amountMinor)} · ${payload.initialPayment.method.replaceAll("_", " ")}`,
+              `Remaining balance: ${currency(ctx)} ${major(review.totalMinor - payload.initialPayment.amountMinor)}`,
+              ...(payload.initialPayment.note
+                ? [`Payment note: ${payload.initialPayment.note}`]
+                : []),
+              "Creates the order and records this payment together. No bank transfer or card charge is initiated.",
+            ]
+          : [
+              `Remaining balance: ${currency(ctx)} ${major(review.totalMinor)} · no payment recorded`,
+            ]),
         ...(payload.notes ? [payload.notes] : []),
       ],
     }
@@ -353,9 +399,32 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   async execute(ctx, payload, key) {
     const scope = requireGeneralScope(ctx)
     const { action: _, ...input } = payload
+    if (payload.initialPayment) assertGeneralAction(ctx, "payment_record")
+    const customer = payload.customerId
+      ? await ctx.db.customer.findFirst({
+          where: { id: payload.customerId, tenantId: scope.tenantId },
+          select: { name: true, phone: true, email: true },
+        })
+      : null
+    if (payload.customerId && !customer) throw conflict("Customer unavailable.")
     const result = await createCommercialOrderInTransaction(ctx.db, {
       ...commercialOrderCreateSchema.parse({
         ...input,
+        ...(customer
+          ? {
+              customerName: customer.name,
+              customerPhone: customer.phone ?? undefined,
+              customerEmail: customer.email ?? undefined,
+            }
+          : {}),
+        ...(payload.initialPayment
+          ? {
+              initialPayment: {
+                ...payload.initialPayment,
+                clientPaymentId: `${key}:initial`,
+              },
+            }
+          : {}),
         storeId: scope.storeId,
         clientOrderId: key,
         schemaVersion: 1,
@@ -369,7 +438,7 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       recordId: result.id,
       orderId: result.id,
       title: "Order created",
-      detail: result.orderNumber,
+      detail: `${result.orderNumber} · total ${currency(ctx)} ${major(result.totalMinor)} · received ${major(result.amountPaidMinor)} · remaining ${major(result.balanceDueMinor)}`,
     }
   },
 }
@@ -418,11 +487,27 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
 const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
+  stock_receive: stockReceive,
+  inventory_closeout_create: closeoutCreate,
+  inventory_closeout_finalize: closeoutFinalize,
+  stock_transfer_dispatch: stockTransferDispatch,
+  stock_transfer_receive: stockTransferReceive,
+  stock_transfer_cancel: stockTransferCancel,
+  stock_adjust: stockAdjust,
+  stock_correct: stockCorrect,
+  stock_count_create: stockCountCreate,
+  stock_count_finalize: stockCountFinalize,
   customer_create: customerCreate,
   product_create: productCreate,
   order_create: orderCreate,
   payment_record: paymentRecord,
   customer_update: customerUpdate,
+  product_unit_configuration_draft: productUnitConfigurationDraft,
+  product_unit_configuration_publish: productUnitConfigurationPublish,
+  product_availability_update: productAvailabilityUpdate,
+  product_price_update: productPriceUpdate,
+  product_details_update: productDetailsUpdate,
+  product_identifiers_update: productIdentifiersUpdate,
 }
 export function generalActionAdapter<A extends GeneralAction>(payload: A) {
   return adapters[payload.action] as unknown as GeneralActionAdapter<A>

@@ -84,6 +84,15 @@ const catalogOfferingFields = {
 
 const catalogPriceMinorSchema = z.coerce.number().int().min(0).max(100_000_000)
 
+export const catalogUpdatePriceSchema = z
+  .object({
+    offeringId: z.string().trim().min(1).max(128),
+    expectedRevision: z.number().int().nonnegative(),
+    priceMinor: catalogPriceMinorSchema,
+    reason: z.string().trim().min(1).max(500),
+  })
+  .strict()
+
 const catalogFixedOfferingSchema = z
   .object({
     ...catalogOfferingFields,
@@ -339,7 +348,12 @@ export const catalogListItemsSchema = z
   })
   .strict()
 
+export const catalogCountSchema = catalogListItemsSchema.extend({
+  nameContains: z.string().trim().min(1).max(160).optional(),
+})
+
 export const catalogListItemsPageSchema = catalogListItemsSchema.extend({
+  searchOrder: z.enum(["relevance", "stable"]).optional(),
   cursor: z.string().trim().min(1).optional(),
   direction: z.enum(["forward", "backward"]).optional(),
   limit: z.number().int().min(1).max(50).default(20),
@@ -417,3 +431,33 @@ export const catalogSetProductUsageSchema = z
     expectedUpdatedAt: z.coerce.date(),
   })
   .strict()
+
+export const catalogUpdateProductDetailsSchema = z
+  .object({
+    catalogItemId: z.string().trim().min(1).max(128),
+    expectedUpdatedAt: z.string().datetime(),
+    name: z.string().trim().min(1).max(160).optional(),
+    description: z.string().trim().max(2_000).nullable().optional(),
+    category: z.string().trim().max(120).nullable().optional(),
+  })
+  .strict()
+  .refine(
+    (v) =>
+      v.name !== undefined ||
+      v.description !== undefined ||
+      v.category !== undefined,
+    "Choose a field to update.",
+  )
+
+export const catalogUpdateProductIdentifiersSchema = z
+  .object({
+    offeringId: z.string().trim().min(1).max(128),
+    expectedRevision: z.number().int().nonnegative(),
+    sku: z.string().trim().max(120).nullable().optional(),
+    barcode: z.string().trim().max(120).nullable().optional(),
+  })
+  .strict()
+  .refine(
+    (v) => v.sku !== undefined || v.barcode !== undefined,
+    "Choose an identifier to update.",
+  )

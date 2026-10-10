@@ -1,6 +1,7 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { FinanceError } from "../finance/rules"
+import { literalContains } from "../literal-contains"
 import { getCustomerLedgerTotalsInTransaction } from "./balances"
 
 /** Bounded account page. Totals cover each complete account, never just its visible entries. */
@@ -22,21 +23,50 @@ export async function listCustomerLedgerReceivables(
     async (tx) => {
       await assertFinanceManager(tx, input)
       const query = input.query?.trim()
+      const where: Prisma.CustomerLedgerAccountWhereInput = {
+        tenantId: input.tenantId,
+        ...(query
+          ? {
+              customer: {
+                OR: [
+                  {
+                    name: {
+                      contains: literalContains(query),
+                      mode: "insensitive" as const,
+                    },
+                  },
+                  {
+                    phone: {
+                      contains: literalContains(query),
+                      mode: "insensitive" as const,
+                    },
+                  },
+                  {
+                    email: {
+                      contains: literalContains(query),
+                      mode: "insensitive" as const,
+                    },
+                  },
+                ],
+              },
+            }
+          : {}),
+      }
+      if (
+        input.cursor &&
+        !(await tx.customerLedgerAccount.findFirst({
+          where: { AND: [where, { id: input.cursor }] },
+          select: { id: true },
+        }))
+      )
+        throw new FinanceError(
+          "CONFLICT",
+          "The receivables list changed. Refresh to continue.",
+        )
       const rows = await tx.customerLedgerAccount.findMany({
         where: {
-          tenantId: input.tenantId,
+          ...where,
           ...(input.cursor ? { id: { gt: input.cursor } } : {}),
-          ...(query
-            ? {
-                customer: {
-                  OR: [
-                    { name: { contains: query, mode: "insensitive" } },
-                    { phone: { contains: query, mode: "insensitive" } },
-                    { email: { contains: query, mode: "insensitive" } },
-                  ],
-                },
-              }
-            : {}),
         },
         orderBy: { id: "asc" },
         take: limit + 1,

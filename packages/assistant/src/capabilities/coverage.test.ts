@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { z } from "zod"
+import { generalActionSchema } from "../general/contracts"
 import {
   buildCapabilityCoverage,
   ruleFor,
@@ -16,14 +17,13 @@ test("the manifest registers every reviewed action with schema, policy and recei
   expect(
     capabilityManifest
       .filter((entry) => entry.mode === "write")
-      .map((entry) => entry.action),
-  ).toEqual([
-    "customer_create",
-    "product_create",
-    "order_create",
-    "payment_record",
-    "customer_update",
-  ])
+      .map((entry) => entry.action)
+      .sort(),
+  ).toEqual(
+    generalActionSchema.options
+      .map((option) => option.shape.action.value)
+      .sort(),
+  )
   expect(
     write.schema.safeParse({ action: "customer_create", name: "Amina" }),
   ).toMatchObject({ success: true })

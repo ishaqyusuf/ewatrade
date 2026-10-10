@@ -57,6 +57,7 @@ export function TRPCReactProvider({
 
             return {
               "x-trpc-source": "react",
+              "x-assistant-client": "dashboard",
               "x-ewatrade-analytics": events.canCollect()
                 ? "allowed"
                 : "denied",

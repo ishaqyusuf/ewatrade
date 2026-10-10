@@ -6,24 +6,28 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 514 (373 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 14
-- Merchant planned: 199
-- Merchant form-only: 116
+- Router procedures: 527 (386 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 51
+- Merchant planned: 171
+- Merchant form-only: 120
 - Merchant excluded: 44
-- Capabilities: 14 (9 read, 5 write)
+- Capabilities: 50 (29 read, 21 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `search.global` |
-| `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.getItem` |
+| `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard | source | `catalog.detail.orders`, `catalog.detail.activity` |
+| `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.detail.overview` |
+| `inventory.totals.read` | 1 | read | `readInventoryTotals` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.compatibleTotalsPage` |
+| `inventory.balances.read` | 1 | read | `readInventoryBalances` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.balancePage` |
 | `inventory.offering_stock.read` | 1 | read | `readOfferingStock` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `inventory.configuredOfferingAvailability` |
 | `sales.orders.read` | 1 | read | `readOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.listPage` |
 | `sales.summary.read` | 1 | read | `readSalesSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.reportSummary` |
 | `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.get` |
 | `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `services.queuePage` |
+| `customers.receivables.read` | 1 | read | `readReceivables` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `customerLedger.receivables` |
 | `customers.accounts.read` | 1 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `customerLedger.accounts` |
 | `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `customers.getById` |
 | `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.create` |
@@ -31,20 +35,47 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile | source | `orders.create` |
 | `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | dashboard, mobile | source | `orders.recordPayment` |
 | `customers.update` | 1 | write (`customer_update`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.update` |
+| `catalog.price.update` | 1 | write (`product_price_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.updatePrice` |
+| `catalog.details.update` | 1 | write (`product_details_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.updateProductDetails` |
+| `catalog.identifiers.update` | 1 | write (`product_identifiers_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.updateProductIdentifiers` |
+| `catalog.availability.update` | 1 | write (`product_availability_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.setOfferingAvailability` |
+| `catalog.units.draft` | 1 | write (`product_unit_configuration_draft`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog, catalog | dashboard | source | `catalog.createUnitConfigurationDraft`, `catalog.updateUnitConfigurationDraft` |
+| `catalog.units.publish` | 1 | write (`product_unit_configuration_publish`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.publishUnitConfiguration` |
+| `sales.orders.summary` | 1 | read | `readOrderSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.operationalSummary` |
+| `inventory.low_stock.read` | 1 | read | `readLowStock` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.lowStockPage` |
+| `catalog.count` | 1 | read | `readCatalogCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `catalog.count` |
+| `sales.order_contacts.count` | 1 | read | `readOrderContactCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.customerCount` |
+| `customers.count` | 1 | read | `readCustomerCount` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | source | `customers.count` |
+| `stores.count` | 1 | read | `readStoreCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `tenant.stores` |
+| `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | source | `customers.listPage` |
+| `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `catalog.listItemsPage` |
+| `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.lookupOpenPage` |
+| `inventory.stock.receive` | 1 | write (`stock_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock, stock | dashboard | source | `inventory.postBalanceOperation`, `inventory.categorySuggestions` |
+| `inventory.stock.adjust` | 1 | write (`stock_adjust`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.postBalanceOperation` |
+| `inventory.stock.correct` | 1 | write (`stock_correct`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.correctOperation` |
+| `inventory.count.create` | 1 | write (`stock_count_create`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.createStockCount` |
+| `inventory.count.finalize` | 1 | write (`stock_count_finalize`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.finalizeStockCount` |
+| `inventory.count.read` | 1 | read | `readStockCount` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.stockCountReview` |
+| `inventory.operations.history` | 1 | read | `readStockOperations` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.operationHistory` |
+| `inventory.operations.read` | 1 | read | `readStockOperation` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.operationAudit` |
+| `inventory.closeout.create` | 1 | write (`inventory_closeout_create`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.createCloseout` |
+| `inventory.closeout.finalize` | 1 | write (`inventory_closeout_finalize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.finalizeCloseout` |
+| `inventory.closeout.list` | 1 | read | `readInventoryCloseouts` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.closeouts` |
+| `inventory.closeout.read` | 1 | read | `readInventoryCloseout` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.closeoutReview` |
+| `inventory.transfer.list` | 1 | read | `readStockTransfers` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transfers` |
+| `inventory.transfer.read` | 1 | read | `readStockTransfer` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transferReview` |
+| `inventory.transfer.dispatch` | 1 | write (`stock_transfer_dispatch`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.dispatchTransfer` |
+| `inventory.transfer.receive` | 1 | write (`stock_transfer_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transitionTransfer` |
+| `inventory.transfer.cancel` | 1 | write (`stock_transfer_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transitionTransfer` |
 
 ## Planned merchant procedures by ticket
 
 | Ticket | Procedures |
 |---|---|
 | B02 | 5 |
-| B03 | 9 |
-| B04 | 12 |
+| B03 | 5 |
 | B05 | 2 |
-| C01 | 2 |
-| C02 | 2 |
-| C03 | 2 |
-| C04 | 3 |
-| C05 | 3 |
+| C05 | 1 |
 | D02 | 4 |
 | D03 | 1 |
 | D04 | 3 |
@@ -63,7 +94,6 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | S01 | 1 |
 | S02 | 1 |
 | S03 | 1 |
-| S05 | 1 |
 
 ## Merchant procedures
 
@@ -80,26 +110,30 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `catalog.archiveVariant` | mutation | catalog | catalog | planned | G04 |
 | `catalog.categories.list` | query | read | catalog | planned | B02 |
 | `catalog.categories.suggest` | mutation | Owner/Admin only | catalog | planned | B02 |
+| `catalog.count` | query | read | catalog | supported | catalog.count |
 | `catalog.createItem` | mutation | catalog | catalog | planned | B03 |
 | `catalog.createSimpleItem` | mutation | catalog | catalog | supported | catalog.product.create |
-| `catalog.createUnitConfigurationDraft` | mutation | catalog | catalog | planned | B03 |
+| `catalog.createUnitConfigurationDraft` | mutation | catalog | catalog | supported | catalog.units.draft |
 | `catalog.createUnitDefinition` | mutation | catalog | catalog | planned | B03 |
-| `catalog.detail.activity` | query | read | catalog | planned | B04 |
-| `catalog.detail.orders` | query | read | catalog | planned | B04 |
-| `catalog.detail.overview` | query | read | catalog | planned | B04 |
-| `catalog.getItem` | query | read | catalog | supported | catalog.item.read |
-| `catalog.listItems` | query | read | catalog | planned | B04 |
-| `catalog.listItemsPage` | query | read | catalog | planned | B04 |
+| `catalog.detail.activity` | query | read | catalog | supported | catalog.history.read |
+| `catalog.detail.orders` | query | read | catalog | supported | catalog.history.read |
+| `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
+| `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
+| `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
+| `catalog.listItemsPage` | query | read | catalog | supported | catalog.page |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
 | `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
 | `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.getMetadata` | query | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
-| `catalog.publishUnitConfiguration` | mutation | catalog | catalog | planned | B03 |
-| `catalog.setOfferingAvailability` | mutation | catalog | catalog | planned | B03 |
+| `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
+| `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
-| `catalog.updateUnitConfigurationDraft` | mutation | catalog | catalog | planned | B03 |
+| `catalog.updatePrice` | mutation | catalog | catalog | supported | catalog.price.update |
+| `catalog.updateProductDetails` | mutation | catalog | catalog | supported | catalog.details.update |
+| `catalog.updateProductIdentifiers` | mutation | catalog | catalog | supported | catalog.identifiers.update |
+| `catalog.updateUnitConfigurationDraft` | mutation | catalog | catalog | supported | catalog.units.draft |
 | `customerLedger.accountDetail` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.accounts` | query | Owner/Admin only | customers | supported | customers.accounts.read |
 | `customerLedger.allocationHistory` | query | Owner/Admin only | customers | planned | E02 |
@@ -107,7 +141,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customerLedger.commandStatus` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.ensureAccount` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.entryDetail` | query | Owner/Admin only | customers | planned | E02 |
-| `customerLedger.receivables` | query | Owner/Admin only | customers | planned | B04 |
+| `customerLedger.receivables` | query | Owner/Admin only | customers | supported | customers.receivables.read |
 | `customerLedger.recordOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
 | `customerLedger.recordReceipt` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.refundUnusedCredit` | mutation | Owner/Admin only | customers | planned | E02 |
@@ -115,10 +149,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.sources` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.statement` | query | Owner/Admin only | customers | planned | E02 |
-| `customers.count` | query | Owner/Admin only | customers | planned | B04 |
+| `customers.count` | query | Owner/Admin only | customers | supported | customers.count |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |
-| `customers.listPage` | query | Owner/Admin only | customers | planned | B04 |
+| `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page |
 | `customers.update` | mutation | Owner/Admin only | customers | supported | customers.update |
 | `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.connectExternal` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
@@ -191,27 +225,34 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `finance.voidExpense` | mutation | Owner/Admin only | finance | planned | E04 |
 | `finance.yearEndPreview` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `inventory.auditExport` | query | stock | inventory | form_only | Bulk file export; download it from the page. |
-| `inventory.balanceReport` | query | stock | inventory | planned | B04 |
-| `inventory.categorySuggestions` | query | stock | inventory | planned | C01 |
+| `inventory.balancePage` | query | stock | inventory | supported | inventory.balances.read |
+| `inventory.balanceReport` | query | stock | inventory | form_only | Legacy full response; assistant uses balancePage and compatibleTotalsPage, preserving complete source-group totals with response pagination. |
+| `inventory.categorySuggestions` | query | stock | inventory | supported | inventory.stock.receive |
+| `inventory.closeoutReview` | query | reconciliation | inventory | supported | inventory.closeout.read |
+| `inventory.closeouts` | query | reconciliation | inventory | supported | inventory.closeout.list |
 | `inventory.commitReservation` | mutation | orders | inventory | planned | G04 |
+| `inventory.compatibleTotalsPage` | query | stock | inventory | supported | inventory.totals.read |
 | `inventory.configuredOfferingAvailability` | query | read | inventory | supported | inventory.offering_stock.read |
-| `inventory.correctOperation` | mutation | stock | inventory | planned | C03 |
-| `inventory.createCloseout` | mutation | reconciliation | inventory | planned | C05 |
-| `inventory.createStockCount` | mutation | stock | inventory | planned | C02 |
-| `inventory.dispatchTransfer` | mutation | stock | inventory | planned | C04 |
-| `inventory.finalizeCloseout` | mutation | reconciliation | inventory | planned | C05 |
-| `inventory.finalizeStockCount` | mutation | stock | inventory | planned | C02 |
+| `inventory.correctOperation` | mutation | stock | inventory | supported | inventory.stock.correct |
+| `inventory.createCloseout` | mutation | reconciliation | inventory | supported | inventory.closeout.create |
+| `inventory.createStockCount` | mutation | stock | inventory | supported | inventory.count.create |
+| `inventory.dispatchTransfer` | mutation | stock | inventory | supported | inventory.transfer.dispatch |
+| `inventory.finalizeCloseout` | mutation | reconciliation | inventory | supported | inventory.closeout.finalize |
+| `inventory.finalizeStockCount` | mutation | stock | inventory | supported | inventory.count.finalize |
+| `inventory.lowStockPage` | query | stock | inventory | supported | inventory.low_stock.read |
 | `inventory.moveCustody` | mutation | stock | inventory | planned | G04 |
-| `inventory.offeringAvailability` | query | read | inventory | planned | B04 |
-| `inventory.operationAudit` | query | stock | staff | planned | S05 |
-| `inventory.operationHistory` | query | stock | inventory | planned | C03 |
-| `inventory.postBalanceOperation` | mutation | stock | inventory | planned | C01 |
+| `inventory.offeringAvailability` | query | read | inventory | form_only | Legacy availability may initialize a zero source; assistant uses configuredOfferingAvailability, which never creates missing stock. |
+| `inventory.operationAudit` | query | stock | inventory | supported | inventory.operations.read |
+| `inventory.operationHistory` | query | stock | inventory | supported | inventory.operations.history |
+| `inventory.postBalanceOperation` | mutation | stock | inventory | supported | inventory.stock.receive, inventory.stock.adjust |
 | `inventory.reconciliationReport` | query | reconciliation | inventory | planned | C05 |
 | `inventory.releaseReservation` | mutation | orders | inventory | planned | G04 |
 | `inventory.reserveOffering` | mutation | orders | inventory | planned | G04 |
-| `inventory.transfers` | query | stock | inventory | planned | C04 |
+| `inventory.stockCountReview` | query | stock | inventory | supported | inventory.count.read |
+| `inventory.transferReview` | query | stock | inventory | supported | inventory.transfer.read |
+| `inventory.transfers` | query | stock | inventory | supported | inventory.transfer.list |
 | `inventory.transformPackagedStock` | mutation | stock | inventory | planned | G04 |
-| `inventory.transitionTransfer` | mutation | stock | inventory | planned | C04 |
+| `inventory.transitionTransfer` | mutation | stock | inventory | supported | inventory.transfer.receive, inventory.transfer.cancel |
 | `offline.conflicts` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.registerDevice` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.replay` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
@@ -220,14 +261,16 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `offline.updateSettings` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `orders.authorizeChargeOnlyServiceLine` | mutation | reconciliation | sales | planned | D02 |
 | `orders.create` | mutation | orders | sales | supported | sales.order.create |
-| `orders.customerCount` | query | read | customers | planned | B04 |
+| `orders.customerCount` | query | read | sales | supported | sales.order_contacts.count |
 | `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | planned | D02 |
 | `orders.fulfillProductLine` | mutation | orders | sales | planned | D02 |
 | `orders.fulfillProducts` | mutation | orders | sales | planned | D02 |
 | `orders.get` | query | read | sales | supported | sales.order.read |
 | `orders.list` | query | read | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
 | `orders.listPage` | query | read | sales | supported | sales.orders.read |
-| `orders.lookupOpen` | query | read | sales | planned | B04 |
+| `orders.lookupOpen` | query | read | sales | form_only | Legacy payment/fulfilment lookup exception; assistant uses lookupOpenPage with normal list visibility and continuation. |
+| `orders.lookupOpenPage` | query | read | sales | supported | sales.orders.lookup |
+| `orders.operationalSummary` | query | read | sales | supported | sales.orders.summary |
 | `orders.payments` | query | read | sales | planned | B05 |
 | `orders.prepareReceipts` | query | read | sales | planned | B05 |
 | `orders.receiptSettings` | query | read | sales | planned | G05 |
@@ -441,4 +484,4 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `tenant.current` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
 | `tenant.featureAvailability` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
 | `tenant.storeContext` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
-| `tenant.stores` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.stores` | query | read | search | supported | stores.count |

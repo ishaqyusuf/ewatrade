@@ -151,3 +151,33 @@ describe("Commercial Order report summary for a date window", () => {
     })
   })
 })
+
+test("date-window overflow is explicitly partial, never a complete total", async () => {
+  const { REPORT_SUMMARY_WINDOW_LIMIT } = await import("./commercial-orders")
+  let requested = 0
+  const db = {
+    commercialOrder: {
+      findMany: async ({ take }: { take: number }) => {
+        requested = take
+        return Array.from({ length: REPORT_SUMMARY_WINDOW_LIMIT + 1 }, () => ({
+          _count: { payments: 0 },
+          amountPaidMinor: 0,
+          lines: [],
+          paymentStatus: "UNPAID",
+          payments: [],
+          totalMinor: 100,
+        }))
+      },
+    },
+  } as unknown as PrismaClient
+  const summary = await getCommercialOrderReportSummary(db, {
+    tenantId: "tenant",
+    storeId: "store",
+    createdAfter: new Date("2026-10-01T00:00:00Z"),
+  })
+  expect(requested).toBe(REPORT_SUMMARY_WINDOW_LIMIT + 1)
+  expect(summary).toMatchObject({
+    partial: true,
+    orderCount: REPORT_SUMMARY_WINDOW_LIMIT,
+  })
+})

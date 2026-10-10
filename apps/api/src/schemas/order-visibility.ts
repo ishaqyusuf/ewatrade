@@ -22,3 +22,19 @@ export const orderLookupSchema = z
   .refine((input) => Object.values(input).filter(Boolean).length === 1, {
     message: "Choose an order number, customer, or phone number.",
   })
+
+export const orderLookupPageSchema = z
+  .object({
+    customerId: z.string().trim().min(1).max(128).optional(),
+    phone: z.string().trim().min(3).max(80).optional(),
+    orderNumber: z.string().trim().min(1).max(160).optional(),
+    cursor: z.string().trim().min(1).max(128).optional(),
+    limit: z.number().int().min(1).max(50).optional(),
+  })
+  .strict()
+  .refine(
+    (input) =>
+      [input.customerId, input.phone, input.orderNumber].filter(Boolean)
+        .length === 1,
+    "Choose an order number, customer, or phone number.",
+  )

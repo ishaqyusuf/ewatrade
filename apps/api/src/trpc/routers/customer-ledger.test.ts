@@ -28,6 +28,7 @@ test("ledger router loads implemented repository procedures", () => {
 })
 
 const inputs = {
+  receivables: { limit: 10 },
   allocationHistory: {
     accountId: "account-1",
     allocationId: "allocation-1",
@@ -100,6 +101,7 @@ const inputs = {
 
 function callEveryProcedure(caller: Caller) {
   return [
+    caller.receivables(inputs.receivables),
     caller.ensureAccount(inputs.ensureAccount),
     caller.recordOpening(inputs.recordOpening),
     caller.recordReceipt(inputs.recordReceipt),
@@ -161,7 +163,9 @@ test("all ledger reads and writes reject unauthenticated callers before DB effec
   } as never)
 
   const results = await Promise.allSettled(callEveryProcedure(caller))
-  expect(results).toHaveLength(14)
+  expect(results).toHaveLength(
+    Object.keys(customerLedgerRouter._def.procedures).length,
+  )
   for (const result of results) {
     expect(result.status).toBe("rejected")
     if (result.status === "rejected") {
@@ -187,7 +191,9 @@ test("all ledger reads and writes reject non-owner/admin roles before DB effects
   const caller = createCaller(baseContext({ db, role: "MANAGER" }) as never)
 
   const results = await Promise.allSettled(callEveryProcedure(caller))
-  expect(results).toHaveLength(14)
+  expect(results).toHaveLength(
+    Object.keys(customerLedgerRouter._def.procedures).length,
+  )
   for (const result of results) {
     expect(result.status).toBe("rejected")
     if (result.status === "rejected") {

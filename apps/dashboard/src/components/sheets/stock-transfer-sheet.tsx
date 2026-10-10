@@ -1,4 +1,5 @@
 "use client"
+import { StockTransferHistory } from "@/components/inventory/stock-transfer-history"
 import {
   inventoryDate,
   inventoryLabel,
@@ -20,6 +21,7 @@ export function StockTransferSheet({
     trpc.inventory.transitionTransfer.mutationOptions({
       onSuccess: async () => {
         await Promise.all([
+          queryClient.invalidateQueries({ queryKey: trpc.inventory.transferReview.pathKey() }),
           queryClient.invalidateQueries({
             queryKey: trpc.inventory.transfers.queryKey(),
           }),
@@ -103,9 +105,10 @@ export function StockTransferSheet({
               {[
                 ["Status", inventoryLabel(record.status)],
                 [
-                  "Quantity",
+                  "Originally dispatched",
                   `${formatInventoryQuantity(record.quantity)} ${record.inventoryUnitName}`,
                 ],
+                ["Remaining in transit", `${formatInventoryQuantity(record.remainingQuantity)} ${record.inventoryUnitName}`],
                 ["From", record.sourceStore.name],
                 ["To", record.targetStore.name],
                 ["Created (UTC)", inventoryDate(record.createdAt)],
@@ -117,6 +120,7 @@ export function StockTransferSheet({
                 </div>
               ))}
             </dl>
+            <StockTransferHistory key={record.id} transferId={record.id} storeId={storeId} />
             {actionable ? (
               <p className="text-muted-foreground">
                 {!storeId || record.targetStore.id === storeId

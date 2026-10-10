@@ -1,8 +1,29 @@
 import { describe, expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
-import { resolveInventoryRelocationSourceInTransaction } from "./inventory-relocation-source"
+import { resolveLoadedInventoryRelocationSource } from "./inventory-relocation-source"
 import { FinanceError } from "./rules"
 
+// These tests exercise the pure source proof; repository loading has its own suite.
+async function resolveFixtureSource(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; stockOperationId: string },
+) {
+  const operation = await tx.stockOperation.findFirst({
+    where: { id: input.stockOperationId },
+  })
+  const book = await tx.financeBook.findUnique({
+    where: {
+      tenantId_currencyCode: { tenantId: input.tenantId, currencyCode: "NGN" },
+    },
+  })
+  return resolveLoadedInventoryRelocationSource(
+    operation as unknown as Parameters<
+      typeof resolveLoadedInventoryRelocationSource
+    >[0],
+    input.tenantId,
+    book,
+  )
+}
 const decimal = (value: string) => ({ toFixed: () => value })
 const timestamp = new Date("2026-09-15T12:00:00.000Z")
 const sourceStore = {
@@ -473,7 +494,7 @@ function custodyFixture(
 async function resolve(value: {
   tx: Prisma.TransactionClient
 }) {
-  return resolveInventoryRelocationSourceInTransaction(value.tx, {
+  return resolveFixtureSource(value.tx, {
     tenantId: "tenant-1",
     stockOperationId: "operation-1",
   })
@@ -484,7 +505,7 @@ describe("inventory relocation source proof", () => {
     const f = custodyFixture()
     f.operation.committedReservation = { id: "reservation" }
     await expect(
-      resolveInventoryRelocationSourceInTransaction(f.tx, {
+      resolveFixtureSource(f.tx, {
         tenantId: "tenant-1",
         stockOperationId: "custody-operation",
       }),
@@ -492,19 +513,18 @@ describe("inventory relocation source proof", () => {
   })
   test("proves custody assignment and return from the persisted custody graph", async () => {
     const assignment = custodyFixture()
-    const assignmentResult =
-      await resolveInventoryRelocationSourceInTransaction(assignment.tx, {
-        tenantId: "tenant-1",
-        stockOperationId: "custody-operation",
-      })
+    const assignmentResult = await resolveFixtureSource(assignment.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "custody-operation",
+    })
     expect(assignmentResult?.sourceKind).toBe("INVENTORY_CUSTODY_MOVE")
     expect(assignmentResult?.sourceId).toBe("custody-operation")
 
     const returned = custodyFixture({ returning: true })
-    const returnResult = await resolveInventoryRelocationSourceInTransaction(
-      returned.tx,
-      { tenantId: "tenant-1", stockOperationId: "custody-operation" },
-    )
+    const returnResult = await resolveFixtureSource(returned.tx, {
+      tenantId: "tenant-1",
+      stockOperationId: "custody-operation",
+    })
     expect(returnResult?.source.balance.id).toBe("balance-staff")
     expect(returnResult?.target.balance.id).toBe("balance-store")
   })
@@ -603,16 +623,16 @@ describe("inventory relocation source proof", () => {
     factorMovement.balanceSource.inventoryUnit.factor = decimal("2")
     await expect(resolve(badFactor)).rejects.toBeInstanceOf(FinanceError)
     await expect(
-      resolveInventoryRelocationSourceInTransaction(
-        custodyFixture({ invalidParent: true }).tx,
-        { tenantId: "tenant-1", stockOperationId: "custody-operation" },
-      ),
+      resolveFixtureSource(custodyFixture({ invalidParent: true }).tx, {
+        tenantId: "tenant-1",
+        stockOperationId: "custody-operation",
+      }),
     ).rejects.toBeInstanceOf(FinanceError)
     await expect(
-      resolveInventoryRelocationSourceInTransaction(
-        custodyFixture({ hasTransferOwner: true }).tx,
-        { tenantId: "tenant-1", stockOperationId: "custody-operation" },
-      ),
+      resolveFixtureSource(custodyFixture({ hasTransferOwner: true }).tx, {
+        tenantId: "tenant-1",
+        stockOperationId: "custody-operation",
+      }),
     ).rejects.toBeInstanceOf(FinanceError)
   })
 
@@ -620,4 +640,67 @@ describe("inventory relocation source proof", () => {
     const f = transferFixture({ correctionCount: 1 })
     expect((await resolve(f))?.correctionCount).toBe(1)
   })
+})
+
+function acknowledgedReceiptFixture(partial: boolean) {
+  const f = transferFixture({
+    stage: "receive",
+    status: partial ? "IN_TRANSIT" : "RECEIVED",
+  })
+  const quantity = partial ? "10" : "2"
+  const remaining = partial ? "8" : "0"
+  f.transfer.enteredQuantity = decimal(quantity)
+  f.transfer.canonicalQuantity = decimal(quantity)
+  f.operation.movements[0]!.previousOnHandQuantity = decimal(quantity)
+  f.operation.movements[0]!.resultingOnHandQuantity = decimal(remaining)
+  if (partial) {
+    f.transfer.receivedOperationId = null
+    f.transfer.receivedAt = null
+    f.operation.receivedTransfers = []
+  }
+  const acknowledgment = {
+    id: "acknowledgment",
+    tenantId: "tenant-1",
+    transferId: f.transfer.id,
+    operationId: f.operation.id,
+    acknowledgedByUserId: f.operation.actorUserId,
+    reason: "Confirmed delivery",
+    effectiveAt: timestamp,
+    kind: "RECEIVE",
+    quantity: decimal("2"),
+    remainingBefore: decimal(quantity),
+    remainingAfter: decimal(remaining),
+    transfer: f.transfer,
+  }
+  Object.assign(f.operation, {
+    reason: acknowledgment.reason,
+    transferAcknowledgment: acknowledgment,
+  })
+  return { ...f, acknowledgment }
+}
+
+test("partial transfer receipt owns a financial source without a terminal link", async () => {
+  const f = acknowledgedReceiptFixture(true)
+  const result = await resolve(f)
+  expect(result?.sourceKind).toBe("STOCK_TRANSFER_RECEIVE")
+  expect(result?.freshStageValid).toBe(true)
+  expect(result?.source.effect).toBe("-2")
+  f.transfer.status = "CANCELLED"
+  expect((await resolve(f))?.freshStageValid).toBe(false)
+})
+
+test("matching terminal and acknowledgment links identify one stage; conflicts fail", async () => {
+  const f = acknowledgedReceiptFixture(false)
+  expect((await resolve(f))?.freshStageValid).toBe(true)
+  f.acknowledgment.transferId = "other-transfer"
+  await expect(resolve(f)).rejects.toBeInstanceOf(FinanceError)
+})
+
+test("acknowledgment cannot invent transit history or replace the actor", async () => {
+  const f = acknowledgedReceiptFixture(true)
+  f.acknowledgment.remainingAfter = decimal("7")
+  await expect(resolve(f)).rejects.toBeInstanceOf(FinanceError)
+  f.acknowledgment.remainingAfter = decimal("8")
+  f.acknowledgment.acknowledgedByUserId = "other-actor"
+  await expect(resolve(f)).rejects.toBeInstanceOf(FinanceError)
 })

@@ -5,21 +5,11 @@ import {
   readSavedOrdinaryCorrectionSource,
   resolveLoadedOrdinaryCorrectionSource,
 } from "./inventory-ordinary-correction-source"
+import { calculateOrdinaryCorrectionCost, type CorrectionCost } from "./ordinary-correction-cost"
 import { FinanceError, assertFinancePostingDate } from "./rules"
-import {
-  calculateWeightedAverageIssue,
-  normalizeQuantity,
-} from "./valuation-math"
+import { normalizeQuantity } from "./valuation-math"
 const ZERO = BigInt(0)
 const MAX_MINOR = BigInt("9223372036854775807")
-type CorrectionCost = Pick<
-  Prisma.FinanceInventoryValuationEventGetPayload<{ include: { pool: true } }>,
-  | "sourceCostMinor"
-  | "valueBeforeMinor"
-  | "valueDeltaMinor"
-  | "valueAfterMinor"
-  | "unknownReason"
->
 function conflict(message: string): never {
   throw new FinanceError("CONFLICT", message)
 }
@@ -169,97 +159,17 @@ export async function recordOrdinaryStockCorrectionValuationInTransaction(
     unknownReason = pool.unknownReason ?? "PRIOR_UNKNOWN_COST"
   }
 
-  const createInverseValue = (): CorrectionCost => {
-    if (originalEffectNegative) {
-      const restoredCost = targetEvent?.sourceCostMinor ?? null
-      if (restoredCost === null) {
-        return {
-          sourceCostMinor: null,
-          valueBeforeMinor,
-          valueDeltaMinor: null,
-          valueAfterMinor: null,
-          unknownReason: unknownReason ?? "PRIOR_UNKNOWN_COST",
-        }
-      }
-      if (valueBeforeMinor === null) {
-        return {
-          sourceCostMinor: restoredCost,
-          valueBeforeMinor: null,
-          valueDeltaMinor: null,
-          valueAfterMinor: null,
-          unknownReason: unknownReason ?? "PRIOR_UNKNOWN_COST",
-        }
-      }
-      const valueAfterMinor = valueBeforeMinor + restoredCost
-      if (valueAfterMinor > MAX_MINOR)
-        throw new FinanceError(
-          "INVALID_AMOUNT",
-          "Inventory value exceeds its limit.",
-        )
-      return {
-        sourceCostMinor: restoredCost,
-        valueBeforeMinor,
-        valueDeltaMinor: restoredCost,
-        valueAfterMinor,
-        unknownReason: null,
-      }
-    }
-    if (valueBeforeMinor === null) {
-      return {
-        sourceCostMinor: null,
-        valueBeforeMinor: null,
-        valueDeltaMinor: null,
-        valueAfterMinor: null,
-        unknownReason: unknownReason ?? "PRIOR_UNKNOWN_COST",
-      }
-    }
-    const issue = calculateWeightedAverageIssue({
-      quantityBefore: inverseCanonicalBefore,
-      valueBeforeMinor,
-      quantityIssued: originalCanonical,
-    })
-    return {
-      sourceCostMinor: issue.valueIssuedMinor,
-      valueBeforeMinor,
-      valueDeltaMinor: -issue.valueIssuedMinor,
-      valueAfterMinor: issue.valueAfterMinor,
-      unknownReason: null,
-    }
-  }
-  const inverseValue = createInverseValue()
-  let replacementValue: CorrectionCost
-  if (replacementEffect.startsWith("-")) {
-    if (inverseValue.valueAfterMinor === null) {
-      replacementValue = {
-        sourceCostMinor: null,
-        valueBeforeMinor: null,
-        valueDeltaMinor: null,
-        valueAfterMinor: null,
-        unknownReason: inverseValue.unknownReason ?? "PRIOR_UNKNOWN_COST",
-      }
-    } else {
-      const issue = calculateWeightedAverageIssue({
-        quantityBefore: inverseAfterCanonical,
-        valueBeforeMinor: inverseValue.valueAfterMinor,
-        quantityIssued: replacementCanonical,
-      })
-      replacementValue = {
-        sourceCostMinor: issue.valueIssuedMinor,
-        valueBeforeMinor: inverseValue.valueAfterMinor,
-        valueDeltaMinor: -issue.valueIssuedMinor,
-        valueAfterMinor: issue.valueAfterMinor,
-        unknownReason: null,
-      }
-    }
-  } else {
-    replacementValue = {
-      sourceCostMinor: null,
-      valueBeforeMinor: inverseValue.valueAfterMinor,
-      valueDeltaMinor: null,
-      valueAfterMinor: null,
-      unknownReason: "UNCAPTURED_MOVEMENTS",
-    }
-  }
+  const { inverseValue, replacementValue } = calculateOrdinaryCorrectionCost({
+    originalEffectNegative,
+    originalSourceCostMinor: targetEvent?.sourceCostMinor ?? null,
+    valueBeforeMinor,
+    unknownReason,
+    inverseCanonicalBefore,
+    originalCanonical,
+    replacementEffect,
+    inverseAfterCanonical,
+    replacementCanonical,
+  })
 
   const firstSequence = (pool?.lastSequence ?? ZERO) + BigInt(1)
   const secondSequence = firstSequence + BigInt(1)

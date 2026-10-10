@@ -1,3 +1,6 @@
+import { verifyStockTransferComposition } from "./general-stock-transfer.integration-check"
+import { verifyStockAdjustmentComposition } from "./general-stock-adjustment.integration-check"
+import { verifyStockCountComposition } from "./general-stock-count.integration-check"
 import { describe, expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import {
@@ -18,8 +21,26 @@ import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { resolveModel } from "./chat-route"
 import { generalBudgetScopeKey } from "./general-allowance"
+import {
+  verifyAvailabilityCommand,
+  verifyAvailabilityProposal,
+} from "./general-availability-command.integration-check"
+import { verifyCatalogPages } from "./general-catalog-page.integration-check"
 import { registerGeneralAssistantChatRoutes } from "./general-chat-route"
 import type { GeneralContext } from "./general-context"
+import { verifyDirectoryCounts } from "./general-counts.integration-check"
+import { verifyLowStock } from "./general-low-stock.integration-check"
+import { verifyCatalogItemScope } from "./general-catalog-item.integration-check"
+import { verifyReceivables } from "./general-receivables.integration-check"
+import { verifyOpenOrderPages } from "./general-open-order.integration-check"
+import { verifyOrderContactCount } from "./general-order-contact-count.integration-check"
+import { verifyOperationalOrderSummary } from "./general-order-summary.integration-check"
+import { verifyStockReceiptComposition } from "./general-stock-receipt.integration-check"
+import { verifySalePayment } from "./general-sale-payment.integration-check"
+import { verifyPricingMatrix } from "./general-pricing-matrix.integration-check"
+import { verifyGeneralProductDetails } from "./general-product-details.integration-check"
+import { verifyGeneralPriceUpdate } from "./general-product-price.integration-check"
+import { verifyGeneralProductTransport } from "./general-product-transport.integration-check"
 import {
   decideGeneralProposal,
   draftGeneralProposal,
@@ -27,6 +48,8 @@ import {
   generalProposalForApp,
   generalProposalWithReview,
 } from "./general-proposals"
+import { verifyUnitCommands } from "./general-unit-command.integration-check"
+import { verifyUnitProposals } from "./general-unit-proposal.integration-check"
 const enabled = process.env.RUN_GENERAL_ASSISTANT_INTEGRATION === "1"
 if (enabled) setDefaultTimeout(600_000)
 ;(enabled ? describe : describe.skip)(
@@ -53,6 +76,7 @@ if (enabled) setDefaultTimeout(600_000)
           "Runtime database does not match the verified isolated target",
         )
       const marker = randomUUID()
+      console.info(`General proposal QA run: ${marker}`)
       let tenantId: string | undefined
       let userId: string | undefined
       try {
@@ -132,7 +156,69 @@ if (enabled) setDefaultTimeout(600_000)
           storeId: store.id,
           userId: user.id,
         }
-        await verifyGeneralTransport(ctx, session.token)
+        if (process.env.RUN_GENERAL_CATALOG_SCOPE === "1" || process.env.RUN_GENERAL_CATALOG_HISTORY === "1") {
+          await verifyCatalogItemScope(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_RECEIVABLES === "1") {
+          await verifyReceivables(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_ORDER_CONTACT_COUNT === "1") {
+          await verifyOrderContactCount(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_OPEN_ORDER === "1") {
+          await verifyOpenOrderPages(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_CATALOG_PAGE === "1") {
+          await verifyCatalogPages(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_LOOKUPS === "1") {
+          await verifyDirectoryCounts(ctx)
+          await verifyOperationalOrderSummary(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_COUNTS === "1") {
+          await verifyDirectoryCounts(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_LOW_STOCK === "1" || process.env.RUN_GENERAL_BALANCE_PAGE === "1") {
+          await verifyLowStock(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_ORDER_SUMMARY === "1") {
+          await verifyOperationalOrderSummary(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_PRICING_MATRIX === "1") {
+          await verifyPricingMatrix(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_UNIT_COMMAND === "1") {
+          await verifyUnitCommands(ctx)
+          await verifyUnitProposals(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_AVAILABILITY_COMMAND === "1") {
+          await verifyAvailabilityCommand(ctx)
+          await verifyAvailabilityProposal(ctx)
+          return
+        }
+        if (process.env.RUN_GENERAL_PRODUCT_TRANSPORT === "1") {
+          await verifyGeneralProductTransport(ctx, session.token)
+          return
+        }
+        if (
+          process.env.RUN_GENERAL_STOCK_TRANSFER === "1" &&
+          process.env.RUN_GENERAL_STOCK_TRANSFER_PROBE === "1"
+        ) {
+          console.info("Transfer diagnostic only: API transport acceptance skipped")
+        } else {
+          await verifyGeneralTransport(ctx, session.token)
+        }
         const conversation = await startGeneralConversation(db, scope)
         const drafted = await draftGeneralProposal(ctx, conversation.id, {
           action: "customer_create",
@@ -201,6 +287,26 @@ if (enabled) setDefaultTimeout(600_000)
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_STOCK_TRANSFER === "1") {
+          await verifyStockTransferComposition(ctx, failingDb, conversation.id)
+          return
+        }
+        if (process.env.RUN_GENERAL_STOCK_ADJUSTMENT === "1") {
+          await verifyStockAdjustmentComposition(ctx, failingDb, conversation.id)
+          return
+        }
+        if (process.env.RUN_GENERAL_STOCK_COUNT === "1") {
+          await verifyStockCountComposition(ctx, failingDb, conversation.id)
+          return
+        }
+        if (process.env.RUN_GENERAL_STOCK_RECEIPT === "1") {
+          await verifyStockReceiptComposition(ctx, failingDb, conversation.id)
+          return
+        }
+        if (process.env.RUN_GENERAL_SALE_PAYMENT === "1") {
+          await verifySalePayment(ctx, failingDb, conversation.id)
+          return
+        }
         await expect(
           decideGeneralProposal({ ...ctx, db: failingDb }, command),
         ).rejects.toThrow("Injected receipt failure")
@@ -505,6 +611,21 @@ if (enabled) setDefaultTimeout(600_000)
             })
           ).amountPaidMinor,
         ).toBe(1500)
+        if (!orderResult.receipt) throw Error("Order receipt missing")
+        await verifyGeneralPriceUpdate(
+          ctx,
+          failingDb,
+          conversation.id,
+          offering.id,
+          orderResult.receipt.recordId,
+        )
+        await verifyGeneralProductDetails(
+          ctx,
+          failingDb,
+          conversation.id,
+          offering.id,
+          orderResult.receipt.recordId,
+        )
         // B01: customer updates are revision-bound, diffed and never rewrite orders.
         const atomic = await db.customer.findFirstOrThrow({
           where: { tenantId: tenant.id, name: "Atomic customer" },
@@ -687,6 +808,10 @@ if (enabled) setDefaultTimeout(600_000)
               await tx.commercialOrder.deleteMany({
                 where: { tenantId: owned.id },
               })
+              await tx.stockCount.deleteMany({ where: { tenantId: owned.id } })
+              await tx.stockTransfer.deleteMany({ where: { tenantId: owned.id } })
+              await tx.stockMovement.deleteMany({ where: { operation: { tenantId: owned.id } } })
+              await tx.stockOperation.deleteMany({ where: { tenantId: owned.id } })
               await tx.assistantBudget.deleteMany({
                 where: {
                   scopeKey: { startsWith: `assistant:${owned.id}:GENERAL:` },
@@ -700,6 +825,7 @@ if (enabled) setDefaultTimeout(600_000)
           await db.user.deleteMany({
             where: { id: userId, email: `general-${marker}@example.invalid` },
           })
+        console.info(`General proposal ${marker}: owned fixture cleanup complete`)
         await db.$disconnect()
       }
     })

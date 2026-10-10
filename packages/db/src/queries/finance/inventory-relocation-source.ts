@@ -4,6 +4,8 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import type { Prisma } from "../../../generated/prisma/client"
 import { FinanceError } from "./rules"
+import { readInventoryRelocationGraph } from "./inventory-relocation-graph"
+import { proveTransferAcknowledgment } from "./transfer-acknowledgment-proof"
 import {
   addQuantities,
   normalizeQuantity,
@@ -64,6 +66,9 @@ export const relocationSourceInclude = {
       finalizedCloseouts: true,
       corrections: true,
     },
+  },
+  transferAcknowledgment: {
+    include: { transfer: { include: transferInclude } },
   },
   dispatchedTransfers: { include: transferInclude },
   receivedTransfers: { include: transferInclude },
@@ -268,7 +273,8 @@ function validateCommonPair(operation: RelocationOperation, tenantId: string) {
 }
 
 function identifyTransferStage(operation: RelocationOperation) {
-  const linked = [
+  const acknowledgment = operation.transferAcknowledgment ?? null
+  const legacy = [
     ...operation.dispatchedTransfers.map((transfer) => ({
       transfer,
       kind: "STOCK_TRANSFER_DISPATCH" as const,
@@ -285,7 +291,36 @@ function identifyTransferStage(operation: RelocationOperation) {
       operationId: transfer.cancelledOperationId,
     })),
   ]
-  if (linked.length !== 1 || linked[0]?.operationId !== operation.id) {
+  const linked = acknowledgment
+    ? [
+        {
+          transfer: acknowledgment.transfer,
+          kind:
+            acknowledgment.kind === "RECEIVE"
+              ? ("STOCK_TRANSFER_RECEIVE" as const)
+              : ("STOCK_TRANSFER_CANCEL" as const),
+          operationId: acknowledgment.operationId,
+          acknowledgment,
+        },
+      ]
+    : legacy.map((stage) => ({ ...stage, acknowledgment: null }))
+  if (
+    acknowledgment &&
+    legacy.some(
+      (stage) =>
+        stage.transfer.id !== acknowledgment.transferId ||
+        stage.operationId !== acknowledgment.operationId ||
+        stage.kind !== linked[0]?.kind,
+    )
+  )
+    conflict(
+      "Stock transfer acknowledgment conflicts with its legacy stage owner.",
+    )
+  if (
+    legacy.length > 1 ||
+    linked.length !== 1 ||
+    linked[0]?.operationId !== operation.id
+  ) {
     conflict("Stock transfer operation must own exactly one linked stage.")
   }
   const stage = linked[0]
@@ -301,6 +336,39 @@ function validateTransferSource(
   tenantId: string,
 ) {
   const transfer = stage.transfer
+  const acknowledgment = stage.acknowledgment
+  const stageDate =
+    acknowledgment?.effectiveAt ??
+    (stage.kind === "STOCK_TRANSFER_RECEIVE"
+      ? transfer.receivedAt
+      : transfer.cancelledAt)
+  const stageOperationId =
+    acknowledgment?.operationId ??
+    (stage.kind === "STOCK_TRANSFER_RECEIVE"
+      ? transfer.receivedOperationId
+      : transfer.cancelledOperationId)
+  const acknowledgedPlan = acknowledgment
+    ? proveTransferAcknowledgment({
+        tenantId,
+        transferId: transfer.id,
+        operationId: operation.id,
+        actorUserId: operation.actorUserId,
+        operationReason: operation.reason,
+        operationDate: operation.effectiveAt,
+        dispatchedAt: transfer.dispatchedAt ?? new Date(NaN),
+        dispatchedQuantity: transfer.enteredQuantity.toFixed(),
+        transactionScale: transfer.inventoryUnit.transactionScale,
+        sourceBefore: source.movement.previousOnHandQuantity.toFixed(),
+        sourceAfter: source.movement.resultingOnHandQuantity.toFixed(),
+        movementQuantity: source.movement.enteredQuantity.toFixed(),
+        acknowledgment: {
+          ...acknowledgment,
+          quantity: acknowledgment.quantity.toFixed(),
+          remainingBefore: acknowledgment.remainingBefore.toFixed(),
+          remainingAfter: acknowledgment.remainingAfter.toFixed(),
+        },
+      })
+    : null
   const sourceStore = transfer.sourceStore
   const targetStore = transfer.targetStore
   const transit = transfer.transitBalanceSource
@@ -369,9 +437,9 @@ function validateTransferSource(
       target.balance.custodyType !== "STORE" ||
       target.balance.custodyReferenceId !== "" ||
       transfer.dispatchedAt === null ||
-      transfer.receivedAt === null ||
-      transfer.receivedAt < transfer.dispatchedAt ||
-      transfer.receivedOperationId !== operation.id)
+      stageDate === null ||
+      stageDate < transfer.dispatchedAt ||
+      stageOperationId !== operation.id)
   ) {
     conflict("Stock transfer receipt does not match its persisted owner.")
   }
@@ -388,17 +456,20 @@ function validateTransferSource(
       target.balance.custodyType !== "STORE" ||
       target.balance.custodyReferenceId !== "" ||
       transfer.dispatchedAt === null ||
-      transfer.cancelledAt === null ||
-      transfer.cancelledAt < transfer.dispatchedAt ||
-      transfer.cancelledOperationId !== operation.id)
+      stageDate === null ||
+      stageDate < transfer.dispatchedAt ||
+      stageOperationId !== operation.id)
   ) {
     conflict("Stock transfer cancellation does not match its persisted owner.")
   }
 
-  const inputQuantity = parseExactDecimal(transfer.enteredQuantity.toFixed(), {
-    allowZero: false,
-    maxScale: transfer.inventoryUnit.transactionScale,
-  })
+  const inputQuantity = parseExactDecimal(
+    acknowledgment?.quantity.toFixed() ?? transfer.enteredQuantity.toFixed(),
+    {
+      allowZero: false,
+      maxScale: transfer.inventoryUnit.transactionScale,
+    },
+  )
   const factor = normalizeQuantity(transfer.unitFactorSnapshot.toFixed())
   const canonical = normalizeQuantity(
     multiplyExactDecimals(inputQuantity, factor, 18),
@@ -406,17 +477,17 @@ function validateTransferSource(
   if (
     factor === "0" ||
     factor !== normalizeQuantity(transfer.inventoryUnit.factor.toFixed()) ||
-    canonical !== normalizeQuantity(transfer.canonicalQuantity.toFixed()) ||
+    normalizeQuantity(
+      multiplyExactDecimals(transfer.enteredQuantity.toFixed(), factor, 18),
+    ) !== normalizeQuantity(transfer.canonicalQuantity.toFixed()) ||
     source.movement.enteredInventoryUnitId !== transfer.inventoryUnitId ||
     target.movement.enteredInventoryUnitId !== transfer.inventoryUnitId ||
     source.movement.configurationVersionId !==
       transfer.configurationVersionId ||
     target.movement.configurationVersionId !==
       transfer.configurationVersionId ||
-    source.movement.enteredQuantity.toFixed() !==
-      transfer.enteredQuantity.toFixed() ||
-    target.movement.enteredQuantity.toFixed() !==
-      transfer.enteredQuantity.toFixed() ||
+    source.movement.enteredQuantity.toFixed() !== inputQuantity ||
+    target.movement.enteredQuantity.toFixed() !== inputQuantity ||
     source.effect !== `-${canonical}` ||
     target.effect !== canonical
   ) {
@@ -426,11 +497,12 @@ function validateTransferSource(
   }
 
   const operationStageDate =
-    stage.kind === "STOCK_TRANSFER_DISPATCH"
+    acknowledgment?.effectiveAt ??
+    (stage.kind === "STOCK_TRANSFER_DISPATCH"
       ? transfer.dispatchedAt
       : stage.kind === "STOCK_TRANSFER_RECEIVE"
         ? transfer.receivedAt
-        : transfer.cancelledAt
+        : transfer.cancelledAt)
   if (
     operationStageDate === null ||
     !Number.isFinite(operationStageDate.getTime()) ||
@@ -438,8 +510,9 @@ function validateTransferSource(
   ) {
     conflict("Stock transfer source date does not match its linked operation.")
   }
-  const freshStageValid =
-    stage.kind === "STOCK_TRANSFER_DISPATCH"
+  const freshStageValid = acknowledgedPlan
+    ? transfer.status === acknowledgedPlan.status
+    : stage.kind === "STOCK_TRANSFER_DISPATCH"
       ? transfer.status === "IN_TRANSIT"
       : stage.kind === "STOCK_TRANSFER_RECEIVE"
         ? transfer.status === "RECEIVED"
@@ -455,6 +528,7 @@ function validateCustodySource(
   if (
     (operation.type !== "CUSTODY_ASSIGNMENT" &&
       operation.type !== "CUSTODY_RETURN") ||
+    operation.transferAcknowledgment != null ||
     operation.dispatchedTransfers.length > 0 ||
     operation.receivedTransfers.length > 0 ||
     operation.cancelledTransfers.length > 0 ||
@@ -507,12 +581,7 @@ export async function resolveInventoryRelocationSourceInTransaction(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; stockOperationId: string },
 ) {
-  const operation = await tx.stockOperation.findFirst({
-    where: { id: input.stockOperationId, tenantId: input.tenantId },
-    include: relocationSourceInclude,
-  })
-  if (!operation)
-    throw new FinanceError("NOT_FOUND", "Stock operation not found.")
+  const operation = await readInventoryRelocationGraph(tx, input)
   const { operationCurrency } = prepareRelocation(operation, input.tenantId)
   const book = await tx.financeBook.findUnique({
     where: {

@@ -279,6 +279,26 @@ export async function recordInventoryRelocationValuationInTransaction(
     tenantId: input.tenantId,
     stockOperationId: input.stockOperationId,
   })
+  return recordResolvedInventoryRelocationValuationInTransaction(
+    tx,
+    input,
+    relocation,
+  )
+}
+
+/** Same posting rules over an already proven source; repository loading stays separate. */
+export async function recordResolvedInventoryRelocationValuationInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string
+    stockOperationId: string
+    expectedSourceStockRevision: number
+    expectedTargetStockRevision: number
+  },
+  relocation: Awaited<
+    ReturnType<typeof resolveInventoryRelocationSourceInTransaction>
+  >,
+) {
   if (!relocation) return null
 
   const { book, operation, source, target } = relocation
@@ -287,6 +307,7 @@ export async function recordInventoryRelocationValuationInTransaction(
   const effectiveAt = operation.effectiveAt
   const actorUserId = operation.actorUserId
   if (
+    operation.id !== input.stockOperationId ||
     book.tenantId !== input.tenantId ||
     book.currencyCode !== sourceBalance.store.currencyCode ||
     sourceBalance.store.currencyCode !== targetBalance.store.currencyCode ||

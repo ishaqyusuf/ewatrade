@@ -109,7 +109,8 @@ export async function readGeneralOrderReview(
   input: Array<{
     offeringId: string
     quantity: string
-    expectedFixedPriceMinor: number
+    expectedFixedPriceMinor?: number
+    enteredTotalMinor?: number
     expectedConfigurationVersionId?: string
   }>,
 ) {
@@ -141,7 +142,7 @@ export async function readGeneralOrderReview(
         },
       },
     })
-    if (!offering || offering.pricingPolicy !== "FIXED")
+    if (!offering || !["FIXED", "ORDER_TOTAL"].includes(offering.pricingPolicy))
       throw new Error("Offering unavailable or requires the sale form")
     const configurationId =
       offering.productUnitOffering?.inventoryUnit.configurationVersionId
@@ -154,15 +155,16 @@ export async function readGeneralOrderReview(
       )
     const price = resolveCommercialLinePrice({
       ...line,
-      policy: "fixed",
+      policy:
+        offering.pricingPolicy === "ORDER_TOTAL" ? "order_total" : "fixed",
       kind: offering.kind === "PRODUCT_UNIT" ? "product_unit" : "service",
       fixedPriceMinor: offering.fixedPriceMinor,
     })
     totalMinor += price.totalMinor
-    if (price.unitPriceMinor === null)
-      throw new Error("Fixed price unavailable")
     lines.push(
-      `${offering.catalogItem.name} · ${offering.name} · ${line.quantity} × ${(price.unitPriceMinor / 100).toFixed(2)} = ${(price.totalMinor / 100).toFixed(2)}`,
+      price.unitPriceMinor === null
+        ? `${offering.catalogItem.name} · ${offering.name} · quantity ${line.quantity} · entered item total ${(price.totalMinor / 100).toFixed(2)}`
+        : `${offering.catalogItem.name} · ${offering.name} · ${line.quantity} × ${(price.unitPriceMinor / 100).toFixed(2)} = ${(price.totalMinor / 100).toFixed(2)}`,
     )
   }
   if (!Number.isSafeInteger(totalMinor) || totalMinor > 100_000_000)
