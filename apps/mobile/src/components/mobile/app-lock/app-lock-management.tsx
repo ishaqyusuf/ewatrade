@@ -11,7 +11,8 @@ import type { AppLockManagementProps } from "./app-lock-presentation"
 export function AppLockManagement(props: AppLockManagementProps) {
   const market = useMobileDesign("app-lock") === "market-day"
   return (
-    <View className="grow justify-between gap-6">
+    // Classic keeps the confirmation under the rows, clear of the gesture bar.
+    <View className={market ? "grow justify-between gap-6" : "gap-4"}>
       <View className={market ? "border-t border-market-line" : "gap-3"}>
         <ManagementRow
           icon="SecurityPassword"
@@ -45,6 +46,11 @@ export function AppLockManagement(props: AppLockManagementProps) {
             onPress={props.onDisable}
           />
         ) : null}
+        {market ? null : (
+          <Text className="px-1 text-xs text-muted-foreground">
+            Works offline. Stored only on this phone.
+          </Text>
+        )}
       </View>
       {props.message ? (
         <Text

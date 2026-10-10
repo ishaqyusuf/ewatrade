@@ -5,6 +5,7 @@ import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
+import { Delete as Backspace } from "lucide-react-native"
 import Svg, { Path } from "react-native-svg"
 
 export const OTP_KEYPAD_ROWS = [
@@ -228,7 +229,7 @@ function OtpKey({
         onPress={onDeletePress}
         transition
       >
-        <Icon className="size-base text-foreground" name="Delete" />
+        <BackspaceGlyph />
       </Pressable>
     )
   }
@@ -332,4 +333,10 @@ function GreenTillKey({
       </Text>
     </Pressable>
   )
+}
+
+/** Backspace key glyph (the icon set's "Delete" is a bin). */
+export function BackspaceGlyph() {
+  const colors = useColors()
+  return <Backspace color={colors.foreground} size={24} strokeWidth={1.8} />
 }

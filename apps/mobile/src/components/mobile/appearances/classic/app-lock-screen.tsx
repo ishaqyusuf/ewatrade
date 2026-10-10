@@ -35,7 +35,7 @@ export function ClassicAppLockScreen({
           />
         ) : null}
         {mode === "manage" ? (
-          <SettingsScreen title={title} sub={subtitle} />
+          <SettingsScreen label="This phone" title={title} sub={subtitle} />
         ) : (
           <View className="items-center gap-3">
             <Text

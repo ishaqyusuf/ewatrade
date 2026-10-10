@@ -1,9 +1,10 @@
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
-import { View } from "@/components/ui/view"
+import { BackspaceGlyph } from "./otp-keypad"
 
 const PIN_KEYPAD_ROWS = [
   ["1", "2", "3"],
@@ -349,7 +350,11 @@ function PinIconKey({
       onPress={onPress}
       transition
     >
-      <Icon className="size-base text-foreground" name={icon} />
+      {icon === "Delete" ? (
+        <BackspaceGlyph />
+      ) : (
+        <Icon className="size-base text-foreground" name={icon} />
+      )}
     </Pressable>
   )
 }

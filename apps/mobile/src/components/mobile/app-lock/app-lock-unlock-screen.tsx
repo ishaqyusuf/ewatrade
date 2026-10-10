@@ -57,6 +57,7 @@ export function AppLockUnlockScreen({
       resolveAppLockQuietSealPresentation("unlock", auth.profile?.businessName),
     [auth.profile?.businessName],
   )
+  const firstName = auth.profile?.name?.trim().split(/\s+/)[0]
   const hasBiometricsEnabled = !!config?.biometricsEnabled
   const canUseBiometrics =
     hasBiometricsEnabled && biometricsStatus.isAvailable && !isLoading
@@ -75,8 +76,10 @@ export function AppLockUnlockScreen({
     if (hasBiometricsEnabled && !biometricsStatus.isAvailable) {
       return biometricsStatus.reason ?? "Use your lock code to continue."
     }
-    return "Enter your lock code to continue."
+    // The classic gate's heading already says what to do.
+    return design === "market-day" ? "Enter your lock code to continue." : ""
   }, [
+    design,
     biometricsStatus.isAvailable,
     biometricsStatus.reason,
     biometricsStatus.label,
@@ -206,8 +209,16 @@ export function AppLockUnlockScreen({
     <Presentation
       mode="unlock"
       eyebrow={presentation.eyebrow}
-      subtitle={presentation.subtitle}
-      title={presentation.title}
+      subtitle={
+        design === "market-day"
+          ? presentation.subtitle
+          : `Enter your PIN to open ${auth.profile?.businessName ?? "your business"}`
+      }
+      title={
+        design === "market-day"
+          ? presentation.title
+          : `Welcome back${firstName ? `, ${firstName}` : ""}`
+      }
       pinpad={
         <AppLockPinPad
           codeLength={APP_LOCK_CODE_LENGTH}
@@ -274,7 +285,9 @@ export function AppLockUnlockScreen({
                 : "text-center text-xs font-semibold text-muted-foreground"
             }
           >
-            Forgot code? Sign out and reset app lock
+            {design === "market-day"
+              ? "Forgot code? Sign out and reset app lock"
+              : "Forgot PIN? Sign out and reset"}
           </Text>
         </Pressable>
       }
