@@ -1,8 +1,10 @@
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { getChatUrl } from "@/lib/base-url"
 import { resolveCustomerOperation } from "@/lib/customer-conversation-state"
+import { cn } from "@/lib/utils"
 import { useCustomerTRPC } from "@/trpc/customer-client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { resolveServiceCommerceCustomerActionHandoffPath } from "@ewatrade/service-commerce"
@@ -53,6 +55,7 @@ export function CustomerQuoteMessage({
   onRefresh: () => Promise<unknown>
   publicToken: string
 }) {
+  const largeTextLayout = useLargeTextLayout()
   const trpc = useCustomerTRPC()
   const [projection, setProjection] = useState(actionMessage)
   const [confirmingToken, setConfirmingToken] = useState<string | null>(null)
@@ -198,7 +201,13 @@ export function CustomerQuoteMessage({
     <View
       className={`mr-auto w-full gap-3 rounded-2xl rounded-bl-md border border-border bg-card px-3.5 py-3.5 ${CUSTOMER_QUOTE_MESSAGE_LAYOUT.compactWidthClass}`}
     >
-      <View className="flex-row items-start justify-between gap-3">
+      <View
+        className={
+          largeTextLayout
+            ? "items-start gap-3"
+            : "flex-row items-start justify-between gap-3"
+        }
+      >
         <View className="min-w-0 flex-1 gap-0.5">
           <Text className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             {heading.eyebrow}
@@ -223,17 +232,25 @@ export function CustomerQuoteMessage({
       <View>
         {projection.options.map((option, index) => (
           <View
-            className={
+            className={cn(
               option.selected
                 ? "min-h-14 flex-row items-center justify-between gap-3 rounded-xl bg-primary/10 px-3 py-2.5"
                 : index === 0
                   ? "min-h-14 flex-row items-center justify-between gap-3 px-1 py-2.5"
-                  : "min-h-14 flex-row items-center justify-between gap-3 border-t border-border px-1 py-2.5"
-            }
+                  : "min-h-14 flex-row items-center justify-between gap-3 border-t border-border px-1 py-2.5",
+              largeTextLayout && "flex-col items-start",
+            )}
             key={option.id}
           >
-            <View className="min-w-0 flex-1 gap-0.5">
-              <Text className="font-bold text-foreground" numberOfLines={2}>
+            <View
+              className={
+                largeTextLayout ? "w-full gap-0.5" : "min-w-0 flex-1 gap-0.5"
+              }
+            >
+              <Text
+                className="font-bold text-foreground"
+                numberOfLines={largeTextLayout ? undefined : 2}
+              >
                 {option.label}
               </Text>
               {option.selected ? (

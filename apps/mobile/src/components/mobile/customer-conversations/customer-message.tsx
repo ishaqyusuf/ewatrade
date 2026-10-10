@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { CustomerAccountInvitationContent } from "./customer-account-invitation-content"
 import { CustomerAccountInvitationMessage } from "./customer-account-invitation-message"
@@ -38,6 +39,7 @@ export function CustomerMessage({
   quoteInteractive?: boolean
   storeName: string
 }) {
+  const largeTextLayout = useLargeTextLayout()
   if (message.accountInvitation) {
     if (!accountInvitationInteractive) {
       return (
@@ -91,9 +93,13 @@ export function CustomerMessage({
     <View className={isCustomer ? "items-end" : "items-start"}>
       <View
         className={
-          isCustomer
-            ? "max-w-[82%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5"
-            : "max-w-[82%] rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5"
+          largeTextLayout
+            ? isCustomer
+              ? "max-w-full rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5"
+              : "max-w-full rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5"
+            : isCustomer
+              ? "max-w-[82%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5"
+              : "max-w-[82%] rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5"
         }
       >
         {message.attachments.map((attachment) => {
