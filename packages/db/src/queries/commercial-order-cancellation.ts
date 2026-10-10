@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto"
 import {
   addExactDecimals,
   compareExactDecimals,
@@ -6,28 +5,15 @@ import {
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
 import { releaseCatalogStockReservationInTransaction } from "./catalog-inventory"
+import {
+  orderAmendmentDigest as digest,
+  orderAmendmentJson as json,
+} from "./commercial-order-amendment-evidence"
 import { getCommercialOrderAmendmentEligibility } from "./commercial-order-amendment-review"
 import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import { runInOwnTransaction } from "./own-transaction"
 
 type Scope = { tenantId: string; storeId: string; orderId: string }
-function digest(value: unknown) {
-  function sorted(value: unknown): unknown {
-    if (Array.isArray(value)) return value.map(sorted)
-    if (value !== null && typeof value === "object")
-      return Object.fromEntries(
-        Object.entries(value)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([key, entry]) => [key, sorted(entry)]),
-      )
-    return value
-  }
-  return createHash("sha256")
-    .update(JSON.stringify(sorted(JSON.parse(JSON.stringify(value)))))
-    .digest("hex")
-}
-const json = (value: unknown): Prisma.InputJsonValue =>
-  JSON.parse(JSON.stringify(value))
 
 /** Preview is read-only and does not authorize a write or promise an actual refund. */
 export async function previewCommercialOrderCancellation(
