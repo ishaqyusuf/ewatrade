@@ -39,6 +39,8 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [1, "android", "build", "attachment"],
   [0, "android", "build", "preview"],
   [0, "ios", "build", "preview_simulator"],
+  [0, "ios", "build", "preview_testflight"],
+  [0, "ios", "submit", "preview_testflight"],
   [1, "android", "build", "preview_simulator"],
   [1, "ios", "build", "simulator_prod"],
   [1, "ios", "update", "preview_simulator_update"],
@@ -102,6 +104,10 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
       path.join(root, "apps", "mobile", "app.config.ts"),
       'export const UPDATE_VERSION = "2026.09.22"\n',
     )
+    await writeFile(
+      path.join(root, "apps", "mobile", "eas.json"),
+      JSON.stringify({ build: { "testflight-preview": { env: {} } } }),
+    )
     await mkdir(path.join(cli, "bin"), { recursive: true })
     await mkdir(path.join(cli, "build", "user"), { recursive: true })
     await mkdir(fakeBin, { recursive: true })
@@ -153,6 +159,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
       `import { writeFileSync } from "node:fs"; export async function assertPreviewPublisherReady() {} export async function runPreviewBuildAndPublish(input) { const result = await input.runJson(input.command); if (result.code === 0) writeFileSync(${JSON.stringify(path.join(root, "preview-publication.txt"))}, input.expectedCommit); return result.code; }\n`,
     )
     for (const [label, relativePath] of [
+      ["testflight", "scripts/check-testflight-preview.mjs"],
       ["teen", "scripts/check-teen-release-readiness.mjs"],
       ["api", "apps/mobile/scripts/check-production-api-live.mjs"],
       ["legal", "scripts/check-production-legal-live.mjs"],
@@ -177,7 +184,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     const easBin = path.join(cli, "bin", "run")
     await writeFile(
       easBin,
-      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const path = require("node:path"); const state = JSON.parse(fs.readFileSync(path.join(process.env.HOME, ".expo", "state.json"), "utf8")); fs.writeFileSync(process.env.EAS_TEST_CAPTURE, JSON.stringify({ home: process.env.HOME, username: state.auth.username, args: process.argv.slice(2), apiUrl: process.env.EXPO_PUBLIC_API_URL, localOnly: process.env.EXPO_PUBLIC_LOCAL_ONLY, profile: process.env.APP_ENV })); if (process.argv.includes("build:view")) console.log(JSON.stringify({ id: process.argv.find((arg) => /^[0-9a-f]{8}-/.test(arg)), status: "FINISHED", platform: process.env.EAS_TEST_BUILD_PLATFORM, buildProfile: "production", distribution: "STORE", channel: "production", appBuildVersion: process.env.EAS_TEST_BUILD_VERSION, gitCommitHash: process.env.EAS_TEST_BUILD_COMMIT === "missing" ? undefined : process.env.EAS_TEST_BUILD_COMMIT, isForIosSimulator: false, project: { id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b", ownerAccount: { name: "cipron-startups" } }, artifacts: { buildUrl: "https://secret.example.test/artifact" } })); if (process.argv.includes("env:list")) console.log("EXPO_PUBLIC_API_URL=https://api.example.test\\nEXPO_PUBLIC_LEGAL_ORIGIN=https://ewatrade.com\\nEXPO_PUBLIC_LOGLY_ENABLED=false"); process.exitCode = Number(process.env.EAS_TEST_EXIT_CODE);\n`,
+      `#!/usr/bin/env bun\nconst fs = require("node:fs"); const path = require("node:path"); const state = JSON.parse(fs.readFileSync(path.join(process.env.HOME, ".expo", "state.json"), "utf8")); fs.writeFileSync(process.env.EAS_TEST_CAPTURE, JSON.stringify({ home: process.env.HOME, username: state.auth.username, args: process.argv.slice(2), apiUrl: process.env.EXPO_PUBLIC_API_URL, localOnly: process.env.EXPO_PUBLIC_LOCAL_ONLY, profile: process.env.APP_ENV })); if (process.argv.includes("build:view")) console.log(JSON.stringify({ id: process.argv.find((arg) => /^[0-9a-f]{8}-/.test(arg)), status: "FINISHED", platform: process.env.EAS_TEST_BUILD_PLATFORM, buildProfile: process.env.IOS_TESTFLIGHT === "1" ? "testflight-preview" : "production", distribution: "STORE", channel: process.env.IOS_TESTFLIGHT === "1" ? "testflight-preview" : "production", appBuildVersion: process.env.EAS_TEST_BUILD_VERSION, gitCommitHash: process.env.EAS_TEST_BUILD_COMMIT === "missing" ? undefined : process.env.EAS_TEST_BUILD_COMMIT, isForIosSimulator: false, project: { id: "532f9a55-f4f6-4d4e-b60b-ea6fa8807a3b", ownerAccount: { name: "cipron-startups" } }, artifacts: { buildUrl: "https://secret.example.test/artifact" } })); if (process.argv.includes("env:list")) console.log("EXPO_PUBLIC_API_URL=https://api.example.test\\nEXPO_PUBLIC_LEGAL_ORIGIN=https://ewatrade.com\\nEXPO_PUBLIC_LOGLY_ENABLED=false"); process.exitCode = Number(process.env.EAS_TEST_EXIT_CODE);\n`,
     )
     await chmod(easBin, 0o755)
     await symlink(easBin, path.join(fakeBin, "eas"))
@@ -223,6 +230,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
           : []),
         ...(mismatch === "local_override" ? ["--local"] : []),
         ...(mismatch?.includes("simulator") ? ["--ios-simulator"] : []),
+        ...(mismatch === "preview_testflight" ? ["--ios-testflight"] : []),
         ...(mismatch === "auto_submit" ? ["--auto-submit"] : []),
         ...(operation === "submit" || operation === "view"
           ? ["--id", exactBuildId]
@@ -451,20 +459,24 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
                 "--profile",
                 development
                   ? "development"
-                  : mismatch === "preview_simulator"
-                    ? "preview-simulator"
-                    : preview
-                      ? "preview"
-                      : "production",
+                  : mismatch === "preview_testflight"
+                    ? "testflight-preview"
+                    : mismatch === "preview_simulator"
+                      ? "preview-simulator"
+                      : preview
+                        ? "preview"
+                        : "production",
                 ...(operation === "submit" ? ["--id", exactBuildId] : []),
                 "--non-interactive",
               ],
     )
     if (operation === "submit") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
-        platform === "ios"
-          ? "teen\napi\nlegal\nbilling\nios-login\nios-identity\nattachment\n"
-          : "teen\napi\nlegal\nbilling\nattachment\n",
+        mismatch === "preview_testflight"
+          ? "testflight\nattachment\n"
+          : platform === "ios"
+            ? "teen\napi\nlegal\nbilling\nios-login\nios-identity\nattachment\n"
+            : "teen\napi\nlegal\nbilling\nattachment\n",
       )
     }
     if (operation === "build") {
@@ -474,7 +486,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         })
       else
         expect(await readFile(preflightCapturePath, "utf8")).toBe(
-          `${preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
+          `${mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
         )
     }
     if (operation === "update") {

@@ -48,12 +48,38 @@
       "ios": {
         "simulator": true
       }
+    },
+    "testflight-preview": {
+      "extends": "preview",
+      "distribution": "store",
+      "channel": "testflight-preview",
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_APP_VARIANT": "preview",
+        "IOS_TESTFLIGHT": "1",
+        "EXPO_PUBLIC_DASHBOARD_URL": "https://preview-dashboard.ewatrade.com",
+        "EXPO_PUBLIC_BASE_URL": "https://preview-dashboard.ewatrade.com",
+        "EXPO_PUBLIC_WEB_URL": "https://preview-dashboard.ewatrade.com",
+        "EXPO_PUBLIC_LEGAL_ORIGIN": "https://ewatrade.com"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "environment": "preview",
+      "credentialsSource": "local"
     }
   },
   "submit": {
     "production": {
       "android": {
         "track": "internal"
+      }
+    },
+    "testflight-preview": {
+      "ios": {
+        "ascAppId": "6815837585",
+        "appleTeamId": "ZXC78SPCV4",
+        "bundleIdentifier": "com.ewatrade.app"
       }
     }
   }

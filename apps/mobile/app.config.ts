@@ -42,6 +42,11 @@ const onboardingLinks = getOnboardingLinkConfig(
   normalizedAppVariant,
   process.env.EXPO_PUBLIC_DASHBOARD_URL,
 )
+// Store signing identity is separate from the Preview runtime/service variant.
+const isTestFlightPreview = process.env.IOS_TESTFLIGHT === "1"
+if (isTestFlightPreview && normalizedAppVariant !== "preview") {
+  throw new Error("TestFlight Preview requires the Preview app variant.")
+}
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
 const isPreviewBuild = normalizedAppVariant === "preview"
@@ -183,7 +188,9 @@ const config: ExpoConfig = {
       ]),
     ],
     supportsTablet: true,
-    bundleIdentifier: variantConfig.iosBundleIdentifier,
+    bundleIdentifier: isTestFlightPreview
+      ? "com.ewatrade.app"
+      : variantConfig.iosBundleIdentifier,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
     },
