@@ -132,3 +132,5 @@ export { previewOrdinaryAdjustmentCost } from "./finance/preview-ordinary-adjust
 export * from "./inventory-transfer-review"
 
 export * from "./inventory-transfer-review-locks"
+
+export { getCommercialOrderAmendmentEligibility } from "./commercial-order-amendment-review"
