@@ -9,9 +9,9 @@ import {
 } from "@ewatrade/ui"
 import {
   ArrowUp02Icon,
+  Cancel01Icon,
   Mic01Icon,
   StopIcon,
-  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
@@ -75,7 +75,10 @@ type Voice = {
   error: string | null
   hint: boolean
   start: () => void
+  /** Stop and write the words into the box to check before sending. */
   stop: () => void
+  /** Stop, write the words out and send them. */
+  stopAndSend: () => void
   cancel: () => void
   dismiss: () => void
 }
@@ -88,10 +91,14 @@ function VoiceComposer({
   const capabilities = useQuery(
     trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(undefined, {
       retry: false,
-      staleTime: 5 * 60_000,
+      // The local Whisper gateway can come and go; hide the mic when it does.
+      staleTime: 30_000,
+      refetchInterval: 60_000,
     }),
   )
   const [hint, setHint] = useState(false)
+  const sendWhenWritten = useRef(false)
+  const [pendingSend, setPendingSend] = useState<string | null>(null)
   const valueRef = useRef(props.value)
   valueRef.current = props.value
   const onChangeRef = useRef(props.onChange)
@@ -101,10 +108,12 @@ function VoiceComposer({
     // The person checks and fixes the transcript before sending it as text.
     onTranscript: (text) => {
       const current = valueRef.current
-      onChangeRef.current(
-        current.trim() ? `${current.trimEnd()}\n${text}` : text,
-      )
-      setHint(true)
+      const next = current.trim() ? `${current.trimEnd()}\n${text}` : text
+      onChangeRef.current(next)
+      if (sendWhenWritten.current) {
+        sendWhenWritten.current = false
+        setPendingSend(next)
+      } else setHint(true)
     },
   })
   const recorder = useSetupVoiceRecorder({
@@ -119,6 +128,13 @@ function VoiceComposer({
   useEffect(() => {
     if (!props.value) setHint(false)
   }, [props.value])
+  // Send once the written-out words have reached the box.
+  const { onSend } = props
+  useEffect(() => {
+    if (pendingSend === null || props.value !== pendingSend) return
+    setPendingSend(null)
+    onSend()
+  }, [pendingSend, props.value, onSend])
 
   if (capabilities.data?.enabled !== true)
     return <ComposerBox {...props} voice={null} />
@@ -149,10 +165,18 @@ function VoiceComposer({
     hint,
     start: () => {
       setHint(false)
+      sendWhenWritten.current = false
       void recorder.start()
     },
     stop: recorder.stop,
-    cancel: recorder.cancel,
+    stopAndSend: () => {
+      sendWhenWritten.current = true
+      recorder.stop()
+    },
+    cancel: () => {
+      sendWhenWritten.current = false
+      recorder.cancel()
+    },
     dismiss: () => {
       recorder.dismiss()
       if (failed) remove(failed.localId)
@@ -219,9 +243,19 @@ function ComposerBox({
       {voice?.recording ? (
         <output
           aria-live="polite"
-          className="flex min-h-11 items-center gap-3 rounded-[22px] border border-destructive/30 bg-background py-1.5 pr-1.5 pl-4"
+          className="flex min-h-11 items-center gap-2 rounded-[22px] border border-destructive/30 bg-background py-1.5 pr-1.5 pl-1.5"
         >
-          <span className="size-2 shrink-0 motion-safe:animate-pulse rounded-full bg-destructive" />
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0 rounded-[50%] text-muted-foreground"
+            aria-label="Cancel recording"
+            title="Cancel recording"
+            onClick={voice.cancel}
+          >
+            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+          </Button>
           <span className="shrink-0 text-xs tabular-nums">
             {formatRecorderElapsed(voice.elapsedMs)} /{" "}
             {formatRecorderElapsed(voice.maxDurationMs)}
@@ -243,20 +277,24 @@ function ComposerBox({
           </span>
           <Button
             type="button"
-            size="sm"
-            variant="ghost"
-            onClick={voice.cancel}
+            size="icon"
+            variant="outline"
+            className="size-8 shrink-0 rounded-[50%]"
+            aria-label="Stop and check the text"
+            title="Stop and check the text"
+            onClick={voice.stop}
           >
-            Cancel
+            <HugeiconsIcon icon={StopIcon} className="size-4" />
           </Button>
           <Button
             type="button"
             size="icon"
-            className="size-8 rounded-[50%]"
-            aria-label="Finish recording"
-            onClick={voice.stop}
+            className="size-8 shrink-0 rounded-[50%]"
+            aria-label="Stop and send"
+            title="Stop and send"
+            onClick={voice.stopAndSend}
           >
-            <HugeiconsIcon icon={Tick02Icon} className="size-4" />
+            <HugeiconsIcon icon={ArrowUp02Icon} className="size-4" />
           </Button>
         </output>
       ) : (
@@ -289,20 +327,6 @@ function ComposerBox({
               align="inline-end"
               className="self-end pr-1.5 pb-1.5"
             >
-              {voice ? (
-                <InputGroupButton
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  className="size-8 rounded-[50%] text-muted-foreground"
-                  aria-label="Record a voice note"
-                  title="Record a voice note"
-                  disabled={busy || disabled || working}
-                  onClick={voice.start}
-                >
-                  <HugeiconsIcon icon={Mic01Icon} className="size-4" />
-                </InputGroupButton>
-              ) : null}
               {busy ? (
                 <InputGroupButton
                   type="button"
@@ -313,6 +337,20 @@ function ComposerBox({
                   onClick={onStop}
                 >
                   <HugeiconsIcon icon={StopIcon} className="size-4" />
+                </InputGroupButton>
+              ) : voice && !value.trim() ? (
+                // Mic and Send share one place: dictate from empty, or type.
+                <InputGroupButton
+                  type="button"
+                  size="icon-sm"
+                  variant="default"
+                  className="size-8 rounded-[50%] disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                  aria-label="Record a voice note"
+                  title="Record a voice note"
+                  disabled={disabled || working}
+                  onClick={voice.start}
+                >
+                  <HugeiconsIcon icon={Mic01Icon} className="size-4" />
                 </InputGroupButton>
               ) : (
                 <InputGroupButton
