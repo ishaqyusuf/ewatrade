@@ -17,7 +17,7 @@ import {
   APP_LOCK_MAX_FAILED_ATTEMPTS,
 } from "@/lib/app-lock-store"
 import { useRouter } from "expo-router"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AppLockManagement } from "./app-lock-management"
 import { AppLockSettingsPage } from "./app-lock-settings-page"
 import {
@@ -82,8 +82,12 @@ export function AppLockSettingsScreen() {
       ? appLockLockoutMessage(lockoutSeconds)
       : message
 
+  // Pick the opening step once storage is read. Later lock changes are
+  // routed by the step handlers, so saving a PIN can still show the offer.
+  const openingStepChosen = useRef(false)
   useEffect(() => {
-    if (!appLock.isHydrated) return
+    if (!appLock.isHydrated || openingStepChosen.current) return
+    openingStepChosen.current = true
     setMode(!market || appLock.isConfigured ? "manage" : "create")
   }, [appLock.isConfigured, appLock.isHydrated, market])
 
