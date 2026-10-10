@@ -2,6 +2,7 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { getSession } from "@/lib/session-store"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -9,7 +10,15 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { FlatList, ScrollView, View } from "react-native"
+import {
+  ListCard,
+  RecordRow,
+  RowDivider,
+  SectionHeader,
+  StatusPill,
+} from "../green-till/kit"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 import { useSupplierReadAuthority } from "./supplier-finance-screen"
 import { SupplierPurchaseRecognitionPanel } from "./supplier-purchase-recognition"
@@ -201,22 +210,25 @@ function SupplierPurchaseList({
       onEndReachedThreshold={0.4}
       ListHeaderComponent={
         <View className="gap-4 pb-4">
-          <Text className="text-lg font-bold">
-            Purchases from {supplier.name}
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            Actual purchase bills for {supplier.code} in this finance book.
-          </Text>
           {onRegisterPurchase ? (
-            <ActionButton onPress={onRegisterPurchase}>
+            <ActionButton
+              icon="Plus"
+              variant="outline"
+              onPress={onRegisterPurchase}
+            >
               Register agreed goods
             </ActionButton>
           ) : null}
-          <Text className="text-lg font-bold">Agreed goods sources</Text>
-          <Text className="text-sm text-muted-foreground">
-            Original agreements for this supplier, including goods not yet
-            invoiced. Each opens a fresh Finance history read.
-          </Text>
+          <SectionHeader
+            title="Agreed goods"
+            trailing={
+              recognitionsVisible && recognitions.length ? (
+                <Text className="text-xs font-bold text-muted-foreground">
+                  {recognitions.length}
+                </Text>
+              ) : undefined
+            }
+          />
           {recognitionQuery.isPending && !offline && sessionMatches ? (
             <Text>Loading agreed goods sources…</Text>
           ) : null}
@@ -261,33 +273,21 @@ function SupplierPurchaseList({
               tone="muted"
             />
           ) : null}
-          {recognitionsVisible && onSelectRecognition
-            ? recognitions.map((item) => (
-                <ActionButton
+          {recognitionsVisible && onSelectRecognition && recognitions.length ? (
+            <ListCard>
+              {recognitions.map((item) => (
+                <RecordRow
                   key={item.id}
-                  className="min-h-20"
-                  variant="outline"
-                  onPress={() => onSelectRecognition(item.id)}
                   accessibilityLabel={`${item.description}, ${money(item.amountMinor)}, open purchase source history`}
-                >
-                  <View className="w-full gap-1">
-                    <View className="flex-row items-start justify-between gap-3">
-                      <Text className="min-w-0 flex-1 font-semibold">
-                        {item.description}
-                      </Text>
-                      <Text className="font-bold tabular-nums">
-                        {money(item.amountMinor)}
-                      </Text>
-                    </View>
-                    <Text className="text-left text-xs text-muted-foreground">
-                      Agreed{" "}
-                      {new Date(item.agreedAt).toISOString().slice(0, 10)} UTC ·
-                      Store {item.storeId}
-                    </Text>
-                  </View>
-                </ActionButton>
-              ))
-            : null}
+                  title={item.description}
+                  meta={`Agreed ${financeDisplayDate(item.agreedAt)}`}
+                  amount={money(item.amountMinor)}
+                  avatar={{ icon: "Package", tint: "sky" }}
+                  onPress={() => onSelectRecognition(item.id)}
+                />
+              ))}
+            </ListCard>
+          ) : null}
           {advanceToAllocate ? (
             <StatusBanner
               title="Choose a purchase"
@@ -314,16 +314,27 @@ function SupplierPurchaseList({
               tone="destructive"
             />
           ) : null}
+          <SectionHeader
+            title="Purchase bills"
+            trailing={
+              summary ? (
+                <Text className="text-xs font-bold text-muted-foreground">
+                  {query.data?.pages[0]?.count ?? 0}
+                </Text>
+              ) : undefined
+            }
+          />
           {summary ? (
-            <View className="flex-row flex-wrap gap-4 border-y border-border py-3">
+            <View className="flex-row rounded-[20px] bg-card px-4 py-3 shadow-sm">
               {[
-                ["Bills", String(query.data?.pages[0]?.count ?? 0)],
                 ["Incurred", money(summary.incurredMinor)],
                 ["Still owed", money(summary.outstandingMinor)],
               ].map(([label, value]) => (
-                <View key={label} className="min-w-[40%] flex-1 gap-1">
+                <View key={label} className="min-w-0 flex-1 gap-0.5">
                   <Text className="text-xs text-muted-foreground">{label}</Text>
-                  <Text className="font-bold tabular-nums">{value}</Text>
+                  <Text className="text-sm font-bold tabular-nums text-foreground">
+                    {value}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -337,36 +348,42 @@ function SupplierPurchaseList({
           ) : null}
         </View>
       }
-      renderItem={({ item }: { item: PurchaseItem }) => (
-        <ActionButton
-          className="mb-3 min-h-20"
-          variant="outline"
-          onPress={() => onSelectPurchase(item.id)}
-          accessibilityLabel={`${item.description}, ${item.status}, open actual purchase detail`}
-        >
-          <View className="w-full gap-1">
-            <View className="flex-row items-start justify-between gap-3">
-              <Text className="min-w-0 flex-1 font-semibold">
-                {item.description}
-              </Text>
-              <Text className="font-bold tabular-nums">
-                {money(item.totalMinor)}
-              </Text>
-            </View>
-            <Text className="text-left text-sm text-muted-foreground">
-              {item.reference ? `${item.reference} · ` : ""}
-              {item.status.toLowerCase()} · {money(item.outstandingMinor)} still
-              owed
-            </Text>
-            <Text className="text-left text-xs text-muted-foreground">
-              {new Date(item.incurredAt).toISOString().slice(0, 10)} UTC
-              {item.dueAt
-                ? ` · due ${new Date(item.dueAt).toISOString().slice(0, 10)} UTC`
-                : " · no due date"}
-            </Text>
+      renderItem={({ item, index }: { item: PurchaseItem; index: number }) => {
+        const last = index === purchases.length - 1
+        const owed = BigInt(item.outstandingMinor) > 0n
+        return (
+          <View
+            className={cn(
+              "overflow-hidden bg-card px-3.5",
+              index === 0 && "mt-2 rounded-t-[20px]",
+              last && "rounded-b-[20px]",
+            )}
+          >
+            <RecordRow
+              stackDetails
+              accessibilityLabel={`${item.description}, ${item.status}, open actual purchase detail`}
+              title={item.description}
+              meta={`${item.reference ? `${item.reference} · ` : ""}${financeDisplayDate(item.incurredAt)}${item.dueAt ? ` · due ${financeDisplayDate(item.dueAt)}` : ""}`}
+              amount={money(item.totalMinor)}
+              avatar={{ icon: "ReceiptText", tint: "amber" }}
+              status={
+                <StatusPill
+                  label={
+                    item.status === "VOID"
+                      ? "Cancelled"
+                      : owed
+                        ? `Owed ${money(item.outstandingMinor)}`
+                        : "Paid"
+                  }
+                  tone={item.status === "VOID" ? "muted" : owed ? "warn" : "ok"}
+                />
+              }
+              onPress={() => onSelectPurchase(item.id)}
+            />
+            {last ? null : <RowDivider />}
           </View>
-        </ActionButton>
-      )}
+        )
+      }}
       ListFooterComponent={
         <View className="gap-2 pb-8">
           {visible && query.hasNextPage && !query.isFetchingNextPage ? (
