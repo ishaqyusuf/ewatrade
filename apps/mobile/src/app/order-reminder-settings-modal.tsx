@@ -3,7 +3,11 @@ import {
   StatusBanner,
   WorkflowModalScreen,
 } from "@/components/mobile"
-import { SectionHeader, ToggleRow } from "@/components/mobile/green-till/kit"
+import {
+  ListCard,
+  SectionHeader,
+  ToggleRow,
+} from "@/components/mobile/green-till/kit"
 import {
   REMINDER_SETTINGS_COPY,
   canEditReminderSettings,
@@ -27,6 +31,7 @@ function ReminderSettingToggle({
   checked,
   description,
   disabled,
+  icon,
   label,
   onCheckedChange,
 }: {
@@ -34,11 +39,13 @@ function ReminderSettingToggle({
   checked: boolean
   description: string
   disabled?: boolean
+  icon: "Mail" | "Clock"
   label: string
   onCheckedChange: (checked: boolean) => void
 }) {
   return (
     <ToggleRow
+      icon={{ name: icon, tint: icon === "Mail" ? "amber" : "sky" }}
       title={label}
       sub={description}
       value={checked}
@@ -130,6 +137,7 @@ export default function OrderReminderSettingsModalRoute() {
         showsVerticalScrollIndicator={false}
       >
         <SettingsScreen
+          label="Reminders"
           loading={settings.isPending && !offline}
           title={
             settings.data
@@ -214,25 +222,27 @@ export default function OrderReminderSettingsModalRoute() {
             </View>
 
             <SectionHeader title="Delivery" />
-            <View className="rounded-[20px] bg-card px-4">
+            <ListCard>
               <ReminderSettingToggle
                 checked={enabled}
-                description="Notify Owners, Admins, and Managers."
+                description="To Owners, Admins and Managers"
                 disabled={!canEditSettings}
+                icon="Mail"
                 label="Email reminders"
                 onCheckedChange={(value) => {
                   markChanged(() => setEnabled(value))
                 }}
               />
-            </View>
+            </ListCard>
 
             <SectionHeader title="When to remind" />
-            <View className="rounded-[20px] bg-card px-4">
+            <ListCard>
               <ReminderSettingToggle
                 badge="−1"
                 checked={dayBeforeEnabled}
-                description="On the previous calendar day."
+                description="On the previous day"
                 disabled={!canEditSettings || !enabled}
+                icon="Clock"
                 label="One day before"
                 onCheckedChange={(value) => {
                   markChanged(() => setDayBeforeEnabled(value))
@@ -241,14 +251,15 @@ export default function OrderReminderSettingsModalRoute() {
               <ReminderSettingToggle
                 badge="0"
                 checked={sameDayEnabled}
-                description="On the scheduled delivery day."
+                description="On the delivery day"
                 disabled={!canEditSettings || !enabled}
-                label="Same day"
+                icon="Clock"
+                label="On the day"
                 onCheckedChange={(value) => {
                   markChanged(() => setSameDayEnabled(value))
                 }}
               />
-            </View>
+            </ListCard>
           </>
         ) : settings.isFetching ? (
           <Skeleton className="h-40 rounded-[20px]" />
@@ -256,13 +267,14 @@ export default function OrderReminderSettingsModalRoute() {
         <View className="mt-4 flex-row items-start gap-2">
           <Icon className="mt-0.5 size-sm text-primary" name="Info" />
           <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
-            Only unfulfilled Product Orders are included. The hourly job never
-            fulfills an order.
+            Only unfulfilled product orders. A reminder never marks an order
+            fulfilled.
           </Text>
         </View>
 
         <View className="mt-5">
           <ActionButton
+            icon="Check"
             disabled={
               offline ||
               settings.isPending ||
@@ -277,7 +289,7 @@ export default function OrderReminderSettingsModalRoute() {
               updateSettings.mutate(currentSettings)
             }}
           >
-            Save reminder settings
+            Save reminders
           </ActionButton>
         </View>
       </ScrollView>

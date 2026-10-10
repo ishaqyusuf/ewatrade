@@ -686,12 +686,15 @@ export function NudgeCard({
 
 export function ToggleRow({
   disabled,
+  icon,
   onValueChange,
   sub,
   title,
   value,
 }: {
   disabled?: boolean
+  /** Optional tinted icon tile, as in the Settings Answer Card rows. */
+  icon?: { name: IconKeys; tint: GreenTillTint }
   onValueChange: (value: boolean) => void
   sub?: string
   title: string
@@ -699,6 +702,7 @@ export function ToggleRow({
 }) {
   return (
     <View className="min-h-[56px] flex-row items-center gap-3 py-3">
+      {icon ? <ToggleRowIcon icon={icon} /> : null}
       <View className="min-w-0 flex-1">
         <Text className="text-sm font-bold [-rn-line-height:19] text-foreground">
           {title}
@@ -715,6 +719,28 @@ export function ToggleRow({
         disabled={disabled}
         onCheckedChange={onValueChange}
       />
+    </View>
+  )
+}
+
+function ToggleRowIcon({
+  icon,
+}: {
+  icon: { name: IconKeys; tint: GreenTillTint }
+}) {
+  const tint = useTint(icon.tint)
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        backgroundColor: tint.bg,
+        borderRadius: 10,
+        height: 34,
+        justifyContent: "center",
+        width: 34,
+      }}
+    >
+      <Icon className="size-[17px]" color={tint.fg} name={icon.name} />
     </View>
   )
 }
