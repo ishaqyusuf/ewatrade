@@ -41,7 +41,7 @@ export function PageFab({
   className,
   ...props
 }: { label: string; icon?: IconSvgElement } & ComponentProps<"button">) {
-  usePageFabSlot()
+  usePageFabSlot("stack")
   if (!useHydrated()) return null
   return createPortal(
     <Button
@@ -87,7 +87,7 @@ export function PageFabMenu({
   label,
   actions,
 }: { label: string; actions: PageFabAction[] }) {
-  usePageFabSlot()
+  usePageFabSlot("replace")
   const hydrated = useHydrated()
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)

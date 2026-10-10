@@ -4,9 +4,12 @@ import { useEffect, useSyncExternalStore } from "react"
 
 /**
  * Page FABs and the shell's assistant launcher share the small-screen
- * bottom-right corner. A mounted page FAB owns it; the launcher yields.
+ * bottom-right corner. A page FAB takes the corner; the launcher either
+ * stacks above it or, for a menu that already offers chat, steps aside.
  */
-let pageFabs = 0
+export type PageFabSlotMode = "stack" | "replace"
+
+const mounted = { stack: 0, replace: 0 }
 const listeners = new Set<() => void>()
 
 function subscribe(listener: () => void) {
@@ -14,22 +17,26 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener)
 }
 
-export function usePageFabSlot() {
-  useEffect(() => {
-    pageFabs += 1
-    for (const listener of listeners) listener()
-    return () => {
-      pageFabs -= 1
-      for (const listener of listeners) listener()
-    }
-  }, [])
+function notify() {
+  for (const listener of listeners) listener()
 }
 
-export function usePageFabOwnsSlot() {
+export function usePageFabSlot(mode: PageFabSlotMode) {
+  useEffect(() => {
+    mounted[mode] += 1
+    notify()
+    return () => {
+      mounted[mode] -= 1
+      notify()
+    }
+  }, [mode])
+}
+
+export function usePageFabSlotMode(): PageFabSlotMode | null {
   return useSyncExternalStore(
     subscribe,
-    () => pageFabs > 0,
-    () => false,
+    () => (mounted.replace ? "replace" : mounted.stack ? "stack" : null),
+    () => null,
   )
 }
 
