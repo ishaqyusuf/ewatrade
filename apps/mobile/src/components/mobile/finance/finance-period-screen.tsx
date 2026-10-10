@@ -15,6 +15,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { View } from "react-native"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
 import { FinanceFormBody } from "./finance-form-body"
 import { FinancePeriodChecklist } from "./finance-period-checklist"
 import {
@@ -525,8 +526,7 @@ function PeriodWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
       ? review.checklist
       : null
   const disabled = !visible || loading || !command.ready || command.pending
-  const date = (value: Date | string) =>
-    new Date(value).toISOString().slice(0, 10)
+  const date = (value: Date | string) => financeDisplayDate(value)
   return (
     <FinanceFormBody>
       <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -696,7 +696,7 @@ function PeriodWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             <Text>{audit?.reason ?? "Historical reason unavailable"}</Text>
             <Text className="text-xs text-muted-foreground">
               Actor {event.actorUserId} ·{" "}
-              {new Date(event.createdAt).toISOString()}
+              {financeDisplayDate(event.createdAt, true)} UTC
               {audit?.snapshot
                 ? ` · snapshot ${audit.snapshot}`
                 : " · historical snapshot unavailable"}

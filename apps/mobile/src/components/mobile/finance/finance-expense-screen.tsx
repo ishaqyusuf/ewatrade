@@ -193,7 +193,7 @@ function ExpenseWorkspace({
           {bill.voidedAt ? (
             <StatusBanner
               title="Cancelled expense"
-              message={`Original record retained. ${bill.voidReason ?? ""}${bill.voidEffectiveAt ? ` · Effective ${new Date(bill.voidEffectiveAt).toISOString().slice(0, 10)} UTC` : ""}`}
+              message={`Original record retained. ${bill.voidReason ?? ""}${bill.voidEffectiveAt ? ` · Effective ${financeDisplayDate(bill.voidEffectiveAt)} UTC` : ""}`}
             />
           ) : null}
           {bill.lines.map((line) => (
@@ -247,7 +247,7 @@ function ExpenseWorkspace({
             {item.funding === "OWNER_CAPITAL"
               ? "Owner personal funds (capital contribution)"
               : item.account.name}{" "}
-            · {new Date(item.effectiveAt).toISOString().slice(0, 10)} UTC
+            · {financeDisplayDate(item.effectiveAt)} UTC
           </Text>
           {item.reference ? (
             <Text className="text-sm">Reference: {item.reference}</Text>

@@ -7,6 +7,7 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { FlatList, View } from "react-native"
+import { financeDisplayDate } from "../finance/finance-display"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -85,7 +86,8 @@ function AccountRows({
     formatFinanceMoney(value, data?.currencyCode ?? "NGN")
   return (
     <FlatList
-      className="flex-1 px-4"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 48 }}
       data={data?.items ?? []}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={
@@ -94,8 +96,8 @@ function AccountRows({
             {data?.account.name ?? "Report account entries"}
           </Text>
           <Text className="text-sm text-muted-foreground">
-            {input.from.toISOString().slice(0, 10)} –{" "}
-            {input.through.toISOString().slice(0, 10)} UTC · Snapshot{" "}
+            {financeDisplayDate(input.from)} –{" "}
+            {financeDisplayDate(input.through)} UTC · Snapshot{" "}
             {input.snapshotSequence}
           </Text>
           <StatusBanner
@@ -174,7 +176,7 @@ function AccountRows({
         <View className="gap-2 border-b border-border py-5">
           <Text className="text-base font-semibold">{item.description}</Text>
           <Text className="text-xs text-muted-foreground">
-            {item.effectiveAt.toISOString().slice(0, 10)} UTC · Sequence{" "}
+            {financeDisplayDate(item.effectiveAt)} UTC · Sequence{" "}
             {item.sequence}
           </Text>
           <Text>

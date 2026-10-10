@@ -16,6 +16,7 @@ import {
 import { Suspense, lazy } from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlatList, View } from "react-native"
+import { financeDisplayDate } from "./finance-display"
 import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 
@@ -272,7 +273,8 @@ function SupplierDirectory({
     : []
   return (
     <FlatList
-      className="flex-1 px-[18px]"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 48 }}
       data={suppliers}
       keyExtractor={(supplier) => supplier.id}
       refreshing={query.isRefetching}
@@ -749,7 +751,7 @@ function SupplierStatement({
           </View>
           <Text className="text-sm text-muted-foreground">
             {item.kind.replaceAll("_", " ")} · {item.side.toLowerCase()} ·{" "}
-            {new Date(item.effectiveAt).toISOString().slice(0, 10)} UTC
+            {financeDisplayDate(item.effectiveAt)} UTC
           </Text>
           <Text className="text-xs text-muted-foreground">
             Journal sequence {item.sequence}
@@ -762,7 +764,7 @@ function SupplierStatement({
             <ActionButton
               variant="outline"
               onPress={() => onReverse(item)}
-              accessibilityLabel={`Correct ${item.kind.replaceAll("_", " ")} dated ${new Date(item.effectiveAt).toISOString().slice(0, 10)}`}
+              accessibilityLabel={`Correct ${item.kind.replaceAll("_", " ")} dated ${financeDisplayDate(item.effectiveAt)}`}
             >
               Correct this entry
             </ActionButton>
@@ -772,7 +774,7 @@ function SupplierStatement({
             <ActionButton
               variant="outline"
               onPress={() => onAllocateAdvance(item)}
-              accessibilityLabel={`Choose a purchase to apply ${item.kind.replaceAll("_", " ")} from ${new Date(item.effectiveAt).toISOString().slice(0, 10)}`}
+              accessibilityLabel={`Choose a purchase to apply ${item.kind.replaceAll("_", " ")} from ${financeDisplayDate(item.effectiveAt)}`}
             >
               Apply to a purchase
             </ActionButton>
@@ -1125,7 +1127,7 @@ function SupplierAging({
           </Text>
           <Text className="text-xs text-muted-foreground">
             {item.dueAt
-              ? `Due ${new Date(item.dueAt).toISOString().slice(0, 10)} UTC`
+              ? `Due ${financeDisplayDate(item.dueAt)} UTC`
               : "No due date recorded"}
             {item.storeId ? " · store source" : " · book-level source"} ·
             sequence {item.sequence}

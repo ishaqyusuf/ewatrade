@@ -12,6 +12,7 @@ import { useEffect, useState } from "react"
 import { FlatList, View } from "react-native"
 import { HeroCard } from "../green-till/hero-card"
 import { FinanceBankDateField } from "./finance-bank-date-field"
+import { financeDisplayDate } from "./finance-display"
 import { FinanceFormBody } from "./finance-form-body"
 import {
   type FinanceWorkspace,
@@ -151,7 +152,8 @@ function StatementWindow({
     )
   return (
     <FlatList
-      className="flex-1 px-[18px]"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 48 }}
       data={data?.items ?? []}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={
@@ -160,8 +162,8 @@ function StatementWindow({
             {data?.account.name ?? "Account statement"}
           </Text>
           <Text className="text-sm text-muted-foreground">
-            {window.from.toISOString().slice(0, 10)} –{" "}
-            {window.through.toISOString().slice(0, 10)} UTC
+            {financeDisplayDate(window.from)} –{" "}
+            {financeDisplayDate(window.through)} UTC
           </Text>
           <Text className="text-sm text-muted-foreground">
             Recorded finance entries only. Unposted sales and payments are
@@ -249,7 +251,7 @@ function StatementWindow({
         <View className="gap-2 border-b border-border py-5">
           <Text className="text-base font-semibold">{item.description}</Text>
           <Text className="text-xs text-muted-foreground">
-            {new Date(item.effectiveAt).toISOString().slice(0, 10)} UTC ·{" "}
+            {financeDisplayDate(item.effectiveAt)} UTC ·{" "}
             {item.sourceKind.toLowerCase().replaceAll("_", " ")}
           </Text>
           <Text>
