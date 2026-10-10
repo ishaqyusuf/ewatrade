@@ -1,9 +1,13 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
+import { useColors } from "@/hooks/use-color"
+import type { GreenTillTint } from "@/lib/green-till-theme"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
@@ -16,8 +20,11 @@ import {
 import { Suspense, lazy } from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlatList, View } from "react-native"
+import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
+import { HeroCard } from "../green-till/hero-card"
+import { RecordRow, RowDivider, SectionHeader } from "../green-till/kit"
+import { useWorkflowHeader } from "../workflow-modal-screen"
 import { financeDisplayDate } from "./finance-display"
-import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 
 import {
@@ -193,6 +200,22 @@ type AgingCursor = NonNullable<
 export function SupplierFinanceScreen(props: SupplierFinanceScreenProps) {
   const [selected, setSelected] = useState<Supplier | null>(null)
   const [creating, setCreating] = useState(false)
+  // The account view owns the bar while it is open.
+  useWorkflowHeader(
+    selected
+      ? null
+      : creating
+        ? {
+            backLabel: "Back to suppliers",
+            onBack: () => setCreating(false),
+            title: "New supplier",
+          }
+        : {
+            backLabel: "Back to spending",
+            onBack: props.onBack,
+            title: "Suppliers",
+          },
+  )
   if (creating)
     return (
       <Suspense fallback={<Text>Loading supplier form…</Text>}>
@@ -222,7 +245,6 @@ export function SupplierFinanceScreen(props: SupplierFinanceScreenProps) {
 
 function SupplierDirectory({
   book,
-  onBack,
   onCreate,
   onSelect,
 }: SupplierFinanceScreenProps & {
@@ -230,6 +252,7 @@ function SupplierDirectory({
   onSelect: (supplier: Supplier) => void
 }) {
   const trpc = useTRPC()
+  const colors = useColors()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
   const query = useInfiniteQuery(
     trpc.finance.suppliers.infiniteQueryOptions(
@@ -287,18 +310,10 @@ function SupplierDirectory({
       }}
       onEndReachedThreshold={0.4}
       ListHeaderComponent={
-        <View className="gap-4 pb-4">
-          <ActionButton variant="ghost" onPress={onBack}>
-            ‹ Back to spending
+        <View className="gap-4 pb-1">
+          <ActionButton icon="Plus" onPress={onCreate}>
+            Add supplier
           </ActionButton>
-          <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Business money
-          </Text>
-          <Text className="text-2xl font-bold">Suppliers</Text>
-          <Text className="text-sm text-muted-foreground">
-            Recorded supplier accounts for this financial book.
-          </Text>
-          <ActionButton onPress={onCreate}>Add supplier</ActionButton>
           {offline ? (
             <StatusBanner
               title="Offline"
@@ -306,7 +321,9 @@ function SupplierDirectory({
               tone="warning"
             />
           ) : null}
-          {query.isPending && !offline ? <Text>Loading suppliers…</Text> : null}
+          {query.isPending && !offline ? (
+            <Skeleton className="h-36 rounded-[20px]" />
+          ) : null}
           {query.isError ? (
             <StatusBanner
               title="Suppliers unavailable"
@@ -325,22 +342,55 @@ function SupplierDirectory({
               tone="muted"
             />
           ) : null}
+          {suppliers.length ? (
+            <SectionHeader
+              title="Supplier accounts"
+              trailing={
+                <Text className="text-xs font-bold text-muted-foreground">
+                  {suppliers.length}
+                  {query.hasNextPage ? "+" : ""}
+                </Text>
+              }
+            />
+          ) : null}
         </View>
       }
-      renderItem={({ item }) => (
-        <Pressable
-          className="mb-3 min-h-16 flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3"
-          onPress={() => onSelect(item)}
-          accessibilityRole="button"
-          accessibilityLabel={`${item.name}, ${item.code}, open supplier statement`}
-        >
-          <View className="min-w-0 flex-1 gap-1">
-            <Text className="text-base font-semibold">{item.name}</Text>
-            <Text className="text-sm text-muted-foreground">{item.code}</Text>
+      renderItem={({ item, index }) => {
+        const last = index === suppliers.length - 1
+        return (
+          <View
+            className={cn(
+              "overflow-hidden bg-card px-3.5",
+              index === 0 && "rounded-t-[20px]",
+              last && "rounded-b-[20px]",
+            )}
+          >
+            <RecordRow
+              accessibilityLabel={`${item.name}, ${item.code}, open supplier statement`}
+              title={item.name}
+              meta={item.code}
+              avatar={{
+                initials: item.name
+                  .split(/\s+/)
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase(),
+                tint: "amber",
+              }}
+              status={
+                <Icon
+                  className="size-[16px]"
+                  color={colors.mutedForeground}
+                  name="ChevronRight"
+                />
+              }
+              onPress={() => onSelect(item)}
+            />
+            {last ? null : <RowDivider />}
           </View>
-          <Text className="text-lg text-primary">›</Text>
-        </Pressable>
-      )}
+        )
+      }}
       ListFooterComponent={
         visible && query.hasNextPage && !query.isFetchingNextPage ? (
           <ActionButton
@@ -355,7 +405,6 @@ function SupplierDirectory({
           </ActionButton>
         ) : null
       }
-      contentContainerClassName="pb-12"
     />
   )
 }
@@ -383,6 +432,30 @@ export function SupplierFinanceDetail({
   const [purchaseId, setPurchaseId] = useState<string | null>(null)
   const [registeringPurchase, setRegisteringPurchase] = useState(false)
   const [recognitionId, setRecognitionId] = useState<string | null>(null)
+  const subView = recognitionId
+    ? "Purchase history"
+    : registeringPurchase
+      ? "Register purchase"
+      : purchaseId
+        ? "Purchase"
+        : recording || reversalEntry
+          ? reversalEntry
+            ? "Correct entry"
+            : "Record entry"
+          : null
+  useWorkflowHeader({
+    backLabel: subView ? "Back to supplier account" : "Back to suppliers",
+    onBack: subView
+      ? () => {
+          setRecognitionId(null)
+          setRegisteringPurchase(false)
+          setPurchaseId(null)
+          setRecording(false)
+          setReversalEntry(null)
+        }
+      : onBack,
+    title: subView ?? "Supplier account",
+  })
   if (recognitionId)
     return (
       <Suspense
@@ -451,49 +524,42 @@ export function SupplierFinanceDetail({
     )
   return (
     <View className="flex-1 px-[18px]">
-      <View className="gap-3 pb-4">
-        <ActionButton variant="ghost" onPress={onBack}>
-          ‹ Suppliers
-        </ActionButton>
-        <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          Supplier account
-        </Text>
-        <Text className="text-2xl font-bold">{supplier.name}</Text>
-        <Text className="text-sm text-muted-foreground">
-          {supplier.code} · {book.currencyCode} · all stores
-        </Text>
-        <ActionButton variant="outline" onPress={() => setRecording(true)}>
-          Record entry
-        </ActionButton>
-        <View className="flex-row flex-wrap gap-2 rounded-[16px] bg-muted p-1">
+      <View className="gap-3 pb-3">
+        <View className="flex-row items-center gap-3">
+          <View className="min-w-0 flex-1">
+            <Text
+              className="text-lg font-extrabold tracking-tight text-foreground"
+              numberOfLines={2}
+            >
+              {supplier.name}
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              {supplier.code} · {book.currencyCode} · all stores
+            </Text>
+          </View>
+          <ActionButton
+            className="min-h-[44px] w-auto px-4"
+            icon="Plus"
+            variant="outline"
+            onPress={() => setRecording(true)}
+          >
+            Record entry
+          </ActionButton>
+        </View>
+        <View className="flex-row gap-2">
           {(
             [
               { value: "statement", label: "Statement" },
-              { value: "aging", label: "Aging" },
+              { value: "aging", label: "Payable aging" },
               { value: "purchases", label: "Purchases" },
             ] as const
           ).map((tab) => (
-            <Pressable
+            <ClassicCustomerBookFilter
               key={tab.value}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: view === tab.value }}
+              active={view === tab.value}
+              label={tab.label}
               onPress={() => setView(tab.value)}
-              className={
-                view === tab.value
-                  ? "min-h-11 grow items-center justify-center rounded-xl bg-primary px-3"
-                  : "min-h-11 grow items-center justify-center rounded-xl px-3"
-              }
-            >
-              <Text
-                className={
-                  view === tab.value
-                    ? "text-sm font-bold text-primary-foreground"
-                    : "text-sm font-bold text-muted-foreground"
-                }
-              >
-                {tab.label}
-              </Text>
-            </Pressable>
+            />
           ))}
         </View>
       </View>
@@ -680,14 +746,7 @@ function SupplierStatement({
       refreshing={refreshing || query.isRefetching}
       onRefresh={() => void refresh()}
       ListHeaderComponent={
-        <View className="gap-4 pb-4">
-          <Text className="text-base font-semibold">
-            Payable and advance statement
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            Amounts are exact journal control totals at one pinned book
-            sequence.
-          </Text>
+        <View className="gap-4 pb-1">
           {offline ? (
             <StatusBanner
               title="Offline"
@@ -719,68 +778,96 @@ function SupplierStatement({
             />
           ) : null}
           {visible && query.data ? (
-            <FinanceDetailScaffold
-              title="Supplier statement"
-              label="Still payable"
+            <HeroCard
+              label="Payable to supplier"
               amount={formatFinanceMoney(query.data.payableMinor, currencyCode)}
-              sub={`Supplier advance ${formatFinanceMoney(query.data.advanceMinor, currencyCode)} · separate from payable`}
+              sub={`Advance held ${formatFinanceMoney(query.data.advanceMinor, currencyCode)} · kept separate`}
+              stats={[
+                {
+                  label: "Payable",
+                  value: formatFinanceMoney(
+                    query.data.payableMinor,
+                    currencyCode,
+                  ),
+                },
+                {
+                  label: "Advance",
+                  value: formatFinanceMoney(
+                    query.data.advanceMinor,
+                    currencyCode,
+                  ),
+                },
+              ]}
             />
-          ) : null}
-          {visible && query.data ? (
-            <Text className="text-xs text-muted-foreground">
-              Snapshot {query.data.snapshotSequence} · advances remain separate
-              from payable
-            </Text>
           ) : null}
           {query.isSuccess && visible && query.data.data.length === 0 ? (
             <Text className="py-6 text-sm text-muted-foreground">
               No supplier entries at this snapshot.
             </Text>
           ) : null}
+          {visible && query.data?.data.length ? (
+            <SectionHeader title="Statement" />
+          ) : null}
         </View>
       }
-      renderItem={({ item }) => (
-        <View className="mb-3 gap-2 rounded-2xl border border-border bg-card p-4">
-          <View className="flex-row items-start justify-between gap-3">
-            <Text className="min-w-0 flex-1 font-semibold">
-              {item.description}
-            </Text>
-            <Text className="font-bold">
-              {formatFinanceMoney(item.amountMinor, currencyCode)}
-            </Text>
+      renderItem={({ item, index }) => {
+        const rows = query.data?.data ?? []
+        const last = index === rows.length - 1
+        const style = supplierEntryStyle(item.kind)
+        const canCorrect =
+          !item.reversal &&
+          ["OPENING_PAYABLE", "OPENING_ADVANCE", "ADVANCE"].includes(item.kind)
+        const canApply =
+          !item.reversal && ["OPENING_ADVANCE", "ADVANCE"].includes(item.kind)
+        return (
+          <View
+            className={cn(
+              "overflow-hidden bg-card px-3.5",
+              index === 0 && "rounded-t-[20px]",
+              last && "rounded-b-[20px]",
+            )}
+          >
+            <RecordRow
+              stackDetails
+              title={item.description}
+              meta={`${financeDisplayDate(item.effectiveAt)} · ${supplierKindLabel(item.kind)}${item.reversal ? " · Reversed" : ""}`}
+              amount={formatFinanceMoney(item.amountMinor, currencyCode)}
+              avatar={{ icon: style.icon, tint: style.tint }}
+            />
+            {canCorrect || canApply ? (
+              <View className="-mt-1 flex-row flex-wrap gap-x-5 pb-3 pl-[50px]">
+                {canCorrect ? (
+                  <Pressable
+                    accessibilityLabel={`Correct ${supplierKindLabel(item.kind)} dated ${financeDisplayDate(item.effectiveAt)}`}
+                    accessibilityRole="button"
+                    className="min-h-9 justify-center"
+                    hitSlop={6}
+                    onPress={() => onReverse(item)}
+                  >
+                    <Text className="text-[13px] font-bold text-primary">
+                      Correct
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {canApply ? (
+                  <Pressable
+                    accessibilityLabel={`Choose a purchase to apply ${supplierKindLabel(item.kind)} from ${financeDisplayDate(item.effectiveAt)}`}
+                    accessibilityRole="button"
+                    className="min-h-9 justify-center"
+                    hitSlop={6}
+                    onPress={() => onAllocateAdvance(item)}
+                  >
+                    <Text className="text-[13px] font-bold text-primary">
+                      Apply to a purchase
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+            {last ? null : <RowDivider />}
           </View>
-          <Text className="text-sm text-muted-foreground">
-            {item.kind.replaceAll("_", " ")} · {item.side.toLowerCase()} ·{" "}
-            {financeDisplayDate(item.effectiveAt)} UTC
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            Journal sequence {item.sequence}
-            {item.reversal ? ` · reversed at ${item.reversal.sequence}` : ""}
-          </Text>
-          {!item.reversal &&
-          ["OPENING_PAYABLE", "OPENING_ADVANCE", "ADVANCE"].includes(
-            item.kind,
-          ) ? (
-            <ActionButton
-              variant="outline"
-              onPress={() => onReverse(item)}
-              accessibilityLabel={`Correct ${item.kind.replaceAll("_", " ")} dated ${financeDisplayDate(item.effectiveAt)}`}
-            >
-              Correct this entry
-            </ActionButton>
-          ) : null}
-          {!item.reversal &&
-          ["OPENING_ADVANCE", "ADVANCE"].includes(item.kind) ? (
-            <ActionButton
-              variant="outline"
-              onPress={() => onAllocateAdvance(item)}
-              accessibilityLabel={`Choose a purchase to apply ${item.kind.replaceAll("_", " ")} from ${financeDisplayDate(item.effectiveAt)}`}
-            >
-              Apply to a purchase
-            </ActionButton>
-          ) : null}
-        </View>
-      )}
+        )
+      }}
       ListFooterComponent={
         visible && query.data ? (
           <SupplierFinancePageControls
@@ -806,6 +893,36 @@ function SupplierStatement({
       contentContainerClassName="pb-12"
     />
   )
+}
+
+const SUPPLIER_KIND_LABELS: Record<string, string> = {
+  ADVANCE: "Advance paid",
+  ADVANCE_ALLOCATION: "Advance applied",
+  OPENING_ADVANCE: "Opening advance",
+  OPENING_PAYABLE: "Opening payable",
+  PURCHASE: "Purchase",
+  PURCHASE_BILL: "Purchase bill",
+  PURCHASE_PAYMENT: "Payment",
+  PURCHASE_PAYMENT_REVERSAL: "Payment reversed",
+  PURCHASE_RECOGNITION_REVERSAL: "Purchase reversed",
+  REVERSAL: "Reversal",
+  SUPPLIER_OPENING_PAYABLE: "Opening payable",
+}
+function supplierKindLabel(kind: string) {
+  const known = SUPPLIER_KIND_LABELS[kind]
+  if (known) return known
+  const words = kind.replaceAll("_", " ").toLowerCase()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+function supplierEntryStyle(kind: string): {
+  icon: IconKeys
+  tint: GreenTillTint
+} {
+  if (kind.includes("REVERSAL")) return { icon: "Undo2", tint: "rose" }
+  if (kind.includes("PAYMENT") || kind === "ADVANCE")
+    return { icon: "ArrowUp", tint: "mint" }
+  if (kind.startsWith("PURCHASE")) return { icon: "ReceiptText", tint: "amber" }
+  return { icon: "FileText", tint: "sky" }
 }
 
 function SupplierAging({

@@ -6,10 +6,51 @@ import { useColorScheme, useColors } from "@/hooks/use-color"
 import { isInvitedStaffProfile, isSalesRepRole } from "@/lib/mobile-roles"
 import { Redirect, useRouter } from "expo-router"
 import { StatusBar } from "expo-status-bar"
-import type { ComponentType, ReactNode } from "react"
+import {
+  type ComponentType,
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MobileScreen } from "./screen"
+
+/**
+ * A nested view (e.g. Suppliers inside Spending) can take over the modal bar
+ * so the screen keeps one header: its title and a back chevron that returns
+ * to the previous view instead of closing the modal.
+ */
+export type WorkflowHeaderOverride = {
+  backLabel: string
+  onBack: () => void
+  title: string
+}
+const WorkflowHeaderContext = createContext<
+  (override: WorkflowHeaderOverride | null) => void
+>(() => {})
+
+/** Put `title` and a back chevron in the modal bar while mounted. */
+export function useWorkflowHeader(override: WorkflowHeaderOverride | null) {
+  const setOverride = useContext(WorkflowHeaderContext)
+  const latest = useRef(override)
+  latest.current = override
+  const active = override !== null
+  const title = override?.title
+  const backLabel = override?.backLabel
+  useEffect(() => {
+    if (!active || !title || !backLabel) return
+    setOverride({
+      backLabel,
+      onBack: () => latest.current?.onBack(),
+      title,
+    })
+    return () => setOverride(null)
+  }, [active, backLabel, setOverride, title])
+}
 
 export type WorkflowModalChromeProps = {
   /** Shows a back arrow that returns to the previous screen. */
@@ -100,78 +141,82 @@ function DefaultWorkflowModalChrome({
   const colors = useColors()
   const { colorScheme } = useColorScheme()
   const insets = useSafeAreaInsets()
+  const [override, setOverride] = useState<WorkflowHeaderOverride | null>(null)
+  const showBack = Boolean(override) || back
   return (
-    <View
-      style={{
-        backgroundColor: colors.background,
-        flex: 1,
-      }}
-    >
-      <StatusBar
-        animated
-        backgroundColor={colors.background}
-        style={colorScheme === "dark" ? "light" : "dark"}
-      />
+    <WorkflowHeaderContext.Provider value={setOverride}>
       <View
-        pointerEvents="none"
         style={{
           backgroundColor: colors.background,
-          height: insets.top,
-          left: 0,
-          position: "absolute",
-          right: 0,
-          top: 0,
-          zIndex: 100,
+          flex: 1,
         }}
-      />
-      <MobileScreen
-        contentClassName="px-0 pt-2 pb-0"
-        contentContainerStyle={{ paddingBottom: 0 }}
-        keyboardBottomOffset={keyboardBottomOffset}
-        scroll={false}
       >
-        {hideHeader ? null : (
-          // Green Till: X on the left, centred title, balancing spacer.
-          <View className="mb-3.5 flex-row items-center gap-2.5 px-4">
-            <Pressable
-              accessibilityLabel={closeLabel}
-              accessibilityRole="button"
-              className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
-              haptic
-              onPress={onClose}
-              transition
-            >
-              <Icon
-                className={
-                  back
-                    ? "size-[20px] text-foreground"
-                    : "size-[18px] text-foreground"
-                }
-                name={back ? "ArrowLeft" : "X"}
-              />
-            </Pressable>
-            <View className="min-w-0 flex-1 items-center">
-              <Text
-                accessibilityRole="header"
-                numberOfLines={1}
-                className="text-center text-base font-extrabold tracking-tight text-foreground"
+        <StatusBar
+          animated
+          backgroundColor={colors.background}
+          style={colorScheme === "dark" ? "light" : "dark"}
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            backgroundColor: colors.background,
+            height: insets.top,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0,
+            zIndex: 100,
+          }}
+        />
+        <MobileScreen
+          contentClassName="px-0 pt-2 pb-0"
+          contentContainerStyle={{ paddingBottom: 0 }}
+          keyboardBottomOffset={keyboardBottomOffset}
+          scroll={false}
+        >
+          {hideHeader ? null : (
+            // Green Till: X on the left, centred title, balancing spacer.
+            <View className="mb-3.5 flex-row items-center gap-2.5 px-4">
+              <Pressable
+                accessibilityLabel={override?.backLabel ?? closeLabel}
+                accessibilityRole="button"
+                className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+                haptic
+                onPress={override?.onBack ?? onClose}
+                transition
               >
-                {title}
-              </Text>
-              {subtitle ? (
+                <Icon
+                  className={
+                    showBack
+                      ? "size-[20px] text-foreground"
+                      : "size-[18px] text-foreground"
+                  }
+                  name={showBack ? "ArrowLeft" : "X"}
+                />
+              </Pressable>
+              <View className="min-w-0 flex-1 items-center">
                 <Text
+                  accessibilityRole="header"
                   numberOfLines={1}
-                  className="text-center text-xs text-muted-foreground"
+                  className="text-center text-base font-extrabold tracking-tight text-foreground"
                 >
-                  {subtitle}
+                  {override?.title ?? title}
                 </Text>
-              ) : null}
+                {subtitle && !override ? (
+                  <Text
+                    numberOfLines={1}
+                    className="text-center text-xs text-muted-foreground"
+                  >
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+              <View className="size-11" />
             </View>
-            <View className="size-11" />
-          </View>
-        )}
-        <View className="min-h-0 flex-1">{children}</View>
-      </MobileScreen>
-    </View>
+          )}
+          <View className="min-h-0 flex-1">{children}</View>
+        </MobileScreen>
+      </View>
+    </WorkflowHeaderContext.Provider>
   )
 }
