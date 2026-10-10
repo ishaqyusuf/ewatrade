@@ -6,8 +6,9 @@ export default function FinanceMovementRoute() {
   const { entryId } = useLocalSearchParams<{ entryId: string }>()
   return (
     <WorkflowModalScreen
+      back
       title="Money movement"
-      closeLabel="Close money movement"
+      closeLabel="Back"
       closeHref="/finance-accounts-modal"
     >
       <FinanceMovementScreen entryId={entryId} />
