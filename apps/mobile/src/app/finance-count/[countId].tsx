@@ -6,8 +6,9 @@ export default function FinanceCountRoute() {
   const { countId } = useLocalSearchParams<{ countId: string }>()
   return (
     <WorkflowModalScreen
-      title="Count and investigate"
-      closeLabel="Close cash count"
+      back
+      title="Cash count"
+      closeLabel="Back to cash counts"
       closeHref="/finance-counts-modal"
     >
       <FinanceCountScreen countId={countId} />
