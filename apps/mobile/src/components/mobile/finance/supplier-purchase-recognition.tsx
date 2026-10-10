@@ -852,7 +852,11 @@ export function SupplierPurchaseRegistrationForm({
   return (
     <KeyboardAwareScrollView
       className="flex-1"
-      contentContainerClassName="gap-4 px-4 pb-12"
+      contentContainerStyle={{
+        gap: 16,
+        paddingBottom: 48,
+        paddingHorizontal: 18,
+      }}
       bottomOffset={100}
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
@@ -1913,7 +1917,11 @@ export function SupplierPurchaseRecognitionPanel({
   return (
     <KeyboardAwareScrollView
       className="flex-1"
-      contentContainerClassName="gap-4 px-4 pb-12"
+      contentContainerStyle={{
+        gap: 16,
+        paddingBottom: 48,
+        paddingHorizontal: 18,
+      }}
       bottomOffset={100}
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"

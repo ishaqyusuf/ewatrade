@@ -343,7 +343,11 @@ export function SupplierCommandForm({
   return (
     <KeyboardAwareScrollView
       className="flex-1"
-      contentContainerClassName="gap-4 px-[18px] pb-12"
+      contentContainerStyle={{
+        gap: 16,
+        paddingBottom: 48,
+        paddingHorizontal: 18,
+      }}
       keyboardShouldPersistTaps="handled"
     >
       {/* The modal bar names this step and steps back. */}
