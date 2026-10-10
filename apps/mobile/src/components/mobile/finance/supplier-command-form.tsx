@@ -3,10 +3,12 @@ import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { createSupplierFixture } from "@/internal-tooling/fixture-recipes"
 import { financeUtcDate } from "@/lib/finance-expense-input"
 import { getSession } from "@/lib/session-store"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
@@ -14,7 +16,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
+import { ListCard } from "../green-till/kit"
+import { FinanceBankDateField } from "./finance-bank-date-field"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
+import { financeDisplayDate } from "./finance-display"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 import {
   beginSupplierCommandPreparation,
@@ -337,36 +343,22 @@ export function SupplierCommandForm({
   return (
     <KeyboardAwareScrollView
       className="flex-1"
-      contentContainerClassName="gap-4 px-4 pb-12"
+      contentContainerClassName="gap-4 px-[18px] pb-12"
       keyboardShouldPersistTaps="handled"
     >
-      <ActionButton variant="ghost" disabled={command.pending} onPress={onBack}>
-        ‹ {supplier ? "Supplier account" : "Suppliers"}
-      </ActionButton>
-      <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        Supplier accounts · {book.currencyCode}
-      </Text>
-      <Text className="text-2xl font-bold">
-        {review
-          ? review.mode === "reversal"
-            ? "Review supplier correction"
-            : "Review before recording"
-          : supplier
-            ? "Record supplier entry"
-            : "Add supplier"}
-      </Text>
-      <Text className="text-sm text-muted-foreground">
+      {/* The modal bar names this step and steps back. */}
+      <Text className="px-0.5 text-xs text-muted-foreground">
         {review?.mode === "create"
-          ? "This creates a supplier identity only. It does not record a balance, purchase, or cash movement."
+          ? "This creates the supplier only. It records no balance, purchase or payment."
           : review?.mode === "reversal"
-            ? "This posts a linked opposite entry and keeps the original in history. Advance reversals are refused until consumed portions are released."
+            ? "This adds a linked opposite entry and keeps the original."
             : review?.mode === "opening"
-              ? "Opening balances use the bookkeeping start date. Payables and held advances remain separate."
+              ? "Opening balances use the book start date. Payables and advances stay separate."
               : review?.mode === "advance"
-                ? "This records a reported payment into supplier advances. It does not initiate a transfer or confirm an inventory receipt."
+                ? "This records money already paid to the supplier. It does not send money or receive stock."
                 : supplier
-                  ? `${supplier.code} · ${supplier.name}. Each submission is checked against the current finance book before review.`
-                  : "Create the supplier identity first. Opening balances and paid advances are separate dated entries."}
+                  ? `${supplier.name} · ${supplier.code} · ${book.currencyCode}`
+                  : "Add the supplier first. Balances and advances are recorded afterwards."}
       </Text>
       <FinanceCommandFeedback
         command={command}
@@ -381,70 +373,73 @@ export function SupplierCommandForm({
         />
       ) : null}
       {review ? (
-        <View className="gap-3 rounded-2xl border border-border bg-card p-4">
-          <Text className="text-base font-semibold">
-            {review.mode === "create"
-              ? "New supplier"
+        <View className="gap-4">
+          <ListCard>
+            {(review.mode === "create"
+              ? [
+                  ["New supplier", review.payload.name],
+                  ["Code", review.payload.code],
+                ]
               : review.mode === "reversal"
-                ? `Correct ${review.sourceKind.replaceAll("_", " ")}`
-                : review.mode === "opening"
-                  ? review.payload.kind === "PAYABLE"
-                    ? "Opening payable"
-                    : "Opening held advance"
-                  : "Paid supplier advance"}
+                ? [
+                    ["Correct", supplierEntryLabel(review.sourceKind)],
+                    ["Original", review.sourceDescription],
+                    ["Date", financeDisplayDate(review.payload.effectiveAt)],
+                    ["Reason", review.payload.reason],
+                  ]
+                : [
+                    [
+                      review.mode === "opening"
+                        ? review.payload.kind === "PAYABLE"
+                          ? "Opening payable"
+                          : "Opening held advance"
+                        : "Paid advance",
+                      formatFinanceMoney(
+                        review.payload.amountMinor,
+                        book.currencyCode,
+                      ),
+                    ],
+                    ["Date", financeDisplayDate(review.payload.effectiveAt)],
+                    ...(review.mode === "advance"
+                      ? [["Paid from", review.accountName]]
+                      : []),
+                    ["Description", review.payload.description],
+                  ]
+            ).map(([label, value]) => (
+              <View
+                key={label}
+                className="min-h-11 flex-row items-start justify-between gap-3 py-3"
+              >
+                <Text className="text-sm text-muted-foreground">{label}</Text>
+                <Text className="min-w-0 flex-1 text-right text-sm font-bold text-foreground">
+                  {value}
+                </Text>
+              </View>
+            ))}
+          </ListCard>
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <ActionButton
+                variant="outline"
+                disabled={command.pending}
+                onPress={() => setReview(null)}
+              >
+                Back
+              </ActionButton>
+            </View>
+            <View className="flex-1">
+              <ActionButton
+                disabled={disabled}
+                isLoading={command.pending}
+                onPress={() => void confirm()}
+              >
+                Confirm
+              </ActionButton>
+            </View>
+          </View>
+          <Text className="px-0.5 text-xs text-muted-foreground">
+            Nothing is saved until you confirm.
           </Text>
-          {review.mode === "create" ? (
-            <>
-              <Text>Code · {review.payload.code}</Text>
-              <Text>Name · {review.payload.name}</Text>
-            </>
-          ) : review.mode === "reversal" ? (
-            <>
-              <Text>
-                {supplier?.code} · {supplier?.name}
-              </Text>
-              <Text>Original · {review.sourceKind.replaceAll("_", " ")}</Text>
-              <Text>{review.sourceDescription}</Text>
-              <Text>
-                Correction date ·{" "}
-                {review.payload.effectiveAt.toISOString().slice(0, 10)} UTC
-              </Text>
-              <Text>Reason · {review.payload.reason}</Text>
-            </>
-          ) : (
-            <>
-              <Text>
-                {supplier?.code} · {supplier?.name}
-              </Text>
-              <Text className="text-xl font-bold">
-                {formatFinanceMoney(
-                  review.payload.amountMinor,
-                  book.currencyCode,
-                )}
-              </Text>
-              <Text>
-                {review.payload.effectiveAt.toISOString().slice(0, 10)} UTC
-                {review.mode === "advance"
-                  ? ` · paid from ${review.accountName}`
-                  : ""}
-              </Text>
-              <Text>{review.payload.description}</Text>
-            </>
-          )}
-          <ActionButton
-            disabled={disabled}
-            isLoading={command.pending}
-            onPress={() => void confirm()}
-          >
-            Confirm and record
-          </ActionButton>
-          <ActionButton
-            variant="outline"
-            disabled={command.pending}
-            onPress={() => setReview(null)}
-          >
-            Back to details
-          </ActionButton>
         </View>
       ) : !supplier ? (
         <View className="gap-4">
@@ -494,11 +489,15 @@ export function SupplierCommandForm({
         </View>
       ) : reversalEntry ? (
         <View className="gap-4">
-          <StatusBanner
-            title="Original supplier entry"
-            message={`${reversalEntry.kind.replaceAll("_", " ")} · ${new Date(reversalEntry.effectiveAt).toISOString().slice(0, 10)} UTC · ${reversalEntry.description}. The original source remains in history.`}
-            tone="warning"
-          />
+          <View className="gap-0.5 rounded-[20px] bg-card px-4 py-3 shadow-sm">
+            <Text className="text-xs font-bold text-muted-foreground">
+              {supplierEntryLabel(reversalEntry.kind)} ·{" "}
+              {financeDisplayDate(reversalEntry.effectiveAt)}
+            </Text>
+            <Text className="text-sm text-foreground">
+              {reversalEntry.description}
+            </Text>
+          </View>
           <FormField
             label="Correction reason"
             value={reason}
@@ -506,12 +505,15 @@ export function SupplierCommandForm({
             maxLength={400}
             multiline
           />
-          <FormField
-            label="Correction date (YYYY-MM-DD, UTC)"
+          <FinanceBankDateField
+            label="Correction date"
             value={date}
-            onChangeText={setDate}
-            maxLength={10}
-            autoCapitalize="none"
+            onChange={setDate}
+            minimum={new Date(reversalEntry.effectiveAt)
+              .toISOString()
+              .slice(0, 10)}
+            maximum={today}
+            disabled={disabled}
           />
           <ActionButton
             disabled={disabled}
@@ -523,50 +525,32 @@ export function SupplierCommandForm({
         </View>
       ) : (
         <View className="gap-4">
-          <View className="flex-row gap-2">
-            <ActionButton
-              className="flex-1"
-              variant={opening ? "secondary" : "outline"}
-              disabled={disabled}
-              onPress={() => {
-                setEntryMode("opening")
-                setDate(startDate)
-              }}
-            >
-              Opening entry
-            </ActionButton>
-            <ActionButton
-              className="flex-1"
-              variant={!opening ? "secondary" : "outline"}
-              disabled={disabled}
-              onPress={() => {
-                setEntryMode("advance")
-                setDate(today)
-              }}
-            >
-              Paid advance
-            </ActionButton>
-          </View>
+          <Segmented
+            label="Type"
+            disabled={disabled}
+            options={[
+              ["opening", "Opening entry"],
+              ["advance", "Paid advance"],
+            ]}
+            value={entryMode}
+            onChange={(value) => {
+              setEntryMode(value)
+              setDate(value === "opening" ? startDate : today)
+            }}
+          />
           {opening ? (
-            <View className="flex-row gap-2">
-              {(["PAYABLE", "ADVANCE"] as const).map((value) => (
-                <ActionButton
-                  key={value}
-                  className="flex-1"
-                  variant={kind === value ? "secondary" : "outline"}
-                  disabled={disabled}
-                  onPress={() => setKind(value)}
-                >
-                  {value === "PAYABLE" ? "Opening payable" : "Held advance"}
-                </ActionButton>
-              ))}
-            </View>
+            <Segmented
+              label="Opening balance"
+              hint={`Uses the book start date, ${financeDisplayDate(`${startDate}T00:00:00.000Z`)}. One opening source of each type per supplier.`}
+              disabled={disabled}
+              options={[
+                ["PAYABLE", "Payable"],
+                ["ADVANCE", "Held advance"],
+              ]}
+              value={kind}
+              onChange={setKind}
+            />
           ) : null}
-          <Text className="text-sm text-muted-foreground">
-            {opening
-              ? `Opening entries use ${startDate} UTC. Each supplier can have one source of each type, even if an earlier entry was reversed.`
-              : "Choose a date from the book start date through today (UTC)."}
-          </Text>
           <MoneyField
             currencyCode={book.currencyCode}
             label={`Amount (${book.currencyCode})`}
@@ -575,22 +559,22 @@ export function SupplierCommandForm({
           />
           {!opening ? (
             <View className="gap-2">
-              <Text className="text-xs font-bold uppercase tracking-[1.4px]">
-                Paid from · active accounts
+              <Text className="px-0.5 text-xs font-bold text-muted-foreground">
+                Paid from
               </Text>
               {accounts.length ? (
-                accounts.map((account) => (
-                  <ActionButton
-                    key={account.id}
-                    variant={
-                      moneyAccountId === account.id ? "secondary" : "outline"
-                    }
-                    disabled={disabled}
-                    onPress={() => setMoneyAccountId(account.id)}
-                  >
-                    {account.name} · {account.purpose.toLowerCase()}
-                  </ActionButton>
-                ))
+                <View className="flex-row flex-wrap gap-2">
+                  {accounts.map((account) => (
+                    <ClassicCustomerBookFilter
+                      key={account.id}
+                      active={moneyAccountId === account.id}
+                      label={account.name}
+                      onPress={() => {
+                        if (!disabled) setMoneyAccountId(account.id)
+                      }}
+                    />
+                  ))}
+                </View>
               ) : (
                 <StatusBanner
                   message="Create an active cash, bank, or clearing account before recording a paid supplier advance."
@@ -607,12 +591,13 @@ export function SupplierCommandForm({
             multiline
           />
           {!opening ? (
-            <FormField
-              label="Date (YYYY-MM-DD, UTC)"
+            <FinanceBankDateField
+              label="Date paid"
               value={date}
-              onChangeText={setDate}
-              maxLength={10}
-              autoCapitalize="none"
+              onChange={setDate}
+              minimum={startDate}
+              maximum={today}
+              disabled={disabled}
             />
           ) : null}
           <ActionButton
@@ -625,5 +610,70 @@ export function SupplierCommandForm({
         </View>
       )}
     </KeyboardAwareScrollView>
+  )
+}
+
+function supplierEntryLabel(kind: string) {
+  const words = kind.replaceAll("_", " ").toLowerCase()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/** Two-choice segmented control inside a card, per the 22/01 entry form. */
+function Segmented<T extends string>({
+  label,
+  hint,
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string
+  hint?: string
+  options: readonly (readonly [T, string])[]
+  value: T
+  onChange: (value: T) => void
+  disabled?: boolean
+}) {
+  return (
+    <View className="gap-1.5">
+      <Text className="px-0.5 text-xs font-bold text-muted-foreground">
+        {label}
+      </Text>
+      <View className="flex-row gap-1.5 rounded-xl bg-muted p-1">
+        {options.map(([option, text]) => {
+          const selected = option === value
+          return (
+            <View
+              key={option}
+              className={cn(
+                "flex-1 rounded-[10px]",
+                selected && "bg-card shadow-sm",
+              )}
+            >
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected, disabled }}
+                className="min-h-10 items-center justify-center rounded-[10px] px-2"
+                disabled={disabled}
+                haptic
+                onPress={() => onChange(option)}
+              >
+                <Text
+                  className={cn(
+                    "text-[13px] font-extrabold",
+                    selected ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {text}
+                </Text>
+              </Pressable>
+            </View>
+          )
+        })}
+      </View>
+      {hint ? (
+        <Text className="px-0.5 text-xs text-muted-foreground">{hint}</Text>
+      ) : null}
+    </View>
   )
 }
