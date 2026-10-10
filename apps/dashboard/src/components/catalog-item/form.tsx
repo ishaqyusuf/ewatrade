@@ -1185,7 +1185,7 @@ export function CatalogItemForm({
             }}
           />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-md:px-4">
             <Button variant="outline" onClick={backToForm}>
               Back to form
             </Button>

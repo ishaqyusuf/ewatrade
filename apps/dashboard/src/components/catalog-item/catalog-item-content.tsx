@@ -29,12 +29,23 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
   return (
     <SheetFrame
       loadingFallback={
-        <CatalogItemSkeleton chat={catalogCreateMode === "chat"} />
+        <div
+          className={catalogCreateMode === "chat" ? "max-md:px-4" : undefined}
+        >
+          <CatalogItemSkeleton chat={catalogCreateMode === "chat"} />
+        </div>
       }
       finalFocus={props.finalFocus}
       closeError={props.closeError}
       popupClassName={`${themeClass} ${catalogCreateMode === "chat" ? "sm:w-[min(1120px,95vw)] sm:max-w-[1120px]" : "sm:w-[min(900px,95vw)] sm:max-w-[900px]"}`}
       mobileBottomSheet={!form.kind}
+      // Phones run the product chat edge to edge under a compact header.
+      headerClassName={
+        catalogCreateMode === "chat" ? "max-md:px-4 max-md:pb-3" : undefined
+      }
+      contentClassName={
+        catalogCreateMode === "chat" ? "max-md:px-0 max-md:pb-0" : undefined
+      }
       title={
         form.kind === "product"
           ? "Add product"

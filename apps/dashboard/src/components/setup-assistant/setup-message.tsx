@@ -9,7 +9,7 @@ import { cn } from "@ewatrade/ui"
 import { CheckmarkCircle02Icon, SparklesIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { UIMessage } from "ai"
-import { memo } from "react"
+import { type ReactNode, createContext, memo, useContext } from "react"
 import { Streamdown } from "streamdown"
 import { SetupSentAttachment } from "./setup-attachment-chips"
 import { SetupChatItems } from "./setup-chat-items"
@@ -32,6 +32,18 @@ const markdownComponents = {
   img: () => null,
 }
 
+/**
+ * Chats whose draft is not the business setup list (the product chat) render
+ * their own record card under each finished assistant message instead.
+ */
+export type SetupDraftCardHost = (props: {
+  messageId: string
+  staged: string[]
+}) => ReactNode
+export const SetupDraftCardContext = createContext<SetupDraftCardHost | null>(
+  null,
+)
+
 export const SetupMessage = memo(function SetupMessage({
   message,
   streaming,
@@ -39,6 +51,7 @@ export const SetupMessage = memo(function SetupMessage({
   message: UIMessage
   streaming: boolean
 }) {
+  const renderDraftCard = useContext(SetupDraftCardContext)
   if (message.role === "user") {
     const text = message.parts
       .map((part) => (part.type === "text" ? part.text : ""))
@@ -115,7 +128,9 @@ export const SetupMessage = memo(function SetupMessage({
             </Streamdown>
           ) : null,
         )}
-        {staged.length > 0 && !streaming ? (
+        {streaming ? null : renderDraftCard ? (
+          renderDraftCard({ messageId: message.id, staged })
+        ) : staged.length > 0 ? (
           <SetupChatItems keys={staged} />
         ) : null}
       </div>

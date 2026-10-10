@@ -26,6 +26,7 @@ type SheetFrameProps = {
   description?: string
   header?: ReactNode
   footer?: ReactNode
+  headerClassName?: string
   contentClassName?: string
   popupClassName?: string
   mobileBottomSheet?: boolean
@@ -41,6 +42,7 @@ export function SheetFrame({
   description,
   header,
   footer,
+  headerClassName,
   contentClassName,
   popupClassName,
   mobileBottomSheet = false,
@@ -54,7 +56,12 @@ export function SheetFrame({
       finalFocus={finalFocus}
       popupClassName={popupClassName}
     >
-      <SheetHeader className="shrink-0 flex-row items-start justify-between gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
+      <SheetHeader
+        className={cn(
+          "shrink-0 flex-row items-start justify-between gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6",
+          headerClassName,
+        )}
+      >
         <div className="min-w-0 space-y-2">
           <SheetTitle className="text-xl font-medium">{title}</SheetTitle>
           {description ? (
