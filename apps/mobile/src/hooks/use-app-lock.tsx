@@ -253,9 +253,9 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
     const result = await LocalAuthentication.authenticateAsync({
       biometricsSecurityLevel: "weak",
-      cancelLabel: "Use code",
+      cancelLabel: "Use PIN",
       disableDeviceFallback: true,
-      fallbackLabel: "Use lock code",
+      fallbackLabel: "Use PIN",
       promptDescription: "Confirm it is you to open your business workspace.",
       promptMessage: "Unlock ẸwáTrade",
       promptSubtitle: "App lock",
@@ -268,9 +268,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       }
 
       return {
-        error:
-          result.warning ??
-          "Biometric unlock failed. Enter your lock code to continue.",
+        error: result.warning ?? "That didn’t work. Enter your PIN.",
         ok: false,
       }
     }
