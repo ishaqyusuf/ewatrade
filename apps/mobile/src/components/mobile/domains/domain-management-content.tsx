@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { SectionHeader } from "@/components/mobile/green-till/kit"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBadge } from "@/components/mobile/status-badge"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -277,10 +278,8 @@ export function DomainManagementContent({
             }
             loading={domains.isPending}
           />
-          <View className="gap-2">
-            <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
-              Storefront address
-            </Text>
+          <View>
+            <SectionHeader title="Storefront address" />
             <View className="flex-row items-center gap-4 rounded-[20px] bg-card p-4">
               <View className="min-w-0 flex-1 gap-1">
                 <Text className="text-lg font-extrabold text-foreground">
@@ -294,10 +293,8 @@ export function DomainManagementContent({
             </View>
           </View>
 
-          <View className="gap-2">
-            <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
-              Custom domain
-            </Text>
+          <View>
+            <SectionHeader title="Custom domain" />
 
             {domains.isPending ? (
               <ListSkeleton
