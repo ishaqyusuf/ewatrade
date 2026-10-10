@@ -190,6 +190,20 @@ ${manifest
   )
   .join("\n")}
 
+## Chat examples and regression tests
+
+Examples describe intended requests, not recorded model evaluations. Test links
+identify source coverage, not a passing run or deployed availability. Empty entries
+are explicit gaps. Database integration suites require their guarded test profile;
+do not run them against a merchant database. Browser screenshots and run results
+are maintained separately in local Brain acceptance reports and artifacts.
+
+| Capability | Example requests | Registered regression tests |
+|---|---|---|
+${manifest
+  .map((entry) => `| \`${entry.id}\` | ${entry.examples.map(cell).join("<br>") || "None registered"} | ${entry.tests.map((path) => `[${cell(path)}](../../../../${path})`).join("<br>") || "None registered"} |`)
+  .join("\n")}
+
 ## Planned merchant procedures by ticket
 
 | Ticket | Procedures |
