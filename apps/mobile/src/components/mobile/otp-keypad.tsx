@@ -307,7 +307,7 @@ function GreenTillKey({
           className={cn(
             "h-full items-center justify-center rounded-[13px]",
             pressed
-              ? "scale-[0.96] bg-primary/15"
+              ? "scale-[0.96] bg-primary/25"
               : action
                 ? "bg-transparent"
                 : "bg-card shadow-sm",
