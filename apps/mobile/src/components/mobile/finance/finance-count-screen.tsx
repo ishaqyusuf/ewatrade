@@ -126,6 +126,7 @@ function CountWorkspace({
   const count = detail.data
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   const diff = BigInt(count.differenceMinor)
+  const signedDiff = `${diff > 0n ? "+" : diff < 0n ? "−" : ""}${money((diff < 0n ? -diff : diff).toString())}`
   const canAdjust = !count.adjustment && !count.reviewRequired && diff !== 0n
   const canReverse = Boolean(count.adjustment && !count.adjustment.reversal)
   const pending = command.retained?.command
@@ -154,7 +155,7 @@ function CountWorkspace({
                 ? { label: "Matched", tone: "synced" }
                 : { label: "Needs review", tone: "draft" }
         }
-        amount={`${diff > 0n ? "+" : diff < 0n ? "−" : ""}${money((diff < 0n ? -diff : diff).toString())}`}
+        amount={signedDiff}
         sub={
           count.adjustment && !count.adjustment.reversal
             ? `Adjusted ${financeDisplayDate(count.adjustment.recordedAt)} · original count kept`
@@ -261,7 +262,7 @@ function CountWorkspace({
                     id: "adjustment",
                     title: "Adjustment recorded",
                     detail: `${financeDisplayDate(count.adjustment.recordedAt, true)} · ${count.adjustment.description}`,
-                    amount: money(count.differenceMinor),
+                    amount: signedDiff,
                     tone: "ok" as const,
                   },
                 ]
@@ -272,7 +273,7 @@ function CountWorkspace({
                     id: "difference",
                     title: "Difference found",
                     detail: `Expected ${money(count.expectedBalanceMinor)} from posted entries`,
-                    amount: money(count.differenceMinor),
+                    amount: signedDiff,
                     tone: "warn" as const,
                   },
                 ]
