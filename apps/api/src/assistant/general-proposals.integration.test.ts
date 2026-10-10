@@ -1,3 +1,4 @@
+import { verifyFulfillmentComposition } from "./general-fulfillment.integration-check"
 import { verifyOrderAmendmentProposals } from "./general-order-amendment.integration-check"
 import { verifyOrderReplacementPreview } from "./general-order-replacement.integration-check"
 import { verifyOrderMetadataAmendment } from "./general-order-metadata.integration-check"
@@ -304,6 +305,10 @@ if (enabled) setDefaultTimeout(600_000)
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_FULFILLMENT === "1") {
+          await verifyFulfillmentComposition(ctx, failingDb, conversation.id)
+          return
+        }
         if (process.env.RUN_GENERAL_ORDER_AMENDMENT === "1") {
           await verifyOrderAmendmentProposals(ctx, failingDb, conversation.id)
           return
@@ -827,6 +832,9 @@ if (enabled) setDefaultTimeout(600_000)
               if (!owned) throw Error("Refusing unowned fixture cleanup")
               // Reservations and order lines restrict deletion of their catalog
               // references. Remove this fixture's orders before cascading its tenant.
+              await tx.productFulfillment.deleteMany({ where: { orderLine: { order: { tenantId: owned.id } } } })
+              await tx.commercialServiceFulfillment.deleteMany({ where: { tenantId: owned.id } })
+              await tx.commercialServiceAuthorization.deleteMany({ where: { tenantId: owned.id } })
               await tx.stockReservation.deleteMany({
                 where: { tenantId: owned.id },
               })

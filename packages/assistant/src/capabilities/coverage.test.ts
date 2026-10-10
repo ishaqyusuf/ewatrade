@@ -9,7 +9,7 @@ import {
 import { capabilityForAction, capabilityManifest } from "./manifest"
 import type { Capability, ProcedureRule } from "./types"
 
-const read = capabilityManifest[0]
+const read = capabilityManifest.find((entry) => entry.id === "search.records")!
 const write = capabilityForAction("customer_create")
 
 test("the manifest registers every reviewed action with schema, policy and receipt", () => {
