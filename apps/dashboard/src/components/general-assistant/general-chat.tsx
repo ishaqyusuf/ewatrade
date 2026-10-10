@@ -75,6 +75,8 @@ export function GeneralChat() {
       router.push(
         `/customers?customerQuery=${encodeURIComponent(receipt.detail)}`,
       )
+    else if (receipt.kind === "inventory_closeout")
+      router.push(`/inventory?inventoryCloseout=${encodeURIComponent(receipt.recordId)}`)
     else if (receipt.kind === "stock_transfer")
       router.push(`/inventory/transfers?record=${encodeURIComponent(receipt.recordId)}`)
     else if (receipt.kind === "stock_count")

@@ -6,6 +6,7 @@ import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
+import { CloseoutSheet } from "./closeout-sheet"
 import { StockCountSheet } from "./stock-count-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
 import { DomainSheet } from "./domain-sheet"
@@ -71,6 +72,7 @@ export function GlobalSheets({
       {!access.scopedStaff ? <DomainSheet store={store} /> : null}
       <ReceiptSheet storeId={store.id} />
       <StockCountSheet storeId={store.id} />
+      <CloseoutSheet storeId={store.id} />
       {access.finance ? (
         <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
       ) : null}
