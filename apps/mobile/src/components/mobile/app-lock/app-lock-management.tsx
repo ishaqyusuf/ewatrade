@@ -3,17 +3,15 @@ import { Pressable } from "@/components/ui/pressable"
 import { Switch } from "@/components/ui/switch"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { cn } from "@/lib/utils"
 import type { ReactNode } from "react"
 import type { AppLockManagementProps } from "./app-lock-presentation"
 
+/** Market Day (Quiet Seal) App lock rows. Classic uses AppLockSettingsPage. */
 export function AppLockManagement(props: AppLockManagementProps) {
-  const market = useMobileDesign("app-lock") === "market-day"
   return (
-    // Classic keeps the confirmation under the rows, clear of the gesture bar.
-    <View className={market ? "grow justify-between gap-6" : "gap-4"}>
-      <View className={market ? "border-t border-market-line" : "gap-3"}>
+    <View className="grow justify-between gap-6">
+      <View className="border-t border-market-line">
         <ManagementRow
           icon="SecurityPassword"
           title={props.hasLock ? "Change PIN code" : "Create PIN code"}
@@ -46,20 +44,11 @@ export function AppLockManagement(props: AppLockManagementProps) {
             onPress={props.onDisable}
           />
         ) : null}
-        {market ? null : (
-          <Text className="px-1 text-xs text-muted-foreground">
-            Works offline. Stored only on this phone.
-          </Text>
-        )}
       </View>
       {props.message ? (
         <Text
           accessibilityLiveRegion="polite"
-          className={
-            market
-              ? "text-center text-xs font-semibold leading-[18px] text-market-muted-ink"
-              : "text-center text-xs font-medium leading-5 text-muted-foreground"
-          }
+          className="text-center text-xs font-semibold leading-[18px] text-market-muted-ink"
         >
           {props.message}
         </Text>
@@ -85,31 +74,18 @@ function ManagementRow({
   danger?: boolean
   trailing?: ReactNode
 }) {
-  const market = useMobileDesign("app-lock") === "market-day"
   const rowClass = cn(
-    market
-      ? "min-h-[82px] flex-row items-center gap-3 border-b border-market-line px-1 py-3"
-      : "min-h-[76px] flex-row items-center gap-3 rounded-2xl bg-card px-4 py-3",
+    "min-h-[82px] flex-row items-center gap-3 border-b border-market-line px-1 py-3",
     disabled && "opacity-50",
   )
   const content = (
     <>
-      <View
-        className={
-          market
-            ? "size-[42px] items-center justify-center rounded-full bg-market-soft-band"
-            : "size-10 items-center justify-center rounded-full bg-muted"
-        }
-      >
+      <View className="size-[42px] items-center justify-center rounded-full bg-market-soft-band">
         <Icon
           className={
-            market
-              ? danger
-                ? "size-[21px] text-market-paprika"
-                : "size-[21px] text-market-ink"
-              : danger
-                ? "size-base text-destructive"
-                : "size-base text-muted-foreground"
+            danger
+              ? "size-[21px] text-market-paprika"
+              : "size-[21px] text-market-ink"
           }
           name={icon}
         />
@@ -117,35 +93,21 @@ function ManagementRow({
       <View className="min-w-0 flex-1 gap-1">
         <Text
           className={
-            market
-              ? danger
-                ? "text-sm font-extrabold leading-[19px] text-market-paprika"
-                : "text-sm font-extrabold leading-[19px] text-market-ink"
-              : danger
-                ? "text-sm font-semibold text-destructive"
-                : "text-sm font-semibold text-foreground"
+            danger
+              ? "text-sm font-extrabold leading-[19px] text-market-paprika"
+              : "text-sm font-extrabold leading-[19px] text-market-ink"
           }
         >
           {title}
         </Text>
-        <Text
-          className={
-            market
-              ? "text-xs leading-[17px] text-market-muted-ink"
-              : "text-xs leading-4 text-muted-foreground"
-          }
-        >
+        <Text className="text-xs leading-[17px] text-market-muted-ink">
           {detail}
         </Text>
       </View>
       {trailing ??
         (onPress ? (
           <Icon
-            className={
-              market
-                ? "size-[17px] text-market-muted-ink"
-                : "size-sm text-muted-foreground"
-            }
+            className="size-[17px] text-market-muted-ink"
             name="ChevronRight"
           />
         ) : null)}
@@ -156,10 +118,7 @@ function ManagementRow({
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
-      className={cn(
-        rowClass,
-        market ? "active:bg-market-soft-band" : "active:bg-accent",
-      )}
+      className={cn(rowClass, "active:bg-market-soft-band")}
       haptic
       onPress={onPress}
       transition
