@@ -6,6 +6,7 @@ export default function FinanceExpenseRoute() {
   const { billId } = useLocalSearchParams<{ billId: string }>()
   return (
     <WorkflowModalScreen
+      back
       title="Expense"
       closeLabel="Back to spending"
       closeHref="/finance-modal"
