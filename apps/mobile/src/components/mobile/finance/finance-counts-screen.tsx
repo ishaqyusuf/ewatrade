@@ -11,10 +11,11 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
 import { FlatList, View } from "react-native"
+import { HeroCard } from "../green-till/hero-card"
+import { ListCard, RecordRow } from "../green-till/kit"
 import { FinanceCashCountForm } from "./finance-cash-count-form"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { financeDisplayDate } from "./finance-display"
-import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -88,7 +89,8 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
     <FlatList
-      className="flex-1 px-[18px]"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 48 }}
       data={
         counts.isError
           ? []
@@ -102,13 +104,6 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
       }}
       ListHeaderComponent={
         <View className="gap-4 pb-5">
-          <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Business money
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            Count first. Investigate missing records before adjusting
-            differences. Recorded balances include posted activity only.
-          </Text>
           {feedback}
           {balances.isError ? (
             <StatusBanner
@@ -120,8 +115,7 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             />
           ) : balances.data ? (
             <View className="gap-4">
-              <FinanceDetailScaffold
-                title="Cash counts"
+              <HeroCard
                 label="Recorded cash balance"
                 amount={money(
                   accounts
@@ -130,13 +124,17 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
                 )}
                 sub="Posted activity only · includes archived accounts"
               />
-              {accounts.map((account) => (
-                <Text key={account.id}>
-                  {account.name}
-                  {account.archivedAt ? " · Archived" : ""}:{" "}
-                  {money(account.balanceMinor)}
-                </Text>
-              ))}
+              <ListCard>
+                {accounts.map((account) => (
+                  <RecordRow
+                    key={account.id}
+                    avatar={{ icon: "Wallet", tint: "mint" }}
+                    title={account.name}
+                    meta={account.archivedAt ? "Archived" : "Cash account"}
+                    amount={money(account.balanceMinor)}
+                  />
+                ))}
+              </ListCard>
             </View>
           ) : (
             <Skeleton className="h-48 rounded-[22px]" />
@@ -166,7 +164,7 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             variant="ledger"
           />
         ) : (
-          <Text className="py-5 text-muted-foreground">
+          <Text className="rounded-[20px] bg-card p-4 text-sm leading-6 text-muted-foreground">
             {counts.isError
               ? "Refresh to load the count history."
               : "No physical counts yet. Record the cash you can see, including zero."}
@@ -185,8 +183,9 @@ function CountsWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             </ActionButton>
           ) : null}
           <Text className="text-sm text-muted-foreground">
-            Each difference is the original difference at count, retained after
-            adjustments and reversals.
+            Count first. Investigate missing records before adjusting
+            differences. Each original difference is retained after adjustments
+            and reversals.
           </Text>
         </View>
       }
