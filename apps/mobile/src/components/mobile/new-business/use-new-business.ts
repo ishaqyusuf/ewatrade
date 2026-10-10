@@ -15,6 +15,7 @@ import {
   findBusinessProfile,
   listBusinessProfiles,
 } from "@ewatrade/utils"
+import { toLocalPhone } from "@ewatrade/utils/countries"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
 import { useRouter } from "expo-router"
@@ -294,10 +295,12 @@ export function useNewBusiness() {
         ?.code ?? "NGN"
     updateDraft({
       countryCode: "NG",
+      // The QA fixture number is a +1 test line, so its country is US.
+      phoneCountryCode: "US",
       businessName: fixture.businessName,
       addressLine1: fixture.addressLine1,
       city: fixture.city,
-      phone: fixture.phone,
+      phone: toLocalPhone("1", fixture.phone),
       currencyCode: currency,
       businessProfileKey: "general-retail-groceries",
       operatingModel: "products",

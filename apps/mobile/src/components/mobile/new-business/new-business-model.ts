@@ -18,6 +18,8 @@ export const BUSINESS_SETUP_TITLES = [
 ]
 export type NewBusinessDraft = {
   countryCode?: string
+  /** The phone's own country when it differs; unset follows the business. */
+  phoneCountryCode?: string
   businessName: string
   addressLine1: string
   city: string
@@ -69,6 +71,9 @@ export function businessDetailsIssue(draft: NewBusinessDraft) {
     return "Enter a phone number between 7 and 40 characters."
   return null
 }
+export function newBusinessPhoneDialCode(draft: NewBusinessDraft) {
+  return getCountry(draft.phoneCountryCode ?? draft.countryCode).dialCode
+}
 export function businessCreateInput(
   draft: NewBusinessDraft,
 ): RouterInputs["tenant"]["createBusiness"] {
@@ -79,7 +84,7 @@ export function businessCreateInput(
     countryCode: draft.countryCode ?? "NG",
     currencyCode: draft.currencyCode,
     supportPhone: toInternationalPhone(
-      getCountry(draft.countryCode).dialCode,
+      newBusinessPhoneDialCode(draft),
       draft.phone,
     ),
     onboarding: {

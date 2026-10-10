@@ -20,6 +20,8 @@ import { View } from "react-native"
 import { CountrySelect } from "../country-select"
 import { CurrentLocationCard } from "../current-location-card"
 import { ListCard } from "../green-till/kit"
+import { PhoneField } from "../phone-field"
+import { newBusinessPhoneDialCode } from "./new-business-model"
 import type { NewBusinessModel } from "./use-new-business"
 
 type FieldsProps = { model: NewBusinessModel; market: boolean }
@@ -114,7 +116,15 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
       <CountrySelect
         value={draft.countryCode ?? "NG"}
         disabled={locked}
-        onChange={(countryCode) => updateDraft({ countryCode })}
+        onChange={(countryCode) =>
+          updateDraft({
+            countryCode,
+            // The phone follows the business country until it is changed.
+            ...(draft.phoneCountryCode === draft.countryCode
+              ? { phoneCountryCode: countryCode }
+              : {}),
+          })
+        }
       />
       {!locked ? (
         <CurrentLocationCard
@@ -154,34 +164,26 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
         placeholder="Enter the street address"
         inputClassName={inputClassName}
       />
-      <View className={large ? "gap-3" : "flex-row gap-3"}>
-        <FormField
-          variant={market ? "filled" : "auth"}
-          containerClassName={large ? undefined : "min-w-0 flex-1"}
-          label="City"
-          maxLength={120}
-          value={draft.city}
-          onChangeText={(city) => updateDraft({ city })}
-          placeholder="Enter the city"
-          inputClassName={inputClassName}
-        />
-        <FormField
-          variant={market ? "filled" : "auth"}
-          containerClassName={large ? undefined : "min-w-0 flex-1"}
-          label="Phone"
-          editable={!locked}
-          leadingText={`+${getCountry(draft.countryCode).dialCode}`}
-          keyboardType="phone-pad"
-          maxLength={40}
-          value={toLocalPhone(
-            getCountry(draft.countryCode).dialCode,
-            draft.phone,
-          )}
-          onChangeText={(phone) => updateDraft({ phone })}
-          placeholder="Enter phone"
-          inputClassName={inputClassName}
-        />
-      </View>
+      <FormField
+        variant={market ? "filled" : "auth"}
+        label="City"
+        maxLength={120}
+        value={draft.city}
+        onChangeText={(city) => updateDraft({ city })}
+        placeholder="Enter the city"
+        inputClassName={inputClassName}
+      />
+      <PhoneField
+        countryCode={draft.phoneCountryCode ?? draft.countryCode ?? "NG"}
+        editable={!locked}
+        label="Phone"
+        onChangeText={(phone) => updateDraft({ phone })}
+        onCountryChange={(phoneCountryCode) =>
+          updateDraft({ phoneCountryCode })
+        }
+        value={draft.phone}
+        variant={market ? "filled" : "auth"}
+      />
       <CurrencySelector
         appearance={market ? "market-day" : "classic"}
         disabled={locked}
@@ -261,7 +263,10 @@ function ClassicReview({ model }: { model: NewBusinessModel }) {
             main: draft.businessName.trim(),
             sub: [
               `${draft.addressLine1.trim()}, ${draft.city.trim()}`,
-              toInternationalPhone(country.dialCode, draft.phone),
+              toInternationalPhone(
+                newBusinessPhoneDialCode(draft),
+                draft.phone,
+              ),
             ]
               .filter(Boolean)
               .join(" · "),
@@ -325,7 +330,7 @@ function MarketReview({ model, market }: FieldsProps) {
           <Summary
             label="Phone"
             value={toInternationalPhone(
-              getCountry(draft.countryCode).dialCode,
+              newBusinessPhoneDialCode(draft),
               draft.phone,
             )}
           />
