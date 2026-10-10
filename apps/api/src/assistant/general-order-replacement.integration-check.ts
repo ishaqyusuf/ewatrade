@@ -4,9 +4,11 @@ import {
   createCommercialOrder,
   createSimpleCatalogItem,
   previewCommercialOrderReplacement,
+  replaceCommercialOrder,
+  replaceCommercialOrderInTransaction,
 } from "@ewatrade/db/queries"
 import type { GeneralContext } from "./general-context"
-/** Read-only replacement preview gate, not command or assistant acceptance. */
+/** Canonical replacement gate; assistant and dashboard acceptance are separate. */
 export async function verifyOrderReplacementPreview(ctx: GeneralContext) {
   const db = ctx.db
   const tenantId = ctx.tenantContext.tenant.id
@@ -177,4 +179,96 @@ export async function verifyOrderReplacementPreview(ctx: GeneralContext) {
   expect(
     combined.blockers.some((row) => row.code === "INSUFFICIENT_STOCK"),
   ).toBe(true)
+  const changes = [{ orderLineId: line.id, quantity: "3", unitPriceMinor: 125 }]
+  const fresh = await previewCommercialOrderReplacement(db, {
+    ...scope,
+    changes,
+  })
+  const command = {
+    ...scope,
+    changes,
+    actorUserId,
+    clientOperationId: randomUUID(),
+    reason: "Customer changed quantity and agreed price",
+    expectedReviewDigest: fresh.reviewDigest,
+  }
+  await expect(
+    replaceCommercialOrder(db, {
+      ...command,
+      expectedReviewDigest: refreshed.reviewDigest,
+    }),
+  ).rejects.toThrow("Review replacement again")
+  console.info("Replacement command: rollback after receipt")
+  await expect(
+    db.$transaction(
+      async (tx) => {
+        await replaceCommercialOrderInTransaction(tx, command)
+        throw Error("Replacement receipt rollback")
+      },
+      { maxWait: 10000, timeout: 30000 },
+    ),
+  ).rejects.toThrow("Replacement receipt rollback")
+  expect(await db.commercialOrder.count({ where: { tenantId } })).toBe(2)
+  expect(await db.commercialOrderAmendment.count({ where: { tenantId } })).toBe(
+    0,
+  )
+  expect(
+    (await db.commercialOrder.findUniqueOrThrow({ where: { id: order.id } }))
+      .status,
+  ).toBe("CONFIRMED")
+  expect(
+    (
+      await db.stockBalanceSource.findUniqueOrThrow({
+        where: { id: source.id },
+      })
+    ).reservedQuantity.toFixed(),
+  ).toBe("4")
+  console.info("Replacement command: confirmation and exact replay")
+  const receipt = await replaceCommercialOrder(db, command)
+  expect(receipt.kind).toBe("REPLACE")
+  expect(receipt.replacementOrderId).not.toBeNull()
+  expect((await replaceCommercialOrder(db, command)).id).toBe(receipt.id)
+  await expect(
+    replaceCommercialOrder(db, { ...command, reason: "Different request" }),
+  ).rejects.toThrow("different input")
+  expect(await db.commercialOrder.count({ where: { tenantId } })).toBe(3)
+  expect(await db.commercialOrderAmendment.count({ where: { tenantId } })).toBe(
+    1,
+  )
+  expect(
+    (await db.commercialOrder.findUniqueOrThrow({ where: { id: order.id } }))
+      .status,
+  ).toBe("CANCELLED")
+  const replacementId = receipt.replacementOrderId
+  if (!replacementId) throw Error("Replacement ID required")
+  const replacement = await db.commercialOrder.findUniqueOrThrow({
+    where: { id: replacementId },
+    include: { lines: { include: { snapshot: true } } },
+  })
+  expect(replacement).toMatchObject({
+    totalMinor: 375,
+    status: "CONFIRMED",
+    amountPaidMinor: 0,
+    storeId,
+    tenantId,
+  })
+  const originalOrder = await db.commercialOrder.findUniqueOrThrow({
+    where: { id: order.id },
+  })
+  expect(replacement.deliveryDueAt?.toISOString()).toBe(
+    originalOrder.deliveryDueAt?.toISOString(),
+  )
+  expect(replacement.lines[0]?.quantity.toFixed()).toBe("3")
+  expect(replacement.lines[0]?.snapshot?.unitPriceMinor).toBe(125)
+  expect(
+    await db.offeringSnapshot.findUniqueOrThrow({ where: { id: original.id } }),
+  ).toEqual(original)
+  const finalBalance = await db.stockBalanceSource.findUniqueOrThrow({
+    where: { id: source.id },
+  })
+  expect(finalBalance.reservedQuantity.toFixed()).toBe("5")
+  expect(finalBalance.onHandQuantity.toFixed()).toBe("6")
+  expect(
+    await db.stockMovement.count({ where: { operation: { tenantId } } }),
+  ).toBe(0)
 }

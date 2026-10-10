@@ -21,6 +21,14 @@ export async function previewCommercialOrderCancellation(
   input: Scope,
 ) {
   const review = await getCommercialOrderAmendmentEligibility(db, input)
+  return buildCommercialOrderCancellationPreview(review, input)
+}
+
+/** Internal composition from the same scoped source read; never authorizes a write. */
+export function buildCommercialOrderCancellationPreview(
+  review: Awaited<ReturnType<typeof getCommercialOrderAmendmentEligibility>>,
+  input: Scope,
+) {
   const releases = review.source.lines.flatMap((line) => {
     const reservation = line.stockReservation
     if (!reservation) return []

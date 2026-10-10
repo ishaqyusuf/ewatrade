@@ -825,6 +825,7 @@ if (enabled) setDefaultTimeout(600_000)
               await tx.stockReservation.deleteMany({
                 where: { tenantId: owned.id },
               })
+              await tx.commercialOrderAmendment.deleteMany({ where: { tenantId: owned.id } })
               await tx.commercialOrder.deleteMany({
                 where: { tenantId: owned.id },
               })

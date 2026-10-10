@@ -141,3 +141,4 @@ export * from "./commercial-order-metadata-amendment"
 
 export * from "./commercial-order-replacement-terms"
 export * from "./commercial-order-replacement-review"
+export * from "./commercial-order-replacement"

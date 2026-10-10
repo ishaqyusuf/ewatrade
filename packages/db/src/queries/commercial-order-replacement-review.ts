@@ -10,7 +10,7 @@ import { CatalogError } from "./catalog-errors"
 import { getConfiguredCatalogOfferingAvailability } from "./catalog-inventory"
 import { orderAmendmentDigest } from "./commercial-order-amendment-evidence"
 import { getCommercialOrderAmendmentEligibility } from "./commercial-order-amendment-review"
-import { previewCommercialOrderCancellation } from "./commercial-order-cancellation"
+import { buildCommercialOrderCancellationPreview } from "./commercial-order-cancellation"
 import {
   type OrderReplacementChanges,
   buildOrderReplacementTerms,
@@ -27,15 +27,7 @@ export async function previewCommercialOrderReplacement(
   },
 ) {
   const review = await getCommercialOrderAmendmentEligibility(db, input)
-  const cancellation = await previewCommercialOrderCancellation(db, input)
-  if (
-    orderAmendmentDigest(review.source) !==
-    orderAmendmentDigest(cancellation.beforeSnapshot)
-  )
-    throw new CatalogError(
-      "REVISION_CONFLICT",
-      "Order changed during replacement review.",
-    )
+  const cancellation = buildCommercialOrderCancellationPreview(review, input)
   const terms = buildOrderReplacementTerms(review.source, input.changes)
   const balances = new Map<
     string,
@@ -227,6 +219,7 @@ export async function previewCommercialOrderReplacement(
     terms,
     reservationChanges,
     beforeSnapshot: cancellation.beforeSnapshot,
+    releasedReservations: cancellation.releases,
     stockOnHandChange: "0" as const,
     moneyMovementMinor: 0 as const,
     reviewDigest: orderAmendmentDigest({
