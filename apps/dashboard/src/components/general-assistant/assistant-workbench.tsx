@@ -63,7 +63,8 @@ export function AssistantWorkbench() {
 
   return (
     // Edge to edge under the shell header, like the design: no card frame.
-    <div className="-mx-4 flex flex-1 flex-col md:-mx-8">
+    // -mb-4 cancels the shell's bottom padding so only the columns scroll.
+    <div className="-mx-4 -mb-4 flex flex-1 flex-col md:-mx-8">
       <h1 className="sr-only">AI assistant</h1>
       <div className="grid h-[calc(100svh-70px)] min-h-[32rem] overflow-hidden md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px]">
         <nav

@@ -219,7 +219,7 @@ function ComposerBox({
       {voice?.recording ? (
         <output
           aria-live="polite"
-          className="flex min-h-11 items-center gap-3 rounded-3xl border border-destructive/30 bg-background py-1.5 pr-1.5 pl-4"
+          className="flex min-h-11 items-center gap-3 rounded-[22px] border border-destructive/30 bg-background py-1.5 pr-1.5 pl-4"
         >
           <span className="size-2 shrink-0 motion-safe:animate-pulse rounded-full bg-destructive" />
           <span className="shrink-0 text-xs tabular-nums">
@@ -266,7 +266,7 @@ function ComposerBox({
             send()
           }}
         >
-          <InputGroup className="rounded-3xl border-border bg-background has-[textarea]:rounded-3xl">
+          <InputGroup className="rounded-[22px] border-border bg-background has-[textarea]:rounded-[22px]">
             <InputGroupTextarea
               ref={inputRef}
               aria-label={label}
