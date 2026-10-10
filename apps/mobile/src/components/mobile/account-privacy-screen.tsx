@@ -1,25 +1,24 @@
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
+import { getMobileRoleLabel } from "@/lib/mobile-roles"
 import { type PublicLegalPath, publicLegalUrl } from "@/lib/public-legal-url"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import { Alert, Linking } from "react-native"
+import { HeroCard } from "./green-till/hero-card"
+import { ListCard, RecordRow, SectionHeader } from "./green-till/kit"
 import { LegalAcceptancePanel } from "./legal-acceptance-panel"
 import { MobileScreen } from "./screen"
-import { SettingsScreen } from "./settings-screen"
-
-const policyLinks = [
-  ["terms", "Terms of Service"],
-  ["privacy", "Privacy Notice"],
-  ["support", "Support"],
-  ["delete-account", "Deletion information"],
-] as const
+import { StatusBanner } from "./status-banner"
 
 export function AccountPrivacyScreen() {
   const router = useRouter()
+  const { profile } = useAuthContext()
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [linkError, setLinkError] = useState<string | null>(null)
@@ -69,42 +68,115 @@ export function AccountPrivacyScreen() {
       setLinkError("The page could not open. Try again when you are online.")
     }
   }
+  const statusError = request.error ?? deletionIntake.error ?? legalStatus.error
+  const actionError =
+    acceptLegal.error?.message ?? submit.error?.message ?? linkError
+  const legal = legalStatus.data
+  const legalMeta = legalStatus.isPending
+    ? "Checking your acceptance…"
+    : legalStatus.isError
+      ? "Acceptance status unavailable"
+      : legal?.accepted
+        ? "Current version accepted"
+        : "Read the current document"
+  const requestDeletion = () =>
+    Alert.alert(
+      "Request account deletion?",
+      "We will verify your request and review associated data. This does not immediately erase your account or close your business. An owner may need to arrange a handover; records requiring retention will be explained in your outcome. You may be asked to sign in again.",
+      [
+        { text: "Keep account", style: "cancel" },
+        {
+          text: "Request deletion",
+          style: "destructive",
+          onPress: () => submit.mutate({ confirmation: "DELETE MY ACCOUNT" }),
+        },
+      ],
+    )
   return (
-    <MobileScreen contentClassName="gap-4 px-[18px] py-6">
-      <Pressable
-        accessibilityRole="button"
-        className="min-h-11 justify-center"
-        onPress={() => router.back()}
-      >
-        <Text className="font-semibold text-primary">Back</Text>
-      </Pressable>
-      <SettingsScreen
-        title={
-          request.data ? "Deletion request received" : "Account and privacy"
+    <MobileScreen contentClassName="gap-4 px-[18px] py-4">
+      <View className="flex-row items-center gap-3 mb-1">
+        <Pressable
+          accessibilityLabel="Back"
+          accessibilityRole="button"
+          className="size-11 items-center justify-center rounded-full bg-card"
+          onPress={() => router.back()}
+        >
+          <Icon name="ArrowLeft" className="size-[20px] text-foreground" />
+        </Pressable>
+        <Text
+          accessibilityRole="header"
+          className="flex-1 text-lg font-extrabold text-foreground"
+        >
+          Account and privacy
+        </Text>
+      </View>
+      <HeroCard
+        label="Signed in as"
+        title={profile?.name || "Your account"}
+        sub={profile?.email || "Signed-in account"}
+        pill={
+          profile?.role
+            ? { label: getMobileRoleLabel(profile.role) }
+            : undefined
         }
-        sub={
-          request.data
-            ? "Your account has not been erased."
-            : "Your account, legal documents and personal information"
-        }
-        loading={request.isPending}
       />
-      <Text className="text-base leading-6 text-muted-foreground">
-        Request deletion of your EwaTrade account and associated personal
-        information. This is different from leaving one business or closing a
-        workspace. Other people’s business records must remain protected. An
-        owner may need to arrange a handover; records requiring retention must
-        be explained in your outcome.
-      </Text>
-      {legalStatus.data?.effective &&
-      legalStatus.data.version &&
-      legalStatus.data.effectiveDate ? (
+      {statusError ? (
+        <StatusBanner
+          title="Couldn’t load your privacy status"
+          message={statusError.message}
+          tone="destructive"
+          actionLabel="Retry"
+          actionDisabled={
+            request.isFetching ||
+            deletionIntake.isFetching ||
+            legalStatus.isFetching
+          }
+          onActionPress={() => {
+            void request.refetch()
+            void deletionIntake.refetch()
+            void legalStatus.refetch()
+          }}
+        />
+      ) : null}
+      <View>
+        <SectionHeader title="Terms" />
+        <ListCard>
+          <RecordRow
+            avatar={{ icon: "FileText", tint: "sky" }}
+            title="Terms of Service"
+            meta={legalMeta}
+            onPress={() => void openPolicy("terms")}
+            status={
+              <Icon
+                name="ChevronRight"
+                className="size-[16px] text-muted-foreground"
+              />
+            }
+          />
+          <RecordRow
+            avatar={{ icon: "ShieldCheck", tint: "sky" }}
+            title="Privacy Notice"
+            meta={legal?.accepted ? "Current version acknowledged" : legalMeta}
+            onPress={() => void openPolicy("privacy")}
+            status={
+              <Icon
+                name="ChevronRight"
+                className="size-[16px] text-muted-foreground"
+              />
+            }
+          />
+        </ListCard>
+      </View>
+      {legal?.effective &&
+      legal.version &&
+      legal.effectiveDate &&
+      !legal.accepted ? (
         hasLegalPages ? (
           <LegalAcceptancePanel
-            key={legalStatus.data.version}
-            version={legalStatus.data.version}
-            effectiveDate={legalStatus.data.effectiveDate}
-            accepted={legalStatus.data.accepted}
+            key={legal.version}
+            version={legal.version}
+            effectiveDate={legal.effectiveDate}
+            accepted={legal.accepted}
             pending={acceptLegal.isPending}
             onOpenPolicy={(path) => void openPolicy(path)}
             onAccept={(version) =>
@@ -117,86 +189,92 @@ export function AccountPrivacyScreen() {
             }
           />
         ) : (
-          <Text accessibilityRole="alert" className="text-destructive">
-            Terms and Privacy are unavailable in this build. Acceptance is
-            disabled until those pages can be reviewed.
-          </Text>
+          <StatusBanner
+            message="Terms and Privacy are unavailable in this build. Acceptance is disabled until those pages can be reviewed."
+            tone="warning"
+          />
         )
       ) : null}
-      {request.data ? (
-        <View className="gap-2">
-          <Text className="font-semibold text-foreground">
-            Request {request.data.id}
-          </Text>
-          <Text className="text-muted-foreground">
-            Status: {request.data.status.toLowerCase().replaceAll("_", " ")}
-          </Text>
-          <Text className="text-muted-foreground">
-            A received request does not mean your information has been erased.
-          </Text>
-        </View>
-      ) : deletionIntake.data?.available ? (
-        <Pressable
-          accessibilityRole="button"
-          disabled={submit.isPending || request.isPending}
-          className="min-h-12 justify-center rounded-lg bg-destructive px-4 disabled:opacity-50"
-          onPress={() =>
-            Alert.alert(
-              "Request account deletion?",
-              "We will verify your request and review associated data. This does not immediately erase your account or close your business.",
-              [
-                { text: "Keep account", style: "cancel" },
-                {
-                  text: "Request deletion",
-                  style: "destructive",
-                  onPress: () =>
-                    submit.mutate({ confirmation: "DELETE MY ACCOUNT" }),
-                },
-              ],
-            )
-          }
-        >
-          <Text className="font-semibold text-destructive-foreground">
-            {submit.isPending
-              ? "Submitting request…"
-              : "Request account deletion"}
-          </Text>
-        </Pressable>
-      ) : (
-        <Text className="text-sm leading-5 text-muted-foreground">
-          {deletionIntake.isPending
-            ? "Checking account deletion request availability…"
-            : "Account deletion requests are not yet available. See Deletion information or Support below for current guidance."}
+      <View>
+        <SectionHeader title="Your account" />
+        <ListCard>
+          <RecordRow
+            avatar={{
+              icon: request.data ? "Clock" : "Trash",
+              tint: request.data ? "amber" : "rose",
+            }}
+            title={
+              request.data
+                ? "Deletion requested"
+                : submit.isPending
+                  ? "Submitting request…"
+                  : "Request account deletion"
+            }
+            meta={
+              request.data
+                ? [
+                    request.data.status.toLowerCase().replaceAll("_", " "),
+                    "Received doesn’t mean erased",
+                  ]
+                : request.isPending || deletionIntake.isPending
+                  ? "Checking availability…"
+                  : deletionIntake.data?.available
+                    ? "Review what happens before confirming"
+                    : "See deletion information for guidance"
+            }
+            onPress={
+              request.data
+                ? undefined
+                : !request.isPending &&
+                    !submit.isPending &&
+                    deletionIntake.data?.available
+                  ? requestDeletion
+                  : () => void openPolicy("delete-account")
+            }
+            status={
+              request.data ? undefined : (
+                <Icon
+                  name="ChevronRight"
+                  className="size-[16px] text-muted-foreground"
+                />
+              )
+            }
+          />
+          <RecordRow
+            avatar={{ icon: "HelpCircle", tint: "mint" }}
+            title="Support"
+            meta="Questions about your data"
+            onPress={() => void openPolicy("support")}
+            status={
+              <Icon
+                name="ChevronRight"
+                className="size-[16px] text-muted-foreground"
+              />
+            }
+          />
+        </ListCard>
+        <Text className="mt-3 px-1 text-xs leading-5 text-muted-foreground">
+          Leaving a business and deleting your account are different. Ask the
+          owner to remove you from a business.
         </Text>
-      )}
-      {submit.error ||
-      request.error ||
-      deletionIntake.error ||
-      legalStatus.error ||
-      acceptLegal.error ||
-      linkError ? (
-        <Text accessibilityRole="alert" className="text-destructive">
-          {acceptLegal.error?.message ??
-            legalStatus.error?.message ??
-            submit.error?.message ??
-            request.error?.message ??
-            deletionIntake.error?.message ??
-            linkError}
-        </Text>
-      ) : null}
-      <Text className="text-sm leading-5 text-muted-foreground">
-        You may be asked to sign in again to verify this sensitive request.
-      </Text>
-      {policyLinks.map(([path, label]) => (
+        {request.data ? (
+          <Text className="mt-2 px-1 text-xs leading-5 text-muted-foreground">
+            Request reference: {request.data.id}
+          </Text>
+        ) : null}
         <Pressable
-          key={path}
           accessibilityRole="link"
-          className="min-h-11 justify-center"
-          onPress={() => void openPolicy(path)}
+          className="min-h-11 justify-center px-1"
+          onPress={() => void openPolicy("delete-account")}
         >
-          <Text className="font-semibold text-primary underline">{label}</Text>
+          <Text className="text-sm font-semibold text-primary">
+            How account deletion works
+          </Text>
         </Pressable>
-      ))}
+      </View>
+      {actionError ? (
+        <StatusBanner message={actionError} tone="destructive" />
+      ) : null}
     </MobileScreen>
   )
 }
