@@ -39,6 +39,8 @@ model CommercialOrder {
   acceptedQuoteVersion           ServiceQuoteVersion?
   acceptedCommerceQuoteVersion   CommerceQuoteVersion?
   fulfillmentCommands            CommercialOrderFulfillmentCommand[]
+  amendments                     CommercialOrderAmendment[]          @relation("OrderAmendments")
+  replacementAmendments          CommercialOrderAmendment[]          @relation("OrderReplacementAmendments")
   reminderDeliveries             CommercialOrderReminderDelivery[]
   prescriptionPaymentIntents     PrescriptionPaymentIntent[]
   prescriptionPickupFulfillment  PrescriptionPickupFulfillment?
@@ -296,4 +298,32 @@ model ProductReturn {
   @@unique([tenantId, clientReturnId])
   @@index([orderLineId, createdAt])
   @@index([destinationBalanceSourceId])
+}
+
+// Immutable command evidence; original OfferingSnapshots are never overwritten.
+enum CommercialOrderAmendmentKind {
+  METADATA
+  CANCEL
+  REPLACE
+}
+
+model CommercialOrderAmendment {
+  id                 String                       @id @default(cuid())
+  tenantId           String
+  orderId            String
+  replacementOrderId String?
+  clientOperationId  String
+  payloadHash        String
+  kind               CommercialOrderAmendmentKind
+  beforeSnapshot     Json
+  afterSnapshot      Json
+  actorUserId        String
+  reason             String
+  createdAt          DateTime                     @default(now())
+  order              CommercialOrder              @relation("OrderAmendments", fields: [tenantId, orderId], references: [tenantId, id], onDelete: Cascade)
+  replacementOrder   CommercialOrder?             @relation("OrderReplacementAmendments", fields: [tenantId, replacementOrderId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([tenantId, orderId, createdAt])
+  @@index([tenantId, replacementOrderId])
 }
