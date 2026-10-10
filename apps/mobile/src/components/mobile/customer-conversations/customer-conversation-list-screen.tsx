@@ -25,7 +25,10 @@ import {
   canFetchCustomerConversationListNextPage,
   mergeCustomerConversationAccessItems,
 } from "./customer-conversation-list-state"
-import { CustomerShellHeader } from "./customer-shell-header"
+import {
+  CustomerBusinessLink,
+  CustomerShellHeader,
+} from "./customer-shell-header"
 
 type ConversationItem =
   RouterOutputs["serviceCommerce"]["mobileStoreConversations"]["items"][number]
@@ -216,7 +219,9 @@ export function CustomerConversationListScreen({
               accessibilityLabel="Loading more conversations"
               className="my-5"
             />
-          ) : null
+          ) : (
+            <CustomerBusinessLink />
+          )
         }
         onEndReached={() => {
           if (
@@ -244,8 +249,10 @@ export function CustomerConversationListScreen({
             refreshing={refreshing && !fetchingNext}
           />
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <CustomerConversationListItem
+            first={index === 0}
+            last={index === conversations.length - 1}
             lastActivityAt={item.lastActivityAt}
             lastMessage={item.lastMessage}
             onPress={() => {

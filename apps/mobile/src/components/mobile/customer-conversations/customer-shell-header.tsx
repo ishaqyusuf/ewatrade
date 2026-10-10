@@ -105,41 +105,6 @@ export function CustomerShellHeader({
     )
   }
 
-  const businessButton =
-    !isAuthenticated || accessProfile?.hasBusinessAccess ? (
-      <Pressable
-        accessibilityLabel="Open Business workspace"
-        accessibilityHint={
-          isAuthenticated
-            ? "Opens your Business workspace"
-            : "Opens Business sign in"
-        }
-        accessibilityRole="button"
-        className={
-          largeTextLayout
-            ? "min-h-16 flex-row items-center justify-center gap-2 rounded-full bg-muted px-5 active:bg-accent"
-            : "min-h-11 min-w-28 flex-row items-center justify-center gap-2 rounded-full bg-muted px-5 active:bg-accent"
-        }
-        haptic
-        onPress={async () => {
-          await setLastMobileShell("business")
-          router.push(isAuthenticated ? "/dashboard" : "/login")
-        }}
-        transition
-      >
-        <Icon className="size-[20px] text-foreground" name="Building2" />
-        <Text
-          className={
-            largeTextLayout
-              ? "text-sm leading-10 font-bold text-foreground"
-              : "text-sm font-bold text-foreground"
-          }
-        >
-          Business
-        </Text>
-      </Pressable>
-    ) : null
-
   const accountActions =
     accountControl || showAccountPrivacy ? (
       <View className="flex-row items-center gap-2">
@@ -149,7 +114,7 @@ export function CustomerShellHeader({
             accessibilityHint="Open account-wide privacy and deletion options"
             accessibilityLabel="Account and privacy"
             accessibilityRole="button"
-            className="size-11 items-center justify-center rounded-full bg-muted active:bg-accent"
+            className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
             haptic
             onPress={() => router.push("/account-privacy")}
           >
@@ -159,63 +124,70 @@ export function CustomerShellHeader({
       </View>
     ) : null
 
-  if (largeTextLayout || showAccountPrivacy) {
-    return (
-      <View style={{ paddingTop: insets.top + 6 }}>
-        <View className="gap-2 bg-background px-5 pb-4">
-          <View className="gap-0.5">
-            <Text
-              accessibilityRole="header"
-              className="text-2xl font-extrabold tracking-tight text-foreground"
-            >
-              Chats
-            </Text>
-            <Text
-              className={
-                largeTextLayout
-                  ? "text-sm leading-10 font-medium text-muted-foreground"
-                  : "text-sm font-medium text-muted-foreground"
-              }
-            >
-              Your conversations with stores
-            </Text>
-          </View>
-          <View
-            className={
-              largeTextLayout
-                ? "items-end gap-2"
-                : "flex-row flex-wrap items-center justify-end gap-2"
-            }
-          >
-            {accountActions}
-            {businessButton}
-          </View>
-        </View>
-      </View>
-    )
-  }
-
   return (
     <View style={{ paddingTop: insets.top + 6 }}>
-      <View className="min-h-20 flex-row items-center gap-4 bg-background px-5 pb-4">
-        <View className="min-w-0 flex-1 gap-0.5">
+      <View
+        className={
+          largeTextLayout
+            ? "gap-2 bg-background px-[18px] pb-4"
+            : "min-h-20 flex-row items-center gap-4 bg-background px-[18px] pb-4"
+        }
+      >
+        <View
+          className={largeTextLayout ? "gap-0.5" : "min-w-0 flex-1 gap-0.5"}
+        >
           <Text
             accessibilityRole="header"
             className="text-2xl font-extrabold tracking-tight text-foreground"
-            numberOfLines={1}
+            numberOfLines={largeTextLayout ? undefined : 1}
           >
             Chats
           </Text>
           <Text
             className="text-sm font-medium text-muted-foreground"
-            numberOfLines={1}
+            numberOfLines={largeTextLayout ? undefined : 1}
           >
             Your conversations with stores
           </Text>
         </View>
-        {accountActions}
-        {businessButton}
+        {accountActions ? (
+          <View className={largeTextLayout ? "items-end" : undefined}>
+            {accountActions}
+          </View>
+        ) : null}
       </View>
+    </View>
+  )
+}
+
+/** "Have a business on ẸwáTrade? Open it" under the chats list. */
+export function CustomerBusinessLink() {
+  const router = useRouter()
+  const { accessProfile, isAuthenticated } = useAuthContext()
+  if (isAuthenticated && !accessProfile?.hasBusinessAccess) return null
+  return (
+    <View className="flex-row flex-wrap items-center justify-center gap-x-1 px-[18px] py-4">
+      <Text className="text-sm text-muted-foreground">
+        Have a business on ẸwáTrade?
+      </Text>
+      <Pressable
+        accessibilityHint={
+          isAuthenticated
+            ? "Opens your Business workspace"
+            : "Opens Business sign in"
+        }
+        accessibilityLabel="Open Business workspace"
+        accessibilityRole="link"
+        className="min-h-11 justify-center"
+        haptic
+        hitSlop={8}
+        onPress={async () => {
+          await setLastMobileShell("business")
+          router.push(isAuthenticated ? "/dashboard" : "/login")
+        }}
+      >
+        <Text className="text-sm font-bold text-primary">Open it</Text>
+      </Pressable>
     </View>
   )
 }
