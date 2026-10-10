@@ -42,6 +42,11 @@ function fixture(
     tenantId: options.tenantId ?? "tenant-1",
     storeId: "store-1",
     currencyCode: "NGN",
+    amountPaidMinor: 0,
+    totalMinor: 2000,
+    paymentStatus: "PENDING",
+    payments: [],
+    deliveryDueAt: null,
     customerId: null,
     status: options.status ?? "CONFIRMED",
     completedAt: options.completedAt ?? null,
@@ -260,5 +265,14 @@ test("composed service command refuses another active Store before writes", asyn
       storeId: "other-store",
     }),
   ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  expect(f.writes).toBe(0)
+})
+
+
+test("reviewed service authorization refuses stale evidence before writes", async () => {
+  const f = fixture()
+  await expect(authorizeCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, {
+    ...input, storeId: "store-1", expectedReviewRevision: "stale-review",
+  })).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(f.writes).toBe(0)
 })

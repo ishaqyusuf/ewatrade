@@ -7,6 +7,18 @@ import {
   assertChargeOnlyServiceRelease,
 } from "./commercial-service-line-policy"
 
+/** Invoke only after canonical financial/order/line locks and actor checks. */
+export async function assertCommercialServiceLineReview(
+  db: Prisma.TransactionClient,
+  input: { tenantId: string; storeId?: string; orderLineId: string; action: "authorize" | "fulfill"; expectedReviewRevision?: string },
+) {
+  if (input.expectedReviewRevision === undefined) return
+  if (!input.storeId) throw new CatalogError("INVALID_ORDER", "A reviewed service action requires its Store.")
+  const review = await getCommercialServiceLineReview(db, { ...input, storeId: input.storeId })
+  if (!review.eligible || review.revision !== input.expectedReviewRevision)
+    throw new CatalogError("REVISION_CONFLICT", "Service eligibility or payment evidence changed. Review this action again.")
+}
+
 /** Caller authorizes this read; confirmation must repeat it under the command locks. */
 export async function getCommercialServiceLineReview(
   db: Prisma.TransactionClient,

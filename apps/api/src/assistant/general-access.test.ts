@@ -249,3 +249,15 @@ test("dashboard receivables retain finance plan and Owner/Admin restrictions", (
     expect(listed(ctx).includes("readReceivables")).toBe(allowed)
   }
 })
+
+test("dashboard service performance and manager release retain separate role boundaries", () => {
+  for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"]) {
+    const ctx = actor(role)
+    ctx.requestHeaders = new Headers({ "x-assistant-client": "dashboard" })
+    expect(allowedActions(ctx)).toContain("service_line_fulfill")
+    if (["OWNER", "ADMIN", "MANAGER"].includes(role))
+      expect(allowedActions(ctx)).toContain("service_line_authorize")
+    else
+      expect(allowedActions(ctx)).not.toContain("service_line_authorize")
+  }
+})

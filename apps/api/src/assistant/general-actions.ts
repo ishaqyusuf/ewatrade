@@ -1,3 +1,4 @@
+import { serviceLineAction } from "./general-service-fulfillment"
 import type {
   GeneralAction,
   GeneralActionName,
@@ -500,6 +501,8 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
 const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
+  service_line_authorize: serviceLineAction,
+  service_line_fulfill: serviceLineAction,
   stock_receive: stockReceive,
   order_cancel: orderCancel,
   order_metadata_update: orderMetadataUpdate,

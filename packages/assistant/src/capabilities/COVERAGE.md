@@ -6,17 +6,22 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 527 (386 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 51
-- Merchant planned: 171
+- Router procedures: 533 (392 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 59
+- Merchant planned: 169
 - Merchant form-only: 120
 - Merchant excluded: 44
-- Capabilities: 50 (29 read, 21 write)
+- Capabilities: 55 (29 read, 26 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `sales.service.authorize` | 1 | write (`service_line_authorize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `orders.authorizeChargeOnlyServiceLine` |
+| `sales.service.fulfill` | 1 | write (`service_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillChargeOnlyServiceLine` |
+| `sales.order.cancel` | 1 | write (`order_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.cancel`, `orders.cancellationReview` |
+| `sales.order.metadata.update` | 1 | write (`order_metadata_update`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.amendMetadata`, `orders.metadataReview` |
+| `sales.order.replace` | 1 | write (`order_replace`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.replace`, `orders.replacementReview` |
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `search.global` |
 | `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard | source | `catalog.detail.orders`, `catalog.detail.activity` |
 | `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.detail.overview` |
@@ -76,7 +81,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | B03 | 5 |
 | B05 | 2 |
 | C05 | 1 |
-| D02 | 4 |
+| D02 | 2 |
 | D03 | 1 |
 | D04 | 3 |
 | D05 | 11 |
@@ -259,10 +264,13 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `offline.review` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.settings` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.updateSettings` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `orders.authorizeChargeOnlyServiceLine` | mutation | reconciliation | sales | planned | D02 |
+| `orders.amendMetadata` | mutation | reconciliation | sales | supported | sales.order.metadata.update |
+| `orders.authorizeChargeOnlyServiceLine` | mutation | reconciliation | sales | supported | sales.service.authorize |
+| `orders.cancel` | mutation | reconciliation | sales | supported | sales.order.cancel |
+| `orders.cancellationReview` | query | reconciliation | sales | supported | sales.order.cancel |
 | `orders.create` | mutation | orders | sales | supported | sales.order.create |
 | `orders.customerCount` | query | read | sales | supported | sales.order_contacts.count |
-| `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | planned | D02 |
+| `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | supported | sales.service.fulfill |
 | `orders.fulfillProductLine` | mutation | orders | sales | planned | D02 |
 | `orders.fulfillProducts` | mutation | orders | sales | planned | D02 |
 | `orders.get` | query | read | sales | supported | sales.order.read |
@@ -270,12 +278,15 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `orders.listPage` | query | read | sales | supported | sales.orders.read |
 | `orders.lookupOpen` | query | read | sales | form_only | Legacy payment/fulfilment lookup exception; assistant uses lookupOpenPage with normal list visibility and continuation. |
 | `orders.lookupOpenPage` | query | read | sales | supported | sales.orders.lookup |
+| `orders.metadataReview` | query | reconciliation | sales | supported | sales.order.metadata.update |
 | `orders.operationalSummary` | query | read | sales | supported | sales.orders.summary |
 | `orders.payments` | query | read | sales | planned | B05 |
 | `orders.prepareReceipts` | query | read | sales | planned | B05 |
 | `orders.receiptSettings` | query | read | sales | planned | G05 |
 | `orders.recordPayment` | mutation | orders | sales | supported | sales.payment.record |
 | `orders.reminderSettings` | query | Owner/Admin only | sales | planned | G05 |
+| `orders.replace` | mutation | reconciliation | sales | supported | sales.order.replace |
+| `orders.replacementReview` | query | reconciliation | sales | supported | sales.order.replace |
 | `orders.reportSummary` | query | read | sales | supported | sales.summary.read |
 | `orders.returnProductLine` | mutation | orders | sales | planned | D03 |
 | `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | planned | G05 |

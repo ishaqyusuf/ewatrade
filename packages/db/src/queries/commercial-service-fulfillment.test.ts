@@ -294,3 +294,12 @@ test("composed service command refuses another active Store before writes", asyn
   ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(f.writes).toBe(0)
 })
+
+
+test("reviewed service fulfillment refuses stale evidence before writes", async () => {
+  const f = fixture()
+  await expect(fulfillCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, {
+    ...input, storeId: "store-1", expectedReviewRevision: "stale-review",
+  })).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  expect(f.writes).toBe(0)
+})

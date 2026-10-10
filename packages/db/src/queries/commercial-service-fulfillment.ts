@@ -1,3 +1,4 @@
+import { assertCommercialServiceLineReview } from "./commercial-service-line-review"
 import { createHash } from "node:crypto"
 
 import { assertChargeOnlyServicePerformance } from "./commercial-service-line-policy"
@@ -149,6 +150,7 @@ export type FulfillCommercialOrderChargeOnlyServiceLineInput = {
   tenantId: string
   /** Optional active-Store fence for transaction-composed callers. */
   storeId?: string
+  expectedReviewRevision?: string
 }
 
 export function fulfillCommercialOrderChargeOnlyServiceLine(
@@ -299,6 +301,7 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
       return serializeFulfillment(priorCommand)
     }
 
+    await assertCommercialServiceLineReview(tx, { ...input, action: "fulfill" })
     const { quantity, performedAt } = assertChargeOnlyServicePerformance(
       line,
       input,

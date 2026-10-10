@@ -92,7 +92,7 @@ function assertCanManageOrderReminders(
   }
 }
 
-function assertCanManageSalesOperations(role: string) {
+export function assertCanManageSalesOperations(role: string) {
   const normalized = normalizeRole(role)
   if (!normalized || !canManageSalesOperations(normalized)) {
     throw new TRPCError({

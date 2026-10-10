@@ -166,6 +166,15 @@ function GeneralProposalFields({
       }}
     >
       <FieldGroup>
+        {payload.action === "service_line_authorize" || payload.action === "service_line_fulfill" ? (
+          <>
+            <p className="text-sm text-muted-foreground">This applies to the selected service line at its full saved quantity. Review the refreshed details before confirming.</p>
+            <Field>
+              <FieldLabel htmlFor={field("reason")}>Reason</FieldLabel>
+              <Input id={field("reason")} value={payload.reason} disabled={disabled} onChange={(event) => patch({ reason: event.target.value })} />
+            </Field>
+          </>
+        ) : null}
         {payload.action === "product_unit_configuration_publish" ? (
           <Field>
             <p className="text-sm text-muted-foreground">

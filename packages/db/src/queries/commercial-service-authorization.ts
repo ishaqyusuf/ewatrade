@@ -1,3 +1,4 @@
+import { assertCommercialServiceLineReview } from "./commercial-service-line-review"
 import { createHash } from "node:crypto"
 
 import { assertChargeOnlyServiceRelease } from "./commercial-service-line-policy"
@@ -142,6 +143,7 @@ export type AuthorizeCommercialOrderChargeOnlyServiceLineInput = {
   tenantId: string
   /** Optional active-Store fence for transaction-composed callers. */
   storeId?: string
+  expectedReviewRevision?: string
 }
 
 export function authorizeCommercialOrderChargeOnlyServiceLine(
@@ -287,6 +289,7 @@ export async function authorizeCommercialOrderChargeOnlyServiceLineInTransaction
       return serializeAuthorization(priorCommand)
     }
 
+    await assertCommercialServiceLineReview(tx, { ...input, action: "authorize" })
     const quantity = assertChargeOnlyServiceRelease(line)
 
     const authorization = await tx.commercialServiceAuthorization.create({

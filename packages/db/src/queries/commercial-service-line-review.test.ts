@@ -102,3 +102,15 @@ test("revision binds the action and ignores caller property order", async () => 
   expect(reordered.revision).toBe(original.revision)
   expect((await getCommercialServiceLineReview(f.db, { ...input, action: "authorize" })).revision).not.toBe(original.revision)
 })
+
+test("confirmation evidence guard refuses changes and requires the reviewed Store", async () => {
+  const { assertCommercialServiceLineReview } = await import("./commercial-service-line-review")
+  const f = fixture()
+  f.line.snapshot.serviceAuthorizationPolicy = "ON_ORDER_CONFIRMATION"
+  const review = await getCommercialServiceLineReview(f.db, input)
+  const confirmation = { ...input, expectedReviewRevision: review.revision }
+  await assertCommercialServiceLineReview(f.db, confirmation)
+  f.line.order.amountPaidMinor += 1
+  await expect(assertCommercialServiceLineReview(f.db, confirmation)).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(assertCommercialServiceLineReview(f.db, { ...confirmation, storeId: undefined })).rejects.toMatchObject({ code: "INVALID_ORDER" })
+})
