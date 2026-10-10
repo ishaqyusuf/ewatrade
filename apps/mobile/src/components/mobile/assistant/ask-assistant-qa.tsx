@@ -74,7 +74,7 @@ export function AskAssistantQa({
     <View style={{ flex: 1, paddingTop: insets.top }}>
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
-          title="Ask ẸwáTrade"
+          title="Assistant"
           business={`Jawdah Farms · ${rep ? "Sales rep" : manager ? "Manager" : "Owner"}`}
           action="New chat"
           onAction={() => select("home")}

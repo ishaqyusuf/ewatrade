@@ -24,17 +24,53 @@ export function readGeneralConversation(
     select: { id: true, title: true, updatedAt: true },
   })
 }
-export function listGeneralConversations(db: DbClient, scope: AssistantScope) {
-  return db.assistantConversation.findMany({
+/** First text of a stored message, as a short chat title. */
+function firstText(parts: unknown) {
+  if (!Array.isArray(parts)) return null
+  for (const part of parts) {
+    if (
+      part &&
+      typeof part === "object" &&
+      "type" in part &&
+      part.type === "text" &&
+      "text" in part &&
+      typeof part.text === "string" &&
+      part.text.trim()
+    ) {
+      const text = part.text.trim().replace(/\s+/g, " ")
+      return text.length > 60 ? `${text.slice(0, 59)}…` : text
+    }
+  }
+  return null
+}
+/** Chats are named by their first question; empty chats keep no title. */
+export async function listGeneralConversations(
+  db: DbClient,
+  scope: AssistantScope,
+) {
+  const rows = await db.assistantConversation.findMany({
     where: generalConversationWhere(scope),
     orderBy: { updatedAt: "desc" },
     take: 30,
-    select: { id: true, title: true, updatedAt: true },
+    select: {
+      id: true,
+      updatedAt: true,
+      messages: {
+        where: { role: "user" },
+        orderBy: { sequence: "asc" },
+        take: 1,
+        select: { parts: true },
+      },
+    },
   })
+  return rows.map(({ messages, ...row }) => ({
+    ...row,
+    title: firstText(messages[0]?.parts),
+  }))
 }
 export function startGeneralConversation(db: DbClient, scope: AssistantScope) {
   return db.assistantConversation.create({
-    data: { ...generalConversationWhere(scope), title: "Ask ẸwáTrade" },
+    data: { ...generalConversationWhere(scope), title: "New chat" },
     select: { id: true },
   })
 }

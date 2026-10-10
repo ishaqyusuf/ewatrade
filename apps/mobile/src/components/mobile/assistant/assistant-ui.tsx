@@ -1,4 +1,4 @@
-import { Icon } from "@/components/ui/icon"
+import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -16,12 +16,15 @@ export function AssistantHeader({
   action,
   onAction,
   disabled,
+  icons,
 }: {
   title: string
   business?: string
   action?: string
   onAction?: () => void
   disabled?: boolean
+  /** Icon buttons on the right, in place of a text action. */
+  icons?: { icon: IconKeys; label: string; onPress: () => void }[]
 }) {
   const router = useRouter()
   const large = useLargeTextLayout()
@@ -45,6 +48,26 @@ export function AssistantHeader({
           </Text>
           <Text className="text-xs text-muted-foreground">{business}</Text>
         </View>
+        {icons?.map((item) => (
+          <Pressable
+            key={item.label}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityState={{ disabled }}
+            className="size-[44px] items-center justify-center rounded-full"
+            disabled={disabled}
+            onPress={item.onPress}
+          >
+            <Icon
+              name={item.icon}
+              className={
+                disabled
+                  ? "size-[20px] text-muted-foreground"
+                  : "size-[20px] text-foreground"
+              }
+            />
+          </Pressable>
+        ))}
         {!large && action ? (
           <Pressable
             accessibilityRole="button"
@@ -108,7 +131,9 @@ export function AssistantComposer({
   disabled,
   reason,
   children,
+  inputRef,
 }: {
+  inputRef?: { current: TextInput | null }
   value: string
   placeholder?: string
   onChange: (value: string) => void
@@ -134,6 +159,7 @@ export function AssistantComposer({
       ) : null}
       <View className="flex-row items-end gap-2">
         <TextInput
+          ref={inputRef}
           accessibilityLabel="Message the assistant"
           className="min-h-[46px] max-h-[160px] flex-1 rounded-[23px] bg-card px-4 py-3 text-sm text-foreground"
           editable={!disabled && !busy}

@@ -85,6 +85,7 @@ export function useGeneralAssistant() {
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
+  const [queued, setQueued] = useState<string | null>(null)
   const storageKey = `ewatrade:general-assistant:v1:${scope}`
   const availability = useQuery(
     trpc.assistant.availability.queryOptions(undefined, {
@@ -143,10 +144,6 @@ export function useGeneralAssistant() {
       live = false
     }
   }, [storageKey, scope, scopeChanged, offline])
-  useEffect(() => {
-    if (!conversationId && conversations.data?.[0])
-      setConversationId(conversations.data[0].id)
-  }, [conversationId, conversations.data])
   useEffect(() => {
     if (!server || !canWork() || scopeChanged) return
     const value = {
@@ -360,20 +357,8 @@ export function useGeneralAssistant() {
         void conversations.refetch()
       }
     })
-  const send = async () => {
-    if (
-      !canWork() ||
-      !draft.trim() ||
-      busy ||
-      runId ||
-      pending ||
-      !conversationId ||
-      state.isError
-    )
-      return
-    const text = draft.trim()
+  const sendText = async (text: string) => {
     attemptedText.current = text
-    setDraft("")
     setNotice(null)
     try {
       await chat.sendMessage({ text })
@@ -384,6 +369,26 @@ export function useGeneralAssistant() {
       }
     }
   }
+  /** Asks in the open thread, or starts one first and sends once it's ready. */
+  const ask = async (value: string) => {
+    const text = value.trim()
+    if (!canWork() || !text || busy || runId || pending || queued) return
+    if (conversationId && state.isError) return
+    setDraft("")
+    if (conversationId) return sendText(text)
+    setQueued(text)
+    if (!(await newThread())) {
+      setQueued(null)
+      setDraft((current) => current || text)
+    }
+  }
+  const send = () => ask(draft)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sendText is rebuilt every render; the queued text triggers this.
+  useEffect(() => {
+    if (!queued || !conversationId || pending || busy || runId) return
+    setQueued(null)
+    void sendText(queued)
+  }, [queued, conversationId, pending, busy, runId])
   const confirm = (proposal: GeneralProposal) =>
     act(async () => {
       if (!proposal.approvalToken || proposal.status !== "PENDING")
@@ -438,6 +443,9 @@ export function useGeneralAssistant() {
     recover,
     newThread,
     send,
+    ask,
+    queued,
+    profile: origin?.profile,
     confirm,
     cancel,
     save,

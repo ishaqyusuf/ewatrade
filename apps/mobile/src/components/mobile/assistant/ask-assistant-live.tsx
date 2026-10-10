@@ -10,16 +10,18 @@ import {
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { useEffect, useRef, useState } from "react"
-import { FlatList } from "react-native"
+import { FlatList, type TextInput } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
+import { ListCard } from "../green-till/kit"
 import { StatusBanner } from "../status-banner"
 import {
   AssistantAnswerCard,
   ProposalCard,
   ResultCard,
 } from "./assistant-cards"
+import { AssistantChatRow, AssistantHome } from "./assistant-home"
 import {
   AssistantBubble,
   AssistantComposer,
@@ -41,6 +43,7 @@ export function AskAssistantLive() {
   const editor = useModal()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
   const list = useRef<FlatList>(null)
+  const input = useRef<TextInput>(null)
   const atBottom = useRef(true)
   const disabled =
     vm.offline ||
@@ -58,7 +61,7 @@ export function AskAssistantLive() {
     : vm.scopeChanged
       ? "Your session or Store changed. Close and reopen the assistant."
       : !vm.offline && vm.availability.data && !vm.availability.data.enabled
-        ? "Ask ẸwáTrade is being prepared for this business."
+        ? "The assistant is being set up for this business."
         : vm.availability.isError
           ? "Availability could not load. Reconnect and try again."
           : null
@@ -73,25 +76,53 @@ export function AskAssistantLive() {
     : vm.offline
       ? (vm.data?.messages ?? [])
       : vm.chat.messages
+  const role = vm.profile?.role?.trim().toLowerCase()
+  const firstName = vm.profile?.name?.trim().split(/\s+/)[0]
+  const home =
+    !messages.length &&
+    !vm.queued &&
+    !vm.busy &&
+    !!vm.availability.data?.enabled &&
+    !vm.offline &&
+    !noAccess &&
+    !(vm.state.isPending && vm.conversationId)
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
-          title="Ask ẸwáTrade"
-          business={
-            vm.data
-              ? `${vm.data.businessName} · ${vm.data.storeName}`
-              : undefined
-          }
-          action={
-            vm.availability.data?.enabled || vm.offline
-              ? "Saved chats"
+          title="Assistant"
+          business={[
+            vm.data?.businessName ?? vm.profile?.businessName,
+            firstName && role
+              ? `${firstName} (${role.charAt(0).toUpperCase()}${role.slice(1)})`
+              : undefined,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          icons={
+            vm.availability.data?.enabled && !vm.offline
+              ? [
+                  { icon: "Clock", label: "All chats", onPress: saved.present },
+                  ...(home
+                    ? []
+                    : [
+                        {
+                          icon: "SquarePen" as const,
+                          label: "New chat",
+                          onPress: () => void vm.newThread(),
+                        },
+                      ]),
+                ]
               : undefined
           }
           disabled={
-            vm.offline || vm.scopeChanged || vm.busy || vm.pending || !!vm.runId
+            vm.offline ||
+            vm.scopeChanged ||
+            vm.busy ||
+            vm.pending ||
+            !!vm.runId ||
+            !!vm.queued
           }
-          onAction={saved.present}
         />
         <FlatList
           ref={list}
@@ -152,42 +183,30 @@ export function AskAssistantLive() {
                   message="Try again to load saved answers and current drafts."
                 />
               ) : null}
-              {!vm.conversationId &&
-              vm.availability.data?.enabled &&
-              !vm.offline ? (
-                <>
-                  <Text className="text-sm text-muted-foreground">
-                    How can I help today? Nothing changes until you confirm.
-                  </Text>
-                  <ActionButton
-                    disabled={disabled || !!noAccess}
-                    onPress={() => void vm.newThread()}
-                  >
-                    Start a chat
-                  </ActionButton>
-                </>
+              {home ? (
+                <AssistantHome
+                  name={vm.profile?.name}
+                  role={vm.profile?.role}
+                  chats={(vm.conversations.data ?? [])
+                    .filter((chat) => chat.id !== vm.conversationId)
+                    .slice(0, 3)}
+                  disabled={disabled || exhausted}
+                  onSuggestion={(suggestion) => {
+                    if (suggestion.send) void vm.ask(suggestion.prompt)
+                    else {
+                      vm.setDraft(suggestion.prompt)
+                      input.current?.focus()
+                    }
+                  }}
+                  onChat={vm.choose}
+                  onAllChats={saved.present}
+                />
               ) : null}
-              {!messages.length &&
-              vm.availability.data?.enabled &&
-              !vm.offline &&
-              !noAccess ? (
-                <View className="gap-3">
-                  {[
-                    "New order",
-                    "My sales",
-                    "Find a product",
-                    "What can I do?",
-                  ].map((suggestion) => (
-                    <ActionButton
-                      key={suggestion}
-                      variant="outline"
-                      disabled={disabled}
-                      onPress={() => vm.setDraft(suggestion)}
-                    >
-                      {suggestion}
-                    </ActionButton>
-                  ))}
-                </View>
+              {vm.queued ? (
+                <>
+                  <AssistantBubble user text={vm.queued} />
+                  <AssistantThinking />
+                </>
               ) : null}
               {vm.data && !vm.offline ? (
                 <Text className="text-xs text-muted-foreground">
@@ -339,15 +358,16 @@ export function AskAssistantLive() {
           onSend={() => void vm.send()}
           onStop={() => void vm.chat.stop()}
           busy={vm.busy}
-          disabled={disabled || exhausted || !vm.conversationId || !!noAccess}
-          placeholder="Ask about your business…"
+          disabled={disabled || exhausted || !!vm.queued || !!noAccess}
+          inputRef={input}
+          placeholder="Ask a question or say what to record…"
           reason={
             vm.offline
               ? "Saved answers are available offline. Reconnect to make changes."
               : undefined
           }
         />
-        <Modal ref={saved.ref} title="Saved chats" snapPoints={["90%"]}>
+        <Modal ref={saved.ref} title="All chats" snapPoints={["90%"]}>
           <BottomSheetScrollView
             contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 32 }}
           >
@@ -360,20 +380,21 @@ export function AskAssistantLive() {
             >
               New chat
             </ActionButton>
-            {vm.conversations.data?.map((conversation) => (
-              <ActionButton
-                key={conversation.id}
-                disabled={disabled || !!noAccess}
-                variant="outline"
-                onPress={() => {
-                  vm.choose(conversation.id)
-                  saved.dismiss()
-                }}
-              >
-                {conversation.title ?? "Ask ẸwáTrade"} ·{" "}
-                {new Date(conversation.updatedAt).toLocaleDateString()}
-              </ActionButton>
-            ))}
+            {vm.conversations.data?.length ? (
+              <ListCard>
+                {vm.conversations.data.map((conversation) => (
+                  <AssistantChatRow
+                    key={conversation.id}
+                    chat={conversation}
+                    disabled={disabled || !!noAccess}
+                    onPress={() => {
+                      vm.choose(conversation.id)
+                      saved.dismiss()
+                    }}
+                  />
+                ))}
+              </ListCard>
+            ) : null}
           </BottomSheetScrollView>
         </Modal>
         <Modal ref={editor.ref} title="Edit draft" snapPoints={["90%"]}>

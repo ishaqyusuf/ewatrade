@@ -33,7 +33,7 @@ export function AssistantEntry({ query }: { query?: string }) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={
-        query ? `Ask ẸwáTrade about ${query}` : "Ask ẸwáTrade"
+        query ? `Ask the assistant about ${query}` : "Open the assistant"
       }
       className={
         query
@@ -58,7 +58,7 @@ export function AssistantEntry({ query }: { query?: string }) {
       <Icon name="Sparkles" className="size-[20px] text-gold-foreground" />
       {query ? (
         <Text className="min-w-0 flex-1 text-sm font-bold text-gold-foreground">
-          Ask ẸwáTrade about ‘{query}’
+          Ask the assistant about ‘{query}’
         </Text>
       ) : null}
     </Pressable>
