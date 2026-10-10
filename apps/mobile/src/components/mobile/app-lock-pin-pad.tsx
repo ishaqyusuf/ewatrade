@@ -367,11 +367,15 @@ function PinIconKey({
       haptic
       onPress={onPress}
     >
-      <Icon
-        className="size-[26px]"
-        color={palette.heroForeground}
-        name={icon}
-      />
+      {icon === "Delete" ? (
+        <BackspaceGlyph color={palette.heroForeground} />
+      ) : (
+        <Icon
+          className="size-[26px]"
+          color={palette.heroForeground}
+          name={icon}
+        />
+      )}
     </Pressable>
   )
 }

@@ -161,52 +161,55 @@ export function PinEntryScreen({
   const palette = useGatePalette()
   return (
     <GateShell leading={leading} testID={testID}>
-      {glyph === "brand" ? (
-        <View className="mt-4">
-          <BrandMark color={palette.brandMark} size={52} />
-        </View>
-      ) : (
-        <View className="mt-4 size-[52px] items-center justify-center rounded-[18px] bg-[var(--gate-chip)]">
-          <Icon
-            className="size-[24px]"
-            color={palette.heroForeground}
-            name={glyph}
-          />
-        </View>
-      )}
-      <Text
-        accessibilityRole="header"
-        className="mt-3.5 text-center text-[22px] font-extrabold tracking-tight [-rn-line-height:28] text-[var(--gate-fg)]"
-      >
-        {title}
-      </Text>
-      <Text className="mt-1 max-w-[300px] text-center text-[13.5px] [-rn-line-height:19] text-[var(--gate-muted)]">
-        {subtitle}
-      </Text>
-      <AppLockPinPad
-        biometricLabel={biometricLabel}
-        codeLength={APP_LOCK_CODE_LENGTH}
-        disabled={disabled}
-        error={error}
-        message={
-          <Text
-            accessibilityLiveRegion="polite"
-            className={
-              error
-                ? "min-h-5 max-w-[300px] text-center text-[13px] font-semibold [-rn-line-height:19] text-[var(--gate-error)]"
-                : "min-h-5 max-w-[300px] text-center text-[13px] font-semibold [-rn-line-height:19] text-[var(--gate-muted)]"
-            }
-          >
-            {message ?? " "}
-          </Text>
-        }
-        onBiometricPress={onBiometricPress}
-        onDeletePress={onDeletePress}
-        onDigitPress={onDigitPress}
-        showBiometric={showBiometric}
-        value={value}
-        variant="gate"
-      />
+      {/* Centred on tall phones; scrolls at large text. */}
+      <View className="w-full flex-1 items-center justify-center pb-2">
+        {glyph === "brand" ? (
+          <View className="mt-4">
+            <BrandMark color={palette.brandMark} size={52} />
+          </View>
+        ) : (
+          <View className="mt-4 size-[52px] items-center justify-center rounded-[18px] bg-[var(--gate-chip)]">
+            <Icon
+              className="size-[24px]"
+              color={palette.heroForeground}
+              name={glyph}
+            />
+          </View>
+        )}
+        <Text
+          accessibilityRole="header"
+          className="mt-3.5 text-center text-[22px] font-extrabold tracking-tight [-rn-line-height:28] text-[var(--gate-fg)]"
+        >
+          {title}
+        </Text>
+        <Text className="mt-1 min-h-[38px] max-w-[300px] text-center text-[13.5px] [-rn-line-height:19] text-[var(--gate-muted)]">
+          {subtitle}
+        </Text>
+        <AppLockPinPad
+          biometricLabel={biometricLabel}
+          codeLength={APP_LOCK_CODE_LENGTH}
+          disabled={disabled}
+          error={error}
+          message={
+            <Text
+              accessibilityLiveRegion="polite"
+              className={
+                error
+                  ? "min-h-5 max-w-[300px] text-center text-[13px] font-semibold [-rn-line-height:19] text-[var(--gate-error)]"
+                  : "min-h-5 max-w-[300px] text-center text-[13px] font-semibold [-rn-line-height:19] text-[var(--gate-muted)]"
+              }
+            >
+              {message ?? " "}
+            </Text>
+          }
+          onBiometricPress={onBiometricPress}
+          onDeletePress={onDeletePress}
+          onDigitPress={onDigitPress}
+          showBiometric={showBiometric}
+          value={value}
+          variant="gate"
+        />
+      </View>
       {footer ? (
         <View className="mt-auto w-full items-center pt-5">
           {footer.kind === "action" ? (

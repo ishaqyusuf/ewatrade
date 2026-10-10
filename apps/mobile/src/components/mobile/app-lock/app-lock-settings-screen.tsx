@@ -174,7 +174,7 @@ export function AppLockSettingsScreen() {
       } finally {
         setIsSubmitting(false)
       }
-      setNote("App lock is on")
+      setNote(null)
       setMode("manage")
     },
     [appLock],
@@ -224,7 +224,7 @@ export function AppLockSettingsScreen() {
         return
       }
       setMode("manage")
-      setNote("App lock is on")
+      setNote(null)
       setMessage(market ? "App lock is on." : null)
       return
     }
@@ -256,7 +256,7 @@ export function AppLockSettingsScreen() {
         await appLock.clearLock()
         setCode("")
         setMode(market ? "create" : "manage")
-        setNote("App lock is off")
+        setNote(null)
         setMessage(market ? "App lock is off." : null)
         setIsError(false)
         setIsSubmitting(false)
@@ -352,7 +352,11 @@ export function AppLockSettingsScreen() {
     return (
       <AppLockSettingsPage
         biometricLabel={biometricLabel}
-        biometricReason={appLock.biometricsStatus.reason}
+        biometricReason={
+          appLock.biometricsStatus.hasHardware
+            ? "Set it up in your phone’s settings first"
+            : "Not available on this phone"
+        }
         biometricsAvailable={appLock.biometricsStatus.isAvailable}
         biometricsEnabled={!!appLock.config?.biometricsEnabled}
         businessName={auth.profile?.businessName}

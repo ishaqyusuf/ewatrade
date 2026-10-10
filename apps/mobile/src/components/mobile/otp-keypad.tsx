@@ -336,7 +336,9 @@ function GreenTillKey({
 }
 
 /** Backspace key glyph (the icon set's "Delete" is a bin). */
-export function BackspaceGlyph() {
+export function BackspaceGlyph({ color }: { color?: string } = {}) {
   const colors = useColors()
-  return <Backspace color={colors.foreground} size={24} strokeWidth={1.8} />
+  return (
+    <Backspace color={color ?? colors.foreground} size={24} strokeWidth={1.8} />
+  )
 }
