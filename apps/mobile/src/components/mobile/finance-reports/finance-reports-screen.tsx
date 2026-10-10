@@ -1,6 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { DetailSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Icon } from "@/components/ui/icon"
+import { Pressable } from "@/components/ui/pressable"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { prepareFinanceStatementRange } from "@/lib/finance-money-input"
 import { useTRPC } from "@/trpc/client"
@@ -10,12 +13,13 @@ import { type Href, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import { ScrollView, View } from "react-native"
 import { FinanceBankDateField } from "../finance/finance-bank-date-field"
+import { financeDisplayDate } from "../finance/finance-display"
 import { FinanceFormBody } from "../finance/finance-form-body"
-import { FinanceDetailScaffold } from "../finance/finance-ledger-layout"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
 } from "../finance/finance-workspace-gate"
+import { HeroCard } from "../green-till/hero-card"
 import { type FinanceReport, buildFinanceReportCsv } from "./report-csv"
 import { ReportExportActions } from "./report-export-actions"
 import { ReportAmount, ReportSection } from "./report-section"
@@ -62,6 +66,7 @@ function ReportWindowView({
 }) {
   const trpc = useTRPC()
   const [editing, setEditing] = useState(false)
+  const [showCoverage, setShowCoverage] = useState(false)
   const [from, setFrom] = useState(window.from.toISOString().slice(0, 10))
   const [through, setThrough] = useState(
     window.through.toISOString().slice(0, 10),
@@ -140,26 +145,108 @@ function ReportWindowView({
         gap: 16,
       }}
     >
-      <Text className="text-xl font-bold">Recorded financial reports</Text>
+      <Text className="text-sm text-muted-foreground">
+        {financeDisplayDate(window.from)} – {financeDisplayDate(window.through)}{" "}
+        · UTC
+      </Text>
+      {report ? (
+        <HeroCard
+          label="Net, recorded entries"
+          amount={formatFinanceMoney(
+            report.profitAndLoss.netProfitMinor,
+            report.currencyCode,
+          )}
+          sub="Not your complete business profit"
+          pill={{ label: "Partial records", tone: "draft" }}
+          stats={[
+            {
+              label: "Revenue",
+              value: formatFinanceMoney(
+                report.profitAndLoss.revenueMinor,
+                report.currencyCode,
+              ),
+            },
+            {
+              label: "Expenses",
+              value: formatFinanceMoney(
+                report.profitAndLoss.expensesMinor,
+                report.currencyCode,
+              ),
+            },
+            {
+              label: "Closing cash",
+              value: formatFinanceMoney(
+                report.cashFlow.closingMinor,
+                report.currencyCode,
+              ),
+            },
+          ]}
+        />
+      ) : !query.isError ? (
+        <Skeleton className="h-44 rounded-[26px]" />
+      ) : null}
+      <View className="flex-row flex-wrap gap-3">
+        <View className="min-w-[140px] flex-1">
+          <ActionButton
+            icon="Calendar"
+            variant="outline"
+            onPress={() => setEditing(true)}
+          >
+            Change dates
+          </ActionButton>
+        </View>
+        <View className="min-w-[140px] flex-1">
+          <ActionButton
+            icon="RefreshCw"
+            variant="outline"
+            disabled={query.isFetching}
+            onPress={() =>
+              onWindow({ ...window, revision: window.revision + 1 })
+            }
+          >
+            Refresh report
+          </ActionButton>
+        </View>
+      </View>
       <StatusBanner
         title="Partial financial records"
-        message="Posted finance entries only. Automatic Commerce posting is off. Sales, customer payments, inventory costs and opening reconciliation are incomplete; these totals do not represent complete business profit or financial position."
+        message="Sales, payments, stock costs and opening balances are incomplete. These totals aren’t your full profit or financial position."
         tone="warning"
       />
-      <Text className="text-sm text-muted-foreground">
-        {window.from.toISOString().slice(0, 10)} –{" "}
-        {window.through.toISOString().slice(0, 10)} UTC
-      </Text>
-      <ActionButton variant="outline" onPress={() => setEditing(true)}>
-        Change dates
-      </ActionButton>
-      <ActionButton
-        variant="outline"
-        disabled={query.isFetching}
-        onPress={() => onWindow({ ...window, revision: window.revision + 1 })}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showCoverage }}
+        className="min-h-11 flex-row items-center justify-between gap-3"
+        onPress={() => setShowCoverage(!showCoverage)}
       >
-        Refresh to include new entries
-      </ActionButton>
+        <Text className="text-sm font-semibold text-primary">
+          What’s included in this report
+        </Text>
+        <Icon
+          name={showCoverage ? "ChevronUp" : "ChevronDown"}
+          className="size-[16px] text-primary"
+        />
+      </Pressable>
+      {showCoverage ? (
+        <View className="gap-2 rounded-2xl bg-card p-4">
+          <Text className="text-sm leading-5 text-muted-foreground">
+            Posted finance entries only. Automatic Commerce posting is off.
+            Refresh to include newer entries; changing dates starts a new
+            snapshot.
+          </Text>
+          {report ? (
+            <Text className="text-xs leading-5 text-muted-foreground">
+              {report.currencyCode} · Snapshot {report.snapshotSequence}
+              {"\n"}Coverage:{" "}
+              {report.coverage.replaceAll("_", " ").toLowerCase()}
+              {"\n"}Missing coverage:{" "}
+              {report.coverageGaps
+                .map((gap) => gap.replaceAll("_", " ").toLowerCase())
+                .join(", ")}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {!report && query.isError ? (
         <StatusBanner
           title="Reports unavailable"
@@ -222,27 +309,6 @@ function ReportContents({ report }: { report: FinanceReport }) {
   const t = report.trialBalance
   return (
     <View className="gap-6">
-      <Text className="text-xs text-muted-foreground">
-        {report.currencyCode} · Snapshot {report.snapshotSequence} ·{" "}
-        {report.coverage}
-        {"\n"}Missing coverage: {report.coverageGaps.join(", ")}
-      </Text>
-      <FinanceDetailScaffold
-        title="Recorded entries"
-        label="Net recorded · selected dates"
-        amount={formatFinanceMoney(p.netProfitMinor, report.currencyCode)}
-        sub="Partial records · not complete business profit"
-        stats={[
-          {
-            label: "Revenue",
-            value: formatFinanceMoney(p.revenueMinor, report.currencyCode),
-          },
-          {
-            label: "Expenses",
-            value: formatFinanceMoney(p.expensesMinor, report.currencyCode),
-          },
-        ]}
-      />
       <ReportExportActions
         filename={`finance-report-${report.through.toISOString().slice(0, 10)}-snapshot-${report.snapshotSequence}.csv`}
         build={async () => buildFinanceReportCsv(report)}
