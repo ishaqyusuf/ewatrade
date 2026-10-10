@@ -1,4 +1,3 @@
-import { canStaffPerform } from "@ewatrade/auth/store-access"
 import {
   capabilityManifest,
   writeCapabilities,
@@ -8,7 +7,8 @@ import {
   type GeneralAnswer,
   generalDateRange,
 } from "@ewatrade/assistant/general/contracts"
-import { type Tool, type ToolSet, tool } from "ai"
+import { canStaffPerform } from "@ewatrade/auth/store-access"
+import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
 import { z } from "zod"
 import { catalogCountSchema } from "../schemas/catalog"
 import { customerCountSchema } from "../schemas/customers"
@@ -25,44 +25,64 @@ import { searchRouter } from "../trpc/routers/search"
 import { servicesRouter } from "../trpc/routers/services"
 import { tenantRouter } from "../trpc/routers/tenant"
 import {
+  generalCatalogHistoryInput,
+  readGeneralCatalogHistory,
+} from "./general-catalog-history"
+import { readGeneralCatalogItem } from "./general-catalog-item"
+import {
   type GeneralContext,
   assertCapability,
   canUseCapability,
   requireGeneralScope,
 } from "./general-context"
-import {
-  generalCatalogHistoryInput,
-  readGeneralCatalogHistory,
-} from "./general-catalog-history"
-import { readGeneralCatalogItem } from "./general-catalog-item"
 import { generalCountAnswer } from "./general-count-answer"
-import { generalOrderContactCountAnswer } from "./general-order-contact-count-answer"
+import {
+  generalInventoryBalanceAnswers,
+  generalInventoryBalancesInput,
+} from "./general-inventory-balances"
+import {
+  generalInventoryTotalsAnswers,
+  generalInventoryTotalsInput,
+} from "./general-inventory-totals"
 import {
   generalCatalogPageInput,
   generalCustomerPageInput,
   generalOpenOrderInput,
   generalOrderPageInput,
 } from "./general-lookup-inputs"
-import {
-  generalInventoryBalancesInput,
-  generalInventoryBalanceAnswers,
-} from "./general-inventory-balances"
-import {
-  generalInventoryTotalsInput,
-  generalInventoryTotalsAnswers,
-} from "./general-inventory-totals"
 import { generalLowStockAnswers } from "./general-low-stock-answers"
 import { generalOperationalAnswers } from "./general-operational-answers"
 import { generalOrderAnswer } from "./general-order-answer"
+import { generalOrderContactCountAnswer } from "./general-order-contact-count-answer"
 import { draftGeneralProposal } from "./general-proposals"
 import {
-  generalReceivablesInput,
   generalReceivablesAnswers,
+  generalReceivablesInput,
 } from "./general-receivables"
 import { generalSalesAnswer } from "./general-sales-answer"
 const id = z.string().min(1).max(128)
 const query = z.string().trim().min(2).max(160)
 /** Model-visible registry: read/draft only; no decision or command capability. */
+
+/**
+ * DeepSeek rejects tool schemas whose top level is not `type: "object"`, and a
+ * discriminated union converts to a bare `oneOf`. Same validation, object root.
+ */
+function objectToolSchema<T>(schema: z.ZodType<T>) {
+  const base = zodSchema(schema)
+  return jsonSchema<T>(
+    async () => {
+      const { oneOf, ...rest } = await base.jsonSchema
+      return {
+        ...rest,
+        type: "object" as const,
+        ...(oneOf ? { anyOf: oneOf } : {}),
+      }
+    },
+    { validate: base.validate },
+  )
+}
+
 export function createGeneralTools(
   ctx: GeneralContext,
   conversationId: string,
@@ -327,60 +347,174 @@ export function createGeneralTools(
         }),
     }),
     readInventoryCloseouts: tool({
-      description: "Find recent custody closeouts in the current Store. This limited history is not a total. Inventory custody closeout is separate from financial period close.",
-      inputSchema: z.object({ status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(), limit: z.number().int().min(1).max(50).optional() }).strict(),
-      execute: (input) => wrap("readInventoryCloseouts", async (fresh) => {
-        const rows = await inventoryRouter.createCaller(fresh).closeouts({ ...input, storeId: requireGeneralScope(fresh).storeId })
-        onAnswer({ id: `closeouts_${crypto.randomUUID()}`, title: "Recent custody closeouts", value: `${rows.length} shown`, scope: fresh.tenantContext.activeStore?.name ?? "Current Store", asOf: new Date().toISOString(), detail: "Limited recent history, not a total. Read a saved closeout to inspect original declarations and current reconciliation conflicts." })
-        return { rows, limited: true }
-      }),
+      description:
+        "Find recent custody closeouts in the current Store. This limited history is not a total. Inventory custody closeout is separate from financial period close.",
+      inputSchema: z
+        .object({
+          status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(),
+          limit: z.number().int().min(1).max(50).optional(),
+        })
+        .strict(),
+      execute: (input) =>
+        wrap("readInventoryCloseouts", async (fresh) => {
+          const rows = await inventoryRouter.createCaller(fresh).closeouts({
+            ...input,
+            storeId: requireGeneralScope(fresh).storeId,
+          })
+          onAnswer({
+            id: `closeouts_${crypto.randomUUID()}`,
+            title: "Recent custody closeouts",
+            value: `${rows.length} shown`,
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
+            asOf: new Date().toISOString(),
+            detail:
+              "Limited recent history, not a total. Read a saved closeout to inspect original declarations and current reconciliation conflicts.",
+          })
+          return { rows, limited: true }
+        }),
     }),
     readInventoryCloseout: tool({
-      description: "Read original custody declarations, expected quantities and variance alongside current stock and reservations. Reading never rebases the draft. canFinalize is guidance only; finalization requires separate confirmation and fresh checks. This does not close a financial period.",
+      description:
+        "Read original custody declarations, expected quantities and variance alongside current stock and reservations. Reading never rebases the draft. canFinalize is guidance only; finalization requires separate confirmation and fresh checks. This does not close a financial period.",
       inputSchema: z.object({ closeoutId: id }).strict(),
-      execute: (input) => wrap("readInventoryCloseout", async (fresh) => {
-        const row = await inventoryRouter.createCaller(fresh).closeoutReview({ ...input, storeId: requireGeneralScope(fresh).storeId })
-        onAnswer({ id: `closeout_${crypto.randomUUID()}`, title: "Saved custody closeout", value: row.status, scope: fresh.tenantContext.activeStore?.name ?? "Current Store", asOf: new Date().toISOString(), detail: `${row.lines.length} original declaration(s). ${row.canFinalize ? "Current stock matches the saved review; finalization still requires separate confirmation." : "Not ready for finalization. Inspect status, current stock and reservations; original declarations are retained."}` })
-        return row
-      }),
+      execute: (input) =>
+        wrap("readInventoryCloseout", async (fresh) => {
+          const row = await inventoryRouter.createCaller(fresh).closeoutReview({
+            ...input,
+            storeId: requireGeneralScope(fresh).storeId,
+          })
+          onAnswer({
+            id: `closeout_${crypto.randomUUID()}`,
+            title: "Saved custody closeout",
+            value: row.status,
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
+            asOf: new Date().toISOString(),
+            detail: `${row.lines.length} original declaration(s). ${row.canFinalize ? "Current stock matches the saved review; finalization still requires separate confirmation." : "Not ready for finalization. Inspect status, current stock and reservations; original declarations are retained."}`,
+          })
+          return row
+        }),
     }),
     readStockTransfers: tool({
-      description: "Find recent transfers involving the current Store and accessible transfer Store identities. This limited list is not a total. Read the saved transfer before receipt or cancellation; quantities still in transit are distinct from original dispatch.",
-      inputSchema: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
-      execute: (input) => wrap("readStockTransfers", async (fresh) => {
-        const stores = fresh.tenantContext.stores.filter((store) => !fresh.tenantContext.staffAccess || canStaffPerform(fresh.tenantContext.staffAccess, "stock", store.id)).map((store) => ({ id: store.id, name: store.name }))
-        const allowed = new Set(stores.map((store) => store.id))
-        const rows = (await inventoryRouter.createCaller(fresh).transfers({ ...input, limit: input.limit ?? 50, storeId: requireGeneralScope(fresh).storeId })).filter((row) => allowed.has(row.sourceStore.id) && allowed.has(row.targetStore.id))
-        onAnswer({ id: `transfers_${crypto.randomUUID()}`, title: "Recent Store transfers", value: `${rows.length} shown`, scope: fresh.tenantContext.activeStore?.name ?? "Current Store", asOf: new Date().toISOString(), detail: "Limited recent history, not a total. Open a saved transfer to review receipt history and remaining transit quantities." })
-        return { rows, stores, limited: true }
-      }),
+      description:
+        "Find recent transfers involving the current Store and accessible transfer Store identities. This limited list is not a total. Read the saved transfer before receipt or cancellation; quantities still in transit are distinct from original dispatch.",
+      inputSchema: z
+        .object({ limit: z.number().int().min(1).max(50).optional() })
+        .strict(),
+      execute: (input) =>
+        wrap("readStockTransfers", async (fresh) => {
+          const stores = fresh.tenantContext.stores
+            .filter(
+              (store) =>
+                !fresh.tenantContext.staffAccess ||
+                canStaffPerform(
+                  fresh.tenantContext.staffAccess,
+                  "stock",
+                  store.id,
+                ),
+            )
+            .map((store) => ({ id: store.id, name: store.name }))
+          const allowed = new Set(stores.map((store) => store.id))
+          const rows = (
+            await inventoryRouter.createCaller(fresh).transfers({
+              ...input,
+              limit: input.limit ?? 50,
+              storeId: requireGeneralScope(fresh).storeId,
+            })
+          ).filter(
+            (row) =>
+              allowed.has(row.sourceStore.id) &&
+              allowed.has(row.targetStore.id),
+          )
+          onAnswer({
+            id: `transfers_${crypto.randomUUID()}`,
+            title: "Recent Store transfers",
+            value: `${rows.length} shown`,
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
+            asOf: new Date().toISOString(),
+            detail:
+              "Limited recent history, not a total. Open a saved transfer to review receipt history and remaining transit quantities.",
+          })
+          return { rows, stores, limited: true }
+        }),
     }),
     readStockTransfer: tool({
-      description: "Read a saved transfer involving the current Store with access to both Stores, including original dispatch, exact remaining transit and retained receipt/cancellation evidence. Receipt requires a separate destination-Store proposal.",
+      description:
+        "Read a saved transfer involving the current Store with access to both Stores, including original dispatch, exact remaining transit and retained receipt/cancellation evidence. Receipt requires a separate destination-Store proposal.",
       inputSchema: z.object({ transferId: id }).strict(),
-      execute: (input) => wrap("readStockTransfer", async (fresh) => {
-        const row = await inventoryRouter.createCaller(fresh).transferReview({ ...input, storeId: requireGeneralScope(fresh).storeId })
-        onAnswer({ id: `transfer_${crypto.randomUUID()}`, title: "Saved Store transfer", value: row.status, scope: fresh.tenantContext.activeStore?.name ?? "Current Store", asOf: new Date().toISOString(), detail: `${row.productName}: ${row.dispatchedQuantity} ${row.unitName} dispatched; ${row.transit?.quantity ?? "0"} remaining in transit. ${row.sourceStore.name} → ${row.targetStore.name}. ${row.acknowledgments.length} acknowledgment(s) shown${row.acknowledgmentHistoryLimited ? "; history limited" : ""}.`.slice(0, 1000) })
-        return row
-      }),
+      execute: (input) =>
+        wrap("readStockTransfer", async (fresh) => {
+          const row = await inventoryRouter.createCaller(fresh).transferReview({
+            ...input,
+            storeId: requireGeneralScope(fresh).storeId,
+          })
+          onAnswer({
+            id: `transfer_${crypto.randomUUID()}`,
+            title: "Saved Store transfer",
+            value: row.status,
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
+            asOf: new Date().toISOString(),
+            detail:
+              `${row.productName}: ${row.dispatchedQuantity} ${row.unitName} dispatched; ${row.transit?.quantity ?? "0"} remaining in transit. ${row.sourceStore.name} → ${row.targetStore.name}. ${row.acknowledgments.length} acknowledgment(s) shown${row.acknowledgmentHistoryLimited ? "; history limited" : ""}.`.slice(
+                0,
+                1000,
+              ),
+          })
+          return row
+        }),
     }),
     readStockOperations: tool({
-      description: "List recent stock operations in the current Store. This is a limited recent list, not complete history or a total. Read the exact original operation before drafting a correction.",
-      inputSchema: z.object({ limit: z.number().int().min(1).max(50).optional() }).strict(),
-      execute: (input) => wrap("readStockOperations", async (fresh) => {
-        const rows = await inventoryRouter.createCaller(fresh).operationHistory({ ...input, storeId: requireGeneralScope(fresh).storeId })
-        onAnswer({ id: `stock_history_${crypto.randomUUID()}`, title: "Recent stock operations", value: `${rows.length} shown`, scope: fresh.tenantContext.activeStore?.name ?? "Current Store", asOf: new Date().toISOString(), detail: "Limited recent history; not a total. Read an operation to inspect its exact movements before correction." })
-        return rows
-      }),
+      description:
+        "List recent stock operations in the current Store. This is a limited recent list, not complete history or a total. Read the exact original operation before drafting a correction.",
+      inputSchema: z
+        .object({ limit: z.number().int().min(1).max(50).optional() })
+        .strict(),
+      execute: (input) =>
+        wrap("readStockOperations", async (fresh) => {
+          const rows = await inventoryRouter
+            .createCaller(fresh)
+            .operationHistory({
+              ...input,
+              storeId: requireGeneralScope(fresh).storeId,
+            })
+          onAnswer({
+            id: `stock_history_${crypto.randomUUID()}`,
+            title: "Recent stock operations",
+            value: `${rows.length} shown`,
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
+            asOf: new Date().toISOString(),
+            detail:
+              "Limited recent history; not a total. Read an operation to inspect its exact movements before correction.",
+          })
+          return rows
+        }),
     }),
     readStockOperation: tool({
-      description: "Read one saved stock operation in the current Store, including original movement IDs, quantity and conversion snapshots. Historical evidence does not grant correction eligibility; drafting rechecks source ownership.",
+      description:
+        "Read one saved stock operation in the current Store, including original movement IDs, quantity and conversion snapshots. Historical evidence does not grant correction eligibility; drafting rechecks source ownership.",
       inputSchema: z.object({ operationId: id }).strict(),
-      execute: (input) => wrap("readStockOperation", async (fresh) => {
-        const operation = await inventoryRouter.createCaller(fresh).operationAudit({ ...input, storeId: requireGeneralScope(fresh).storeId })
-        onAnswer({ id: `stock_operation_${crypto.randomUUID()}`, title: "Saved stock operation", value: operation?.type ?? "Unavailable", scope: fresh.tenantContext.activeStore?.name ?? "Current Store", asOf: new Date().toISOString(), detail: operation ? `${operation.id} · ${operation.reason ?? ""} · ${operation.movements.length} movement(s). Original evidence retained; corrections require fresh review.`.slice(0, 1000) : "Operation not found in the current Store." })
-        return operation
-      }),
+      execute: (input) =>
+        wrap("readStockOperation", async (fresh) => {
+          const operation = await inventoryRouter
+            .createCaller(fresh)
+            .operationAudit({
+              ...input,
+              storeId: requireGeneralScope(fresh).storeId,
+            })
+          onAnswer({
+            id: `stock_operation_${crypto.randomUUID()}`,
+            title: "Saved stock operation",
+            value: operation?.type ?? "Unavailable",
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
+            asOf: new Date().toISOString(),
+            detail: operation
+              ? `${operation.id} · ${operation.reason ?? ""} · ${operation.movements.length} movement(s). Original evidence retained; corrections require fresh review.`.slice(
+                  0,
+                  1000,
+                )
+              : "Operation not found in the current Store.",
+          })
+          return operation
+        }),
     }),
     readStockCount: tool({
       description:
@@ -431,13 +565,11 @@ export function createGeneralTools(
       inputSchema: generalInventoryBalancesInput,
       execute: (input) =>
         wrap("readInventoryBalances", async (fresh) => {
-          const page = await inventoryRouter
-            .createCaller(fresh)
-            .balancePage({
-              ...input,
-              storeId: requireGeneralScope(fresh).storeId,
-              limit: 10,
-            })
+          const page = await inventoryRouter.createCaller(fresh).balancePage({
+            ...input,
+            storeId: requireGeneralScope(fresh).storeId,
+            limit: 10,
+          })
           for (const answer of generalInventoryBalanceAnswers(page, {
             ...input,
             storeName: fresh.tenantContext.activeStore?.name ?? "Current Store",
@@ -730,7 +862,7 @@ export function createGeneralTools(
     draftAction: tool({
       description:
         "Stage an exact new customer, customer detail update, simple product, order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens.",
-      inputSchema: actionSchema,
+      inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {
           const result = await draftGeneralProposal(
