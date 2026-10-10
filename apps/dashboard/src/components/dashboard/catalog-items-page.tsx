@@ -1,5 +1,4 @@
 "use client"
-import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 
 import {
   CatalogAppearance,
@@ -86,7 +85,6 @@ export function CatalogItemsPage({
           </ErrorBoundary>
         </div>
       </ScrollableContent>
-      <CatalogItemDetailModal store={store} />
       <CatalogInventorySheet store={store} />
       <CatalogUnitConfigurationSheet />
       <CatalogItemSheet

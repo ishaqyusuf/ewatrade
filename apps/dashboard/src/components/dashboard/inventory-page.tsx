@@ -1,6 +1,5 @@
 "use client"
 
-import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 import { CatalogUnitConfigurationSheet } from "@/components/catalog-item/catalog-unit-configuration-sheet"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { InventoryHeader } from "@/components/inventory/inventory-header"
@@ -69,7 +68,6 @@ export function InventoryPage({
         </div>
       </ScrollableContent>
       <InventoryOperationSheet store={store} />
-      <CatalogItemDetailModal store={store} />
       <CatalogUnitConfigurationSheet />
     </>
   )

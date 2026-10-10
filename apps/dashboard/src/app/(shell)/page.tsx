@@ -13,7 +13,6 @@ import { AssistantProductEntry } from "@/components/product-assistant/assistant-
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
-import { OrderDetailsSheet } from "@/components/sheets/order-details-sheet"
 import { OrderVisibilityCard } from "@/components/staff/order-visibility-card"
 import { getGettingStartedActions } from "@/lib/dashboard-overview"
 import { canOperateInventory } from "@/lib/inventory-operations"
@@ -159,9 +158,6 @@ export default async function DashboardHomePage() {
       ) : null}
       {store && canUpdateStock ? (
         <InventoryOperationSheet key={`stock:${store.id}`} store={store} />
-      ) : null}
-      {store && canCreateOrder ? (
-        <OrderDetailsSheet key={`details:${store.id}`} storeId={store.id} />
       ) : null}
       {store ? (
         <OverviewFab

@@ -60,7 +60,7 @@ export function GeneralProposalCard({
   return (
     <section
       aria-label={title}
-      className="flex flex-col gap-3 rounded-lg border px-4 py-3"
+      className="flex min-w-0 flex-col gap-3 rounded-lg border px-4 py-3 [overflow-wrap:anywhere]"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{title}</h3>

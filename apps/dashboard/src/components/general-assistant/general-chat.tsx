@@ -1,8 +1,5 @@
 "use client"
-import type {
-  GeneralProposal,
-  GeneralReceipt,
-} from "@ewatrade/assistant/general/contracts"
+import type { GeneralProposal } from "@ewatrade/assistant/general/contracts"
 import {
   generalAnswers,
   generalPlainText,
@@ -26,7 +23,7 @@ import {
   StopIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useRouter } from "next/navigation"
+import { useAssistantReceipt } from "@/hooks/use-assistant-receipt"
 import { useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
@@ -61,7 +58,7 @@ const markdownComponents = {
 /** Persistent everyday chat: read business facts and confirm reviewed drafts. */
 export function GeneralChat({ compact = false }: { compact?: boolean }) {
   const vm = useGeneralAssistant({ autoStart: compact })
-  const router = useRouter()
+  const openReceipt = useAssistantReceipt()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
   const enabled = vm.availability.data?.enabled === true
   const disabled =
@@ -76,34 +73,6 @@ export function GeneralChat({ compact = false }: { compact?: boolean }) {
     (vm.data.allowance.remainingRequests <= 0 ||
       vm.data.allowance.remainingTokens <= 0)
   const currencyCode = vm.data?.currencyCode ?? ""
-  const openReceipt = (receipt: GeneralReceipt) => {
-    // The directory has no detail route; filter it to the saved customer.
-    if (receipt.kind === "customer")
-      router.push(
-        `/customers?customerQuery=${encodeURIComponent(receipt.detail)}`,
-      )
-    else if (receipt.kind === "inventory_closeout")
-      router.push(`/inventory?inventoryCloseout=${encodeURIComponent(receipt.recordId)}`)
-    else if (receipt.kind === "stock_transfer")
-      router.push(`/inventory/transfers?record=${encodeURIComponent(receipt.recordId)}`)
-    else if (receipt.kind === "stock_count")
-      router.push(`/inventory?inventoryCount=${encodeURIComponent(receipt.recordId)}`)
-    else if (receipt.kind === "inventory")
-      router.push(
-        receipt.catalogItemId
-          ? `/catalog?catalogDetail=${encodeURIComponent(receipt.catalogItemId)}`
-          : "/inventory",
-      )
-    else if (receipt.kind === "product")
-      router.push(
-        `/catalog?catalogDetail=${encodeURIComponent(receipt.recordId)}`,
-      )
-    // Order details open as a sheet on the sales page.
-    else
-      router.push(
-        `/sales?orderSheet=details&orderId=${encodeURIComponent(receipt.orderId ?? receipt.recordId)}`,
-      )
-  }
   if (!compact && vm.availability.isPending)
     return <output className="text-sm">Loading your assistant…</output>
   if (!compact && vm.availability.isError)
@@ -125,7 +94,7 @@ export function GeneralChat({ compact = false }: { compact?: boolean }) {
     <section
       aria-label="Ask ẸwáTrade"
       className={cn(
-        "grid overflow-hidden",
+        "grid min-w-0 overflow-hidden",
         compact
           ? "min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)]"
           : "min-h-[34rem] rounded-lg border md:h-[min(720px,calc(100svh-14rem))] md:grid-cols-[220px_minmax(0,1fr)]",
@@ -134,7 +103,7 @@ export function GeneralChat({ compact = false }: { compact?: boolean }) {
       <nav
         aria-label="Saved chats"
         className={cn(
-          "flex min-h-0 flex-col gap-2 border-b bg-muted/20 p-3",
+          "flex min-h-0 min-w-0 flex-col gap-2 border-b bg-muted/20 p-3",
           !compact && "md:border-r md:border-b-0",
         )}
       >
@@ -175,7 +144,7 @@ export function GeneralChat({ compact = false }: { compact?: boolean }) {
           ))}
         </ul>
       </nav>
-      <div className="flex min-h-0 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-col">
         <header className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3 sm:px-6">
           <div>
             <h2 className="text-base font-semibold">Ask ẸwáTrade</h2>
@@ -193,7 +162,7 @@ export function GeneralChat({ compact = false }: { compact?: boolean }) {
           ) : null}
         </header>
         <StickToBottom
-          className="relative min-h-0 flex-1 overflow-y-auto"
+          className="relative min-h-0 min-w-0 flex-1 overflow-y-auto"
           initial="instant"
           resize="smooth"
           role="log"
@@ -309,7 +278,7 @@ export function GeneralChat({ compact = false }: { compact?: boolean }) {
               if (message.role === "user")
                 return (
                   <div key={message.id} className="flex justify-end">
-                    <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                    <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
                       {text}
                     </p>
                   </div>

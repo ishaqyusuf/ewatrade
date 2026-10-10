@@ -4,7 +4,6 @@ import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { OrdersHeader } from "@/components/orders/orders-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
-import { OrderDetailsSheet } from "@/components/sheets/order-details-sheet"
 import { OrdersDataTable } from "@/components/tables/orders/data-table"
 import { OrdersTableSkeleton } from "@/components/tables/orders/skeleton"
 import { useDirectoryView } from "@/hooks/use-directory-view"
@@ -72,7 +71,6 @@ export function SalesPage({
         </div>
       </ScrollableContent>
       <OrderCreateSheet store={store} customerDirectory={customerDirectory} />
-      <OrderDetailsSheet key={store.id} storeId={store.id} />
     </>
   )
 }

@@ -5,14 +5,31 @@ import {
 } from "@/components/tables/inventory-ledger/format"
 import { formatInventoryQuantity } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
-import { Sheet } from "@ewatrade/ui"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { Button, Sheet } from "@ewatrade/ui"
+import { useQuery } from "@tanstack/react-query"
 import { SheetFrame } from "./sheet-frame"
-function Audit({ operationId }: { operationId: string }) {
+function Audit({
+  operationId,
+  storeId,
+}: { operationId: string; storeId?: string }) {
   const trpc = useTRPC()
-  const { data } = useSuspenseQuery(
-    trpc.inventory.operationAudit.queryOptions({ operationId }),
+  const query = useQuery(
+    trpc.inventory.operationAudit.queryOptions(
+      { operationId, storeId },
+      { retry: false },
+    ),
   )
+  if (query.isPending) return <output>Loading stock operation…</output>
+  if (query.isError)
+    return (
+      <div role="alert" className="grid gap-3">
+        <p>This stock operation is unavailable in the selected Store.</p>
+        <Button variant="outline" onClick={() => void query.refetch()}>
+          Try again
+        </Button>
+      </div>
+    )
+  const data = query.data
   if (!data) return <p>Operation is no longer available.</p>
   return (
     <div className="grid gap-6">
@@ -65,8 +82,13 @@ function Audit({ operationId }: { operationId: string }) {
 }
 export function InventoryAuditSheet({
   record,
+  storeId,
   onClose,
-}: { record: { id: string; type: string } | null; onClose: () => void }) {
+}: {
+  record: { id: string; type: string } | null
+  storeId?: string
+  onClose: () => void
+}) {
   return (
     <Sheet
       open={Boolean(record)}
@@ -79,7 +101,7 @@ export function InventoryAuditSheet({
           title={inventoryLabel(record.type)}
           description="Recorded operation and its individual stock movements."
         >
-          <Audit operationId={record.id} />
+          <Audit key={record.id} operationId={record.id} storeId={storeId} />
         </SheetFrame>
       ) : null}
     </Sheet>

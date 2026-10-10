@@ -5,11 +5,7 @@ import { useOrderParams } from "@/hooks/use-order-params"
 import { useReceiptParams } from "@/hooks/use-receipt-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query"
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useRef } from "react"
 import { orderMoney } from "./order-draft"
@@ -24,7 +20,7 @@ export function OrderDetails({
   const { setParams } = useOrderParams()
   const { setParams: setReceipt } = useReceiptParams()
   const command = useRef(crypto.randomUUID())
-  const { data: order } = useSuspenseQuery(
+  const query = useQuery(
     trpc.orders.get.queryOptions({ orderId }, { retry: false }),
   )
   const fulfillment = useMutation(
@@ -56,6 +52,19 @@ export function OrderDetails({
       },
     }),
   )
+  if (query.isPending) return <output>Loading order…</output>
+  if (query.isError)
+    return (
+      <div role="alert" className="grid gap-3">
+        <p>
+          This order is unavailable. Check the selected Store and your access.
+        </p>
+        <Button variant="outline" onClick={() => void query.refetch()}>
+          Try again
+        </Button>
+      </div>
+    )
+  const order = query.data
   if (order.storeId !== storeId)
     return (
       <FormFeedback appearance="dashboard">

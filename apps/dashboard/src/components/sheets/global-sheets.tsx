@@ -1,4 +1,5 @@
 "use client"
+import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 import { CatalogAppearance } from "@/components/catalog-item/catalog-appearance"
 import { CatalogItemSheet } from "@/components/catalog-item/catalog-item-sheet"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
@@ -7,16 +8,21 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 
 import { CloseoutSheet } from "./closeout-sheet"
-import { StockCountSheet } from "./stock-count-sheet"
+import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
 import { DomainSheet } from "./domain-sheet"
 import { FinanceSheet } from "./finance-sheet"
+import { InventoryOperationDetailsSheet } from "./inventory-operation-details-sheet"
+import { OrderDetailsSheet } from "./order-details-sheet"
 import { PrescriptionRequestSheet } from "./prescription-request-sheet"
 import { ReceiptSheet } from "./receipt-sheet"
 import { ServiceCommerceSheet } from "./service-commerce-sheet"
+import { StockCountSheet } from "./stock-count-sheet"
+import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
 import { StoreConversationSheet } from "./store-conversation-sheet"
 
 export type GlobalSheetAccess = {
+  sales: boolean
   catalog?: boolean
   scopedStaff?: boolean
   finance: boolean
@@ -70,6 +76,15 @@ export function GlobalSheets({
         </div>
       ) : null}
       {!access.scopedStaff ? <DomainSheet store={store} /> : null}
+      {access.catalog ? <CatalogItemDetailModal store={store} /> : null}
+      {access.sales ? (
+        <>
+          <OrderDetailsSheet storeId={store.id} />
+          <CustomerDetailsSheet />
+        </>
+      ) : null}
+      <StockTransferDetailsSheet storeId={store.id} />
+      <InventoryOperationDetailsSheet storeId={store.id} />
       <ReceiptSheet storeId={store.id} />
       <StockCountSheet storeId={store.id} />
       <CloseoutSheet storeId={store.id} />

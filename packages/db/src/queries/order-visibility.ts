@@ -64,7 +64,8 @@ export const openOrderWhere = {
 export function customerHistoryWhere(
   scope: OrderScope,
 ): Prisma.CommercialOrderWhereInput {
-  const { createdByUserId, ...storeScope } = scope
+  const { createdByUserId } = scope
+  const storeScope = { tenantId: scope.tenantId, storeId: scope.storeId }
   return createdByUserId
     ? { ...storeScope, OR: [{ createdByUserId }, openOrderWhere] }
     : storeScope
