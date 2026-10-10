@@ -17,7 +17,7 @@ import {
 } from "./commercial-order-replacement-terms"
 
 /** Read-only impact preview. A caller must authorize and confirmation must repeat under locks. */
-export async function previewCommercialOrderReplacement(
+export async function readCommercialOrderReplacementReview(
   db: Prisma.TransactionClient,
   input: {
     tenantId: string
@@ -204,33 +204,46 @@ export async function previewCommercialOrderReplacement(
       }
     })
   return {
-    orderId: review.orderId,
-    orderNumber: review.orderNumber,
-    eligible:
-      review.eligibility.eligibleForOrdinaryAmendment &&
-      reservationChanges.every((row) => row.sufficient),
-    blockers: [
-      ...review.eligibility.blockers,
-      ...reservationChanges
-        .filter((row) => !row.sufficient)
-        .map((row) => ({
-          code: "INSUFFICIENT_STOCK",
-          reason: `Balance ${row.balanceSourceId} cannot cover the replacement after releasing this order's reservations.`,
-          requiredWorkflow: "stock_availability",
-        })),
-    ],
-    terms,
-    reservationChanges,
-    beforeSnapshot: cancellation.beforeSnapshot,
-    releasedReservations: cancellation.releases,
-    stockOnHandChange: "0" as const,
-    moneyMovementMinor: 0 as const,
-    reviewDigest: orderAmendmentDigest({
-      source: review.source,
-      cancellationDigest: cancellation.reviewDigest,
+    originalSnapshots: review.source.lines.flatMap((line) =>
+      line.snapshot ? [line.snapshot] : [],
+    ),
+    preview: {
+      orderId: review.orderId,
+      orderNumber: review.orderNumber,
+      eligible:
+        review.eligibility.eligibleForOrdinaryAmendment &&
+        reservationChanges.every((row) => row.sufficient),
+      blockers: [
+        ...review.eligibility.blockers,
+        ...reservationChanges
+          .filter((row) => !row.sufficient)
+          .map((row) => ({
+            code: "INSUFFICIENT_STOCK",
+            reason: `Balance ${row.balanceSourceId} cannot cover the replacement after releasing this order's reservations.`,
+            requiredWorkflow: "stock_availability",
+          })),
+      ],
       terms,
       reservationChanges,
-      offerings,
-    }),
+      beforeSnapshot: cancellation.beforeSnapshot,
+      releasedReservations: cancellation.releases,
+      stockOnHandChange: "0" as const,
+      moneyMovementMinor: 0 as const,
+      reviewDigest: orderAmendmentDigest({
+        source: review.source,
+        cancellationDigest: cancellation.reviewDigest,
+        terms,
+        reservationChanges,
+        offerings,
+      }),
+    },
   }
+}
+
+/** Public impact projection; retained raw snapshots stay inside canonical composition. */
+export async function previewCommercialOrderReplacement(
+  db: Prisma.TransactionClient,
+  input: Parameters<typeof readCommercialOrderReplacementReview>[1],
+) {
+  return (await readCommercialOrderReplacementReview(db, input)).preview
 }

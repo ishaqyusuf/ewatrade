@@ -217,7 +217,7 @@ export async function verifyOrderAmendmentProposals(
   expect(balance.reservedQuantity.toFixed()).toBe("0")
   expect(balance.onHandQuantity.toFixed()).toBe("6")
   expect(await db.commercialOrderAmendment.count({ where: { tenantId } })).toBe(
-    3,
+    process.env.RUN_GENERAL_ORDER_AMENDMENT_REPLACEMENT_ONLY === "1" ? 2 : 3,
   )
   expect(
     await db.stockMovement.count({ where: { operation: { tenantId } } }),

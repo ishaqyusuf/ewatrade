@@ -6,12 +6,12 @@ import {
   orderAmendmentDigest as digest,
   orderAmendmentJson as json,
 } from "./commercial-order-amendment-evidence"
-import { previewCommercialOrderReplacement } from "./commercial-order-replacement-review"
+import { readCommercialOrderReplacementReview } from "./commercial-order-replacement-review"
 import {
   type OrderReplacementChanges,
   orderReplacementChangesSchema,
 } from "./commercial-order-replacement-terms"
-import { createCommercialOrderInTransaction } from "./commercial-orders"
+import { createCommercialOrderGraphInTransaction } from "./commercial-orders"
 import {
   lockCommerceFinancialContext,
   lockCommerceFinancialOrder,
@@ -116,10 +116,11 @@ export async function prepareCommercialOrderReplacementInTransaction(
   const reservations = await tx.$queryRaw<
     Array<{ id: string; balanceSourceId: string }>
   >`SELECT r."id",r."balanceSourceId" FROM "StockReservation" r JOIN "CommercialOrderLine" l ON l."id"=r."commercialOrderLineId" WHERE l."orderId"=${input.orderId} AND r."tenantId"=${input.tenantId} AND r."storeId"=${input.storeId} ORDER BY r."id" FOR UPDATE OF r`
-  const review = await previewCommercialOrderReplacement(tx, {
-    ...input,
-    changes: parsed.data,
-  })
+  const { preview: review, originalSnapshots: originals } =
+    await readCommercialOrderReplacementReview(tx, {
+      ...input,
+      changes: parsed.data,
+    })
   if (!review.eligible)
     throw new CatalogError(
       "INVALID_ORDER",
@@ -152,167 +153,156 @@ export async function prepareCommercialOrderReplacementInTransaction(
       )
   }
   // The closure retains this transaction's locks and private reviewed evidence.
-  return {
-    target,
-    execute: async () => {
-      const completed = await readPrevious()
-      if (completed) return replay(completed)
-      for (const release of review.releasedReservations) {
-        if (
-          !reservations.some(
-            (row) =>
-              row.id === release.reservationId &&
-              row.balanceSourceId === release.balanceSourceId,
-          )
+  const execute = async () => {
+    for (const release of review.releasedReservations) {
+      if (
+        !reservations.some(
+          (row) =>
+            row.id === release.reservationId &&
+            row.balanceSourceId === release.balanceSourceId,
         )
-          throw new CatalogError(
-            "REVISION_CONFLICT",
-            "Order reservations changed during replacement.",
-          )
-        await releaseCatalogStockReservationInTransaction(
-          tx,
-          { tenantId: input.tenantId, reservationId: release.reservationId },
-          {
-            expectedStoreId: input.storeId,
-            expectedCommercialOrderLineId: release.orderLineId,
-            requireUncommitted: true,
-          },
+      )
+        throw new CatalogError(
+          "REVISION_CONFLICT",
+          "Order reservations changed during replacement.",
         )
-      }
-      const originals = await tx.offeringSnapshot.findMany({
-        where: { orderLine: { orderId: input.orderId } },
-      })
-      const replacement = await createCommercialOrderInTransaction(tx, {
-        tenantId: input.tenantId,
-        storeId: input.storeId,
-        actorUserId: input.actorUserId,
-        clientOrderId: `amendment:${createHash("sha256").update(`${input.tenantId}:${input.clientOperationId}`).digest("hex")}`,
-        schemaVersion: 1,
-        createTrackedServiceWork: false,
-        customerId: locked.order.customerId ?? undefined,
-        customerName: locked.order.customerName ?? undefined,
-        customerPhone: locked.order.customerPhone ?? undefined,
-        customerEmail: locked.order.customerEmail ?? undefined,
-        notes: locked.order.notes ?? undefined,
-        deliveryDueAt: locked.order.deliveryDueAt ?? undefined,
-        discountMinor: review.terms.discountMinor,
-        taxMinor: review.terms.taxMinor,
-        serviceChargeMinor: review.terms.serviceChargeMinor,
-        lines: review.terms.lines.map((line) => {
-          const original = originals.find(
-            (row) => row.orderLineId === line.orderLineId,
-          )
-          if (!original)
-            throw new CatalogError(
-              "INVALID_ORDER",
-              "Original snapshot unavailable.",
-            )
-          return {
-            offeringId: line.offeringId,
-            quantity: line.quantity,
-            note: original.note ?? undefined,
-            expectedConfigurationVersionId:
-              original.configurationVersionId ?? undefined,
-            ...(line.unitPriceMinor === null
-              ? { enteredTotalMinor: line.totalMinor }
-              : { trustedUnitPriceMinor: line.unitPriceMinor }),
-          }
-        }),
-      })
-      // Verify canonical creation honored the reviewed terms and did not change unit/service meaning.
-      const created = await tx.commercialOrder.findUniqueOrThrow({
-        where: { id: replacement.id },
-        include: {
-          lines: { include: { snapshot: true }, orderBy: { createdAt: "asc" } },
+      await releaseCatalogStockReservationInTransaction(
+        tx,
+        { tenantId: input.tenantId, reservationId: release.reservationId },
+        {
+          expectedStoreId: input.storeId,
+          expectedCommercialOrderLineId: release.orderLineId,
+          requireUncommitted: true,
         },
-      })
-      if (created.totalMinor !== review.terms.totalMinor)
-        throw new CatalogError(
-          "REVISION_CONFLICT",
-          "Replacement total changed during creation.",
-        )
-      if (created.currencyCode !== locked.order.currencyCode)
-        throw new CatalogError(
-          "REVISION_CONFLICT",
-          "Replacement currency changed during creation.",
-        )
-      if (created.lines.length !== review.terms.lines.length)
-        throw new CatalogError(
-          "REVISION_CONFLICT",
-          "Replacement line count changed during creation.",
-        )
-      const unmatched = [...created.lines]
-      for (const line of review.terms.lines) {
+      )
+    }
+    const replacement = await createCommercialOrderGraphInTransaction(tx, {
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      actorUserId: input.actorUserId,
+      clientOrderId: `amendment:${createHash("sha256").update(`${input.tenantId}:${input.clientOperationId}`).digest("hex")}`,
+      schemaVersion: 1,
+      createTrackedServiceWork: false,
+      customerId: locked.order.customerId ?? undefined,
+      customerName: locked.order.customerName ?? undefined,
+      customerPhone: locked.order.customerPhone ?? undefined,
+      customerEmail: locked.order.customerEmail ?? undefined,
+      notes: locked.order.notes ?? undefined,
+      deliveryDueAt: locked.order.deliveryDueAt ?? undefined,
+      discountMinor: review.terms.discountMinor,
+      taxMinor: review.terms.taxMinor,
+      serviceChargeMinor: review.terms.serviceChargeMinor,
+      lines: review.terms.lines.map((line) => {
         const original = originals.find(
           (row) => row.orderLineId === line.orderLineId,
         )
-        const index = unmatched.findIndex(
-          (row) =>
-            row.offeringId === line.offeringId &&
-            row.quantity.toString() === line.quantity &&
-            row.unitPriceMinor === line.unitPriceMinor &&
-            row.totalMinor === line.totalMinor &&
-            row.snapshot?.note === original?.note,
-        )
-        const snapshot = unmatched[index]?.snapshot
-        if (
-          index < 0 ||
-          !original ||
-          !snapshot ||
-          snapshot.configurationVersionId !== original.configurationVersionId ||
-          snapshot.inventoryUnitId !== original.inventoryUnitId ||
-          snapshot.unitFactor?.toString() !== original.unitFactor?.toString() ||
-          snapshot.stockBehavior !== original.stockBehavior ||
-          snapshot.transactionScale !== original.transactionScale ||
-          (snapshot.balanceSourceId !== null &&
-            !balanceIds.includes(snapshot.balanceSourceId)) ||
-          snapshot.pricingPolicy !== original.pricingPolicy ||
-          snapshot.serviceWorkPolicy !== original.serviceWorkPolicy ||
-          snapshot.serviceAuthorizationPolicy !==
-            original.serviceAuthorizationPolicy
-        )
+        if (!original)
           throw new CatalogError(
-            "REVISION_CONFLICT",
-            "Replacement line meaning changed during creation.",
+            "INVALID_ORDER",
+            "Original snapshot unavailable.",
           )
-        unmatched.splice(index, 1)
-      }
-      if (
-        created.deliveryDueAt?.getTime() !==
-        locked.order.deliveryDueAt?.getTime()
+        return {
+          offeringId: line.offeringId,
+          quantity: line.quantity,
+          note: original.note ?? undefined,
+          expectedConfigurationVersionId:
+            original.configurationVersionId ?? undefined,
+          ...(line.unitPriceMinor === null
+            ? { enteredTotalMinor: line.totalMinor }
+            : { trustedUnitPriceMinor: line.unitPriceMinor }),
+        }
+      }),
+    })
+    // Verify canonical creation honored the reviewed terms and did not change unit/service meaning.
+    const created = replacement
+    if (created.totalMinor !== review.terms.totalMinor)
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Replacement total changed during creation.",
       )
-        await tx.commercialOrder.update({
-          where: { id: replacement.id },
-          data: { deliveryDueAt: locked.order.deliveryDueAt },
-        })
+    if (created.currencyCode !== locked.order.currencyCode)
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Replacement currency changed during creation.",
+      )
+    if (created.lines.length !== review.terms.lines.length)
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "Replacement line count changed during creation.",
+      )
+    const unmatched = [...created.lines]
+    for (const line of review.terms.lines) {
+      const original = originals.find(
+        (row) => row.orderLineId === line.orderLineId,
+      )
+      const index = unmatched.findIndex(
+        (row) =>
+          row.offeringId === line.offeringId &&
+          row.quantity.toString() === line.quantity &&
+          row.unitPriceMinor === line.unitPriceMinor &&
+          row.totalMinor === line.totalMinor &&
+          row.snapshot?.note === original?.note,
+      )
+      const snapshot = unmatched[index]?.snapshot
+      if (
+        index < 0 ||
+        !original ||
+        !snapshot ||
+        snapshot.configurationVersionId !== original.configurationVersionId ||
+        snapshot.inventoryUnitId !== original.inventoryUnitId ||
+        snapshot.unitFactor?.toString() !== original.unitFactor?.toString() ||
+        snapshot.stockBehavior !== original.stockBehavior ||
+        snapshot.transactionScale !== original.transactionScale ||
+        (snapshot.balanceSourceId !== null &&
+          !balanceIds.includes(snapshot.balanceSourceId)) ||
+        snapshot.pricingPolicy !== original.pricingPolicy ||
+        snapshot.serviceWorkPolicy !== original.serviceWorkPolicy ||
+        snapshot.serviceAuthorizationPolicy !==
+          original.serviceAuthorizationPolicy
+      )
+        throw new CatalogError(
+          "REVISION_CONFLICT",
+          "Replacement line meaning changed during creation.",
+        )
+      unmatched.splice(index, 1)
+    }
+    if (
+      created.deliveryDueAt?.getTime() !== locked.order.deliveryDueAt?.getTime()
+    )
       await tx.commercialOrder.update({
-        where: { id: input.orderId },
-        data: { status: "CANCELLED" },
+        where: { id: replacement.id },
+        data: { deliveryDueAt: locked.order.deliveryDueAt },
       })
-      return tx.commercialOrderAmendment.create({
-        data: {
-          tenantId: input.tenantId,
-          orderId: input.orderId,
+    await tx.commercialOrder.update({
+      where: { id: input.orderId },
+      data: { status: "CANCELLED" },
+    })
+    return tx.commercialOrderAmendment.create({
+      data: {
+        tenantId: input.tenantId,
+        orderId: input.orderId,
+        replacementOrderId: replacement.id,
+        clientOperationId: input.clientOperationId,
+        payloadHash,
+        kind: "REPLACE",
+        actorUserId: input.actorUserId,
+        reason: input.reason.trim(),
+        beforeSnapshot: review.beforeSnapshot,
+        afterSnapshot: json({
+          status: "CANCELLED",
           replacementOrderId: replacement.id,
-          clientOperationId: input.clientOperationId,
-          payloadHash,
-          kind: "REPLACE",
-          actorUserId: input.actorUserId,
-          reason: input.reason.trim(),
-          beforeSnapshot: review.beforeSnapshot,
-          afterSnapshot: json({
-            status: "CANCELLED",
-            replacementOrderId: replacement.id,
-            replacementOrderNumber: replacement.orderNumber,
-            terms: review.terms,
-            reservationChanges: review.reservationChanges,
-            stockOnHandChange: "0",
-            moneyMovementMinor: 0,
-          }),
-        },
-      })
-    },
+          replacementOrderNumber: replacement.orderNumber,
+          terms: review.terms,
+          reservationChanges: review.reservationChanges,
+          stockOnHandChange: "0",
+          moneyMovementMinor: 0,
+        }),
+      },
+    })
   }
+  // Repeated calls on this prepared command share the same execution and receipt.
+  let execution: ReturnType<typeof execute> | undefined
+  return { target, execute: () => (execution ??= execute()) }
 }
 
 export async function replaceCommercialOrderInTransaction(

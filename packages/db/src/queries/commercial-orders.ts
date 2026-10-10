@@ -520,7 +520,8 @@ async function attachOrderActors(
   }))
 }
 
-export async function createCommercialOrderInTransaction(
+/** Internal composition returns the graph already read by canonical creation. */
+export async function createCommercialOrderGraphInTransaction(
   tx: Prisma.TransactionClient,
   input: CreateCommercialOrderInput,
 ) {
@@ -543,7 +544,12 @@ export async function createCommercialOrderInTransaction(
 
   const previous = await findCommercialOrderByClientIdentity(tx, input)
   if (previous) {
-    return serializeIdempotentOrder(previous, hash)
+    if (previous.payloadHash !== hash)
+      throw new CatalogError(
+        "IDEMPOTENCY_MISMATCH",
+        "This Commercial Order identity was already used with different input.",
+      )
+    return previous
   }
 
   const store = await tx.store.findFirst({
@@ -1005,7 +1011,16 @@ export async function createCommercialOrderInTransaction(
     include: orderGraph,
     where: { id: order.id },
   })
-  return serializeOrder(created)
+  return created
+}
+
+export async function createCommercialOrderInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateCommercialOrderInput,
+) {
+  return serializeOrder(
+    await createCommercialOrderGraphInTransaction(tx, input),
+  )
 }
 
 export async function createCommercialOrder(
