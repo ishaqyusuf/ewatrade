@@ -186,7 +186,6 @@ export function SubscriptionPlanContent({
   const plans = verified?.plans.filter((plan) => plan.id !== "free") ?? []
   const currentIndex = plans.findIndex((plan) => plan.id === verified?.plan.id)
   const nextPlan = currentIndex >= 0 ? plans[currentIndex + 1] : undefined
-  const freePlan = verified?.plans.find((plan) => plan.id === "free")
   const order: readonly string[] = USAGE_ORDER
   const limits = verified ? verified.entitlements.map((e) => e) : []
   const usage = limits
@@ -300,9 +299,6 @@ export function SubscriptionPlanContent({
             </ListCard>
             <Text className="mt-2.5 px-0.5 text-xs text-muted-foreground">
               Paid plans are free during launch.
-              {freePlan
-                ? ` Free plan: ${freePlan.limits.products} products, ${freePlan.limits.ordersPerMonth} orders a month.`
-                : ""}
               {supportUrl ? "" : " Contact support to change plan."}
             </Text>
           </View>
