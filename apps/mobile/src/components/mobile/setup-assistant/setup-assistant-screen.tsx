@@ -1,6 +1,4 @@
-import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
-import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -31,6 +29,7 @@ import {
 import { SetupPrerequisites } from "./setup-prerequisites"
 import { SetupRecordCard } from "./setup-record-card"
 import { SetupRecordEditor } from "./setup-record-editor"
+import { SetupTrayPeek } from "./setup-tray-peek"
 import { useSetupAssistant } from "./use-setup-assistant"
 
 export function SetupAssistantScreen() {
@@ -128,7 +127,7 @@ function SetupAssistantLive() {
   }
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
-      <KeyboardAvoidingView behavior="padding" className="flex-1 bg-background">
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
           title="Setup assistant"
           business={vm.auth.profile?.businessName}
@@ -289,30 +288,7 @@ function SetupAssistantLive() {
               }
             >
               {entities.length > 0 ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open setup list, ${counts.open} records to review`}
-                  className="min-h-[56px] flex-row items-center gap-3 rounded-[18px] bg-ink px-3 py-2"
-                  onPress={() => tray.present()}
-                >
-                  <Icon
-                    name="ClipboardList"
-                    className="size-[20px] text-background"
-                  />
-                  <View className="min-w-0 flex-1">
-                    <Text className="text-sm font-bold text-background">
-                      Setup list · {counts.open}
-                    </Text>
-                    <Text className="text-xs text-background">
-                      {counts.confirmed} confirmed · {counts.check} to check
-                    </Text>
-                  </View>
-                  <View className="rounded-xl bg-gold px-3 py-2">
-                    <Text className="text-xs font-bold text-gold-foreground">
-                      Review ↑
-                    </Text>
-                  </View>
-                </Pressable>
+                <SetupTrayPeek counts={counts} onPress={() => tray.present()} />
               ) : null}
             </AssistantComposer>
           </>
@@ -328,7 +304,11 @@ function SetupAssistantLive() {
           enablePanDownToClose={!vm.pending}
         >
           <BottomSheetScrollView
-            contentContainerClassName="gap-3 px-[18px] pb-8"
+            contentContainerStyle={{
+              gap: 12,
+              paddingHorizontal: 18,
+              paddingBottom: 32,
+            }}
             keyboardShouldPersistTaps="handled"
           >
             <Text className="text-xs text-muted-foreground">

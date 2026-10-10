@@ -152,7 +152,11 @@ export function SetupRecordEditor({
   return (
     <BottomSheetInputProvider>
       <BottomSheetKeyboardAwareScrollView
-        contentContainerClassName="gap-4 px-[18px] pb-8"
+        contentContainerStyle={{
+          gap: 16,
+          paddingHorizontal: 18,
+          paddingBottom: 32,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <Text className="text-xs text-muted-foreground">
@@ -265,6 +269,7 @@ export function SetupRecordEditor({
           <>
             <View className="flex-row gap-2">
               <ActionButton
+                className="w-auto flex-1"
                 variant={purpose === "CASH" ? undefined : "outline"}
                 disabled={disabled}
                 onPress={() => setPurpose("CASH")}
@@ -272,6 +277,7 @@ export function SetupRecordEditor({
                 Cash
               </ActionButton>
               <ActionButton
+                className="w-auto flex-1"
                 variant={purpose === "BANK" ? undefined : "outline"}
                 disabled={disabled}
                 onPress={() => setPurpose("BANK")}

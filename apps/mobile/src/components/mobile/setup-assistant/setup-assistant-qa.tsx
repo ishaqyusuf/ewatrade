@@ -2,11 +2,12 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { summarizeSetupAreas } from "@ewatrade/assistant/setup/areas"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useEffect, useState } from "react"
 import { ScrollView } from "react-native"
+import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ActionButton } from "../action-button"
 import {
   AssistantBubble,
   AssistantComposer,
@@ -17,6 +18,7 @@ import { StatusBanner } from "../status-banner"
 import { type SetupEntity, setupCounts } from "./setup-model"
 import { SetupRecordCard } from "./setup-record-card"
 import { SetupRecordEditor } from "./setup-record-editor"
+import { SetupTrayPeek } from "./setup-tray-peek"
 export function SetupAssistantQa({ state }: { state: string }) {
   const tray = useModal()
   const editor = useModal()
@@ -66,7 +68,7 @@ export function SetupAssistantQa({ state }: { state: string }) {
   const offline = state === "offline"
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
-      <View className="flex-1 bg-background">
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
           title="Setup assistant"
           business="Jawdah Farms · Development preview"
@@ -120,9 +122,6 @@ export function SetupAssistantQa({ state }: { state: string }) {
                   tone="warning"
                 />
               ) : null}
-              <ActionButton variant="outline" onPress={() => tray.present()}>
-                Open setup list · {counts.open}
-              </ActionButton>
             </>
           )}
         </ScrollView>
@@ -135,9 +134,39 @@ export function SetupAssistantQa({ state }: { state: string }) {
             offline || ["loading", "noaccess", "allowance"].includes(state)
           }
           reason="Development preview · typing only · no records are added."
-        />
+        >
+          {!["noaccess", "loading"].includes(state) ? (
+            <SetupTrayPeek counts={counts} onPress={() => tray.present()} />
+          ) : null}
+        </AssistantComposer>
         <Modal ref={tray.ref} title="Setup list" snapPoints={["90%"]}>
-          <BottomSheetScrollView contentContainerClassName="gap-3 px-[18px] pb-8">
+          <BottomSheetScrollView
+            contentContainerStyle={{
+              gap: 12,
+              paddingHorizontal: 18,
+              paddingBottom: 32,
+            }}
+          >
+            <View className="flex-row flex-wrap gap-2">
+              {summarizeSetupAreas(null, entities).map((area) => (
+                <View
+                  key={area.area}
+                  className="rounded-full bg-muted px-3 py-2"
+                >
+                  <Text className="text-xs text-muted-foreground">
+                    {
+                      {
+                        sell: "Sell",
+                        use: "Use",
+                        customers: "Customers",
+                        money: "Money",
+                      }[area.area]
+                    }{" "}
+                    · {area.records} staged
+                  </Text>
+                </View>
+              ))}
+            </View>
             {entities.map((e) => (
               <SetupRecordCard
                 key={e.key}
@@ -195,7 +224,7 @@ export function SetupAssistantQa({ state }: { state: string }) {
             />
           ) : null}
         </Modal>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   )
 }

@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useRouter } from "expo-router"
 import { ActionButton } from "../action-button"
 import { ListCard, StatusPill } from "../green-till/kit"
@@ -27,6 +28,8 @@ export function SetupRecordCard({
   onAdd: () => void
 }) {
   const router = useRouter()
+  const large = useLargeTextLayout()
+  const actionClass = large ? "w-full" : "min-h-[44px] w-auto px-3"
   const p = setupEntityPayload(entity)
   const receipt = setupRecordRoute(entity)
   const source = setupSource(entity)
@@ -85,6 +88,7 @@ export function SetupRecordCard({
         <View className="flex-row flex-wrap gap-2">
           {receipt ? (
             <ActionButton
+              className={actionClass}
               variant="outline"
               onPress={() => router.push(receipt as never)}
             >
@@ -97,6 +101,7 @@ export function SetupRecordCard({
             </ActionButton>
           ) : entity.state === "SKIPPED" ? (
             <ActionButton
+              className={actionClass}
               variant="outline"
               disabled={disabled || !p}
               onPress={() => onState("PROPOSED")}
@@ -107,10 +112,16 @@ export function SetupRecordCard({
             <>
               {entity.state === "CONFIRMED" ? (
                 <>
-                  <ActionButton disabled={disabled} icon="Plus" onPress={onAdd}>
+                  <ActionButton
+                    className={actionClass}
+                    disabled={disabled}
+                    icon="Plus"
+                    onPress={onAdd}
+                  >
                     Add to my business
                   </ActionButton>
                   <ActionButton
+                    className={actionClass}
                     disabled={disabled}
                     variant="outline"
                     onPress={() => onState("PROPOSED")}
@@ -120,6 +131,7 @@ export function SetupRecordCard({
                 </>
               ) : (
                 <ActionButton
+                  className={actionClass}
                   disabled={disabled || !p || entity.state === "NEEDS_INPUT"}
                   onPress={() => onState("CONFIRMED")}
                 >
@@ -127,6 +139,7 @@ export function SetupRecordCard({
                 </ActionButton>
               )}
               <ActionButton
+                className={actionClass}
                 disabled={disabled || !p}
                 variant="outline"
                 onPress={onEdit}
@@ -134,6 +147,7 @@ export function SetupRecordCard({
                 Add details
               </ActionButton>
               <ActionButton
+                className={actionClass}
                 disabled={disabled}
                 variant="ghost"
                 onPress={() => onState("SKIPPED")}
