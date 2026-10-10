@@ -19,6 +19,7 @@ import Animated, {
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
 
 // 03 Market Preview: small app cards on a mint stage above each auth form.
+// Cards start 16pt lower than the first build so the logo row has room (10 Oct).
 // Sample figures are always labelled as examples; setup previews use the
 // owner's own answers.
 
@@ -205,7 +206,7 @@ export function SalesExampleStage() {
         chips={["14 orders", "Synced"]}
         left={22}
         right={60}
-        top={44}
+        top={60}
         rotate={-3}
       />
       <StageCard
@@ -214,7 +215,7 @@ export function SalesExampleStage() {
         title="3 unpaid"
         subtitle="₦22,000 to collect"
         left={30}
-        top={148}
+        top={164}
         width={150}
         rotate={-2}
       />
@@ -224,7 +225,7 @@ export function SalesExampleStage() {
         title="Eggs · ₦4,500"
         subtitle="40 crates"
         right={18}
-        top={138}
+        top={154}
         width={168}
         rotate={4}
       />
@@ -243,7 +244,7 @@ export function VerifyStage({ email }: { email?: string }) {
       centered
       left={Math.max(16, (width - 220) / 2)}
       width={220}
-      top={58}
+      top={74}
     />
   )
 }
@@ -258,7 +259,7 @@ export function SalesRepExampleStage() {
         chips={["5 sales", "Sales rep"]}
         left={22}
         right={60}
-        top={44}
+        top={60}
         rotate={-3}
       />
       <StageCard
@@ -267,7 +268,7 @@ export function SalesRepExampleStage() {
         title="Close out at 6pm"
         subtitle="Cash and stock"
         right={18}
-        top={138}
+        top={154}
         width={168}
         rotate={4}
       />
@@ -283,7 +284,7 @@ export function NoAccessStage() {
       subtitle="Your workspace will appear here"
       left={24}
       right={24}
-      top={58}
+      top={74}
     />
   )
 }
@@ -307,7 +308,7 @@ export function SetupPreviewStage({
         chips={chips.length ? chips : ["Setting up"]}
         left={22}
         right={40}
-        top={44}
+        top={60}
         rotate={-3}
       />
       {ownerLine ? (
@@ -317,7 +318,7 @@ export function SetupPreviewStage({
           title={ownerLine.title}
           subtitle={ownerLine.subtitle}
           right={18}
-          top={148}
+          top={164}
           width={168}
           rotate={4}
         />
@@ -328,7 +329,7 @@ export function SetupPreviewStage({
           title="First item next"
           subtitle="After setup"
           right={18}
-          top={148}
+          top={164}
           width={168}
           rotate={4}
         />
@@ -348,7 +349,7 @@ function IntroCards({ index }: { index: number }) {
           title="Eggs"
           subtitle="₦4,500 per crate"
           left={24}
-          top={48}
+          top={64}
           width={150}
           rotate={-4}
         />
@@ -358,7 +359,7 @@ function IntroCards({ index }: { index: number }) {
           title="Broilers"
           subtitle="₦6,500 per bird"
           right={24}
-          top={68}
+          top={84}
           width={150}
           rotate={3}
         />
@@ -368,7 +369,7 @@ function IntroCards({ index }: { index: number }) {
           title="Feed 25kg"
           subtitle="₦14,000 per bag"
           left={80}
-          top={148}
+          top={164}
           width={170}
         />
       </>
@@ -381,7 +382,7 @@ function IntroCards({ index }: { index: number }) {
           subtitle="Example · Paid · 10:42"
           left={22}
           right={22}
-          top={52}
+          top={68}
         />
         <StageCard
           icon="Clock"
@@ -390,7 +391,7 @@ function IntroCards({ index }: { index: number }) {
           subtitle="Waiting to sync"
           left={34}
           right={34}
-          top={128}
+          top={144}
           rotate={-2}
         />
       </>
@@ -404,7 +405,7 @@ function IntroCards({ index }: { index: number }) {
         chips={["Owner", "2 staff"]}
         left={22}
         right={60}
-        top={44}
+        top={60}
         rotate={-3}
       />
       <StageCard
@@ -413,7 +414,7 @@ function IntroCards({ index }: { index: number }) {
         title="Musa joined"
         subtitle="Sales rep"
         right={18}
-        top={138}
+        top={154}
         width={168}
         rotate={4}
       />

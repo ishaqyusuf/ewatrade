@@ -39,8 +39,8 @@ type GreenTillAuthScreenProps = {
   testID?: string
 }
 
-const STAGE_HEIGHT = 250
-const COMPACT_STAGE_HEIGHT = 250
+const STAGE_HEIGHT = 266
+const COMPACT_STAGE_HEIGHT = 266
 const LARGE_TEXT_STAGE_HEIGHT = 120
 
 /** Option 03 Market Preview: app cards on a mint stage above a light form sheet. */
@@ -102,7 +102,7 @@ export function GreenTillAuthScreen({
             </Svg>
           </View>
           {largeText ? null : (stage ?? <SalesExampleStage />)}
-          <View className="absolute left-5 right-4 top-1 min-h-11 flex-row items-center gap-2">
+          <View className="absolute left-5 right-4 top-3 min-h-11 flex-row items-center gap-2">
             <BrandLogo reverse={colorScheme === "dark"} width={92} />
             <View className="ml-auto flex-row items-center gap-2">
               {actions}
@@ -124,7 +124,17 @@ export function GreenTillAuthScreen({
             </View>
           </View>
         </View>
-        <View className="-mt-[30px] flex-1 gap-4 rounded-t-[28px] bg-background px-[18px] pb-6 pt-5">
+        {/* The sheet casts a soft shadow up onto the stage so it reads as its
+            own layer (owner, 10 Oct). */}
+        <View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: colors.background,
+              shadowColor: palette.heroTo,
+            },
+          ]}
+        >
           {headerContent ?? (
             <View className="gap-1">
               <Text
@@ -231,6 +241,20 @@ export function AuthFlowScreen({
 }
 
 const styles = StyleSheet.create({
+  sheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    elevation: 12,
+    flex: 1,
+    gap: 16,
+    marginTop: -30,
+    paddingBottom: 24,
+    paddingHorizontal: 18,
+    paddingTop: 28,
+    shadowOffset: { height: -8, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+  },
   stage: { overflow: "hidden", position: "relative" },
   progress: { flexDirection: "row", gap: 6 },
 })
