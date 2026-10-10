@@ -11,6 +11,7 @@ export const eventMetadataSchema = z.object({
   item_count: z.number().int().nonnegative().optional(),
   duration_ms: z.number().finite().nonnegative().optional(),
   success: z.boolean().optional(),
+  assistant_mode: z.enum(["setup", "product", "general"]).optional(),
 })
 export type EventMetadata = z.infer<typeof eventMetadataSchema>
 export function safeEventMetadata(input: unknown): EventMetadata {

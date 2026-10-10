@@ -19,6 +19,7 @@ import {
 import { readVoiceUsage } from "@ewatrade/db/assistant-voice"
 import { enqueueAssistantAttachmentProcessing } from "@ewatrade/jobs/assistant-attachments"
 import { z } from "zod"
+import { assistantAnalyticsContext } from "../../assistant/analytics"
 import {
   isSetupAttachmentStorageAvailable,
   setupAttachmentStorage,
@@ -129,9 +130,10 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
         data: { status: "UPLOADED", errorCode: null },
       })
       if (result.count)
-        await enqueueAssistantAttachmentProcessing(input.attachmentId).catch(
-          () => undefined,
-        )
+        await enqueueAssistantAttachmentProcessing(
+          input.attachmentId,
+          assistantAnalyticsContext(ctx).origin,
+        ).catch(() => undefined)
       return { retried: result.count === 1 }
     }),
   /** Saves an upload intent; the bytes follow with PUT to `uploadPath`. */

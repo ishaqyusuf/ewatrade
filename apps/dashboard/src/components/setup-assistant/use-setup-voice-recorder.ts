@@ -1,6 +1,7 @@
 "use client"
 
 import { SETUP_ATTACHMENT_LIMITS } from "@ewatrade/assistant/setup/attachments"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { voiceRecordingFile } from "./voice-recording-file"
 
@@ -26,7 +27,25 @@ export type SetupRecorderState =
  */
 export function useSetupVoiceRecorder(input: {
   onReady: (file: File, durationMs: number) => void
+  assistantMode?: "setup" | "product"
 }) {
+  const workflow = useDashboardWorkflow()
+  const telemetrySettled = useRef(true)
+  const trackRecording = useCallback(
+    (
+      phase: "started" | "completed" | "failed" | "blocked" | "cancelled",
+      durationMs?: number,
+    ) => {
+      if (telemetrySettled.current) return
+      if (phase !== "started") telemetrySettled.current = true
+      workflow.track("assistant_recording", phase, {
+        channel: "microphone",
+        assistant_mode: input.assistantMode ?? "setup",
+        duration_ms: durationMs,
+      })
+    },
+    [workflow, input.assistantMode],
+  )
   const maxDurationMs = SETUP_ATTACHMENT_LIMITS.AUDIO.maxDurationMs
   const [state, setState] = useState<SetupRecorderState>({ kind: "idle" })
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -55,7 +74,10 @@ export function useSetupVoiceRecorder(input: {
 
   const finish = useCallback(
     (discard: boolean) => {
-      if (discard) generationRef.current++
+      if (discard) {
+        trackRecording("cancelled")
+        generationRef.current++
+      }
       discardRef.current = discard
       const recorder = recorderRef.current
       if (recorder?.state === "recording") recorder.stop()
@@ -67,7 +89,7 @@ export function useSetupVoiceRecorder(input: {
         )
       }
     },
-    [cleanup],
+    [cleanup, trackRecording],
   )
 
   useEffect(() => {
@@ -88,11 +110,17 @@ export function useSetupVoiceRecorder(input: {
       state.kind === "preparing"
     )
       return
+    telemetrySettled.current = false
+    workflow.track("assistant_voice_button", "observed", {
+      channel: "microphone",
+      assistant_mode: input.assistantMode ?? "setup",
+    })
     if (
       typeof MediaRecorder === "undefined" ||
       !navigator.mediaDevices?.getUserMedia ||
       !window.isSecureContext
     ) {
+      trackRecording("blocked")
       setState({
         kind: "unsupported",
         message: "Voice notes can't be recorded in this browser.",
@@ -103,6 +131,7 @@ export function useSetupVoiceRecorder(input: {
       MediaRecorder.isTypeSupported(candidate),
     )
     if (!mimeType) {
+      trackRecording("blocked")
       setState({
         kind: "unsupported",
         message: "This browser can't record a supported voice note.",
@@ -136,6 +165,7 @@ export function useSetupVoiceRecorder(input: {
           return
         }
         if (!chunks.length || durationMs < 500) {
+          trackRecording("failed", durationMs)
           setState({ kind: "idle" })
           return
         }
@@ -145,9 +175,11 @@ export function useSetupVoiceRecorder(input: {
             new Blob(chunks, { type: mimeType }),
           )
           if (generation !== generationRef.current) return
+          trackRecording("completed", result.durationMs)
           onReadyRef.current(result.file, result.durationMs)
           setState({ kind: "idle" })
         } catch {
+          if (generation === generationRef.current) trackRecording("failed")
           if (generation === generationRef.current)
             setState({
               kind: "unsupported",
@@ -157,6 +189,7 @@ export function useSetupVoiceRecorder(input: {
         }
       }
       recorder.onerror = () => {
+        trackRecording("failed")
         finish(true)
         setState({
           kind: "unsupported",
@@ -186,6 +219,7 @@ export function useSetupVoiceRecorder(input: {
       }
       startedAtRef.current = Date.now()
       recorder.start(250)
+      trackRecording("started")
       setState({ kind: "recording", elapsedMs: 0, levels: [] })
       frameRef.current = window.requestAnimationFrame(meter)
       timerRef.current = window.setInterval(() => {
@@ -197,13 +231,22 @@ export function useSetupVoiceRecorder(input: {
       }, 250)
     } catch {
       if (generation !== generationRef.current) return
+      trackRecording("blocked")
       cleanup()
       setState({
         kind: "unsupported",
         message: "Allow microphone access to record a voice note.",
       })
     }
-  }, [cleanup, finish, maxDurationMs, state.kind])
+  }, [
+    cleanup,
+    finish,
+    maxDurationMs,
+    state.kind,
+    workflow,
+    trackRecording,
+    input.assistantMode,
+  ])
 
   return {
     state,

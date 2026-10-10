@@ -9,6 +9,7 @@ import {
   setupAttachmentContentTypeFor,
   validateSetupAttachmentIntent,
 } from "@ewatrade/assistant/setup/attachments"
+import { useEvents } from "@ewatrade/events/client"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -75,6 +76,7 @@ export function useSetupAttachments(input: {
 }) {
   const trpc = useTRPC()
   const workflow = useDashboardWorkflow()
+  const events = useEvents()
   const [items, setItemsState] = useState<SetupLocalAttachment[]>([])
   const itemsRef = useRef(items)
   const setItems = useCallback(
@@ -85,6 +87,7 @@ export function useSetupAttachments(input: {
     [],
   )
   const transcribed = useRef(new Set<string>())
+  const failedEvents = useRef(new Set<string>())
   const cancelled = useRef(new Set<string>())
   const mounted = useRef(true)
   const onTranscriptRef = useRef(input.onTranscript)
@@ -135,13 +138,25 @@ export function useSetupAttachments(input: {
   )
 
   const update = useCallback(
-    (localId: string, patch: Partial<SetupLocalAttachment>) =>
+    (localId: string, patch: Partial<SetupLocalAttachment>) => {
+      if (
+        patch.phase === "failed" &&
+        !failedEvents.current.has(localId) &&
+        itemsRef.current.find((item) => item.localId === localId)?.kind ===
+          "AUDIO"
+      ) {
+        failedEvents.current.add(localId)
+        workflow.track("assistant_voice", "failed", {
+          channel: "transcription",
+        })
+      }
       setItems((current) =>
         current.map((item) =>
           item.localId === localId ? { ...item, ...patch } : item,
         ),
-      ),
-    [setItems],
+      )
+    },
+    [setItems, workflow],
   )
 
   const reading = items
@@ -279,7 +294,10 @@ export function useSetupAttachments(input: {
           method: "PUT",
           body: file,
           credentials: "same-origin",
-          headers: { "Content-Type": contentType },
+          headers: {
+            "Content-Type": contentType,
+            "x-ewatrade-analytics": events.canCollect() ? "allowed" : "denied",
+          },
         })
         if (!response.ok) {
           update(localId, {
@@ -299,6 +317,7 @@ export function useSetupAttachments(input: {
       }
     },
     [
+      events,
       createIntent,
       removeAttachment,
       input.conversationId,
@@ -352,6 +371,8 @@ export function useSetupAttachments(input: {
     retry: async (localId: string) => {
       const item = itemsRef.current.find((row) => row.localId === localId)
       if (!item?.attachmentId || !item.retryable) return
+      failedEvents.current.delete(localId)
+      workflow.track("assistant_voice", "started", { channel: "retry" })
       update(localId, { phase: "reading", error: null })
       try {
         const result = await retryAttachment.mutateAsync({

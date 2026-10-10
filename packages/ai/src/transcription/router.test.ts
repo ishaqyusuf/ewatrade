@@ -18,6 +18,7 @@ function fixture(
     gateway?: typeof lease | null
     assertActive?: () => Promise<void>
     circuitOpen?: () => Promise<boolean>
+    observeAttempt?: (attempt: VoiceAttempt) => Promise<void>
   } = {},
 ) {
   const attempts: VoiceAttempt[] = []
@@ -41,6 +42,7 @@ function fixture(
       attempts.push({ ...value })
     },
     circuitOpen: options.circuitOpen,
+    observeAttempt: options.observeAttempt,
     fetchImpl: (async (url, init) => {
       calls.push({ url: String(url), init })
       const result = responses.shift()
@@ -131,4 +133,29 @@ describe("voice routing", () => {
     ])
       expect(normalizeGatewayUrl(url)).toBeNull()
   })
+})
+
+test("provider telemetry observes actual dispatch exactly once and cannot break fallback", async () => {
+  const observed: string[] = []
+  const f = fixture(
+    [
+      ok({ ready: false, model: "whisper" }),
+      new Response(null, { status: 503 }),
+      ok({ text: "Private speech" }),
+    ],
+    {
+      observeAttempt: async (attempt) => {
+        observed.push(`${attempt.provider}:${attempt.outcome}`)
+        throw new Error("analytics offline")
+      },
+    },
+  )
+  expect((await f.run()).provider).toBe("xai")
+  expect(observed).toEqual([
+    "local_whisper:skipped",
+    "openai:started",
+    "openai:failed",
+    "xai:started",
+    "xai:success",
+  ])
 })

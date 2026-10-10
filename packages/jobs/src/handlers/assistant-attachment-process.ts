@@ -44,8 +44,12 @@ import {
   resolveAssistantAttachmentStorage,
 } from "@ewatrade/private-media/assistant-attachments"
 import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
+import { assistantVoiceObserver } from "../assistant-analytics"
 
-export type AssistantAttachmentProcessPayload = { attachmentId: string }
+export type AssistantAttachmentProcessPayload = {
+  attachmentId: string
+  analyticsOrigin?: string
+}
 
 /** Owner-approved setup allowance (S00-04): 20 audio minutes, 40 photos. */
 export const SETUP_MEDIA_BUDGET_LIMITS = {
@@ -68,7 +72,9 @@ function heicWorkerUrl() {
   return existsSync(packaged) ? pathToFileURL(packaged) : undefined
 }
 
-export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps {
+export function defaultAssistantAttachmentDeps(
+  analyticsOrigin?: string,
+): SetupAttachmentProcessingDeps {
   const classifications = new Map<string, "LIVE" | "QA">()
   const classify = async (tenantId: string) => {
     const cached = classifications.get(tenantId)
@@ -168,6 +174,7 @@ export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps 
             throw new Error("MEDIA_UNAVAILABLE")
           }),
         transcribe: createFallbackTranscriber({
+          observeAttempt: assistantVoiceObserver(attachment, analyticsOrigin),
           contentType: attachment.contentType,
           audioSeconds: Math.ceil((attachment.durationMs ?? 0) / 1000),
           tenantId: attachment.tenantId,
@@ -276,13 +283,13 @@ export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps 
   }
 }
 
-/** Identifier-only payload; every fact is re-read from the database. */
+/** IDs plus an optional API-approved analytics origin; actor facts are re-read. */
 export async function assistantAttachmentProcessHandler(
   payload: AssistantAttachmentProcessPayload,
 ) {
   const result = await processSetupAttachment(
     payload.attachmentId,
-    defaultAssistantAttachmentDeps(),
+    defaultAssistantAttachmentDeps(payload.analyticsOrigin),
   )
   if (result.status === "failed" && result.retryable)
     // Let the queue retry; the lease and attempt counter bound it.

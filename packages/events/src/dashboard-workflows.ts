@@ -3,6 +3,11 @@ export const dashboardProcedures = {
   "tenant.createBusiness": "business_setup",
   "tenant.createInventoryStore": "business_setup",
   "tenant.createStore": "business_setup",
+  "productAssistant.create": "assistant",
+  "productAssistant.createFromForm": "assistant",
+  "assistant.start": "assistant",
+  "assistant.editProposal": "assistant",
+  "assistant.decideProposal": "assistant",
   "setupAssistant.start": "assistant",
   "setupAssistant.begin": "assistant",
   "setupAssistant.skip": "assistant",
@@ -228,6 +233,7 @@ export type WorkflowPhase =
   | "blocked"
   | "cancelled"
   | "observed"
+  | "skipped"
 export type DashboardWorkflow = { category: string; action: string }
 export function dashboardProcedure(path: string): DashboardWorkflow | null {
   if (!Object.hasOwn(dashboardProcedures, path)) return null
@@ -238,7 +244,14 @@ export function dashboardProcedure(path: string): DashboardWorkflow | null {
     .join("_")
     .replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
     .replace(/store_conversation_/g, "conversation_")
-  return { category, action }
+  return {
+    category,
+    action: path.startsWith("assistant.")
+      ? `general_${action}`
+      : path.startsWith("productAssistant.")
+        ? `product_${action}`
+        : action,
+  }
 }
 export const dashboardBrowserActions = {
   login: { category: "access", action: "login" },
@@ -257,6 +270,9 @@ export const dashboardBrowserActions = {
   staff_invite: { category: "staff", action: "invite" },
   staff_update: { category: "staff", action: "update" },
   customer_create: { category: "customers", action: "create" },
+  assistant_voice_button: { category: "assistant", action: "voice_button" },
+  assistant_recording: { category: "assistant", action: "recording" },
+  assistant_typing: { category: "assistant", action: "typing" },
   assistant_voice: { category: "assistant", action: "voice" },
   assistant_message: { category: "assistant", action: "message" },
   receipt_download: { category: "reports", action: "receipt_download" },

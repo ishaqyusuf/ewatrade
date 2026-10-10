@@ -30,10 +30,18 @@ export function createFallbackTranscriber(options: {
   digest: string
   assertActive: () => Promise<void>
   recordAttempt: (attempt: VoiceAttempt) => Promise<void>
+  observeAttempt?: (attempt: VoiceAttempt) => Promise<void>
   circuitOpen?: (provider: VoiceProvider, model: string) => Promise<boolean>
 }): AssistantTranscriber {
   const env = options.environment ?? process.env
   const fetchImpl = options.fetchImpl ?? fetch
+  const observe = async (attempt: VoiceAttempt) => {
+    try {
+      await options.observeAttempt?.({ ...attempt })
+    } catch {
+      /* Optional telemetry cannot affect speech. */
+    }
+  }
   return async ({ audio, abortSignal }) => {
     const deadline = AbortSignal.any([
       AbortSignal.timeout(100_000),
@@ -164,6 +172,7 @@ export function createFallbackTranscriber(options: {
         }
         await options.assertActive()
         await options.recordAttempt(attempt)
+        await observe(attempt)
         dispatched = true
         const response = await fetchImpl(url, {
           method: "POST",
@@ -200,6 +209,7 @@ export function createFallbackTranscriber(options: {
         attempt.durationMs = Date.now() - started
         attempt.providerRequestId = providerRequestId
         await options.recordAttempt(attempt)
+        await observe(attempt)
         if (
           deadline.aborted ||
           (error instanceof TranscriptionError && error.terminal)
@@ -234,6 +244,7 @@ export function createFallbackTranscriber(options: {
         attempt.pricingVersion = env.ASSISTANT_VOICE_PRICING_VERSION
       }
       await options.recordAttempt(attempt)
+      await observe(attempt)
       return {
         provider: target.provider,
         model: attempt.model,

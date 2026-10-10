@@ -1,6 +1,12 @@
 import { createHmac } from "node:crypto"
 import { z } from "zod"
 import {
+  type AssistantSignal,
+  assistantSignalSchema,
+  productCreationSignal,
+  proposalSignal,
+} from "./assistant-signals"
+import {
   dashboardProcedure,
   procedureOutcome,
   workflowEvent,
@@ -17,7 +23,9 @@ const serverEnvelopeSchema = z.object({
   project: z.literal("ewatrade-dashboard"),
   name: z
     .string()
-    .regex(/^dashboard_[a-z_]+_(completed|failed|blocked)$/)
+    .regex(
+      /^dashboard_[a-z_]+_(started|completed|failed|blocked|cancelled|skipped)$/,
+    )
     .max(80),
   version: z.literal(1),
   source: z.literal("server"),
@@ -35,12 +43,25 @@ const serverEnvelopeSchema = z.object({
     surface: z.literal("dashboard"),
     category: z.string().max(40),
     action: z.string().max(70),
-    status: z.enum(["completed", "failed", "blocked"]),
+    status: z.enum([
+      "started",
+      "completed",
+      "failed",
+      "blocked",
+      "cancelled",
+      "skipped",
+    ]),
     success: z.boolean(),
     channel: z.literal("server"),
     workspace_role: z.string().max(40).optional(),
     audience: z.enum(["internal", "business"]),
     item_count: z.number().int().nonnegative().optional(),
+    provider: assistantSignalSchema.shape.provider,
+    model: assistantSignalSchema.shape.model,
+    environment: assistantSignalSchema.shape.environment,
+    error_code: assistantSignalSchema.shape.error_code,
+    duration_ms: assistantSignalSchema.shape.duration_ms,
+    attempt_ordinal: assistantSignalSchema.shape.attempt_ordinal,
   }),
 })
 export type DashboardServerEnvelope = z.infer<typeof serverEnvelopeSchema>
@@ -78,12 +99,32 @@ export function createDashboardOutcome(
     output: unknown
     requestId: string
     commandId?: string
+    signal?: AssistantSignal
   },
   now = new Date(),
 ): DashboardServerEnvelope | null {
   const secret = process.env.LOGLY_IDENTITY_SECRET
   if (!secret || secret.length < 32) return null
-  const workflow = dashboardProcedure(input.path)
+  const proposal =
+    input.path === "assistant.decideProposal"
+      ? proposalSignal(input.output)
+      : productCreationSignal(input.path, input.output)
+  if (
+    [
+      "assistant.decideProposal",
+      "productAssistant.create",
+      "productAssistant.createFromForm",
+    ].includes(input.path) &&
+    !proposal
+  )
+    return null
+  const signal = input.signal ?? proposal?.signal
+  const parsedSignal = signal ? assistantSignalSchema.safeParse(signal) : null
+  if (parsedSignal && !parsedSignal.success) return null
+  const safeSignal = parsedSignal?.success ? parsedSignal.data : undefined
+  const workflow = safeSignal
+    ? { category: "assistant", action: safeSignal.action }
+    : dashboardProcedure(input.path)
   if (!workflow || !dashboardCaptureAllowed(input.headers, input.principal))
     return null
   const context = issueAnalyticsContext(
@@ -98,7 +139,9 @@ export function createDashboardOutcome(
     now.getTime(),
   )
   if (!identity) return null
-  const outcome = procedureOutcome(input.path, input.output)
+  const outcome = safeSignal
+    ? { phase: safeSignal.phase, itemCount: safeSignal.item_count }
+    : procedureOutcome(input.path, input.output)
   // HMAC namespaces isolate business/actor/procedure; command retries share one UUID.
   const hex = createHmac("sha256", secret)
     .update(
@@ -107,7 +150,8 @@ export function createDashboardOutcome(
         input.principal.userId,
         input.principal.tenantId ?? null,
         input.path,
-        input.commandId ?? input.requestId,
+        proposal?.commandId ?? input.commandId ?? input.requestId,
+        ...(safeSignal ? [safeSignal.action, safeSignal.phase] : []),
       ]),
     )
     .digest("hex")
@@ -123,6 +167,16 @@ export function createDashboardOutcome(
     actorId: identity.actorId,
     groups: identity.groups,
     properties: {
+      ...(safeSignal
+        ? {
+            provider: safeSignal.provider,
+            model: safeSignal.model,
+            environment: safeSignal.environment,
+            error_code: safeSignal.error_code,
+            duration_ms: safeSignal.duration_ms,
+            attempt_ordinal: safeSignal.attempt_ordinal,
+          }
+        : {}),
       ...event.properties,
       ...identity.properties,
       channel: "server",

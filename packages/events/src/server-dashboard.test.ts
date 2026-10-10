@@ -170,3 +170,107 @@ test("server delivery fixes the project/key/origin, retries the same event, and 
     deliverDashboardOutcome({ ...event, project: "ewatrade-marketing" }, send),
   ).rejects.toThrow()
 })
+
+test("confirmed chat actions are post-commit, payload-free and stable across retries", () => {
+  const request = {
+    ...input(),
+    path: "assistant.decideProposal",
+    commandId: undefined,
+    output: {
+      id: "private-proposal",
+      status: "COMPLETED",
+      payload: { action: "product_create", name: "private product" },
+      receipt: { amount: 123456 },
+    },
+  }
+  const event = requireOutcome(request)
+  expect(event.name).toBe("dashboard_assistant_product_create_completed")
+  expect(event.properties.item_count).toBe(1)
+  expect(
+    requireOutcome({ ...request, requestId: crypto.randomUUID() }).eventId,
+  ).toBe(event.eventId)
+  for (const status of ["PENDING", "CANCELLED", "EXPIRED", "FAILED"]) {
+    const other = requireOutcome({
+      ...request,
+      output: { ...request.output, status },
+    })
+    expect(other.properties.success).toBe(false)
+    expect(other.properties.item_count).toBe(0)
+    expect(other.eventId).not.toBe(event.eventId)
+  }
+  expect(JSON.stringify(event)).not.toContain("private product")
+  expect(JSON.stringify(event)).not.toContain("123456")
+  expect(
+    createDashboardOutcome({
+      ...request,
+      output: {
+        ...request.output,
+        payload: { action: "private arbitrary action" },
+      },
+    }),
+  ).toBeNull()
+})
+
+test("product chat creation receipts deduplicate and never export names or record IDs", () => {
+  const request = {
+    ...input(),
+    path: "productAssistant.create",
+    commandId: undefined,
+    output: { recordId: "private-catalog-id", name: "private service" },
+  }
+  const event = requireOutcome(request)
+  expect(event.name).toBe("dashboard_assistant_product_create_completed")
+  expect(
+    requireOutcome({ ...request, requestId: crypto.randomUUID() }).eventId,
+  ).toBe(event.eventId)
+  expect(JSON.stringify(event)).not.toContain("private-catalog-id")
+  expect(JSON.stringify(event)).not.toContain("private service")
+})
+
+test("provider phases survive delivery schema, isolate retries and still enforce privacy", async () => {
+  const ids = new Set<string>()
+  for (const provider of ["local_whisper", "openai", "xai"] as const) {
+    for (const phase of [
+      "started",
+      "completed",
+      "failed",
+      "skipped",
+    ] as const) {
+      const request = {
+        ...input(),
+        path: "assistant.transcription",
+        signal: {
+          action: `transcription_${provider}` as const,
+          phase,
+          provider,
+          model: "whisper-v3",
+          environment: "production" as const,
+          attempt_ordinal: 1,
+          duration_ms: 42,
+        },
+      }
+      const event = requireOutcome(request)
+      expect(event.name).toBe(
+        `dashboard_assistant_transcription_${provider}_${phase}`,
+      )
+      expect(event.properties.provider).toBe(provider)
+      expect(event.properties.environment).toBe("production")
+      expect(ids.has(event.eventId)).toBe(false)
+      ids.add(event.eventId)
+      await deliverDashboardOutcome(event, (async (_url, init) => {
+        const sent = JSON.parse(String(init?.body)).events[0]
+        expect(sent.properties.status).toBe(phase)
+        return new Response(null, { status: 202 })
+      }) as typeof fetch)
+      expect(
+        createDashboardOutcome({ ...request, headers: new Headers() }),
+      ).toBeNull()
+      expect(
+        createDashboardOutcome({
+          ...request,
+          principal: { ...request.principal, qaSession: true },
+        }),
+      ).toBeNull()
+    }
+  }
+})

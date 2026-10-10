@@ -7,6 +7,7 @@ import type {
   GeneralProposal,
 } from "@ewatrade/assistant/general/contracts"
 import { readGeneralSnapshot } from "@ewatrade/assistant/general/snapshot"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { DefaultChatTransport, type UIMessage } from "ai"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -30,6 +31,17 @@ const errorMessage = (error: unknown) =>
 export function useGeneralAssistant({
   autoStart = false,
 }: { autoStart?: boolean } = {}) {
+  const workflow = useDashboardWorkflow()
+  const typed = useRef(false)
+  const messageSettled = useRef(true)
+  const settleMessage = (phase: "completed" | "failed" | "cancelled") => {
+    if (messageSettled.current) return
+    messageSettled.current = true
+    workflow.track("assistant_message", phase, {
+      channel: "browser_stream",
+      assistant_mode: "general",
+    })
+  }
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const mounted = useRef(true)
@@ -116,15 +128,23 @@ export function useGeneralAssistant({
       if (part.type === "data-general-proposal") void refresh().catch(() => {})
     },
     onError: () => {
+      settleMessage("failed")
       if (!mounted.current) return
       setDraft((current) => current || attemptedText.current || "")
       void refresh().catch(() => {})
     },
-    onFinish: ({ isAbort, isError }) => {
+    onFinish: ({ isAbort, isError, isDisconnect }) => {
+      settleMessage(
+        isAbort
+          ? "cancelled"
+          : isError || isDisconnect
+            ? "failed"
+            : "completed",
+      )
       if (!mounted.current) return
       // History fetched before this reply finished must not replace it.
       appliedAt.current = Date.now()
-      if (!isAbort && !isError) attemptedText.current = null
+      if (!isAbort && !isError && !isDisconnect) attemptedText.current = null
       else setDraft((current) => current || attemptedText.current || "")
       void refresh().catch(() => {})
     },
@@ -237,6 +257,7 @@ export function useGeneralAssistant({
       act(async () => {
         const created = await start.mutateAsync()
         if (!mounted.current) return
+        typed.current = false
         setConversationId(created.id)
         chat.setMessages([])
         if (!preserveDraft) setDraft("")
@@ -272,12 +293,19 @@ export function useGeneralAssistant({
     const text = draft.trim()
     if (!text || busy || runId || pending || !conversationId || state.isError)
       return
+    typed.current = false
+    messageSettled.current = false
+    workflow.track("assistant_message", "started", {
+      channel: "browser_stream",
+      assistant_mode: "general",
+    })
     attemptedText.current = text
     setDraft("")
     setNotice(null)
     try {
       await chat.sendMessage({ text })
     } catch (error) {
+      settleMessage("failed")
       if (mounted.current) {
         setDraft((current) => current || text)
         setNotice(errorMessage(error))
@@ -314,6 +342,7 @@ export function useGeneralAssistant({
     )
   const choose = (id: string) => {
     if (busy || runId || pending) return
+    typed.current = false
     chat.setMessages([])
     setConversationId(id)
     setDraft("")
@@ -327,7 +356,16 @@ export function useGeneralAssistant({
     chat,
     busy,
     draft,
-    setDraft,
+    setDraft: (value: string) => {
+      if (value.trim() && !typed.current) {
+        typed.current = true
+        workflow.track("assistant_typing", "started", {
+          channel: "composer",
+          assistant_mode: "general",
+        })
+      }
+      setDraft(value)
+    },
     notice,
     pending,
     runId,

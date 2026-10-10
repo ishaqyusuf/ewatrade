@@ -25,8 +25,11 @@ import {
   upsertSetupDraftEntities,
 } from "@ewatrade/db/assistant"
 import { listSentAssistantAttachments } from "@ewatrade/db/assistant-attachments"
+import type { AssistantSignal } from "@ewatrade/events/assistant-signals"
+import { recordDashboardOutcome } from "@ewatrade/jobs/product-analytics"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import { assistantAnalyticsContext } from "../../assistant/analytics"
 import { withExpiredAttachments } from "../../assistant/chat-attachments"
 import {
   commitSetupDraft,
@@ -449,6 +452,37 @@ export const setupAssistantRouter = createTRPCRouter({
         })
         throw error
       })
+      const analytics = assistantAnalyticsContext(ctx)
+      if (analytics.origin) {
+        try {
+          const savedDraft = await readSetupDraft(ctx.db, draftId)
+          const actions: Record<string, AssistantSignal["action"]> = {
+            PRODUCT: "product_create",
+            SERVICE: "service_create",
+            CUSTOMER: "customer_create",
+            MONEY_ACCOUNT: "money_account_create",
+          }
+          for (const result of outcome.results) {
+            const entity = savedDraft.entities.find(
+              (entry) => entry.key === result.key,
+            )
+            const action = entity ? actions[entity.kind] : undefined
+            if (result.state !== "COMMITTED" || !result.recordId || !action)
+              continue
+            await recordDashboardOutcome({
+              headers: ctx.requestHeaders,
+              principal: analytics.principal,
+              path: "setupAssistant.commit",
+              output: null,
+              requestId: ctx.requestId,
+              commandId: result.recordId,
+              signal: { action, phase: "completed", item_count: 1 },
+            })
+          }
+        } catch {
+          /* Committed records remain successful if optional analytics fails. */
+        }
+      }
       if (
         !outcome.interrupted &&
         outcome.remaining === 0 &&

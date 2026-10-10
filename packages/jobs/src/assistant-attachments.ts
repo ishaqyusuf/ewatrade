@@ -8,11 +8,12 @@ import { triggerJob } from "./trigger"
  */
 export async function enqueueAssistantAttachmentProcessing(
   attachmentId: string,
+  analyticsOrigin?: string,
 ) {
   await triggerJob(
     "assistant.attachment.process",
     assistantAttachmentProcessHandler,
-    { attachmentId },
+    { attachmentId, analyticsOrigin },
     { maxAttempts: SETUP_ATTACHMENT_MAX_ATTEMPTS, baseDelayMs: 1_500 },
   )
 }

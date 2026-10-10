@@ -69,6 +69,7 @@ export function SetupChat({
   stateQueryKey,
   onBusyChange,
   inputLabel,
+  assistantMode = "setup",
 }: {
   conversationId: string
   status: "OFFERED" | "ACTIVE"
@@ -78,6 +79,7 @@ export function SetupChat({
   stateQueryKey?: readonly unknown[]
   onBusyChange?: (busy: boolean) => void
   inputLabel?: string
+  assistantMode?: "setup" | "product"
 }) {
   const settled = useRef(true)
   const workflow = useDashboardWorkflow()
@@ -170,6 +172,7 @@ export function SetupChat({
         settled.current = true
         workflow.track("assistant_message", "failed", {
           channel: "browser_stream",
+          assistant_mode: assistantMode,
         })
       }
       const runId = runIdRef.current
@@ -187,7 +190,7 @@ export function SetupChat({
           : isError || isDisconnect
             ? "failed"
             : "completed",
-        { channel: "browser_stream" },
+        { channel: "browser_stream", assistant_mode: assistantMode },
       )
     },
   })
@@ -225,8 +228,20 @@ export function SetupChat({
     settled.current = false
     workflow.track("assistant_message", "started", {
       channel: "browser_stream",
+      assistant_mode: assistantMode,
     })
-    await chat.sendMessage({ parts })
+    try {
+      await chat.sendMessage({ parts })
+    } catch {
+      sendFailed.current = true
+      if (!settled.current) {
+        settled.current = true
+        workflow.track("assistant_message", "failed", {
+          channel: "browser_stream",
+          assistant_mode: assistantMode,
+        })
+      }
+    }
     return !sendFailed.current
   }
   const stop = () => {
@@ -274,6 +289,7 @@ export function SetupChat({
 
       {canType ? (
         <SetupComposer
+          assistantMode={assistantMode}
           key={conversationId}
           inputLabel={inputLabel}
           conversationId={conversationId}

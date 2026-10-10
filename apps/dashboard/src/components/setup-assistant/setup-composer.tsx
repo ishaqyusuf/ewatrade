@@ -6,6 +6,7 @@ import {
   SETUP_ATTACHMENT_TYPES,
   type SetupAttachmentPartData,
 } from "@ewatrade/assistant/setup/attachments"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Button,
   InputGroup,
@@ -48,6 +49,7 @@ export function SetupComposer({
   mediaEnabled,
   onSend,
   onStop,
+  assistantMode = "setup",
   inputLabel = "Tell the assistant about your business",
 }: {
   conversationId: string
@@ -58,7 +60,10 @@ export function SetupComposer({
   onSend: (parts: SetupComposerPart[]) => Promise<boolean>
   onStop: () => void
   inputLabel?: string
+  assistantMode?: "setup" | "product"
 }) {
+  const workflow = useDashboardWorkflow()
+  const typed = useRef(false)
   const trpc = useTRPC()
   const capabilities = useQuery(
     trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(),
@@ -94,6 +99,7 @@ export function SetupComposer({
     },
   })
   const recorder = useSetupVoiceRecorder({
+    assistantMode,
     onReady: (file, durationMs) => void attachments.add(file, { durationMs }),
   })
   const recording = recorder.state.kind === "recording"
@@ -129,6 +135,7 @@ export function SetupComposer({
         ...ready.map((data) => ({ type: SETUP_ATTACHMENT_PART, data })),
       ])
       if (accepted) {
+        typed.current = false
         attachments.takeReady()
         setInput((current) => (current.trim() === text ? "" : current))
         setTranscriptHint(false)
@@ -226,7 +233,16 @@ export function SetupComposer({
             className="min-h-0"
             maxLength={8000}
             value={input}
-            onChange={(event) => setInput(event.target.value)}
+            onChange={(event) => {
+              if (event.target.value.trim() && !typed.current) {
+                typed.current = true
+                workflow.track("assistant_typing", "started", {
+                  channel: "composer",
+                  assistant_mode: assistantMode,
+                })
+              }
+              setInput(event.target.value)
+            }}
           />
           <InputGroupAddon align="inline-end" className="self-end">
             {mediaEnabled ? (

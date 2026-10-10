@@ -19,6 +19,7 @@ import type { Context } from "hono"
 import { parseBuffer } from "music-metadata"
 import { z } from "zod"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
+import { assistantAnalyticsContext } from "./analytics"
 import { requireAssistantAttachmentScope } from "./attachment-scope"
 import {
   setupAttachmentStorage,
@@ -46,7 +47,11 @@ async function admit(context: Context) {
   const ctx = await resolveProtectedTenantContext(
     await createTRPCContext(undefined, context),
   )
-  return { db: ctx.db, scope: requireAssistantAttachmentScope(ctx) }
+  return {
+    db: ctx.db,
+    scope: requireAssistantAttachmentScope(ctx),
+    analyticsOrigin: assistantAnalyticsContext(ctx).origin,
+  }
 }
 
 function mapError(context: Context, error: unknown) {
@@ -93,7 +98,7 @@ export function registerAssistantAttachmentRoutes(
         )
         if (!attachmentId.success)
           return refuse(context, 400, "BAD_REQUEST", "Invalid file.")
-        const { db, scope } = await admit(context)
+        const { db, scope, analyticsOrigin } = await admit(context)
         const row = await readAssistantAttachment(db, scope, attachmentId.data)
         if (
           !(row.kind === "AUDIO"
@@ -175,9 +180,10 @@ export function registerAssistantAttachmentRoutes(
           )
         }
         // Stored and recorded: a dispatch failure is recovered by the sweep.
-        await enqueueAssistantAttachmentProcessing(row.id).catch(
-          () => undefined,
-        )
+        await enqueueAssistantAttachmentProcessing(
+          row.id,
+          analyticsOrigin,
+        ).catch(() => undefined)
         return context.json({ attachmentId: row.id, status: "UPLOADED" })
       } catch (error) {
         return mapError(context, error)

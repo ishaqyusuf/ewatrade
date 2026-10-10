@@ -14,7 +14,8 @@
     "./qa-policy-server": "./src/qa-policy.server.ts",
     "./dashboard-workflows": "./src/dashboard-workflows.ts",
     "./dashboard-client": "./src/dashboard-workflow-client.ts",
-    "./server-dashboard": "./src/server-dashboard.ts"
+    "./server-dashboard": "./src/server-dashboard.ts",
+    "./assistant-signals": "./src/assistant-signals.ts"
   },
   "scripts": {
     "test": "bun test src",

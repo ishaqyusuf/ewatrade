@@ -338,6 +338,7 @@ export function ProductChat({
           ) : null}
           <SetupDraftCardContext.Provider value={renderDraftCard}>
             <SetupChat
+              assistantMode="product"
               inputLabel="Tell the assistant about your product"
               key={data.conversation.id}
               conversationId={data.conversation.id}
