@@ -58,8 +58,10 @@ export function MobileBottomTabItem({
       }}
       allowOverflow={Boolean(tab.render) || (isOperationalDetail && isAction)}
       className={cn(
-        "min-h-11 min-w-11 items-center justify-center rounded-full active:opacity-85",
-        isOperationalNavigation && "w-full",
+        "min-h-11 min-w-11 items-center justify-center active:opacity-85",
+        // A full-width nav slot is wide, so a pill radius curves into its
+        // label and clips descenders at large text ("Catalog").
+        isOperationalNavigation ? "w-full rounded-2xl" : "rounded-full",
         largeTextLayout && !isAction && "min-h-14",
       )}
       disabled={tab.disabled}
