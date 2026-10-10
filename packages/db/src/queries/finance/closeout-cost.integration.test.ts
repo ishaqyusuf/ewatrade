@@ -1,6 +1,7 @@
 import { expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import type { Prisma } from "../../../generated/prisma/client"
+import { withPerformanceTrace } from "../../performance-tracing"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
 import {
   createInventoryCloseout,
@@ -190,33 +191,44 @@ describeWithServiceCommerceDatabase("custody closeout cost acceptance", () => {
       const legacy = await makeStock(known, "missing-opening", true)
       const firstGain = await makeStock(known, "first-gain", false)
       const noBook = await makeStock(physicalOnly, "physical", true, "4")
+      async function traced<T>(label: string, action: () => Promise<T>) {
+        console.info(`closeout-cost ${runId}: starting ${label}`)
+        return withPerformanceTrace("job", action, (trace) =>
+          console.info(
+            `closeout-cost ${runId}: ${label}`,
+            JSON.stringify(trace),
+          ),
+        )
+      }
       async function receive(
         stock: typeof shortage,
         label: string,
         amountMinor: string,
       ) {
-        await recordFinancePurchase(db, {
-          tenantId: known.tenant.id,
-          actorUserId: owner.id,
-          bookId: book.id,
-          clientCommandId: `receipt-${label}-${runId}`,
-          supplierId: supplier.id,
-          storeId: known.store.id,
-          description: "QA original closeout cost",
-          incurredAt: new Date("2026-09-15T12:00:00Z"),
-          lines: [
-            {
-              balanceSourceId: stock.root.id,
-              enteredInventoryUnitId: stock.unit.id,
-              expectedConfigurationVersionId: stock.configuration.id,
-              description: "QA cost",
-              amountMinor,
-              enteredQuantity: "4",
-              expectedBalanceRevision: 0,
-              categories: [{ name: `Closeout ${runId.slice(0, 8)}` }],
-            },
-          ],
-        })
+        await traced(`purchase fixture ${label}`, () =>
+          recordFinancePurchase(db, {
+            tenantId: known.tenant.id,
+            actorUserId: owner.id,
+            bookId: book.id,
+            clientCommandId: `receipt-${label}-${runId}`,
+            supplierId: supplier.id,
+            storeId: known.store.id,
+            description: "QA original closeout cost",
+            incurredAt: new Date("2026-09-15T12:00:00Z"),
+            lines: [
+              {
+                balanceSourceId: stock.root.id,
+                enteredInventoryUnitId: stock.unit.id,
+                expectedConfigurationVersionId: stock.configuration.id,
+                description: "QA cost",
+                amountMinor,
+                enteredQuantity: "4",
+                expectedBalanceRevision: 0,
+                categories: [{ name: `Closeout ${runId.slice(0, 8)}` }],
+              },
+            ],
+          }),
+        )
       }
       await receive(shortage, "shortage", "1001")
       await receive(gain, "gain", "1000")
@@ -231,19 +243,21 @@ describeWithServiceCommerceDatabase("custody closeout cost acceptance", () => {
         const current = await db.stockBalanceSource.findUniqueOrThrow({
           where: { id: stock.root.id },
         })
-        await moveInventoryCustody(db, {
-          tenantId: stock.target.tenant.id,
-          actorUserId: manager.id,
-          clientOperationId: `custody-${label}-${runId}`,
-          sourceBalanceSourceId: stock.root.id,
-          expectedSourceRevision: current.revision,
-          quantity: "4",
-          targetCustodyType: custodyType,
-          targetCustodyReferenceId: reference,
-          source: "manager_inventory_action",
-          reason: "Approved QA custody",
-          schemaVersion: 1,
-        })
+        await traced(`custody fixture ${label}`, () =>
+          moveInventoryCustody(db, {
+            tenantId: stock.target.tenant.id,
+            actorUserId: manager.id,
+            clientOperationId: `custody-${label}-${runId}`,
+            sourceBalanceSourceId: stock.root.id,
+            expectedSourceRevision: current.revision,
+            quantity: "4",
+            targetCustodyType: custodyType,
+            targetCustodyReferenceId: reference,
+            source: "manager_inventory_action",
+            reason: "Approved QA custody",
+            schemaVersion: 1,
+          }),
+        )
         const balance = await db.stockBalanceSource.findFirstOrThrow({
           where: {
             tenantId: stock.target.tenant.id,
