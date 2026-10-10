@@ -21,7 +21,7 @@ test("incomplete report never exposes its subtotal or count as a complete answer
   expect(JSON.stringify(answer)).not.toContain("1234.56")
   expect(JSON.stringify(answer)).not.toContain("2000")
   expect(answer.scope).toContain("Your orders")
-  expect(answer.scope).toContain("end excluded")
+  expect(answer.scope).toContain("Thu 1 – Fri 9 Oct")
 })
 test("known empty result is zero, with dated scope and order-value qualification", () => {
   const answer = generalSalesAnswer({
@@ -35,6 +35,6 @@ test("known empty result is zero, with dated scope and order-value qualification
   })
   expect(answer.value).toBe("₦0.00")
   expect(answer.detail).toBe("0 orders · order value, not cash collected.")
-  expect(answer.scope).toContain(period.createdAfter)
-  expect(answer.scope).toContain(period.createdBefore)
+  // 1 Oct up to (not including) 10 Oct reads as Thu 1 – Fri 9 Oct.
+  expect(answer.scope).toContain("Thu 1 – Fri 9 Oct")
 })

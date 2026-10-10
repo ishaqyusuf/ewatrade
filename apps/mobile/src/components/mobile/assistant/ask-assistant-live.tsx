@@ -28,6 +28,7 @@ import {
   AssistantDayMarker,
   AssistantHeader,
   AssistantThinking,
+  assistantAsOf,
 } from "./assistant-ui"
 import {
   generalAnswers,
@@ -277,7 +278,7 @@ export function AskAssistantLive() {
                     title={answer.title}
                     value={answer.value}
                     scope={answer.scope}
-                    asOf={new Date(answer.asOf).toLocaleString()}
+                    asOf={assistantAsOf(answer.asOf)}
                   >
                     <Text className="text-sm text-muted-foreground">
                       {answer.detail}

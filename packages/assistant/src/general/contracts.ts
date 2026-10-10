@@ -324,6 +324,44 @@ export function generalMoney(
     return `${currencyCode} ${amount < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`
   }
 }
+/** A readable period for answer cards: "Sat 10 Oct" or "Mon 5 – Thu 8 Oct".
+ * The end is exclusive, so a whole-day range shows its last included day. */
+export function generalDateRange(after?: string, before?: string) {
+  const parse = (value?: string) => {
+    const date = value ? new Date(value) : null
+    return date && !Number.isNaN(date.getTime()) ? date : null
+  }
+  const start = parse(after)
+  const endExclusive = parse(before)
+  const midnight = (date: Date | null) =>
+    !date || date.toISOString().endsWith("T00:00:00.000Z")
+  const timed = !midnight(start) || !midnight(endExclusive)
+  const end =
+    endExclusive && !timed ? new Date(endExclusive.getTime() - 1) : endExclusive
+  const show = (date: Date, month = true) =>
+    date
+      .toLocaleString("en-GB", {
+        timeZone: "UTC",
+        weekday: "short",
+        day: "numeric",
+        ...(month ? { month: "short" } : {}),
+        ...(timed ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
+      })
+      .replace(",", "")
+      .replace(" at ", " ")
+  if (start && end) {
+    const sameDay =
+      start.toISOString().slice(0, 10) === end.toISOString().slice(0, 10)
+    if (!timed && sameDay) return show(start)
+    const sameMonth =
+      start.getUTCFullYear() === end.getUTCFullYear() &&
+      start.getUTCMonth() === end.getUTCMonth()
+    return `${show(start, timed || !sameMonth)} – ${show(end)}`
+  }
+  if (start) return `From ${show(start)}`
+  if (end) return `Until ${show(end)}`
+  return "All dates"
+}
 export function generalActionSummary(
   action: GeneralAction,
   currencyCode: string,

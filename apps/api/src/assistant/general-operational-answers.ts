@@ -1,4 +1,7 @@
-import { generalMoney } from "@ewatrade/assistant/general/contracts"
+import {
+  generalDateRange,
+  generalMoney,
+} from "@ewatrade/assistant/general/contracts"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import type { getCommercialOrderOperationalSummary } from "@ewatrade/db/queries"
 
@@ -11,7 +14,7 @@ export function generalOperationalAnswers(input: {
   statuses?: readonly string[]
   createdBefore?: string
 }): GeneralAnswer[] {
-  const scope = `${input.storeName} · ${input.ownOrders ? "Your orders" : "Authorized orders"}${input.customerId ? ` · Customer ${input.customerId}` : ""} · ${input.createdAfter ?? "Any start"} to ${input.createdBefore ?? "Any end"}${input.createdBefore ? " (end excluded)" : ""}`
+  const scope = `${input.storeName} · ${input.ownOrders ? "Your orders" : "All orders"}${input.customerId ? ` · Customer ${input.customerId}` : ""} · ${generalDateRange(input.createdAfter, input.createdBefore)}`
   const statuses = input.statuses?.length
     ? ` Statuses: ${input.statuses.join(", ")}.`
     : " All statuses included in the count."

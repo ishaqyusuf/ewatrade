@@ -37,7 +37,7 @@ test("exact counts and each currency are presented without rounding or ledger cl
   expect(cards[1]?.detail).toContain("not customer ledger debt")
   expect(cards[0]?.detail).toContain("Statuses: CONFIRMED")
   expect(cards[0]?.scope).toContain("Your orders")
-  expect(cards[0]?.scope).toContain("end excluded")
+  expect(cards[0]?.scope).toContain("Until Thu 1 Jan")
 })
 test("known empty aggregate produces an exact zero count without inventing a currency balance", () => {
   const cards = generalOperationalAnswers({

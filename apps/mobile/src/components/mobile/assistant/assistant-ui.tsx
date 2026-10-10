@@ -246,3 +246,16 @@ export function AssistantDayMarker({
     </View>
   )
 }
+
+/** "as of 6:25 PM" today, else "as of 9 Oct, 6:25 PM". */
+export function assistantAsOf(iso: string, now = new Date()) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  const time = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+  return date.toDateString() === now.toDateString()
+    ? `as of ${time}`
+    : `as of ${date.toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${time}`
+}

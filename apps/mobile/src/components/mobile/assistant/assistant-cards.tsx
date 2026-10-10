@@ -19,13 +19,16 @@ export function AssistantAnswerCard({
 }) {
   return (
     <ListCard>
-      <View className="gap-3 p-3">
-        <Text className="text-sm font-bold text-foreground">{title}</Text>
-        <Text className="text-2xl font-bold text-foreground">{value}</Text>
-        <Text className="text-xs text-muted-foreground">
-          {scope} · {asOf}
+      <View className="gap-2 py-3">
+        <View className="gap-0.5">
+          <Text className="text-sm font-bold text-foreground">{title}</Text>
+          <Text className="text-xs text-muted-foreground">{scope}</Text>
+        </View>
+        <Text className="text-2xl font-extrabold tracking-tight text-foreground">
+          {value}
         </Text>
         {children}
+        <Text className="text-[11px] text-muted-foreground">{asOf}</Text>
       </View>
     </ListCard>
   )
