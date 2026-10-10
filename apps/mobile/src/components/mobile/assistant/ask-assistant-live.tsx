@@ -75,7 +75,7 @@ export function AskAssistantLive() {
       : vm.chat.messages
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
-      <KeyboardAvoidingView behavior="padding" className="flex-1 bg-background">
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
           title="Ask ẸwáTrade"
           business={

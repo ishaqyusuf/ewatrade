@@ -63,7 +63,7 @@ export function AskAssistantQa({
       ? `Mama Tunde · ORD-1041\n${formatMinorMoney(majorToMinor(price) ?? 0, "NGN")} ${method} · Balance after: ${formatMinorMoney(Math.max(0, 450000 - (majorToMinor(price) ?? 0)), "NGN")}`
       : view === "product"
         ? `Layer mash 25kg · bag\n₦${price} per bag · ${quantity} opening stock`
-        : `Aisha Bello · ${quantity} crates of eggs\n₦4,500 each · Payment to be checked`
+        : `Aisha Bello · ${quantity} crates of eggs\n${formatMinorMoney(majorToMinor(price) ?? 0, "NGN")} each · Payment to be checked`
   const title =
     view === "payment"
       ? "Record a payment"
@@ -72,7 +72,7 @@ export function AskAssistantQa({
         : "Create this order"
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
-      <KeyboardAvoidingView behavior="padding" className="flex-1 bg-background">
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <AssistantHeader
           title="Ask ẸwáTrade"
           business={`Jawdah Farms · ${rep ? "Sales rep" : manager ? "Manager" : "Owner"}`}
@@ -289,7 +289,13 @@ export function AskAssistantQa({
           snapPoints={["70%"]}
         >
           <BottomSheetInputProvider>
-            <BottomSheetKeyboardAwareScrollView contentContainerClassName="gap-4 px-[18px] pb-8">
+            <BottomSheetKeyboardAwareScrollView
+              contentContainerStyle={{
+                gap: 16,
+                paddingHorizontal: 18,
+                paddingBottom: 32,
+              }}
+            >
               <QaQuickFillButton
                 formId="ask-assistant-proposal"
                 canUndo={!!undo}

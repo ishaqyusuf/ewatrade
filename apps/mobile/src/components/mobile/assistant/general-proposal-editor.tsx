@@ -86,7 +86,13 @@ export function GeneralProposalEditor({
   }
   return (
     <BottomSheetInputProvider>
-      <BottomSheetKeyboardAwareScrollView contentContainerClassName="gap-4 px-4 pb-8">
+      <BottomSheetKeyboardAwareScrollView
+        contentContainerStyle={{
+          gap: 16,
+          paddingHorizontal: 18,
+          paddingBottom: 32,
+        }}
+      >
         <Text className="text-sm text-muted-foreground">
           Save changes, then review the updated card before confirming.
         </Text>

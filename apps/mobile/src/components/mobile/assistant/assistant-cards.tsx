@@ -1,5 +1,6 @@
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import type { ReactNode } from "react"
 import { ActionButton } from "../action-button"
 import { ListCard, StatusPill } from "../green-till/kit"
@@ -57,6 +58,8 @@ export function ProposalCard({
   onEdit: () => void
   onCancel: () => void
 }) {
+  const large = useLargeTextLayout()
+  const actionClass = large ? "w-full" : "min-h-[44px] w-auto px-3"
   return (
     <View className="gap-3 rounded-[18px] border border-gold bg-card p-3">
       <View className="flex-row flex-wrap items-center justify-between gap-2">
@@ -86,12 +89,14 @@ export function ProposalCard({
           </Text>
           <View className="flex-row flex-wrap gap-2">
             <ActionButton
+              className={actionClass}
               disabled={disabled || confirmDisabled}
               onPress={onConfirm}
             >
               Confirm
             </ActionButton>
             <ActionButton
+              className={actionClass}
               variant="outline"
               disabled={disabled}
               onPress={onEdit}
@@ -99,6 +104,7 @@ export function ProposalCard({
               Edit
             </ActionButton>
             <ActionButton
+              className={actionClass}
               variant="ghost"
               disabled={disabled}
               onPress={onCancel}

@@ -156,7 +156,11 @@ export function AssistantComposer({
         >
           <Icon
             name={busy ? "Square" : "ArrowUp"}
-            className="size-[21px] text-primary-foreground"
+            className={
+              !busy && (disabled || !value.trim())
+                ? "size-[21px] text-muted-foreground"
+                : "size-[21px] text-primary-foreground"
+            }
           />
         </Pressable>
       </View>
