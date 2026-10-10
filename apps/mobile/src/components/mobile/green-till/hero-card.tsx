@@ -162,7 +162,11 @@ export function HeroCard({
           {title}
         </NativeText>
       ) : null}
-      {delta || sub ? (
+      {/* A plain sub line sits outside the wrapping row: Android measured it
+          too narrow there and cut long values such as an email address. */}
+      {!delta && typeof sub === "string" ? (
+        <NativeText style={[styles.sub, { color: muted }]}>{sub}</NativeText>
+      ) : delta || sub ? (
         <View style={styles.deltaRow}>
           {delta ? (
             <View style={styles.deltaValue}>

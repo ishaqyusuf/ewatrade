@@ -194,6 +194,7 @@ export function AccountPrivacyScreen() {
               icon: request.data ? "Clock" : "Trash",
               tint: request.data ? "amber" : "rose",
             }}
+            danger={!request.data}
             title={
               request.data
                 ? "Deletion requested"
