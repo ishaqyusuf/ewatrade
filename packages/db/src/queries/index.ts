@@ -138,3 +138,6 @@ export { getCommercialOrderAmendmentEligibility } from "./commercial-order-amend
 export * from "./commercial-order-cancellation"
 
 export * from "./commercial-order-metadata-amendment"
+
+export * from "./commercial-order-replacement-terms"
+export * from "./commercial-order-replacement-review"

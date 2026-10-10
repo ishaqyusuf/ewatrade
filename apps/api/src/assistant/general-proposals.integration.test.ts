@@ -1,3 +1,4 @@
+import { verifyOrderReplacementPreview } from "./general-order-replacement.integration-check"
 import { verifyOrderMetadataAmendment } from "./general-order-metadata.integration-check"
 import { verifyStockTransferComposition } from "./general-stock-transfer.integration-check"
 import { verifyStockAdjustmentComposition } from "./general-stock-adjustment.integration-check"
@@ -158,6 +159,10 @@ if (enabled) setDefaultTimeout(600_000)
           tenantId: tenant.id,
           storeId: store.id,
           userId: user.id,
+        }
+        if (process.env.RUN_GENERAL_ORDER_REPLACEMENT === "1") {
+          await verifyOrderReplacementPreview(ctx)
+          return
         }
         if (process.env.RUN_GENERAL_ORDER_METADATA === "1") {
           await verifyOrderMetadataAmendment(ctx)
