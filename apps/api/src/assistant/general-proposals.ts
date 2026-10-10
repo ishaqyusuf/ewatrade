@@ -354,7 +354,17 @@ export async function generalProposalWithReview(
 ): Promise<GeneralProposal> {
   const proposal = generalProposalForApp(row)
   const adapter = generalActionAdapter(proposal.payload)
-  if (proposal.status !== "PENDING" || !adapter.review) return proposal
+  if (!adapter.review) return proposal
+  if (["CANCELLED", "EXPIRED", "FAILED"].includes(proposal.status)) {
+    // Settled drafts still read by name, never by record id; no approval.
+    try {
+      const { lines } = await adapter.review(ctx, proposal.payload)
+      return { ...proposal, approvalToken: undefined, review: lines }
+    } catch {
+      return proposal
+    }
+  }
+  if (proposal.status !== "PENDING") return proposal
   try {
     const { lines, target } = await adapter.review(ctx, proposal.payload)
     return sameTarget(target, row)
