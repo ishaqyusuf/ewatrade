@@ -19,7 +19,7 @@ export function generalOrderAnswer(
     id: `order_${crypto.randomUUID()}`,
     title: order.orderNumber,
     value: generalMoney(order.totalMinor, order.currencyCode),
-    scope: `${storeName.slice(0, 300)} · Order ${order.id}`,
+    scope: storeName.slice(0, 300),
     asOf: new Date().toISOString(),
     detail: `${order.status} · ${order.paymentStatus} · unpaid ${generalMoney(unpaid, order.currencyCode)}. ${excluded ? "Cancelled/refunded orders contribute no unpaid amount. " : ""}Individual order only; use the summary read for totals.`,
   }

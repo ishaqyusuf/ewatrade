@@ -4,7 +4,10 @@ import {
   writeCapabilities,
 } from "@ewatrade/assistant/capabilities/manifest"
 import type { Capability } from "@ewatrade/assistant/capabilities/types"
-import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
+import {
+  type GeneralAnswer,
+  generalDateRange,
+} from "@ewatrade/assistant/general/contracts"
 import { type Tool, type ToolSet, tool } from "ai"
 import { z } from "zod"
 import { catalogCountSchema } from "../schemas/catalog"
@@ -156,7 +159,7 @@ export function createGeneralTools(
             id: `catalog_item_${crypto.randomUUID()}`,
             title: item.name.slice(0, 160),
             value: `${item.kind} · ${item.status}`,
-            scope: `${fresh.tenantContext.activeStore?.name ?? "Current Store"} · Item ${item.id}`,
+            scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
             asOf: new Date().toISOString(),
             detail:
               "Saved item, variants and selling units for the current Store. Stock visibility follows your inventory permission; missing or hidden balances do not mean zero stock. Use the offering stock read for available quantity.",
@@ -206,7 +209,7 @@ export function createGeneralTools(
               id: `catalog_match_${crypto.randomUUID()}`,
               title: item.name.slice(0, 160),
               value: `${item.kind} · ${item.status}`,
-              scope: `Catalog item ${item.id}`,
+              scope: "Catalog",
               asOf: new Date().toISOString(),
               detail:
                 "Read this saved item to resolve its current variant, unit, price and offering identifiers. Ask which item when names are ambiguous.",
@@ -411,7 +414,7 @@ export function createGeneralTools(
                 0,
                 160,
               ),
-              scope: `Source ${line.balanceSourceId}`,
+              scope: "Stock count line",
               asOf: new Date().toISOString(),
               detail:
                 `Saved system ${line.expectedQuantity}; signed variance ${line.varianceQuantity}; current stock ${line.currentQuantity}; reserved ${line.reservedQuantity}. ${line.stockCurrent && line.configurationCurrent ? "Observation is current." : "Stock or configuration changed; recount before finalization."}`.slice(
@@ -458,7 +461,7 @@ export function createGeneralTools(
             id: `stock_${crypto.randomUUID()}`,
             title: "Stock",
             value: stock.availableOfferingQuantity,
-            scope: `${fresh.tenantContext.activeStore?.name ?? "Store"} · offering ${offeringId}`,
+            scope: fresh.tenantContext.activeStore?.name ?? "Store",
             asOf: new Date().toISOString(),
             detail:
               "Available offering units · excludes reservations. Unconfigured stock is unavailable, not zero.",
@@ -496,7 +499,7 @@ export function createGeneralTools(
             id: `orders_${crypto.randomUUID()}`,
             title: "Orders",
             value: `${page.items.length} on this page`,
-            scope: `${fresh.tenantContext.activeStore?.name ?? "Store"} · ${input.createdAfter ?? "Any start"} to ${input.createdBefore ?? "Any end"}${input.createdBefore ? " (end excluded)" : ""}`,
+            scope: `${fresh.tenantContext.activeStore?.name ?? "Store"} · ${generalDateRange(input.createdAfter, input.createdBefore)}`,
             asOf: new Date().toISOString(),
             detail: `${page.nextCursor ? "More results are available. " : ""}Limited to 10 authorized orders; this page is not a business total. Search: ${input.query ?? "none"} (${input.queryMode ?? "all"}); statuses: ${input.statuses?.join(", ") ?? "all"}; ${input.cursor ? "continuation page" : "first page"}.`,
           })
@@ -661,7 +664,7 @@ export function createGeneralTools(
               id: `customer_match_${crypto.randomUUID()}`,
               title: customer.name.slice(0, 160),
               value: "Saved customer",
-              scope: `Customer ${customer.id}`,
+              scope: "Customer directory",
               asOf: new Date().toISOString(),
               detail: `Phone: ${customer.phone ?? "not recorded"}. Email: ${customer.email ?? "not recorded"}. Read this saved customer before drafting changes; do not choose between similar names without clarification.`,
             })

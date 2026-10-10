@@ -25,7 +25,7 @@ export function generalLowStockAnswers(
           row.status === "available"
             ? `${row.availableOfferingQuantity} ${row.unitName}`.slice(0, 160)
             : "Unavailable",
-        scope: `${scope} · Offering ${row.offeringId}`.slice(0, 500),
+        scope: `${scope} · ${row.offeringName}`.slice(0, 500),
         asOf,
         detail: `${row.variantName.slice(0, 160)} · ${row.offeringName.slice(0, 160)}. Available selling units after reservations; at most ${page.threshold} ${row.unitName.slice(0, 80)}. Shared-unit quantities are rounded down to the permitted selling precision.`,
       }),
@@ -35,7 +35,7 @@ export function generalLowStockAnswers(
         id: `stock_unavailable_${crypto.randomUUID()}`,
         title: `Stock · ${row.productName}`.slice(0, 160),
         value: "Unavailable",
-        scope: `${scope} · Offering ${row.offeringId}`.slice(0, 500),
+        scope: `${scope} · ${row.offeringName}`.slice(0, 500),
         asOf,
         detail: `${row.variantName.slice(0, 160)} · ${row.unitName.slice(0, 80)}. ${row.reason} No zero stock has been inferred.`,
       }),

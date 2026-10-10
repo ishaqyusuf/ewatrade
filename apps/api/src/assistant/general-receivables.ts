@@ -25,7 +25,7 @@ export function generalReceivablesAnswers(
       id: `receivable_${crypto.randomUUID()}`,
       title: item.customer.name.slice(0, 160),
       value: `Debt ${generalMoney(item.totals.outstandingDebtMinor, item.currencyCode)}`,
-      scope: `Account ${item.id} · Customer ${item.customer.id}`,
+      scope: "Customer account · all Stores",
       asOf,
       detail: `Available credit ${generalMoney(item.totals.availableCreditMinor, item.currencyCode)}; net ledger balance ${generalMoney(item.totals.netBalanceMinor, item.currencyCode)}. Debt and credit are separate; neither is cash collected or an unpaid-order total. Posted entries only, all Stores.`,
     })),
