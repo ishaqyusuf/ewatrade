@@ -4,10 +4,10 @@ import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import {
-  BottomSheetFooter,
-  BottomSheetScrollView,
-  type BottomSheetFooterProps,
   type BottomSheetBackdropProps,
+  BottomSheetFooter,
+  type BottomSheetFooterProps,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useCallback, useState } from "react"

@@ -136,6 +136,7 @@ export function SetupChat({
   )
 
   const runIdRef = useRef<string | null>(null)
+  const sendFailed = useRef(false)
   const [recovering, setRecovering] = useState(false)
   const [syncFromServer, setSyncFromServer] = useState(false)
 
@@ -164,6 +165,7 @@ export function SetupChat({
       if (part.type === "data-setup-draft") void refreshDraft()
     },
     onError: (error) => {
+      sendFailed.current = true
       if (!settled.current) {
         settled.current = true
         workflow.track("assistant_message", "failed", {
@@ -174,6 +176,7 @@ export function SetupChat({
       if (runId && !errorBody(error)) void recover(runId)
     },
     onFinish: ({ isAbort, isError, isDisconnect }) => {
+      if (isAbort || isError || isDisconnect) sendFailed.current = true
       void refreshDraft()
       if (settled.current) return
       settled.current = true
@@ -216,13 +219,15 @@ export function SetupChat({
     onBusyChange?.(busy || recovering)
   }, [busy, recovering, onBusyChange])
   const canType = status === "ACTIVE"
-  const send = (parts: SetupComposerPart[]) => {
-    if (parts.length === 0 || busy || !canType) return
+  const send = async (parts: SetupComposerPart[]) => {
+    if (parts.length === 0 || busy || !canType) return false
+    sendFailed.current = false
     settled.current = false
     workflow.track("assistant_message", "started", {
       channel: "browser_stream",
     })
-    void chat.sendMessage({ parts })
+    await chat.sendMessage({ parts })
+    return !sendFailed.current
   }
   const stop = () => {
     // Closing the stream alone lets the turn finish on the server; Stop asks
@@ -269,6 +274,7 @@ export function SetupChat({
 
       {canType ? (
         <SetupComposer
+          key={conversationId}
           inputLabel={inputLabel}
           conversationId={conversationId}
           busy={busy}

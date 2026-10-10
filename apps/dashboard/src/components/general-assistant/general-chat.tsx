@@ -59,11 +59,18 @@ const markdownComponents = {
 }
 
 /** Persistent everyday chat: read business facts and confirm reviewed drafts. */
-export function GeneralChat() {
-  const vm = useGeneralAssistant()
+export function GeneralChat({ compact = false }: { compact?: boolean }) {
+  const vm = useGeneralAssistant({ autoStart: compact })
   const router = useRouter()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
-  const disabled = vm.state.isError || vm.pending || vm.busy || !!vm.runId
+  const enabled = vm.availability.data?.enabled === true
+  const disabled =
+    !enabled ||
+    vm.conversations.isPending ||
+    vm.state.isError ||
+    vm.pending ||
+    vm.busy ||
+    !!vm.runId
   const exhausted =
     !!vm.data &&
     (vm.data.allowance.remainingRequests <= 0 ||
@@ -97,9 +104,9 @@ export function GeneralChat() {
         `/sales?orderSheet=details&orderId=${encodeURIComponent(receipt.orderId ?? receipt.recordId)}`,
       )
   }
-  if (vm.availability.isPending)
+  if (!compact && vm.availability.isPending)
     return <output className="text-sm">Loading your assistant…</output>
-  if (vm.availability.isError)
+  if (!compact && vm.availability.isError)
     return (
       <div className="flex items-center gap-3 text-sm">
         <p>We couldn't check the assistant.</p>
@@ -112,16 +119,24 @@ export function GeneralChat() {
         </Button>
       </div>
     )
-  if (!vm.availability.data?.enabled) return null
+  if (!compact && !enabled) return null
   const last = vm.chat.messages.at(-1)
   return (
     <section
       aria-label="Ask ẸwáTrade"
-      className="grid min-h-[34rem] overflow-hidden rounded-lg border md:h-[min(720px,calc(100svh-14rem))] md:grid-cols-[220px_minmax(0,1fr)]"
+      className={cn(
+        "grid overflow-hidden",
+        compact
+          ? "min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)]"
+          : "min-h-[34rem] rounded-lg border md:h-[min(720px,calc(100svh-14rem))] md:grid-cols-[220px_minmax(0,1fr)]",
+      )}
     >
       <nav
         aria-label="Saved chats"
-        className="flex flex-col gap-2 border-b bg-muted/20 p-3 md:border-r md:border-b-0"
+        className={cn(
+          "flex min-h-0 flex-col gap-2 border-b bg-muted/20 p-3",
+          !compact && "md:border-r md:border-b-0",
+        )}
       >
         <Button
           size="sm"
@@ -130,7 +145,12 @@ export function GeneralChat() {
         >
           New chat
         </Button>
-        <ul className="flex gap-1 overflow-x-auto md:flex-col md:overflow-y-auto">
+        <ul
+          className={cn(
+            "flex gap-1 overflow-x-auto",
+            !compact && "md:flex-col md:overflow-y-auto",
+          )}
+        >
           {vm.conversations.data?.map((conversation) => (
             <li key={conversation.id} className="shrink-0">
               <button
@@ -179,18 +199,79 @@ export function GeneralChat() {
           role="log"
         >
           <StickToBottom.Content className="flex flex-col gap-5 px-4 py-6 sm:px-6">
-            {!vm.conversationId ? (
+            {compact && !enabled ? (
+              <div className="space-y-3 text-sm">
+                <output className="block">
+                  {vm.availability.isPending
+                    ? "Connecting to your assistant…"
+                    : vm.availability.isError
+                      ? "Couldn't connect to your assistant."
+                      : "Chat is unavailable for this workspace right now."}
+                </output>
+                {!vm.availability.isPending ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void vm.availability.refetch()}
+                  >
+                    Retry connection
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            {enabled && !vm.conversationId && vm.conversations.isPending ? (
+              <output className="text-sm">Loading saved chats…</output>
+            ) : enabled && !vm.conversationId && vm.conversations.isError ? (
+              <div role="alert" className="flex items-center gap-3 text-sm">
+                <p>We couldn't load your saved chats.</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void vm.conversations.refetch()}
+                >
+                  Retry loading chats
+                </Button>
+              </div>
+            ) : enabled && !vm.conversationId ? (
               <div className="flex flex-col items-start gap-3">
                 <p className="text-sm text-muted-foreground">
                   Ask about sales, orders, products and stock, or draft a
                   customer, product, sale or payment. Nothing changes until you
                   confirm.
                 </p>
-                <Button disabled={disabled} onClick={() => void vm.newThread()}>
-                  Start a chat
-                </Button>
+                {compact ? (
+                  vm.conversations.isError ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void vm.conversations.refetch()}
+                    >
+                      Retry loading chats
+                    </Button>
+                  ) : vm.notice ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={disabled}
+                      onClick={() => void vm.newThread({ preserveDraft: true })}
+                    >
+                      Retry connection
+                    </Button>
+                  ) : (
+                    <output className="text-xs text-muted-foreground">
+                      Preparing your chat…
+                    </output>
+                  )
+                ) : (
+                  <Button
+                    disabled={disabled}
+                    onClick={() => void vm.newThread()}
+                  >
+                    Start a chat
+                  </Button>
+                )}
               </div>
-            ) : vm.state.isPending ? (
+            ) : enabled && vm.state.isPending ? (
               <output className="text-sm">Loading this chat…</output>
             ) : null}
             {vm.state.isError ? (
@@ -336,7 +417,9 @@ export function GeneralChat() {
               rows={2}
               maxLength={8000}
               value={vm.draft}
-              disabled={!vm.conversationId || exhausted || vm.state.isError}
+              disabled={
+                !enabled || !vm.conversationId || exhausted || vm.state.isError
+              }
               onChange={(event) => vm.setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {

@@ -1,25 +1,25 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
-import { Modal, useModal } from "@/components/ui/modal"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
+import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { formatMinorMoney } from "@ewatrade/utils"
 import {
   BottomSheetFooter,
   type BottomSheetFooterProps,
 } from "@gorhom/bottom-sheet"
-import { formatMinorMoney } from "@ewatrade/utils"
 import { VariableContextProvider } from "nativewind"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
 import type { WorkJob } from "./service-jobs-model"
 import {
-  projectServicePayment,
   type ServicePaymentDraft,
   type ServicePaymentFields,
   type ServicePaymentKind,
+  projectServicePayment,
 } from "./service-payment-model"
 import { useServiceAppearance } from "./use-service-appearance"
 

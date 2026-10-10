@@ -44,8 +44,16 @@ export const SETUP_MEDIA_DISABLED = {
 } as const
 
 /** Refuses uploads when media is off, whatever the UI shows. */
-export function requireSetupAssistantMedia() {
-  if (!isSetupAssistantMediaEnabled())
+export function isAssistantVoiceEnabled() {
+  return process.env.ASSISTANT_VOICE_ENABLED === "true"
+}
+
+export function requireSetupAssistantMedia(kind?: string) {
+  if (
+    !(kind === "AUDIO"
+      ? isAssistantVoiceEnabled()
+      : isSetupAssistantMediaEnabled())
+  )
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: SETUP_MEDIA_DISABLED.message,

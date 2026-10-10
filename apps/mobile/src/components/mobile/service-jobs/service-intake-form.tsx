@@ -1,6 +1,3 @@
-import { ServiceOfferingChoices } from "./service-offering-choices"
-import { useServiceAppearance } from "./use-service-appearance"
-import { ServiceAction as ActionButton } from "./service-action"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -10,7 +7,10 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { ServiceAction as ActionButton } from "./service-action"
 import { discardRetainedEvidence } from "./service-evidence-files"
+import { ServiceOfferingChoices } from "./service-offering-choices"
+import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
 export function ServiceIntakeForm({

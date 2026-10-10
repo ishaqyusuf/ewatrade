@@ -21,6 +21,7 @@ import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-we
 import { registerAssistantAttachmentRoutes } from "./assistant/attachment-upload"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
+import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
@@ -197,6 +198,7 @@ registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerAssistantChatRoutes(app)
 registerAssistantAttachmentRoutes(app)
+registerVoiceGatewayRoutes(app)
 registerGeneralAssistantChatRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)
 registerServiceCommerceMediaDeliveryRoutes(app)

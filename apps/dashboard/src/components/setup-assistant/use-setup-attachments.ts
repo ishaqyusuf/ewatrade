@@ -9,6 +9,7 @@ import {
   setupAttachmentContentTypeFor,
   validateSetupAttachmentIntent,
 } from "@ewatrade/assistant/setup/attachments"
+import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 
@@ -21,6 +22,7 @@ export type SetupLocalAttachment = {
   attachmentId: string | null
   summary: string | null
   error: string | null
+  retryable?: boolean
 }
 
 const megabytes = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MB`
@@ -72,16 +74,62 @@ export function useSetupAttachments(input: {
   onTranscript: (text: string) => void
 }) {
   const trpc = useTRPC()
-  const [items, setItems] = useState<SetupLocalAttachment[]>([])
+  const workflow = useDashboardWorkflow()
+  const [items, setItemsState] = useState<SetupLocalAttachment[]>([])
   const itemsRef = useRef(items)
-  itemsRef.current = items
+  const setItems = useCallback(
+    (updater: (current: SetupLocalAttachment[]) => SetupLocalAttachment[]) => {
+      itemsRef.current = updater(itemsRef.current)
+      setItemsState(itemsRef.current)
+    },
+    [],
+  )
   const transcribed = useRef(new Set<string>())
+  const cancelled = useRef(new Set<string>())
+  const mounted = useRef(true)
   const onTranscriptRef = useRef(input.onTranscript)
   onTranscriptRef.current = input.onTranscript
 
   const createIntent = useMutation(
     trpc.setupAssistant.attachments.createIntent.mutationOptions(),
   )
+  const retryAttachment = useMutation(
+    trpc.setupAssistant.attachments.retry.mutationOptions(),
+  )
+  const pending = useQuery(
+    trpc.setupAssistant.attachments.pending.queryOptions(
+      { conversationId: input.conversationId },
+      { refetchOnWindowFocus: false },
+    ),
+  )
+  const recovered = useRef(false)
+  useEffect(() => {
+    const rows = pending.data
+    if (!rows || recovered.current) return
+    recovered.current = true
+    setItems((current) => [
+      ...current,
+      ...rows
+        .filter(
+          (row) =>
+            !row.sent && !current.some((item) => item.attachmentId === row.id),
+        )
+        .map((row) => ({
+          localId: row.id,
+          fileName: row.fileName,
+          kind: row.kind,
+          previewUrl:
+            row.kind === "AUDIO" || row.kind === "IMAGE"
+              ? `/api/assistant/attachments/${encodeURIComponent(row.id)}/content`
+              : null,
+          phase: "reading" as const,
+          attachmentId: row.id,
+          summary: row.summary,
+          error: row.error,
+          retryable: row.retryable,
+        })),
+    ])
+  }, [pending.data, setItems])
   const removeAttachment = useMutation(
     trpc.setupAssistant.attachments.remove.mutationOptions(),
   )
@@ -93,7 +141,7 @@ export function useSetupAttachments(input: {
           item.localId === localId ? { ...item, ...patch } : item,
         ),
       ),
-    [],
+    [setItems],
   )
 
   const reading = items
@@ -116,23 +164,32 @@ export function useSetupAttachments(input: {
         update(item.localId, { phase: "ready", summary: row.summary })
         if (row.transcript && !transcribed.current.has(row.id)) {
           transcribed.current.add(row.id)
+          workflow.track("assistant_voice", "completed", {
+            channel: "transcription",
+            item_count: 1,
+          })
           onTranscriptRef.current(row.transcript)
         }
       } else if (row.status === "FAILED")
         update(item.localId, {
           phase: "failed",
           error: row.error ?? "This file could not be read.",
+          retryable: row.retryable,
         })
     }
-  }, [status.data, update])
+  }, [status.data, update, workflow])
 
-  useEffect(
-    () => () => {
-      for (const item of itemsRef.current)
-        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
-    },
-    [],
-  )
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      for (const item of itemsRef.current) {
+        cancelled.current.add(item.localId)
+        if (item.previewUrl?.startsWith("blob:"))
+          URL.revokeObjectURL(item.previewUrl)
+      }
+    }
+  }, [])
 
   const add = useCallback(
     async (file: File, options: { durationMs?: number } = {}) => {
@@ -146,6 +203,11 @@ export function useSetupAttachments(input: {
           })
         : ({ ok: false, reason: "UNSUPPORTED_TYPE" } as const)
       const kind = checked.ok ? checked.kind : null
+      if (kind === "AUDIO")
+        workflow.track("assistant_voice", "started", {
+          channel: "recording_upload",
+          duration_ms: options.durationMs,
+        })
       const pending = itemsRef.current.filter(
         (item) => item.phase !== "failed",
       ).length
@@ -154,7 +216,8 @@ export function useSetupAttachments(input: {
         fileName: file.name || "attachment",
         kind,
         previewUrl:
-          kind === "IMAGE" && !/hei[cf]/.test(contentType ?? "")
+          (kind === "AUDIO" || kind === "IMAGE") &&
+          !/hei[cf]/.test(contentType ?? "")
             ? URL.createObjectURL(file)
             : null,
         phase: "preparing",
@@ -188,6 +251,7 @@ export function useSetupAttachments(input: {
       try {
         const intent = await createIntent.mutateAsync({
           conversationId: input.conversationId,
+          clientRequestId: localId,
           fileName: base.fileName,
           contentType,
           sizeBytes: file.size,
@@ -198,6 +262,12 @@ export function useSetupAttachments(input: {
           update(localId, {
             phase: "failed",
             error: refusalCopy(intent.reason, kind),
+          })
+          return
+        }
+        if (!mounted.current || cancelled.current.has(localId)) {
+          void removeAttachment.mutateAsync({
+            attachmentId: intent.attachment.id,
           })
           return
         }
@@ -228,13 +298,21 @@ export function useSetupAttachments(input: {
         })
       }
     },
-    [createIntent, input.conversationId, update],
+    [
+      createIntent,
+      removeAttachment,
+      input.conversationId,
+      update,
+      workflow,
+      setItems,
+    ],
   )
 
   const remove = useCallback(
     (localId: string) => {
       const item = itemsRef.current.find((entry) => entry.localId === localId)
       if (!item) return
+      cancelled.current.add(localId)
       if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
       if (item.attachmentId)
         removeAttachment.mutate({ attachmentId: item.attachmentId })
@@ -242,29 +320,56 @@ export function useSetupAttachments(input: {
         current.filter((entry) => entry.localId !== localId),
       )
     },
-    [removeAttachment],
+    [removeAttachment, setItems],
   )
 
   /** Ready files leave the composer once they are in a sent message. */
-  const takeReady = useCallback((): SetupAttachmentPartData[] => {
-    const ready = itemsRef.current.filter(
-      (item) => item.phase === "ready" && item.attachmentId && item.kind,
-    )
-    setItems((current) => current.filter((item) => item.phase !== "ready"))
-    for (const item of ready)
-      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
-    return ready.map((item) => ({
-      attachmentId: item.attachmentId as string,
-      kind: item.kind as SetupAttachmentKind,
-      fileName: item.fileName,
-      summary: item.summary ?? "",
-    }))
-  }, [])
+  const takeReady = useCallback(
+    (clear = true): SetupAttachmentPartData[] => {
+      const ready = itemsRef.current.filter(
+        (item) => item.phase === "ready" && item.attachmentId && item.kind,
+      )
+      if (clear) {
+        setItems((current) => current.filter((item) => item.phase !== "ready"))
+        for (const item of ready)
+          if (item.previewUrl?.startsWith("blob:"))
+            URL.revokeObjectURL(item.previewUrl)
+      }
+      return ready.map((item) => ({
+        attachmentId: item.attachmentId as string,
+        kind: item.kind as SetupAttachmentKind,
+        fileName: item.fileName,
+        summary: item.summary ?? "",
+      }))
+    },
+    [setItems],
+  )
 
   return {
     items,
     add,
     remove,
+    retry: async (localId: string) => {
+      const item = itemsRef.current.find((row) => row.localId === localId)
+      if (!item?.attachmentId || !item.retryable) return
+      update(localId, { phase: "reading", error: null })
+      try {
+        const result = await retryAttachment.mutateAsync({
+          attachmentId: item.attachmentId,
+        })
+        if (!result.retried)
+          update(localId, {
+            phase: "failed",
+            retryable: false,
+            error: "Please remove this note and record again.",
+          })
+      } catch {
+        update(localId, {
+          phase: "failed",
+          error: "Check your connection and try again.",
+        })
+      }
+    },
     takeReady,
     busy: items.some((item) =>
       ["preparing", "uploading", "reading"].includes(item.phase),

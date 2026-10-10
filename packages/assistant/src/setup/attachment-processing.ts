@@ -1,14 +1,15 @@
+import type {
+  AssistantImageReader,
+  AssistantMediaCall,
+  AssistantTranscriber,
+} from "@ewatrade/ai/media"
 /**
  * Turns one uploaded attachment into bounded, untrusted extraction data:
  * deterministic parsing for files, transcription for voice notes and a
  * transcription-style read for photos. Storage, providers and persistence are
  * injected so the job, tests and QA rehearsal share this logic.
  */
-import type {
-  AssistantImageReader,
-  AssistantMediaCall,
-  AssistantTranscriber,
-} from "@ewatrade/ai/media"
+import { TranscriptionError } from "@ewatrade/ai/transcription-contracts"
 import { SetupFileParseError, parseSpreadsheet } from "../files/spreadsheet"
 import {
   SETUP_ATTACHMENT_LIMITS,
@@ -65,12 +66,14 @@ export type SetupAttachmentProcessingDeps = {
   ) => Promise<void>
   complete: (input: {
     attachmentId: string
+    generation: number
     transcript: string | null
     extraction: SetupAttachmentExtraction
     durationMs: number | null
   }) => Promise<boolean>
   fail: (input: {
     attachmentId: string
+    generation: number
     errorCode: string
     retryable: boolean
   }) => Promise<void>
@@ -153,12 +156,10 @@ async function extract(
     case "AUDIO": {
       const media = await deps.media(attachment)
       if (!media) throw new ProcessingRefusal("MEDIA_UNAVAILABLE", false)
-      // The client's duration is a lower bound; a 10 MB note is ~2 minutes.
-      const audioSeconds = Math.max(
-        1,
-        Math.ceil((attachment.durationMs ?? 0) / 1000),
-        Math.ceil(attachment.sizeBytes / 64_000),
-      )
+      // Upload admission stores the duration measured from the actual bytes.
+      if (!attachment.durationMs)
+        throw new ProcessingRefusal("INVALID_AUDIO", false)
+      const audioSeconds = Math.max(1, Math.ceil(attachment.durationMs / 1000))
       if (!(await deps.reserveMedia(attachment, { audioSeconds })))
         throw new ProcessingRefusal("BUDGET_EXHAUSTED", false)
       const result = await media.transcribe({ audio: bytes })
@@ -227,25 +228,31 @@ export async function processSetupAttachment(
         durationMs: now() - startedAt,
       })
       .catch(() => undefined)
-    await deps.complete({
+    const completed = await deps.complete({
       attachmentId: attachment.id,
+      generation: attachment.processingAttempts,
       transcript: result.transcript,
       extraction: result.extraction,
       durationMs: result.durationMs,
     })
-    return { status: "ready", kind: attachment.kind }
+    return completed
+      ? { status: "ready", kind: attachment.kind }
+      : { status: "skipped" }
   } catch (error) {
     const refusal =
-      error instanceof ProcessingRefusal
-        ? error
-        : error instanceof SetupFileParseError
-          ? new ProcessingRefusal(`FILE_${error.code}`, false)
-          : new ProcessingRefusal(
-              "PROCESSING_UNAVAILABLE",
-              attachment.processingAttempts < SETUP_ATTACHMENT_MAX_ATTEMPTS,
-            )
+      error instanceof TranscriptionError
+        ? new ProcessingRefusal(error.code, false)
+        : error instanceof ProcessingRefusal
+          ? error
+          : error instanceof SetupFileParseError
+            ? new ProcessingRefusal(`FILE_${error.code}`, false)
+            : new ProcessingRefusal(
+                "PROCESSING_UNAVAILABLE",
+                attachment.processingAttempts < SETUP_ATTACHMENT_MAX_ATTEMPTS,
+              )
     await deps.fail({
       attachmentId: attachment.id,
+      generation: attachment.processingAttempts,
       errorCode: refusal.errorCode,
       retryable: refusal.retryable,
     })
@@ -260,6 +267,8 @@ export async function processSetupAttachment(
 /** Owner-facing reason for a failed attachment; codes never reach the UI raw. */
 export function describeSetupAttachmentError(errorCode: string | null) {
   switch (errorCode) {
+    case "UNKNOWN_OUTCOME":
+      return "This recording was interrupted after reaching a provider. Please check the conversation before recording again."
     case "BUDGET_EXHAUSTED":
       return "This business has used its setup allowance for voice notes and photos. You can still type your list."
     case "MEDIA_UNAVAILABLE":

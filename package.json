@@ -80,6 +80,7 @@
     "qa:ios-login-config": "node scripts/with-workspace-env.mjs APP_ENV=production DEV_PROFILE=prod node scripts/check-ios-login-readiness.mjs",
     "qa:store-billing-config": "node scripts/with-workspace-env.mjs APP_ENV=production DEV_PROFILE=prod node scripts/check-store-billing-readiness.mjs",
     "qa:legal-acceptance-audit": "node scripts/with-workspace-env.mjs bun scripts/audit-legal-acceptance.ts",
+    "assistant:voice:local": "node scripts/with-workspace-env.mjs bun scripts/assistant-voice/start.ts",
     "assistant:usage-report": "node scripts/with-workspace-env.mjs bun scripts/assistant-usage-report.ts",
     "assistant:runtime": "node scripts/with-workspace-env.mjs bun scripts/assistant-runtime-switch.ts",
     "qa:tar-override": "node --test scripts/giget-tar-override.test.mjs",

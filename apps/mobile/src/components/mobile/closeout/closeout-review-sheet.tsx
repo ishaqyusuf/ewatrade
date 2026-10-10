@@ -1,6 +1,6 @@
+import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -8,16 +8,16 @@ import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
 import {
+  type BottomSheetBackdropProps,
   BottomSheetFlatList,
   BottomSheetFooter,
   type BottomSheetFooterProps,
-  type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useCallback, useState } from "react"
 import { useWindowDimensions } from "react-native"
-import type { CloseoutViewModel } from "./closeout-presentation"
 import type { CloseoutLine } from "./closeout-model"
+import type { CloseoutViewModel } from "./closeout-presentation"
 
 export function CloseoutReviewSheet({
   model,

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTRPC } from "@/trpc/client"
 import {
   SETUP_ATTACHMENT_PART,
   SETUP_ATTACHMENT_TYPES,
@@ -19,6 +20,7 @@ import {
   StopIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useQuery } from "@tanstack/react-query"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { SetupComposerAttachment } from "./setup-attachment-chips"
 import { useSetupAttachments } from "./use-setup-attachments"
@@ -53,10 +55,16 @@ export function SetupComposer({
   busy: boolean
   /** Photos, files and voice notes; when off, the owner only types. */
   mediaEnabled: boolean
-  onSend: (parts: SetupComposerPart[]) => void
+  onSend: (parts: SetupComposerPart[]) => Promise<boolean>
   onStop: () => void
   inputLabel?: string
 }) {
+  const trpc = useTRPC()
+  const capabilities = useQuery(
+    trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(),
+  )
+  const voiceEnabled = capabilities.data?.enabled === true
+  const [sending, setSending] = useState(false)
   const [input, setInput] = useState("")
   const [transcriptHint, setTranscriptHint] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -98,20 +106,38 @@ export function SetupComposer({
 
   const canSend =
     !busy &&
+    !sending &&
+    recorder.state.kind !== "preparing" &&
+    recorder.state.kind !== "requesting" &&
     !attachments.busy &&
     !recording &&
+    input.length <= 8000 &&
+    (!attachments.items.some(
+      (item) => item.kind === "AUDIO" && item.phase === "ready",
+    ) ||
+      input.trim().length > 0) &&
     (input.trim().length > 0 || attachments.readyCount > 0)
 
-  const send = () => {
+  const send = async () => {
     if (!canSend) return
     const text = input.trim()
-    const ready = attachments.takeReady()
-    onSend([
-      ...(text ? [{ type: "text" as const, text }] : []),
-      ...ready.map((data) => ({ type: SETUP_ATTACHMENT_PART, data })),
-    ])
-    setInput("")
-    setTranscriptHint(false)
+    const ready = attachments.takeReady(false)
+    setSending(true)
+    try {
+      const accepted = await onSend([
+        ...(text ? [{ type: "text" as const, text }] : []),
+        ...ready.map((data) => ({ type: SETUP_ATTACHMENT_PART, data })),
+      ])
+      if (accepted) {
+        attachments.takeReady()
+        setInput((current) => (current.trim() === text ? "" : current))
+        setTranscriptHint(false)
+      }
+    } catch {
+      // The chat displays the send error; keep the editable draft and audio.
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -123,6 +149,8 @@ export function SetupComposer({
               key={item.localId}
               item={item}
               onRemove={() => attachments.remove(item.localId)}
+              onRetry={() => void attachments.retry(item.localId)}
+              disabled={busy || sending}
             />
           ))}
         </ul>
@@ -133,7 +161,7 @@ export function SetupComposer({
           aria-live="polite"
           className="mb-2 flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2"
         >
-          <span className="size-2 animate-pulse rounded-full bg-destructive" />
+          <span className="size-2 motion-safe:animate-pulse rounded-full bg-destructive" />
           <span className="text-xs tabular-nums text-foreground">
             {formatRecorderElapsed(recorder.state.elapsedMs)} /{" "}
             {formatRecorderElapsed(recorder.maxDurationMs)}
@@ -175,10 +203,18 @@ export function SetupComposer({
         </p>
       ) : null}
 
+      {recorder.state.kind === "requesting" ||
+      recorder.state.kind === "preparing" ? (
+        <output className="mb-2 block text-xs text-muted-foreground">
+          {recorder.state.kind === "requesting"
+            ? "Allow microphone access to begin."
+            : "Preparing your recording…"}
+        </output>
+      ) : null}
       <form
         onSubmit={(event) => {
           event.preventDefault()
-          send()
+          void send()
         }}
       >
         <InputGroup>
@@ -200,44 +236,54 @@ export function SetupComposer({
                   size="icon-sm"
                   variant="ghost"
                   aria-label="Attach a photo or file"
-                  disabled={recording}
+                  disabled={recording || busy || sending}
                   onClick={() => fileRef.current?.click()}
                 >
                   <HugeiconsIcon icon={Attachment01Icon} className="size-4" />
                 </InputGroupButton>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-1">
+              {voiceEnabled ? (
                 <InputGroupButton
                   type="button"
                   size="icon-sm"
                   variant="ghost"
                   aria-label="Record a voice note"
-                  disabled={recording || recorder.state.kind === "requesting"}
+                  title="Record a voice note"
+                  disabled={
+                    busy ||
+                    sending ||
+                    attachments.busy ||
+                    recorder.state.kind !== "idle"
+                  }
                   onClick={() => void recorder.start()}
                 >
                   <HugeiconsIcon icon={Mic01Icon} className="size-4" />
                 </InputGroupButton>
-              </div>
-            ) : null}
-            {busy ? (
-              <InputGroupButton
-                type="button"
-                size="icon-sm"
-                variant="outline"
-                aria-label="Stop"
-                onClick={onStop}
-              >
-                <HugeiconsIcon icon={StopIcon} className="size-4" />
-              </InputGroupButton>
-            ) : (
-              <InputGroupButton
-                type="submit"
-                size="icon-sm"
-                variant="default"
-                aria-label="Send"
-                disabled={!canSend}
-              >
-                <HugeiconsIcon icon={ArrowUp02Icon} className="size-4" />
-              </InputGroupButton>
-            )}
+              ) : null}
+              {busy ? (
+                <InputGroupButton
+                  type="button"
+                  size="icon-sm"
+                  variant="outline"
+                  aria-label="Stop"
+                  onClick={onStop}
+                >
+                  <HugeiconsIcon icon={StopIcon} className="size-4" />
+                </InputGroupButton>
+              ) : (
+                <InputGroupButton
+                  type="submit"
+                  size="icon-sm"
+                  variant="default"
+                  aria-label="Send"
+                  disabled={!canSend}
+                >
+                  <HugeiconsIcon icon={ArrowUp02Icon} className="size-4" />
+                </InputGroupButton>
+              )}
+            </div>
           </InputGroupAddon>
         </InputGroup>
         {mediaEnabled ? (
@@ -257,6 +303,11 @@ export function SetupComposer({
           />
         ) : null}
       </form>
+      {input.length > 8000 ? (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          Shorten the message to 8,000 characters before sending.
+        </p>
+      ) : null}
       <p className="mt-2 text-[11px] text-muted-foreground">
         {transcriptHint
           ? "Check the voice note text above and fix anything it misheard before sending."

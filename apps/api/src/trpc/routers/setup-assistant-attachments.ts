@@ -9,7 +9,6 @@ import {
   summarizeSetupAttachment,
   validateSetupAttachmentIntent,
 } from "@ewatrade/assistant/setup/attachments"
-import { findSetupConversation } from "@ewatrade/db/assistant"
 import {
   AssistantAttachmentError,
   type AssistantAttachmentRecord,
@@ -17,6 +16,8 @@ import {
   listAssistantAttachments,
   removeAssistantAttachment,
 } from "@ewatrade/db/assistant-attachments"
+import { readVoiceUsage } from "@ewatrade/db/assistant-voice"
+import { enqueueAssistantAttachmentProcessing } from "@ewatrade/jobs/assistant-attachments"
 import { z } from "zod"
 import {
   isSetupAttachmentStorageAvailable,
@@ -24,6 +25,7 @@ import {
   setupAttachmentTarget,
 } from "../../assistant/attachment-storage"
 import {
+  isAssistantVoiceEnabled,
   requireSetupAssistantMedia,
   requireSetupAssistantScope,
 } from "../../assistant/setup-context"
@@ -49,6 +51,12 @@ export function presentSetupAttachment(row: AssistantAttachmentRecord) {
       extraction: extractionOf(row),
     }),
     transcript: row.kind === "AUDIO" ? row.transcript : null,
+    retryable:
+      row.kind === "AUDIO" &&
+      row.processingAttempts < 3 &&
+      ["ALL_PROVIDERS_FAILED", "PROCESSING_UNAVAILABLE", "TIMEOUT"].includes(
+        row.errorCode ?? "",
+      ),
     error:
       row.status === "FAILED"
         ? describeSetupAttachmentError(row.errorCode)
@@ -57,11 +65,81 @@ export function presentSetupAttachment(row: AssistantAttachmentRecord) {
 }
 
 export const setupAssistantAttachmentsRouter = createTRPCRouter({
+  voiceCapabilities: protectedProcedure.query(({ ctx }) => {
+    const scope = requireSetupAssistantScope(ctx)
+    return {
+      enabled:
+        isAssistantVoiceEnabled() &&
+        isSetupAttachmentStorageAvailable(scope.dataClassification),
+      maxDurationMs: 120_000,
+    }
+  }),
+  voiceUsage: protectedProcedure
+    .input(z.object({ days: z.number().int().min(1).max(90).default(30) }))
+    .query(({ ctx, input }) =>
+      readVoiceUsage(ctx.db, requireSetupAssistantScope(ctx), input.days),
+    ),
+  pending: protectedProcedure
+    .input(z.object({ conversationId: z.string().min(1).max(64) }))
+    .query(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const ids = await ctx.db.assistantAttachment.findMany({
+        where: {
+          conversationId: input.conversationId,
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          actorUserId: scope.userId,
+          messageId: null,
+          retentionUntil: { gt: new Date() },
+          status: { in: ["UPLOADED", "PROCESSING", "READY", "FAILED"] },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 4,
+        select: { id: true },
+      })
+      return (
+        await listAssistantAttachments(
+          ctx.db,
+          scope,
+          ids.map((row) => row.id),
+        )
+      ).map(presentSetupAttachment)
+    }),
+  retry: protectedProcedure
+    .input(z.object({ attachmentId: z.string().min(1).max(64) }))
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      requireSetupAssistantMedia("AUDIO")
+      const result = await ctx.db.assistantAttachment.updateMany({
+        where: {
+          id: input.attachmentId,
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          actorUserId: scope.userId,
+          kind: "AUDIO",
+          status: "FAILED",
+          messageId: null,
+          processingAttempts: { lt: 3 },
+          retentionUntil: { gt: new Date() },
+          conversation: { status: "ACTIVE" },
+          errorCode: {
+            in: ["ALL_PROVIDERS_FAILED", "PROCESSING_UNAVAILABLE", "TIMEOUT"],
+          },
+        },
+        data: { status: "UPLOADED", errorCode: null },
+      })
+      if (result.count)
+        await enqueueAssistantAttachmentProcessing(input.attachmentId).catch(
+          () => undefined,
+        )
+      return { retried: result.count === 1 }
+    }),
   /** Saves an upload intent; the bytes follow with PUT to `uploadPath`. */
   createIntent: protectedProcedure
     .input(
       z.object({
         conversationId: z.string().min(1).max(64),
+        clientRequestId: z.string().uuid().optional(),
         fileName: z.string().min(1).max(260),
         contentType: z.string().min(3).max(120),
         sizeBytes: z.number().int().positive(),
@@ -71,16 +149,25 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const scope = requireSetupAssistantScope(ctx)
-      requireSetupAssistantMedia()
-      const conversation = await findSetupConversation(ctx.db, scope)
+      const checked = validateSetupAttachmentIntent(input)
+      if (!checked.ok) return { ok: false as const, reason: checked.reason }
+      requireSetupAssistantMedia(checked.kind)
+      const conversation = await ctx.db.assistantConversation.findFirst({
+        where: {
+          id: input.conversationId,
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          purpose: { in: ["SETUP", "PRODUCT_CREATE"] },
+          OR: [{ purpose: "SETUP" }, { ownerUserId: scope.userId }],
+        },
+        select: { id: true, status: true },
+      })
       if (
         !conversation ||
         conversation.id !== input.conversationId ||
         conversation.status !== "ACTIVE"
       )
         return { ok: false as const, reason: "CONVERSATION_CLOSED" as const }
-      const checked = validateSetupAttachmentIntent(input)
-      if (!checked.ok) return { ok: false as const, reason: checked.reason }
       if (!isSetupAttachmentStorageAvailable(scope.dataClassification))
         return { ok: false as const, reason: "UPLOADS_UNAVAILABLE" as const }
       try {
@@ -89,6 +176,7 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
           scope,
           {
             conversationId: conversation.id,
+            clientRequestId: input.clientRequestId,
             kind: checked.kind,
             fileName: sanitizeSetupAttachmentName(input.fileName),
             contentType: input.contentType,

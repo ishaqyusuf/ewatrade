@@ -2,6 +2,7 @@
 
 import { SETUP_ATTACHMENT_LIMITS } from "@ewatrade/assistant/setup/attachments"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { voiceRecordingFile } from "./voice-recording-file"
 
 // Mirrors the storefront voice-note recorder; candidates for a shared hook.
 const MIME_PREFERENCE = [
@@ -12,17 +13,10 @@ const MIME_PREFERENCE = [
   "audio/wav",
 ] as const
 
-const EXTENSIONS: Record<(typeof MIME_PREFERENCE)[number], string> = {
-  "audio/webm": "webm",
-  "audio/ogg": "ogg",
-  "audio/mp4": "m4a",
-  "audio/mpeg": "mp3",
-  "audio/wav": "wav",
-}
-
 export type SetupRecorderState =
   | { kind: "idle" }
   | { kind: "requesting" }
+  | { kind: "preparing" }
   | { kind: "recording"; elapsedMs: number; levels: number[] }
   | { kind: "unsupported"; message: string }
 
@@ -39,6 +33,7 @@ export function useSetupVoiceRecorder(input: {
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const discardRef = useRef(false)
+  const generationRef = useRef(0)
   const startedAtRef = useRef(0)
   const timerRef = useRef<number | null>(null)
   const frameRef = useRef<number | null>(null)
@@ -60,6 +55,7 @@ export function useSetupVoiceRecorder(input: {
 
   const finish = useCallback(
     (discard: boolean) => {
+      if (discard) generationRef.current++
       discardRef.current = discard
       const recorder = recorderRef.current
       if (recorder?.state === "recording") recorder.stop()
@@ -86,7 +82,12 @@ export function useSetupVoiceRecorder(input: {
   }, [finish])
 
   const start = useCallback(async () => {
-    if (state.kind === "recording" || state.kind === "requesting") return
+    if (
+      state.kind === "recording" ||
+      state.kind === "requesting" ||
+      state.kind === "preparing"
+    )
+      return
     if (
       typeof MediaRecorder === "undefined" ||
       !navigator.mediaDevices?.getUserMedia ||
@@ -108,9 +109,14 @@ export function useSetupVoiceRecorder(input: {
       })
       return
     }
+    const generation = ++generationRef.current
     setState({ kind: "requesting" })
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (generation !== generationRef.current) {
+        for (const track of stream.getTracks()) track.stop()
+        return
+      }
       const recorder = new MediaRecorder(stream, { mimeType })
       streamRef.current = stream
       recorderRef.current = recorder
@@ -119,20 +125,43 @@ export function useSetupVoiceRecorder(input: {
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunksRef.current.push(event.data)
       }
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const durationMs = Date.now() - startedAtRef.current
         cleanup()
         recorderRef.current = null
         const chunks = chunksRef.current
         chunksRef.current = []
-        if (!discardRef.current && chunks.length > 0 && durationMs >= 500)
-          onReadyRef.current(
-            new File(chunks, `voice-note.${EXTENSIONS[mimeType]}`, {
-              type: mimeType,
-            }),
-            Math.min(durationMs, maxDurationMs),
+        if (generation !== generationRef.current || discardRef.current) {
+          setState({ kind: "idle" })
+          return
+        }
+        if (!chunks.length || durationMs < 500) {
+          setState({ kind: "idle" })
+          return
+        }
+        setState({ kind: "preparing" })
+        try {
+          const result = await voiceRecordingFile(
+            new Blob(chunks, { type: mimeType }),
           )
-        setState({ kind: "idle" })
+          if (generation !== generationRef.current) return
+          onReadyRef.current(result.file, result.durationMs)
+          setState({ kind: "idle" })
+        } catch {
+          if (generation === generationRef.current)
+            setState({
+              kind: "unsupported",
+              message:
+                "This recording could not be prepared. Please try again.",
+            })
+        }
+      }
+      recorder.onerror = () => {
+        finish(true)
+        setState({
+          kind: "unsupported",
+          message: "Recording was interrupted. Please try again.",
+        })
       }
       // A small level meter so the owner can see the microphone is hearing them.
       const context = new AudioContext()
@@ -167,6 +196,7 @@ export function useSetupVoiceRecorder(input: {
         if (elapsedMs >= maxDurationMs) finish(false)
       }, 250)
     } catch {
+      if (generation !== generationRef.current) return
       cleanup()
       setState({
         kind: "unsupported",

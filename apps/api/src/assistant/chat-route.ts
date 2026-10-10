@@ -55,6 +55,7 @@ import {
 import {
   SETUP_BUDGET_LIMITS,
   SETUP_MEDIA_DISABLED,
+  isAssistantVoiceEnabled,
   isSetupAssistantMediaEnabled,
   requireSetupAssistantScope,
 } from "./setup-context"
@@ -288,14 +289,21 @@ async function handleChat(context: Context, deps: AssistantChatDependencies) {
     const attachmentIds = body.message.parts.flatMap((part) =>
       part.type === SETUP_ATTACHMENT_PART ? [part.data.attachmentId] : [],
     )
-    if (attachmentIds.length > 0 && !isSetupAssistantMediaEnabled())
+    const attachments = await repository.readAttachmentsToSend(attachmentIds)
+    if (
+      attachments.some(
+        (row) =>
+          !(row.kind === "AUDIO"
+            ? isAssistantVoiceEnabled()
+            : isSetupAssistantMediaEnabled()),
+      )
+    )
       return failure(
         context,
         412,
         SETUP_MEDIA_DISABLED.code,
         SETUP_MEDIA_DISABLED.message,
       )
-    const attachments = await repository.readAttachmentsToSend(attachmentIds)
     const refusal = attachmentSendRefusal(attachments, {
       conversationId: conversation.id,
       messageId: body.message.id,

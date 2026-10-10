@@ -257,6 +257,7 @@ export const dashboardBrowserActions = {
   staff_invite: { category: "staff", action: "invite" },
   staff_update: { category: "staff", action: "update" },
   customer_create: { category: "customers", action: "create" },
+  assistant_voice: { category: "assistant", action: "voice" },
   assistant_message: { category: "assistant", action: "message" },
   receipt_download: { category: "reports", action: "receipt_download" },
   finance_report_export: {

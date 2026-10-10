@@ -27,7 +27,9 @@ const errorMessage = (error: unknown) =>
  * review/edit/confirm proposal lifecycle. Online only; the server rechecks
  * Store, role and target state on every call.
  */
-export function useGeneralAssistant() {
+export function useGeneralAssistant({
+  autoStart = false,
+}: { autoStart?: boolean } = {}) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const mounted = useRef(true)
@@ -36,6 +38,7 @@ export function useGeneralAssistant() {
   /** dataUpdatedAt of the last history applied or streamed into the chat. */
   const appliedAt = useRef(0)
   const attemptedText = useRef<string | null>(null)
+  const autoStartAttempted = useRef(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [draft, setDraft] = useState("")
   const [notice, setNotice] = useState<string | null>(null)
@@ -206,35 +209,65 @@ export function useGeneralAssistant() {
         trpc.search.pathKey(),
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     )
-  const act = async (operation: () => Promise<unknown>) => {
-    if (actionLock.current || busy || runId || state.isError) return false
-    actionLock.current = true
-    setPending(true)
-    setNotice(null)
-    try {
-      await operation()
-      if (mounted.current) await refresh()
-      return mounted.current
-    } catch (error) {
-      if (mounted.current) {
-        setNotice(errorMessage(error))
-        void refresh().catch(() => {})
+  const act = useCallback(
+    async (operation: () => Promise<unknown>) => {
+      if (actionLock.current || busy || runId || state.isError) return false
+      actionLock.current = true
+      setPending(true)
+      setNotice(null)
+      try {
+        await operation()
+        if (mounted.current) await refresh()
+        return mounted.current
+      } catch (error) {
+        if (mounted.current) {
+          setNotice(errorMessage(error))
+          void refresh().catch(() => {})
+        }
+        return false
+      } finally {
+        actionLock.current = false
+        if (mounted.current) setPending(false)
       }
-      return false
-    } finally {
-      actionLock.current = false
-      if (mounted.current) setPending(false)
-    }
-  }
-  const newThread = () =>
-    act(async () => {
-      const created = await start.mutateAsync()
-      if (!mounted.current) return
-      setConversationId(created.id)
-      chat.setMessages([])
-      setDraft("")
-      void conversations.refetch()
-    })
+    },
+    [busy, runId, state.isError, refresh],
+  )
+  const newThread = useCallback(
+    ({ preserveDraft = false }: { preserveDraft?: boolean } = {}) =>
+      act(async () => {
+        const created = await start.mutateAsync()
+        if (!mounted.current) return
+        setConversationId(created.id)
+        chat.setMessages([])
+        if (!preserveDraft) setDraft("")
+        void conversations.refetch()
+      }),
+    [act, start.mutateAsync, chat.setMessages, conversations.refetch],
+  )
+  // Resume saved history or prepare one empty thread on first open. A failed
+  // attempt is retried explicitly, never by repeatedly creating conversations.
+  useEffect(() => {
+    if (
+      !autoStart ||
+      !enabled ||
+      !conversations.isSuccess ||
+      conversations.isFetching ||
+      conversationId ||
+      conversations.data.length > 0 ||
+      autoStartAttempted.current
+    )
+      return
+    autoStartAttempted.current = true
+    void newThread({ preserveDraft: true })
+  }, [
+    autoStart,
+    enabled,
+    conversations.isSuccess,
+    conversations.isFetching,
+    conversations.data,
+    conversationId,
+    newThread,
+  ])
   const send = async () => {
     const text = draft.trim()
     if (!text || busy || runId || pending || !conversationId || state.isError)

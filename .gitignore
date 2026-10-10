@@ -29,3 +29,6 @@ packages/jobs/.trigger/
 /output/
 /outputs/
 /artifacts/
+
+# Expo CLI local state
+.expo/

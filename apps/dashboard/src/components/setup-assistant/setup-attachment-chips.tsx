@@ -45,7 +45,7 @@ export function AttachmentThumbnail({
   className?: string
 }) {
   const [broken, setBroken] = useState(false)
-  if (src && !broken)
+  if (src && kind === "IMAGE" && !broken)
     return (
       // Private, owner-only preview bytes: no image optimizer or cache.
       <img
@@ -75,9 +75,13 @@ export function AttachmentThumbnail({
 export function SetupComposerAttachment({
   item,
   onRemove,
+  onRetry,
+  disabled,
 }: {
   item: SetupLocalAttachment
   onRemove: () => void
+  onRetry?: () => void
+  disabled?: boolean
 }) {
   const working = ["preparing", "uploading", "reading"].includes(item.phase)
   return (
@@ -104,7 +108,7 @@ export function SetupComposerAttachment({
           {working ? (
             <HugeiconsIcon
               icon={Loading03Icon}
-              className="size-3 animate-spin"
+              className="size-3 motion-safe:animate-spin"
             />
           ) : item.phase === "failed" ? (
             <HugeiconsIcon icon={AlertCircleIcon} className="size-3 shrink-0" />
@@ -114,14 +118,37 @@ export function SetupComposerAttachment({
               ? item.error
               : item.phase === "ready"
                 ? item.summary || PHASE_COPY.ready
-                : PHASE_COPY[item.phase]}
+                : item.phase === "reading" && item.kind === "AUDIO"
+                  ? "Transcribing…"
+                  : PHASE_COPY[item.phase]}
           </span>
         </p>
+        {item.kind === "AUDIO" && item.previewUrl ? (
+          // biome-ignore lint/a11y/useMediaCaption: The editable voice transcript is shown in the adjacent composer.
+          <audio
+            controls
+            preload="none"
+            src={item.previewUrl}
+            aria-label="Play your recording"
+            className="mt-1 h-8 max-w-full w-44"
+          />
+        ) : null}
+        {item.phase === "failed" && item.retryable ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onRetry}
+            className="text-xs underline"
+          >
+            Retry transcription
+          </button>
+        ) : null}
       </div>
       <button
         type="button"
         aria-label={`Remove ${item.fileName}`}
         onClick={onRemove}
+        disabled={disabled}
         className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground"
       >
         <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />

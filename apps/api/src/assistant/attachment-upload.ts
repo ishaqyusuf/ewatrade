@@ -16,6 +16,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
 import type { Context } from "hono"
+import { parseBuffer } from "music-metadata"
 import { z } from "zod"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
 import {
@@ -24,6 +25,7 @@ import {
 } from "./attachment-storage"
 import {
   SETUP_MEDIA_DISABLED,
+  isAssistantVoiceEnabled,
   isSetupAssistantMediaEnabled,
   requireSetupAssistantScope,
 } from "./setup-context"
@@ -92,7 +94,12 @@ export function registerAssistantAttachmentRoutes(
         if (!attachmentId.success)
           return refuse(context, 400, "BAD_REQUEST", "Invalid file.")
         const { db, scope } = await admit(context)
-        if (!isSetupAssistantMediaEnabled()) {
+        const row = await readAssistantAttachment(db, scope, attachmentId.data)
+        if (
+          !(row.kind === "AUDIO"
+            ? isAssistantVoiceEnabled()
+            : isSetupAssistantMediaEnabled())
+        ) {
           void context.req.raw.body?.cancel().catch(() => undefined)
           return refuse(
             context,
@@ -101,7 +108,6 @@ export function registerAssistantAttachmentRoutes(
             SETUP_MEDIA_DISABLED.message,
           )
         }
-        const row = await readAssistantAttachment(db, scope, attachmentId.data)
         // A replay after a successful upload returns the current state.
         if (row.status !== "PENDING_UPLOAD") {
           void context.req.raw.body?.cancel().catch(() => undefined)
@@ -118,18 +124,56 @@ export function registerAssistantAttachmentRoutes(
           maxBytes: SETUP_ATTACHMENT_LIMITS[row.kind].maxBytes,
           accepts: acceptsAssistantAttachmentBytes,
         })
+        let durationMs: number | undefined
+        if (row.kind === "AUDIO") {
+          try {
+            const metadata = await parseBuffer(
+              bytes,
+              { mimeType: row.contentType, size: bytes.length },
+              { duration: true, skipCovers: true },
+            )
+            const seconds = metadata.format.duration
+            if (!seconds || !Number.isFinite(seconds) || seconds > 120)
+              return refuse(
+                context,
+                400,
+                "INVALID_AUDIO",
+                "Record a voice note of up to two minutes.",
+              )
+            durationMs = Math.ceil(seconds * 1000)
+          } catch {
+            return refuse(
+              context,
+              400,
+              "INVALID_AUDIO",
+              "This recording could not be opened. Please record it again.",
+            )
+          }
+        }
         const storage = setupAttachmentStorage(scope.dataClassification)
         const { storagePath } = await storage.stage({
           target: setupAttachmentTarget(row),
           bytes,
           abortSignal: context.req.raw.signal,
         })
-        await markAssistantAttachmentUploaded(db, {
+        const saved = await markAssistantAttachmentUploaded(db, {
           attachmentId: row.id,
           storageProvider: storage.provider,
           storageStoreId: storage.storeId,
           storagePath,
+          durationMs,
         })
+        if (!saved) {
+          await storage
+            .remove({ target: setupAttachmentTarget(row) })
+            .catch(() => undefined)
+          return refuse(
+            context,
+            409,
+            "UPLOAD_EXPIRED",
+            "This recording was removed or its upload expired.",
+          )
+        }
         // Stored and recorded: a dispatch failure is recovered by the sweep.
         await enqueueAssistantAttachmentProcessing(row.id).catch(
           () => undefined,
@@ -154,6 +198,7 @@ export function registerAssistantAttachmentRoutes(
         const { db, scope } = await admit(context)
         const row = await readAssistantAttachment(db, scope, attachmentId.data)
         if (
+          row.retentionUntil.getTime() <= Date.now() ||
           !row.storagePath ||
           !["IMAGE", "AUDIO"].includes(row.kind) ||
           ["image/heic", "image/heif"].includes(row.contentType)

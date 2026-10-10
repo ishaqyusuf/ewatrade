@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type {
   AssistantAttachmentKind,
   Prisma,
@@ -44,6 +45,7 @@ const attachmentSelect = {
   errorCode: true,
   processingAttempts: true,
   uploadExpiresAt: true,
+  retentionUntil: true,
   processedAt: true,
   createdAt: true,
 } satisfies Prisma.AssistantAttachmentSelect
@@ -73,6 +75,7 @@ export async function createAssistantAttachmentIntentInTransaction(
     sizeBytes: number
     contentDigest: string
     durationMs?: number | null
+    clientRequestId?: string
     maxPerConversation: number
     uploadWindowMs: number
     retentionMs: number
@@ -81,6 +84,20 @@ export async function createAssistantAttachmentIntentInTransaction(
 ) {
   const now = input.now ?? new Date()
   const create = async (tx: Prisma.TransactionClient) => {
+    if (input.clientRequestId) {
+      const existing = await tx.assistantAttachment.findFirst({
+        where: {
+          actorUserId: scope.userId,
+          clientRequestId: input.clientRequestId,
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          conversationId: input.conversationId,
+          contentDigest: input.contentDigest,
+        },
+        select: attachmentSelect,
+      })
+      if (existing) return existing
+    }
     const count = await tx.assistantAttachment.count({
       where: { conversationId: input.conversationId },
     })
@@ -91,10 +108,14 @@ export async function createAssistantAttachmentIntentInTransaction(
       )
     return tx.assistantAttachment.create({
       data: {
+        id: input.clientRequestId
+          ? `voice_${createHash("sha256").update([scope.tenantId, scope.storeId, scope.userId, input.conversationId, input.clientRequestId].join("\n")).digest("hex").slice(0, 48)}`
+          : undefined,
         conversationId: input.conversationId,
         tenantId: scope.tenantId,
         storeId: scope.storeId,
         actorUserId: scope.userId,
+        clientRequestId: input.clientRequestId,
         kind: input.kind,
         fileName: input.fileName,
         contentType: input.contentType,
@@ -115,9 +136,34 @@ export async function createAssistantAttachmentIntent(
   db: PrismaClient,
   ...args: ArgsAfterClient<typeof createAssistantAttachmentIntentInTransaction>
 ) {
-  return runInOwnTransaction(db, (tx) =>
-    createAssistantAttachmentIntentInTransaction(tx, ...args),
-  )
+  try {
+    return await runInOwnTransaction(db, (tx) =>
+      createAssistantAttachmentIntentInTransaction(tx, ...args),
+    )
+  } catch (error) {
+    const [scope, input] = args
+    if (
+      input.clientRequestId &&
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      const row = await db.assistantAttachment.findFirst({
+        where: {
+          actorUserId: scope.userId,
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          conversationId: input.conversationId,
+          clientRequestId: input.clientRequestId,
+          contentDigest: input.contentDigest,
+        },
+        select: attachmentSelect,
+      })
+      if (row) return row
+    }
+    throw error
+  }
 }
 
 export async function readAssistantAttachment(
@@ -162,6 +208,7 @@ export async function markAssistantAttachmentUploaded(
     storageProvider: string
     storageStoreId: string | null
     storagePath: string
+    durationMs?: number
     now?: Date
   },
 ) {
@@ -177,6 +224,7 @@ export async function markAssistantAttachmentUploaded(
       storageProvider: input.storageProvider,
       storageStoreId: input.storageStoreId,
       storagePath: input.storagePath,
+      ...(input.durationMs ? { durationMs: input.durationMs } : {}),
     },
   })
   return result.count === 1
@@ -222,6 +270,7 @@ export async function completeAssistantAttachmentProcessing(
   db: DbClient,
   input: {
     attachmentId: string
+    generation: number
     transcript?: string | null
     extraction: Prisma.InputJsonValue
     durationMs?: number | null
@@ -229,7 +278,11 @@ export async function completeAssistantAttachmentProcessing(
   },
 ) {
   const result = await db.assistantAttachment.updateMany({
-    where: { id: input.attachmentId, status: "PROCESSING" },
+    where: {
+      id: input.attachmentId,
+      status: "PROCESSING",
+      processingAttempts: input.generation,
+    },
     data: {
       status: "READY",
       transcript: input.transcript ?? null,
@@ -246,10 +299,19 @@ export async function completeAssistantAttachmentProcessing(
 /** Retryable failures go back to UPLOADED for the recovery pass. */
 export async function failAssistantAttachmentProcessing(
   db: DbClient,
-  input: { attachmentId: string; errorCode: string; retryable: boolean },
+  input: {
+    attachmentId: string
+    generation: number
+    errorCode: string
+    retryable: boolean
+  },
 ) {
   await db.assistantAttachment.updateMany({
-    where: { id: input.attachmentId, status: "PROCESSING" },
+    where: {
+      id: input.attachmentId,
+      status: "PROCESSING",
+      processingAttempts: input.generation,
+    },
     data: {
       status: input.retryable ? "UPLOADED" : "FAILED",
       errorCode: input.errorCode,

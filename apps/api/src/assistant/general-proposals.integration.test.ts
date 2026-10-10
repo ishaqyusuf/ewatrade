@@ -25,6 +25,7 @@ import {
   verifyAvailabilityCommand,
   verifyAvailabilityProposal,
 } from "./general-availability-command.integration-check"
+import { verifyCloseoutComposition } from "./general-closeout.integration-check"
 import { verifyCatalogPages } from "./general-catalog-page.integration-check"
 import { registerGeneralAssistantChatRoutes } from "./general-chat-route"
 import type { GeneralContext } from "./general-context"
@@ -293,6 +294,10 @@ if (enabled) setDefaultTimeout(600_000)
         }
         if (process.env.RUN_GENERAL_STOCK_ADJUSTMENT === "1") {
           await verifyStockAdjustmentComposition(ctx, failingDb, conversation.id)
+          return
+        }
+        if (process.env.RUN_GENERAL_CLOSEOUT === "1") {
+          await verifyCloseoutComposition(ctx, failingDb, conversation.id)
           return
         }
         if (process.env.RUN_GENERAL_STOCK_COUNT === "1") {
@@ -808,6 +813,7 @@ if (enabled) setDefaultTimeout(600_000)
               await tx.commercialOrder.deleteMany({
                 where: { tenantId: owned.id },
               })
+              await tx.inventoryCloseout.deleteMany({ where: { tenantId: owned.id } })
               await tx.stockCount.deleteMany({ where: { tenantId: owned.id } })
               await tx.stockTransfer.deleteMany({ where: { tenantId: owned.id } })
               await tx.stockMovement.deleteMany({ where: { operation: { tenantId: owned.id } } })

@@ -1,5 +1,6 @@
 import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
+import { QuickAssistant } from "@/components/quick-assistant/quick-assistant"
 import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider"
 import {
   canAccessDashboardPath,
@@ -120,6 +121,11 @@ export default async function ShellLayout({
             {children}
           </main>
         </GlobalSheetsProvider>
+        {navItems.some((item) => item.href === "/assistant") ? (
+          <QuickAssistant
+            key={`${session.user.id}:${ctx.tenant.id}:${store.id}`}
+          />
+        ) : null}
       </div>
     </div>
   )

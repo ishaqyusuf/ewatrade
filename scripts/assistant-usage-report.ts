@@ -23,7 +23,7 @@ const {
 try {
   const now = new Date()
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-  const [summary, abandoned, expired] = await Promise.all([
+  const [summary, abandoned, expired, voiceAttempts] = await Promise.all([
     summarizeAssistantUsage(prisma, { since }),
     prisma.assistantRun.count({
       where: {
@@ -34,6 +34,13 @@ try {
       },
     }),
     listExpiredAssistantAttachments(prisma, { now, limit: 500 }),
+    prisma.assistantTranscriptionAttempt.groupBy({
+      by: ["provider", "model", "outcome", "billingStatus"],
+      where: { startedAt: { gte: since } },
+      _count: { _all: true },
+      _sum: { audioSeconds: true, estimatedCostMicros: true },
+      _avg: { durationMs: true },
+    }),
   ])
   const totals = summary.usage.reduce(
     (sum, row) => ({
@@ -58,6 +65,16 @@ try {
       {
         since: since.toISOString(),
         totals,
+        voiceAttempts: voiceAttempts.map((row) => ({
+          provider: row.provider,
+          model: row.model,
+          outcome: row.outcome,
+          billingStatus: row.billingStatus,
+          attempts: row._count._all,
+          attemptedAudioSeconds: row._sum.audioSeconds,
+          estimatedCostMicros: row._sum.estimatedCostMicros?.toString() ?? null,
+          averageDurationMs: row._avg.durationMs,
+        })),
         byBusinessAndModel: summary.usage,
         runs: summary.runs,
         runningNow: summary.runningNow,

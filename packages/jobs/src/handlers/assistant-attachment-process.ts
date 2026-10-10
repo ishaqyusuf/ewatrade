@@ -5,6 +5,11 @@ import {
   createOpenAIMediaAdapters,
   createRehearsalMediaAdapters,
 } from "@ewatrade/ai/media"
+import { createFallbackTranscriber } from "@ewatrade/ai/transcription"
+import {
+  TranscriptionError,
+  gatewayLeaseSchema,
+} from "@ewatrade/ai/transcription-contracts"
 import {
   SETUP_ATTACHMENT_LEASE_MS,
   SETUP_ATTACHMENT_MAX_ATTEMPTS,
@@ -26,6 +31,13 @@ import {
   completeAssistantAttachmentProcessing,
   failAssistantAttachmentProcessing,
 } from "@ewatrade/db/assistant-attachments"
+import {
+  assertVoiceAttemptActive,
+  readVoiceGateway,
+  recordVoiceAttempt,
+  reserveVoiceAudio,
+  voiceCircuitOpen,
+} from "@ewatrade/db/assistant-voice"
 import { prisma } from "@ewatrade/db/client"
 import {
   createAssistantAttachmentStorage,
@@ -74,6 +86,31 @@ export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps 
         leaseMs: SETUP_ATTACHMENT_LEASE_MS,
         maxAttempts: SETUP_ATTACHMENT_MAX_ATTEMPTS,
       })
+      if (row?.kind === "AUDIO" && row.processingAttempts > 1) {
+        const interrupted =
+          await prisma.assistantTranscriptionAttempt.updateMany({
+            where: {
+              attachmentId: row.id,
+              generation: { lt: row.processingAttempts },
+              outcome: "started",
+              billingStatus: "unknown",
+            },
+            data: {
+              outcome: "failed",
+              errorCode: "UNKNOWN_OUTCOME",
+              completedAt: new Date(),
+            },
+          })
+        if (interrupted.count) {
+          await failAssistantAttachmentProcessing(prisma, {
+            attachmentId: row.id,
+            generation: row.processingAttempts,
+            errorCode: "UNKNOWN_OUTCOME",
+            retryable: false,
+          })
+          return null
+        }
+      }
       return row
         ? {
             id: row.id,
@@ -122,7 +159,49 @@ export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps 
             })
           : null
       }
-      return createOpenAIMediaAdapters()
+      const media = createOpenAIMediaAdapters()
+      if (attachment.kind !== "AUDIO") return media
+      return {
+        readImage:
+          media?.readImage ??
+          (async () => {
+            throw new Error("MEDIA_UNAVAILABLE")
+          }),
+        transcribe: createFallbackTranscriber({
+          contentType: attachment.contentType,
+          audioSeconds: Math.ceil((attachment.durationMs ?? 0) / 1000),
+          tenantId: attachment.tenantId,
+          digest: attachment.contentDigest,
+          gateway: async () => {
+            const parsed = gatewayLeaseSchema.safeParse(
+              (await readVoiceGateway(prisma))?.value,
+            )
+            return parsed.success ? parsed.data : null
+          },
+          assertActive: async () => {
+            if (process.env.ASSISTANT_VOICE_ENABLED !== "true")
+              throw new TranscriptionError("VOICE_DISABLED", true)
+            try {
+              await assertVoiceAttemptActive(
+                prisma,
+                attachment.id,
+                attachment.processingAttempts,
+              )
+            } catch {
+              throw new TranscriptionError("VOICE_CANCELLED", true)
+            }
+          },
+          recordAttempt: (attempt) =>
+            recordVoiceAttempt(prisma, {
+              ...attempt,
+              attachmentId: attachment.id,
+              generation: attachment.processingAttempts,
+              audioSeconds: Math.ceil((attachment.durationMs ?? 0) / 1000),
+            }),
+          circuitOpen: (provider, model) =>
+            voiceCircuitOpen(prisma, provider, model),
+        }),
+      }
     },
     prepareImage: async (bytes, contentType) => {
       const processed = await processCatalogPhoto({
@@ -135,16 +214,40 @@ export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps 
       return { bytes: processed.display.bytes, mediaType: "image/webp" }
     },
     reserveMedia: async (attachment, request) =>
-      (
-        await reserveAssistantMediaBudget(prisma, {
-          scopeKey: scopeKey(attachment.tenantId),
-          limits: SETUP_MEDIA_BUDGET_LIMITS,
-          audioSeconds: request.audioSeconds,
-          images: request.images,
+      attachment.kind === "AUDIO"
+        ? reserveVoiceAudio(
+            prisma,
+            attachment.id,
+            request.audioSeconds ?? 0,
+            attachment.processingAttempts,
+          )
+        : (
+            await reserveAssistantMediaBudget(prisma, {
+              scopeKey: scopeKey(attachment.tenantId),
+              limits: SETUP_MEDIA_BUDGET_LIMITS,
+              audioSeconds: request.audioSeconds,
+              images: request.images,
+            })
+          ).allowed,
+    recordUsage: async (attachment, usage) => {
+      if (
+        attachment.kind === "AUDIO" &&
+        (await classify(attachment.tenantId)) === "QA"
+      ) {
+        await recordVoiceAttempt(prisma, {
+          attachmentId: attachment.id,
+          generation: attachment.processingAttempts,
+          ordinal: 1,
+          provider: "rehearsal",
+          model: usage.model,
+          outcome: "success",
+          audioSeconds: usage.audioSeconds ?? 0,
+          durationMs: usage.durationMs,
+          billingStatus: "not_billable",
+          estimatedCostMicros: 0n,
         })
-      ).allowed,
-    recordUsage: (attachment, usage) =>
-      recordAssistantAttachmentUsage(prisma, {
+      }
+      await recordAssistantAttachmentUsage(prisma, {
         attachmentId: attachment.id,
         tenantId: attachment.tenantId,
         actorUserId: attachment.actorUserId,
@@ -159,10 +262,12 @@ export function defaultAssistantAttachmentDeps(): SetupAttachmentProcessingDeps 
         imageCount: usage.imageCount,
         durationMs: usage.durationMs,
         budgetScopeKey: scopeKey(attachment.tenantId),
-      }),
+      })
+    },
     complete: (input) =>
       completeAssistantAttachmentProcessing(prisma, {
         attachmentId: input.attachmentId,
+        generation: input.generation,
         transcript: input.transcript,
         extraction: input.extraction,
         durationMs: input.durationMs,

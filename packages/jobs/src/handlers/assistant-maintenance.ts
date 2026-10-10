@@ -27,7 +27,21 @@ export type AssistantMaintenanceDeps = {
 export function defaultAssistantMaintenanceDeps(): AssistantMaintenanceDeps {
   return {
     now: () => new Date(),
-    failAbandonedRuns: (now) => failAbandonedAssistantRuns(prisma, { now }),
+    failAbandonedRuns: async (now) => {
+      const expiredAttempts =
+        await prisma.assistantTranscriptionAttempt.findMany({
+          where: {
+            startedAt: { lt: new Date(now.getTime() - 90 * 86400_000) },
+          },
+          take: 500,
+          select: { id: true },
+        })
+      if (expiredAttempts.length)
+        await prisma.assistantTranscriptionAttempt.deleteMany({
+          where: { id: { in: expiredAttempts.map((row) => row.id) } },
+        })
+      return failAbandonedAssistantRuns(prisma, { now })
+    },
     listExpired: (now, limit) =>
       listExpiredAssistantAttachments(prisma, { now, limit }),
     removeBytes: async (attachment) => {

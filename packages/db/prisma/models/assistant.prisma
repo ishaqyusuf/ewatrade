@@ -87,6 +87,8 @@ model AssistantAttachment {
   tenantId           String
   storeId            String
   actorUserId        String
+  clientRequestId    String?
+  audioBudgetReserved Boolean @default(false)
   // Set once, when the owner sends the attachment with a message.
   messageId          String?
   kind               AssistantAttachmentKind
@@ -113,10 +115,39 @@ model AssistantAttachment {
   updatedAt          DateTime                  @updatedAt
 
   conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  transcriptionAttempts AssistantTranscriptionAttempt[]
 
+  @@index([actorUserId, clientRequestId])
   @@index([conversationId, createdAt])
   @@index([status, leaseUntil])
   @@index([retentionUntil])
+}
+
+// Each submitted/failed/skipped STT provider is attributable without storing
+// transcripts in analytics. Lifetime follows the private source attachment.
+model AssistantTranscriptionAttempt {
+  id String @id @default(cuid())
+  attachmentId String
+  generation Int
+  ordinal Int
+  provider String
+  model String
+  outcome String @default("started")
+  errorCode String?
+  gatewayGeneration String?
+  providerRequestId String?
+  audioSeconds Int
+  durationMs Int?
+  billingStatus String @default("unknown")
+  estimatedCostMicros BigInt?
+  pricingVersion String?
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  attachment AssistantAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@unique([attachmentId, generation, ordinal])
+  @@index([provider, startedAt])
+  @@index([outcome, startedAt])
 }
 
 model AssistantMessage {
