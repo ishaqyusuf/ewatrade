@@ -19,6 +19,8 @@ test("the prompt states the local date and time zone", () => {
   })
   expect(prompt).toContain("It is now Sat 10 Oct 2026, 19:15 in Africa/Lagos.")
   expect(prompt).toContain("never ask the user for the date or time zone")
+  expect(prompt).toContain("never by record IDs or internal codes")
+  expect(prompt).toContain("never in minor units")
 })
 
 test("an invalid time zone falls back to UTC", () => {
