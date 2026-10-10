@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { financePurchaseRecognitionsSchema } from "./finance-purchases"
+import {
+  financePurchaseRecognitionsSchema,
+  financePurchasesSchema,
+} from "./finance-purchases"
 
 test("strict API contract refuses client actor/scope injection and oversized pages", () => {
   const parsed = financePurchaseRecognitionsSchema.parse({
@@ -20,4 +23,26 @@ test("strict API contract refuses client actor/scope injection and oversized pag
         ...extra,
       }),
     ).toThrow()
+})
+
+test("infinite-list paging direction is accepted, other values are not", () => {
+  for (const schema of [
+    financePurchaseRecognitionsSchema,
+    financePurchasesSchema,
+  ]) {
+    expect(
+      schema.parse({
+        bookId: "book",
+        supplierId: "supplier",
+        direction: "forward",
+      }).direction,
+    ).toBe("forward")
+    expect(() =>
+      schema.parse({
+        bookId: "book",
+        supplierId: "supplier",
+        direction: "sideways",
+      }),
+    ).toThrow()
+  }
 })

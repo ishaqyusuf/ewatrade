@@ -112,6 +112,8 @@ export const financePurchasesSchema = financeBookSchema
     status: z.enum(["UNPAID", "PARTIAL", "PAID", "VOID"]).optional(),
     cursor: id.optional(),
     limit: z.number().int().min(1).max(50).default(30),
+    // useInfiniteQuery adds the paging direction to the input.
+    direction: z.enum(["forward", "backward"]).optional(),
   })
   .strict()
 
@@ -156,6 +158,8 @@ export const financePurchaseRecognitionsSchema = financeBookSchema
     supplierId: id,
     cursor: id.optional(),
     limit: z.number().int().min(1).max(50).default(30),
+    // useInfiniteQuery adds the paging direction to the input.
+    direction: z.enum(["forward", "backward"]).optional(),
   })
   .strict()
 
