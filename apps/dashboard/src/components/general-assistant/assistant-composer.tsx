@@ -252,7 +252,7 @@ function ComposerBox({
           <Button
             type="button"
             size="icon"
-            className="size-8 rounded-full"
+            className="size-8 rounded-[50%]"
             aria-label="Finish recording"
             onClick={voice.stop}
           >
@@ -294,7 +294,7 @@ function ComposerBox({
                   type="button"
                   size="icon-sm"
                   variant="ghost"
-                  className="size-8 rounded-full text-muted-foreground"
+                  className="size-8 rounded-[50%] text-muted-foreground"
                   aria-label="Record a voice note"
                   title="Record a voice note"
                   disabled={busy || disabled || working}
@@ -308,7 +308,7 @@ function ComposerBox({
                   type="button"
                   size="icon-sm"
                   variant="outline"
-                  className="size-8 rounded-full"
+                  className="size-8 rounded-[50%]"
                   aria-label="Stop"
                   onClick={onStop}
                 >
@@ -319,7 +319,7 @@ function ComposerBox({
                   type="submit"
                   size="icon-sm"
                   variant="default"
-                  className="size-8 rounded-full disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                  className="size-8 rounded-[50%] disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
                   aria-label="Send"
                   title="Send (Ctrl+Enter)"
                   disabled={!canSend}

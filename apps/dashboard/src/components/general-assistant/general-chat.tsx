@@ -281,7 +281,7 @@ export function GeneralThread({
                     key={suggestion}
                     size="sm"
                     variant="outline"
-                    className="rounded-full"
+                    className="rounded-[999px]"
                     disabled={disabled}
                     onClick={() => vm.setDraft(suggestion)}
                   >
@@ -469,6 +469,33 @@ export function allowanceLine(vm: GeneralAssistantVM) {
   ).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
 }
 
+type SavedChat = NonNullable<
+  GeneralAssistantVM["conversations"]["data"]
+>[number]
+
+/** Chats with a first question, plus the open one even while it is empty. */
+function savedChats(vm: GeneralAssistantVM): SavedChat[] {
+  return (vm.conversations.data ?? []).filter(
+    (chat) => chat.title || chat.id === vm.conversationId,
+  )
+}
+
+function groupChats(chats: SavedChat[], now = new Date()) {
+  const day = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const week = new Date(day)
+  week.setDate(day.getDate() - 6)
+  const groups: [string, SavedChat[]][] = [
+    ["Today", []],
+    ["This week", []],
+    ["Earlier", []],
+  ]
+  for (const chat of chats) {
+    const at = new Date(chat.updatedAt)
+    groups[at >= day ? 0 : at >= week ? 1 : 2]?.[1].push(chat)
+  }
+  return groups.filter(([, rows]) => rows.length)
+}
+
 /** Vertical saved-chat list for the assistant page. */
 export function GeneralChatList({
   vm,
@@ -479,36 +506,46 @@ export function GeneralChatList({
 }) {
   const { disabled } = generalChatFlags(vm)
   return (
-    <ul className="flex flex-col gap-0.5">
-      {vm.conversations.data?.map((conversation) => (
-        <li key={conversation.id}>
-          <button
-            type="button"
-            disabled={disabled}
-            aria-current={conversation.id === vm.conversationId}
-            onClick={() => vm.choose(conversation.id)}
-            className={cn(
-              "w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-60",
-              conversation.id === vm.conversationId && "bg-muted font-medium",
-            )}
-          >
-            <span className="block truncate">
-              {conversation.title ?? "New chat"}
-            </span>
-            {pendingChats.has(conversation.id) ? (
-              <span className="flex items-center gap-1.5 text-xs font-normal text-amber-700 dark:text-amber-400">
-                <span className="size-1.5 rounded-full bg-current" />
-                Needs review
-              </span>
-            ) : (
-              <span className="block text-xs font-normal text-muted-foreground">
-                {new Date(conversation.updatedAt).toLocaleDateString()}
-              </span>
-            )}
-          </button>
-        </li>
+    <div className="flex flex-col gap-0.5">
+      {groupChats(savedChats(vm)).map(([group, chats]) => (
+        <section key={group} aria-label={group}>
+          <h3 className="mt-3 mb-1 px-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase first:mt-1">
+            {group}
+          </h3>
+          <ul className="flex flex-col gap-0.5">
+            {chats.map((conversation) => (
+              <li key={conversation.id}>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-current={conversation.id === vm.conversationId}
+                  onClick={() => vm.choose(conversation.id)}
+                  className={cn(
+                    "w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-60",
+                    conversation.id === vm.conversationId &&
+                      "bg-muted font-medium",
+                  )}
+                >
+                  <span className="block truncate">
+                    {conversation.title ?? "New chat"}
+                  </span>
+                  {pendingChats.has(conversation.id) ? (
+                    <span className="flex items-center gap-1.5 text-xs font-normal text-amber-700 dark:text-amber-400">
+                      <span className="size-1.5 rounded-full bg-current" />
+                      Needs review
+                    </span>
+                  ) : (
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {new Date(conversation.updatedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   )
 }
 
@@ -541,7 +578,7 @@ export function GeneralChatSwitcher({
       <DropdownMenuContent align="start" className="max-h-80 w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Saved chats</DropdownMenuLabel>
-          {vm.conversations.data?.map((conversation) => (
+          {savedChats(vm).map((conversation) => (
             <DropdownMenuItem
               key={conversation.id}
               disabled={disabled}
