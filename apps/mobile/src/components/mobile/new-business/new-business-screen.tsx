@@ -10,7 +10,10 @@ import { Text } from "@/components/ui/text"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMarketDayPalette } from "@/lib/market-day-theme"
+import { useTRPC } from "@/trpc/client"
 import { listBusinessProfiles } from "@ewatrade/utils"
+import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
 import { type ScrollView, View } from "react-native"
@@ -27,8 +30,49 @@ export function NewBusinessWorkflowChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} screen="new-business" />
 }
 
+type PlanSnapshot = {
+  entitlements: Array<{ key: string; isAtLimit: boolean; limit: number | null }>
+  plan: { id: string; name: string; limits: { businesses: number | null } }
+  plans: Array<{
+    id: string
+    name: string
+    limits: { businesses: number | null }
+  }>
+}
+
+/** The owner's plan business limit; Create becomes See plans (design 21, Limit). */
+function useBusinessLimit(enabled: boolean) {
+  const trpc = useTRPC()
+  const query = useQuery(
+    trpc.retailOps.subscription.queryOptions(undefined, {
+      enabled,
+      retry: false,
+    }),
+  )
+  const data = query.data as PlanSnapshot | undefined
+  const atLimit = Boolean(
+    data?.entitlements.find((item) => item.key === "businesses")?.isAtLimit,
+  )
+  if (!data || !atLimit) return null
+  const allowed = data.plan.limits.businesses
+  const next = data.plans.find(
+    (plan) =>
+      plan.limits.businesses === null ||
+      (allowed !== null && plan.limits.businesses > allowed),
+  )
+  return {
+    title: `${data.plan.name} includes ${allowed ?? 0} owned business${allowed === 1 ? "" : "es"}`,
+    message: next
+      ? `${next.name} lets you own ${next.limits.businesses ?? "unlimited"}. Your answers stay here while you check plans.`
+      : "Your answers stay here while you check plans.",
+  }
+}
+
 export function NewBusinessOnboardingScreen() {
   const model = useNewBusiness()
+  const router = useRouter()
+  // Warn from the first step, so the owner learns before filling the form.
+  const limit = useBusinessLimit(!model.local && !model.isOffline)
   const market = useMobileDesign("new-business") === "market-day"
   const { BusinessHeader: Header, BusinessProfileRow: ProfileRow } = market
     ? Market
@@ -57,6 +101,13 @@ export function NewBusinessOnboardingScreen() {
         <StatusBanner
           tone={model.status === "uncertain" ? "warning" : "destructive"}
           message={model.error}
+        />
+      ) : null}
+      {limit ? (
+        <StatusBanner
+          tone="warning"
+          title={limit.title}
+          message={limit.message}
         />
       ) : null}
       {model.local ? (
@@ -196,6 +247,18 @@ export function NewBusinessOnboardingScreen() {
             >
               Open created business
             </ActionButton>
+          ) : model.step === 4 && limit ? (
+            <>
+              <ActionButton
+                onPress={() => router.push("/subscription-modal")}
+                trailingIcon="ArrowRight"
+              >
+                See plans
+              </ActionButton>
+              <ActionButton onPress={model.goBack} variant="outline">
+                Back
+              </ActionButton>
+            </>
           ) : model.step > 1 ? (
             <>
               <ActionButton

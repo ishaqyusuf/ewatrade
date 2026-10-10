@@ -2,6 +2,7 @@ import * as Classic from "@/components/mobile/appearances/classic/new-business"
 import * as Market from "@/components/mobile/appearances/market-day/new-business"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
@@ -18,6 +19,7 @@ import {
 import { View } from "react-native"
 import { CountrySelect } from "../country-select"
 import { CurrentLocationCard } from "../current-location-card"
+import { ListCard } from "../green-till/kit"
 import type { NewBusinessModel } from "./use-new-business"
 
 type FieldsProps = { model: NewBusinessModel; market: boolean }
@@ -189,10 +191,120 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
     </Section>
   )
 }
+/** One review group: a small header with Edit, then the values. */
+function ReviewCard({
+  title,
+  lines,
+  onEdit,
+  disabled,
+}: {
+  title: string
+  lines: { main: string; sub?: string }[]
+  onEdit: () => void
+  disabled: boolean
+}) {
+  return (
+    <View className="gap-2">
+      <View className="flex-row items-center justify-between px-0.5">
+        <Text className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Edit ${title.toLowerCase()}`}
+          className="min-h-9 justify-center px-1"
+          disabled={disabled}
+          hitSlop={8}
+          onPress={onEdit}
+        >
+          <Text className="text-[13px] font-bold text-primary">Edit</Text>
+        </Pressable>
+      </View>
+      <ListCard>
+        {lines.map((line) => (
+          <View key={line.main} className="gap-0.5 py-3">
+            <Text className="text-[15px] font-bold text-foreground">
+              {line.main}
+            </Text>
+            {line.sub ? (
+              <Text className="text-[13px] text-muted-foreground">
+                {line.sub}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+      </ListCard>
+    </View>
+  )
+}
+
 export function NewBusinessReview({ model, market }: FieldsProps) {
-  const { BusinessSection: Section, BusinessSummary: Summary } = market
-    ? Market
-    : Classic
+  if (!market) return <ClassicReview model={model} />
+  return <MarketReview model={model} market={market} />
+}
+
+function ClassicReview({ model }: { model: NewBusinessModel }) {
+  const { draft } = model
+  const country = getCountry(draft.countryCode)
+  const label = <T extends { key: string; label: string }>(
+    items: readonly T[],
+    key: string,
+  ) => items.find((item) => item.key === key)?.label ?? key
+  return (
+    <View className="gap-5">
+      <ReviewCard
+        title="Business"
+        disabled={model.locked}
+        onEdit={() => model.editStep(3)}
+        lines={[
+          {
+            main: draft.businessName.trim(),
+            sub: [
+              `${draft.addressLine1.trim()}, ${draft.city.trim()}`,
+              toInternationalPhone(country.dialCode, draft.phone),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          },
+        ]}
+      />
+      <ReviewCard
+        title="Currency"
+        disabled={model.locked}
+        onEdit={() => model.editStep(3)}
+        lines={[{ main: draft.currencyCode, sub: country.name }]}
+      />
+      <ReviewCard
+        title="How it works"
+        disabled={model.locked}
+        onEdit={() => model.editStep(2)}
+        lines={[
+          {
+            main: model.selectedProfile?.title ?? "Business type not chosen",
+            sub:
+              draft.businessProfileKey === "other-mixed-business"
+                ? draft.otherBusinessDescription.trim()
+                : label(BUSINESS_OPERATING_MODELS, draft.operatingModel),
+          },
+          {
+            main: draft.orderChannels
+              .map((key) => label(BUSINESS_ORDER_CHANNELS, key))
+              .join(", "),
+            sub: `Team: ${label(BUSINESS_TEAM_SIZES, draft.teamSize)}`,
+          },
+        ]}
+      />
+      <Text className="px-0.5 text-xs text-muted-foreground [-rn-line-height:18]">
+        {model.local
+          ? "This preview creates a device-local workspace only."
+          : "The new business keeps its stock, sales, customers and staff separate."}
+      </Text>
+    </View>
+  )
+}
+
+function MarketReview({ model, market }: FieldsProps) {
+  const { BusinessSection: Section, BusinessSummary: Summary } = Market
   const { draft } = model
   return (
     <View className="gap-6">

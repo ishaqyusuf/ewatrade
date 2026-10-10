@@ -146,6 +146,13 @@ export function useNewBusiness() {
     setError(null)
     changeStep(Math.min(4, stepRef.current + 1))
   }
+  /** Jump back to an earlier step from the review, keeping the draft. */
+  const editStep = (value: number) => {
+    if (!canEdit() || value >= stepRef.current) return
+    Keyboard.dismiss()
+    setError(null)
+    changeStep(value)
+  }
   const goBack = () => {
     if (!canEdit()) return
     Keyboard.dismiss()
@@ -325,6 +332,7 @@ export function useNewBusiness() {
     toggleChannel,
     continueFlow,
     goBack,
+    editStep,
     submit,
     status,
     locked,
