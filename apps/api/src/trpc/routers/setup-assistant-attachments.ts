@@ -20,16 +20,17 @@ import { readVoiceUsage } from "@ewatrade/db/assistant-voice"
 import { enqueueAssistantAttachmentProcessing } from "@ewatrade/jobs/assistant-attachments"
 import { z } from "zod"
 import { assistantAnalyticsContext } from "../../assistant/analytics"
+import { requireAssistantAttachmentScope } from "../../assistant/attachment-scope"
 import {
   isSetupAttachmentStorageAvailable,
   setupAttachmentStorage,
   setupAttachmentTarget,
 } from "../../assistant/attachment-storage"
-import { requireAssistantAttachmentScope } from "../../assistant/attachment-scope"
 import {
   isAssistantVoiceEnabled,
   requireSetupAssistantMedia,
 } from "../../assistant/setup-context"
+import { assistantVoiceAvailability } from "../../assistant/voice-availability"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
 function extractionOf(row: Pick<AssistantAttachmentRecord, "extraction">) {
@@ -66,12 +67,16 @@ export function presentSetupAttachment(row: AssistantAttachmentRecord) {
 }
 
 export const setupAssistantAttachmentsRouter = createTRPCRouter({
-  voiceCapabilities: protectedProcedure.query(({ ctx }) => {
+  /** The mic is offered only when a voice note can be written out now. */
+  voiceCapabilities: protectedProcedure.query(async ({ ctx }) => {
     const scope = requireAssistantAttachmentScope(ctx)
+    const voice =
+      isAssistantVoiceEnabled() &&
+      isSetupAttachmentStorageAvailable(scope.dataClassification)
+        ? await assistantVoiceAvailability(ctx.db, scope.tenantId)
+        : null
     return {
-      enabled:
-        isAssistantVoiceEnabled() &&
-        isSetupAttachmentStorageAvailable(scope.dataClassification),
+      enabled: voice?.available === true,
       maxDurationMs: 120_000,
     }
   }),

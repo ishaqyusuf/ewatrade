@@ -19,6 +19,17 @@ const transcriptSchema = z.object({
   durationSeconds: z.number().nonnegative().optional(),
 })
 
+/** Tenants allowed to use the local Whisper gateway; "*" enrolls every tenant. */
+export function localWhisperEnrolled(
+  tenantId: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+) {
+  const allowed = (env.ASSISTANT_LOCAL_TENANT_IDS ?? "")
+    .split(",")
+    .map((x) => x.trim())
+  return allowed.includes("*") || allowed.includes(tenantId)
+}
+
 /** Full provider keys and gateway URLs never leave the server. */
 export function createFallbackTranscriber(options: {
   environment?: Environment
@@ -82,10 +93,7 @@ export function createFallbackTranscriber(options: {
         let headers: Record<string, string>
         let body: BodyInit
         if (target.provider === "local_whisper") {
-          const allowed = (env.ASSISTANT_LOCAL_TENANT_IDS ?? "")
-            .split(",")
-            .map((x) => x.trim())
-          if (!allowed.includes(options.tenantId))
+          if (!localWhisperEnrolled(options.tenantId, env))
             throw new TranscriptionError("LOCAL_NOT_ENROLLED")
           const lease = await options.gateway()
           const secret = env.ASSISTANT_VOICE_GATEWAY_SECRET
