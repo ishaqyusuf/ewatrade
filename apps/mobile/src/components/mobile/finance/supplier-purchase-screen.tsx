@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { getSession } from "@/lib/session-store"
 import { cn } from "@/lib/utils"
@@ -10,6 +11,7 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { FlatList, ScrollView, View } from "react-native"
+import { HeroCard } from "../green-till/hero-card"
 import {
   ListCard,
   RecordRow,
@@ -503,7 +505,10 @@ function SupplierPurchaseDetail({
     )
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-12">
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="gap-4 px-[18px] pb-12"
+    >
       {/* The modal bar already steps back to Purchases. */}
       {mode ? (
         <ActionButton variant="ghost" onPress={cancelForm}>
@@ -547,77 +552,95 @@ function SupplierPurchaseDetail({
       ) : null}
       {data && !mode ? (
         <>
-          <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            {supplier.name} · {supplier.code}
+          <HeroCard
+            label="Still owed"
+            pill={
+              data.voidedAt
+                ? { label: "Cancelled", tone: "offline" }
+                : BigInt(data.outstandingMinor) === 0n
+                  ? { label: "Paid", tone: "synced" }
+                  : BigInt(data.paidMinor) > 0n
+                    ? { label: "Part paid", tone: "draft" }
+                    : { label: "Unpaid", tone: "draft" }
+            }
+            amount={money(data.outstandingMinor)}
+            sub={data.description}
+            stats={[
+              { label: "Incurred", value: money(data.totalMinor) },
+              { label: "Paid", value: money(data.paidMinor) },
+            ]}
+          />
+          <Text className="px-0.5 text-xs font-semibold text-muted-foreground">
+            {supplier.name}
+            {data.reference ? ` · ${data.reference}` : ""} ·{" "}
+            {financeDisplayDate(data.incurredAt)}
+            {data.dueAt ? ` · due ${financeDisplayDate(data.dueAt)}` : ""}
           </Text>
-          <Text className="text-2xl font-bold">{data.description}</Text>
-          <Text className="text-sm text-muted-foreground">
-            Purchase · {data.reference ?? "no reference"} ·{" "}
-            {data.storeId ?? "all stores"}
-          </Text>
-          <View className="flex-row flex-wrap gap-4 border-y border-border py-4">
-            {[
-              ["Incurred", money(data.totalMinor)],
-              ["Paid", money(data.paidMinor)],
-              ["Still owed", money(data.outstandingMinor)],
-            ].map(([label, value]) => (
-              <View key={label} className="min-w-[40%] flex-1 gap-1">
-                <Text className="text-xs text-muted-foreground">{label}</Text>
-                <Text className="text-lg font-bold tabular-nums">{value}</Text>
+          {!data.voidedAt && BigInt(data.outstandingMinor) > 0n ? (
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <ActionButton
+                  icon="ArrowLeftRight"
+                  variant="outline"
+                  onPress={() => setMode("allocate")}
+                >
+                  Apply advance
+                </ActionButton>
               </View>
-            ))}
-          </View>
-          <Text className="text-sm text-muted-foreground">
-            {new Date(data.incurredAt).toISOString().slice(0, 10)} UTC
-            {data.dueAt
-              ? ` · due ${new Date(data.dueAt).toISOString().slice(0, 10)} UTC`
-              : " · no due date"}
-            {data.voidedAt ? " · void" : ""}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            Inventory source · {data.coverage.receipts.replaceAll("_", " ")} ·
-            valuation {data.coverage.valuation.replaceAll("_", " ")} · COGS{" "}
-            {data.coverage.cogs.replaceAll("_", " ")}
-          </Text>
-          {data.recognitionId ? (
-            <ActionButton
-              variant="outline"
-              onPress={() => setRecognitionViewId(data.recognitionId)}
-            >
-              Open purchase source history
-            </ActionButton>
+              <View className="flex-1">
+                <ActionButton icon="Wallet" onPress={() => setMode("pay")}>
+                  Pay purchase
+                </ActionButton>
+              </View>
+            </View>
           ) : null}
-          <Text className="text-lg font-bold">Purchase lines</Text>
-          {data.lines.map((line) => (
-            <View key={line.id} className="gap-1 border-b border-border py-3">
-              <View className="flex-row justify-between gap-3">
-                <Text className="min-w-0 flex-1 font-semibold">
-                  {line.description}
-                </Text>
-                <Text className="font-bold tabular-nums">
+          <SectionHeader
+            title="Purchase lines"
+            trailing={
+              data.recognitionId ? (
+                <Pressable
+                  accessibilityRole="button"
+                  className="min-h-9 justify-end"
+                  hitSlop={8}
+                  onPress={() => setRecognitionViewId(data.recognitionId)}
+                >
+                  <Text className="text-[13px] font-bold text-primary">
+                    Source history
+                  </Text>
+                </Pressable>
+              ) : undefined
+            }
+          />
+          <ListCard>
+            {data.lines.map((line) => (
+              <View
+                key={line.id}
+                className="min-h-12 flex-row items-center justify-between gap-3 py-3"
+              >
+                <View className="min-w-0 flex-1">
+                  <Text className="text-sm font-bold text-foreground">
+                    {line.description}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {line.account.name}
+                  </Text>
+                </View>
+                <Text className="text-sm font-bold tabular-nums text-foreground">
                   {money(line.amountMinor)}
                 </Text>
               </View>
-              <Text className="text-xs text-muted-foreground">
-                {line.account.code} · {line.account.name}
-              </Text>
-            </View>
-          ))}
-          {!data.voidedAt && BigInt(data.outstandingMinor) > 0n ? (
-            <ActionButton onPress={() => setMode("pay")}>
-              Pay purchase
-            </ActionButton>
+            ))}
+          </ListCard>
+          <SectionHeader title="Cash payments" />
+          {data.payments.length === 0 ? (
+            <Text className="px-0.5 text-sm text-muted-foreground">
+              No payments recorded yet.
+            </Text>
           ) : null}
-          {!data.voidedAt && BigInt(data.outstandingMinor) > 0n ? (
-            <ActionButton variant="outline" onPress={() => setMode("allocate")}>
-              Apply supplier advance
-            </ActionButton>
-          ) : null}
-          <Text className="text-lg font-bold">Cash payments</Text>
           {data.payments.map((item) => (
             <View
               key={item.id}
-              className="gap-2 rounded-2xl border border-border p-4"
+              className="gap-2 rounded-[20px] bg-card p-4 shadow-sm"
             >
               <View className="flex-row justify-between gap-3">
                 <Text className="min-w-0 flex-1 font-semibold">
@@ -628,10 +651,10 @@ function SupplierPurchaseDetail({
                 </Text>
               </View>
               <Text className="text-xs text-muted-foreground">
-                {new Date(item.effectiveAt).toISOString().slice(0, 10)} UTC
+                {financeDisplayDate(item.effectiveAt)}
                 {item.reference ? ` · ${item.reference}` : ""}
                 {item.reversedAt
-                  ? ` · reversed ${new Date(item.reversalEffectiveAt ?? item.reversedAt).toISOString().slice(0, 10)} UTC`
+                  ? ` · reversed ${financeDisplayDate(item.reversalEffectiveAt ?? item.reversedAt)}`
                   : ""}
               </Text>
               {!item.reversedAt ? (
@@ -653,9 +676,12 @@ function SupplierPurchaseDetail({
               tone="warning"
             />
           ) : null}
-          <Text className="text-lg font-bold">
-            Supplier advance allocations
-          </Text>
+          <SectionHeader title="Advances applied" />
+          {data.allocations.length === 0 ? (
+            <Text className="px-0.5 text-sm text-muted-foreground">
+              No supplier advance applied.
+            </Text>
+          ) : null}
           {data.allocations.map((item) => {
             const released = item.releases.reduce(
               (sum, release) => sum + BigInt(release.amountMinor),
@@ -665,7 +691,7 @@ function SupplierPurchaseDetail({
             return (
               <View
                 key={item.id}
-                className="gap-2 rounded-2xl border border-border p-4"
+                className="gap-2 rounded-[20px] bg-card p-4 shadow-sm"
               >
                 <View className="flex-row justify-between gap-3">
                   <Text className="min-w-0 flex-1 font-semibold">
@@ -676,9 +702,8 @@ function SupplierPurchaseDetail({
                   </Text>
                 </View>
                 <Text className="text-xs text-muted-foreground">
-                  {new Date(item.effectiveAt).toISOString().slice(0, 10)} UTC ·{" "}
-                  {money(released.toString())} released · source{" "}
-                  {item.advanceEntry.kind.toLowerCase().replaceAll("_", " ")}
+                  {financeDisplayDate(item.effectiveAt)} ·{" "}
+                  {money(released.toString())} released
                 </Text>
                 {unreleased > 0n && !data.voidedAt ? (
                   <ActionButton
@@ -697,8 +722,7 @@ function SupplierPurchaseDetail({
                     className="text-xs text-muted-foreground"
                   >
                     Released {money(release.amountMinor)} ·{" "}
-                    {new Date(release.effectiveAt).toISOString().slice(0, 10)}{" "}
-                    UTC · {release.reason}
+                    {financeDisplayDate(release.effectiveAt)} · {release.reason}
                   </Text>
                 ))}
                 {item.releasesHasMore ? (
@@ -716,11 +740,10 @@ function SupplierPurchaseDetail({
               tone="warning"
             />
           ) : null}
-          <Text className="text-xs text-muted-foreground">
-            Same supplier current payable{" "}
-            {money(data.currentSupplierTotals.payableMinor)} · advance{" "}
-            {money(data.currentSupplierTotals.advanceMinor)} · journal{" "}
-            {data.currentSupplierTotals.throughJournalSequence}
+          <Text className="px-0.5 text-xs text-muted-foreground">
+            {supplier.name} owes in total{" "}
+            {money(data.currentSupplierTotals.payableMinor)} · advance held{" "}
+            {money(data.currentSupplierTotals.advanceMinor)}
           </Text>
         </>
       ) : null}
