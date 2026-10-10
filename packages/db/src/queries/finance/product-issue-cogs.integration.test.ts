@@ -1,5 +1,6 @@
 import { expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
+import { getCommercialProductLineReview } from "../commercial-product-line-review"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
 import {
   createCommercialOrder,
@@ -345,9 +346,17 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
       ).rejects.toMatchObject({ code: "ORDER_NOT_FOUND" })
       expect(await beforeIssue()).toEqual(beforeClosedIssue)
 
+      const reviewedIssue = await getCommercialProductLineReview(db, {
+        tenantId: tenant.id,
+        storeId: store.id,
+        orderLineId: fulfillmentInput.orderLineId,
+      })
+      expect(reviewedIssue.cost).toMatchObject({
+        valueBeforeMinor: "1001", valueDeltaMinor: "-250", valueAfterMinor: "751",
+      })
       const firstFulfillment = await fulfillCommercialOrderProductLine(
         db,
-        fulfillmentInput,
+        { ...fulfillmentInput, storeId: store.id, expectedReviewRevision: reviewedIssue.revision },
       )
       const firstIssue =
         await db.financeInventoryValuationEvent.findFirstOrThrow({
