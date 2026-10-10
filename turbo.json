@@ -9,6 +9,17 @@
   ],
   "ui": "tui",
   "tasks": {
+    "@ewatrade/wapi#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "ASSISTANT_VOICE_*",
+        "ASSISTANT_WHISPER_*",
+        "WHISPER_MODEL",
+        "HF_HOME",
+        "NGROK_AUTHTOKEN"
+      ]
+    },
     "build": {
       "dependsOn": ["^build"],
       "env": [

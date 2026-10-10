@@ -32,3 +32,4 @@ packages/jobs/.trigger/
 
 # Expo CLI local state
 .expo/
+apps/wapi/.cache/

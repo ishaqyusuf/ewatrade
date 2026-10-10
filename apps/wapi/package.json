@@ -1,0 +1,11 @@
+{
+  "name": "@ewatrade/wapi",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../scripts/with-workspace-env.mjs bun src/dev.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  }
+}

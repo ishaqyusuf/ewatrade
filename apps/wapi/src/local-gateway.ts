@@ -1,15 +1,12 @@
 /** Local-only adapter for the Al-Ghurobaa Whisper HTTP service. */
-import {
-  createHash,
-  createHmac,
-  randomUUID,
-  timingSafeEqual,
-} from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { stat } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { registerCacheCleanup, sweepCacheCleanup } from "./cache-cleanup"
+import { authenticatedEnvironment } from "./gateway-auth"
+import { voiceTargets } from "./targets"
 
-const secret = process.env.ASSISTANT_VOICE_GATEWAY_SECRET ?? ""
+const targets = voiceTargets(process.env)
 const generation = process.env.ASSISTANT_VOICE_GENERATION ?? ""
 const cacheRoot = process.env.ASSISTANT_WHISPER_CACHE_DIR
 const whisper = new URL(
@@ -18,7 +15,6 @@ const whisper = new URL(
 const port = Number(process.env.ASSISTANT_VOICE_GATEWAY_PORT ?? 8790)
 const language = process.env.ASSISTANT_WHISPER_LANGUAGE ?? "en"
 if (
-  secret.length < 32 ||
   !generation ||
   !cacheRoot ||
   !["127.0.0.1", "localhost", "[::1]"].includes(whisper.hostname) ||
@@ -73,10 +69,12 @@ Bun.serve({
     const digest = read("digest")
     for (const [key, expiry] of nonces)
       if (expiry < Date.now()) nonces.delete(key)
-    const expected = createHmac("sha256", secret)
-      .update(`${path}\n${generation}\n${read("expires")}\n${nonce}\n${digest}`)
-      .digest("hex")
-    const signature = read("signature")
+    const environment = authenticatedEnvironment(
+      targets,
+      request.headers,
+      path,
+      generation,
+    )
     if (
       read("generation") !== generation ||
       !Number.isFinite(expires) ||
@@ -84,12 +82,32 @@ Bun.serve({
       expires > Date.now() + 40_000 ||
       nonce.length !== 36 ||
       nonces.has(nonce) ||
-      !/^[a-f0-9]{64}$/.test(signature) ||
-      !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+      !environment
     )
       return json({ error: "Unauthorized" }, 401)
+    const started = Date.now()
+    const reply = (value: unknown, status = 200) => {
+      if (path === "/transcribe")
+        console.info(
+          JSON.stringify({
+            event: "voice_request",
+            environment,
+            requestId: nonce,
+            status,
+            durationMs: Date.now() - started,
+          }),
+        )
+      return Response.json(value, {
+        status,
+        headers: {
+          "Cache-Control": "no-store",
+          "x-request-id": nonce,
+          "x-voice-environment": environment,
+        },
+      })
+    }
     nonces.set(nonce, expires)
-    if (nonces.size > 5000) return json({ error: "Busy" }, 429)
+    if (nonces.size > 5000) return reply({ error: "Busy" }, 429)
     let health: { ready?: boolean; model?: string }
     try {
       const response = await fetch(new URL("/health", whisper), {
@@ -99,16 +117,16 @@ Bun.serve({
       health = await response.json()
       if (!response.ok) throw new Error()
     } catch {
-      return json({ ready: false, model: "unknown-local" }, 503)
+      return reply({ ready: false, model: "unknown-local" }, 503)
     }
     if (path === "/health")
-      return json({
+      return reply({
         ready: Boolean(health.ready),
         model: health.model ?? "unknown-local",
         busy,
       })
     if (!health.ready || !health.model || busy)
-      return json({ error: "Not ready" }, 503)
+      return reply({ error: "Not ready" }, 503)
     const type = (request.headers.get("Content-Type") ?? "").split(";")[0] ?? ""
     const extensions: Record<string, string> = {
       "audio/wav": "wav",
@@ -119,7 +137,7 @@ Bun.serve({
     }
     const extension = extensions[type]
     if (!extension || !/^[a-f0-9]{64}$/.test(digest))
-      return json({ error: "Invalid audio" }, 400)
+      return reply({ error: "Invalid audio" }, 400)
     busy = true
     const key = `/${randomUUID()}.${extension}`
     const audioUrl = `http://127.0.0.1:${downloads.port}${key}`
@@ -136,7 +154,7 @@ Bun.serve({
         bytes.length > 10 * 1024 * 1024 ||
         createHash("sha256").update(bytes).digest("hex") !== digest
       )
-        return json({ error: "Invalid audio" }, 400)
+        return reply({ error: "Invalid audio" }, 400)
       cleanup = await registerCacheCleanup({
         cache,
         download: downloadHash,
@@ -160,7 +178,7 @@ Bun.serve({
       })
       if (!response.ok) {
         await response.body?.cancel()
-        return json({ error: "Transcription failed" }, 503)
+        return reply({ error: "Transcription failed" }, 503)
       }
       const result = (await response.json()) as {
         text?: string
@@ -168,14 +186,14 @@ Bun.serve({
         language?: string
         durationSeconds?: number
       }
-      return json({
+      return reply({
         text: result.text,
         model: result.model,
         language: result.language,
         durationSeconds: result.durationSeconds,
       })
     } catch {
-      return json({ error: "Transcription failed" }, 503)
+      return reply({ error: "Transcription failed" }, 503)
     } finally {
       audio.delete(key)
       await cleanup?.().catch(() =>
