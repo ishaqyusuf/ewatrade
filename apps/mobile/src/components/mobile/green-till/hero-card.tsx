@@ -88,7 +88,12 @@ export function HeroCard({
             : { height, width },
         )
       }}
-      style={[styles.card, { shadowColor: palette.heroTo }]}
+      // Solid base under the measured gradient, so a card that grows (large
+      // text, a late CTA) never shows a gap before the gradient re-measures.
+      style={[
+        styles.card,
+        { backgroundColor: palette.heroTo, shadowColor: palette.heroTo },
+      ]}
       testID={testID}
     >
       <View style={[StyleSheet.absoluteFill, styles.clip]}>

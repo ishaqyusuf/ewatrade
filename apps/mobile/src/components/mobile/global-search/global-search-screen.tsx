@@ -27,6 +27,7 @@ import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -61,6 +62,7 @@ export function GlobalSearchScreen() {
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const scrollHide = useBottomSearchScroll()
+  const largeText = useLargeTextLayout()
   // biome-ignore lint/correctness/useExhaustiveDependencies: appearance changes invalidate measured header geometry
   useEffect(() => {
     setHeaderHeight(0)
@@ -391,11 +393,13 @@ export function GlobalSearchScreen() {
                   >
                     Quick actions
                   </Text>
-                  {[classicActions.slice(0, 3), classicActions.slice(3)].map(
-                    (row) =>
-                      row.length ? (
-                        <QuickActionRow key={row[0].id} actions={row} />
-                      ) : null,
+                  {(largeText
+                    ? [classicActions]
+                    : [classicActions.slice(0, 3), classicActions.slice(3)]
+                  ).map((row) =>
+                    row.length ? (
+                      <QuickActionRow key={row[0].id} actions={row} />
+                    ) : null,
                   )}
                 </View>
                 {isOffline ? (
