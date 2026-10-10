@@ -6,11 +6,10 @@ import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { appLockBiometricName } from "@/lib/app-lock-messages"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { keypadHaptic } from "@/lib/keypad-haptic"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
-import * as Haptics from "expo-haptics"
 import type { ReactNode } from "react"
-import { Platform } from "react-native"
 import { BackspaceGlyph } from "./otp-keypad"
 
 const PIN_KEYPAD_ROWS = [
@@ -311,17 +310,6 @@ function PinCodeCells({
       ))}
     </View>
   )
-}
-
-/** Keypad tick on touch-down. Android's "light" impact is too faint to feel. */
-function keypadHaptic() {
-  void Haptics.impactAsync(
-    Platform.OS === "android"
-      ? Haptics.ImpactFeedbackStyle.Medium
-      : Haptics.ImpactFeedbackStyle.Light,
-  ).catch(() => {
-    // Haptic support is optional; a feedback failure must not block the key.
-  })
 }
 
 /** Round gate key: the circle brightens and dips while held. */

@@ -4,6 +4,8 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
+import { keypadHaptic } from "@/lib/keypad-haptic"
+import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import { Delete as Backspace } from "lucide-react-native"
 import Svg, { Path } from "react-native-svg"
@@ -275,62 +277,71 @@ function GreenTillKey({
 }) {
   const colors = useColors()
   const height = largeTextLayout ? "h-[64px]" : "h-[46px]"
-  if (label === "paste" || label === "delete") {
-    const paste = label === "paste"
-    return (
-      <Pressable
-        accessibilityLabel={
-          paste ? "Paste verification code" : "Delete last digit"
-        }
-        className={cn(
-          height,
-          "flex-1 items-center justify-center rounded-[13px] active:bg-accent",
-          disabled && "opacity-60",
-        )}
-        disabled={disabled}
-        haptic
-        onPress={paste ? onPastePress : onDeletePress}
-        transition
-      >
-        {paste ? (
-          <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-primary">
-            Paste
-          </Text>
-        ) : (
-          <Svg
-            accessible={false}
-            fill="none"
-            height={20}
-            stroke={colors.primary}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.9}
-            viewBox="0 0 24 24"
-            width={20}
-          >
-            <Path d="M10 5a2 2 0 0 0-1.34.52l-6.33 5.74a1 1 0 0 0 0 1.48l6.33 5.74A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
-            <Path d="m12 9 6 6M18 9l-6 6" />
-          </Svg>
-        )}
-      </Pressable>
-    )
-  }
+  const action = label === "paste" || label === "delete"
+  const paste = label === "paste"
   return (
     <Pressable
-      accessibilityLabel={`Enter digit ${label}`}
-      className={cn(
-        height,
-        "flex-1 items-center justify-center rounded-[13px] bg-card shadow-sm active:bg-accent",
-        disabled && "opacity-60",
-      )}
+      accessibilityLabel={
+        paste
+          ? "Paste verification code"
+          : action
+            ? "Delete last digit"
+            : `Enter digit ${label}`
+      }
+      allowOverflow
+      className={cn(height, "flex-1", disabled && "opacity-60")}
       disabled={disabled}
-      haptic
-      onPress={() => onDigitPress(label)}
-      transition
+      noRipple
+      onPress={
+        paste
+          ? onPastePress
+          : action
+            ? onDeletePress
+            : () => onDigitPress(label)
+      }
+      onPressIn={disabled ? undefined : keypadHaptic}
     >
-      <Text className="text-[20px] font-bold [-rn-line-height:24] text-foreground">
-        {label}
-      </Text>
+      {/* Like the App lock keypad: the key darkens and dips while held. */}
+      {({ pressed }) => (
+        <View
+          className={cn(
+            "h-full items-center justify-center rounded-[13px]",
+            pressed
+              ? "scale-[0.96] bg-primary/15"
+              : action
+                ? "bg-transparent"
+                : "bg-card shadow-sm",
+          )}
+        >
+          {paste ? (
+            <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-primary">
+              Paste
+            </Text>
+          ) : action ? (
+            <Svg
+              accessible={false}
+              fill="none"
+              height={20}
+              stroke={colors.primary}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.9}
+              viewBox="0 0 24 24"
+              width={20}
+            >
+              <Path d="M10 5a2 2 0 0 0-1.34.52l-6.33 5.74a1 1 0 0 0 0 1.48l6.33 5.74A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z" />
+              <Path d="m12 9 6 6M18 9l-6 6" />
+            </Svg>
+          ) : (
+            <Text
+              maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
+              className="text-center text-[20px] font-bold [-rn-include-font-padding:false] [-rn-line-height:24] [-rn-text-align-vertical:center] text-foreground"
+            >
+              {label}
+            </Text>
+          )}
+        </View>
+      )}
     </Pressable>
   )
 }
