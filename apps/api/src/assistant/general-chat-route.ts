@@ -5,6 +5,7 @@ import {
 import {
   GENERAL_PROMPT_VERSION,
   generalInstructions,
+  generalLocalNow,
 } from "@ewatrade/assistant/general/prompt"
 import {
   type AssistantStoredMessage,
@@ -239,6 +240,9 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
                 ctx.tenantContext.activeStore?.currencyCode ??
                 ctx.tenantContext.tenant.currencyCode,
               role: ctx.tenantContext.membership.role,
+              ...generalLocalNow(
+                ctx.tenantContext.tenant.timezone ?? "Africa/Lagos",
+              ),
             }),
             tools: createGeneralTools(
               ctx,

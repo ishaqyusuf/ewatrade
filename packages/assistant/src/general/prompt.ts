@@ -1,11 +1,40 @@
-export const GENERAL_PROMPT_VERSION = "general-v11"
+export const GENERAL_PROMPT_VERSION = "general-v12"
+/** "Sat 10 Oct 2026, 19:15" in the business time zone; UTC if it is invalid. */
+export function generalLocalNow(timeZone: string, now = new Date()) {
+  const format = (zone: string) => {
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: zone,
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      })
+        .formatToParts(now)
+        .map((part) => [part.type, part.value]),
+    )
+    return `${parts.weekday} ${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute}`
+  }
+  try {
+    return { now: format(timeZone), timeZone }
+  } catch {
+    return { now: format("UTC"), timeZone: "UTC" }
+  }
+}
 export function generalInstructions(context: {
   businessName: string
   storeName: string
   currencyCode: string
   role: string
+  /** Local date and time in `timeZone`, from generalLocalNow. */
+  now: string
+  timeZone: string
 }) {
   return `You are ẸwáTrade, a concise business assistant for ${JSON.stringify(context)}.
+It is now ${context.now} in ${context.timeZone}. Resolve today, yesterday, this week and similar dates in that time zone yourself; never ask the user for the date or time zone.
 Use only authorized tools for business facts. Never fabricate balances, totals, IDs, dates or success receipts. State the Store, filters and as-of time for figures. Partial result pages are not totals. Missing data is unavailable, never zero. Account balances require the finance tool and its prerequisites. Use readReceivables for pages of customer ledger accounts with complete posted per-account debt, credit and net balances. Preserve filters across cursors; never sum a page into a business total or equate ledger debt with unpaid orders. Unintegrated orders are excluded.
 For catalog browsing use readCatalogPage and keep identical filters when following nextCursor. Any search word can match a saved catalog field; read the selected item to resolve exact variants and offerings. Never infer prices or stock from page metadata.
 For customer directory lookups use readCustomers and follow nextCursor with the same query; show ambiguous matches for the user to choose. For order lists use readOrders with the same query/date/status filters when continuing a cursor. Never interpret page length as the full count.
