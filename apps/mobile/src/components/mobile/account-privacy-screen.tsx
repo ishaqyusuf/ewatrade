@@ -12,6 +12,7 @@ import { useState } from "react"
 import { Alert, Linking } from "react-native"
 import { HeroCard } from "./green-till/hero-card"
 import { ListCard, RecordRow, SectionHeader } from "./green-till/kit"
+import { ScreenBar } from "./green-till/screen-bar"
 import { LegalAcceptancePanel } from "./legal-acceptance-panel"
 import { MobileScreen } from "./screen"
 import { StatusBanner } from "./status-banner"
@@ -94,22 +95,12 @@ export function AccountPrivacyScreen() {
     )
   return (
     <MobileScreen contentClassName="gap-4 px-[18px] py-4">
-      <View className="flex-row items-center gap-3 mb-1">
-        <Pressable
-          accessibilityLabel="Back"
-          accessibilityRole="button"
-          className="size-11 items-center justify-center rounded-full bg-card"
-          onPress={() => router.back()}
-        >
-          <Icon name="ArrowLeft" className="size-[20px] text-foreground" />
-        </Pressable>
-        <Text
-          accessibilityRole="header"
-          className="flex-1 text-lg font-extrabold text-foreground"
-        >
-          Account and privacy
-        </Text>
-      </View>
+      <ScreenBar
+        kind="back"
+        label="Back"
+        onPress={() => router.back()}
+        title="Account and privacy"
+      />
       <HeroCard
         label="Signed in as"
         title={profile?.name || "Your account"}

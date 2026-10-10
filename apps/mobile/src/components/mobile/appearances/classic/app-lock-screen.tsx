@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
 import { StatusBar } from "expo-status-bar"
+import { ScreenBar } from "../../green-till/screen-bar"
 import { SettingsScreen } from "../../settings-screen"
 
 export function ClassicAppLockScreen({
@@ -29,21 +30,11 @@ export function ClassicAppLockScreen({
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <View className="gap-7">
         {onClose ? (
-          <View className="flex-row items-center justify-between">
-            <View className="size-11" />
-            <Text className="text-center text-[13px] font-medium text-muted-foreground">
-              App lock
-            </Text>
-            <Pressable
-              accessibilityLabel="Close app lock settings"
-              accessibilityRole="button"
-              className="size-11 items-center justify-center rounded-full bg-muted active:bg-accent"
-              haptic
-              onPress={onClose}
-            >
-              <Icon className="size-[20px] text-muted-foreground" name="X" />
-            </Pressable>
-          </View>
+          <ScreenBar
+            label="Close app lock settings"
+            onPress={onClose}
+            title="App lock"
+          />
         ) : null}
         {mode === "manage" ? (
           <SettingsScreen title={title} sub={subtitle} />

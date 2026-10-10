@@ -143,12 +143,13 @@ export default function OrderReminderSettingsModalRoute() {
               ? "Reconnect to change reminder settings."
               : settings.data
                 ? enabled
-                  ? [
-                      dayBeforeEnabled && "One day before",
-                      sameDayEnabled && "on the delivery day",
-                    ]
-                      .filter(Boolean)
-                      .join(" and ") || "Choose when to send reminders below."
+                  ? dayBeforeEnabled && sameDayEnabled
+                    ? "One day before and on the delivery day"
+                    : dayBeforeEnabled
+                      ? "One day before delivery"
+                      : sameDayEnabled
+                        ? "On the delivery day"
+                        : "Choose when to send reminders below."
                   : "No reminder emails will be sent."
                 : "Your settings haven’t loaded yet."
           }
