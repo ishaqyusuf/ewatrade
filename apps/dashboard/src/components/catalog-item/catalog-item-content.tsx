@@ -53,16 +53,8 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
             ? "Add service"
             : "Add item"
       }
-      description={
-        // Chat mode keeps the top compact; the chat itself explains the step.
-        catalogCreateMode === "chat"
-          ? undefined
-          : form.kind === "product"
-            ? "Name it and choose how you count it. Add details when you need them."
-            : form.kind === "service"
-              ? "Name the service, then set a fixed price or quote each job."
-              : "Choose what you want to add."
-      }
+      // Only the kind chooser needs a subtitle; the forms and chat keep the top compact.
+      description={form.kind ? undefined : "Choose what you want to add."}
       header={
         props.allowKindChange === false ||
         catalogCreateMode === "chat" ? null : (
