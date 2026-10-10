@@ -1261,7 +1261,7 @@ function SupplierAging({
             <RecordRow
               stackDetails
               title={item.reference || item.description}
-              meta={`${supplierKindLabel(item.kind)} · ${item.dueAt ? `due ${financeDisplayDate(item.dueAt)}` : "no due date"}`}
+              meta={`${supplierKindLabel(item.kind)}${item.dueAt ? ` · due ${financeDisplayDate(item.dueAt)}` : ""}`}
               amount={formatFinanceMoney(item.outstandingMinor, currencyCode)}
               avatar={{
                 icon: overdue ? "TriangleAlert" : "ReceiptText",
