@@ -1,5 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -17,13 +16,20 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
+import { VariableContextProvider } from "nativewind"
 import { Suspense, lazy } from "react"
 import { useEffect, useRef, useState } from "react"
 import { FlatList, View } from "react-native"
 import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
 import { HeroCard } from "../green-till/hero-card"
-import { RecordRow, RowDivider, SectionHeader } from "../green-till/kit"
+import {
+  RecordRow,
+  RowDivider,
+  SectionHeader,
+  StatusPill,
+} from "../green-till/kit"
 import { useWorkflowHeader } from "../workflow-modal-screen"
+import { FinanceBankDateField } from "./finance-bank-date-field"
 import { financeDisplayDate } from "./finance-display"
 import type { FinanceWorkspace } from "./finance-workspace-gate"
 
@@ -1076,6 +1082,32 @@ function SupplierAging({
       if (request === refreshGeneration.current) setRefreshing(false)
     }
   }
+  function changeDate(value: string) {
+    scopeGeneration.current += 1
+    refreshGeneration.current += 1
+    setRefreshing(false)
+    authority.invalidate()
+    if (isSupplierAgingDay(value)) {
+      client.removeQueries({
+        queryKey: trpc.finance.supplierPayableAging.queryKey({
+          bookId,
+          supplierId: supplier.id,
+          asOfDate: value,
+          snapshotSequence: undefined,
+          cursor: undefined,
+          limit: 30,
+        }),
+        exact: true,
+      })
+    }
+    setAsOfDate(value)
+    setSnapshot(undefined)
+    setSnapshotDate(undefined)
+    setCursor(undefined)
+    setPrevious([])
+    setRefreshError(null)
+  }
+  const total = visible && query.data ? BigInt(query.data.payableMinor) : 0n
   function changePage(nextCursor: AgingCursor | undefined) {
     if (snapshot === undefined || offline || !validDay) return
     const input = {
@@ -1101,44 +1133,12 @@ function SupplierAging({
       onRefresh={() => void refresh()}
       ListHeaderComponent={
         <View className="gap-4 pb-4">
-          <Text className="text-base font-semibold">
-            Supplier payable aging
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            UTC cutoff · all stores · based on recorded due dates. Advances stay
-            separate.
-          </Text>
-          <FormField
-            label="As of date (UTC)"
+          <FinanceBankDateField
+            label="Aging as of"
             value={asOfDate}
-            onChangeText={(value) => {
-              scopeGeneration.current += 1
-              refreshGeneration.current += 1
-              setRefreshing(false)
-              authority.invalidate()
-              if (isSupplierAgingDay(value)) {
-                client.removeQueries({
-                  queryKey: trpc.finance.supplierPayableAging.queryKey({
-                    bookId,
-                    supplierId: supplier.id,
-                    asOfDate: value,
-                    snapshotSequence: undefined,
-                    cursor: undefined,
-                    limit: 30,
-                  }),
-                  exact: true,
-                })
-              }
-              setAsOfDate(value)
-              setSnapshot(undefined)
-              setSnapshotDate(undefined)
-              setCursor(undefined)
-              setPrevious([])
-              setRefreshError(null)
-            }}
-            placeholder="YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
-            autoCapitalize="none"
+            onChange={changeDate}
+            minimum="2000-01-01"
+            maximum={new Date().toISOString().slice(0, 10)}
           />
           {!validDay ? (
             <Text className="text-sm text-destructive">
@@ -1153,7 +1153,7 @@ function SupplierAging({
             />
           ) : null}
           {query.isPending && validDay && !offline ? (
-            <Text>Loading payable aging…</Text>
+            <Skeleton className="h-48 rounded-[20px]" />
           ) : null}
           {query.isError ? (
             <StatusBanner
@@ -1176,41 +1176,59 @@ function SupplierAging({
             />
           ) : null}
           {visible && query.data ? (
-            <View className="flex-row gap-3 rounded-2xl bg-muted/60 p-4">
-              <Amount
-                label="Payable"
-                amount={query.data.payableMinor}
-                currencyCode={currencyCode}
+            <View>
+              <SectionHeader
+                title={`Payable aging · as of ${financeDisplayDate(`${asOfDate}T00:00:00.000Z`)}`}
               />
-              <Amount
-                label="Supplier advance"
-                amount={query.data.advanceMinor}
-                currencyCode={currencyCode}
-              />
+              <View className="gap-3.5 rounded-[20px] bg-card p-4 shadow-sm">
+                {query.data.buckets.map((bucket) => {
+                  const amount = BigInt(bucket.amountMinor)
+                  const pct = total > 0n ? Number((amount * 100n) / total) : 0
+                  const tone =
+                    bucket.bucket === "NOT_DUE" ||
+                    bucket.bucket === "DUE_TODAY" ||
+                    bucket.bucket === "UNDATED"
+                      ? "bg-primary"
+                      : bucket.bucket === "OVERDUE_1_30"
+                        ? "bg-gold"
+                        : "bg-destructive"
+                  return (
+                    <View key={bucket.bucket} className="gap-1.5">
+                      <View className="flex-row justify-between gap-3">
+                        <Text className="min-w-0 flex-1 text-[13px] font-semibold text-foreground">
+                          {supplierAgingBucketLabels[bucket.bucket]}
+                        </Text>
+                        <Text className="text-[13px] font-bold tabular-nums text-foreground">
+                          {formatFinanceMoney(bucket.amountMinor, currencyCode)}
+                        </Text>
+                      </View>
+                      <View className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <VariableContextProvider
+                          value={{ "--aging-width": `${pct}%` }}
+                        >
+                          <View
+                            className={cn(
+                              "h-full w-[var(--aging-width)] rounded-full",
+                              tone,
+                            )}
+                          />
+                        </VariableContextProvider>
+                      </View>
+                    </View>
+                  )
+                })}
+              </View>
+              <Text className="mt-2 px-0.5 text-xs text-muted-foreground">
+                Payable{" "}
+                {formatFinanceMoney(query.data.payableMinor, currencyCode)} ·
+                advance held{" "}
+                {formatFinanceMoney(query.data.advanceMinor, currencyCode)} ·
+                based on recorded due dates
+              </Text>
             </View>
           ) : null}
-          {visible && query.data ? (
-            <Text className="text-xs text-muted-foreground">
-              Snapshot {query.data.snapshotSequence} · {query.data.sourcesRead}{" "}
-              sources read · scope includes unassigned opening liabilities
-            </Text>
-          ) : null}
-          {visible && query.data ? (
-            <View className="gap-2 rounded-2xl border border-border p-4">
-              {query.data.buckets.map((bucket) => (
-                <View
-                  key={bucket.bucket}
-                  className="flex-row justify-between gap-3"
-                >
-                  <Text className="flex-1 text-sm text-muted-foreground">
-                    {supplierAgingBucketLabels[bucket.bucket]}
-                  </Text>
-                  <Text className="font-semibold">
-                    {formatFinanceMoney(bucket.amountMinor, currencyCode)}
-                  </Text>
-                </View>
-              ))}
-            </View>
+          {visible && query.data?.data.length ? (
+            <SectionHeader title="Open sources" />
           ) : null}
           {query.isSuccess && visible && query.data.data.length === 0 ? (
             <Text className="py-6 text-sm text-muted-foreground">
@@ -1228,29 +1246,38 @@ function SupplierAging({
           ) : null}
         </View>
       }
-      renderItem={({ item }) => (
-        <View className="mb-3 gap-2 rounded-2xl border border-border bg-card p-4">
-          <View className="flex-row items-start justify-between gap-3">
-            <Text className="min-w-0 flex-1 font-semibold">
-              {item.reference || item.description}
-            </Text>
-            <Text className="font-bold">
-              {formatFinanceMoney(item.outstandingMinor, currencyCode)}
-            </Text>
+      renderItem={({ item, index }) => {
+        const rows = query.data?.data ?? []
+        const last = index === rows.length - 1
+        const overdue = item.bucket.startsWith("OVERDUE")
+        return (
+          <View
+            className={cn(
+              "overflow-hidden bg-card px-3.5",
+              index === 0 && "rounded-t-[20px]",
+              last && "rounded-b-[20px]",
+            )}
+          >
+            <RecordRow
+              stackDetails
+              title={item.reference || item.description}
+              meta={`${supplierKindLabel(item.kind)} · ${item.dueAt ? `due ${financeDisplayDate(item.dueAt)}` : "no due date"}`}
+              amount={formatFinanceMoney(item.outstandingMinor, currencyCode)}
+              avatar={{
+                icon: overdue ? "TriangleAlert" : "ReceiptText",
+                tint: overdue ? "rose" : "amber",
+              }}
+              status={
+                <StatusPill
+                  label={supplierAgingBucketLabels[item.bucket]}
+                  tone={overdue ? "danger" : "muted"}
+                />
+              }
+            />
+            {last ? null : <RowDivider />}
           </View>
-          <Text className="text-sm text-muted-foreground">
-            {supplierAgingBucketLabels[item.bucket]} ·{" "}
-            {item.kind.replaceAll("_", " ")}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            {item.dueAt
-              ? `Due ${financeDisplayDate(item.dueAt)} UTC`
-              : "No due date recorded"}
-            {item.storeId ? " · store source" : " · book-level source"} ·
-            sequence {item.sequence}
-          </Text>
-        </View>
-      )}
+        )
+      }}
       ListFooterComponent={
         visible && query.data ? (
           <SupplierFinancePageControls
