@@ -10,6 +10,7 @@ import {
   triggerDeployCommand,
 } from "./trigger-deploy-profile.mjs"
 
+const root = fileURLToPath(new URL("../", import.meta.url))
 const args = process.argv.slice(2)
 const command = args[0] === "--" ? args.slice(1) : args
 let env = process.env
@@ -28,7 +29,6 @@ try {
     throw new Error("Expected a Trigger subcommand before its options.")
   }
   if (command[1] === "deploy") {
-    const root = fileURLToPath(new URL("../", import.meta.url))
     if (resolve(process.cwd()) !== join(root, "packages", "jobs")) {
       throw new Error("Jobs deployment must run from the jobs workspace.")
     }
@@ -62,9 +62,12 @@ if (
   process.exit(1)
 }
 
+// The hoisted install (bunfig linker) puts the workspace CLI at the repo root.
 const commandBin =
   finalCommand[0] === "trigger"
-    ? join(process.cwd(), "node_modules", ".bin", "trigger")
+    ? ([process.cwd(), root]
+        .map((dir) => join(dir, "node_modules", ".bin", "trigger"))
+        .find((bin) => existsSync(bin)) ?? "")
     : finalCommand[0]
 const executable = existsSync(commandBin) ? commandBin : finalCommand[0]
 if (command[1] === "deploy" && !existsSync(commandBin)) {
