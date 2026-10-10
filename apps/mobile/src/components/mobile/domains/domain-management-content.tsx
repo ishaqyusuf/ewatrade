@@ -256,6 +256,12 @@ export function DomainManagementContent({
       {step === "list" ? (
         <>
           <SettingsScreen
+            label="Your store address"
+            pill={
+              domains.data?.some((domain) => domain.status === "ACTIVE")
+                ? { label: "Active", tone: "synced" }
+                : undefined
+            }
             title={
               domains.isError
                 ? "Domain status unavailable"
