@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 533 (392 merchant, 141 public/account/internal)
+- Router procedures: 541 (394 merchant, 147 public/account/internal)
 - Merchant supported by a capability: 60
 - Merchant planned: 168
 - Merchant form-only: 120
-- Merchant excluded: 44
+- Merchant excluded: 46
 - Capabilities: 56 (29 read, 27 write)
 
 ## Capabilities
@@ -178,6 +178,7 @@ are maintained separately in local Brain acceptance reports and artifacts.
 | `assistant.conversations` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.decideProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.start` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `catalog.archiveOffering` | mutation | catalog | catalog | planned | G04 |
 | `catalog.archiveVariant` | mutation | catalog | catalog | planned | G04 |
@@ -418,6 +419,7 @@ are maintained separately in local Brain acceptance reports and artifacts.
 | `productAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `qaAccess.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |
