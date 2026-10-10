@@ -25,6 +25,7 @@ import {
   verifyAvailabilityCommand,
   verifyAvailabilityProposal,
 } from "./general-availability-command.integration-check"
+import { verifyOrderCancellation } from "./general-order-cancellation.integration-check"
 import { verifyCloseoutComposition } from "./general-closeout.integration-check"
 import { verifyCatalogPages } from "./general-catalog-page.integration-check"
 import { registerGeneralAssistantChatRoutes } from "./general-chat-route"
@@ -156,6 +157,10 @@ if (enabled) setDefaultTimeout(600_000)
           tenantId: tenant.id,
           storeId: store.id,
           userId: user.id,
+        }
+        if (process.env.RUN_GENERAL_ORDER_CANCELLATION === "1") {
+          await verifyOrderCancellation(ctx)
+          return
         }
         if (process.env.RUN_GENERAL_CATALOG_SCOPE === "1" || process.env.RUN_GENERAL_CATALOG_HISTORY === "1") {
           await verifyCatalogItemScope(ctx)
