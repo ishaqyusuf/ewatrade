@@ -12,6 +12,7 @@ import {
   type NativeBankStatementDetail,
   validateNativeBankStatementDetail,
 } from "./finance-bank-read-state"
+import { financeDisplayDate } from "./finance-display"
 import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
@@ -119,7 +120,8 @@ function StatementWorkspace({
   const money = (value: string) => formatFinanceMoney(value, book.currencyCode)
   return (
     <FlatList
-      className="flex-1 px-[18px]"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 48 }}
       data={items}
       keyExtractor={(item) => `${item.kind}:${item.row.id}`}
       refreshing={query.isFetching}
@@ -174,7 +176,7 @@ function StatementWorkspace({
                   },
                 ]}
               />
-              <View className="gap-3 border-y border-border py-4">
+              <View className="gap-3 rounded-2xl border border-border bg-card p-4">
                 {[
                   ["Bank opening", data.statement.openingBalanceMinor],
                   ["Posted opening", data.postedOpeningMinor],
@@ -183,11 +185,14 @@ function StatementWorkspace({
                   ["Posted closing", data.postedClosingMinor],
                   ["Closing difference", data.closingDifferenceMinor],
                 ].map(([label, amount]) => (
-                  <View key={label} className="gap-1">
+                  <View
+                    key={label}
+                    className="flex-row flex-wrap items-center justify-between gap-x-4 gap-y-1"
+                  >
                     <Text className="text-sm text-muted-foreground">
                       {label}
                     </Text>
-                    <Text className="text-lg font-semibold">
+                    <Text className="text-base font-semibold">
                       {money(amount ?? "0")}
                     </Text>
                   </View>
@@ -241,7 +246,7 @@ function StatementWorkspace({
           {item.kind === "BANK" ? (
             <>
               <Text className="text-sm text-muted-foreground">
-                {item.row.occurredAt.toISOString().slice(0, 10)} UTC ·{" "}
+                {financeDisplayDate(item.row.occurredAt)} UTC ·{" "}
                 {item.row.externalId}
               </Text>
               <Text className="text-sm text-muted-foreground">
@@ -253,7 +258,7 @@ function StatementWorkspace({
           ) : (
             <>
               <Text className="text-sm text-muted-foreground">
-                {item.row.effectiveAt.toISOString().slice(0, 10)} UTC ·{" "}
+                {financeDisplayDate(item.row.effectiveAt)} UTC ·{" "}
                 {item.row.sourceKind.toLowerCase().replaceAll("_", " ")}
               </Text>
               <ActionButton

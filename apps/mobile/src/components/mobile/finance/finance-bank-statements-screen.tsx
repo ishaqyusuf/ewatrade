@@ -9,8 +9,9 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
-import { FlatList, View } from "react-native"
+import { FlatList, ScrollView, View } from "react-native"
 import { validateNativeBankStatementPage } from "./finance-bank-read-state"
+import { financeDisplayDate } from "./finance-display"
 import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
@@ -114,7 +115,8 @@ function BankStatementsWorkspace({
   }
   return (
     <FlatList
-      className="flex-1 px-4"
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 32 }}
       data={data?.items ?? []}
       keyExtractor={(item) => item.id}
       refreshing={query.isFetching}
@@ -152,22 +154,27 @@ function BankStatementsWorkspace({
             />
           ) : null}
           <Text className="font-semibold">Account filter</Text>
-          <ActionButton
-            variant={accountId ? "outline" : "secondary"}
-            onPress={() => chooseAccount()}
-          >
-            All bank accounts
-          </ActionButton>
-          {accounts.map((a) => (
-            <ActionButton
-              key={a.id}
-              variant={a.id === accountId ? "secondary" : "outline"}
-              onPress={() => chooseAccount(a.id)}
-            >
-              {a.name}
-              {a.archivedAt ? " · Archived" : ""}
-            </ActionButton>
-          ))}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View className="flex-row gap-2">
+              {[
+                { id: undefined, name: "All bank accounts", archivedAt: null },
+                ...accounts,
+              ].map((account) => (
+                <Pressable
+                  key={account.id ?? "all"}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: account.id === accountId }}
+                  className={`min-h-[44px] justify-center rounded-full border px-4 ${account.id === accountId ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                  onPress={() => chooseAccount(account.id)}
+                >
+                  <Text className="font-medium">
+                    {account.name}
+                    {account.archivedAt ? " · Archived" : ""}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
           <ActionButton
             disabled={
               offline || !authorized || !accounts.some((a) => !a.archivedAt)
@@ -236,7 +243,7 @@ function BankStatementsWorkspace({
           accessibilityRole="button"
           accessibilityLabel={`Review original statement ${item.reference}`}
           haptic
-          className="gap-2 border-b border-border py-5"
+          className="mb-3 gap-2 rounded-2xl border border-border bg-card p-4"
           onPress={() =>
             router.push({
               pathname: "/finance-bank/[statementId]",
@@ -253,9 +260,9 @@ function BankStatementsWorkspace({
             {formatFinanceMoney(item.closingBalanceMinor, book.currencyCode)}
           </Text>
           <Text className="text-sm text-muted-foreground">
-            {item.startsAt.toISOString().slice(0, 10)} –{" "}
-            {item.endsAt.toISOString().slice(0, 10)} UTC · {item.rowCount}{" "}
-            original transactions
+            {financeDisplayDate(item.startsAt)} –{" "}
+            {financeDisplayDate(item.endsAt)} UTC · {item.rowCount} original
+            transactions
           </Text>
           <Text className="font-semibold text-primary">
             Review original statement ›
