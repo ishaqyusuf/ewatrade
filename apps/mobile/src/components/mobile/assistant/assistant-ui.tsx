@@ -105,7 +105,9 @@ export function AssistantBubble({
           <Icon name="Sparkles" className="size-[16px] text-gold-foreground" />
         </View>
       ) : null}
-      <View className={user ? "max-w-[88%] gap-2" : "min-w-0 flex-1 gap-2"}>
+      <View
+        className={user ? "max-w-[82%] gap-2" : "min-w-0 max-w-[88%] gap-2"}
+      >
         <View
           className={
             user

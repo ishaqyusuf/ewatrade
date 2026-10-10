@@ -260,15 +260,6 @@ function SetupAssistantLive() {
                       }
                     />
                   ) : null}
-                  {active && entities.length > 0 ? (
-                    <ActionButton
-                      variant="outline"
-                      disabled={disabled}
-                      onPress={() => tray.present()}
-                    >
-                      Review your setup list
-                    </ActionButton>
-                  ) : null}
                 </View>
               }
             />
@@ -284,7 +275,7 @@ function SetupAssistantLive() {
                   ? "Reconnect to chat. Your saved setup list is here."
                   : vm.error?.allowance
                     ? "Your list is still editable and addable."
-                    : "Nothing is added until you press Add. Setup is by typing for this release."
+                    : undefined
               }
             >
               {entities.length > 0 ? (
