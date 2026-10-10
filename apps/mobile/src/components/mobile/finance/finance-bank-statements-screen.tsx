@@ -1,8 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { getSession } from "@/lib/session-store"
+import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
@@ -10,6 +10,9 @@ import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
 import { FlatList, ScrollView, View } from "react-native"
+import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
+import { HeroCard } from "../green-till/hero-card"
+import { RecordRow, RowDivider, SectionHeader } from "../green-till/kit"
 import { validateNativeBankStatementPage } from "./finance-bank-read-state"
 import { financeDisplayDate } from "./finance-display"
 import {
@@ -122,11 +125,21 @@ function BankStatementsWorkspace({
       refreshing={query.isFetching}
       onRefresh={() => authority.runProtectedRead()}
       ListHeaderComponent={
-        <View className="gap-4 pb-5">
-          <Text className="text-sm text-muted-foreground">
-            Original CSV evidence alongside posted business money. Imported
-            balances are not live bank balances.
-          </Text>
+        <View className="gap-4 pb-1">
+          <HeroCard
+            label="Imported from your bank"
+            title={
+              !data
+                ? offline
+                  ? "Reconnect to review"
+                  : "Checking statements…"
+                : data.items.length
+                  ? `${data.items.length}${data.nextCursor ? "+" : ""} imported statement${data.items.length === 1 && !data.nextCursor ? "" : "s"}`
+                  : "No statements yet"
+            }
+            sub="Imported balances are original evidence, not live bank balances."
+            pill={offline ? { label: "Offline", tone: "offline" } : undefined}
+          />
           {imported ? (
             <StatusBanner
               title="Statement recorded"
@@ -153,48 +166,55 @@ function BankStatementsWorkspace({
               onActionPress={() => authority.runProtectedRead()}
             />
           ) : null}
-          <Text className="font-semibold">Account filter</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <ActionButton
+                icon="FileText"
+                disabled={
+                  offline || !authorized || !accounts.some((a) => !a.archivedAt)
+                }
+                onPress={() =>
+                  router.push({
+                    pathname: "/finance-bank-import-modal",
+                    params: accountId ? { accountId } : {},
+                  } as Href)
+                }
+              >
+                Import
+              </ActionButton>
+            </View>
+            <View className="flex-1">
+              <ActionButton
+                icon="RefreshCw"
+                variant="outline"
+                disabled={offline || query.isFetching}
+                onPress={() => authority.runProtectedRead()}
+              >
+                Refresh
+              </ActionButton>
+            </View>
+          </View>
+          {accounts.length > 1 ? (
+            <ScrollView
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 18 }}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0, marginHorizontal: -18 }}
+            >
               {[
-                { id: undefined, name: "All bank accounts", archivedAt: null },
+                { id: undefined, name: "All", archivedAt: null },
                 ...accounts,
               ].map((account) => (
-                <Pressable
+                <ClassicCustomerBookFilter
                   key={account.id ?? "all"}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: account.id === accountId }}
-                  className={`min-h-[44px] justify-center rounded-full border px-4 ${account.id === accountId ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                  active={account.id === accountId}
+                  label={`${account.name}${account.archivedAt ? " · Archived" : ""}`}
                   onPress={() => chooseAccount(account.id)}
-                >
-                  <Text className="font-medium">
-                    {account.name}
-                    {account.archivedAt ? " · Archived" : ""}
-                  </Text>
-                </Pressable>
+                />
               ))}
-            </View>
-          </ScrollView>
-          <ActionButton
-            disabled={
-              offline || !authorized || !accounts.some((a) => !a.archivedAt)
-            }
-            onPress={() =>
-              router.push({
-                pathname: "/finance-bank-import-modal",
-                params: accountId ? { accountId } : {},
-              } as Href)
-            }
-          >
-            Import statement
-          </ActionButton>
-          <ActionButton
-            variant="outline"
-            disabled={offline || query.isFetching}
-            onPress={() => authority.runProtectedRead()}
-          >
-            Refresh original records
-          </ActionButton>
+            </ScrollView>
+          ) : null}
+          {data?.items.length ? <SectionHeader title="Statements" /> : null}
         </View>
       }
       ListEmptyComponent={
@@ -209,66 +229,78 @@ function BankStatementsWorkspace({
         </Text>
       }
       ListFooterComponent={
-        <View className="gap-3 py-6">
-          <Text className="text-sm text-muted-foreground">
-            Page {cursors.length}. Each page reads current original imports;
-            refresh can include newer statements.
-          </Text>
-          <ActionButton
-            variant="outline"
-            disabled={offline || query.isFetching || cursors.length < 2}
-            onPress={() => {
-              authority.invalidate()
-              setCursors((v) => v.slice(0, -1))
-            }}
-          >
-            Previous page
-          </ActionButton>
-          <ActionButton
-            variant="outline"
-            disabled={offline || query.isFetching || !data?.nextCursor}
-            onPress={() => {
-              if (data?.nextCursor) {
-                authority.invalidate()
-                setCursors((v) => [...v, data.nextCursor ?? undefined])
-              }
-            }}
-          >
-            Next page
-          </ActionButton>
-        </View>
+        cursors.length > 1 || data?.nextCursor ? (
+          <View className="mt-4 flex-row items-center gap-3">
+            <View className="flex-1">
+              <ActionButton
+                icon="ChevronLeft"
+                variant="outline"
+                disabled={offline || query.isFetching || cursors.length < 2}
+                onPress={() => {
+                  authority.invalidate()
+                  setCursors((v) => v.slice(0, -1))
+                }}
+              >
+                Newer
+              </ActionButton>
+            </View>
+            <Text className="text-xs font-bold text-muted-foreground">
+              Page {cursors.length}
+            </Text>
+            <View className="flex-1">
+              <ActionButton
+                variant="outline"
+                disabled={offline || query.isFetching || !data?.nextCursor}
+                onPress={() => {
+                  if (data?.nextCursor) {
+                    authority.invalidate()
+                    setCursors((v) => [...v, data.nextCursor ?? undefined])
+                  }
+                }}
+              >
+                Older
+              </ActionButton>
+            </View>
+          </View>
+        ) : null
       }
-      renderItem={({ item }) => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Review original statement ${item.reference}`}
-          haptic
-          className="mb-3 gap-2 rounded-2xl border border-border bg-card p-4"
-          onPress={() =>
-            router.push({
-              pathname: "/finance-bank/[statementId]",
-              params: { statementId: item.id, accountId: item.accountId },
-            } as Href)
-          }
-        >
-          <Text className="text-xs text-muted-foreground">
-            {accounts.find((a) => a.id === item.accountId)?.name ??
-              "Original bank account"}
-          </Text>
-          <Text className="text-base font-semibold">{item.reference}</Text>
-          <Text className="text-xl font-bold">
-            {formatFinanceMoney(item.closingBalanceMinor, book.currencyCode)}
-          </Text>
-          <Text className="text-sm text-muted-foreground">
-            {financeDisplayDate(item.startsAt)} –{" "}
-            {financeDisplayDate(item.endsAt)} UTC · {item.rowCount} original
-            transactions
-          </Text>
-          <Text className="font-semibold text-primary">
-            Review original statement ›
-          </Text>
-        </Pressable>
-      )}
+      renderItem={({ item, index }) => {
+        const last = index === (data?.items.length ?? 0) - 1
+        const accountName =
+          accounts.find((a) => a.id === item.accountId)?.name ??
+          "Original bank account"
+        return (
+          <View
+            className={cn(
+              "overflow-hidden bg-card px-3.5",
+              index === 0 && "rounded-t-[20px]",
+              last && "rounded-b-[20px]",
+            )}
+          >
+            <RecordRow
+              stackDetails
+              accessibilityLabel={`Review original statement ${item.reference}`}
+              title={item.reference}
+              meta={[
+                accountName,
+                `${financeDisplayDate(item.startsAt)} – ${financeDisplayDate(item.endsAt)} · ${item.rowCount} row${item.rowCount === 1 ? "" : "s"}`,
+              ]}
+              amount={formatFinanceMoney(
+                item.closingBalanceMinor,
+                book.currencyCode,
+              )}
+              avatar={{ icon: "FileText", tint: "sky" }}
+              onPress={() =>
+                router.push({
+                  pathname: "/finance-bank/[statementId]",
+                  params: { statementId: item.id, accountId: item.accountId },
+                } as Href)
+              }
+            />
+            {last ? null : <RowDivider />}
+          </View>
+        )
+      }}
     />
   )
 }
