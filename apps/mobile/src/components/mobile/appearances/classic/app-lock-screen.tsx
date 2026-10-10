@@ -21,7 +21,9 @@ export function ClassicAppLockScreen({
   const { colorScheme } = useColorScheme()
   return (
     <MobileScreen
-      contentClassName="justify-between gap-7"
+      contentClassName={
+        mode === "manage" ? "gap-5 px-[18px] py-4" : "justify-between gap-7"
+      }
       keyboardBottomOffset={24}
     >
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
@@ -30,7 +32,7 @@ export function ClassicAppLockScreen({
           <View className="flex-row items-center justify-between">
             <View className="size-11" />
             <Text className="text-center text-[13px] font-medium text-muted-foreground">
-              PIN code
+              App lock
             </Text>
             <Pressable
               accessibilityLabel="Close app lock settings"

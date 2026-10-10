@@ -30,7 +30,7 @@ export function AppLockSettingsScreen() {
   const auth = useAuthContext()
   const appLock = useAppLockContext()
   const [mode, setMode] = useState<AppLockSetupMode>(
-    appLock.isConfigured ? "manage" : "create",
+    design !== "market-day" || appLock.isConfigured ? "manage" : "create",
   )
   const [code, setCode] = useState("")
   const [draftCode, setDraftCode] = useState("")
@@ -51,8 +51,10 @@ export function AppLockSettingsScreen() {
 
   useEffect(() => {
     if (!appLock.isHydrated) return
-    setMode(appLock.isConfigured ? "manage" : "create")
-  }, [appLock.isConfigured, appLock.isHydrated])
+    setMode(
+      design !== "market-day" || appLock.isConfigured ? "manage" : "create",
+    )
+  }, [appLock.isConfigured, appLock.isHydrated, design])
 
   const resetEntry = useCallback(() => {
     setCode("")
@@ -183,8 +185,32 @@ export function AppLockSettingsScreen() {
       mode={isManageMode ? "manage" : "entry"}
       eyebrow={presentation.eyebrow}
       onClose={close}
-      subtitle={presentation.subtitle}
-      title={presentation.title}
+      subtitle={
+        design === "market-day"
+          ? presentation.subtitle
+          : isManageMode
+            ? appLock.isConfigured
+              ? "Your PIN protects this app on this phone."
+              : "Add a PIN to protect your business on this phone."
+            : mode === "confirm"
+              ? "Enter the same six digits again."
+              : mode === "create"
+                ? "Choose six digits to keep your business private on this phone."
+                : "Verify your PIN before changing app lock."
+      }
+      title={
+        design === "market-day"
+          ? presentation.title
+          : isManageMode
+            ? appLock.isConfigured
+              ? "App lock is on"
+              : "App lock is off"
+            : mode === "confirm"
+              ? "Confirm your PIN"
+              : mode === "create"
+                ? "Create your PIN"
+                : "Enter your current PIN"
+      }
       management={
         <AppLockManagement
           hasLock={appLock.isConfigured}

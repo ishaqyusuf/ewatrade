@@ -21,7 +21,7 @@ import {
   useRef,
   useState,
 } from "react"
-import { AppState, type AppStateStatus } from "react-native"
+import { AppState, type AppStateStatus, Platform } from "react-native"
 
 type AppLockBiometricsStatus = {
   hasHardware: boolean
@@ -68,7 +68,7 @@ function getBiometricLabel(
       LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION,
     )
   ) {
-    return "Face ID"
+    return Platform.OS === "ios" ? "Face ID" : "Face recognition"
   }
 
   if (

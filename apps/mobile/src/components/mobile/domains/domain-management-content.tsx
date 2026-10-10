@@ -256,15 +256,26 @@ export function DomainManagementContent({
       {step === "list" ? (
         <>
           <SettingsScreen
-            title="Website and domain"
-            sub={DOMAIN_MANAGEMENT_COPY.purpose}
+            title={
+              domains.isError
+                ? "Domain status unavailable"
+                : (domains.data?.find((domain) => domain.status === "ACTIVE")
+                    ?.hostname ?? "Your free address is included")
+            }
+            sub={
+              domains.isError
+                ? "Reconnect and try again to see the current status."
+                : domains.data?.some((domain) => domain.status === "ACTIVE")
+                  ? "Your custom domain is live."
+                  : "Connect a custom domain when you’re ready."
+            }
             loading={domains.isPending}
           />
           <View className="gap-2">
             <Text className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
               Storefront address
             </Text>
-            <View className="flex-row items-center gap-4 border-y border-border py-4">
+            <View className="flex-row items-center gap-4 rounded-[20px] bg-card p-4">
               <View className="min-w-0 flex-1 gap-1">
                 <Text className="text-lg font-extrabold text-foreground">
                   {DOMAIN_MANAGEMENT_COPY.includedAddressTitle}
@@ -301,7 +312,7 @@ export function DomainManagementContent({
               domains.data.map((item) => (
                 <Pressable
                   accessibilityRole="button"
-                  className="min-h-16 flex-row items-center gap-3 border-t border-border px-1 py-4"
+                  className="min-h-16 flex-row items-center gap-3 rounded-[20px] bg-card px-4 py-4"
                   haptic
                   key={item.id}
                   onPress={() => {

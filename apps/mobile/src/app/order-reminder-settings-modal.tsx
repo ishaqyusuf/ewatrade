@@ -3,7 +3,7 @@ import {
   StatusBanner,
   WorkflowModalScreen,
 } from "@/components/mobile"
-import { ToggleRow } from "@/components/mobile/green-till/kit"
+import { SectionHeader, ToggleRow } from "@/components/mobile/green-till/kit"
 import {
   REMINDER_SETTINGS_COPY,
   canEditReminderSettings,
@@ -141,7 +141,16 @@ export default function OrderReminderSettingsModalRoute() {
           sub={
             offline
               ? "Reconnect to change reminder settings."
-              : "Keep the team ahead of scheduled deliveries."
+              : settings.data
+                ? enabled
+                  ? [
+                      dayBeforeEnabled && "One day before",
+                      sameDayEnabled && "on the delivery day",
+                    ]
+                      .filter(Boolean)
+                      .join(" and ") || "Choose when to send reminders below."
+                  : "No reminder emails will be sent."
+                : "Your settings haven’t loaded yet."
           }
         />
         {settings.isError ? (
@@ -203,10 +212,8 @@ export default function OrderReminderSettingsModalRoute() {
               />
             </View>
 
-            <Text className="mb-2 mt-1 text-xs font-extrabold tracking-[1.4px] text-muted-foreground">
-              REMINDER DELIVERY
-            </Text>
-            <View className="border-b border-border">
+            <SectionHeader title="Delivery" />
+            <View className="rounded-[20px] bg-card px-4">
               <ReminderSettingToggle
                 checked={enabled}
                 description="Notify Owners, Admins, and Managers."
@@ -218,10 +225,8 @@ export default function OrderReminderSettingsModalRoute() {
               />
             </View>
 
-            <Text className="mb-2 mt-6 text-xs font-extrabold tracking-[1.4px] text-muted-foreground">
-              SEND BEFORE DELIVERY
-            </Text>
-            <View className="border-b border-border">
+            <SectionHeader title="When to remind" />
+            <View className="rounded-[20px] bg-card px-4">
               <ReminderSettingToggle
                 badge="−1"
                 checked={dayBeforeEnabled}
