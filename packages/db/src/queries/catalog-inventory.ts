@@ -413,49 +413,121 @@ export async function releaseCatalogStockReservation(
   db: PrismaClient,
   input: { reservationId: string; tenantId: string },
 ) {
-  return db.$transaction(async (tx) => {
-    const reservation = await tx.stockReservation.findFirst({
-      include: { balanceSource: true, enteredInventoryUnit: true },
-      where: { id: input.reservationId, tenantId: input.tenantId },
-    })
-    if (!reservation) {
-      throw new CatalogError(
-        "RESERVATION_NOT_FOUND",
-        "Stock Reservation not found.",
-      )
-    }
-    if (reservation.status !== StockReservationStatus.ACTIVE) {
-      return serializeReservation(reservation)
-    }
+  return db.$transaction((tx) =>
+    releaseCatalogStockReservationInTransaction(tx, input),
+  )
+}
 
-    const reservedBalanceQuantity =
-      reservation.enteredInventoryUnit.stockBehavior ===
-      InventoryUnitStockBehavior.PACKAGED_STOCK
-        ? reservation.enteredQuantity.toString()
-        : reservation.canonicalQuantity.toString()
-    const nextReserved = subtractExactDecimals(
-      reservation.balanceSource.reservedQuantity.toString(),
-      reservedBalanceQuantity,
+/** Source commands own authorization and financial/order locks before releasing stock. */
+export async function releaseCatalogStockReservationInTransaction(
+  tx: Prisma.TransactionClient,
+  input: { reservationId: string; tenantId: string },
+  options: {
+    expectedStoreId?: string
+    expectedCommercialOrderLineId?: string
+    requireUncommitted?: boolean
+  } = {},
+) {
+  const reservations = await tx.$queryRaw<
+    Array<{ id: string; storeId: string; balanceSourceId: string }>
+  >`
+    SELECT "id", "storeId", "balanceSourceId" FROM "StockReservation"
+    WHERE "id" = ${input.reservationId} AND "tenantId" = ${input.tenantId}
+    FOR UPDATE
+  `
+  const identity = reservations[0]
+  if (
+    reservations.length !== 1 ||
+    !identity ||
+    identity.id !== input.reservationId
+  )
+    throw new CatalogError(
+      "RESERVATION_NOT_FOUND",
+      "Stock Reservation not found.",
     )
-    const updated = await tx.stockBalanceSource.updateMany({
-      data: { reservedQuantity: nextReserved, revision: { increment: 1 } },
-      where: {
-        id: reservation.balanceSourceId,
-        revision: reservation.balanceSource.revision,
-      },
-    })
-    if (updated.count !== 1) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "The inventory balance changed while releasing stock.",
-      )
-    }
-    const released = await tx.stockReservation.update({
-      data: { releasedAt: new Date(), status: StockReservationStatus.RELEASED },
-      where: { id: reservation.id },
-    })
-    return serializeReservation(released)
+  const balances = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "StockBalanceSource"
+    WHERE "id" = ${identity.balanceSourceId} AND "tenantId" = ${input.tenantId}
+      AND "storeId" = ${identity.storeId} FOR UPDATE
+  `
+  if (balances.length !== 1 || balances[0]?.id !== identity.balanceSourceId)
+    throw new CatalogError(
+      "RESERVATION_NOT_FOUND",
+      "Reservation Balance Source not found.",
+    )
+  const reservation = await tx.stockReservation.findFirst({
+    include: { balanceSource: true, enteredInventoryUnit: true },
+    where: { id: input.reservationId, tenantId: input.tenantId },
   })
+  if (
+    !reservation ||
+    reservation.storeId !== identity.storeId ||
+    reservation.balanceSourceId !== identity.balanceSourceId
+  ) {
+    throw new CatalogError(
+      "RESERVATION_NOT_FOUND",
+      "Stock Reservation not found.",
+    )
+  }
+  if (
+    (options.expectedStoreId !== undefined &&
+      reservation.storeId !== options.expectedStoreId) ||
+    (options.expectedCommercialOrderLineId !== undefined &&
+      reservation.commercialOrderLineId !==
+        options.expectedCommercialOrderLineId)
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Reservation ownership changed. Reload before retrying.",
+    )
+  if (
+    options.requireUncommitted &&
+    (reservation.status === StockReservationStatus.COMMITTED ||
+      reservation.committedOperationId ||
+      reservation.committedAt)
+  )
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Committed stock requires a return, not reservation release.",
+    )
+  if (reservation.status !== StockReservationStatus.ACTIVE) {
+    return serializeReservation(reservation)
+  }
+
+  const reservedBalanceQuantity =
+    reservation.enteredInventoryUnit.stockBehavior ===
+    InventoryUnitStockBehavior.PACKAGED_STOCK
+      ? reservation.enteredQuantity.toString()
+      : reservation.canonicalQuantity.toString()
+  const nextReserved = subtractExactDecimals(
+    reservation.balanceSource.reservedQuantity.toString(),
+    reservedBalanceQuantity,
+  )
+  if (compareExactDecimals(nextReserved, "0") < 0)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Reserved stock does not cover this reservation.",
+    )
+  const updated = await tx.stockBalanceSource.updateMany({
+    data: { reservedQuantity: nextReserved, revision: { increment: 1 } },
+    where: {
+      id: reservation.balanceSourceId,
+      tenantId: input.tenantId,
+      storeId: reservation.storeId,
+      revision: reservation.balanceSource.revision,
+    },
+  })
+  if (updated.count !== 1) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "The inventory balance changed while releasing stock.",
+    )
+  }
+  const released = await tx.stockReservation.update({
+    data: { releasedAt: new Date(), status: StockReservationStatus.RELEASED },
+    where: { id: reservation.id },
+  })
+  return serializeReservation(released)
 }
 
 export type CommitCatalogStockReservationInput = {
