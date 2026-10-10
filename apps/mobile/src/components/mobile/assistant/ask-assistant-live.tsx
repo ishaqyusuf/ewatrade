@@ -78,6 +78,8 @@ export function AskAssistantLive() {
       : vm.chat.messages
   const role = vm.profile?.role?.trim().toLowerCase()
   const firstName = vm.profile?.name?.trim().split(/\s+/)[0]
+  // Chats with no question yet are empty and stay out of the lists.
+  const chats = (vm.conversations.data ?? []).filter((chat) => chat.title)
   const home =
     !messages.length &&
     !vm.queued &&
@@ -109,7 +111,7 @@ export function AskAssistantLive() {
                         {
                           icon: "SquarePen" as const,
                           label: "New chat",
-                          onPress: () => void vm.newThread(),
+                          onPress: vm.fresh,
                         },
                       ]),
                 ]
@@ -187,7 +189,7 @@ export function AskAssistantLive() {
                 <AssistantHome
                   name={vm.profile?.name}
                   role={vm.profile?.role}
-                  chats={(vm.conversations.data ?? [])
+                  chats={chats
                     .filter((chat) => chat.id !== vm.conversationId)
                     .slice(0, 3)}
                   disabled={disabled || exhausted}
@@ -375,14 +377,14 @@ export function AskAssistantLive() {
               disabled={disabled || !!noAccess}
               onPress={() => {
                 saved.dismiss()
-                void vm.newThread()
+                vm.fresh()
               }}
             >
               New chat
             </ActionButton>
-            {vm.conversations.data?.length ? (
+            {chats.length ? (
               <ListCard>
-                {vm.conversations.data.map((conversation) => (
+                {chats.map((conversation) => (
                   <AssistantChatRow
                     key={conversation.id}
                     chat={conversation}

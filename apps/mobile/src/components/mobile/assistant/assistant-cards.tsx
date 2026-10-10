@@ -81,7 +81,9 @@ export function ProposalCard({
           tone={state === "confirmed" ? "ok" : "muted"}
         />
       </View>
-      <Text className="text-sm text-foreground">{summary}</Text>
+      {summary ? (
+        <Text className="text-sm text-foreground">{summary}</Text>
+      ) : null}
       {state === "pending" ? (
         <>
           <Text className="text-xs text-muted-foreground">

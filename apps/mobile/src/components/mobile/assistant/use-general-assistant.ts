@@ -416,6 +416,14 @@ export function useGeneralAssistant() {
         payload,
       }),
     )
+  /** Back to the assistant home; the next question starts a new chat. */
+  const fresh = () => {
+    if (!canWork() || busy || runId || pending) return
+    chat.setMessages([])
+    setConversationId(null)
+    setDraft("")
+    setNotice(null)
+  }
   const choose = (id: string) => {
     if (!canWork() || busy || runId || pending) return
     chat.setMessages([])
@@ -450,6 +458,7 @@ export function useGeneralAssistant() {
     cancel,
     save,
     choose,
+    fresh,
     savedAt: offline ? cached?.savedAt : state.dataUpdatedAt,
   }
 }
