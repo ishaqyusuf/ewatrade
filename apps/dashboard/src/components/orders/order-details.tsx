@@ -10,6 +10,7 @@ import { Button } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useRef } from "react"
+import { OrderActivityPanel } from "./order-activity-panel"
 import { orderMoney } from "./order-draft"
 
 export function OrderDetails({
@@ -79,7 +80,8 @@ export function OrderDetails({
     ) &&
     order.lines.some(
       (line) =>
-        line.kind === "product" && line.reservation?.status === "ACTIVE",
+        (line.kind === "product" && line.reservation?.status === "ACTIVE") ||
+        (line.customLine && !line.serviceFulfillment),
     )
   return (
     <div className="grid gap-5">
@@ -169,7 +171,7 @@ export function OrderDetails({
         </FormFeedback>
       ) : null}
       {fulfillment.isSuccess ? (
-        <output className="text-sm">Product fulfillment recorded.</output>
+        <output className="text-sm">Fulfillment recorded.</output>
       ) : null}
       <div className="flex flex-wrap gap-2">
         {canFulfill ? (
@@ -185,7 +187,7 @@ export function OrderDetails({
           >
             {fulfillment.isPending
               ? "Recording fulfillment…"
-              : "Fulfill products"}
+              : "Mark fulfilled"}
           </Button>
         ) : null}
         <Button
@@ -199,6 +201,7 @@ export function OrderDetails({
           Receipt
         </Button>
       </div>
+      <OrderActivityPanel orderId={orderId} />
     </div>
   )
 }
