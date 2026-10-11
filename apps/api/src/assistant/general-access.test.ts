@@ -263,7 +263,7 @@ test("dashboard service performance and manager release retain separate role bou
 })
 
 test("customer funds reads retain finance authority and planned rollout", () => {
-  const ids = ["customers.account.read", "customers.sources.read", "customers.statement.read"]
+  const ids = ["finance.money_accounts.read", "customers.account.read", "customers.sources.read", "customers.statement.read"]
   for (const capability of capabilityManifest.filter(value => ids.includes(value.id))) {
     const owner = actor("OWNER")
     owner.requestHeaders = new Headers({ "x-assistant-client": "dashboard" })

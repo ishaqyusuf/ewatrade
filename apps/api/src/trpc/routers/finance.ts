@@ -1,4 +1,5 @@
 import {
+  listFinanceMoneyAccounts,
   adjustFinanceCashCount,
   allocateFinanceSupplierAdvance,
   changeFinancePeriod,
@@ -51,6 +52,7 @@ import {
   voidFinanceExpense,
 } from "@ewatrade/db/queries"
 import {
+  financeMoneyAccountsSchema,
   financeAccountActivitySchema,
   financeAccountSchema,
   financeBillPaymentSchema,
@@ -339,6 +341,9 @@ export const financeRouter = createTRPCRouter({
     .query(({ ctx, input }) =>
       listFinanceBills(ctx.db, { ...input, ...ctx.financeActor }),
     ),
+  moneyAccounts: financeProcedure.input(financeMoneyAccountsSchema).query(({ ctx, input }) =>
+    listFinanceMoneyAccounts(ctx.db, { ...input, ...ctx.financeActor }),
+  ),
   book: financeProcedure.query(({ ctx }) =>
     getFinanceBook(ctx.db, ctx.financeActor),
   ),

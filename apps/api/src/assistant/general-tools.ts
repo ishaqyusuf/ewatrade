@@ -1,3 +1,5 @@
+import { financeRouter } from "../trpc/routers/finance"
+import { financeMoneyAccountsSchema } from "../schemas/finance"
 import { generalCustomerAccountsInput, generalCustomerSourcesInput, generalCustomerStatementInput, generalCustomerAccountAnswer, generalCustomerSourcesAnswers, generalCustomerStatementAnswer } from "./general-customer-funds"
 import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
 import {
@@ -852,6 +854,20 @@ export function createGeneralTools(
             .createCaller(fresh)
             .accounts({ ...input, limit: 10 }),
         ),
+    }),
+    readMoneyAccounts: tool({
+      description: "Find up to 10 active cash, bank or clearing account identities in an exact Finance Book. Continue with nextCursor as afterCode in the same Book. This is not a balance, provider settlement or proof of payout. Ask which account when ambiguous.",
+      inputSchema: financeMoneyAccountsSchema.omit({ limit: true }),
+      execute: input => wrap("readMoneyAccounts", async fresh => {
+        const page = await financeRouter.createCaller(fresh).moneyAccounts({ ...input, limit: 10 })
+        onAnswer({
+          id: `money_accounts_${crypto.randomUUID()}`, title: "Cash and bank accounts",
+          value: `${page.accounts.length} on this page`, scope: `Finance Book · ${page.book.currencyCode}`,
+          asOf: new Date().toISOString(),
+          detail: `${page.accounts.map(account => `${account.name} (${account.purpose})`).join("; ") || "No active money accounts on this page."} ${page.nextCursor ? "More accounts available." : "End of this list."} Account identities only; no balance or provider payout has been verified.`,
+        })
+        return page
+      }),
     }),
     readCustomerAccount: tool({
       description: "Read one verified customer ledger account, matching Book, exact debt and credit, revision and snapshot. Posted entries only; available credit is not proof of refundable cash.",

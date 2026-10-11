@@ -24,6 +24,10 @@ export const financeAccountActivitySchema = z
   })
   .strict()
 export const financeBookSchema = z.object({ bookId: id }).strict()
+export const financeMoneyAccountsSchema = financeBookSchema.extend({
+  afterCode: z.string().regex(/^[A-Z0-9_-]{1,32}$/i).optional(),
+  limit: z.number().int().min(1).max(50).default(20),
+}).strict()
 export const financeFiscalCalendarSchema = financeBookSchema
   .extend({
     clientCommandId: id,

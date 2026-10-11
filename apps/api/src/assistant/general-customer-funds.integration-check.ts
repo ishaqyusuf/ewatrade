@@ -19,10 +19,11 @@ const accountResult = z.object({
 export async function verifyCustomerFundsTools(
   ctx: GeneralContext,
   conversationId: string,
-  target: { accountId: string; customerId: string; creditEntryId: string },
+  target: { accountId: string; customerId: string; creditEntryId: string; bookId: string; moneyAccountId: string },
   previous?: { revision: string; snapshotSequence: string },
 ) {
   const ids = [
+    "finance.money_accounts.read",
     "customers.account.read",
     "customers.sources.read",
     "customers.statement.read",
@@ -52,6 +53,12 @@ export async function verifyCustomerFundsTools(
       const execute = tools[name]?.execute
       if (!execute) throw Error(`Missing read tool ${name}`)
       return execute(input, { toolCallId: randomUUID(), messages: [] })
+    }
+    if (!previous) {
+      expect(await execute("readMoneyAccounts", { bookId: target.bookId })).toMatchObject({
+        status: "available", data: { book: { id: target.bookId }, accounts: expect.arrayContaining([expect.objectContaining({ id: target.moneyAccountId, purpose: "CASH" })]) },
+      })
+      expect(await execute("readMoneyAccounts", { bookId: randomUUID() })).toMatchObject({ status: "unavailable" })
     }
     const detail = accountResult.parse(
       await execute("readCustomerAccount", { accountId: target.accountId }),

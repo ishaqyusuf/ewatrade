@@ -6,17 +6,18 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 534 (393 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 66
+- Router procedures: 535 (394 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 67
 - Merchant planned: 162
 - Merchant form-only: 120
 - Merchant excluded: 45
-- Capabilities: 62 (32 read, 30 write)
+- Capabilities: 63 (33 read, 30 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `finance.money_accounts.read` | 1 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
 | `customers.account.read` | 1 | read | `readCustomerAccount` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.accountDetail` |
 | `customers.sources.read` | 1 | read | `readCustomerLedgerSources` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.sources` |
 | `customers.statement.read` | 1 | read | `readCustomerStatement` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.statement` |
@@ -93,6 +94,7 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `finance.money_accounts.read` | Which bank account did I return the deposit from? | [packages/db/src/queries/finance/money-account-reads.test.ts](../../../../packages/db/src/queries/finance/money-account-reads.test.ts) |
 | `customers.account.read` | Read customer funds and matching Book | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
 | `customers.sources.read` | Read current customer ledger sources | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
 | `customers.statement.read` | Read a pinned customer statement | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
@@ -279,6 +281,7 @@ track conversational evaluation separately from these source test links.
 | `finance.expenseReceipts.withdraw` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.fiscalCalendar` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `finance.journal` | query | Owner/Admin only | finance | planned | G01 |
+| `finance.moneyAccounts` | query | Owner/Admin only | finance | supported | finance.money_accounts.read |
 | `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
 | `finance.payBill` | mutation | Owner/Admin only | finance | planned | E04 |
 | `finance.payPurchase` | mutation | Owner/Admin only | finance | planned | E05 |

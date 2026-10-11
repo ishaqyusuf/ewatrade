@@ -32,7 +32,7 @@ export async function verifyHeldCreditRefundComposition(original: GeneralContext
       method: "CASH", amountMinor: "1000", description: "QA unused customer deposit", clientCommandId: randomUUID(),
     })
     const receipt = await db.customerLedgerReceipt.findUniqueOrThrow({ where: { id: deposit.id } })
-    const fundsTarget = { accountId: account.id, customerId: customer.id, creditEntryId: receipt.entryId }
+    const fundsTarget = { bookId: book.id, moneyAccountId: money.id, accountId: account.id, customerId: customer.id, creditEntryId: receipt.entryId }
     const fundsBefore = await verifyCustomerFundsTools(ctx, conversationId, fundsTarget)
     const payload = { action: "held_credit_refund" as const, bookId: book.id, accountId: account.id,
       creditEntryId: receipt.entryId, moneyAccountId: money.id, method: "CASH" as const,
