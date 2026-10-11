@@ -21,6 +21,7 @@ import type {
   OrderDetailContentProps,
   OrderDetailPrimaryActionProps,
 } from "@/components/mobile/order-detail/order-detail-presentation"
+import { OrderNotesAndPhotos } from "@/components/mobile/order-detail/order-notes-photos"
 import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
 import {
   ledgerDayLabel,
@@ -260,6 +261,7 @@ export function ClassicOrderDetailContent({
         ) : null}
       </OrderOverviewSection>
 
+      <OrderNotesAndPhotos orderId={order.id} isOffline={isOffline} />
       <OrderActivityTimeline activity={activity} />
     </View>
   )

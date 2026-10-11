@@ -20,6 +20,7 @@ import type {
   OrderDetailContentProps,
   OrderDetailPrimaryActionProps,
 } from "@/components/mobile/order-detail/order-detail-presentation"
+import { OrderNotesAndPhotos } from "@/components/mobile/order-detail/order-notes-photos"
 import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -328,6 +329,8 @@ export function OrderDetailDispatchDocket({
             <InfoRow detail={order.notes} label="Note" />
           </DocketSection>
         ) : null}
+
+        <OrderNotesAndPhotos orderId={order.id} isOffline={isOffline} />
 
         <DocketSection title="Activity">
           {activity.map((event) => (
