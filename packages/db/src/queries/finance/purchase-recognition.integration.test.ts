@@ -1,3 +1,4 @@
+import { getFinancePurchaseRegistrationReview } from "./purchase-registration-review"
 import { expect, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
@@ -12,6 +13,7 @@ import {
   type RecognizeFinancePurchaseInput,
   recognizeFinancePurchase,
   registerFinancePurchase,
+  registerFinancePurchaseInTransaction,
 } from "./purchase-recognition"
 import { getFinancePurchaseRecognition } from "./purchase-recognition-reads"
 import { reverseFinancePurchaseRecognition } from "./purchase-recognition-reversals"
@@ -36,8 +38,12 @@ const date = (day: number) =>
 describeWithServiceCommerceDatabase(
   "independent purchase recognition acceptance",
   () => {
-    test("timing, transit, settlement, exact correction and atomic receipt evidence", async () => {
+    test(process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1" ? "registration review, rollback and two-line replay without postings" : "timing, transit, settlement, exact correction and atomic receipt evidence", async () => {
       const { prisma: db } = await import("../../client")
+      if (process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1") {
+        const [actual] = await db.$queryRaw<Array<{ database: string }>>`SELECT current_database() AS database`
+        if (actual?.database !== "ewatrade_general_assistant_main_20261009") throw Error("Isolated registration target required")
+      }
       const run = randomUUID()
       console.log(`supplier-recognition run=${run}`)
       let tenantId: string | undefined
@@ -194,6 +200,35 @@ describeWithServiceCommerceDatabase(
             ...context,
             recognitionId: result.id,
           })
+        }
+        if (process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1") {
+          const input = { ...context, supplierId: supplier.id, storeId: store.id,
+            description: "QA exact agreement", agreedAt: date(1),
+            lines: [{ ...goods, enteredQuantity: "2", amountMinor: "1000", description: "Agreed goods", categories: [{ name: "Purchase" }] }],
+          }
+          const journalsBefore = await db.financeJournalEntry.count({ where: { bookId: book.id } })
+          const review = await db.$transaction(tx => getFinancePurchaseRegistrationReview(tx, input), { maxWait: 10_000, timeout: 30_000 })
+          expect(review).toMatchObject({ supplierId: supplier.id, storeId: store.id, totalMinor: "1000", effect: "AGREEMENT_ONLY_NO_PAYABLE_OR_STOCK" })
+          await expect(db.$transaction(async tx => {
+            await registerFinancePurchaseInTransaction(tx, { ...input, clientCommandId: `rollback-${run}` })
+            throw Error("Injected registration rollback")
+          }, { maxWait: 10_000, timeout: 30_000 })).rejects.toThrow("Injected registration rollback")
+          expect(await db.financePurchaseRecognition.count({ where: { bookId: book.id } })).toBe(0)
+          expect(await db.financeBill.count({ where: { bookId: book.id } })).toBe(0)
+          const document = await register("registration-only", "1000", true)
+          expect(document.amountMinor).toBe("1100")
+          expect(document.lines).toHaveLength(2)
+          expect(document.events).toHaveLength(0)
+          expect(document.invoiceBillId).toBeNull()
+          expect(document.lines.every(line => line.receipt === null)).toBe(true)
+          expect(await db.financePurchaseRecognition.count({ where: { bookId: book.id } })).toBe(1)
+          expect(await db.financeBill.count({ where: { bookId: book.id, kind: "PURCHASE_ACCRUAL" } })).toBe(1)
+          expect(await db.financeBill.count({ where: { bookId: book.id, kind: "PURCHASE" } })).toBe(0)
+          expect(await db.financeJournalEntry.count({ where: { bookId: book.id } })).toBe(journalsBefore)
+          expect(await db.stockMovement.count({ where: { operation: { tenantId: tenant.id } } })).toBe(0)
+          await expect(db.$transaction(tx => getFinancePurchaseRegistrationReview(tx, { ...input, lines: [{ ...input.lines[0]!, expectedConfigurationVersionId: randomUUID() }] }), { maxWait: 10_000, timeout: 30_000 })).rejects.toMatchObject({ code: "CONFLICT" })
+          console.log(`supplier-recognition ${run}: registration review, rollback and two-line replay passed`)
+          return
         }
         async function fact(
           document: { id: string },

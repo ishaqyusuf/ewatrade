@@ -28,6 +28,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Registration database regression, 11 October 2026](runs/2026-10-11-registration-database.md):16 assertions for review, transaction rollback, two-line replay and no posting effects;16 owned cleanup checks clear. Assistant integration pending.
+
 - [Purchase registration review, 11 October 2026](runs/2026-10-11-purchase-registration-review.md): shared canonical validation and agreement-only review;64 assertions pass. Database/proposal/web acceptance pending.
 
 - [Recognition reads source, 11 October 2026](runs/2026-10-11-recognition-reads-source.md): planned canonical registration/event lookup with separate stages and corrections;14 assertions/scoped API types pass. Actual-tool acceptance pending.
