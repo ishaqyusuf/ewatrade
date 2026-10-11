@@ -27,6 +27,9 @@ const proposalTests = [
  * bumping `version`; IDs are permanent. Server executors live in the API.
  */
 export const capabilityManifest = [
+  {id:"finance.purchases.read",version:1,mode:"read",title:"Find purchase bills",domain:"finance",tool:"readPurchaseBills",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.purchases"],examples:["Find purchase bills in this Finance Book"],tests:["apps/api/src/assistant/general-purchase-reads.test.ts"],brain},
+  {id:"finance.purchase.read",version:1,mode:"read",title:"Read purchase bill",domain:"finance",tool:"readPurchaseBill",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.purchase"],examples:["Read purchase bill in this Finance Book"],tests:["apps/api/src/assistant/general-purchase-reads.test.ts"],brain},
+
   {id:"finance.supplier.create",version:1,mode:"write",action:"supplier_create",schema:actionSchema("supplier_create"),effect:"book",receipt:"finance_supplier",title:"Create supplier",domain:"finance",tool:"draftAction",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.createSupplier"],examples:["Add ACME as a supplier in this Finance Book"],tests:["packages/assistant/src/general/supplier-create.test.ts","packages/db/src/queries/finance/supplier-create-review.test.ts"],brain},
 
   {id:"finance.expense.void",version:1,mode:"write",action:"expense_void",schema:actionSchema("expense_void"),effect:"book",receipt:"finance_bill",title:"Void unpaid expense",domain:"finance",tool:"draftAction",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.voidExpense"],examples:["Void this incorrectly recorded unpaid expense"],tests:["packages/assistant/src/general/bill-correction.test.ts","packages/db/src/queries/finance/bill-correction-review.test.ts"],brain},

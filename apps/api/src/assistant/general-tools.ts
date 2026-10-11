@@ -1,3 +1,4 @@
+import { generalPurchasesInput, generalPurchaseInput, generalPurchasesAnswer, generalPurchaseData } from "./general-purchase-reads"
 import { generalSuppliersInput, generalSupplierStatementInput, generalSuppliersAnswer, generalSupplierStatementAnswer } from "./general-supplier-reads"
 import { generalBillsInput, generalBillInput, generalBillsAnswer, generalBillData } from "./general-bill-reads"
 import { generalCustomerEntryInput, generalCustomerAllocationHistoryInput, generalCustomerEntryAnswer, generalCustomerAllocationHistoryAnswer } from "./general-customer-allocations"
@@ -857,6 +858,20 @@ export function createGeneralTools(
             .createCaller(fresh)
             .accounts({ ...input, limit: 10 }),
         ),
+    }),
+    readPurchaseBills: tool({
+      description: "Read up to 10 recognized purchase bills in an exact Finance Book across Stores, optionally filtered by supplier/status. Preserve filters with nextCursor. Summary covers all matching bills, not this page. Settled totals include advances; not all cash paid. Registrations without bills are excluded. Never infer physical receipt or ownership.",
+      inputSchema: generalPurchasesInput,
+      execute: input => wrap("readPurchaseBills", async fresh => {
+        const page = await financeRouter.createCaller(fresh).purchases({...input, limit: 10})
+        onAnswer(generalPurchasesAnswer(page))
+        return page
+      }),
+    }),
+    readPurchaseBill: tool({
+      description: "Read an exact purchase bill, separating cash paid, active advances applied, released allocations and outstanding balance. Preserve canonical receipt/valuation coverage and recognitionId: separate recognition sources cannot prove physical receipt from this bill. History is limited to 10 of each kind; HasMore flags mean incomplete history. Never guess omitted payment/allocation targets or claim a bank transfer occurred.",
+      inputSchema: generalPurchaseInput,
+      execute: input => wrap("readPurchaseBill", async fresh => generalPurchaseData(await financeRouter.createCaller(fresh).purchase(input))),
     }),
     readSuppliers: tool({
       description: "Search up to 10 supplier identities by name or code in an exact Finance Book. Continue with nextCursor preserving Book and query. Clarify ambiguous names; never invent a supplier ID or infer balances from the identity list.",
