@@ -76,6 +76,7 @@ export async function getCommercialOrderChangeOptions(
           id: true,
           productFulfillments: { select: { quantity: true } },
           productReturns: { select: { quantity: true } },
+          serviceFulfillment: { select: { id: true } },
         },
       },
     },
@@ -107,7 +108,11 @@ export async function getCommercialOrderChangeOptions(
         )
       : returnable.length
         ? allow()
-        : lock("Nothing handed over yet")),
+        : order.lines.some((line) => line.productFulfillments.length)
+          ? lock("Everything handed over is already returned")
+          : order.lines.some((line) => line.serviceFulfillment)
+            ? lock("Typed-price items have no stock to return")
+            : lock("Nothing handed over yet")),
     lines: closed ? [] : returnable,
   }
   const refund = {
