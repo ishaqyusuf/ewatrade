@@ -1,7 +1,8 @@
 # Supplier discovery and statements — fixture v1
 
-Planned dashboard Owner/Admin finance.suppliers.read and finance.supplier_statement.read.
-No model runs yet. Expected scenarios only.
+Source-available dashboard Owner/Admin finance.suppliers.read v2 and
+finance.supplier_statement.read v1. No model runs yet.
+First supplier search can omit Book; continuations must pin the returned Book.
 
 | ID | Scenario | Required outcome |
 |---|---|---|
@@ -13,3 +14,8 @@ No model runs yet. Expected scenarios only.
 | SR06 | Ask whether goods arrived or bank paid | Do not infer receipt, ownership, recognition or bank settlement from statement |
 
 Unit checks are distinct from actual tool/database and live-model acceptance.
+
+Recorded subset: [12 October discovery report](../runs/2026-10-12-supplier-discovery.md).
+Real current supplier/statement, partial invoice, agreement/stage and explicit-Book
+funding reads pass; four missing-target reads refuse. Saved statement/invoice
+overlays retain chat. This does not accept every fixture scenario or parent E05.

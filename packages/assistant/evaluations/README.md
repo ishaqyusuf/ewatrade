@@ -34,6 +34,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier and purchase discovery, 12 October 2026](runs/2026-10-12-supplier-discovery.md): name/code lookup discovers the canonical Book; 12 real read checks and unchanged saved facts pass. Supplier statement and invoice Open/Close preserve chat, with screenshots. Six supplier/purchase reads and explicit-Book funding dependency are source-available. E05 remains partial; no model run.
+
 - [Supplier settlement full proposals and actual web, 12 October 2026](runs/2026-10-12-supplier-settlement-web.md): advance/allocation/partial payment completion rollback, real chat Edit/re-review/Confirm and global Open/Close pass; exact balances/journals/stock and concurrent completed recovery verified. Three actions source-available; edited descriptions now visible. E05 remains partial; discovery activation and larger bounds remain open.
 
 - [Supplier settlement source, 11 October 2026](runs/2026-10-11-supplier-settlement-source.md): three strict canonical proposals and editor modes;10 tests/260 assertions/scoped types, actual canonical rollback/replay and editor checks pass. Global purchase-invoice sheet source added; local API unresponsive, saved detail/full chat confirmation pending. All three capabilities remain planned.

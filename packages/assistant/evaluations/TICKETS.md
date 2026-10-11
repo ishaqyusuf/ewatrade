@@ -66,12 +66,15 @@ physical receipt now pass actual dashboard Edit/re-review/Confirm and global rec
 Open/Close, with exact saved posting/stock/valuation readback. Full two-line assistant
 receipt confirmation reaches forced completion rollback in 28.8s within the existing
 30s budget; saved facts are unchanged. Completed receipt replay and duplicate-stage
-refusal pass. **E05 remains partial and unbookmarked:** larger operating bounds,
+refusal pass. **E05 remains partial and unbookmarked.** Supplier
 advances/allocation and partial payment now pass full proposal rollback, actual chat
 Edit/re-review/Confirm, saved receipt Open/Close and exact journal/balance/stock
-readback with concurrent completed recovery. Three actions are source-available;
-source discovery availability, larger operating bounds and full signed stale-source
-acceptance remain open. Evidence:
+readback with concurrent completed recovery. Three actions are source-available.
+Supplier/purchase discovery is now source-available: name/code search resolves the
+canonical Book, 12 real read checks pass and saved statement/invoice overlays retain
+the assistant. Creation/registration activation and full chat acceptance, larger
+operating bounds and full signed stale-source acceptance remain open. Evidence:
+[supplier discovery report](runs/2026-10-12-supplier-discovery.md),
 [supplier settlement web report](runs/2026-10-12-supplier-settlement-web.md) and
 [physical receipt proposal/web report](runs/2026-10-11-receipt-proposal-web.md).
 D02/D03 financial source performance and E02 credit-release web acceptance also

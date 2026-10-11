@@ -236,7 +236,7 @@ test("customer funds reads retain finance authority and planned rollout", () => 
   for (const capability of capabilityManifest.filter(value => ids.includes(value.id))) {
     const owner = actor("OWNER")
     owner.requestHeaders = new Headers({ "x-assistant-client": "dashboard" })
-    expect(canUseCapability(owner, capability)).toBe(false)
+    expect(canUseCapability(owner, capability)).toBe(capability.id === "finance.money_accounts.read")
     const rollout = capability.rollout
     try {
       Object.assign(capability, { rollout: "source" })

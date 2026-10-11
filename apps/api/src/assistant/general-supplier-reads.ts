@@ -12,10 +12,13 @@ import {
   financeSupplierStatementSchema,
 } from "../schemas/finance-suppliers"
 
-export const generalSuppliersInput = financeSuppliersSchema.omit({
-  limit: true,
-  direction: true,
-})
+export const generalSuppliersInput = financeSuppliersSchema
+  .omit({ limit: true, direction: true })
+  .extend({ bookId: financeSuppliersSchema.shape.bookId.optional() })
+  .refine((value) => value.cursor === undefined || value.bookId !== undefined, {
+    path: ["bookId"],
+    message: "Keep the original Finance Book when continuing supplier search.",
+  })
 export const generalSupplierStatementInput = z
   .object({
     bookId: financeSupplierStatementSchema.shape.bookId,

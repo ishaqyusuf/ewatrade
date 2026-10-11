@@ -1,6 +1,6 @@
 # Purchase registration and recognition reads — version 1
 
-Planned dashboard Owner/Admin finance.purchase_registrations.read and
+Source-available dashboard Owner/Admin finance.purchase_registrations.read and
 finance.purchase_recognition.read. Fixtures are not executed model evaluations.
 
 | ID | Scenario | Expected |
@@ -13,5 +13,9 @@ finance.purchase_recognition.read. Fixtures are not executed model evaluations.
 | RR06 | Request partial recognition or receipt correction | Respect EXACT_WHOLE_DOCUMENT and SUPPLIER_RETURN_SOURCE_REQUIRED; do not promise unsupported writes |
 | RR07 | Wrong Book/supplier or revoked role | Canonical refusal, no data leakage |
 
-Schema and answer-boundary tests recorded separately. Actual tool database/web/model
-acceptance pending. No new write capability is implied.
+Schema and answer-boundary tests recorded separately. Actual source reads and owning saved objects are verified below; full scenario/model acceptance remains pending. No new write capability is implied.
+
+Recorded subset: [12 October discovery report](../runs/2026-10-12-supplier-discovery.md).
+Real current supplier/statement, partial invoice, agreement/stage and explicit-Book
+funding reads pass; four missing-target reads refuse. Saved statement/invoice
+overlays retain chat. This does not accept every fixture scenario or parent E05.

@@ -1,6 +1,6 @@
 # Money account lookup conversation fixtures — version 1
 
-Capability: finance.money_accounts.read v1. Dashboard only, planned.
+Capability: finance.money_accounts.read v1. Dashboard Owner/Admin, source-available; explicit Book required.
 All live-model scenarios are **not run**; fixture existence is not acceptance.
 
 | ID | Conversation | Required behavior |
@@ -13,3 +13,7 @@ All live-model scenarios are **not run**; fixture existence is not acceptance.
 
 Use owned QA aliases. Record code/prompt/model versions, sanitized step outcomes,
 actual evidence and unmet assertions using the parent catalog's run format.
+
+Recorded supplier funding subset: [12 October discovery report](../runs/2026-10-12-supplier-discovery.md).
+The real executor returns the exact active Shop cash identity in the original Book.
+This is not a balance, provider settlement or completed model evaluation.

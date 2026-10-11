@@ -890,13 +890,18 @@ export function createGeneralTools(
       execute: input => wrap("readPurchaseBill", async fresh => generalPurchaseData(await financeRouter.createCaller(fresh).purchase(input))),
     }),
     readSuppliers: tool({
-      description: "Search up to 10 supplier identities by name or code in an exact Finance Book. Continue with nextCursor preserving Book and query. Clarify ambiguous names; never invent a supplier ID or infer balances from the identity list.",
+      description:
+        "Search up to 10 supplier identities by name or code. Omit bookId on the first read to discover the current business Finance Book; use the returned bookId for later reads and drafts. Continue with nextCursor preserving Book and query. Clarify ambiguous names; never ask for or invent internal IDs or infer balances from the identity list.",
       inputSchema: generalSuppliersInput,
-      execute: input => wrap("readSuppliers", async fresh => {
-        const page = await financeRouter.createCaller(fresh).suppliers({...input, limit: 10})
-        onAnswer(generalSuppliersAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readSuppliers", async (fresh) => {
+          const caller = financeRouter.createCaller(fresh)
+          const bookId = input.bookId ?? (await caller.book())?.id
+          if (!bookId) throw Error("Set up Finance first.")
+          const page = await caller.suppliers({ ...input, bookId, limit: 10 })
+          onAnswer(generalSuppliersAnswer(page))
+          return { ...page, bookId }
+        }),
     }),
     readSupplierStatement: tool({
       description: "Read an exact supplier's recorded payable and advance balances separately, plus up to 10 statement entries. Continuations must preserve bookId, supplierId and snapshotSequence and use nextCursor. Complete snapshot balances are not page sums. Do not infer money transfer, physical receipt, invoice recognition or ownership from settlement entries.",

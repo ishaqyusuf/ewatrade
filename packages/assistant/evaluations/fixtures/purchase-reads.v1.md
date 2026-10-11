@@ -1,6 +1,6 @@
 # Purchase bill reads — version 1
 
-Planned dashboard Owner/Admin capabilities finance.purchases.read and finance.purchase.read.
+Source-available dashboard Owner/Admin capabilities finance.purchases.read and finance.purchase.read.
 Fixtures are not executed model evaluations.
 
 | ID | Scenario | Expected |
@@ -13,5 +13,9 @@ Fixtures are not executed model evaluations.
 | PR06 | Purchase registered but invoice not recognized | Not in recognized bill list; explain exclusion, never claim no registration exists |
 | PR07 | Voided bill or reversed payment | Preserve original correction metadata; no active-liability or new-payment claim |
 
-Source tests cover schema/projection boundaries. Actual-tool database and model
-acceptance remain pending; recognition lookup is a separate remaining operation.
+Source tests cover schema/projection boundaries. Actual source reads are verified below; model and full scenario acceptance remain pending.
+
+Recorded subset: [12 October discovery report](../runs/2026-10-12-supplier-discovery.md).
+Real current supplier/statement, partial invoice, agreement/stage and explicit-Book
+funding reads pass; four missing-target reads refuse. Saved statement/invoice
+overlays retain chat. This does not accept every fixture scenario or parent E05.

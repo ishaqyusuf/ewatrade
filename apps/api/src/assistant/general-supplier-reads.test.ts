@@ -5,6 +5,10 @@ import {
   generalSuppliersAnswer,
 } from "./general-supplier-reads"
 test("supplier discovery fixes page bounds and preserves exact Book scope", () => {
+  expect(generalSuppliersInput.parse({ query: "  ACME  " })).toEqual({
+    query: "ACME",
+  })
+  expect(generalSuppliersInput.safeParse({ cursor: "supplier" }).success).toBe(false)
   expect(
     generalSuppliersInput.parse({
       bookId: "book",
