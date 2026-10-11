@@ -7,16 +7,18 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 539 (398 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 86
-- Merchant planned: 146
+- Merchant supported by a capability: 88
+- Merchant planned: 144
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 82 (42 read, 40 write)
+- Capabilities: 84 (44 read, 40 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `finance.purchase_registrations.read` | 1 | read | `readPurchaseRegistrations` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognitions` |
+| `finance.purchase_recognition.read` | 1 | read | `readPurchaseRecognition` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognition` |
 | `finance.purchases.read` | 1 | read | `readPurchaseBills` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchases` |
 | `finance.purchase.read` | 1 | read | `readPurchaseBill` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchase` |
 | `finance.supplier.create` | 1 | write (`supplier_create`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.createSupplier` |
@@ -113,6 +115,8 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `finance.purchase_registrations.read` | Find purchase agreements in this Finance Book | [apps/api/src/assistant/general-purchase-recognition-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-recognition-reads.test.ts) |
+| `finance.purchase_recognition.read` | Read purchase recognition events in this Finance Book | [apps/api/src/assistant/general-purchase-recognition-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-recognition-reads.test.ts) |
 | `finance.purchases.read` | Find purchase bills in this Finance Book | [apps/api/src/assistant/general-purchase-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-reads.test.ts) |
 | `finance.purchase.read` | Read purchase bill in this Finance Book | [apps/api/src/assistant/general-purchase-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-reads.test.ts) |
 | `finance.supplier.create` | Add ACME as a supplier in this Finance Book | [packages/assistant/src/general/supplier-create.test.ts](../../../../packages/assistant/src/general/supplier-create.test.ts)<br>[packages/db/src/queries/finance/supplier-create-review.test.ts](../../../../packages/db/src/queries/finance/supplier-create-review.test.ts) |
@@ -210,7 +214,7 @@ track conversational evaluation separately from these source test links.
 | E02 | 3 |
 | E03 | 2 |
 | E04 | 1 |
-| E05 | 13 |
+| E05 | 11 |
 | G01 | 6 |
 | G02 | 8 |
 | G03 | 29 |
@@ -329,8 +333,8 @@ track conversational evaluation separately from these source test links.
 | `finance.periodCloseChecklist` | query | Owner/Admin only | finance | planned | G02 |
 | `finance.periods` | query | Owner/Admin only | finance | planned | G02 |
 | `finance.purchase` | query | Owner/Admin only | finance | supported | finance.purchase.read |
-| `finance.purchaseRecognition` | query | Owner/Admin only | finance | planned | E05 |
-| `finance.purchaseRecognitions` | query | Owner/Admin only | finance | planned | E05 |
+| `finance.purchaseRecognition` | query | Owner/Admin only | finance | supported | finance.purchase_recognition.read |
+| `finance.purchaseRecognitions` | query | Owner/Admin only | finance | supported | finance.purchase_registrations.read |
 | `finance.purchases` | query | Owner/Admin only | finance | supported | finance.purchases.read |
 | `finance.recognizePurchase` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.recordCashCount` | mutation | Owner/Admin only | finance | planned | G02 |

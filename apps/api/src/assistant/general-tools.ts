@@ -1,3 +1,4 @@
+import { generalPurchaseRegistrationsInput, generalPurchaseRecognitionInput, generalPurchaseRegistrationsAnswer } from "./general-purchase-recognition-reads"
 import { generalPurchasesInput, generalPurchaseInput, generalPurchasesAnswer, generalPurchaseData } from "./general-purchase-reads"
 import { generalSuppliersInput, generalSupplierStatementInput, generalSuppliersAnswer, generalSupplierStatementAnswer } from "./general-supplier-reads"
 import { generalBillsInput, generalBillInput, generalBillsAnswer, generalBillData } from "./general-bill-reads"
@@ -858,6 +859,20 @@ export function createGeneralTools(
             .createCaller(fresh)
             .accounts({ ...input, limit: 10 }),
         ),
+    }),
+    readPurchaseRegistrations: tool({
+      description: "Find up to 10 original purchase agreements for an exact Finance Book and supplier, including pre-invoice registrations. Continue preserving Book/supplier with nextCursor. Amount is agreed cost, not payable, paid or received. Registration does not post money or stock. Inspect recognition events before claiming invoice, ownership or receipt status.",
+      inputSchema: generalPurchaseRegistrationsInput,
+      execute: input => wrap("readPurchaseRegistrations", async fresh => {
+        const page = await financeRouter.createCaller(fresh).purchaseRecognitions({...input, limit: 10})
+        onAnswer(generalPurchaseRegistrationsAnswer(page))
+        return page
+      }),
+    }),
+    readPurchaseRecognition: tool({
+      description: "Inspect an exact registered purchase's agreement, lines and original/correction events. Report INVOICE, OWNERSHIP and RECEIPT separately. An original event with reversalId is corrected; preserve reversalOfId and reasons, never count it as an active stage. invoiceBillId or a historical receipt alone is not current payable/stock evidence. For settlement readPurchaseBill with the exact invoice bill ID. Respect whole-document matching and supplier-return-source requirement for receipt correction; never promise unsupported partial recognition or receipt reversal.",
+      inputSchema: generalPurchaseRecognitionInput,
+      execute: input => wrap("readPurchaseRecognition", fresh => financeRouter.createCaller(fresh).purchaseRecognition(input)),
     }),
     readPurchaseBills: tool({
       description: "Read up to 10 recognized purchase bills in an exact Finance Book across Stores, optionally filtered by supplier/status. Preserve filters with nextCursor. Summary covers all matching bills, not this page. Settled totals include advances; not all cash paid. Registrations without bills are excluded. Never infer physical receipt or ownership.",

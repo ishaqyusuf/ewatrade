@@ -27,6 +27,9 @@ const proposalTests = [
  * bumping `version`; IDs are permanent. Server executors live in the API.
  */
 export const capabilityManifest = [
+  {id:"finance.purchase_registrations.read",version:1,mode:"read",title:"Find purchase agreements",domain:"finance",tool:"readPurchaseRegistrations",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.purchaseRecognitions"],examples:["Find purchase agreements in this Finance Book"],tests:["apps/api/src/assistant/general-purchase-recognition-reads.test.ts"],brain},
+  {id:"finance.purchase_recognition.read",version:1,mode:"read",title:"Read purchase recognition events",domain:"finance",tool:"readPurchaseRecognition",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.purchaseRecognition"],examples:["Read purchase recognition events in this Finance Book"],tests:["apps/api/src/assistant/general-purchase-recognition-reads.test.ts"],brain},
+
   {id:"finance.purchases.read",version:1,mode:"read",title:"Find purchase bills",domain:"finance",tool:"readPurchaseBills",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.purchases"],examples:["Find purchase bills in this Finance Book"],tests:["apps/api/src/assistant/general-purchase-reads.test.ts"],brain},
   {id:"finance.purchase.read",version:1,mode:"read",title:"Read purchase bill",domain:"finance",tool:"readPurchaseBill",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.purchase"],examples:["Read purchase bill in this Finance Book"],tests:["apps/api/src/assistant/general-purchase-reads.test.ts"],brain},
 

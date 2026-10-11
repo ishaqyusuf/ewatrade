@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Purchase recognition reads | [1](fixtures/purchase-recognition-reads.v1.md) | Pre-invoice discovery, separate stages, correction/source evidence | None yet |
 | Purchase bill reads | [1](fixtures/purchase-reads.v1.md) | Settlement separation, recognition provenance, bounded history, exact scope | None yet |
 | Supplier creation | [1](fixtures/supplier-create.v1.md) | Identity normalization, ambiguity, duplicate/scope refusal, rollback/recovery and receipt | None yet |
 | Expense/payment corrections | [1](fixtures/bill-correction.v1.md) | Exact original targets, no-transfer boundaries, void/payment guards, stale/retry and rollback | None yet |
@@ -26,6 +27,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Recognition reads source, 11 October 2026](runs/2026-10-11-recognition-reads-source.md): planned canonical registration/event lookup with separate stages and corrections;14 assertions/scoped API types pass. Actual-tool acceptance pending.
 
 - [Purchase reads source, 11 October 2026](runs/2026-10-11-purchase-reads-source.md): canonical planned lookup tools, settlement/source separation and bounded histories;19 assertions/scoped API types pass. Actual-tool acceptance pending.
 
