@@ -23,7 +23,8 @@ export {
 } from "./reads"
 export { FinanceError } from "./rules"
 export { createFinanceExpenseCategory } from "./accounts"
-export { recordFinanceExpense, payFinanceBill } from "./bills"
+export { recordFinanceExpense, recordFinanceExpenseInTransaction, payFinanceBill, payFinanceBillInTransaction, type FinanceExpenseInput, type FinanceBillPaymentInput } from "./bills"
+export { getFinanceExpenseReview } from "./expense-review"
 export { getFinanceBill, listFinanceBills } from "./bill-reads"
 export {
   listFinanceAccountActivity,
