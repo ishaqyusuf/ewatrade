@@ -61,14 +61,14 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
 Current implementation focus: E05. Supplier creation and purchase registration
-have focused database and saved receipt Open/Close evidence. Invoice and ownership
-proposals pass focused database checks and their dashboard editor passes component
-checks. The real chat invoice/ownership edit, review, confirmation and saved receipt
-Open/Close pass, with exact posting readback. Batched physical receipt passes a
-local two-line rollback probe in 27.7s. Canonical physical receipt review matches
-actual valuation. Canonical locked review plus receipt confirmation passes in 28.1s;
-the surrounding assistant proposal transaction still needs headroom verification;
-advances/allocation and settlement remain open.
+have focused database and saved receipt Open/Close evidence. Invoice, ownership and
+physical receipt now pass actual dashboard Edit/re-review/Confirm and global receipt
+Open/Close, with exact saved posting/stock/valuation readback. Full two-line assistant
+receipt confirmation reaches forced completion rollback in 28.8s within the existing
+30s budget; saved facts are unchanged. Completed receipt replay and duplicate-stage
+refusal pass. **E05 remains partial and unbookmarked:** larger operating bounds,
+advances/allocation and settlement remain open. Evidence:
+[physical receipt proposal/web report](runs/2026-10-11-receipt-proposal-web.md).
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.
 

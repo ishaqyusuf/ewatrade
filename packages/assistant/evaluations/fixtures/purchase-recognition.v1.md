@@ -1,7 +1,7 @@
 # Purchase recognition — version 1
 
 E05 dashboard Owner/Admin actions on an exact Book and original agreement. Invoice
-and ownership are source-available; assistant physical receipt remains pending.
+ownership and whole-original-goods physical receipt are source-available.
 These scenarios are fixtures, not executed model evaluations.
 
 | ID | Scenario | Expected |
@@ -12,8 +12,10 @@ These scenarios are fixtures, not executed model evaluations.
 | PN04 | Amount/date/Book/authority/source changed | Fresh canonical refusal; never overwrite immutable costs or corrected events |
 | PN05 | Completion fails or command response is lost | All source/journal/receipt writes roll back, or one original event is recovered on replay |
 | PN06 | Existing stage or corrected source | Refuse duplicate/new original stage; use the owning correction workflow |
-| PN07 | Physical receipt | Exact original lines, current stock revisions and complete stock/valuation review before confirmation; two-line operating acceptance remains open |
-| PN08 | Review/edit/confirm and Open/Close | Explicit fact/reference/date review; saved global agreement sheet preserves assistant chat |
+| PN07 | Physical receipt | Exact original lines, current stock revisions and complete stock/valuation review before confirmation; local two-line Edit/re-review/Confirm and exact saved readback pass; larger bounds remain open |
+| PN08 | Review/edit/confirm and Open/Close | Fresh acknowledgment; date milliseconds and fixed original target preserved; saved global agreement sheet preserves assistant chat |
+| PN09 | Prepared receipt source, rollback and replay | Locks original balance/unit/configuration; rejects replacement values; one execution; full two-line proposal completion failure rolls back all effects; completed replay has no duplicate event |
 
-Canonical invoice/ownership review groundwork is tracked separately from assistant
-proposals, browser confirmation, physical receipt, settlement and live-model acceptance.
+Canonical review, proposal/database tests and actual web confirmation are recorded
+separately from settlement, larger operating bounds and live-model acceptance.
+Evidence: [physical receipt proposal/web](../runs/2026-10-11-receipt-proposal-web.md).

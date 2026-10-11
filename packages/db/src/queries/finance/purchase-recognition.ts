@@ -11,11 +11,23 @@ import {
 } from "./purchase-registration-source"
 import { randomUUID } from "node:crypto"
 import type { StockCategorySelector } from "@ewatrade/utils/inventory-categories"
-import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
+import type {
+  FinanceBook,
+  Prisma,
+  PrismaClient,
+} from "../../../generated/prisma/client"
 import type { FinancePurchaseRecognitionStage } from "../../../generated/prisma/enums"
-import { postSingleBalanceStockOperationInTransaction } from "../inventory-operations"
+import {
+  postSingleBalanceStockOperationInTransaction,
+  preparePurchaseStockReceiptInTransaction,
+  type SingleBalanceInput,
+} from "../inventory-operations"
 import type { FinanceActor } from "./access"
-import { financeDocumentCommand, financePostingCommandId } from "./commands"
+import {
+  financeDocumentCommand,
+  prepareFinanceDocumentCommand,
+  financePostingCommandId,
+} from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
 import {
   assertReceiptMovement,
@@ -167,311 +179,416 @@ export async function recognizeReviewedFinancePurchaseReceiptInTransaction(
   )
 }
 
+type ReviewedReceiptInput = Omit<
+  RecognizeFinancePurchaseInput,
+  "stage" | "receipts" | "dueAt" | "invoiceAmountMinor"
+> & { expectedReviewDigest: string }
+
+/** Review and command share one transaction-local source; no graph is accepted or retained across confirmations. */
+export async function prepareReviewedFinancePurchaseReceiptInTransaction(
+  tx: Prisma.TransactionClient,
+  input: ReviewedReceiptInput,
+) {
+  if (!/^[a-f0-9]{64}$/.test(input.expectedReviewDigest))
+    throw new FinanceError("CONFLICT", "Refresh the physical receipt review.")
+  normalizePurchaseRecognition({ ...input, stage: "RECEIPT" })
+  const command = {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    bookId: input.bookId,
+    clientCommandId: input.clientCommandId,
+    recognitionId: input.recognitionId,
+    stage: "RECEIPT" as const,
+    effectiveAt: new Date(input.effectiveAt),
+    reference: input.reference,
+  }
+  const { reference, invoiceAmount } = normalizePurchaseRecognition(command)
+  const { actorUserId: _actor, tenantId: _tenant, ...payload } = command
+  const prepared = await prepareFinanceDocumentCommand(
+    tx,
+    command,
+    "RECOGNIZE_REVIEWED_PURCHASE_RECEIPT",
+    {
+      ...payload,
+      reference,
+      expectedReviewDigest: input.expectedReviewDigest,
+    },
+  )
+  if (prepared.replay) {
+    const replay = prepared.replay
+    return { review: null, execute: () => prepared.execute(async () => replay) }
+  }
+  const source = await resolvePurchaseRecognitionSource(
+    tx,
+    command,
+    prepared.book,
+    invoiceAmount,
+  )
+  const ids = source.document.lines.map((line) => line.balanceSourceId).sort()
+  await tx.$queryRaw`SELECT id FROM "StockBalanceSource" WHERE id = ANY(${ids}::text[]) AND "tenantId" = ${input.tenantId} ORDER BY id FOR UPDATE`
+  const stock = new Map<
+    string,
+    Awaited<ReturnType<typeof preparePurchaseStockReceiptInTransaction>>
+  >()
+  for (const line of [...source.document.lines].sort((a, b) =>
+    a.balanceSourceId.localeCompare(b.balanceSourceId),
+  )) {
+    stock.set(
+      line.balanceSourceId,
+      await preparePurchaseStockReceiptInTransaction(tx, {
+        tenantId: command.tenantId,
+        storeId: source.document.storeId,
+        balanceSourceId: line.balanceSourceId,
+        enteredInventoryUnitId: line.enteredInventoryUnitId,
+        enteredQuantity: line.enteredQuantity.toFixed(),
+        expectedConfigurationVersionId: line.configurationVersionId,
+      }),
+    )
+  }
+  const header = await composePurchaseRecognitionReview(
+    tx,
+    command,
+    prepared.book,
+    source,
+  )
+  const review = await composePurchaseReceiptReview(
+    tx,
+    command,
+    header,
+    async (_tx, input) => {
+      const preparedStock = stock.get(input.balanceSourceId)
+      if (!preparedStock)
+        throw new FinanceError(
+          "CONFLICT",
+          "Original receipt stock preparation is incomplete.",
+        )
+      return preparedStock.preview
+    },
+  )
+  if (purchaseReceiptReviewDigest(review) !== input.expectedReviewDigest)
+    throw new FinanceError(
+      "CONFLICT",
+      "Purchase receipt facts, stock or valuation changed. Review again.",
+    )
+  const receipts = review.receipts.map((receipt) => ({ ...receipt }))
+  return {
+    review,
+    execute: () =>
+      prepared.execute((book) =>
+        postPurchaseRecognition(tx, command, book, source, receipts, stock),
+      ),
+  }
+}
+
 async function recognizePurchase(
   tx: Prisma.TransactionClient,
   input: RecognizeFinancePurchaseInput,
   expectedReviewDigest?: string,
 ) {
+  if (expectedReviewDigest) {
+    const {
+      stage: _stage,
+      receipts: _receipts,
+      dueAt: _due,
+      invoiceAmountMinor: _amount,
+      ...command
+    } = input
+    return (
+      await prepareReviewedFinancePurchaseReceiptInTransaction(tx, {
+        ...command,
+        expectedReviewDigest,
+      })
+    ).execute()
+  }
   const { reference, invoiceAmount } = normalizePurchaseRecognition(input)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   return financeDocumentCommand(
     tx,
     input,
-    expectedReviewDigest
-      ? "RECOGNIZE_REVIEWED_PURCHASE_RECEIPT"
-      : "RECOGNIZE_PURCHASE",
-    {
-      ...payload,
-      reference,
-      ...(expectedReviewDigest ? { expectedReviewDigest } : {}),
-    },
+    "RECOGNIZE_PURCHASE",
+    { ...payload, reference },
     async (book) => {
-      const { document, posting } = await resolvePurchaseRecognitionSource(
+      const source = await resolvePurchaseRecognitionSource(
         tx,
         input,
         book,
         invoiceAmount,
       )
-      let receiptConfirmations = input.receipts
-      if (expectedReviewDigest) {
-        // Ordinary stock writers use optimistic revisions; these row locks also
-        // hold movement counts/quantities stable from review through receipt.
-        const ids = document.lines.map((line) => line.balanceSourceId).sort()
-        await tx.$queryRaw`SELECT id FROM "StockBalanceSource" WHERE id = ANY(${ids}::text[]) AND "tenantId" = ${input.tenantId} ORDER BY id FOR UPDATE`
-        const receiptInput = { ...input, stage: "RECEIPT" as const }
-        const header = await composePurchaseRecognitionReview(
-          tx,
-          receiptInput,
-          book,
-          { document, posting },
-        )
-        const review = await composePurchaseReceiptReview(
-          tx,
-          receiptInput,
-          header,
-        )
-        if (purchaseReceiptReviewDigest(review) !== expectedReviewDigest)
-          throw new FinanceError(
-            "CONFLICT",
-            "Purchase receipt facts, stock or valuation changed. Review again.",
-          )
-        receiptConfirmations = review.receipts
-      }
-      const debit = await purchaseRecognitionControl(
-        tx,
-        book.id,
-        posting.debit,
-        true,
-      )
-      const credit = await purchaseRecognitionControl(
-        tx,
-        book.id,
-        posting.credit,
-        true,
-      )
-      const eventId = randomUUID()
-      let invoiceBillId: string | undefined
-      if (input.stage === "INVOICE") {
-        const bill = await tx.financeBill.create({
-          data: {
-            bookId: book.id,
-            supplierId: document.supplierId,
-            kind: "PURCHASE",
-            payeeName: document.costBill.payeeName,
-            description: document.costBill.description,
-            reference,
-            incurredAt: input.effectiveAt,
-            dueAt: input.dueAt,
-            storeId: document.storeId,
-            totalMinor: document.costBill.totalMinor,
-            actorUserId: input.actorUserId,
-          },
-        })
-        invoiceBillId = bill.id
-        await tx.financeBillLine.createMany({
-          data: document.costBill.lines.map((line) => ({
-            bookId: book.id,
-            billId: bill.id,
-            accountId: debit.id,
-            position: line.position,
-            description: line.description,
-            amountMinor: line.amountMinor,
-          })),
-        })
-      }
-      const journal = await postFinanceJournalInTransaction(tx, {
-        ...input,
-        clientCommandId: financePostingCommandId(
-          input.clientCommandId,
-          "recognition-journal",
-        ),
-        sourceKind:
-          input.stage === "INVOICE"
-            ? "PURCHASE_BILL"
-            : `PURCHASE_${input.stage}_RECOGNITION`,
-        sourceId: invoiceBillId ?? eventId,
-        description: document.costBill.description,
-        storeId: document.storeId,
-        lines: [
-          {
-            accountId: debit.id,
-            side: "DEBIT",
-            amountMinor: document.costBill.totalMinor.toString(),
-          },
-          {
-            accountId: credit.id,
-            side: "CREDIT",
-            amountMinor: document.costBill.totalMinor.toString(),
-          },
-        ],
-      })
-      const journalEntryId = purchaseJournalEntryId(journal)
-      const recordedEvent = await tx.financePurchaseRecognitionEvent.create({
-        data: {
-          id: eventId,
-          bookId: book.id,
-          supplierId: document.supplierId,
-          recognitionId: document.id,
-          stage: input.stage,
-          originalStage: input.stage,
-          journalEntryId,
-          debitAccountId: debit.id,
-          creditAccountId: credit.id,
-          invoiceBillId,
-          effectiveAt: input.effectiveAt,
-          reference,
-          actorUserId: input.actorUserId,
-        },
-      })
-      if (invoiceBillId) {
-        await tx.financeSupplierEntry.create({
-          data: {
-            bookId: book.id,
-            supplierId: document.supplierId,
-            kind: "PURCHASE_BILL",
-            side: "CREDIT",
-            amountMinor: document.costBill.totalMinor,
-            journalEntryId,
-            effectiveAt: input.effectiveAt,
-            actorUserId: input.actorUserId,
-            description: document.costBill.description,
-            billId: invoiceBillId,
-          },
-        })
-      }
-      if (input.stage === "RECEIPT") {
-        const receipts = receiptConfirmations
-        if (
-          !Array.isArray(receipts) ||
-          receipts.length !== document.lines.length ||
-          new Set(receipts.map((line) => line.lineId)).size !== receipts.length
-        )
-          throw new FinanceError(
-            "INVALID_JOURNAL",
-            "Confirm every original goods line exactly once.",
-          )
-        const valuations: Array<{
-          receiptId: string
-          expectedStockRevision: number
-        }> = []
-        for (const line of [...document.lines].sort((a, b) =>
-          a.balanceSourceId.localeCompare(b.balanceSourceId),
-        )) {
-          const confirmation = receipts.find(
-            (receipt) => receipt.lineId === line.id,
-          )
-          if (
-            !confirmation ||
-            !Number.isInteger(confirmation.expectedBalanceRevision) ||
-            confirmation.expectedBalanceRevision < 0 ||
-            confirmation.expectedBalanceRevision >= 2_147_483_647
-          )
-            throw new FinanceError(
-              "INVALID_JOURNAL",
-              "Refresh the receipt's stock revisions.",
-            )
-          const clientOperationId = financePostingCommandId(
-            input.clientCommandId,
-            `recognition-stock:${line.id}`,
-          )
-          if (
-            await tx.stockOperation.findUnique({
-              where: {
-                tenantId_clientOperationId: {
-                  tenantId: input.tenantId,
-                  clientOperationId,
-                },
-              },
-              select: { id: true },
-            })
-          )
-            throw new FinanceError(
-              "CONFLICT",
-              "This receipt stock identity already exists outside its command.",
-            )
-          const operation = await postSingleBalanceStockOperationInTransaction(
-            tx,
-            {
-              actorUserId: input.actorUserId,
-              tenantId: input.tenantId,
-              storeId: document.storeId,
-              balanceSourceId: line.balanceSourceId,
-              clientOperationId,
-              direction: "increase",
-              effectiveAt: input.effectiveAt,
-              enteredInventoryUnitId: line.enteredInventoryUnitId,
-              enteredQuantity: line.enteredQuantity.toFixed(),
-              expectedBalanceRevision: confirmation.expectedBalanceRevision,
-              expectedConfigurationVersionId: line.configurationVersionId,
-              categories: purchaseRecognitionCategories(line.categories),
-              reason: line.costBillLine.description,
-              schemaVersion: 1,
-              source: "finance_purchase",
-              type: "receipt",
-            },
-          )
-          const movement = operation.movements[0]
-          if (!movement || operation.movements.length !== 1)
-            throw new FinanceError(
-              "CONFLICT",
-              "The goods receipt did not produce one exact movement.",
-            )
-          const receipt = await tx.financePurchaseReceiptLine.create({
-            data: {
-              tenantId: input.tenantId,
-              bookId: book.id,
-              billLineId: line.costBillLineId,
-              stockOperationId: operation.id,
-              stockMovementId: movement.id,
-            },
-          })
-          valuations.push({
-            receiptId: receipt.id,
-            expectedStockRevision: confirmation.expectedBalanceRevision + 1,
-          })
-        }
-        await recordRecognitionReceiptValuations(
-          tx,
-          {
-            tenantId: input.tenantId,
-            bookId: book.id,
-            actorUserId: input.actorUserId,
-            receipts: valuations,
-          },
-          async (actualReceipts) => {
-            const journalEntry = await tx.financeJournalEntry.findUniqueOrThrow(
-              {
-                where: { id: journalEntryId },
-                include: { lines: { take: 3 }, reversal: true },
-              },
-            )
-            const event = {
-              ...recordedEvent,
-              journalEntry,
-              reversal: null,
-              invoiceBill: null,
-            }
-            const datedDocument = {
-              ...document,
-              events: [...document.events, event],
-            }
-            verifyLoadedPurchaseRecognitionEvent(
-              datedDocument,
-              event,
-              debit,
-              credit,
-            )
-            if (journalEntry.reversal)
-              throw new FinanceError(
-                "CONFLICT",
-                "The new receipt journal was already reversed.",
-              )
-            const dates = new Map<string, Date>()
-            for (const receipt of actualReceipts) {
-              if (receipt.billLine.bill.id !== document.costBillId)
-                throw new FinanceError(
-                  "CONFLICT",
-                  "The receipt no longer belongs to its exact purchase.",
-                )
-              const line = document.lines.find(
-                (l) => l.costBillLineId === receipt.billLine.id,
-              )
-              const fact = assertReceiptMovement(
-                datedDocument,
-                event,
-                line,
-                receipt.stockMovement,
-                input.actorUserId,
-              )
-              dates.set(receipt.stockMovementId, fact.effectiveAt)
-            }
-            return dates
-          },
-        )
-      }
-      return { id: eventId }
+      return postPurchaseRecognition(tx, input, book, source)
     },
   )
+}
+
+async function postPurchaseRecognition(
+  tx: Prisma.TransactionClient,
+  input: RecognizeFinancePurchaseInput,
+  book: FinanceBook,
+  source: Awaited<ReturnType<typeof resolvePurchaseRecognitionSource>>,
+  receiptsInput = input.receipts,
+  stock?: Map<
+    string,
+    Awaited<ReturnType<typeof preparePurchaseStockReceiptInTransaction>>
+  >,
+) {
+  const { document, posting } = source
+  const { reference } = normalizePurchaseRecognition(input)
+  const debit = await purchaseRecognitionControl(
+    tx,
+    book.id,
+    posting.debit,
+    true,
+  )
+  const credit = await purchaseRecognitionControl(
+    tx,
+    book.id,
+    posting.credit,
+    true,
+  )
+  const eventId = randomUUID()
+  let invoiceBillId: string | undefined
+  if (input.stage === "INVOICE") {
+    const bill = await tx.financeBill.create({
+      data: {
+        bookId: book.id,
+        supplierId: document.supplierId,
+        kind: "PURCHASE",
+        payeeName: document.costBill.payeeName,
+        description: document.costBill.description,
+        reference,
+        incurredAt: input.effectiveAt,
+        dueAt: input.dueAt,
+        storeId: document.storeId,
+        totalMinor: document.costBill.totalMinor,
+        actorUserId: input.actorUserId,
+      },
+    })
+    invoiceBillId = bill.id
+    await tx.financeBillLine.createMany({
+      data: document.costBill.lines.map((line) => ({
+        bookId: book.id,
+        billId: bill.id,
+        accountId: debit.id,
+        position: line.position,
+        description: line.description,
+        amountMinor: line.amountMinor,
+      })),
+    })
+  }
+  const journal = await postFinanceJournalInTransaction(tx, {
+    ...input,
+    clientCommandId: financePostingCommandId(
+      input.clientCommandId,
+      "recognition-journal",
+    ),
+    sourceKind:
+      input.stage === "INVOICE"
+        ? "PURCHASE_BILL"
+        : `PURCHASE_${input.stage}_RECOGNITION`,
+    sourceId: invoiceBillId ?? eventId,
+    description: document.costBill.description,
+    storeId: document.storeId,
+    lines: [
+      {
+        accountId: debit.id,
+        side: "DEBIT",
+        amountMinor: document.costBill.totalMinor.toString(),
+      },
+      {
+        accountId: credit.id,
+        side: "CREDIT",
+        amountMinor: document.costBill.totalMinor.toString(),
+      },
+    ],
+  })
+  const journalEntryId = purchaseJournalEntryId(journal)
+  const recordedEvent = await tx.financePurchaseRecognitionEvent.create({
+    data: {
+      id: eventId,
+      bookId: book.id,
+      supplierId: document.supplierId,
+      recognitionId: document.id,
+      stage: input.stage,
+      originalStage: input.stage,
+      journalEntryId,
+      debitAccountId: debit.id,
+      creditAccountId: credit.id,
+      invoiceBillId,
+      effectiveAt: input.effectiveAt,
+      reference,
+      actorUserId: input.actorUserId,
+    },
+  })
+  if (invoiceBillId) {
+    await tx.financeSupplierEntry.create({
+      data: {
+        bookId: book.id,
+        supplierId: document.supplierId,
+        kind: "PURCHASE_BILL",
+        side: "CREDIT",
+        amountMinor: document.costBill.totalMinor,
+        journalEntryId,
+        effectiveAt: input.effectiveAt,
+        actorUserId: input.actorUserId,
+        description: document.costBill.description,
+        billId: invoiceBillId,
+      },
+    })
+  }
+  if (input.stage === "RECEIPT") {
+    const receipts = receiptsInput
+    if (
+      !Array.isArray(receipts) ||
+      receipts.length !== document.lines.length ||
+      new Set(receipts.map((line) => line.lineId)).size !== receipts.length
+    )
+      throw new FinanceError(
+        "INVALID_JOURNAL",
+        "Confirm every original goods line exactly once.",
+      )
+    const valuations: Array<{
+      receiptId: string
+      expectedStockRevision: number
+    }> = []
+    for (const line of [...document.lines].sort((a, b) =>
+      a.balanceSourceId.localeCompare(b.balanceSourceId),
+    )) {
+      const confirmation = receipts.find(
+        (receipt) => receipt.lineId === line.id,
+      )
+      if (
+        !confirmation ||
+        !Number.isInteger(confirmation.expectedBalanceRevision) ||
+        confirmation.expectedBalanceRevision < 0 ||
+        confirmation.expectedBalanceRevision >= 2_147_483_647
+      )
+        throw new FinanceError(
+          "INVALID_JOURNAL",
+          "Refresh the receipt's stock revisions.",
+        )
+      const clientOperationId = financePostingCommandId(
+        input.clientCommandId,
+        `recognition-stock:${line.id}`,
+      )
+      if (
+        await tx.stockOperation.findUnique({
+          where: {
+            tenantId_clientOperationId: {
+              tenantId: input.tenantId,
+              clientOperationId,
+            },
+          },
+          select: { id: true },
+        })
+      )
+        throw new FinanceError(
+          "CONFLICT",
+          "This receipt stock identity already exists outside its command.",
+        )
+      const stockCommand: SingleBalanceInput = {
+        actorUserId: input.actorUserId,
+        tenantId: input.tenantId,
+        storeId: document.storeId,
+        balanceSourceId: line.balanceSourceId,
+        clientOperationId,
+        direction: "increase",
+        effectiveAt: input.effectiveAt,
+        enteredInventoryUnitId: line.enteredInventoryUnitId,
+        enteredQuantity: line.enteredQuantity.toFixed(),
+        expectedBalanceRevision: confirmation.expectedBalanceRevision,
+        expectedConfigurationVersionId: line.configurationVersionId,
+        categories: purchaseRecognitionCategories(line.categories),
+        reason: line.costBillLine.description,
+        schemaVersion: 1,
+        source: "finance_purchase",
+        type: "receipt",
+      }
+      const preparedStock = stock?.get(line.balanceSourceId)
+      if (stock && !preparedStock)
+        throw new FinanceError(
+          "CONFLICT",
+          "Original receipt stock preparation is incomplete.",
+        )
+      const operation = preparedStock
+        ? await preparedStock.execute(stockCommand)
+        : await postSingleBalanceStockOperationInTransaction(tx, stockCommand)
+      const movement = operation.movements[0]
+      if (!movement || operation.movements.length !== 1)
+        throw new FinanceError(
+          "CONFLICT",
+          "The goods receipt did not produce one exact movement.",
+        )
+      const receipt = await tx.financePurchaseReceiptLine.create({
+        data: {
+          tenantId: input.tenantId,
+          bookId: book.id,
+          billLineId: line.costBillLineId,
+          stockOperationId: operation.id,
+          stockMovementId: movement.id,
+        },
+      })
+      valuations.push({
+        receiptId: receipt.id,
+        expectedStockRevision: confirmation.expectedBalanceRevision + 1,
+      })
+    }
+    await recordRecognitionReceiptValuations(
+      tx,
+      {
+        tenantId: input.tenantId,
+        bookId: book.id,
+        actorUserId: input.actorUserId,
+        receipts: valuations,
+      },
+      async (actualReceipts) => {
+        const journalEntry = await tx.financeJournalEntry.findUniqueOrThrow({
+          where: { id: journalEntryId },
+          include: { lines: { take: 3 }, reversal: true },
+        })
+        const event = {
+          ...recordedEvent,
+          journalEntry,
+          reversal: null,
+          invoiceBill: null,
+        }
+        const datedDocument = {
+          ...document,
+          events: [...document.events, event],
+        }
+        verifyLoadedPurchaseRecognitionEvent(
+          datedDocument,
+          event,
+          debit,
+          credit,
+        )
+        if (journalEntry.reversal)
+          throw new FinanceError(
+            "CONFLICT",
+            "The new receipt journal was already reversed.",
+          )
+        const dates = new Map<string, Date>()
+        for (const receipt of actualReceipts) {
+          if (receipt.billLine.bill.id !== document.costBillId)
+            throw new FinanceError(
+              "CONFLICT",
+              "The receipt no longer belongs to its exact purchase.",
+            )
+          const line = document.lines.find(
+            (l) => l.costBillLineId === receipt.billLine.id,
+          )
+          const fact = assertReceiptMovement(
+            datedDocument,
+            event,
+            line,
+            receipt.stockMovement,
+            input.actorUserId,
+          )
+          dates.set(receipt.stockMovementId, fact.effectiveAt)
+        }
+        return dates
+      },
+    )
+  }
+  return { id: eventId }
 }
 
 export async function registerFinancePurchase(

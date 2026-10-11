@@ -71,6 +71,12 @@ export function GeneralPurchaseRecognitionEditor({
   onCancel: () => void
 }) {
   const invoice = initial.stage === "INVOICE"
+  const physicalReceipt = initial.stage === "RECEIPT"
+  const factName = invoice
+    ? "Invoice"
+    : physicalReceipt
+      ? "Receipt"
+      : "Ownership"
   const schema = schemaFor(invoice)
   const form = useZodForm<z.infer<typeof schema>>(schema, {
     defaultValues: {
@@ -127,12 +133,18 @@ export function GeneralPurchaseRecognitionEditor({
     >
       <section className="grid gap-2 rounded-lg border bg-muted/30 p-4">
         <h3 className="text-sm font-medium">
-          {invoice ? "Supplier invoice" : "Ownership of agreed goods"}
+          {invoice
+            ? "Supplier invoice"
+            : physicalReceipt
+              ? "Physical receipt of agreed goods"
+              : "Ownership of agreed goods"}
         </h3>
         <p className="text-sm text-muted-foreground">
           {invoice
             ? "Records one invoice and supplier payable using the original agreed costs. It does not declare ownership, record stock receipt or send money."
-            : "Records ownership using the original agreed costs. No new supplier payable, stock receipt or money transfer."}
+            : physicalReceipt
+              ? "Records all original agreed goods arriving at their original Store. Stock and valuation use the exact original allocated costs. No new supplier payable or money transfer."
+              : "Records ownership using the original agreed costs. No new supplier payable, stock receipt or money transfer."}
         </p>
       </section>
       <p className="text-sm text-muted-foreground">
@@ -141,7 +153,7 @@ export function GeneralPurchaseRecognitionEditor({
       </p>
       <FieldGroup>
         <ControlField
-          label={`${invoice ? "Invoice" : "Ownership"} date and time (UTC)`}
+          label={`${factName} date and time (UTC)`}
           error={errors.date?.message}
         >
           <Input
@@ -196,7 +208,9 @@ export function GeneralPurchaseRecognitionEditor({
             label={
               invoice
                 ? "This invoice is confirmed; no payment or stock receipt"
-                : "Ownership is confirmed; no payment or stock receipt"
+                : physicalReceipt
+                  ? "All original agreed goods have physically arrived and are owned; no payment"
+                  : "Ownership is confirmed; no payment or stock receipt"
             }
             error={errors.acknowledged?.message}
           >

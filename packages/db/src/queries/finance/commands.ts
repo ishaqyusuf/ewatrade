@@ -11,6 +11,23 @@ export async function financeDocumentCommand(
   payload: unknown,
   execute: (book: FinanceBook) => Promise<FinanceDocumentResult>,
 ): Promise<FinanceDocumentResult> {
+  const prepared = await prepareFinanceDocumentCommand(tx, input, kind, payload)
+  return prepared.execute(execute)
+}
+
+/** Internal transaction-local command boundary; retains Book/authority/replay checks. */
+export async function prepareFinanceDocumentCommand(
+  tx: Prisma.TransactionClient,
+  sourceInput: FinanceActor & { bookId: string; clientCommandId: string },
+  kind: string,
+  payload: unknown,
+) {
+  const input = {
+    tenantId: sourceInput.tenantId,
+    actorUserId: sourceInput.actorUserId,
+    bookId: sourceInput.bookId,
+    clientCommandId: sourceInput.clientCommandId,
+  }
   if (!input.clientCommandId.trim() || input.clientCommandId.length > 128) {
     throw new FinanceError(
       "INVALID_JOURNAL",
@@ -46,20 +63,36 @@ export async function financeDocumentCommand(
         "The saved command result cannot be recovered.",
       )
     }
-    return { id: result.id }
+    const id = result.id
+    return {
+      book,
+      replay: { id },
+      execute: async (
+        _execute: (book: FinanceBook) => Promise<FinanceDocumentResult>,
+      ) => ({ id }),
+    }
   }
-  const result = await execute(book)
-  await tx.financeCommand.create({
-    data: {
-      bookId: book.id,
-      clientCommandId: input.clientCommandId,
-      kind,
-      payloadHash,
-      actorUserId: input.actorUserId,
-      result,
+  let execution: Promise<FinanceDocumentResult> | undefined
+  return {
+    book,
+    replay: null,
+    execute(execute: (book: FinanceBook) => Promise<FinanceDocumentResult>) {
+      return (execution ??= (async () => {
+        const result = await execute(book)
+        await tx.financeCommand.create({
+          data: {
+            bookId: book.id,
+            clientCommandId: input.clientCommandId,
+            kind,
+            payloadHash,
+            actorUserId: input.actorUserId,
+            result,
+          },
+        })
+        return result
+      })())
     },
-  })
-  return result
+  }
 }
 
 export function financePostingCommandId(clientCommandId: string, part: string) {

@@ -26,6 +26,7 @@ export async function composePurchaseReceiptReview(
   source: Awaited<
     ReturnType<typeof purchaseRecognitionReviewSource<"RECEIPT">>
   >,
+  previewStock: typeof previewOrdinaryStockReceipt = previewOrdinaryStockReceipt,
 ) {
   const { review, document } = source
   const ids = document.lines.map((line) => line.balanceSourceId)
@@ -86,7 +87,7 @@ export async function composePurchaseReceiptReview(
   for (const line of [...document.lines].sort(
     (a, b) => a.costBillLine.position - b.costBillLine.position,
   )) {
-    const stock = await previewOrdinaryStockReceipt(tx, {
+    const stock = await previewStock(tx, {
       tenantId: input.tenantId,
       storeId: review.storeId,
       balanceSourceId: line.balanceSourceId,

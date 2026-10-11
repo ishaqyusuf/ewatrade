@@ -84,6 +84,7 @@ export {
   recognizeFinancePurchase,
   recognizeFinancePurchaseInTransaction,
   recognizeReviewedFinancePurchaseReceiptInTransaction,
+  prepareReviewedFinancePurchaseReceiptInTransaction,
   purchaseReceiptReviewDigest,
 } from "./purchase-recognition"
 export { reverseFinancePurchaseRecognition } from "./purchase-recognition-reversals"

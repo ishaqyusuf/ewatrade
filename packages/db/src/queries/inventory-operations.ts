@@ -208,6 +208,15 @@ export async function previewOrdinaryStockAdjustment(
     balance,
     input.enteredInventoryUnitId,
   )
+  return previewLoadedOrdinaryStockAdjustment(tx, input, balance, unit)
+}
+
+async function previewLoadedOrdinaryStockAdjustment(
+  tx: Prisma.TransactionClient,
+  input: OrdinaryStockPreviewInput & { direction: "increase" | "decrease" },
+  balance: BalanceGraph,
+  unit: Awaited<ReturnType<typeof loadCompatibleEnteredUnit>>,
+) {
   const enteredQuantity = parseExactDecimal(input.enteredQuantity, {
     allowZero: false,
     maxScale: unit.transactionScale,
@@ -419,11 +428,103 @@ export async function postSingleBalanceStockOperationInTransaction(
   )
 }
 
+/** Private purchase composition: caller holds the Book and sorted original stock locks. */
+export async function preparePurchaseStockReceiptInTransaction(
+  tx: Prisma.TransactionClient,
+  sourceInput: OrdinaryStockPreviewInput & {
+    expectedConfigurationVersionId: string
+  },
+) {
+  const input = { ...sourceInput }
+  const lockedBalance = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "StockBalanceSource" WHERE id = ${input.balanceSourceId}
+    AND "tenantId" = ${input.tenantId} AND "storeId" = ${input.storeId} FOR UPDATE`
+  if (lockedBalance.length !== 1 || lockedBalance[0]?.id !== input.balanceSourceId)
+    throw new CatalogError("INVALID_STOCK_OPERATION", "The original purchase stock source is unavailable.")
+  // Hold both the entered unit and its status/factor owner through execution.
+  const lockedUnit = await tx.$queryRaw<Array<{ id: string }>>`SELECT u.id FROM "InventoryUnit" u
+    JOIN "UnitConfigurationVersion" c ON c.id = u."configurationVersionId"
+    JOIN "CatalogProduct" p ON p.id = c."productId"
+    JOIN "CatalogItem" i ON i.id = p."catalogItemId" AND i."tenantId" = ${input.tenantId}
+    WHERE u.id = ${input.enteredInventoryUnitId} AND c.id = ${input.expectedConfigurationVersionId}
+    FOR SHARE OF u, c`
+  if (lockedUnit.length !== 1 || lockedUnit[0]?.id !== input.enteredInventoryUnitId)
+    throw new CatalogError("STALE_CONFIGURATION", "The original purchase unit is unavailable in this business.")
+  const balance = await loadBalance(tx, input)
+  if (balance.custodyType !== "STORE")
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Purchase receipts require Store custody.",
+    )
+  const unit = await loadCompatibleEnteredUnit(
+    tx,
+    balance,
+    input.enteredInventoryUnitId,
+  )
+  if (unit.configurationVersionId !== input.expectedConfigurationVersionId)
+    throw new CatalogError(
+      "STALE_CONFIGURATION",
+      "Refresh the original purchase unit configuration.",
+    )
+  const preview = await previewLoadedOrdinaryStockAdjustment(
+    tx,
+    { ...input, direction: "increase" },
+    balance,
+    unit,
+  )
+  let execution: Promise<ReturnType<typeof serializeOperation>> | undefined
+  let confirmedHash: string | undefined
+  return {
+    preview,
+    execute(command: SingleBalanceInput) {
+      if (
+        command.tenantId !== input.tenantId ||
+        command.storeId !== input.storeId ||
+        command.balanceSourceId !== input.balanceSourceId ||
+        command.enteredInventoryUnitId !== input.enteredInventoryUnitId ||
+        command.enteredQuantity !== input.enteredQuantity ||
+        command.expectedConfigurationVersionId !==
+          input.expectedConfigurationVersionId ||
+        command.expectedBalanceRevision !== balance.revision ||
+        command.source !== "finance_purchase" ||
+        command.direction !== "increase" ||
+        command.type !== "receipt" ||
+        command.unitCostMinor !== undefined
+      )
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "The prepared purchase receipt source changed.",
+        )
+      const posting = {
+        ...command,
+        effectiveAt: command.effectiveAt
+          ? new Date(command.effectiveAt)
+          : undefined,
+        categories: command.categories?.map((category) => ({ ...category })),
+      }
+      const payloadHash = prepareSingleBalanceStockOperation(posting)
+      if (confirmedHash !== undefined && confirmedHash !== payloadHash)
+        throw new CatalogError(
+          "IDEMPOTENCY_MISMATCH",
+          "The prepared stock receipt command changed.",
+        )
+      confirmedHash = payloadHash
+      return (execution ??= postSingleBalanceStockOperationInTransactionCore(
+        tx,
+        posting,
+        payloadHash,
+        false,
+        { balance, unit },
+      ))
+    },
+  }
+}
+
 async function postSingleBalanceStockOperationInTransactionCore(
   tx: Prisma.TransactionClient,
   input: SingleBalanceInput,
   payloadHash: string,
   registerOrdinaryValuation: boolean,
+  prepared?: { balance: BalanceGraph; unit: Awaited<ReturnType<typeof loadCompatibleEnteredUnit>> },
 ) {
   const previous = await previousOperation(tx, {
     clientOperationId: input.clientOperationId,
@@ -435,14 +536,14 @@ async function postSingleBalanceStockOperationInTransactionCore(
   const categoryLinks = input.categories
     ? await resolveStockCategories(tx, input.tenantId, input.categories)
     : []
-  const balance = await loadBalance(tx, input)
+  const balance = prepared?.balance ?? await loadBalance(tx, input)
   if (balance.revision !== input.expectedBalanceRevision) {
     throw new CatalogError(
       "REVISION_CONFLICT",
       "The Balance Source changed before this operation.",
     )
   }
-  const unit = await loadCompatibleEnteredUnit(
+  const unit = prepared?.unit ?? await loadCompatibleEnteredUnit(
     tx,
     balance,
     input.enteredInventoryUnitId,
