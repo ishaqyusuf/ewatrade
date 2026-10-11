@@ -3,6 +3,7 @@ import {
   AppError,
   classifyError,
   providerError,
+  ruleRejectedError,
   runProviderOperation,
   toPublicErrorEnvelope,
 } from "."
@@ -167,4 +168,28 @@ test("store allowance failures retain actionable copy through the API wrapper", 
   expect(response.error.message).toContain("to add more stores")
   expect(response.error.message).not.toContain("permission")
   expect(response.error.retryable).toBe(false)
+})
+
+test("rule refusals keep their domain reason through the API wrapper", () => {
+  const domain = Object.assign(new Error("Money has been received"), {
+    code: "INVALID_ORDER",
+  })
+  const response = toPublicErrorEnvelope(
+    new Error("tRPC wrapper", { cause: ruleRejectedError(domain) }),
+  )
+  expect(response.error).toMatchObject({
+    code: "RULE_REJECTED",
+    message: "Money has been received",
+    retryable: false,
+  })
+  expect(classifyError(ruleRejectedError(domain)).reportable).toBe(false)
+  // The same domain error without the explicit opt-in stays masked.
+  expect(
+    toPublicErrorEnvelope(new Error("tRPC wrapper", { cause: domain })).error
+      .message,
+  ).toBe("Something went wrong. Please try again.")
+  // An empty domain message falls back to the fixed rule text.
+  expect(
+    toPublicErrorEnvelope(ruleRejectedError(new Error(" "))).error.message,
+  ).toBe("This action isn’t allowed for this record right now.")
 })

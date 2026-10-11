@@ -30,6 +30,7 @@ export type ErrorCode =
   | "RATE_LIMITED"
   | "REGISTRAR_PROVIDER_FAILED"
   | "ROLE_RESTRICTED"
+  | "RULE_REJECTED"
   | "STORAGE_PROVIDER_FAILED"
   | "STORE_LIMIT_REACHED"
   | "STOCK_CONFLICT"
@@ -244,6 +245,12 @@ const descriptors: Record<ErrorCode, ErrorDescriptor> = {
     retryable: false,
     status: 403,
   },
+  RULE_REJECTED: {
+    message: "This action isn’t allowed for this record right now.",
+    reportable: false,
+    retryable: false,
+    status: 422,
+  },
   STORAGE_PROVIDER_FAILED: {
     message:
       "Private media storage is temporarily unavailable. Please try again.",
@@ -277,7 +284,10 @@ export type AppErrorOptions = {
   code: ErrorCode
   internalMessage?: string
   operation?: string
-  /** Plan errors only: server-authored upgrade text that replaces the fixed message. */
+  /**
+   * Plan and rule errors only: server-authored text (upgrade copy, or why a
+   * business rule refused the action) that replaces the fixed message.
+   */
   publicMessage?: string
   referenceId?: string
 }
@@ -286,6 +296,7 @@ export type AppErrorOptions = {
 const CUSTOM_PUBLIC_MESSAGE_CODES = new Set<ErrorCode>([
   "PLAN_LIMIT_REACHED",
   "PLAN_UPGRADE_REQUIRED",
+  "RULE_REJECTED",
 ])
 
 function createReferenceId() {
@@ -484,6 +495,22 @@ export function classifyError(
   })
   if (errorRecord) classifiedErrors.set(errorRecord, classified)
   return classified
+}
+
+/**
+ * A business rule refused the action and its domain message was written for
+ * the person acting (e.g. "Money has been received"). Only call this for
+ * domain errors whose messages never include private data; everything else
+ * keeps its fixed public text.
+ */
+export function ruleRejectedError(cause: Error, operation?: string) {
+  return new AppError({
+    cause,
+    code: "RULE_REJECTED",
+    internalMessage: cause.message,
+    operation,
+    publicMessage: cause.message.trim() || undefined,
+  })
 }
 
 export function providerError(

@@ -13,6 +13,7 @@ import {
   previewCommercialOrderReplacement,
   replaceCommercialOrder,
 } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { protectedProcedure } from "../init"
@@ -54,22 +55,25 @@ async function domain<T>(operation: () => Promise<T>) {
   try {
     return await operation()
   } catch (error) {
-    if (error instanceof CatalogError)
+    if (error instanceof CatalogError) {
+      const code =
+        error.code === "ORDER_NOT_FOUND"
+          ? "NOT_FOUND"
+          : [
+                "REVISION_CONFLICT",
+                "IDEMPOTENCY_MISMATCH",
+                "INSUFFICIENT_STOCK",
+                "STALE_CONFIGURATION",
+              ].includes(error.code)
+            ? "CONFLICT"
+            : "BAD_REQUEST"
       throw new TRPCError({
-        code:
-          error.code === "ORDER_NOT_FOUND"
-            ? "NOT_FOUND"
-            : [
-                  "REVISION_CONFLICT",
-                  "IDEMPOTENCY_MISMATCH",
-                  "INSUFFICIENT_STOCK",
-                  "STALE_CONFIGURATION",
-                ].includes(error.code)
-              ? "CONFLICT"
-              : "BAD_REQUEST",
+        code,
         message: error.message,
-        cause: error,
+        // Say why the rule refused it; not-found and conflicts keep fixed text.
+        cause: code === "BAD_REQUEST" ? ruleRejectedError(error) : error,
       })
+    }
     throw error
   }
 }

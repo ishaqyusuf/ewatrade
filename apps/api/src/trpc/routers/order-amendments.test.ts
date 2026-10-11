@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { toPublicError } from "@ewatrade/errors"
 import { createCallerFactory } from "../init"
 import { ordersRouter } from "./orders"
 
@@ -101,4 +102,64 @@ test("amendment commands reject supplied authority and payment fields", async ()
     ).rejects.toMatchObject({ code: "BAD_REQUEST" })
   }
   expect(accesses).toBe(0)
+})
+
+test("a refused amendment tells the person why instead of a generic error", async () => {
+  const order = {
+    id: identity.orderId,
+    tenantId: "server-tenant",
+    storeId: "server-store",
+    orderNumber: "ORD-001",
+    status: "CONFIRMED",
+    paymentStatus: "PENDING",
+    amountPaidMinor: 0,
+    currencyCode: "NGN",
+    subtotalMinor: 0,
+    totalMinor: 0,
+    discountMinor: 0,
+    taxMinor: 0,
+    serviceChargeMinor: 0,
+    customerId: null,
+    customerName: null,
+    customerPhone: null,
+    customerEmail: null,
+    deliveryDueAt: null,
+    notes: null,
+    updatedAt: new Date("2026-10-11T00:00:00.000Z"),
+    store: { status: "ACTIVE" },
+    acceptedQuoteVersion: null,
+    acceptedCommerceQuoteVersion: null,
+    serviceIntake: null,
+    prescriptionPickupFulfillment: null,
+    prescriptionDeliveryAddress: null,
+    prescriptionDeliveryAssignment: null,
+    _count: {
+      lines: 0,
+      payments: 0,
+      ledgerEntries: 0,
+      returns: 0,
+      serviceAuthorizations: 0,
+      serviceFulfillments: 0,
+      serviceJobs: 0,
+      prescriptionPaymentIntents: 0,
+      serviceBookings: 0,
+    },
+    lines: [],
+  }
+  const db = {
+    commercialOrder: { findFirst: async () => order },
+    customer: { findFirst: async () => null },
+  }
+  const caller = createCaller(context("OWNER", db) as never)
+  const failure = await caller
+    .metadataReview({
+      orderId: identity.orderId,
+      patch: { customerId: "gone" },
+    })
+    .catch((error: unknown) => error)
+  expect(failure).toMatchObject({ code: "BAD_REQUEST" })
+  expect(toPublicError(failure)).toMatchObject({
+    code: "RULE_REJECTED",
+    message: "Selected Customer not found in this business.",
+  })
 })

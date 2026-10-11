@@ -35,6 +35,7 @@ import {
   getOrderReceipts,
   saveOrderReceiptSettings,
 } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { ReceiptRenderError } from "@ewatrade/order-receipts"
 import { renderOrderReceipts } from "@ewatrade/order-receipts/pdf"
 import { TRPCError } from "@trpc/server"
@@ -130,16 +131,18 @@ function resolveStoreId(
 
 function orderError(error: CatalogError | FinanceError) {
   if (error instanceof FinanceError) {
+    const code =
+      error.code === "FORBIDDEN"
+        ? "FORBIDDEN"
+        : error.code === "NOT_FOUND"
+          ? "NOT_FOUND"
+          : error.code === "CONFLICT" || error.code === "CLOSED_PERIOD"
+            ? "CONFLICT"
+            : "BAD_REQUEST"
     return new TRPCError({
-      cause: error,
-      code:
-        error.code === "FORBIDDEN"
-          ? "FORBIDDEN"
-          : error.code === "NOT_FOUND"
-            ? "NOT_FOUND"
-            : error.code === "CONFLICT" || error.code === "CLOSED_PERIOD"
-              ? "CONFLICT"
-              : "BAD_REQUEST",
+      // Rule refusals show their reason; access and conflicts keep fixed text.
+      cause: code === "BAD_REQUEST" ? ruleRejectedError(error) : error,
+      code,
       message: error.message,
     })
   }
@@ -164,7 +167,7 @@ function orderError(error: CatalogError | FinanceError) {
     })
   }
   return new TRPCError({
-    cause: error,
+    cause: ruleRejectedError(error),
     code: "BAD_REQUEST",
     message: error.message,
   })
