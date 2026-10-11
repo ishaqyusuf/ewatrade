@@ -24,6 +24,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Protected correction history, 11 October 2026](runs/2026-10-11-correction-history-router.md): retained router/middleware regression passes4assertions with synthetic completed correction DTOs and verified chat cleanup; HTTP/runtime investigation remains pending.
+
 - [Receipt lifecycle fix, 11 October 2026](runs/2026-10-11-receipt-lifecycle-fix.md): reproduced false mount-guard rejection, fixed subscription ordering, verified list/Refresh in browser and43 existing state assertions; owned cleanup complete.
 
 - [Chat loading diagnosis, 11 October 2026](runs/2026-10-11-chat-loading-diagnostic.md): empty chat briefly rendered then reached global error boundary; root cause unproven, web acceptance remains incomplete.
