@@ -55,7 +55,9 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
   const rawCalls: Array<{ query: string; values: unknown[] }> = []
   const orderUpdates: Array<Record<string, unknown>> = []
   const commandRows = new Map<string, Record<string, unknown>>()
-  let fulfillmentUpsertCount = 0
+  let fulfillmentCreateCount = 0
+  const savedFulfillment = { id: "fulfillment-a", quantity: { toString: () => "2" }, stockOperationId: "operation:fulfill-a" }
+  let priorFulfillment = options.existingFulfillment ? savedFulfillment : null
   let batchCommandCreateCount = 0
 
   const line = {
@@ -168,8 +170,7 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
       },
     },
     productFulfillment: {
-      findUnique: async () =>
-        options.existingFulfillment === false ? null : { id: "fulfillment-a" },
+      findUnique: async () => priorFulfillment,
       findFirst: async (args: unknown) => {
         expect(args).toMatchObject({
           where: {
@@ -190,14 +191,11 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
           },
         }
       },
-      upsert: async () => {
+      create: async () => {
         events.push("write:product-fulfillment")
-        fulfillmentUpsertCount += 1
-        return {
-          id: "fulfillment-a",
-          quantity: { toString: () => "2" },
-          stockOperationId: "operation:fulfill-a",
-        }
+        fulfillmentCreateCount += 1
+        priorFulfillment = savedFulfillment
+        return savedFulfillment
       },
     },
     financeBook: { findUnique: async () => null },
@@ -235,8 +233,8 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
     events,
     rawCalls,
     orderUpdates,
-    get fulfillmentUpsertCount() {
-      return fulfillmentUpsertCount
+    get fulfillmentCreateCount() {
+      return fulfillmentCreateCount
     },
     get batchCommandCreateCount() {
       return batchCommandCreateCount
@@ -267,6 +265,7 @@ test("single-line fulfillment locks finance and Order before replay and preserve
   )
 
   expect(first).toEqual(second)
+  expect(fixture.fulfillmentCreateCount).toBe(1)
   expect(fixture.orderUpdates).toHaveLength(2)
   expect(fixture.orderUpdates.map((update) => update.completedAt)).toEqual([
     completedAt,
@@ -280,16 +279,17 @@ test("single-line fulfillment locks finance and Order before replay and preserve
     "lock:customer-account",
     "lock:order",
   ])
-  for (const events of [
+  for (const [index, events] of [
     fixture.events.slice(0, firstCallEnd),
     fixture.events.slice(firstCallEnd),
-  ]) {
+  ].entries()) {
     const lock = events.indexOf("lock:order")
     const stock = events.indexOf("read:stock-operation:fulfill-a")
     const source = events.indexOf("write:product-fulfillment")
     expect(lock).toBeGreaterThan(-1)
     expect(stock).toBeGreaterThan(lock)
-    expect(source).toBeGreaterThan(stock)
+    if (index === 0) expect(source).toBeGreaterThan(stock)
+    else expect(source).toBe(-1)
   }
   expect(fixture.rawCalls.map((call) => call.values.slice(-2))).toContainEqual([
     orderId,
@@ -309,13 +309,13 @@ test("batch replay returns the stored result without repeating fulfillment write
   }
 
   const first = await fulfillCommercialOrderProducts(fixture.db, input)
-  const writesAfterFirst = fixture.fulfillmentUpsertCount
+  const writesAfterFirst = fixture.fulfillmentCreateCount
   const second = await fulfillCommercialOrderProducts(fixture.db, input)
 
   expect(second).toEqual(first)
   expect(first).toEqual({ fulfilledLineCount: 1, status: "COMPLETED" })
   expect(writesAfterFirst).toBe(1)
-  expect(fixture.fulfillmentUpsertCount).toBe(writesAfterFirst)
+  expect(fixture.fulfillmentCreateCount).toBe(writesAfterFirst)
   expect(fixture.batchCommandCreateCount).toBe(1)
   // One financial/Order lock acquisition per command, including replay.
   expect(fixture.events.filter((event) => event.startsWith("lock:"))).toEqual([
@@ -391,7 +391,7 @@ test("product line composes in caller transaction and rejects a different Store"
       storeId: "other-store",
     }),
   ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
-  expect(wrong.fulfillmentUpsertCount).toBe(0)
+  expect(wrong.fulfillmentCreateCount).toBe(0)
   expect(wrong.orderUpdates).toHaveLength(0)
 })
 
@@ -412,6 +412,6 @@ test("batch composes without a nested transaction and fences Store before replay
   await expect(fulfillCommercialOrderProductsInTransaction(f.tx, {
     ...input, reason: "Changed intention",
   })).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
-  expect(f.fulfillmentUpsertCount).toBe(1)
+  expect(f.fulfillmentCreateCount).toBe(1)
   expect(f.batchCommandCreateCount).toBe(1)
 })

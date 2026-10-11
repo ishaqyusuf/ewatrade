@@ -420,19 +420,14 @@ async function applyCommercialOrderProductLineInTransaction(
             },
     },
   )
-  const fulfillment = await tx.productFulfillment.upsert({
-    create: {
+  // The parent Order and reservation locks serialize this source identity.
+  // A prior source is immutable; fresh work needs one insert, not another upsert read.
+  const fulfillment = previousFulfillment ?? await tx.productFulfillment.create({
+    data: {
       orderLineId: input.line.id,
       quantity: input.line.quantity,
       reservationId: input.line.stockReservation.id,
       stockOperationId: operation.id,
-    },
-    update: {},
-    where: {
-      orderLineId_reservationId: {
-        orderLineId: input.line.id,
-        reservationId: input.line.stockReservation.id,
-      },
     },
   })
   // Replayed legacy fulfillment is not a reviewed historical cost import.
