@@ -331,6 +331,21 @@ export const generalAnswerSchema = z
 export type GeneralAnswer = z.infer<typeof generalAnswerSchema>
 export const generalStoredPartSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string().max(16000) }).strict(),
+  // A photo or PDF the owner sent (e.g. a receipt); display data only.
+  z
+    .object({
+      type: z.literal("data-setup-attachment"),
+      data: z
+        .object({
+          attachmentId: z.string().max(128),
+          kind: z.string().max(32),
+          fileName: z.string().max(300),
+          summary: z.string().max(2000),
+          expired: z.boolean().optional(),
+        })
+        .strict(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("data-general-answer"),
@@ -342,6 +357,14 @@ export type GeneralDataParts = {
   "general-answer": GeneralAnswer
   "general-run": { runId: string; remainingRequests: number }
   "general-proposal": { proposalId: string }
+  /** Receipt photo or PDF sent with a user message. */
+  "setup-attachment": {
+    attachmentId: string
+    kind: string
+    fileName: string
+    summary: string
+    expired?: boolean
+  }
 }
 /** Money in assistant answers and reviews ("₦4,500.00"), exact for large values. */
 export function generalMoney(

@@ -45,6 +45,8 @@ type ComposerProps = {
   voiceConversationId: string | null
   /** Shown under the box unless a voice hint replaces it. */
   footer?: ReactNode
+  /** Files are ready to send, so an empty message may be sent. */
+  hasAttachments?: boolean
 }
 
 /**
@@ -197,6 +199,7 @@ function ComposerBox({
   label,
   footer,
   voice,
+  hasAttachments = false,
 }: ComposerProps & { voice: Voice | null }) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   useLayoutEffect(() => {
@@ -218,7 +221,7 @@ function ComposerBox({
     !blocked &&
     !disabled &&
     !working &&
-    value.trim().length > 0 &&
+    (value.trim().length > 0 || hasAttachments) &&
     value.length <= 8000
   const send = () => {
     if (canSend) onSend()
@@ -338,7 +341,7 @@ function ComposerBox({
                 >
                   <HugeiconsIcon icon={StopIcon} className="size-4" />
                 </InputGroupButton>
-              ) : voice && !value.trim() ? (
+              ) : voice && !value.trim() && !hasAttachments ? (
                 // Mic and Send share one place: dictate from empty, or type.
                 <InputGroupButton
                   type="button"

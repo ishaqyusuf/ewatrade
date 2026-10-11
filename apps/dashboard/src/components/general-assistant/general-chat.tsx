@@ -25,6 +25,7 @@ import {
 import {
   ArrowDown01Icon,
   ArrowUpRight01Icon,
+  Attachment01Icon,
   PlusSignIcon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons"
@@ -35,6 +36,7 @@ import { type ReactNode, useEffect, useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
+import { GeneralAttachmentTray } from "./general-attachment-tray"
 import { GeneralProposalCard } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { useGeneralAssistant } from "./use-general-assistant"
@@ -284,14 +286,38 @@ export function GeneralThread({
           ) : null}
           {vm.chat.messages.map((message) => {
             const text = generalPlainText(message.parts)
-            if (message.role === "user")
+            if (message.role === "user") {
+              const files = message.parts.flatMap((part) =>
+                part.type === "data-setup-attachment" ? [part.data] : [],
+              )
               return (
-                <div key={message.id} className="flex justify-end">
-                  <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-                    {text}
-                  </p>
+                <div
+                  key={message.id}
+                  className="flex flex-col items-end gap-1.5"
+                >
+                  {files.map((file) => (
+                    <span
+                      key={file.attachmentId}
+                      className="flex max-w-[85%] items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+                    >
+                      <HugeiconsIcon
+                        icon={Attachment01Icon}
+                        className="size-3.5 shrink-0"
+                      />
+                      <span className="truncate">
+                        {file.fileName}
+                        {file.expired ? " · removed" : ""}
+                      </span>
+                    </span>
+                  ))}
+                  {text ? (
+                    <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                      {text}
+                    </p>
+                  ) : null}
                 </div>
               )
+            }
             const answers = generalAnswers(message.parts)
             return (
               <div key={message.id} className="flex gap-3">
@@ -432,24 +458,36 @@ export function GeneralComposer({
 }) {
   const { enabled, disabled, exhausted } = generalChatFlags(vm)
   const off = !enabled || !vm.conversationId || exhausted || vm.state.isError
+  const mediaEnabled = vm.availability.data?.mediaEnabled === true
   return (
-    <AssistantComposer
-      value={vm.draft}
-      onChange={vm.setDraft}
-      onSend={() => void vm.send()}
-      onStop={() => void vm.chat.stop()}
-      busy={vm.busy}
-      blocked={disabled}
-      disabled={off}
-      placeholder={
-        exhausted
-          ? "Monthly allowance used"
-          : "Ask a question or say what to record…"
-      }
-      label="Ask a question or say what to record"
-      voiceConversationId={enabled ? vm.conversationId : null}
-      footer={footer}
-    />
+    <>
+      {vm.conversationId && enabled && mediaEnabled ? (
+        <GeneralAttachmentTray
+          key={`${vm.conversationId}:${vm.attachmentTrayKey}`}
+          conversationId={vm.conversationId}
+          disabled={off || vm.busy}
+          onReadyChange={vm.setReadyAttachments}
+        />
+      ) : null}
+      <AssistantComposer
+        hasAttachments={vm.readyAttachments.length > 0}
+        value={vm.draft}
+        onChange={vm.setDraft}
+        onSend={() => void vm.send()}
+        onStop={() => void vm.chat.stop()}
+        busy={vm.busy}
+        blocked={disabled}
+        disabled={off}
+        placeholder={
+          exhausted
+            ? "Monthly allowance used"
+            : "Ask a question or say what to record…"
+        }
+        label="Ask a question or say what to record"
+        voiceConversationId={enabled ? vm.conversationId : null}
+        footer={footer}
+      />
+    </>
   )
 }
 

@@ -1,3 +1,4 @@
+import { isSetupAssistantMediaEnabled } from "../../assistant/setup-context"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import {
   generalActionSchema,
@@ -29,7 +30,11 @@ import { createTRPCRouter, protectedProcedure } from "../init"
 const id = z.string().min(1).max(128)
 export const assistantRouter = createTRPCRouter({
   availability: protectedProcedure.query(({ ctx }) => {
-    const availability = generalAssistantAvailability(process.env)
+    // Receipt photos/PDFs share the setup assistant's media switch.
+    const availability = {
+      ...generalAssistantAvailability(process.env),
+      mediaEnabled: isSetupAssistantMediaEnabled(),
+    }
     if (!availability.enabled) return availability
     try {
       requireGeneralScope(ctx)

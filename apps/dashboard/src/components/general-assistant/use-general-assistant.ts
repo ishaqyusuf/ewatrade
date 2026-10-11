@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { DefaultChatTransport, type UIMessage } from "ai"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { z } from "zod"
+import type { GeneralReadyAttachment } from "./general-attachment-tray"
 
 type Message = UIMessage<never, GeneralDataParts>
 const runSchema = z.object({
@@ -53,6 +54,11 @@ export function useGeneralAssistant({
   const autoStartAttempted = useRef(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [draft, setDraft] = useState("")
+  // Receipt photos/PDFs read and ready to go with the next message.
+  const [readyAttachments, setReadyAttachments] = useState<
+    GeneralReadyAttachment[]
+  >([])
+  const [attachmentTrayKey, setAttachmentTrayKey] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
@@ -111,7 +117,27 @@ export function useGeneralAssistant({
               message: {
                 id: last.id,
                 role: "user",
-                parts: last.parts.filter((p) => p.type === "text"),
+                parts: last.parts.flatMap(
+                  (
+                    p,
+                  ): Array<
+                    | { type: "text"; text: string }
+                    | {
+                        type: "data-setup-attachment"
+                        data: { attachmentId: string }
+                      }
+                  > =>
+                    p.type === "text"
+                      ? [{ type: "text", text: p.text }]
+                      : p.type === "data-setup-attachment"
+                        ? [
+                            {
+                              type: p.type,
+                              data: { attachmentId: p.data.attachmentId },
+                            },
+                          ]
+                        : [],
+                ),
               },
             },
           }
@@ -291,7 +317,15 @@ export function useGeneralAssistant({
   ])
   const send = async () => {
     const text = draft.trim()
-    if (!text || busy || runId || pending || !conversationId || state.isError)
+    const files = readyAttachments
+    if (
+      (!text && !files.length) ||
+      busy ||
+      runId ||
+      pending ||
+      !conversationId ||
+      state.isError
+    )
       return
     typed.current = false
     messageSettled.current = false
@@ -302,8 +336,23 @@ export function useGeneralAssistant({
     attemptedText.current = text
     setDraft("")
     setNotice(null)
+    setReadyAttachments([])
+    setAttachmentTrayKey((key) => key + 1)
     try {
-      await chat.sendMessage({ text })
+      await chat.sendMessage({
+        parts: [
+          ...(text ? [{ type: "text" as const, text }] : []),
+          ...files.map((file) => ({
+            type: "data-setup-attachment" as const,
+            data: {
+              attachmentId: file.attachmentId,
+              kind: "IMAGE",
+              fileName: file.fileName,
+              summary: "",
+            },
+          })),
+        ],
+      })
     } catch (error) {
       settleMessage("failed")
       if (mounted.current) {
@@ -349,6 +398,9 @@ export function useGeneralAssistant({
     setNotice(null)
   }
   return {
+    readyAttachments,
+    setReadyAttachments,
+    attachmentTrayKey,
     availability,
     conversations,
     state,
