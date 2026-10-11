@@ -30,7 +30,7 @@ const input = {
 }
 
 test("read-only eligibility returns reserved account identities and original cost ceiling", async () => {
-  expect(await reviewProductReturnJournal(fixture(), input)).toEqual({ grossEffectiveAt: effectiveAt, inventoryAccountId: "inventory", costOfSalesAccountId: "cogs", grossAmount: 100n, priorReturnCost: 0n })
+  expect(await reviewProductReturnJournal(fixture(), input)).toMatchObject({ grossEffectiveAt: effectiveAt, inventoryAccountId: "inventory", costOfSalesAccountId: "cogs", grossAmount: 100n, priorReturnCost: 0n })
 })
 test("missing gross and zero cost do not promise a journal", async () => {
   expect(await reviewProductReturnJournal(fixture({ missing: true }), input)).toBeNull()

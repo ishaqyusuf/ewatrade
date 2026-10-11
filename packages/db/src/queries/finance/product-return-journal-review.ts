@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { CommercialOrder, Prisma } from "../../../generated/prisma/client"
 import type { resolveCommerceInventoryCostPosting } from "./inventory-cost-posting-source"
 import { FinanceError } from "./rules"
@@ -145,6 +146,7 @@ export async function reviewProductReturnJournal(tx: Prisma.TransactionClient, i
   }
 
   return {
+    revision: createHash("sha256").update(JSON.stringify({ grossEntry, gross: gross.input, orderReturns, priorEntries, accounts }, (_key, value) => typeof value === "bigint" ? value.toString() : value)).digest("hex"),
     grossEffectiveAt: grossEntry.effectiveAt,
     inventoryAccountId: account("1300", "ASSET", "INVENTORY"),
     costOfSalesAccountId: account("5000", "EXPENSE", "COST_OF_SALES"),

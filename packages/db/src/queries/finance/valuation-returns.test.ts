@@ -468,6 +468,8 @@ test("composed return review combines stock and destination value without record
   const fixture = baseFixture({ disposition: "RESTOCK" })
   const tx = {
     ...fixture.tx,
+    commercialOrder: { findFirst: async () => ({ ...fixture.productReturn.order, status: "COMPLETED", completedAt: new Date("2026-09-01") }) },
+    financeJournalEntry: { findUnique: async () => null },
     stockBalanceSource: { findFirst: async () => ({
       ...fixture.balance, onHandQuantity: decimal("4"), reservedQuantity: decimal("0"),
       inventoryUnit: { ...fixture.balance.inventoryUnit, name: "Piece" },
@@ -482,7 +484,8 @@ test("composed return review combines stock and destination value without record
   expect(review.destination).toMatchObject({ valueBeforeMinor: "200", valueAfterMinor: "240", valueDeltaMinor: "40" })
   expect(review.customerCredit).toBe("NOT_RECORDED")
   expect(review.cashRefund).toBe("NOT_RECORDED")
-  expect(review.financialReview).toBe("JOURNAL_PENDING")
+  expect(review.financialReview).toBe("REVIEWED")
+  expect(review.journal.status).toBe("WAITING_FOR_ORIGINAL_COGS")
   expect(fixture.state.header).toBeNull()
   expect(fixture.state.event).toBeNull()
 })
