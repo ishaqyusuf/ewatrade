@@ -1,3 +1,4 @@
+import { generalSuppliersInput, generalSupplierStatementInput, generalSuppliersAnswer, generalSupplierStatementAnswer } from "./general-supplier-reads"
 import { generalBillsInput, generalBillInput, generalBillsAnswer, generalBillData } from "./general-bill-reads"
 import { generalCustomerEntryInput, generalCustomerAllocationHistoryInput, generalCustomerEntryAnswer, generalCustomerAllocationHistoryAnswer } from "./general-customer-allocations"
 import { financeRouter } from "../trpc/routers/finance"
@@ -856,6 +857,24 @@ export function createGeneralTools(
             .createCaller(fresh)
             .accounts({ ...input, limit: 10 }),
         ),
+    }),
+    readSuppliers: tool({
+      description: "Search up to 10 supplier identities by name or code in an exact Finance Book. Continue with nextCursor preserving Book and query. Clarify ambiguous names; never invent a supplier ID or infer balances from the identity list.",
+      inputSchema: generalSuppliersInput,
+      execute: input => wrap("readSuppliers", async fresh => {
+        const page = await financeRouter.createCaller(fresh).suppliers({...input, limit: 10})
+        onAnswer(generalSuppliersAnswer(page))
+        return page
+      }),
+    }),
+    readSupplierStatement: tool({
+      description: "Read an exact supplier's recorded payable and advance balances separately, plus up to 10 statement entries. Continuations must preserve bookId, supplierId and snapshotSequence and use nextCursor. Complete snapshot balances are not page sums. Do not infer money transfer, physical receipt, invoice recognition or ownership from settlement entries.",
+      inputSchema: generalSupplierStatementInput,
+      execute: input => wrap("readSupplierStatement", async fresh => {
+        const statement = await financeRouter.createCaller(fresh).supplierStatement({...input, limit: 10})
+        onAnswer(generalSupplierStatementAnswer(statement))
+        return statement
+      }),
     }),
     readExpenseBills: tool({
       description: "Search up to 10 recorded expense bills across Stores in an exact Finance Book by payee, description or reference. Optional status UNPAID/PARTIAL/PAID/VOID. Continue with nextCursor as cursor preserving filters. Currency and complete filtered totals accompany this page. Ask which bill if ambiguous; never create another expense to record payment.",

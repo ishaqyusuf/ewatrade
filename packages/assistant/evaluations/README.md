@@ -7,6 +7,7 @@ it is not an executed result, enabled capability, or deployment claim.
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
 | Expense/payment corrections | [1](fixtures/bill-correction.v1.md) | Exact original targets, no-transfer boundaries, void/payment guards, stale/retry and rollback | None yet |
+| Supplier search/statements | [1](fixtures/supplier-reads.v1.md) | Exact identities, separate balances, snapshot continuation and scope refusal | None yet |
 | `finance.money_movement.record` v1 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
 | `finance.expense.record` v1 | [1](fixtures/expense.v1.md) | Unpaid/partial/owner-funded expense, ambiguity, posting guards, atomic retry, receipt | None yet |
 | `finance.bill.pay` v1 | [1](fixtures/bill-payment.v1.md) | Existing bill resolution, partial/owner payment, stale/void/closed guards, retry, editor | None yet |
@@ -23,6 +24,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Supplier read source, 11 October 2026](runs/2026-10-11-supplier-reads-source.md):14assertions and scoped types pass; canonical search/statements registered as planned dashboard tools. Actual-tool acceptance pending.
 
 - [Correction receipt Open/Close, 11 October 2026](runs/2026-10-11-correction-receipt-open.md): saved cards load; Open shows corrected bill over same chat, Close preserves it; working receipt list and owned cleanup verified. Backend confirmations; full UI confirmation pending.
 
