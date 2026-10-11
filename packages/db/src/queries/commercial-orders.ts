@@ -465,7 +465,7 @@ async function applyCommercialOrderProductsInTransaction(
     )
   const productLines = await tx.commercialOrderLine.findMany({
     include: { productFulfillments: true, stockReservation: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     where: {
       kind: SellableOfferingKind.PRODUCT_UNIT,
       orderId: input.orderId,
@@ -480,7 +480,7 @@ async function applyCommercialOrderProductsInTransaction(
   // "fulfil" records their performance. They go first because performance
   // is refused once the Order is COMPLETED.
   const catalogFreeLines = await tx.commercialOrderLine.findMany({
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true },
     where: {
       kind: SellableOfferingKind.SERVICE,

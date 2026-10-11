@@ -73,7 +73,7 @@ export async function getCommercialProductLineReview(
       balanceSourceId: balance.id, unitName: balance.inventoryUnit.name,
       onHandBefore: balance.onHandQuantity.toFixed(), onHandAfter: impact.resultingOnHand,
       reservedBefore: balance.reservedQuantity.toFixed(), reservedAfter: impact.resultingReserved,
-      canonicalQuantity: reservation.canonicalQuantity.toFixed(),
+      canonicalBefore, canonicalQuantity: reservation.canonicalQuantity.toFixed(),
     },
     cost,
     revision: createHash("sha256").update(JSON.stringify({
