@@ -36,7 +36,7 @@ import { type ReactNode, useEffect, useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
-import { GeneralAttachmentTray } from "./general-attachment-tray"
+import { GeneralAttachComposer } from "./general-attachment-tray"
 import { GeneralProposalCard } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { useGeneralAssistant } from "./use-general-assistant"
@@ -463,35 +463,29 @@ export function GeneralComposer({
   const { enabled, disabled, exhausted } = generalChatFlags(vm)
   const off = !enabled || !vm.conversationId || exhausted || vm.state.isError
   const mediaEnabled = vm.availability.data?.mediaEnabled === true
-  return (
-    <>
-      {vm.conversationId && enabled && mediaEnabled ? (
-        <GeneralAttachmentTray
-          key={`${vm.conversationId}:${vm.attachmentTrayKey}`}
-          conversationId={vm.conversationId}
-          disabled={off || vm.busy}
-          onReadyChange={vm.setReadyAttachments}
-        />
-      ) : null}
-      <AssistantComposer
-        hasAttachments={vm.readyAttachments.length > 0}
-        value={vm.draft}
-        onChange={vm.setDraft}
-        onSend={() => void vm.send()}
-        onStop={() => void vm.chat.stop()}
-        busy={vm.busy}
-        blocked={disabled}
-        disabled={off}
-        placeholder={
-          exhausted
-            ? "Monthly allowance used"
-            : "Ask a question or say what to record…"
-        }
-        label="Ask a question or say what to record"
-        voiceConversationId={enabled ? vm.conversationId : null}
-        footer={footer}
-      />
-    </>
+  const props = {
+    hasAttachments: vm.readyAttachments.length > 0,
+    value: vm.draft,
+    onChange: vm.setDraft,
+    onSend: () => void vm.send(),
+    onStop: () => void vm.chat.stop(),
+    busy: vm.busy,
+    blocked: disabled,
+    disabled: off,
+    placeholder: exhausted ? "Monthly allowance used" : "Ask anything",
+    label: "Ask a question or say what to record",
+    voiceConversationId: enabled ? vm.conversationId : null,
+    footer,
+  }
+  return vm.conversationId && enabled && mediaEnabled ? (
+    <GeneralAttachComposer
+      key={`${vm.conversationId}:${vm.attachmentTrayKey}`}
+      conversationId={vm.conversationId}
+      onReadyChange={vm.setReadyAttachments}
+      {...props}
+    />
+  ) : (
+    <AssistantComposer {...props} />
   )
 }
 

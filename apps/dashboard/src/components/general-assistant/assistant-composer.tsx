@@ -1,16 +1,11 @@
 "use client"
 import { useTRPC } from "@/trpc/client"
-import {
-  Button,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupTextarea,
-} from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui"
 import {
   ArrowUp02Icon,
   Cancel01Icon,
   Mic01Icon,
+  PlusSignIcon,
   StopIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -47,6 +42,16 @@ type ComposerProps = {
   footer?: ReactNode
   /** Files are ready to send, so an empty message may be sent. */
   hasAttachments?: boolean
+  /** Shows the + button and the attached files inside the box. */
+  attach?: ComposerAttach
+}
+
+export type ComposerAttach = {
+  accept: string
+  disabled: boolean
+  onFiles: (files: File[]) => void
+  /** Attached files, shown inside the box above the text. */
+  chips: ReactNode
 }
 
 /**
@@ -200,21 +205,31 @@ function ComposerBox({
   footer,
   voice,
   hasAttachments = false,
+  attach,
 }: ComposerProps & { voice: Voice | null }) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  // Wrapped text stacks the box (text on top, buttons below) until cleared;
+  // large screens are always stacked.
+  const [wrapped, setWrapped] = useState(false)
   useLayoutEffect(() => {
     const textarea = inputRef.current
     if (!textarea) return
     textarea.style.height = ""
-    if (!value) return
+    if (!value) {
+      setWrapped(false)
+      return
+    }
     const style = getComputedStyle(textarea)
-    const lines = window.matchMedia("(min-width: 768px)").matches ? 5 : 3
-    const maxHeight =
-      Number.parseFloat(style.lineHeight) * lines +
+    const lineHeight = Number.parseFloat(style.lineHeight)
+    const padding =
       Number.parseFloat(style.paddingTop) +
       Number.parseFloat(style.paddingBottom)
-    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`
+    if (textarea.scrollHeight - padding > lineHeight * 1.5) setWrapped(true)
+    const lines = window.matchMedia("(min-width: 768px)").matches ? 5 : 3
+    textarea.style.height = `${Math.min(textarea.scrollHeight, lineHeight * lines + padding)}px`
   }, [value])
+  const stacked = wrapped || value.includes("\n")
   const working = voice?.working === true
   const canSend =
     !busy &&
@@ -226,6 +241,7 @@ function ComposerBox({
   const send = () => {
     if (canSend) onSend()
   }
+  const round = "size-9 shrink-0 rounded-[50%]"
 
   return (
     <div>
@@ -243,135 +259,180 @@ function ComposerBox({
           </button>
         </p>
       ) : null}
-      {voice?.recording ? (
-        <output
-          aria-live="polite"
-          className="flex min-h-11 items-center gap-2 rounded-[22px] border border-destructive/30 bg-background py-1.5 pr-1.5 pl-1.5"
-        >
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="size-8 shrink-0 rounded-[50%] text-muted-foreground"
-            aria-label="Cancel recording"
-            title="Cancel recording"
-            onClick={voice.cancel}
+      <form
+        className="rounded-[26px] border border-border bg-background p-1.5 shadow-xs"
+        onSubmit={(event) => {
+          event.preventDefault()
+          send()
+        }}
+      >
+        {attach?.chips}
+        {voice?.recording ? (
+          <output
+            aria-live="polite"
+            className="flex min-h-9 items-center gap-2"
           >
-            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
-          </Button>
-          <span className="shrink-0 text-xs tabular-nums">
-            {formatRecorderElapsed(voice.elapsedMs)} /{" "}
-            {formatRecorderElapsed(voice.maxDurationMs)}
-          </span>
-          <span
-            aria-hidden
-            className="flex h-5 min-w-0 flex-1 items-center gap-0.5 overflow-hidden"
-          >
-            {Array.from({ length: 24 }, (_, index) => (
-              <span
-                // biome-ignore lint/suspicious/noArrayIndexKey: fixed meter bars
-                key={index}
-                className="w-1 shrink-0 rounded-full bg-primary/70"
-                style={{
-                  height: `${Math.max(15, (voice.levels[index % Math.max(1, voice.levels.length)] ?? 0) * 100)}%`,
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={`${round} text-muted-foreground`}
+              aria-label="Cancel recording"
+              title="Cancel recording"
+              onClick={voice.cancel}
+            >
+              <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+            </Button>
+            <span className="size-2 shrink-0 rounded-full bg-destructive" />
+            <span className="shrink-0 text-xs tabular-nums">
+              {formatRecorderElapsed(voice.elapsedMs)} /{" "}
+              {formatRecorderElapsed(voice.maxDurationMs)}
+            </span>
+            <span
+              aria-hidden
+              className="flex h-5 min-w-0 flex-1 items-center gap-0.5 overflow-hidden"
+            >
+              {Array.from({ length: 24 }, (_, index) => (
+                <span
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed meter bars
+                  key={index}
+                  className="w-1 shrink-0 rounded-full bg-primary/70"
+                  style={{
+                    height: `${Math.max(15, (voice.levels[index % Math.max(1, voice.levels.length)] ?? 0) * 100)}%`,
+                  }}
+                />
+              ))}
+            </span>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className={round}
+              aria-label="Stop and put the words in the box"
+              title="Stop and put the words in the box"
+              onClick={voice.stop}
+            >
+              <HugeiconsIcon icon={StopIcon} className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              className={round}
+              aria-label="Stop and send"
+              title="Stop and send"
+              onClick={voice.stopAndSend}
+            >
+              <HugeiconsIcon icon={ArrowUp02Icon} className="size-4" />
+            </Button>
+          </output>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1">
+            {attach ? (
+              <>
+                <input
+                  ref={fileRef}
+                  hidden
+                  multiple
+                  accept={attach.accept}
+                  type="file"
+                  onChange={(event) => {
+                    attach.onFiles(Array.from(event.target.files ?? []))
+                    event.target.value = ""
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className={`${round} ${stacked ? "order-2" : "order-1"} lg:order-2`}
+                  aria-label="Attach a photo or PDF"
+                  title="Attach a photo or PDF"
+                  disabled={disabled || busy || attach.disabled}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <HugeiconsIcon icon={PlusSignIcon} className="size-5" />
+                </Button>
+              </>
+            ) : null}
+            <div
+              className={`relative min-w-0 ${stacked ? "order-1 basis-full" : "order-2 flex-1"} lg:order-1 lg:basis-full`}
+            >
+              <textarea
+                ref={inputRef}
+                aria-label={label}
+                rows={1}
+                className="block w-full resize-none bg-transparent px-3 py-2 text-sm leading-5 outline-none disabled:opacity-60"
+                maxLength={8000}
+                value={value}
+                disabled={disabled || working}
+                onChange={(event) => onChange(event.target.value)}
+                onKeyDown={(event) => {
+                  // Enter is a new line; Ctrl/⌘+Enter sends.
+                  if (
+                    event.key === "Enter" &&
+                    (event.metaKey || event.ctrlKey)
+                  ) {
+                    event.preventDefault()
+                    send()
+                  }
                 }}
               />
-            ))}
-          </span>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            className="size-8 shrink-0 rounded-[50%]"
-            aria-label="Stop and check the text"
-            title="Stop and check the text"
-            onClick={voice.stop}
-          >
-            <HugeiconsIcon icon={StopIcon} className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            className="size-8 shrink-0 rounded-[50%]"
-            aria-label="Stop and send"
-            title="Stop and send"
-            onClick={voice.stopAndSend}
-          >
-            <HugeiconsIcon icon={ArrowUp02Icon} className="size-4" />
-          </Button>
-        </output>
-      ) : (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            send()
-          }}
-        >
-          <InputGroup className="rounded-[22px] border-border bg-background has-[textarea]:rounded-[22px]">
-            <InputGroupTextarea
-              ref={inputRef}
-              aria-label={label}
-              placeholder={placeholder}
-              rows={1}
-              className="min-h-0 py-2.5 pl-4"
-              maxLength={8000}
-              value={value}
-              disabled={disabled || working}
-              onChange={(event) => onChange(event.target.value)}
-              onKeyDown={(event) => {
-                // Enter is a new line; Ctrl/⌘+Enter sends.
-                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                  event.preventDefault()
-                  send()
-                }
-              }}
+              {value ? null : (
+                // One line only; the field's own placeholder would wrap.
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-3 top-2 truncate text-sm leading-5 text-muted-foreground"
+                >
+                  {placeholder}
+                </span>
+              )}
+            </div>
+            <span
+              aria-hidden
+              className={`${stacked ? "order-3 flex-1" : "hidden"} lg:order-3 lg:block lg:flex-1`}
             />
-            <InputGroupAddon
-              align="inline-end"
-              className="self-end pr-1.5 pb-1.5"
-            >
-              {busy ? (
-                <InputGroupButton
+            <div className="order-4 flex items-center gap-1">
+              {voice ? (
+                <Button
                   type="button"
-                  size="icon-sm"
+                  size="icon"
+                  variant="ghost"
+                  className={round}
+                  aria-label="Record a voice note"
+                  title="Record a voice note"
+                  disabled={disabled || busy || working}
+                  onClick={voice.start}
+                >
+                  <HugeiconsIcon icon={Mic01Icon} className="size-5" />
+                </Button>
+              ) : null}
+              {busy ? (
+                <Button
+                  type="button"
+                  size="icon"
                   variant="outline"
-                  className="size-8 rounded-[50%]"
+                  className={round}
                   aria-label="Stop"
                   onClick={onStop}
                 >
                   <HugeiconsIcon icon={StopIcon} className="size-4" />
-                </InputGroupButton>
-              ) : voice && !value.trim() && !hasAttachments ? (
-                // Mic and Send share one place: dictate from empty, or type.
-                <InputGroupButton
-                  type="button"
-                  size="icon-sm"
-                  variant="default"
-                  className="size-8 rounded-[50%] disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
-                  aria-label="Record a voice note"
-                  title="Record a voice note"
-                  disabled={disabled || working}
-                  onClick={voice.start}
-                >
-                  <HugeiconsIcon icon={Mic01Icon} className="size-4" />
-                </InputGroupButton>
+                </Button>
               ) : (
-                <InputGroupButton
+                <Button
                   type="submit"
-                  size="icon-sm"
-                  variant="default"
-                  className="size-8 rounded-[50%] disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                  size="icon"
+                  className={`${round} disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100`}
                   aria-label="Send"
                   title="Send (Ctrl+Enter)"
                   disabled={!canSend}
                 >
                   <HugeiconsIcon icon={ArrowUp02Icon} className="size-4" />
-                </InputGroupButton>
+                </Button>
               )}
-            </InputGroupAddon>
-          </InputGroup>
-        </form>
-      )}
+            </div>
+          </div>
+        )}
+      </form>
       {value.length > 8000 ? (
         <p role="alert" className="mt-2 text-xs text-destructive">
           Shorten the message to 8,000 characters before sending.
