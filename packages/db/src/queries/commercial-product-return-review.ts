@@ -15,13 +15,21 @@ export async function getCommercialProductReturnStockReview(db: Prisma.Transacti
     where: { id: input.orderLineId, kind: "PRODUCT_UNIT", order: { tenantId: input.tenantId, storeId: input.storeId } },
     include: {
       snapshot: true,
-      order: { select: { id: true, orderNumber: true, status: true, currencyCode: true } },
+      order: { select: {
+        id: true, orderNumber: true, status: true, currencyCode: true,
+        acceptedCommerceQuoteVersion: { select: { quote: { select: { sourceType: true } } } },
+        prescriptionPickupFulfillment: { select: { orderId: true } },
+        prescriptionDeliveryAssignment: { select: { orderId: true } },
+      } },
       productFulfillments: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
       productReturns: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
     },
   })
   if (!line?.snapshot || !line.productFulfillments.length)
     throw new CatalogError("ORDER_NOT_FOUND", "Fulfilled Product Order line not found in this Store.")
+  if (line.order.acceptedCommerceQuoteVersion?.quote.sourceType === "PRESCRIPTION_REQUEST" ||
+      line.order.prescriptionPickupFulfillment || line.order.prescriptionDeliveryAssignment)
+    throw new CatalogError("INVALID_ORDER", "Prescription returns require their clinical workflow.")
   const snapshot = line.snapshot
   const quantities = productReturnQuantityImpact({
     quantity: input.quantity,

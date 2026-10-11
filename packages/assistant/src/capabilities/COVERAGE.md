@@ -7,16 +7,17 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 534 (393 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 61
-- Merchant planned: 167
+- Merchant supported by a capability: 62
+- Merchant planned: 166
 - Merchant form-only: 120
 - Merchant excluded: 45
-- Capabilities: 57 (29 read, 28 write)
+- Capabilities: 58 (29 read, 29 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `sales.product.return` | 1 | write (`product_line_return`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | planned | `orders.returnProductLine` |
 | `sales.products.fulfill` | 1 | write (`product_batch_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProducts` |
 | `sales.product.fulfill` | 1 | write (`product_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProductLine` |
 | `sales.service.authorize` | 1 | write (`service_line_authorize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `orders.authorizeChargeOnlyServiceLine` |
@@ -88,6 +89,7 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `sales.product.return` | Return one item to stock without issuing a refund | [packages/assistant/src/general/product-return.test.ts](../../../../packages/assistant/src/general/product-return.test.ts)<br>[packages/db/src/queries/commercial-product-return-review-guard.test.ts](../../../../packages/db/src/queries/commercial-product-return-review-guard.test.ts) |
 | `sales.products.fulfill` | Fulfil the remaining items in this order | [packages/assistant/src/general/product-fulfillment.test.ts](../../../../packages/assistant/src/general/product-fulfillment.test.ts)<br>[packages/db/src/queries/product-batch-impact.test.ts](../../../../packages/db/src/queries/product-batch-impact.test.ts)<br>[packages/db/src/queries/commercial-product-batch-review.test.ts](../../../../packages/db/src/queries/commercial-product-batch-review.test.ts)<br>[apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts) |
 | `sales.product.fulfill` | Fulfil this reserved product line | [packages/db/src/queries/commercial-product-line-review.test.ts](../../../../packages/db/src/queries/commercial-product-line-review.test.ts)<br>[apps/api/src/assistant/general-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-fulfillment.integration-check.ts) |
 | `sales.service.authorize` | Authorize a charge-only service | [packages/assistant/src/general/service-fulfillment.test.ts](../../../../packages/assistant/src/general/service-fulfillment.test.ts)<br>[packages/db/src/queries/commercial-service-line-review.test.ts](../../../../packages/db/src/queries/commercial-service-line-review.test.ts)<br>[apps/api/src/assistant/general-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-fulfillment.integration-check.ts) |
@@ -154,7 +156,6 @@ track conversational evaluation separately from these source test links.
 | B03 | 5 |
 | B05 | 2 |
 | C05 | 1 |
-| D03 | 1 |
 | D04 | 3 |
 | D05 | 11 |
 | E01 | 6 |
@@ -361,7 +362,7 @@ track conversational evaluation separately from these source test links.
 | `orders.replace` | mutation | reconciliation | sales | supported | sales.order.replace |
 | `orders.replacementReview` | query | reconciliation | sales | supported | sales.order.replace |
 | `orders.reportSummary` | query | read | sales | supported | sales.summary.read |
-| `orders.returnProductLine` | mutation | orders | sales | planned | D03 |
+| `orders.returnProductLine` | mutation | orders | sales | supported | sales.product.return |
 | `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | planned | G05 |
 | `orders.updateReminderSettings` | mutation | Owner/Admin only | sales | planned | G05 |
 | `prescriptions.activateIncident` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |

@@ -3,13 +3,13 @@ import { Prisma } from "../../generated/prisma/client"
 import { getCommercialProductReturnStockReview } from "./commercial-product-return-review"
 const d = (value: string) => new Prisma.Decimal(value)
 const input = { tenantId: "tenant", storeId: "store", orderLineId: "line", quantity: "0.5", disposition: "restock" as const }
-function fixture(options: { missing?: boolean; variant?: string; revision?: number; returns?: string[] } = {}) {
+function fixture(options: { missing?: boolean; variant?: string; revision?: number; returns?: string[]; clinical?: object } = {}) {
   let balanceReads = 0
   const db = {
     commercialOrderLine: { findFirst: async (args: unknown) => {
       expect(args).toMatchObject({ where: { id: "line", kind: "PRODUCT_UNIT", order: { tenantId: "tenant", storeId: "store" } } })
       return options.missing ? null : {
-        id: "line", order: { id: "order", orderNumber: "ORD-1", status: "COMPLETED", currencyCode: "NGN" },
+        id: "line", order: { id: "order", orderNumber: "ORD-1", status: "COMPLETED", currencyCode: "NGN", ...options.clinical },
         snapshot: { balanceSourceId: "balance", inventoryUnitId: "case", variantId: "variant", unitFactor: d("12"), catalogItemName: "Product", offeringName: "Case" },
         productFulfillments: [{ id: "fulfillment", quantity: d("2") }],
         productReturns: (options.returns ?? ["0.5"]).map(quantity => ({ quantity: d(quantity) })),
@@ -50,4 +50,17 @@ test("balance revision and return history both change stock evidence", async () 
   const changedReturns = await getCommercialProductReturnStockReview(fixture({ returns: ["1"] }).db, input)
   expect(changedBalance.stockRevision).not.toBe(original.stockRevision)
   expect(changedReturns.stockRevision).not.toBe(original.stockRevision)
+})
+
+
+test("locked review evidence excludes prescription return sources", async () => {
+  for (const clinical of [
+    { acceptedCommerceQuoteVersion: { quote: { sourceType: "PRESCRIPTION_REQUEST" } } },
+    { prescriptionPickupFulfillment: { orderId: "order" } },
+    { prescriptionDeliveryAssignment: { orderId: "order" } },
+  ]) {
+    const f = fixture({ clinical })
+    await expect(getCommercialProductReturnStockReview(f.db, input)).rejects.toMatchObject({ code: "INVALID_ORDER" })
+    expect(f.balanceReads()).toBe(0)
+  }
 })

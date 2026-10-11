@@ -146,3 +146,5 @@ export { getCommercialServiceLineReview } from "./commercial-service-line-review
 export { getCommercialProductReturnStockReview } from "./commercial-product-return-review"
 export { getCommercialProductLineReview } from "./commercial-product-line-review"
 export { getCommercialProductBatchReview } from "./commercial-product-batch-review"
+
+export { getCommercialProductReturnImpactReview } from "./commercial-product-return-impact-review"

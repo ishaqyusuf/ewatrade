@@ -1,3 +1,4 @@
+import { productLineReturn } from "./general-product-return"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
@@ -517,6 +518,7 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
 const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
+  product_line_return: productLineReturn,
   product_line_fulfill: productLineFulfill,
   product_batch_fulfill: productBatchFulfill,
   service_line_authorize: serviceLineAction,
