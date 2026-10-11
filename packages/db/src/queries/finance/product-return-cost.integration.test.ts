@@ -21,6 +21,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
   test("restores original issue cost through returns, replay, and EARNED", async () => {
     const { prisma: db } = await import("../../client")
     const runId = randomUUID()
+    console.info(`Product return financial QA run: ${runId}`)
     const tenantIds: string[] = []
     const storeIds: string[] = []
     const catalogItemIds: string[] = []
@@ -404,6 +405,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
       expect((await mainPool()).quantity.toFixed()).toBe("12")
       expect((await mainPool()).valueMinor).toBe(BigInt(900))
 
+      console.info("Return finance: review original cost and journal before locked return")
       const firstReturnReview = await getCommercialProductReturnImpactReview(db, {
         tenantId: tenant.id, storeId: store.id, orderLineId: original.line.id,
         quantity: "0.5", disposition: "restock",
@@ -413,6 +415,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
       expect(firstReturnReview.journal).toMatchObject({ status: "WILL_POST", amountMinor: "250" })
       expect(firstReturnReview.customerCredit).toBe("NOT_RECORDED")
       expect(firstReturnReview.cashRefund).toBe("NOT_RECORDED")
+      console.info("Return finance: execute reviewed partial restock")
       const firstReturn = await returnLine(
         "original-half",
         original.line.id,
@@ -984,6 +987,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
       expect(unknownPool.valueMinor).toBeNull()
       expect(unknownPool.unknownReason).toBe("MISSING_OPENING_COST")
     } finally {
+      console.info(`Product return financial ${runId}: cleanup started`)
       await db.$transaction(
         async (tx) => {
           if (bookId) {
@@ -1129,6 +1133,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
         returnEvents: 0,
         users: 0,
       })
+      console.info(`Product return financial ${runId}: cleanup verified`)
     }
   })
 })
