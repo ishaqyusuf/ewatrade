@@ -27,6 +27,8 @@ separate evidence; do not import them as successful model evaluations.
 
 - [Return transaction probes, 11 October 2026](runs/2026-10-11-return-transaction-probes.md): read-only rollback/reacquisition passed with and without tracing; root cause remains unproven.
 
+- [Product return no-Book database acceptance, 11 October 2026](runs/2026-10-11-return-database.md):29assertions passed across stale review, rollback, replay and all dispositions; financial and full browser acceptance remain pending.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
