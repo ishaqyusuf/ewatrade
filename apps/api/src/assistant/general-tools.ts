@@ -1,3 +1,4 @@
+import { generalBillsInput, generalBillInput, generalBillsAnswer, generalBillData } from "./general-bill-reads"
 import { generalCustomerEntryInput, generalCustomerAllocationHistoryInput, generalCustomerEntryAnswer, generalCustomerAllocationHistoryAnswer } from "./general-customer-allocations"
 import { financeRouter } from "../trpc/routers/finance"
 import { financeMoneyAccountsSchema, financeExpenseCategoriesSchema } from "../schemas/finance"
@@ -856,6 +857,20 @@ export function createGeneralTools(
             .accounts({ ...input, limit: 10 }),
         ),
     }),
+    readExpenseBills: tool({
+      description: "Search up to 10 recorded expense bills across Stores in an exact Finance Book by payee, description or reference. Optional status UNPAID/PARTIAL/PAID/VOID. Continue with nextCursor as cursor preserving filters. Currency and complete filtered totals accompany this page. Ask which bill if ambiguous; never create another expense to record payment.",
+      inputSchema: generalBillsInput,
+      execute: input => wrap("readExpenseBills", async fresh => {
+        const page = await financeRouter.createCaller(fresh).bills({...input, limit: 10})
+        onAnswer(generalBillsAnswer(page))
+        return page
+      }),
+    }),
+    readExpenseBill: tool({
+      description: "Inspect an exact expense bill selected from readExpenseBills. Returns complete minor-unit totals and lines, plus at most 10 recent payments with paymentHistoryComplete/paymentCount. Use the Book currency returned by the list. Voided bills cannot be paid. No bank settlement is verified; confirmation refreshes bill balance and authority.",
+      inputSchema: generalBillInput,
+      execute: input => wrap("readExpenseBill", async fresh => generalBillData(await financeRouter.createCaller(fresh).bill(input))),
+    }),
     readExpenseCategories: tool({
       description: "Find up to 10 active operating expense category identities in the exact Finance Book. Continue with nextCursor as afterCode in the same Book. These are categories, not expenses already recorded. Ask which category if ambiguous; do not invent IDs or silently create categories.",
       inputSchema: financeExpenseCategoriesSchema.omit({ limit: true }),
@@ -926,7 +941,7 @@ export function createGeneralTools(
     }),
     draftAction: tool({
       description:
-        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens. When expense_record is available, resolve categories with readExpenseCategories and business payment accounts with readMoneyAccounts. Require an already-incurred expense and explicit confirmation for any payment already made. Omit payment for unpaid bills; use OWNER_CAPITAL only when the owner personally paid, never for business cash. Ask about ambiguous category, funding, dates or amounts before drafting. This records bookkeeping and never sends money.",
+        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens. When bill_payment is available, resolve the existing bill with readExpenseBills and inspect it with readExpenseBill; ask about ambiguity and require paymentAlreadyMade=true. Use readMoneyAccounts for business funding, or explicit owner funding. Never substitute expense_record for paying an existing bill. When expense_record is available, resolve categories with readExpenseCategories and business payment accounts with readMoneyAccounts. Require an already-incurred expense and explicit confirmation for any payment already made. Omit payment for unpaid bills; use OWNER_CAPITAL only when the owner personally paid, never for business cash. Ask about ambiguous category, funding, dates or amounts before drafting. This records bookkeeping and never sends money.",
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {

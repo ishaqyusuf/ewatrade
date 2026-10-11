@@ -7,11 +7,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 537 (396 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 76
-- Merchant planned: 154
+- Merchant supported by a capability: 78
+- Merchant planned: 152
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 72 (36 read, 36 write)
+- Capabilities: 74 (38 read, 36 write)
 
 ## Capabilities
 
@@ -25,6 +25,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.credit.apply` | 1 | write (`customer_credit_apply`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.applyCredit` |
 | `customers.allocation.release` | 1 | write (`customer_allocation_release`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.releaseAllocation` |
 | `customers.receipt.record` | 1 | write (`customer_receipt`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.recordReceipt` |
+| `finance.bills.read` | 1 | read | `readExpenseBills` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.bills` |
+| `finance.bill.read` | 1 | read | `readExpenseBill` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.bill` |
 | `finance.expense_categories.read` | 1 | read | `readExpenseCategories` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.expenseCategories` |
 | `finance.money_accounts.read` | 1 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
 | `customers.account.read` | 1 | read | `readCustomerAccount` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.accountDetail` |
@@ -111,6 +113,8 @@ track conversational evaluation separately from these source test links.
 | `customers.credit.apply` | Apply existing customer credit | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
 | `customers.allocation.release` | Release customer allocation | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
 | `customers.receipt.record` | Record a new customer deposit I already received | [packages/assistant/src/general/customer-receipt.test.ts](../../../../packages/assistant/src/general/customer-receipt.test.ts)<br>[packages/db/src/queries/customer-ledger/receipt-review.test.ts](../../../../packages/db/src/queries/customer-ledger/receipt-review.test.ts) |
+| `finance.bills.read` | Find the unpaid rent bill | [apps/api/src/assistant/general-bill-reads.test.ts](../../../../apps/api/src/assistant/general-bill-reads.test.ts) |
+| `finance.bill.read` | What remains owed on this rent bill? | [apps/api/src/assistant/general-bill-reads.test.ts](../../../../apps/api/src/assistant/general-bill-reads.test.ts) |
 | `finance.expense_categories.read` | Which expense category should rent use? | [packages/db/src/queries/finance/expense-category-reads.test.ts](../../../../packages/db/src/queries/finance/expense-category-reads.test.ts) |
 | `finance.money_accounts.read` | Which bank account did I return the deposit from? | [packages/db/src/queries/finance/money-account-reads.test.ts](../../../../packages/db/src/queries/finance/money-account-reads.test.ts) |
 | `customers.account.read` | Read customer funds and matching Book | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
@@ -189,7 +193,7 @@ track conversational evaluation separately from these source test links.
 | E01 | 6 |
 | E02 | 3 |
 | E03 | 2 |
-| E04 | 5 |
+| E04 | 3 |
 | E05 | 18 |
 | G01 | 6 |
 | G02 | 8 |
@@ -282,8 +286,8 @@ track conversational evaluation separately from these source test links.
 | `finance.bankStatements.match` | mutation | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
 | `finance.bankStatements.resolveCorrectionSource` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
 | `finance.bankStatements.unmatch` | mutation | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
-| `finance.bill` | query | Owner/Admin only | finance | planned | E04 |
-| `finance.bills` | query | Owner/Admin only | finance | planned | E04 |
+| `finance.bill` | query | Owner/Admin only | finance | supported | finance.bill.read |
+| `finance.bills` | query | Owner/Admin only | finance | supported | finance.bills.read |
 | `finance.book` | query | Owner/Admin only | finance | planned | E01 |
 | `finance.cashCount` | query | Owner/Admin only | finance | planned | G02 |
 | `finance.cashCounts` | query | Owner/Admin only | finance | planned | G02 |

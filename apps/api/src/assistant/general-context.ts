@@ -86,6 +86,8 @@ export function requireGeneralScope(
  * transaction commands directly, so these must stay in step with the routers.
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
+  "finance.bills.read": tenant => assertFinanceAccess(tenant),
+  "finance.bill.read": tenant => assertFinanceAccess(tenant),
   "finance.expense_categories.read": tenant => assertFinanceAccess(tenant),
   "finance.money_accounts.read": tenant => assertFinanceAccess(tenant),
   "customers.account.read": tenant => assertFinanceAccess(tenant),

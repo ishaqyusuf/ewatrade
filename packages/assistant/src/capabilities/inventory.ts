@@ -161,8 +161,6 @@ planned("finance", "E03", ["finance.*Money*", "finance.moneyMovement"])
 planned("finance", "E04", [
   "finance.*Expense*",
   "finance.*Bill*",
-  "finance.bill",
-  "finance.bills",
 ])
 planned("finance", "H04", ["finance.expenseReceipts.*"])
 planned("finance", "E05", [
