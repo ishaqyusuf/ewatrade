@@ -19,6 +19,10 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Customer receipt database acceptance, 11 October 2026](runs/2026-10-11-customer-receipt-database.md): 32 assertions passed, atomic rollback/replay, one balanced journal and unchanged opening debt; owned cleanup verified.
+
+- [Customer receipt editor component check, 11 October 2026](runs/2026-10-11-customer-receipt-editor.md): acknowledgment, exact amount, method/reference, cancel and fresh-open checks passed with screenshot.
+
 - [Customer receipt source verification, 11 October 2026](runs/2026-10-11-customer-receipt-source.md): canonical transaction seam, preview, revision guard and planned adapter; 11 tests / 69 assertions.
 
 - [Held-credit refund dashboard acceptance, 11 October 2026](runs/2026-10-11-held-credit-refund-web.md): review/edit/confirm, customer overlay, exact saved financial effects and owned fixture cleanup passed; provider-free.

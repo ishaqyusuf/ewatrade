@@ -20,6 +20,7 @@ import { useState } from "react"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
 import { GeneralProductCreateEditor } from "./general-product-create-editor"
+import { GeneralCustomerReceiptEditor } from "./general-customer-receipt-editor"
 import { GeneralHeldCreditRefundEditor } from "./general-held-credit-refund-editor"
 import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralSaleCustomer } from "./general-sale-customer"
@@ -44,6 +45,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "customer_receipt")
+    return <GeneralCustomerReceiptEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "held_credit_refund")
     return (
       <GeneralHeldCreditRefundEditor
