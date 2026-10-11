@@ -25,8 +25,16 @@ export function createLocalTestPrivateObjectPort<ContentType extends string>(
 } {
   assertPrivateObjectServer()
   const environment = input.environment ?? process.env
+  // One fixed place for every dev process: os.tmpdir() follows TMPDIR, which
+  // differs between processes (the dev router drops it), so files written by
+  // one process were unreadable by another.
   const root = resolve(
-    input.rootDir ?? join(tmpdir(), "ewatrade-local-private-objects"),
+    input.rootDir ??
+      environment.LOCAL_PRIVATE_OBJECTS_DIR ??
+      join(
+        process.platform === "win32" ? tmpdir() : "/tmp",
+        "ewatrade-local-private-objects",
+      ),
   )
   const allowed = () => environment.APP_ENV !== "production"
   const locate = (path: string) => {
