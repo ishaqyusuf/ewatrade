@@ -1,3 +1,4 @@
+import { rememberRecordedProductReturn } from "./product-return-journal-source-snapshot"
 import { consumeProductReturnSource } from "./product-return-source-snapshot"
 import {
   compareExactDecimals,
@@ -71,6 +72,19 @@ export async function recordProductReturnValuationInTransaction(
   input: { tenantId: string; productReturnId: string; costSourceToken?: object },
 ) {
   const { productReturn, sourceBook } = await loadReturnEvidence(tx, input)
+  const result = await recordLoadedProductReturnValuation(tx, input, productReturn, sourceBook)
+  // Valuation only writes cost/allocation/pool/event rows. Its Order, sold snapshot
+  // and current movement remain unchanged until the immediately following journal.
+  if (sourceBook && result) rememberRecordedProductReturn(result, tx, { book: sourceBook, productReturn })
+  return result
+}
+
+async function recordLoadedProductReturnValuation(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; productReturnId: string },
+  productReturn: Awaited<ReturnType<typeof loadReturnEvidence>>["productReturn"],
+  sourceBook: Awaited<ReturnType<typeof loadReturnEvidence>>["sourceBook"],
+) {
   const { order, orderLine: line } = productReturn
   const { snapshot } = line
   const book = sourceBook ?? await tx.financeBook.findUnique({

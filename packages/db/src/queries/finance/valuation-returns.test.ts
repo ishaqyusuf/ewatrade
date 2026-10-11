@@ -516,6 +516,10 @@ test("locked return reuses source history once but reads the new return and vali
   tx.financeBook.findUnique = (() => { throw Error("Repeated Book read") }) as typeof tx.financeBook.findUnique
   const saved = await recordProductReturnValuationInTransaction(tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id, costSourceToken: token })
   expect(saved?.sourceCostMinor?.toString()).toBe(preview.sourceCostMinor)
+  const { consumeRecordedProductReturn } = await import("./product-return-journal-source-snapshot")
+  const journalSource = consumeRecordedProductReturn(saved!, tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id })
+  expect(journalSource.productReturn.id).toBe(fixture.productReturn.id)
+  expect(journalSource.book.id).toBe("book-1")
   expect(currentReads).toBe(1)
   await expect(recordProductReturnValuationInTransaction(tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id, costSourceToken: token })).rejects.toMatchObject({ code: "CONFLICT" })
 })

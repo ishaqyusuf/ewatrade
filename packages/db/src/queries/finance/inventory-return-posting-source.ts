@@ -1,3 +1,4 @@
+import { consumeRecordedProductReturn } from "./product-return-journal-source-snapshot"
 import { reviewProductReturnJournal } from "./product-return-journal-review"
 import {
   addExactDecimals,
@@ -27,7 +28,7 @@ function conflict(message: string): never {
 /** Resolve a RESTOCK journal solely from the immutable registered return cost. */
 export async function resolveCommerceInventoryReturnPosting(
   tx: Prisma.TransactionClient,
-  source: { tenantId: string; productReturnId: string },
+  source: { tenantId: string; productReturnId: string; recordedValuation?: object },
 ): Promise<{ book: FinanceBook; input: FinancePostingInput } | null> {
   return resolveCommerceInventoryReturnSource(tx, source)
 }
@@ -44,47 +45,20 @@ export async function resolveHistoricalCommerceInventoryReturnPosting(
 
 async function resolveCommerceInventoryReturnSource(
   tx: Prisma.TransactionClient,
-  source: { tenantId: string; productReturnId: string },
+  source: { tenantId: string; productReturnId: string; recordedValuation?: object },
   history?: {
     source: FinanceActor & { bookId: string }
     context: ReviewedCostBookContext
   },
 ): Promise<{ book: FinanceBook; input: FinancePostingInput } | null> {
-  const productReturn = await tx.productReturn.findFirst({
-    where: { id: source.productReturnId, tenantId: source.tenantId },
-    include: {
-      order: { include: { store: true } },
-      orderLine: { include: { snapshot: true } },
-      stockOperation: {
-        include: {
-          movements: {
-            include: { balanceSource: { include: { inventoryUnit: true } } },
-          },
-        },
-      },
-      financeCost: {
-        include: {
-          allocations: {
-            include: {
-              fulfillment: true,
-              originalIssue: { include: { pool: true } },
-            },
-            orderBy: { id: "asc" },
-          },
-          valuationEvent: {
-            include: {
-              pool: true,
-              stockMovement: { include: { balanceSource: true } },
-            },
-          },
-        },
-      },
-    },
-  })
+  const recorded = source.recordedValuation
+    ? consumeRecordedProductReturn(source.recordedValuation, tx, source)
+    : undefined
+  const productReturn = await loadReturnJournalEvidence(tx, source, recorded)
   if (!productReturn) return null
   const order = productReturn.order
   if (order.status !== "COMPLETED" || !order.completedAt) return null
-  const book = await tx.financeBook.findUnique({
+  const book = recorded?.book ?? await tx.financeBook.findUnique({
     where: {
       tenantId_currencyCode: {
         tenantId: source.tenantId,
@@ -425,4 +399,58 @@ async function resolveCommerceInventoryReturnSource(
     ],
   }
   return { book, input }
+}
+
+const returnJournalCostInclude = {
+  include: {
+    allocations: {
+      include: {
+        fulfillment: true,
+        originalIssue: { include: { pool: true } },
+      },
+      orderBy: { id: "asc" },
+    },
+    valuationEvent: {
+      include: {
+        pool: true,
+        stockMovement: { include: { balanceSource: true } },
+      },
+    },
+  },
+} satisfies Prisma.ProductReturn$financeCostArgs
+
+async function loadReturnJournalEvidence(
+  tx: Prisma.TransactionClient,
+  source: { tenantId: string; productReturnId: string },
+  recorded: ReturnType<typeof consumeRecordedProductReturn> | undefined,
+) {
+  if (recorded) {
+    const current = await tx.productReturn.findFirst({
+      where: { id: source.productReturnId, tenantId: source.tenantId },
+      include: { financeCost: returnJournalCostInclude },
+    })
+    if (!current) return null
+    if (current.orderId !== recorded.productReturn.orderId ||
+        current.orderLineId !== recorded.productReturn.orderLineId ||
+        current.stockOperationId !== recorded.productReturn.stockOperationId)
+      conflict("Recorded return source linkage changed before journal posting.")
+    return { ...current, order: recorded.productReturn.order,
+      orderLine: recorded.productReturn.orderLine,
+      stockOperation: recorded.productReturn.stockOperation }
+  }
+  return tx.productReturn.findFirst({
+    where: { id: source.productReturnId, tenantId: source.tenantId },
+    include: {
+      order: { include: { store: true } },
+      orderLine: { include: { snapshot: true } },
+      stockOperation: {
+        include: {
+          movements: {
+            include: { balanceSource: { include: { inventoryUnit: true } } },
+          },
+        },
+      },
+      financeCost: returnJournalCostInclude,
+    },
+  })
 }

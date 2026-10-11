@@ -729,3 +729,53 @@ describe("historical original restock source", () => {
     }
   })
 })
+
+test("recorded valuation reuses physical evidence but reloads and validates new cost", async () => {
+  const { rememberRecordedProductReturn } = await import("./product-return-journal-source-snapshot")
+  const tx = fixture()
+  const returned = await tx.productReturn.findFirst({})
+  const book = await tx.financeBook.findUnique({ where: { id: "book-1" } })
+  if (!returned || !book) throw new Error("Missing fixture")
+  const evidence = { book, productReturn: returned } as Parameters<typeof rememberRecordedProductReturn>[2]
+  const token = {}
+  rememberRecordedProductReturn(token, tx, evidence)
+  const read = tx.productReturn.findFirst
+  let reads = 0
+  tx.productReturn.findFirst = (async (args: { include: Record<string, unknown> }) => {
+    reads++
+    expect(Object.keys(args.include)).toEqual(["financeCost"])
+    const current = await read({})
+    if (!current) return null
+    const { order: _order, orderLine: _line, stockOperation: _stock, ...row } = current as typeof evidence.productReturn
+    return row
+  }) as typeof tx.productReturn.findFirst
+  const result = await resolveCommerceInventoryReturnPosting(tx, {
+    tenantId: "tenant-1", productReturnId: "return-1", recordedValuation: token,
+  })
+  expect(result?.input.lines[0]?.amountMinor).toBe("400")
+  expect(reads).toBe(1)
+  await expect(resolveCommerceInventoryReturnPosting(tx, {
+    tenantId: "tenant-1", productReturnId: "return-1", recordedValuation: token,
+  })).rejects.toMatchObject({ code: "CONFLICT" })
+  const next = {}
+  rememberRecordedProductReturn(next, tx, evidence)
+  const cost = (returned as unknown as { financeCost: { sourceCostMinor: bigint } }).financeCost
+  cost.sourceCostMinor = 401n
+  await expect(resolveCommerceInventoryReturnPosting(tx, {
+    tenantId: "tenant-1", productReturnId: "return-1", recordedValuation: next,
+  })).rejects.toMatchObject({ code: "CONFLICT" })
+})
+
+test("recorded journal evidence refuses forged, cross-transaction and cross-return use", async () => {
+  const { rememberRecordedProductReturn, consumeRecordedProductReturn } = await import("./product-return-journal-source-snapshot")
+  const tx = fixture()
+  const evidence = { book: await tx.financeBook.findUnique({ where: { id: "book-1" } }), productReturn: await tx.productReturn.findFirst({}) } as Parameters<typeof rememberRecordedProductReturn>[2]
+  const scope = { tenantId: "tenant-1", productReturnId: "return-1" }
+  expect(() => consumeRecordedProductReturn({}, tx, scope)).toThrow()
+  for (const [otherTx, otherScope] of [[fixture(), scope], [tx, { ...scope, productReturnId: "other" }], [tx, { ...scope, tenantId: "other" }]] as const) {
+    const token = {}
+    rememberRecordedProductReturn(token, tx, evidence)
+    expect(() => consumeRecordedProductReturn(token, otherTx, otherScope)).toThrow()
+    expect(() => consumeRecordedProductReturn(token, tx, scope)).toThrow()
+  }
+})

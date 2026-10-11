@@ -2104,7 +2104,7 @@ export async function returnCommercialOrderProductLineInTransaction(
     },
   })
   if (lockedOrder.context) {
-    await recordProductReturnValuationInTransaction(tx, {
+    const valuation = await recordProductReturnValuationInTransaction(tx, {
       tenantId: input.tenantId,
       productReturnId: productReturn.id,
       costSourceToken,
@@ -2112,6 +2112,7 @@ export async function returnCommercialOrderProductLineInTransaction(
     await postProductReturnFinanceJournalInTransaction(tx, {
       tenantId: input.tenantId,
       productReturnId: productReturn.id,
+      recordedValuation: costSourceToken && valuation ? valuation : undefined,
     })
   }
   return productReturn
