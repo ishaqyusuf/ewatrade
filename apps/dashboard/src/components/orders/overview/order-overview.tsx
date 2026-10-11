@@ -40,7 +40,8 @@ import {
 import {
   FulfilDialog,
   PaymentDialog,
-  ReturnDialog,
+  RefundDialog,
+  ReturnItemsDialog,
 } from "./order-money-dialogs"
 import {
   type OverviewOrder,
@@ -62,7 +63,7 @@ import { useOrderRefresh } from "./use-order-refresh"
 type OpenDialog =
   | { kind: "customer" | "details" | "items" | "cancel" }
   | { kind: "payment" | "refund" }
-  | { kind: "return"; lineId?: string }
+  | { kind: "return"; lineId?: string; money?: boolean }
   | { kind: "fulfil"; lineId?: string }
 
 type ChangeKey =
@@ -181,6 +182,10 @@ export function OrderOverview({
             : "Checking…",
         }
   const returnable = options?.returnLine.lines ?? []
+  // Whether a refund or return may also lower the total (an order credit).
+  const creditOption = options
+    ? { allowed: options.credit.allowed, reason: options.credit.reason }
+    : { allowed: false, reason: changes.isError ? null : "Checking…" }
   const done = async () => {
     await refresh()
   }
@@ -463,11 +468,15 @@ export function OrderOverview({
           )}
         />
       </div>
-      {dialog?.kind === "payment" || dialog?.kind === "refund" ? (
-        <PaymentDialog
+      {dialog?.kind === "payment" ? (
+        <PaymentDialog order={order} onClose={close} onDone={done} />
+      ) : null}
+      {dialog?.kind === "refund" ? (
+        <RefundDialog
           order={order}
-          type={dialog.kind}
-          refundableMinor={options?.refund.refundableMinor ?? 0}
+          credit={creditOption}
+          canReturn={Boolean(options?.returnLine.allowed)}
+          onOpenReturn={() => setDialog({ kind: "return", money: true })}
           onClose={close}
           onDone={done}
         />
@@ -481,10 +490,12 @@ export function OrderOverview({
         />
       ) : null}
       {dialog?.kind === "return" ? (
-        <ReturnDialog
+        <ReturnItemsDialog
           order={order}
           returnable={returnable}
+          credit={creditOption}
           initialLineId={dialog.lineId}
+          moneyFirst={dialog.money}
           onClose={close}
           onDone={done}
         />
@@ -612,6 +623,11 @@ function SummaryStrip({
         <dd className="text-xl font-semibold tabular-nums">
           {money(order.totalMinor)}
         </dd>
+        {order.creditMinor > 0 ? (
+          <dd className="text-xs text-muted-foreground">
+            Lowered by {money(order.creditMinor)}
+          </dd>
+        ) : null}
       </div>
       <div className={tile}>
         <dt className={label}>Paid</dt>

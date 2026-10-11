@@ -5,6 +5,7 @@ import { Button, cn } from "@ewatrade/ui"
 import {
   ArrowTurnBackwardIcon,
   Cancel02Icon,
+  DiscountTag01Icon,
   Exchange01Icon,
   Invoice01Icon,
   MoneyReceive01Icon,
@@ -46,6 +47,7 @@ const ICON: Record<OrderTimelineItem["kind"], typeof Invoice01Icon> = {
   changed: Exchange01Icon,
   replaced: Exchange01Icon,
   cancelled: Cancel02Icon,
+  credited: DiscountTag01Icon,
   completed: Tick02Icon,
 }
 
@@ -217,7 +219,9 @@ function ActivityRow({
                       "ml-1",
                       text.tone === "danger"
                         ? "text-red-700 dark:text-red-300"
-                        : "text-emerald-700 dark:text-emerald-300",
+                        : text.tone === "change"
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-emerald-700 dark:text-emerald-300",
                     )}
                   >
                     {text.amount}

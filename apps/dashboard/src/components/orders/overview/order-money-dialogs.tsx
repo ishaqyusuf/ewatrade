@@ -3,8 +3,15 @@
 import { useTRPC } from "@/trpc/client"
 import { Button, Input, MoneyInput, cn } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
+import {
+  InformationCircleIcon,
+  MinusSignIcon,
+  PackageIcon,
+  PlusSignIcon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation } from "@tanstack/react-query"
-import { useRef, useState } from "react"
+import { type ReactNode, useRef, useState } from "react"
 import { orderMoney } from "../order-draft"
 import {
   DialogField,
@@ -22,12 +29,15 @@ import {
   lineTitle,
   readyLines,
 } from "./order-overview-model"
+import { LockedReason } from "./order-overview-parts"
 
 type DialogProps = {
   order: OverviewOrder
   onClose: () => void
   onDone: () => Promise<void>
 }
+
+type Option = { allowed: boolean; reason: string | null }
 
 function Choice<T extends string>({
   label,
@@ -37,8 +47,8 @@ function Choice<T extends string>({
   disabled,
 }: {
   label: string
-  value: T
-  options: ReadonlyArray<{ value: T; label: string }>
+  value: T | null
+  options: ReadonlyArray<{ value: T; label: string; disabled?: boolean }>
   onChange: (value: T) => void
   disabled?: boolean
 }) {
@@ -51,8 +61,9 @@ function Choice<T extends string>({
             key={option.value}
             type="button"
             aria-pressed={value === option.value}
+            disabled={option.disabled}
             className={cn(
-              "rounded-full border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted",
+              "rounded-full border border-border px-3 py-1.5 text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
               value === option.value &&
                 "border-primary bg-primary/10 hover:bg-primary/15",
             )}
@@ -66,22 +77,93 @@ function Choice<T extends string>({
   )
 }
 
-/** Record a payment against the balance, or pay money back (refund). */
-export function PaymentDialog({
-  order,
-  type,
-  refundableMinor = 0,
-  onClose,
-  onDone,
-}: DialogProps & { type: "payment" | "refund"; refundableMinor?: number }) {
+/** Before → after rows the person sees before confirming money back. */
+function Outcome({
+  title,
+  tone,
+  rows,
+}: {
+  title?: string
+  tone: "amber" | "mint"
+  rows: Array<{ label: string; before?: string; after: string; big?: boolean }>
+}) {
+  return (
+    <div
+      className={cn(
+        "grid gap-1.5 rounded-lg border p-3 text-sm",
+        tone === "amber"
+          ? "border-amber-500/30 bg-amber-500/5"
+          : "border-emerald-500/30 bg-emerald-500/5",
+      )}
+    >
+      {title ? (
+        <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
+          {title}
+        </p>
+      ) : null}
+      {rows.map((row) => (
+        <div
+          key={row.label}
+          className={cn(
+            "flex items-baseline justify-between gap-3",
+            row.big && "border-t border-border pt-1.5 text-base font-semibold",
+          )}
+        >
+          <span className={row.big ? undefined : "text-muted-foreground"}>
+            {row.label}
+          </span>
+          <span className="tabular-nums">
+            {row.before && row.before !== row.after ? (
+              <>
+                <s className="text-muted-foreground">{row.before}</s> →{" "}
+              </>
+            ) : null}
+            <b className="font-semibold">{row.after}</b>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Notice({
+  tone,
+  title,
+  children,
+  action,
+}: {
+  tone: "rose" | "sky"
+  title: string
+  children: ReactNode
+  action?: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 rounded-lg border p-3 text-sm",
+        tone === "rose"
+          ? "border-red-500/30 bg-red-500/5"
+          : "border-sky-500/30 bg-sky-500/5",
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">{title}</p>
+        <p className="text-muted-foreground">{children}</p>
+      </div>
+      {action}
+    </div>
+  )
+}
+
+/** Record a payment against the balance due. */
+export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
   const trpc = useTRPC()
-  const refund = type === "refund"
-  const limit = refund ? refundableMinor : order.balanceDueMinor
+  const limit = order.balanceDueMinor
   const [amount, setAmount] = useState(minorToMajorInput(limit))
   const [method, setMethod] = useState<OrderPaymentMethod>("cash")
   const [reference, setReference] = useState("")
-  const [reason, setReason] = useState("")
-  const clientPaymentId = useRef(`${type}-${crypto.randomUUID()}`).current
+  const clientPaymentId = useRef(`payment-${crypto.randomUUID()}`).current
   const record = useMutation(
     trpc.orders.recordPayment.mutationOptions({
       onSuccess: async () => {
@@ -96,21 +178,15 @@ export function PaymentDialog({
     amountMinor === null || amountMinor <= 0
       ? "Enter an amount."
       : amountMinor > limit
-        ? refund
-          ? `You can refund up to ${money(limit)}.`
-          : `The balance due is ${money(limit)}.`
+        ? `The balance due is ${money(limit)}.`
         : null
   return (
     <OrderDialog
       open
       onOpenChange={(open) => !open && onClose()}
       busy={record.isPending}
-      title={refund ? "Refund" : "Record payment"}
-      description={
-        refund
-          ? `Money paid back to the customer. ${money(refundableMinor)} has been paid on ${order.orderNumber}.`
-          : `${money(order.balanceDueMinor)} is due on ${order.orderNumber}.`
-      }
+      title="Record payment"
+      description={`${money(order.balanceDueMinor)} is due on ${order.orderNumber}.`}
     >
       <DialogField
         label="Amount"
@@ -126,7 +202,7 @@ export function PaymentDialog({
         />
       </DialogField>
       <Choice
-        label={refund ? "Paid back by" : "Paid by"}
+        label="Paid by"
         value={method}
         options={PAYMENT_METHODS}
         onChange={setMethod}
@@ -147,14 +223,6 @@ export function PaymentDialog({
           />
         </DialogField>
       ) : null}
-      {refund ? (
-        <ReasonField
-          value={reason}
-          onChange={setReason}
-          chips={["Item returned", "Overpaid", "Order cancelled", "Goodwill"]}
-          disabled={record.isPending}
-        />
-      ) : null}
       <MutationError message={record.isError ? record.error.message : null} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
@@ -167,10 +235,7 @@ export function PaymentDialog({
         </Button>
         <Button
           type="button"
-          variant={refund ? "destructive" : "default"}
-          disabled={
-            Boolean(problem) || (refund && !reason.trim()) || record.isPending
-          }
+          disabled={Boolean(problem) || record.isPending}
           onClick={() =>
             amountMinor &&
             record.mutate({
@@ -179,142 +244,544 @@ export function PaymentDialog({
               clientPaymentId,
               method,
               reference: reference.trim() || undefined,
-              note: refund ? reason.trim() : undefined,
-              type,
             })
           }
         >
           {record.isPending
             ? "Saving…"
             : problem
-              ? refund
-                ? "Refund"
-                : "Record payment"
-              : `${refund ? "Refund" : "Record"} ${money(amountMinor ?? 0)}`}
+              ? "Record payment"
+              : `Record ${money(amountMinor ?? 0)}`}
         </Button>
       </div>
     </OrderDialog>
   )
 }
 
-const DISPOSITIONS = [
-  { value: "restock", label: "Back to stock" },
-  { value: "damaged", label: "Damaged" },
-  { value: "quarantine", label: "Set aside to check" },
-  { value: "no_restock", label: "Don’t restock" },
+const REFUND_REASONS = [
+  { value: "overcharged", label: "Overcharged" },
+  { value: "items", label: "Items came back" },
+  { value: "goodwill", label: "Goodwill" },
+  { value: "other", label: "Other" },
 ] as const
 
-type Disposition = (typeof DISPOSITIONS)[number]["value"]
+type RefundReason = (typeof REFUND_REASONS)[number]["value"]
 
-/** Take items back from the customer. Money is refunded separately. */
-export function ReturnDialog({
+/**
+ * Money back with the outcome shown first (design 02 "Amount + outcome").
+ * "Overcharged" also lowers the total, so nothing shows as owed afterwards.
+ */
+export function RefundDialog({
   order,
-  returnable,
-  initialLineId,
+  credit,
+  canReturn,
+  onOpenReturn,
   onClose,
   onDone,
 }: DialogProps & {
-  returnable: Array<{ orderLineId: string; quantity: string }>
-  initialLineId?: string
+  /** Whether the total may drop with the refund (an order credit). */
+  credit: Option
+  canReturn: boolean
+  onOpenReturn: () => void
 }) {
   const trpc = useTRPC()
-  const first =
-    returnable.find((row) => row.orderLineId === initialLineId) ?? returnable[0]
-  const [lineId, setLineId] = useState(first?.orderLineId ?? "")
-  const [quantity, setQuantity] = useState(
-    first ? formatQuantity(first.quantity) : "",
-  )
-  const [disposition, setDisposition] = useState<Disposition>("restock")
-  const [reason, setReason] = useState("")
-  const clientReturnId = useRef(`return-${crypto.randomUUID()}`).current
-  const save = useMutation(
-    trpc.orders.returnProductLine.mutationOptions({
+  const paid = order.amountPaidMinor
+  const money = (value: number) => orderMoney(value, order.currencyCode)
+  const [share, setShare] = useState<"all" | "half" | "other">("all")
+  const [other, setOther] = useState("")
+  const [method, setMethod] = useState<OrderPaymentMethod>("cash")
+  const [reference, setReference] = useState("")
+  const [why, setWhy] = useState<RefundReason | null>(null)
+  const [ownReason, setOwnReason] = useState("")
+  const clientOperationId = useRef(`refund-${crypto.randomUUID()}`).current
+  const refund = useMutation(
+    trpc.orders.refund.mutationOptions({
       onSuccess: async () => {
         await onDone()
         onClose()
       },
     }),
   )
-  const selected = returnable.find((row) => row.orderLineId === lineId)
-  const max = selected ? Number(selected.quantity) : 0
+  const amountMinor =
+    share === "all"
+      ? paid
+      : share === "half"
+        ? Math.round(paid / 2)
+        : (majorToMinor(other) ?? 0)
+  const lowerTotal = why === "overcharged"
+  const paidAfter = paid - amountMinor
+  const totalAfter = lowerTotal
+    ? order.totalMinor - amountMinor
+    : order.totalMinor
+  const stillDue = Math.max(0, totalAfter - paidAfter)
+  const reason =
+    why === "other"
+      ? ownReason.trim()
+      : (REFUND_REASONS.find((row) => row.value === why)?.label ?? "")
   const problem =
-    !/^\d{1,12}(\.\d{1,6})?$/.test(quantity.trim()) || Number(quantity) <= 0
-      ? "Enter how many came back."
-      : Number(quantity) > max
-        ? `Only ${formatQuantity(selected?.quantity ?? "0")} was handed over.`
-        : null
+    amountMinor <= 0
+      ? "Enter an amount."
+      : amountMinor > paid
+        ? `You can refund up to ${money(paid)}.`
+        : lowerTotal && amountMinor > order.totalMinor
+          ? `The total is ${money(order.totalMinor)}.`
+          : null
+  return (
+    <OrderDialog
+      open
+      onOpenChange={(open) => !open && onClose()}
+      busy={refund.isPending}
+      title="Refund"
+      description={`Paid so far ${money(paid)} · total ${money(order.totalMinor)}`}
+    >
+      <Choice
+        label="How much goes back?"
+        value={share}
+        options={[
+          { value: "all", label: `All ${money(paid)}` },
+          { value: "half", label: "Half" },
+          { value: "other", label: "Other amount" },
+        ]}
+        onChange={setShare}
+        disabled={refund.isPending}
+      />
+      {share === "other" ? (
+        <DialogField
+          label="Amount"
+          htmlFor="order-refund-amount"
+          hint={other && problem ? problem : undefined}
+        >
+          <MoneyInput
+            id="order-refund-amount"
+            currencyCode={order.currencyCode}
+            value={other}
+            disabled={refund.isPending}
+            onChange={(event) => setOther(event.target.value)}
+          />
+        </DialogField>
+      ) : null}
+      <Choice
+        label="Paid back by"
+        value={method}
+        options={PAYMENT_METHODS}
+        onChange={setMethod}
+        disabled={refund.isPending}
+      />
+      {method !== "cash" ? (
+        <DialogField
+          label="Reference (optional)"
+          htmlFor="order-refund-reference"
+        >
+          <Input
+            id="order-refund-reference"
+            maxLength={160}
+            placeholder="Transfer or receipt number"
+            value={reference}
+            disabled={refund.isPending}
+            onChange={(event) => setReference(event.target.value)}
+          />
+        </DialogField>
+      ) : null}
+      <div className="grid gap-2">
+        <Choice
+          label="Reason"
+          value={why}
+          options={REFUND_REASONS.map((row) => ({
+            ...row,
+            disabled: row.value === "overcharged" && !credit.allowed,
+          }))}
+          onChange={setWhy}
+          disabled={refund.isPending}
+        />
+        {!credit.allowed && credit.reason ? (
+          <LockedReason
+            reason={`Overcharged (lower the total): ${credit.reason}`}
+            wrap
+          />
+        ) : null}
+        {why === "other" ? (
+          <Input
+            aria-label="Your reason"
+            maxLength={500}
+            placeholder="Write the reason"
+            value={ownReason}
+            disabled={refund.isPending}
+            onChange={(event) => setOwnReason(event.target.value)}
+          />
+        ) : null}
+      </div>
+      {why === "items" && canReturn ? (
+        <Notice
+          tone="sky"
+          title="Use Return items instead"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenReturn}
+            >
+              Open
+            </Button>
+          }
+        >
+          It puts the stock back and works out the money from what came back.
+        </Notice>
+      ) : null}
+      <Outcome
+        title="What the order shows after"
+        tone="amber"
+        rows={[
+          { label: "Paid", before: money(paid), after: money(paidAfter) },
+          {
+            label: "Total",
+            before: money(order.totalMinor),
+            after: money(totalAfter),
+          },
+          { label: "Still to collect", after: money(stillDue), big: true },
+        ]}
+      />
+      {!lowerTotal && stillDue > 0 && !problem ? (
+        <Notice tone="rose" title={`${money(stillDue)} will show as owed`}>
+          {credit.allowed
+            ? "Choose “Overcharged” if the price was wrong, so the total drops too."
+            : "The total stays the same, so the order asks for this again."}
+        </Notice>
+      ) : null}
+      <MutationError message={refund.isError ? refund.error.message : null} />
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={refund.isPending}
+          onClick={onClose}
+        >
+          Back
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          disabled={Boolean(problem) || !reason || refund.isPending}
+          onClick={() =>
+            refund.mutate({
+              orderId: order.id,
+              clientOperationId,
+              amountMinor,
+              method,
+              reference: reference.trim() || undefined,
+              reason,
+              lowerTotal,
+            })
+          }
+        >
+          {refund.isPending
+            ? "Saving…"
+            : `Refund ${money(Math.max(0, amountMinor))}`}
+        </Button>
+      </div>
+    </OrderDialog>
+  )
+}
+
+const CONDITIONS = [
+  { value: "restock", label: "Back on shelf" },
+  { value: "quarantine", label: "Set aside" },
+  { value: "damaged", label: "Damaged" },
+  { value: "no_restock", label: "Not restocked" },
+] as const
+
+type Condition = (typeof CONDITIONS)[number]["value"]
+
+const QUANTITY = /^\d{1,12}(\.\d{1,6})?$/
+
+/**
+ * Items back, several lines at once, with one switch to give the returned
+ * value back (design 02 "All lines + money").
+ */
+export function ReturnItemsDialog({
+  order,
+  returnable,
+  credit,
+  initialLineId,
+  moneyFirst = false,
+  onClose,
+  onDone,
+}: DialogProps & {
+  returnable: Array<{ orderLineId: string; quantity: string }>
+  /** Whether money may go back with the return (an order credit). */
+  credit: Option
+  initialLineId?: string
+  moneyFirst?: boolean
+}) {
+  const trpc = useTRPC()
+  const money = (value: number) => orderMoney(value, order.currencyCode)
+  const [counts, setCounts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      returnable.map((row) => [
+        row.orderLineId,
+        row.orderLineId === initialLineId ? formatQuantity(row.quantity) : "0",
+      ]),
+    ),
+  )
+  const [conditions, setConditions] = useState<Record<string, Condition>>({})
+  const [giveMoney, setGiveMoney] = useState(moneyFirst && credit.allowed)
+  const [method, setMethod] = useState<OrderPaymentMethod>("cash")
+  const [reference, setReference] = useState("")
+  const [reason, setReason] = useState("")
+  const clientOperationId = useRef(`return-${crypto.randomUUID()}`).current
+  const save = useMutation(
+    trpc.orders.returnItems.mutationOptions({
+      onSuccess: async () => {
+        await onDone()
+        onClose()
+      },
+    }),
+  )
+  const rows = returnable.flatMap((row) => {
+    const line = order.lines.find((item) => item.id === row.orderLineId)
+    if (!line) return []
+    const text = counts[row.orderLineId] ?? "0"
+    const valid = QUANTITY.test(text.trim())
+    const count = valid ? Number(text) : Number.NaN
+    const max = Number(row.quantity)
+    const sold = Number(line.quantity)
+    return [
+      {
+        line,
+        max,
+        text,
+        count,
+        invalid: !valid || count > max,
+        value:
+          valid && count > 0 && sold > 0
+            ? Math.round((line.totalMinor * count) / sold)
+            : 0,
+        condition: conditions[row.orderLineId] ?? ("restock" as Condition),
+      },
+    ]
+  })
+  const chosen = rows.filter((row) => !row.invalid && row.count > 0)
+  const invalid = rows.some((row) => row.invalid)
+  const value = Math.min(
+    order.totalMinor,
+    chosen.reduce((sum, row) => sum + row.value, 0),
+  )
+  const totalAfter = order.totalMinor - value
+  const refundNow = Math.max(0, order.amountPaidMinor - totalAfter)
+  const stillDue = Math.max(0, totalAfter - (order.amountPaidMinor - refundNow))
+  const stockBack = chosen
+    .filter((row) => row.condition === "restock")
+    .map(
+      (row) =>
+        `${formatQuantity(String(row.count))} ${row.line.snapshot?.inventoryUnitName ?? lineTitle(row.line)}`,
+    )
+  const setCount = (orderLineId: string, next: string) =>
+    setCounts((current) => ({ ...current, [orderLineId]: next }))
+  const step = (row: (typeof rows)[number], by: number) =>
+    setCount(
+      row.line.id,
+      formatQuantity(
+        String(
+          Math.min(
+            row.max,
+            Math.max(0, (Number.isNaN(row.count) ? 0 : row.count) + by),
+          ),
+        ),
+      ),
+    )
   return (
     <OrderDialog
       open
       onOpenChange={(open) => !open && onClose()}
       busy={save.isPending}
-      title="Return an item"
-      description="Records items the customer brought back. Money isn’t refunded automatically — use Refund if you pay them back."
+      title="Items came back"
+      description="Set how many of each came back."
     >
-      <fieldset className="grid gap-2" disabled={save.isPending}>
-        <legend className="mb-2 text-sm font-medium">Item</legend>
-        {returnable.map((row) => {
-          const line = order.lines.find((item) => item.id === row.orderLineId)
-          return (
-            <label
-              key={row.orderLineId}
-              className={cn(
-                "flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border p-3",
-                lineId === row.orderLineId && "border-primary bg-primary/5",
-              )}
-            >
-              <span className="flex min-w-0 items-center gap-3">
-                <input
-                  type="radio"
-                  name="return-line"
-                  checked={lineId === row.orderLineId}
-                  onChange={() => {
-                    setLineId(row.orderLineId)
-                    setQuantity(formatQuantity(row.quantity))
-                  }}
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium">
-                    {line ? lineTitle(line) : "Item"}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {line ? lineDetail(line) : null}
-                  </span>
-                </span>
+      <ul className="grid gap-2">
+        {rows.map((row) => (
+          <li
+            key={row.line.id}
+            className={cn(
+              "grid gap-2 rounded-lg border border-border p-3",
+              row.count > 0 && !row.invalid
+                ? "border-primary/40 bg-primary/5"
+                : "opacity-80",
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{lineTitle(row.line)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatQuantity(String(row.max))} handed over
+                  {row.line.unitPriceMinor === null
+                    ? ""
+                    : ` · ${money(row.line.unitPriceMinor)} each`}
+                </p>
+              </div>
+              <span className="text-sm font-medium tabular-nums">
+                {row.value ? money(row.value) : ""}
               </span>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {formatQuantity(row.quantity)} handed over
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label={`One less ${lineTitle(row.line)}`}
+                disabled={save.isPending || !(row.count > 0)}
+                onClick={() => step(row, -1)}
+              >
+                <HugeiconsIcon icon={MinusSignIcon} className="size-4" />
+              </Button>
+              <Input
+                aria-label={`${lineTitle(row.line)} returned`}
+                inputMode="decimal"
+                className="h-8 w-20 text-center tabular-nums"
+                value={row.text}
+                disabled={save.isPending}
+                onChange={(event) => setCount(row.line.id, event.target.value)}
+              />
+              <span className="text-xs text-muted-foreground">
+                / {formatQuantity(String(row.max))}
               </span>
-            </label>
-          )
-        })}
-      </fieldset>
-      <DialogField
-        label="Quantity returned"
-        htmlFor="order-return-quantity"
-        hint={quantity && problem ? problem : undefined}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label={`One more ${lineTitle(row.line)}`}
+                disabled={save.isPending || row.count >= row.max}
+                onClick={() => step(row, 1)}
+              >
+                <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
+              </Button>
+            </div>
+            {row.invalid ? (
+              <p className="text-xs text-red-700 dark:text-red-300">
+                Up to {formatQuantity(String(row.max))} can come back.
+              </p>
+            ) : null}
+            {row.count > 0 && !row.invalid ? (
+              <div className="flex flex-wrap gap-1.5">
+                {CONDITIONS.map((condition) => (
+                  <button
+                    key={condition.value}
+                    type="button"
+                    aria-pressed={row.condition === condition.value}
+                    disabled={save.isPending}
+                    className={cn(
+                      "rounded-full border border-border px-2.5 py-1 text-xs transition-colors hover:bg-muted",
+                      row.condition === condition.value &&
+                        "border-primary bg-primary/10 hover:bg-primary/15",
+                    )}
+                    onClick={() =>
+                      setConditions((current) => ({
+                        ...current,
+                        [row.line.id]: condition.value,
+                      }))
+                    }
+                  >
+                    {condition.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <label
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-lg border border-border p-3",
+          !credit.allowed && "opacity-70",
+        )}
       >
-        <Input
-          id="order-return-quantity"
-          inputMode="decimal"
-          value={quantity}
-          disabled={save.isPending}
-          onChange={(event) => setQuantity(event.target.value)}
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">Give money back now</span>
+          <span className="block text-xs text-muted-foreground">
+            {!credit.allowed && credit.reason ? (
+              <LockedReason reason={credit.reason} wrap />
+            ) : giveMoney ? (
+              `The total drops by ${money(value)}`
+            ) : (
+              "Stock only, no money"
+            )}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          aria-checked={giveMoney}
+          className="size-5 accent-[var(--primary)]"
+          checked={giveMoney}
+          disabled={!credit.allowed || save.isPending}
+          onChange={(event) => setGiveMoney(event.target.checked)}
         />
-      </DialogField>
-      <Choice
-        label="What happens to it"
-        value={disposition}
-        options={DISPOSITIONS}
-        onChange={setDisposition}
-        disabled={save.isPending}
-      />
+      </label>
+      {giveMoney ? (
+        <>
+          <Choice
+            label="Paid back by"
+            value={method}
+            options={PAYMENT_METHODS}
+            onChange={setMethod}
+            disabled={save.isPending}
+          />
+          {method !== "cash" ? (
+            <DialogField
+              label="Reference (optional)"
+              htmlFor="order-return-reference"
+            >
+              <Input
+                id="order-return-reference"
+                maxLength={160}
+                placeholder="Transfer or receipt number"
+                value={reference}
+                disabled={save.isPending}
+                onChange={(event) => setReference(event.target.value)}
+              />
+            </DialogField>
+          ) : null}
+          {chosen.length ? (
+            <Outcome
+              tone="mint"
+              rows={[
+                { label: "Returned value", after: money(value) },
+                {
+                  label: "Total",
+                  before: money(order.totalMinor),
+                  after: money(totalAfter),
+                },
+                { label: "Refund now", after: money(refundNow) },
+                {
+                  label: "Still to collect",
+                  after: money(stillDue),
+                  big: true,
+                },
+              ]}
+            />
+          ) : null}
+        </>
+      ) : null}
       <ReasonField
         value={reason}
         onChange={setReason}
-        chips={["Damaged", "Wrong item", "Customer changed mind", "Expired"]}
+        chips={["Customer returned it", "Wrong item", "Damaged"]}
         disabled={save.isPending}
       />
+      {chosen.length ? (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <HugeiconsIcon icon={PackageIcon} className="size-4 shrink-0" />
+          <span>
+            Stock back:{" "}
+            <b className="font-medium text-foreground">
+              {stockBack.join(", ") || "None"}
+            </b>{" "}
+            · Money back:{" "}
+            <b className="font-medium text-foreground">
+              {giveMoney && refundNow > 0 ? money(refundNow) : "None"}
+            </b>
+          </span>
+        </p>
+      ) : null}
       <MutationError message={save.isError ? save.error.message : null} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
@@ -323,25 +790,36 @@ export function ReturnDialog({
           disabled={save.isPending}
           onClick={onClose}
         >
-          Cancel
+          Back
         </Button>
         <Button
           type="button"
           disabled={
-            !selected || Boolean(problem) || !reason.trim() || save.isPending
+            !chosen.length || invalid || !reason.trim() || save.isPending
           }
           onClick={() =>
             save.mutate({
-              clientReturnId,
-              orderLineId: lineId,
-              quantity: quantity.trim(),
-              disposition,
+              orderId: order.id,
+              clientOperationId,
               reason: reason.trim(),
-              schemaVersion: 1,
+              lines: chosen.map((row) => ({
+                orderLineId: row.line.id,
+                quantity: row.text.trim(),
+                disposition: row.condition,
+              })),
+              money: giveMoney
+                ? { method, reference: reference.trim() || undefined }
+                : null,
             })
           }
         >
-          {save.isPending ? "Saving…" : "Record return"}
+          {save.isPending
+            ? "Saving…"
+            : giveMoney
+              ? refundNow > 0
+                ? `Return and refund ${money(refundNow)}`
+                : "Return and lower the total"
+              : "Record return"}
         </Button>
       </div>
     </OrderDialog>

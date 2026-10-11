@@ -338,6 +338,18 @@ export function describeEvent(
         lines: [...changes, ...(item.reason ? [`Reason: ${item.reason}`] : [])],
         linkLabel: null,
       }
+    case "credited":
+      return {
+        title:
+          item.creditKind === "overcharge"
+            ? "Total lowered · overcharged"
+            : "Total lowered · items returned",
+        amount: amount ? `−${amount}` : null,
+        tone: "change" as EventTone,
+        detail: meta(actor),
+        lines: [...changes, ...(item.reason ? [`Reason: ${item.reason}`] : [])],
+        linkLabel: null,
+      }
     case "completed":
       return {
         title: "Order completed",
