@@ -20,6 +20,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Money movement preview, 11 October 2026](runs/2026-10-11-money-movement-review.md): shared canonical account resolution and exact review data;5 tests/55 assertions and scoped types pass; adapter/UI acceptance pending.
+
 - [Customer credit linked-Order acceptance, 11 October 2026](runs/2026-10-11-customer-credit-order-database.md): 58 assertions passed; linked credit/reversal, unchanged cash, no duplicate deposit/collection, rollback/replay and cleanup verified.
 
 - [Money movement transaction preparation, 11 October 2026](runs/2026-10-11-money-movement-transaction.md): caller-owned canonical command,2 tests/10 assertions; assistant and database/web acceptance pending.

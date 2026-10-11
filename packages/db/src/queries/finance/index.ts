@@ -85,3 +85,5 @@ export {
   listFinanceExpenseReceipts,
   withdrawFinanceExpenseReceipt,
 } from "./expense-receipt-entrypoints"
+
+export { getFinanceMoneyMovementReview } from "./money-review"
