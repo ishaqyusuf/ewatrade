@@ -75,9 +75,9 @@ export function ClassicOrderPaymentChoice({
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       className={cn(
-        "items-center justify-center rounded-xl px-4",
+        "items-center justify-center rounded-xl border px-4",
         largeText ? "min-h-14 min-w-[46%] flex-1" : "min-h-11",
-        selected ? "bg-foreground" : "border border-border bg-card",
+        selected ? "border-foreground bg-foreground" : "border-border bg-card",
       )}
       haptic
       onPress={onPress}
