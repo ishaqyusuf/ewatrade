@@ -1,3 +1,4 @@
+import { assertCommercialProductReturnReview } from "./commercial-product-return-review-guard"
 import { createHash } from "node:crypto"
 import { tracePhase } from "../performance-tracing"
 import { productReturnQuantityImpact, productReturnStockImpact } from "./product-return-impact"
@@ -1876,6 +1877,7 @@ export type ReturnCommercialOrderProductLineInput = {
   schemaVersion: number
   tenantId: string
   storeId?: string
+  expectedReviewRevision?: string
 }
 
 export function returnCommercialOrderProductLine(
@@ -1894,7 +1896,7 @@ export async function returnCommercialOrderProductLineInTransaction(
 ) {
   assertSchemaVersion(input.schemaVersion)
   // Store is a scope assertion, not a new business payload for existing return identities.
-  const { storeId: _storeId, ...payload } = input
+  const { storeId: _storeId, expectedReviewRevision: _review, ...payload } = input
   const hash = payloadHash(payload)
   const identity = await tx.commercialOrderLine.findFirst({
     select: { orderId: true },
@@ -1961,6 +1963,16 @@ export async function returnCommercialOrderProductLineInTransaction(
       "Fulfilled Product Order line not found.",
     )
   }
+  if (input.expectedReviewRevision !== undefined) {
+    await assertCommercialProductReturnReview(tx, {
+      tenantId: input.tenantId, storeId: lockedOrder.order.storeId,
+      orderId: lockedOrder.order.id, orderLineId: input.orderLineId,
+      quantity: input.quantity, disposition: input.disposition,
+      destinationBalanceSourceId: input.destinationBalanceSourceId,
+      expectedReviewRevision: input.expectedReviewRevision,
+    }, lockedOrder)
+  }
+
   const { quantity } = productReturnQuantityImpact({
     quantity: input.quantity,
     fulfilledQuantities: line.productFulfillments.map(value => value.quantity.toString()),

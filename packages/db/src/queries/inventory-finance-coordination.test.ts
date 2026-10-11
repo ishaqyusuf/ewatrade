@@ -332,3 +332,13 @@ test("matching Store assertion preserves existing return replay identity", async
   expect(receipt.id).toBe("retained-return")
   expect(fixture.events).not.toContain("return-write")
 })
+
+test("reviewed return replay preserves its old payload identity without rereview", async () => {
+  const fixture = productReturnFixture({ replay: true })
+  const receipt = await returnCommercialOrderProductLineInTransaction(fixture.tx, {
+    ...returnInput, storeId: "store-a", expectedReviewRevision: "old-reviewed-state",
+  })
+  expect(receipt.id).toBe("retained-return")
+  expect(fixture.events).not.toContain("return-history")
+  expect(fixture.events).not.toContain("return-write")
+})
