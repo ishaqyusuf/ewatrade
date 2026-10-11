@@ -56,11 +56,13 @@ const ICON: Record<OrderTimelineItem["kind"], typeof Invoice01Icon> = {
 export function OrderActivityColumn({
   orderId,
   currencyCode,
+  timeZone,
   onOpenOrder,
   className,
 }: {
   orderId: string
   currencyCode: string
+  timeZone?: string
   onOpenOrder: (orderId: string) => void
   className?: string
 }) {
@@ -126,7 +128,7 @@ export function OrderActivityColumn({
         ) : null}
         <ol className="grid">
           {entries.map((entry, index) => {
-            const day = dayLabel(entry.at)
+            const day = dayLabel(entry.at, timeZone)
             const heading = day !== lastDay ? day : null
             lastDay = day
             return (
@@ -142,6 +144,7 @@ export function OrderActivityColumn({
                 <ActivityRow
                   entry={entry}
                   currencyCode={currencyCode}
+                  timeZone={timeZone}
                   last={index === entries.length - 1}
                   fresh={Boolean(seen.current && !seen.current.has(entry.id))}
                   onOpenOrder={onOpenOrder}
@@ -161,18 +164,20 @@ export function OrderActivityColumn({
 function ActivityRow({
   entry,
   currencyCode,
+  timeZone,
   last,
   fresh,
   onOpenOrder,
 }: {
   entry: ActivityEntry
   currencyCode: string
+  timeZone?: string
   last: boolean
   fresh: boolean
   onOpenOrder: (orderId: string) => void
 }) {
   const event = entry.kind === "event" ? entry.item : null
-  const text = event ? describeEvent(event, currencyCode) : null
+  const text = event ? describeEvent(event, currencyCode, timeZone) : null
   return (
     <div
       className={cn(
@@ -235,7 +240,7 @@ function ActivityRow({
             dateTime={entry.at}
             className="shrink-0 text-xs text-muted-foreground"
           >
-            {formatOrderTime(entry.at)}
+            {formatOrderTime(entry.at, timeZone)}
           </time>
         </div>
         {text?.detail ? (

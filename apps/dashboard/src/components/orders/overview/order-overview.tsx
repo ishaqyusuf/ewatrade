@@ -1,7 +1,10 @@
 "use client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
-import { requestQuickAssistant } from "@/components/page-fab/fab-slot"
+import {
+  requestQuickAssistant,
+  useQuickAssistantLauncher,
+} from "@/components/page-fab/fab-slot"
 import { useReceiptParams } from "@/hooks/use-receipt-params"
 import { useTRPC } from "@/trpc/client"
 import {
@@ -71,8 +74,8 @@ type ChangeKey =
   | "cancel"
 
 /** Order number, customer and created time under the title. */
-export function orderSubline(order: OverviewOrder) {
-  return `${order.customerName || "Walk-in customer"} · created ${formatOrderDateTime(order.createdAt)}`
+export function orderSubline(order: OverviewOrder, timeZone?: string) {
+  return `${order.customerName || "Walk-in customer"} · created ${formatOrderDateTime(order.createdAt, timeZone)}`
 }
 
 /** Payment, fulfilment and closed state; a replaced order says by what. */
@@ -109,12 +112,15 @@ export function OrderOverview({
   orderId,
   storeId,
   layout,
+  timeZone,
   onOpenOrder,
   onLeave,
 }: {
   orderId: string
   storeId: string
   layout: "sheet" | "page"
+  /** Business time zone, so times match on server and client. */
+  timeZone?: string
   onOpenOrder: (orderId: string) => void
   onLeave?: () => Promise<unknown>
 }) {
@@ -129,6 +135,8 @@ export function OrderOverview({
   const changes = useQuery(
     trpc.orders.changeOptions.queryOptions({ orderId }, { retry: false }),
   )
+  // Shown only where the shell offers the quick assistant (not to cashiers).
+  const launcher = useQuickAssistantLauncher()
   const assistant = useQuery(
     trpc.assistant.availability.queryOptions(undefined, {
       retry: false,
@@ -210,7 +218,7 @@ export function OrderOverview({
         <HugeiconsIcon icon={Invoice01Icon} className="size-4" />
         Receipt
       </Button>
-      {assistant.data?.enabled ? (
+      {launcher && assistant.data?.enabled ? (
         <Button
           className="bg-amber-400 text-amber-950 hover:bg-amber-400/85 dark:bg-amber-400 dark:text-amber-950"
           onClick={() =>
@@ -388,7 +396,7 @@ export function OrderOverview({
               <dt className="text-xs text-muted-foreground">Delivery due</dt>
               <dd>
                 {order.deliveryDueAt
-                  ? formatOrderDateTime(order.deliveryDueAt)
+                  ? formatOrderDateTime(order.deliveryDueAt, timeZone)
                   : "Not set"}
               </dd>
             </div>
@@ -429,7 +437,7 @@ export function OrderOverview({
             <div className="grid gap-2">
               <h1 className="text-2xl font-semibold">{order.orderNumber}</h1>
               <p className="text-sm text-muted-foreground">
-                {orderSubline(order)}
+                {orderSubline(order, timeZone)}
               </p>
               <OrderPills order={order} />
             </div>
@@ -445,11 +453,12 @@ export function OrderOverview({
         <OrderActivityColumn
           orderId={order.id}
           currencyCode={order.currencyCode}
+          timeZone={timeZone}
           onOpenOrder={onOpenOrder}
           className={cn(
             "lg:sticky",
             layout === "page"
-              ? "lg:top-4 lg:max-h-[calc(100dvh-6rem)]"
+              ? "lg:top-4 lg:max-h-[calc(100dvh-7.5rem)]"
               : "lg:top-0 lg:max-h-[calc(100dvh-14rem)]",
           )}
         />
@@ -483,13 +492,19 @@ export function OrderOverview({
       {dialog?.kind === "customer" ? (
         <CustomerChangeDialog
           order={order}
+          timeZone={timeZone}
           storeId={storeId}
           onClose={close}
           onDone={done}
         />
       ) : null}
       {dialog?.kind === "details" ? (
-        <DetailsChangeDialog order={order} onClose={close} onDone={done} />
+        <DetailsChangeDialog
+          order={order}
+          timeZone={timeZone}
+          onClose={close}
+          onDone={done}
+        />
       ) : null}
       {dialog?.kind === "items" ? (
         <ItemsChangeDialog

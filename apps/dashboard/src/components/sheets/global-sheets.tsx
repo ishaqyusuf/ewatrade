@@ -11,12 +11,12 @@ import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
 import { DomainSheet } from "./domain-sheet"
-import { PurchaseRegistrationDetailsSheet } from "./purchase-registration-details-sheet"
 import { FinanceMovementDetailsSheet } from "./finance-movement-details-sheet"
 import { FinanceSheet } from "./finance-sheet"
 import { InventoryOperationDetailsSheet } from "./inventory-operation-details-sheet"
 import { OrderDetailsSheet } from "./order-details-sheet"
 import { PrescriptionRequestSheet } from "./prescription-request-sheet"
+import { PurchaseRegistrationDetailsSheet } from "./purchase-registration-details-sheet"
 import { ReceiptSheet } from "./receipt-sheet"
 import { ServiceCommerceSheet } from "./service-commerce-sheet"
 import { StockCountSheet } from "./stock-count-sheet"
@@ -27,6 +27,8 @@ export type GlobalSheetAccess = {
   /** Website & domain launch gate and role; the sheet mounts only when true. */
   domains?: boolean
   sales: boolean
+  /** The Orders list and full order pages. */
+  ordersPage?: boolean
   catalog?: boolean
   scopedStaff?: boolean
   finance: boolean
@@ -46,12 +48,14 @@ export function GlobalSheets({
   store,
   storeIds,
   tenantId,
+  timeZone,
 }: {
   access: GlobalSheetAccess
   actorUserId: string
   store: GlobalSheetStore
   storeIds: string[]
   tenantId: string
+  timeZone: string
 }) {
   const pathname = usePathname()
   const { setCatalogItemMode } = useCatalogItemParams()
@@ -85,7 +89,11 @@ export function GlobalSheets({
       {access.catalog ? <CatalogItemDetailModal store={store} /> : null}
       {access.sales ? (
         <>
-          <OrderDetailsSheet storeId={store.id} />
+          <OrderDetailsSheet
+            storeId={store.id}
+            fullPage={Boolean(access.ordersPage)}
+            timeZone={timeZone}
+          />
           <CustomerDetailsSheet />
         </>
       ) : null}

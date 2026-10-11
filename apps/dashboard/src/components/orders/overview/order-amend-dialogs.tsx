@@ -27,6 +27,7 @@ import {
 
 type DialogProps = {
   order: OverviewOrder
+  timeZone?: string
   onClose: () => void
   onDone: () => Promise<void>
 }
@@ -51,7 +52,7 @@ type MetadataReview = {
   changedFields: string[]
 }
 
-function metadataEffects(review: MetadataReview) {
+function metadataEffects(review: MetadataReview, timeZone?: string) {
   const { before, after, changedFields } = review
   const effects: string[] = []
   if (changedFields.some((field) => field.startsWith("customer")))
@@ -60,7 +61,7 @@ function metadataEffects(review: MetadataReview) {
     )
   if (changedFields.includes("deliveryDueAt"))
     effects.push(
-      `Delivery: ${before.deliveryDueAt ? formatOrderDateTime(before.deliveryDueAt) : "None"} → ${after.deliveryDueAt ? formatOrderDateTime(after.deliveryDueAt) : "None"}`,
+      `Delivery: ${before.deliveryDueAt ? formatOrderDateTime(before.deliveryDueAt, timeZone) : "None"} → ${after.deliveryDueAt ? formatOrderDateTime(after.deliveryDueAt, timeZone) : "None"}`,
     )
   if (changedFields.includes("notes"))
     effects.push(
@@ -72,6 +73,7 @@ function metadataEffects(review: MetadataReview) {
 /** Review → effects → reason → confirm for customer, delivery and note. */
 function MetadataConfirm({
   order,
+  timeZone,
   patch,
   reasonChips,
   confirmLabel,
@@ -112,7 +114,7 @@ function MetadataConfirm({
       <ReviewEffects
         loading={review.isPending}
         error={review.isError ? review.error.message : null}
-        effects={data ? metadataEffects(data) : []}
+        effects={data ? metadataEffects(data, timeZone) : []}
         blockers={
           data && !data.eligible ? data.blockers.map((row) => row.reason) : []
         }
@@ -162,6 +164,7 @@ function MetadataConfirm({
 
 export function CustomerChangeDialog({
   order,
+  timeZone,
   storeId,
   onClose,
   onDone,
@@ -181,6 +184,7 @@ export function CustomerChangeDialog({
       {reviewing && customerId !== undefined ? (
         <MetadataConfirm
           order={order}
+          timeZone={timeZone}
           patch={{ customerId }}
           reasonChips={[
             "Wrong customer picked",
@@ -268,7 +272,12 @@ function localInput(value: Date | string | null) {
     .slice(0, 16)
 }
 
-export function DetailsChangeDialog({ order, onClose, onDone }: DialogProps) {
+export function DetailsChangeDialog({
+  order,
+  timeZone,
+  onClose,
+  onDone,
+}: DialogProps) {
   const initialDue = localInput(order.deliveryDueAt)
   const [due, setDue] = useState(initialDue)
   const [notes, setNotes] = useState(order.notes ?? "")
@@ -289,6 +298,7 @@ export function DetailsChangeDialog({ order, onClose, onDone }: DialogProps) {
       {reviewing && changed ? (
         <MetadataConfirm
           order={order}
+          timeZone={timeZone}
           patch={patch}
           reasonChips={[
             "Customer asked",

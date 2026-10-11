@@ -411,6 +411,8 @@ function scopedPageAllowed(
 ) {
   if (context.staffAccessMode !== "SCOPED" || (role && canManageTenant(role)))
     return true
+  // Order pages; the API still limits which orders scoped staff can open.
+  if (href.startsWith("/sales/orders/")) return true
   return [
     "/",
     "/sales",

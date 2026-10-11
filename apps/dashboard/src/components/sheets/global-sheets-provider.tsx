@@ -16,6 +16,7 @@ export function GlobalSheetsProvider({
   store,
   storeIds,
   tenantId,
+  timeZone,
 }: {
   access: GlobalSheetAccess
   actorUserId: string
@@ -23,6 +24,8 @@ export function GlobalSheetsProvider({
   store: GlobalSheetStore
   storeIds: string[]
   tenantId: string
+  /** Business time zone for dates in sheets. */
+  timeZone: string
 }) {
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -40,6 +43,7 @@ export function GlobalSheetsProvider({
           store={store}
           storeIds={storeIds}
           tenantId={tenantId}
+          timeZone={timeZone}
         />
       ) : null}
     </>

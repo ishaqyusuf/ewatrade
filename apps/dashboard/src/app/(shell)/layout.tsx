@@ -95,6 +95,11 @@ export default async function ShellLayout({
         <GlobalSheetsProvider
           access={{
             sales: canUseSalesOperations(ctx.membership.role),
+            ordersPage: canAccessDashboardPath(
+              "/sales",
+              ctx.membership.role,
+              navigationContext,
+            ),
             catalog: canAccessDashboardPath(
               "/catalog",
               ctx.membership.role,
@@ -125,6 +130,7 @@ export default async function ShellLayout({
           }}
           storeIds={ctx.stores.map((item) => item.id)}
           tenantId={ctx.tenant.id}
+          timeZone={ctx.tenant.timezone}
         >
           {/* 70px header + this + the wrapper's pb-4 fill exactly one screen. */}
           <main className="flex min-h-[calc(100vh-70px-1rem)] min-w-0 flex-col px-4 md:px-8">

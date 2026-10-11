@@ -32,7 +32,12 @@ export default async function OrderRoutePage({
   ])
   return (
     <HydrateClient>
-      <OrderPage key={orderId} orderId={orderId} storeId={store.id} />
+      <OrderPage
+        key={orderId}
+        orderId={orderId}
+        storeId={store.id}
+        timeZone={ctx.tenant.timezone}
+      />
     </HydrateClient>
   )
 }

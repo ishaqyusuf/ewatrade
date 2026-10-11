@@ -78,6 +78,8 @@ export function useAssistantDraftRequests(take: (draft: string) => void) {
   }, [take])
 }
 
+let launchers = 0
+
 export function useQuickAssistantRequests(open: () => void) {
   useEffect(() => {
     const onRequest = (event: Event) => {
@@ -87,4 +89,21 @@ export function useQuickAssistantRequests(open: () => void) {
     window.addEventListener(ASSISTANT_REQUEST, onRequest)
     return () => window.removeEventListener(ASSISTANT_REQUEST, onRequest)
   }, [open])
+  useEffect(() => {
+    launchers += 1
+    notify()
+    return () => {
+      launchers -= 1
+      notify()
+    }
+  }, [])
+}
+
+/** True while the shell's quick assistant launcher is mounted. */
+export function useQuickAssistantLauncher() {
+  return useSyncExternalStore(
+    subscribe,
+    () => launchers > 0,
+    () => false,
+  )
 }

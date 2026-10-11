@@ -133,34 +133,44 @@ export function orderPills(order: OverviewOrder) {
 export const formatQuantity = (value: string) =>
   value.includes(".") ? value.replace(/\.?0+$/, "") : value
 
-export function formatOrderTime(value: string | Date) {
+/** Order times read in the business time zone, the same on server and client. */
+export function formatOrderTime(value: string | Date, timeZone?: string) {
   return new Date(value).toLocaleTimeString("en-NG", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone,
   })
 }
 
-export function formatOrderDateTime(value: string | Date) {
+export function formatOrderDateTime(value: string | Date, timeZone?: string) {
   return new Date(value).toLocaleString("en-NG", {
     day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone,
   })
 }
 
-export function dayLabel(value: string | Date, now = new Date()) {
+export function dayLabel(
+  value: string | Date,
+  timeZone?: string,
+  now = new Date(),
+) {
   const date = new Date(value)
-  const start = (day: Date) =>
-    new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
-  const days = Math.round((start(now) - start(date)) / 86_400_000)
-  if (days === 0) return "Today"
-  if (days === 1) return "Yesterday"
+  const key = (day: Date) => day.toLocaleDateString("en-CA", { timeZone })
+  if (key(date) === key(now)) return "Today"
+  if (key(date) === key(new Date(now.getTime() - 86_400_000)))
+    return "Yesterday"
+  const sameYear =
+    date.toLocaleDateString("en-NG", { year: "numeric", timeZone }) ===
+    now.toLocaleDateString("en-NG", { year: "numeric", timeZone })
   return date.toLocaleDateString("en-NG", {
     day: "numeric",
     month: "short",
-    year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
+    year: sameYear ? undefined : "numeric",
+    timeZone,
   })
 }
 
@@ -191,14 +201,14 @@ export function mergeActivity(
 
 type Change = OrderTimelineItem["changes"][number]
 
-function changeLine(change: Change, currency: string) {
+function changeLine(change: Change, currency: string, timeZone?: string) {
   const money = (value: number | null) =>
     value === null ? "typed price" : orderMoney(value, currency)
   switch (change.field) {
     case "customer":
       return `Customer: ${change.before ?? "Walk-in"} → ${change.after ?? "Walk-in"}`
     case "deliveryDueAt":
-      return `Delivery: ${change.before ? formatOrderDateTime(change.before) : "None"} → ${change.after ? formatOrderDateTime(change.after) : "None"}`
+      return `Delivery: ${change.before ? formatOrderDateTime(change.before, timeZone) : "None"} → ${change.after ? formatOrderDateTime(change.after, timeZone) : "None"}`
     case "notes":
       return `Note: ${change.before ? `“${change.before}”` : "None"} → ${change.after ? `“${change.after}”` : "None"}`
     case "line":
@@ -218,17 +228,30 @@ function changeLine(change: Change, currency: string) {
   }
 }
 
+const RETURN_OUTCOME: Record<string, string> = {
+  restock: "Back to stock",
+  damaged: "Damaged",
+  quarantine: "Set aside to check",
+  no_restock: "Not restocked",
+}
+
 export type EventTone = "default" | "money" | "stock" | "change" | "danger"
 
 /** Plain-English title, amount and detail lines for one timeline event. */
-export function describeEvent(item: OrderTimelineItem, currency: string) {
+export function describeEvent(
+  item: OrderTimelineItem,
+  currency: string,
+  timeZone?: string,
+) {
   const actor = item.actor?.name ?? null
   const amount =
     item.amountMinor !== null ? orderMoney(item.amountMinor, currency) : null
   const lines = item.lines.map(
     (line) => `${formatQuantity(line.quantity)} × ${line.label}`,
   )
-  const changes = item.changes.map((change) => changeLine(change, currency))
+  const changes = item.changes.map((change) =>
+    changeLine(change, currency, timeZone),
+  )
   const meta = (...parts: Array<string | null | undefined>) =>
     parts.filter(Boolean).join(" · ")
   switch (item.kind) {
@@ -240,7 +263,8 @@ export function describeEvent(item: OrderTimelineItem, currency: string) {
         amount: null,
         tone: "default" as EventTone,
         detail: meta(actor, amount ? `Total ${amount}` : null),
-        lines: [],
+        // A replacement carries what changed from the order it replaced.
+        lines: [...changes, ...(item.reason ? [`Reason: ${item.reason}`] : [])],
         linkLabel: item.linkedOrder
           ? `Replaces ${item.linkedOrder.orderNumber}`
           : null,
@@ -277,7 +301,11 @@ export function describeEvent(item: OrderTimelineItem, currency: string) {
         title: "Returned",
         amount: null,
         tone: "stock" as EventTone,
-        detail: meta(lines.join(", "), actor),
+        detail: meta(
+          lines.join(", "),
+          RETURN_OUTCOME[item.disposition?.toLowerCase() ?? ""],
+          actor,
+        ),
         lines: item.reason ? [`Reason: ${item.reason}`] : [],
         linkLabel: null,
       }

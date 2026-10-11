@@ -358,6 +358,9 @@ test("scoped roles expose orders and stock without catalog or staff administrati
     }),
   ).toBe(true)
   expect(canAccessDashboardPath("/finance", "MANAGER", scope)).toBe(false)
+  expect(
+    canAccessDashboardPath("/sales/orders/order-1", "CASHIER", scope),
+  ).toBe(true)
 })
 
 test("Free plan hides and blocks finance, staff, suppliers and receipt settings", () => {

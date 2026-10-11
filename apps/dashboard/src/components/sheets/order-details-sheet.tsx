@@ -15,7 +15,11 @@ import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { SheetFrame } from "./sheet-frame"
 
-export function OrderDetailsSheet({ storeId }: { storeId: string }) {
+export function OrderDetailsSheet({
+  storeId,
+  fullPage,
+  timeZone,
+}: { storeId: string; fullPage: boolean; timeZone: string }) {
   const { sheet, orderId, setParams } = useOrderParams()
   const open = sheet === "details" && Boolean(orderId)
   const close = () => setParams({ orderSheet: null, orderId: null })
@@ -33,6 +37,8 @@ export function OrderDetailsSheet({ storeId }: { storeId: string }) {
           orderId={orderId}
           storeId={storeId}
           closeError={closeError}
+          fullPage={fullPage}
+          timeZone={timeZone}
           onLeave={close}
           onOpenOrder={(id) =>
             void setParams({ orderSheet: "details", orderId: id })
@@ -47,12 +53,16 @@ function OrderSheetBody({
   orderId,
   storeId,
   closeError,
+  fullPage,
+  timeZone,
   onLeave,
   onOpenOrder,
 }: {
   orderId: string
   storeId: string
   closeError: string | null
+  fullPage: boolean
+  timeZone: string
   onLeave: () => Promise<unknown>
   onOpenOrder: (orderId: string) => void
 }) {
@@ -65,17 +75,19 @@ function OrderSheetBody({
   return (
     <SheetFrame
       title={loaded?.orderNumber ?? "Order details"}
-      description={loaded ? orderSubline(loaded) : undefined}
+      description={loaded ? orderSubline(loaded, timeZone) : undefined}
       header={
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {loaded ? <OrderPills order={loaded} /> : null}
-          <Link
-            href={`/sales/orders/${encodeURIComponent(orderId)}`}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            Open full page
-            <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" />
-          </Link>
+          {fullPage ? (
+            <Link
+              href={`/sales/orders/${encodeURIComponent(orderId)}`}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Open full page
+              <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" />
+            </Link>
+          ) : null}
         </div>
       }
       closeError={closeError}
@@ -85,6 +97,7 @@ function OrderSheetBody({
         orderId={orderId}
         storeId={storeId}
         layout="sheet"
+        timeZone={timeZone}
         onLeave={onLeave}
         onOpenOrder={onOpenOrder}
       />
