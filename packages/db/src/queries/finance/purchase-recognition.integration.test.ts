@@ -1,4 +1,5 @@
 import { getFinancePurchaseRegistrationReview } from "./purchase-registration-review"
+import { verifyPurchaseRecognitionReview } from "./purchase-recognition-review.integration-check"
 import { expect, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
@@ -38,9 +39,9 @@ const date = (day: number) =>
 describeWithServiceCommerceDatabase(
   "independent purchase recognition acceptance",
   () => {
-    test(process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1" ? "registration review, rollback and two-line replay without postings" : "timing, transit, settlement, exact correction and atomic receipt evidence", async () => {
+    test(process.env.RUN_PURCHASE_RECOGNITION_REVIEW_ONLY === "1" ? "invoice and ownership reviews, rollback and exact two-line postings" : process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1" ? "registration review, rollback and two-line replay without postings" : "timing, transit, settlement, exact correction and atomic receipt evidence", async () => {
       const { prisma: db } = await import("../../client")
-      if (process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1") {
+      if (process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1" || process.env.RUN_PURCHASE_RECOGNITION_REVIEW_ONLY === "1") {
         const [actual] = await db.$queryRaw<Array<{ database: string }>>`SELECT current_database() AS database`
         if (actual?.database !== "ewatrade_general_assistant_main_20261009") throw Error("Isolated registration target required")
       }
@@ -200,6 +201,10 @@ describeWithServiceCommerceDatabase(
             ...context,
             recognitionId: result.id,
           })
+        }
+        if (process.env.RUN_PURCHASE_RECOGNITION_REVIEW_ONLY === "1") {
+          await verifyPurchaseRecognitionReview(db, context, await register("recognition-review", "1000", true))
+          return
         }
         if (process.env.RUN_PURCHASE_REGISTRATION_ONLY === "1") {
           const input = { ...context, supplierId: supplier.id, storeId: store.id,

@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Purchase recognition | [1](fixtures/purchase-recognition.v1.md) | Independent invoice/ownership, exact posting review, rollback/replay and physical receipt boundaries | None yet |
 | Purchase registration | [1](fixtures/purchase-registration.v1.md) | Agreement-only draft, exact goods, scope/stale guards, rollback/recovery | None yet |
 | Purchase recognition reads | [1](fixtures/purchase-recognition-reads.v1.md) | Pre-invoice discovery, separate stages, correction/source evidence | None yet |
 | Purchase bill reads | [1](fixtures/purchase-reads.v1.md) | Settlement separation, recognition provenance, bounded history, exact scope | None yet |
@@ -31,6 +32,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Purchase recognition review, 11 October 2026](runs/2026-10-11-recognition-review.md): 8 tests/60 assertions and scoped types pass; isolated database 23 assertions passes with exact invoice/ownership journals, rollback/replay and 16 cleanup checks. Assistant/browser and physical receipt acceptance remain pending.
 
 - [Registration editor, 11 October 2026](runs/2026-10-11-registration-editor.md): layout comparison and actual component acknowledgment/zero guards, exact decimal/minor amount/timestamp, target preservation and Cancel verified; screenshot retained. Full confirmation pending.
 

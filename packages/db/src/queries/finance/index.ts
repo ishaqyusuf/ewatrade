@@ -82,6 +82,7 @@ export {
   registerFinancePurchase,
   registerFinancePurchaseInTransaction,
   recognizeFinancePurchase,
+  recognizeFinancePurchaseInTransaction,
 } from "./purchase-recognition"
 export { reverseFinancePurchaseRecognition } from "./purchase-recognition-reversals"
 export { getFinancePurchaseRecognition } from "./purchase-recognition-reads"
@@ -98,3 +99,4 @@ export {
 export { getFinanceMoneyMovementReview } from "./money-review"
 
 export { getFinancePurchaseRegistrationReview } from "./purchase-registration-review"
+export { getFinancePurchaseRecognitionReview } from "./purchase-recognition-review"
