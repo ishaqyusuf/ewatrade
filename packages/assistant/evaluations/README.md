@@ -20,6 +20,10 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Customer credit linked-Order acceptance, 11 October 2026](runs/2026-10-11-customer-credit-order-database.md): 58 assertions passed; linked credit/reversal, unchanged cash, no duplicate deposit/collection, rollback/replay and cleanup verified.
+
+- [Money movement transaction preparation, 11 October 2026](runs/2026-10-11-money-movement-transaction.md): caller-owned canonical command,2 tests/10 assertions; assistant and database/web acceptance pending.
+
 - [Customer credit dashboard acceptance, 11 October 2026](runs/2026-10-11-customer-credit-web.md): application edit/review/confirm and customer overlay passed; release blocked by browser network error before confirmation, zero releases verified; QA cleanup complete.
 
 - [Customer credit database and discovery acceptance, 11 October 2026](runs/2026-10-11-customer-credit-database.md): 44 assertions passed for apply/release, rollback/replay, balanced journals and actual lookup tools; cleanup verified.

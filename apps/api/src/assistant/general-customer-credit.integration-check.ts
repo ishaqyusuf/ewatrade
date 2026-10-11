@@ -1,8 +1,9 @@
+import { postCommerceFinanceJournalInTransaction } from "../../../../packages/db/src/queries/finance/posting"
 import { createGeneralTools } from "./general-tools"
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { capabilityForAction, capabilityManifest } from "@ewatrade/assistant/capabilities/manifest"
-import { createFinanceBook, ensureCustomerLedgerAccount, recordCustomerLedgerOpening, getCustomerLedgerAccountDetail } from "@ewatrade/db/queries"
+import { createFinanceBook, ensureCustomerLedgerAccount, recordCustomerLedgerOpening, getCustomerLedgerAccountDetail, recordCustomerLedgerReceipt, getFinanceAccountBalances, listCommercialOrderPaymentsPage } from "@ewatrade/db/queries"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import type { GeneralContext } from "./general-context"
 import { decideGeneralProposal, draftGeneralProposal, generalProposalForApp, generalProposalWithReview } from "./general-proposals"
@@ -22,10 +23,19 @@ export async function verifyCustomerCreditComposition(original: GeneralContext, 
   const book = await createFinanceBook(db,{...actor,startsAt:new Date("2026-01-01")})
   const customer = await db.customer.create({data:{tenantId,name:"Customer allocation QA"}})
   const account = await ensureCustomerLedgerAccount(db,{...actor,customerId:customer.id,currencyCode:ctx.tenantContext.tenant.currencyCode})
-  await recordCustomerLedgerOpening(db,{...actor,bookId:book.id,accountId:account.id,direction:"DEBT",amountMinor:"500",reason:"Existing debt",clientCommandId:randomUUID()})
-  await recordCustomerLedgerOpening(db,{...actor,bookId:book.id,accountId:account.id,direction:"CREDIT",amountMinor:"1000",reason:"Existing credit",clientCommandId:randomUUID()})
-  const credit = await db.customerLedgerEntry.findFirstOrThrow({where:{accountId:account.id,kind:"OPENING_CREDIT"}})
-  const charge = await db.customerLedgerEntry.findFirstOrThrow({where:{accountId:account.id,kind:"OPENING_DEBT"}})
+  const orderMode = process.env.RUN_GENERAL_CUSTOMER_CREDIT_ORDER === "1"
+  const order = orderMode ? await db.commercialOrder.create({data:{tenantId,storeId:ctx.tenantContext.activeStore!.id,customerId:customer.id,clientOrderId:randomUUID(),payloadHash:"assistant-credit-fixture",orderNumber:"CREDIT-QA-1",currencyCode:ctx.tenantContext.tenant.currencyCode,subtotalMinor:500,totalMinor:500,createdByUserId:actor.actorUserId}}) : null
+  if (order) {
+   console.info("Customer credit acceptance: post exact Order charge and received deposit")
+   await db.$transaction(tx=>postCommerceFinanceJournalInTransaction(tx,{tenantId,orderId:order.id,event:"BILLED"}),{maxWait:10000,timeout:30000})
+   const cash = await db.financeAccount.findFirstOrThrow({where:{bookId:book.id,code:"1000"}})
+   await recordCustomerLedgerReceipt(db,{...actor,bookId:book.id,accountId:account.id,moneyAccountId:cash.id,clientCommandId:randomUUID(),amountMinor:"1000",method:"CASH",description:"Existing received deposit"})
+  } else {
+   await recordCustomerLedgerOpening(db,{...actor,bookId:book.id,accountId:account.id,direction:"DEBT",amountMinor:"500",reason:"Existing debt",clientCommandId:randomUUID()})
+   await recordCustomerLedgerOpening(db,{...actor,bookId:book.id,accountId:account.id,direction:"CREDIT",amountMinor:"1000",reason:"Existing credit",clientCommandId:randomUUID()})
+  }
+  const credit = await db.customerLedgerEntry.findFirstOrThrow({where:{accountId:account.id,kind:order ? "RECEIPT" : "OPENING_CREDIT"}})
+  const charge = await db.customerLedgerEntry.findFirstOrThrow({where:{accountId:account.id,kind:order ? "ORDER_CHARGE" : "OPENING_DEBT"}})
   const apply = {action:"customer_credit_apply" as const,bookId:book.id,accountId:account.id,creditEntryId:credit.id,chargeEntryId:charge.id,amountMinor:"300"}
   async function draft(payload: GeneralAction) {
    const result = await draftGeneralProposal(ctx,conversationId,payload)
@@ -33,6 +43,7 @@ export async function verifyCustomerCreditComposition(original: GeneralContext, 
    const review = await generalProposalWithReview(ctx,row)
    expect(review.review?.join(" ")).toContain("Customer allocation QA")
    expect(review.review?.join(" ")).toContain(payload.action === "customer_credit_apply" ? "No money is collected" : "No money is refunded")
+   if (order) expect(review.review?.join(" ")).toContain(order.orderNumber)
    const app = generalProposalForApp(row)
    return {proposalId:app.id,revision:app.revision,approvalToken:app.approvalToken,decision:"confirm" as const}
   }
@@ -54,6 +65,10 @@ export async function verifyCustomerCreditComposition(original: GeneralContext, 
   const allocations = await db.customerLedgerAllocation.findMany({where:{accountId:account.id}})
   expect(allocations).toHaveLength(1)
   const allocation = allocations[0]!
+  if (order) {
+   expect(await db.commercialOrderPayment.findUniqueOrThrow({where:{customerAllocationId:allocation.id}})).toMatchObject({orderId:order.id,method:"CUSTOMER_CREDIT",amountMinor:300})
+   expect(await db.commercialOrder.findUniqueOrThrow({where:{id:order.id}})).toMatchObject({amountPaidMinor:300,paymentStatus:"PARTIALLY_PAID"})
+  }
   const release = {action:"customer_allocation_release" as const,bookId:book.id,accountId:account.id,allocationId:allocation.id,amountMinor:"100",reason:"Correct partial allocation"}
   await expect(draftGeneralProposal(ctx,conversationId,{...release,amountMinor:"301"})).rejects.toMatchObject({code:"CONFLICT"})
   console.info("Customer credit acceptance: release rollback and retry")
@@ -67,7 +82,21 @@ export async function verifyCustomerCreditComposition(original: GeneralContext, 
   expect((await getCustomerLedgerAccountDetail(db,{...actor,accountId:account.id})).totals).toMatchObject({availableCreditMinor:"800",outstandingDebtMinor:"300"})
   expect(await db.customerLedgerCommand.count({where:{accountId:account.id,kind:"ALLOCATE"}})).toBe(1)
   expect(await db.customerLedgerCommand.count({where:{accountId:account.id,kind:"RELEASE_ALLOCATION"}})).toBe(1)
-  expect(await db.customerLedgerReceipt.count({where:{accountId:account.id}})).toBe(0)
+  expect(await db.customerLedgerReceipt.count({where:{accountId:account.id}})).toBe(order ? 1 : 0)
+  if (order) {
+   const releaseRow = await db.customerLedgerAllocationRelease.findFirstOrThrow({where:{allocationId:allocation.id}})
+   expect(await db.commercialOrderPayment.findUniqueOrThrow({where:{customerAllocationReleaseId:releaseRow.id}})).toMatchObject({orderId:order.id,method:"CUSTOMER_CREDIT",amountMinor:100,type:"REFUND"})
+   expect(await db.commercialOrder.findUniqueOrThrow({where:{id:order.id}})).toMatchObject({amountPaidMinor:200,paymentStatus:"PARTIALLY_PAID"})
+   expect(await db.commercialOrderPayment.count({where:{orderId:order.id}})).toBe(2)
+   const balances = await getFinanceAccountBalances(db,{...actor,bookId:book.id})
+   expect(balances.accounts.find(a=>a.purpose==="CASH")?.balanceMinor).toBe("1000")
+   expect(balances.accounts.find(a=>a.purpose==="RECEIVABLE")?.balanceMinor).toBe("300")
+   expect(balances.accounts.find(a=>a.purpose==="CUSTOMER_ADVANCE")?.balanceMinor).toBe("800")
+   const collections = await listCommercialOrderPaymentsPage(db,{tenantId,defaultCurrencyCode:ctx.tenantContext.tenant.currencyCode})
+   expect(collections.totalCount).toBe(0)
+   expect(await db.customerLedgerEntry.count({where:{accountId:account.id,kind:"RECEIPT"}})).toBe(1)
+   expect(await db.financeJournalEntry.count({where:{bookId:book.id,sourceKind:"CUSTOMER_RECEIPT"}})).toBe(1)
+  }
   for (const [sourceKind, amount, debitPurpose] of [["CUSTOMER_CREDIT_ALLOCATION",300n,"CUSTOMER_ADVANCE"],["CUSTOMER_ALLOCATION_RELEASE",100n,"RECEIVABLE"]] as const) {
    const journals = await db.financeJournalEntry.findMany({where:{bookId:book.id,sourceKind},include:{lines:{include:{account:true}}}})
    expect(journals).toHaveLength(1)
@@ -93,12 +122,14 @@ export async function verifyCustomerCreditComposition(original: GeneralContext, 
     await db.$transaction(async tx => {
       const books = await tx.financeBook.findMany({ where: { tenantId }, select: { id: true } })
       const bookIds = books.map(book => book.id)
+      await tx.commercialOrderPayment.deleteMany({where:{tenantId}})
       await tx.customerLedgerCommand.deleteMany({ where: { tenantId } })
       await tx.customerLedgerAllocationRelease.deleteMany({ where: { allocation: { credit: { tenantId } } } })
       await tx.customerLedgerAllocation.deleteMany({ where: { credit: { tenantId } } })
       await tx.customerLedgerReceipt.deleteMany({ where: { entry: { tenantId } } })
       await tx.customerLedgerEntry.deleteMany({ where: { tenantId } })
       await tx.customerLedgerAccount.deleteMany({ where: { tenantId } })
+      await tx.commercialOrder.deleteMany({where:{tenantId}})
       await tx.financeCommand.deleteMany({ where: { bookId: { in: bookIds } } })
       await tx.financeJournalLine.deleteMany({ where: { bookId: { in: bookIds } } })
       await tx.financeJournalEntry.deleteMany({ where: { bookId: { in: bookIds } } })
