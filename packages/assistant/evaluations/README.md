@@ -34,6 +34,8 @@ separate evidence; do not import them as successful model evaluations.
 
 - [Held-credit refund review source checks, 11 October 2026](runs/2026-10-11-held-credit-refund-review.md): 6 unit tests /50 assertions; assistant and database acceptance pending.
 
+- [Held-credit refund editor browser check, 11 October 2026](runs/2026-10-11-held-credit-refund-editor.md): isolated component checks and screenshots; full assistant flow pending.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
