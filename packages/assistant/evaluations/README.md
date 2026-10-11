@@ -23,6 +23,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Existing bill-payment database acceptance, 11 October 2026](runs/2026-10-11-bill-payment-database.md):81 assertions passed including actual discovery, rollback/concurrent recovery, stale/closed/void guards and owner remainder; owned cleanup verified.
+
 - [Existing bill discovery, 11 October 2026](runs/2026-10-11-bill-discovery.md): canonical list/detail tools, exact liability and bounded payment/reversal history;2 tests/12 assertions pass; actual-tool database/model execution pending.
 
 - [Bill-payment proposal/editor, 11 October 2026](runs/2026-10-11-bill-payment-adapter.md): strict action/canonical adapter,13 schema assertions and scoped types pass; component acknowledgment/exact values/cancel checked with screenshot; database/full web pending.

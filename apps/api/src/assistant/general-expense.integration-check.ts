@@ -1,3 +1,4 @@
+import { verifyBillPaymentComposition } from "./general-bill-payment.integration-check"
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { capabilityForAction, capabilityManifest } from "@ewatrade/assistant/capabilities/manifest"
@@ -74,6 +75,7 @@ export async function verifyExpenseComposition(original: GeneralContext, failing
     expect(await db.financeBill.count({ where: { bookId: book.id } })).toBe(3)
     expect(await db.financeBillPayment.count({ where: { bookId: book.id } })).toBe(2)
     console.info("Expense acceptance: balanced journals and exact payment ownership passed")
+    if (process.env.RUN_GENERAL_BILL_PAYMENT === "1") await verifyBillPaymentComposition(ctx, failingDb, conversationId, book.id, cash.id)
   } finally {
     capabilities.forEach((capability, index) => Object.assign(capability, { rollout: rollouts[index] }))
     await db.$transaction(async tx => {
