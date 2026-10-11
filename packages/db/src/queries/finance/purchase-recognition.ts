@@ -12,7 +12,7 @@ import { purchaseRecognitionCategories } from "./purchase-recognition-receipt-so
 import { purchaseRecognitionControl } from "./purchase-recognition-source"
 import { purchaseJournalEntryId } from "./purchase-source"
 import { FinanceError } from "./rules"
-import { recordPurchaseReceiptValuationInTransaction } from "./valuation-receipts"
+import { recordPurchaseReceiptValuationsInTransaction } from "./valuation-receipts"
 
 export type RegisterFinancePurchaseInput = FinanceActor & {
   bookId: string
@@ -245,6 +245,10 @@ export async function recognizeFinancePurchaseInTransaction(
             "INVALID_JOURNAL",
             "Confirm every original goods line exactly once.",
           )
+        const valuations: Array<{
+          receiptId: string
+          expectedStockRevision: number
+        }> = []
         for (const line of [...document.lines].sort((a, b) =>
           a.balanceSourceId.localeCompare(b.balanceSourceId),
         )) {
@@ -316,14 +320,17 @@ export async function recognizeFinancePurchaseInTransaction(
               stockMovementId: movement.id,
             },
           })
-          await recordPurchaseReceiptValuationInTransaction(tx, {
-            tenantId: input.tenantId,
-            bookId: book.id,
+          valuations.push({
             receiptId: receipt.id,
-            actorUserId: input.actorUserId,
             expectedStockRevision: confirmation.expectedBalanceRevision + 1,
           })
         }
+        await recordPurchaseReceiptValuationsInTransaction(tx, {
+          tenantId: input.tenantId,
+          bookId: book.id,
+          actorUserId: input.actorUserId,
+          receipts: valuations,
+        })
       }
       return { id: eventId }
     },

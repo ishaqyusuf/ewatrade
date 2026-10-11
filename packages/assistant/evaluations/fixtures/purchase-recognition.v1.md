@@ -1,6 +1,7 @@
 # Purchase recognition — version 1
 
-E05 planned dashboard Owner/Admin actions on an exact Book and original agreement.
+E05 dashboard Owner/Admin actions on an exact Book and original agreement. Invoice
+and ownership are source-available; assistant physical receipt remains pending.
 These scenarios are fixtures, not executed model evaluations.
 
 | ID | Scenario | Expected |

@@ -1,7 +1,10 @@
 import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
 import type { Prisma } from "../../../generated/prisma/client"
 import type { FinanceInventoryUnknownReason } from "../../../generated/prisma/enums"
-import { getPurchaseRecognitionReceiptDate } from "./purchase-recognition-receipt-source"
+import {
+  getPurchaseRecognitionReceiptDate,
+  getPurchaseRecognitionReceiptDates,
+} from "./purchase-recognition-receipt-source"
 import { FinanceError, financeAmount } from "./rules"
 import { addQuantities, normalizeQuantity } from "./valuation-math"
 
@@ -24,11 +27,7 @@ export async function recordPurchaseReceiptValuationInTransaction(
       tenantId: input.tenantId,
       bookId: input.bookId,
     },
-    include: {
-      billLine: { include: { bill: true, account: true } },
-      stockMovement: { include: { balanceSource: true, operation: true } },
-      valuationEvent: true,
-    },
+    include: receiptInclude,
   })
   if (!receipt) {
     throw new FinanceError(
@@ -37,8 +36,7 @@ export async function recordPurchaseReceiptValuationInTransaction(
     )
   }
   const { billLine, stockMovement: movement } = receipt
-  const { bill, account } = billLine
-  const { balanceSource: balance, operation } = movement
+  const { bill } = billLine
   const recognitionReceipt = bill.kind === "PURCHASE_ACCRUAL"
   const effectiveAt = recognitionReceipt
     ? await getPurchaseRecognitionReceiptDate(tx, {
@@ -48,6 +46,101 @@ export async function recordPurchaseReceiptValuationInTransaction(
         stockMovementId: movement.id,
       })
     : bill.incurredAt
+  return recordLoadedReceiptValuation(tx, input, receipt, effectiveAt)
+}
+
+const receiptInclude = {
+  billLine: { include: { bill: true, account: true } },
+  stockMovement: { include: { balanceSource: true, operation: true } },
+  valuationEvent: true,
+} satisfies Prisma.FinancePurchaseReceiptLineInclude
+
+type Receipt = Prisma.FinancePurchaseReceiptLineGetPayload<{
+  include: typeof receiptInclude
+}>
+type ValuationInput = {
+  tenantId: string
+  bookId: string
+  receiptId: string
+  actorUserId: string
+  expectedStockRevision: number
+}
+
+/** Batch recognition adapter; the caller holds the same Book and sorted stock locks. */
+export async function recordPurchaseReceiptValuationsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Omit<ValuationInput, "receiptId" | "expectedStockRevision"> & {
+    receipts: Array<{ receiptId: string; expectedStockRevision: number }>
+  },
+) {
+  if (
+    !input.receipts.length ||
+    input.receipts.length > 10 ||
+    new Set(input.receipts.map((r) => r.receiptId)).size !==
+      input.receipts.length
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "Choose 1–10 distinct purchase receipts.",
+    )
+  const receipts = await tx.financePurchaseReceiptLine.findMany({
+    where: {
+      id: { in: input.receipts.map((r) => r.receiptId) },
+      tenantId: input.tenantId,
+      bookId: input.bookId,
+    },
+    include: receiptInclude,
+    take: 11,
+  })
+  if (
+    receipts.length !== input.receipts.length ||
+    new Set(receipts.map((r) => r.stockMovement.balanceSourceId)).size !==
+      receipts.length ||
+    receipts.some((r) => r.billLine.bill.kind !== "PURCHASE_ACCRUAL")
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The complete registered purchase receipts are unavailable.",
+    )
+  const dates = await getPurchaseRecognitionReceiptDates(tx, {
+    ...input,
+    receipts: receipts.map((r) => ({
+      costBillId: r.billLine.bill.id,
+      costBillLineId: r.billLine.id,
+      stockMovementId: r.stockMovementId,
+    })),
+  })
+  const events = []
+  for (const confirmation of input.receipts) {
+    const receipt = receipts.find((r) => r.id === confirmation.receiptId)
+    const effectiveAt = receipt && dates.get(receipt.stockMovementId)
+    if (!receipt || !effectiveAt)
+      throw new FinanceError(
+        "CONFLICT",
+        "The registered receipt date is unavailable.",
+      )
+    events.push(
+      await recordLoadedReceiptValuation(
+        tx,
+        { ...input, ...confirmation },
+        receipt,
+        effectiveAt,
+      ),
+    )
+  }
+  return events
+}
+
+async function recordLoadedReceiptValuation(
+  tx: Prisma.TransactionClient,
+  input: ValuationInput,
+  receipt: Receipt,
+  effectiveAt: Date,
+) {
+  const { billLine, stockMovement: movement } = receipt
+  const { bill, account } = billLine
+  const { balanceSource: balance, operation } = movement
+  const recognitionReceipt = bill.kind === "PURCHASE_ACCRUAL"
   if (
     (bill.kind !== "PURCHASE" && !recognitionReceipt) ||
     bill.voidedAt ||
