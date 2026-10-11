@@ -2,8 +2,18 @@ import { mock } from "bun:test"
 import assert from "node:assert/strict"
 import { APP_UPDATE_SCOPE } from "@ewatrade/utils/app-update"
 
+// React Native installs abort-controller, which has no AbortSignal.timeout.
+Object.defineProperty(AbortSignal, "timeout", { value: undefined })
+
 const scenario = process.argv[2] ?? ""
 const legacy = scenario.startsWith("legacy-")
+if (scenario === "native-check-timeout") {
+  const schedule = globalThis.setTimeout
+  globalThis.setTimeout = ((callback: () => void, delay: number) => {
+    assert.equal(delay, 8000)
+    return schedule(callback, 0)
+  }) as typeof setTimeout
+}
 const calls = {
   identity: 0,
   requests: 0,
@@ -146,7 +156,10 @@ mock.module(new URL("../session-store.ts", import.meta.url).pathname, () => ({
   getSession: () => session,
 }))
 Object.assign(globalThis, { __DEV__: false })
-globalThis.fetch = (async (input: string | URL | Request) => {
+globalThis.fetch = (async (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => {
   calls.requests++
   const url = new URL(String(input))
   assert.equal(url.pathname, "/api/mobile/builds/check")
@@ -155,6 +168,16 @@ globalThis.fetch = (async (input: string | URL | Request) => {
     APP_UPDATE_SCOPE.applicationId,
   )
   assert.equal(url.searchParams.get("buildNumber"), "9")
+  if (scenario === "native-check-timeout") {
+    assert(init?.signal)
+    return new Promise((_resolve, reject) => {
+      init.signal?.addEventListener(
+        "abort",
+        () => reject(new Error("Aborted")),
+        { once: true },
+      )
+    })
+  }
   if (offline) throw new Error("Offline")
   return Response.json({ build: offer }, { status })
 }) as typeof fetch
@@ -167,6 +190,10 @@ if (
   assert.equal(await client.checkNativeBuild(true), false)
   assert.equal(calls.requests, 0)
   assert.equal(calls.browser, 0)
+} else if (scenario === "native-check-timeout") {
+  await assert.rejects(client.checkNativeBuild(true), /Aborted/)
+  assert.equal(calls.requests, 1)
+  assert.equal(state().visible, false)
 } else if (scenario === "operation-lock") {
   let release: () => void = () => {}
   const pending = client.withAppUpdateLock(
