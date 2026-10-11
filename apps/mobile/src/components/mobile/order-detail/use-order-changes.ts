@@ -18,9 +18,9 @@ export type OrderChangeSheet =
 
 type MetadataPatch = RouterInputs["orders"]["amendMetadata"]["patch"]
 type ReplacementChanges = RouterInputs["orders"]["replace"]["changes"]
-type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
+type PaymentMethod = RouterInputs["orders"]["refund"]["method"]
 type ReturnDisposition =
-  RouterInputs["orders"]["returnProductLine"]["disposition"]
+  RouterInputs["orders"]["returnItems"]["lines"][number]["disposition"]
 
 const SHEET_CLOSE_MS = 400
 const operationId = (prefix: string) => `${prefix}-${Crypto.randomUUID()}`
@@ -94,17 +94,15 @@ export function useOrderChanges({
   const amendMetadata = useMutation(trpc.orders.amendMetadata.mutationOptions())
   const replace = useMutation(trpc.orders.replace.mutationOptions())
   const cancel = useMutation(trpc.orders.cancel.mutationOptions())
-  const refund = useMutation(trpc.orders.recordPayment.mutationOptions())
-  const returnLine = useMutation(
-    trpc.orders.returnProductLine.mutationOptions(),
-  )
+  const refund = useMutation(trpc.orders.refund.mutationOptions())
+  const returnItems = useMutation(trpc.orders.returnItems.mutationOptions())
   const busy =
     working ||
     amendMetadata.isPending ||
     replace.isPending ||
     cancel.isPending ||
     refund.isPending ||
-    returnLine.isPending
+    returnItems.isPending
 
   return {
     sheet,
@@ -218,6 +216,7 @@ export function useOrderChanges({
     },
     async recordRefund(input: {
       amountMinor: number
+      lowerTotal: boolean
       method: PaymentMethod
       reason: string
       reference: string
@@ -228,39 +227,51 @@ export function useOrderChanges({
       try {
         await refund.mutateAsync({
           amountMinor: input.amountMinor,
-          clientPaymentId: operationId("refund"),
+          clientOperationId: operationId("refund"),
+          lowerTotal: input.lowerTotal,
           method: input.method,
-          note: input.reason,
           orderId: order.id,
+          reason: input.reason,
           reference: input.reference.trim() || undefined,
-          type: "refund",
         })
-        await finish("Refund recorded.")
+        await finish(
+          input.lowerTotal
+            ? "Refund recorded and the total lowered."
+            : "Refund recorded.",
+        )
       } catch (failure) {
         fail(failure)
       } finally {
         setWorking(false)
       }
     },
-    async recordReturn(input: {
-      disposition: ReturnDisposition
-      orderLineId: string
-      quantity: string
+    async returnItems(input: {
+      lines: Array<{
+        disposition: ReturnDisposition
+        orderLineId: string
+        quantity: string
+      }>
+      money: { method: PaymentMethod } | null
       reason: string
     }) {
       if (!order || busy) return
       setError(null)
       setWorking(true)
       try {
-        await returnLine.mutateAsync({
-          clientReturnId: operationId("return"),
-          disposition: input.disposition,
-          orderLineId: input.orderLineId,
-          quantity: input.quantity,
+        const result = await returnItems.mutateAsync({
+          clientOperationId: operationId("return"),
+          lines: input.lines,
+          money: input.money,
+          orderId: order.id,
           reason: input.reason,
-          schemaVersion: 1,
         })
-        await finish("Return recorded.")
+        await finish(
+          result?.refundPaymentId
+            ? "Return and refund recorded."
+            : result?.creditId
+              ? "Return recorded and taken off what they owe."
+              : "Return recorded.",
+        )
       } catch (failure) {
         fail(failure)
       } finally {

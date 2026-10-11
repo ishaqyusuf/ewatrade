@@ -216,6 +216,12 @@ export function ClassicOrderDetailContent({
             value={formatMinorMoney(order.taxMinor, order.currencyCode)}
           />
         ) : null}
+        {order.creditMinor > 0 ? (
+          <OrderTotalRow
+            label="Credit after sale"
+            value={`−${formatMinorMoney(order.creditMinor, order.currencyCode)}`}
+          />
+        ) : null}
         <OrderTotalRow
           divided
           emphasized

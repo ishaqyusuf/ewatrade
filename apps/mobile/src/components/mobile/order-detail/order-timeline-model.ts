@@ -171,6 +171,16 @@ export function timelineActivity(
           detail: `${who(item)}${said(item)} · this order closed`,
           tone: "lilac",
         }
+      case "credited":
+        return {
+          ...base,
+          label:
+            item.creditKind === "overcharge"
+              ? `Price corrected −${amount}`
+              : `Returned items credited −${amount}`,
+          detail: `${who(item)}${said(item)}`,
+          tone: "lilac",
+        }
       case "cancelled":
         return {
           ...base,
