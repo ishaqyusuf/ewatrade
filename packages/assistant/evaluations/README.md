@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Supplier creation | [1](fixtures/supplier-create.v1.md) | Identity normalization, ambiguity, duplicate/scope refusal, rollback/recovery and receipt | None yet |
 | Expense/payment corrections | [1](fixtures/bill-correction.v1.md) | Exact original targets, no-transfer boundaries, void/payment guards, stale/retry and rollback | None yet |
 | Supplier search/statements | [1](fixtures/supplier-reads.v1.md) | Exact identities, separate balances, snapshot continuation and scope refusal | None yet |
 | `finance.money_movement.record` v1 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
@@ -24,6 +25,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Supplier creation adapter, 11 October 2026](runs/2026-10-11-supplier-create-adapter.md): strict schema and canonical transactional adapter;14 assertions pass. Editor and database/web/model acceptance pending.
 
 - [Supplier creation review, 11 October 2026](runs/2026-10-11-supplier-create-review.md): canonical fresh-authority/Book/duplicate review and transaction export;7 tests/42 assertions pass. Assistant proposal and database/web acceptance pending.
 

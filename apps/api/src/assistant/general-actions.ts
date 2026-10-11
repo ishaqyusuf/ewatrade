@@ -32,6 +32,7 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import { supplierCreate } from "./general-supplier-create"
 import { billCorrection } from "./general-bill-correction"
 import { billPayment } from "./general-bill-payment"
 import { closeoutCreate, closeoutFinalize } from "./general-closeout"
@@ -584,6 +585,7 @@ const adapters: {
   money_movement: moneyMovement,
   expense_record: expenseRecord,
   bill_payment: billPayment,
+  supplier_create: supplierCreate,
   expense_void: billCorrection,
   bill_payment_reverse: billCorrection,
   customer_credit_apply: customerCreditApply,

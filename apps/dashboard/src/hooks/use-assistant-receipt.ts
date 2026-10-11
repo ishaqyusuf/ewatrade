@@ -8,6 +8,7 @@ export function useAssistantReceipt() {
     {
       financeSheet: parseAsString,
       billId: parseAsString,
+      supplierId: parseAsString,
       financeMovement: parseAsString,
       financeMovementBook: parseAsString,
       customerDetail: parseAsString,
@@ -27,6 +28,7 @@ export function useAssistantReceipt() {
     const closed = {
       financeSheet: null,
       billId: null,
+      supplierId: null,
       financeMovement: null,
       financeMovementBook: null,
       customerDetail: null,
@@ -41,6 +43,8 @@ export function useAssistantReceipt() {
       inventoryOperation: null,
     }
     switch (receipt.kind) {
+      case "finance_supplier":
+        return setParams({...closed, financeSheet: "supplier-statement", supplierId: receipt.recordId})
       case "finance_bill":
         return setParams({...closed, financeSheet: "bill", billId: receipt.recordId})
       case "finance_movement":

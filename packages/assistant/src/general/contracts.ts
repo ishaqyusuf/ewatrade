@@ -1,3 +1,4 @@
+import { supplierCreateAction } from "./supplier-create"
 import { expenseVoidAction, billPaymentReverseAction } from "./bill-correction"
 import { billPaymentAction } from "./bill-payment"
 import { expenseAction } from "./expense"
@@ -254,6 +255,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   moneyMovementAction,
   expenseAction,
   billPaymentAction,
+  supplierCreateAction,
   expenseVoidAction,
   billPaymentReverseAction,
   customerCreditApplyAction,
@@ -277,6 +279,7 @@ export type GeneralActionName = GeneralAction["action"]
 export const generalReceiptSchema = z
   .object({
     kind: z.enum([
+      "finance_supplier",
       "finance_bill",
       "finance_movement",
       "customer",
@@ -296,7 +299,7 @@ export const generalReceiptSchema = z
     detail: z.string(),
   })
   .strict()
-  .refine(value => !["finance_movement", "finance_bill"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
+  .refine(value => !["finance_movement", "finance_bill", "finance_supplier"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
 export const generalProposalSchema = z
   .object({
@@ -425,6 +428,7 @@ export function generalActionSummary(
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "supplier_create": return `Create supplier · ${action.name} (${action.code})`
     case "expense_void": return `Void unpaid expense · ${action.reason}`
     case "bill_payment_reverse": return `Reverse recorded bill payment · ${action.reason}`
     case "bill_payment": return "Record payment against existing expense bill"
