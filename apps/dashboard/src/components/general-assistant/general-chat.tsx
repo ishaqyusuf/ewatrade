@@ -25,7 +25,6 @@ import {
 import {
   ArrowDown01Icon,
   ArrowUpRight01Icon,
-  Attachment01Icon,
   PlusSignIcon,
   SparklesIcon,
 } from "@hugeicons/core-free-icons"
@@ -37,6 +36,7 @@ import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
 import { GeneralAttachComposer } from "./general-attachment-tray"
+import { GeneralSentFile } from "./general-chat-photo"
 import { GeneralProposalCard } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { useGeneralAssistant } from "./use-general-assistant"
@@ -300,19 +300,7 @@ export function GeneralThread({
                   className="flex flex-col items-end gap-1.5"
                 >
                   {files.map((file) => (
-                    <span
-                      key={file.attachmentId}
-                      className="flex max-w-[85%] items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
-                    >
-                      <HugeiconsIcon
-                        icon={Attachment01Icon}
-                        className="size-3.5 shrink-0"
-                      />
-                      <span className="truncate">
-                        {file.fileName}
-                        {file.expired ? " · removed" : ""}
-                      </span>
-                    </span>
+                    <GeneralSentFile key={file.attachmentId} file={file} />
                   ))}
                   {text ? (
                     <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">

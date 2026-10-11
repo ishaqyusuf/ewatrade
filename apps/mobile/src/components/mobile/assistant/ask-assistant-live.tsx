@@ -1,4 +1,3 @@
-import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -32,6 +31,7 @@ import {
   AssistantThinking,
   assistantAsOf,
 } from "./assistant-ui"
+import { ChatPhotoThumb, ChatSentFile } from "./chat-photo"
 import {
   generalAnswers,
   generalPlainText,
@@ -282,21 +282,10 @@ export function AskAssistantLive() {
                   ? item.parts.flatMap((part) =>
                       part.type === "data-setup-attachment"
                         ? [
-                            <View
+                            <ChatSentFile
                               key={part.data.attachmentId}
-                              className="max-w-[80%] flex-row items-center gap-1.5 self-end rounded-full bg-card px-3 py-1.5"
-                            >
-                              <Icon
-                                className="size-[13px] text-muted-foreground"
-                                name="ReceiptText"
-                              />
-                              <Text
-                                className="text-xs text-muted-foreground"
-                                numberOfLines={1}
-                              >
-                                {part.data.fileName}
-                              </Text>
-                            </View>,
+                              file={part.data}
+                            />,
                           ]
                         : [],
                     )
@@ -329,6 +318,13 @@ export function AskAssistantLive() {
                     <ResultCard
                       title={proposal.receipt.title}
                       detail={proposal.receipt.detail}
+                      media={
+                        proposal.payload.action === "order_attachment_add" ? (
+                          <ChatPhotoThumb
+                            attachmentId={proposal.payload.attachmentId}
+                          />
+                        ) : undefined
+                      }
                       onOpen={() => {
                         if (!proposal.receipt) return
                         router.push(generalReceiptRoute(proposal.receipt))
@@ -340,6 +336,11 @@ export function AskAssistantLive() {
                       media={
                         proposal.payload.action === "product_create" ? (
                           <GeneralProductThumb payload={proposal.payload} />
+                        ) : proposal.payload.action ===
+                          "order_attachment_add" ? (
+                          <ChatPhotoThumb
+                            attachmentId={proposal.payload.attachmentId}
+                          />
                         ) : undefined
                       }
                       summary={(

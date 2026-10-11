@@ -78,11 +78,11 @@ export const orderAttachmentAdd = {
     return (await current(ctx, payload)).target
   },
   async review(ctx, payload) {
-    const { attachment, order, target } = await current(ctx, payload)
+    const { kind, order, target } = await current(ctx, payload)
     return {
       target,
       lines: [
-        `Attach ${attachment.fileName} to ${order.orderNumber} · ${order.customerName || "Walk-in customer"}`,
+        `Attach this ${kind === "IMAGE" ? "photo" : "file"} to ${order.orderNumber} · ${order.customerName || "Walk-in customer"}`,
         ...(payload.note ? [`Note: ${payload.note}`] : []),
         "Adds it to the order's Notes & photos. The order's items, totals and payments do not change.",
       ],
@@ -135,8 +135,9 @@ export const orderAttachmentAdd = {
       kind: "order" as const,
       recordId: order.id,
       orderId: order.id,
-      title: "File attached",
-      detail: `${attachment.fileName} added to ${order.orderNumber}'s Notes & photos.`,
+      // Camera file names are random; the card shows the photo itself.
+      title: kind === "IMAGE" ? "Photo attached" : "File attached",
+      detail: `Added to ${order.orderNumber}'s Notes & photos.`,
     }
   },
 } satisfies GeneralActionAdapter<AttachAction>

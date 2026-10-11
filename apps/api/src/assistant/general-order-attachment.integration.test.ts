@@ -159,7 +159,7 @@ if (enabled) setDefaultTimeout(180_000)
         expect(result.receipt).toMatchObject({
           kind: "order",
           orderId: order.id,
-          title: "File attached",
+          title: "Photo attached",
         })
 
         const activity = await listCommercialOrderActivity(db, {

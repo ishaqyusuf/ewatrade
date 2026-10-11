@@ -133,14 +133,26 @@ export function ProposalCard({
 export function ResultCard({
   title,
   detail,
+  media,
   onOpen,
-}: { title: string; detail: string; onOpen?: () => void }) {
+}: {
+  title: string
+  detail: string
+  /** A photo of what was saved, beside the text. */
+  media?: ReactNode
+  onOpen?: () => void
+}) {
   return (
     <View className="gap-3 rounded-[18px] bg-tint-mint p-3">
-      <Text className="text-sm font-bold text-tint-mint-foreground">
-        {title}
-      </Text>
-      <Text className="text-xs text-tint-mint-foreground">{detail}</Text>
+      <View className="flex-row items-center gap-3">
+        {media}
+        <View className="min-w-0 flex-1 gap-1">
+          <Text className="text-sm font-bold text-tint-mint-foreground">
+            {title}
+          </Text>
+          <Text className="text-xs text-tint-mint-foreground">{detail}</Text>
+        </View>
+      </View>
       {onOpen ? (
         <ActionButton variant="outline" onPress={onOpen}>
           Open record

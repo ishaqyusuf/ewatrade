@@ -83,3 +83,11 @@ export function orderAttachmentSource(attachmentId: string) {
     headers: authHeaders(),
   }
 }
+
+/** A photo sent in an assistant chat; only its sender can load it. */
+export function chatAttachmentSource(attachmentId: string) {
+  return {
+    uri: `${getBaseUrl()}/api/assistant/attachments/${encodeURIComponent(attachmentId)}/content`,
+    headers: authHeaders(),
+  }
+}

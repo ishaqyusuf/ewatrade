@@ -6,6 +6,7 @@ import {
 } from "@ewatrade/assistant/general/contracts"
 import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
 import { Badge, Button } from "@ewatrade/ui"
+import { GeneralChatPhotoThumb } from "./general-chat-photo"
 import { GeneralProductPicture } from "./general-product-picture"
 
 const statusLabel: Record<GeneralProposal["status"], string> = {
@@ -36,13 +37,19 @@ export function GeneralProposalCard({
 }) {
   const { receipt } = proposal
   const title = capabilityForAction(proposal.payload.action).title
+  // A file going onto an order shows as the photo itself.
+  const filed =
+    proposal.payload.action === "order_attachment_add"
+      ? proposal.payload.attachmentId
+      : null
   if (receipt)
     return (
       <section
         aria-label={receipt.title}
         className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3"
       >
-        <div className="min-w-0">
+        {filed ? <GeneralChatPhotoThumb attachmentId={filed} /> : null}
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{receipt.title}</p>
           <p className="text-sm text-muted-foreground">{receipt.detail}</p>
         </div>
@@ -82,6 +89,8 @@ export function GeneralProposalCard({
             payload={product}
             onAdd={pending || renewable ? onEdit : undefined}
           />
+        ) : filed ? (
+          <GeneralChatPhotoThumb attachmentId={filed} />
         ) : null}
         <ul className="min-w-0 flex-1 space-y-1 text-sm">
           {lines.map((line, index) => (
