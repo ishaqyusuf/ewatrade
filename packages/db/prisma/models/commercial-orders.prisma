@@ -200,6 +200,8 @@ model OfferingSnapshot {
   serviceWorkPolicy          ServiceWorkPolicy?
   serviceAuthorizationPolicy WorkAuthorizationPolicy?
   balanceSourceId            String?
+  /// Set for catalog-free lines (Quick sale / Additional cost).
+  customLineRole             CatalogSystemRole?
   createdAt                  DateTime                    @default(now())
   orderLine                  CommercialOrderLine         @relation(fields: [orderLineId], references: [id], onDelete: Cascade)
   inventoryUnit              InventoryUnit?              @relation(fields: [inventoryUnitId], references: [id], onDelete: Restrict)

@@ -514,6 +514,7 @@ export async function attachCatalogPhotoAssets(
     where: {
       id: input.catalogItemId,
       tenantId: input.tenantId,
+      systemRole: null,
       archivedAt: null,
       status: { not: "ARCHIVED" },
     },

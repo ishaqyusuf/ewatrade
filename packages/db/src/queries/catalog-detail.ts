@@ -235,6 +235,7 @@ export async function listCatalogItemActivity(
             db.catalogItem.findFirst({
               where: {
                 id: scope.itemId,
+                systemRole: null,
                 tenantId: scope.tenantId,
                 ...detailCursorWhere("created", "createdAt", page.cursor),
               },
@@ -484,7 +485,7 @@ export async function catalogDetailItemExists(
 ) {
   return Boolean(
     await db.catalogItem.findFirst({
-      where: { id: scope.itemId, tenantId: scope.tenantId },
+      where: { id: scope.itemId, systemRole: null, tenantId: scope.tenantId },
       select: { id: true },
     }),
   )

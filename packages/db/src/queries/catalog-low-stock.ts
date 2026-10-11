@@ -36,6 +36,7 @@ export async function listCatalogLowStockPage(
         tenantId: input.tenantId,
         kind: "PRODUCT",
         status: "ACTIVE",
+        systemRole: null,
       },
       variant: { status: "ACTIVE" },
       productUnitOffering: { isNot: null },

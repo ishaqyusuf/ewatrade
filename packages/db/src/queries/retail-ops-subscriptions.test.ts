@@ -450,6 +450,7 @@ describe("retail ops subscription queries", () => {
     expect(getCall(db.calls, "catalogItem.count").where).toEqual({
       tenantId: "tenant_123",
       status: { not: "ARCHIVED" },
+      systemRole: null,
     })
   })
 

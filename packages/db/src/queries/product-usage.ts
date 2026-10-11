@@ -4,6 +4,7 @@ import { CatalogError } from "./catalog-errors"
 
 // Use in sale reads, never in purchasing or Inventory queries.
 export const saleEligibleCatalogItem = {
+  systemRole: null,
   OR: [
     { kind: "SERVICE" },
     {

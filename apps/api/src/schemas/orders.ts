@@ -38,6 +38,38 @@ const exactOrderQuantitySchema = z
     }),
   )
 
+const commercialOrderCatalogLineSchema = z
+  .object({
+    approvedQuotePriceMinor: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(100_000_000)
+      .optional(),
+    expectedBalanceRevision: z.number().int().nonnegative().optional(),
+    enteredTotalMinor: z.number().int().positive().max(100_000_000).optional(),
+    note: z.string().trim().max(2_000).optional(),
+    expectedConfigurationVersionId: z.string().trim().min(1).optional(),
+    expectedFixedPriceMinor: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(100_000_000)
+      .optional(),
+    offeringId: z.string().trim().min(1),
+    quantity: exactOrderQuantitySchema,
+  })
+  .strict()
+
+/** Catalog-free line: a typed amount with an optional description. */
+export const commercialOrderCustomLineSchema = z
+  .object({
+    amountMinor: z.number().int().positive().max(100_000_000),
+    custom: z.enum(["quick_sale", "additional_cost"]),
+    description: z.string().trim().max(200).optional(),
+  })
+  .strict()
+
 export const commercialOrderCreateSchema = z
   .object({
     clientOrderId: z.string().trim().min(8).max(160),
@@ -52,33 +84,10 @@ export const commercialOrderCreateSchema = z
     initialPayment: commercialOrderPaymentInputSchema.optional(),
     lines: z
       .array(
-        z
-          .object({
-            approvedQuotePriceMinor: z
-              .number()
-              .int()
-              .nonnegative()
-              .max(100_000_000)
-              .optional(),
-            expectedBalanceRevision: z.number().int().nonnegative().optional(),
-            enteredTotalMinor: z
-              .number()
-              .int()
-              .positive()
-              .max(100_000_000)
-              .optional(),
-            note: z.string().trim().max(2_000).optional(),
-            expectedConfigurationVersionId: z.string().trim().min(1).optional(),
-            expectedFixedPriceMinor: z
-              .number()
-              .int()
-              .nonnegative()
-              .max(100_000_000)
-              .optional(),
-            offeringId: z.string().trim().min(1),
-            quantity: exactOrderQuantitySchema,
-          })
-          .strict(),
+        z.union([
+          commercialOrderCatalogLineSchema,
+          commercialOrderCustomLineSchema,
+        ]),
       )
       .min(1)
       .max(100),

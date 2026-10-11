@@ -10,6 +10,10 @@ import {
   OfflineReviewDecision,
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
+import {
+  type CommercialOrderCustomLineInput,
+  isCustomOrderLineInput,
+} from "./catalog-free-lines"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import {
   OfflineStaffAccessError,
@@ -33,14 +37,17 @@ type CommercialOrderPayload = {
     reference?: string
   }
   kind: "commercial_order"
-  lines: Array<{
-    approvedQuotePriceMinor?: number
-    expectedBalanceRevision?: number
-    expectedConfigurationVersionId?: string
-    expectedFixedPriceMinor?: number
-    offeringId: string
-    quantity: string
-  }>
+  lines: Array<
+    | {
+        approvedQuotePriceMinor?: number
+        expectedBalanceRevision?: number
+        expectedConfigurationVersionId?: string
+        expectedFixedPriceMinor?: number
+        offeringId: string
+        quantity: string
+      }
+    | CommercialOrderCustomLineInput
+  >
   notes?: string
   taxMinor?: number
 }
@@ -166,7 +173,11 @@ async function authoritativeState(
       storeAvailability: { where: { storeId: input.storeId } },
     },
     where: {
-      id: { in: input.payload.lines.map((line) => line.offeringId) },
+      id: {
+        in: input.payload.lines.flatMap((line) =>
+          isCustomOrderLineInput(line) ? [] : [line.offeringId],
+        ),
+      },
       catalogItem: saleEligibleCatalogItem,
       tenantId: input.tenantId,
     },

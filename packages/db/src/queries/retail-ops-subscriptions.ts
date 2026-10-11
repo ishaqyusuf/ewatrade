@@ -1375,6 +1375,7 @@ export async function getRetailOpsSubscriptionSnapshot(
         where: {
           tenantId: input.tenantId,
           status: { not: "ARCHIVED" },
+          systemRole: null,
         },
       }),
       db.membership.count({
@@ -2245,7 +2246,11 @@ export async function assertRetailOpsProductAllowance(
   // Per-command locks alone cannot serialize different product creations.
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`retail-ops-products:${input.tenantId}`}, 0))`
   const used = await db.catalogItem.count({
-    where: { tenantId: input.tenantId, status: { not: "ARCHIVED" } },
+    where: {
+      tenantId: input.tenantId,
+      status: { not: "ARCHIVED" },
+      systemRole: null,
+    },
   })
   const entitlement = {
     isAtLimit: used >= plan.limits.products,

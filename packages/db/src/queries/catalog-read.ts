@@ -285,7 +285,7 @@ export async function getCatalogItem(
 ) {
   const item = await db.catalogItem.findFirst({
     include: catalogItemGraphForStores(input.storeIds),
-    where: { id: input.itemId, tenantId: input.tenantId },
+    where: { id: input.itemId, systemRole: null, tenantId: input.tenantId },
   })
 
   return item ? serializeCatalogItem(item) : null

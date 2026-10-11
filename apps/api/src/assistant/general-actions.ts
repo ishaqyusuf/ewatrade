@@ -1,6 +1,4 @@
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
-import { productLineFulfill } from "./general-product-fulfillment"
-import { serviceLineAction } from "./general-service-fulfillment"
 import type {
   GeneralAction,
   GeneralActionName,
@@ -44,11 +42,13 @@ import {
   productDetailsUpdate,
   productIdentifiersUpdate,
 } from "./general-product-details"
+import { productLineFulfill } from "./general-product-fulfillment"
 import { productPriceUpdate } from "./general-product-price"
 import {
   productUnitConfigurationDraft,
   productUnitConfigurationPublish,
 } from "./general-product-units"
+import { serviceLineAction } from "./general-service-fulfillment"
 import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
 import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
 import { stockReceive } from "./general-stock-receipt"
@@ -364,7 +364,11 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     }
     for (const line of payload.lines) {
       const offering = await ctx.db.sellableOffering.findFirst({
-        where: { id: line.offeringId, tenantId: scope.tenantId },
+        where: {
+          id: line.offeringId,
+          tenantId: scope.tenantId,
+          catalogItem: { systemRole: null },
+        },
         select: { id: true },
       })
       if (!offering)

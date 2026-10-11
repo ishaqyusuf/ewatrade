@@ -1,5 +1,5 @@
-import { literalContains } from "./literal-contains"
 import { CatalogError } from "./catalog-errors"
+import { literalContains } from "./literal-contains"
 export { CatalogError } from "./catalog-errors"
 import {
   type CatalogItemGraph,
@@ -302,7 +302,11 @@ export async function assertExistingCatalogOfferingPublicationSafety(
   }
   const item = await tx.catalogItem.findFirst({
     include: catalogItemGraph,
-    where: { id: offering.catalogItemId, tenantId: input.tenantId },
+    where: {
+      id: offering.catalogItemId,
+      systemRole: null,
+      tenantId: input.tenantId,
+    },
   })
   const variant = item?.variants.find(
     (entry) => entry.id === offering.variantId,
@@ -1419,6 +1423,7 @@ export async function listCatalogItems(
     where: {
       kind: input.kind ? catalogKind(input.kind) : undefined,
       status: input.status ? catalogStatus(input.status) : undefined,
+      systemRole: null,
       tenantId: input.tenantId,
     },
   })
@@ -1428,15 +1433,30 @@ export async function listCatalogItems(
 
 export async function countCatalogItems(
   db: PrismaClient,
-  input: { tenantId: string; kind?: CatalogItemKindValue; status?: CatalogItemStatusValue; nameContains?: string },
+  input: {
+    tenantId: string
+    kind?: CatalogItemKindValue
+    status?: CatalogItemStatusValue
+    nameContains?: string
+  },
 ) {
   const name = input.nameContains?.trim()
-  return db.catalogItem.count({ where: {
-    tenantId: input.tenantId,
-    kind: input.kind ? catalogKind(input.kind) : undefined,
-    status: input.status ? catalogStatus(input.status) : undefined,
-    ...(name ? { name: { contains: literalContains(name), mode: "insensitive" as const } } : {}),
-  } })
+  return db.catalogItem.count({
+    where: {
+      tenantId: input.tenantId,
+      kind: input.kind ? catalogKind(input.kind) : undefined,
+      status: input.status ? catalogStatus(input.status) : undefined,
+      systemRole: null,
+      ...(name
+        ? {
+            name: {
+              contains: literalContains(name),
+              mode: "insensitive" as const,
+            },
+          }
+        : {}),
+    },
+  })
 }
 
 export async function listCatalogItemsPage(
@@ -1448,6 +1468,7 @@ export async function listCatalogItemsPage(
   const baseWhere: Prisma.CatalogItemWhereInput = {
     kind: input.kind ? catalogKind(input.kind) : undefined,
     status: input.status ? catalogStatus(input.status) : undefined,
+    systemRole: null,
     tenantId: input.tenantId,
   }
   // Deep search: any query word may match any searchable field; results are
@@ -1624,6 +1645,7 @@ async function listRankedCatalogItemsPage(
       where: {
         kind: where.kind,
         status: where.status,
+        systemRole: null,
         tenantId: where.tenantId,
       },
     }),
@@ -1653,69 +1675,97 @@ export type SetCatalogOfferingStoreAvailabilityInput = {
   expectedAvailability?: { isAvailable: boolean; updatedAt: Date } | null
 }
 
-export async function setCatalogOfferingStoreAvailability(db: PrismaClient, input: SetCatalogOfferingStoreAvailabilityInput) {
-  return db.$transaction((tx) => setCatalogOfferingStoreAvailabilityInTransaction(tx, input), { timeout: 30000 })
+export async function setCatalogOfferingStoreAvailability(
+  db: PrismaClient,
+  input: SetCatalogOfferingStoreAvailabilityInput,
+) {
+  return db.$transaction(
+    (tx) => setCatalogOfferingStoreAvailabilityInTransaction(tx, input),
+    { timeout: 30000 },
+  )
 }
 
-export async function setCatalogOfferingStoreAvailabilityInTransaction(tx: Prisma.TransactionClient, input: SetCatalogOfferingStoreAvailabilityInput) {
+export async function setCatalogOfferingStoreAvailabilityInTransaction(
+  tx: Prisma.TransactionClient,
+  input: SetCatalogOfferingStoreAvailabilityInput,
+) {
   const locked = await tx.$queryRaw<Array<{ id: string }>>`
     SELECT "id" FROM "SellableOffering"
     WHERE "id" = ${input.offeringId} AND "tenantId" = ${input.tenantId}
     FOR UPDATE
   `
   if (locked.length !== 1 || locked[0]?.id !== input.offeringId)
-    throw new CatalogError("CATALOG_OFFERING_NOT_FOUND", "Catalog Offering not found.")
-    const offering = await tx.sellableOffering.findFirst({
-      where: { id: input.offeringId, tenantId: input.tenantId },
-      select: { id: true },
+    throw new CatalogError(
+      "CATALOG_OFFERING_NOT_FOUND",
+      "Catalog Offering not found.",
+    )
+  const offering = await tx.sellableOffering.findFirst({
+    where: {
+      id: input.offeringId,
+      tenantId: input.tenantId,
+      catalogItem: { systemRole: null },
+    },
+    select: { id: true },
+  })
+  if (!offering) {
+    throw new CatalogError(
+      "CATALOG_OFFERING_NOT_FOUND",
+      "Catalog Offering not found.",
+    )
+  }
+
+  const store = await tx.store.findFirst({
+    where: { id: input.storeId, tenantId: input.tenantId },
+    select: { id: true },
+  })
+  if (!store) {
+    throw new CatalogError(
+      "STORE_NOT_FOUND",
+      "Store not found for this business.",
+    )
+  }
+
+  if (input.expectedAvailability !== undefined) {
+    const current = await tx.storeOfferingAvailability.findUnique({
+      where: {
+        storeId_offeringId: {
+          storeId: input.storeId,
+          offeringId: input.offeringId,
+        },
+      },
+      select: { isAvailable: true, updatedAt: true },
     })
-    if (!offering) {
+    const expected = input.expectedAvailability
+    if (
+      (current === null) !== (expected === null) ||
+      (current &&
+        expected &&
+        (current.isAvailable !== expected.isAvailable ||
+          current.updatedAt.getTime() !== expected.updatedAt.getTime()))
+    )
       throw new CatalogError(
-        "CATALOG_OFFERING_NOT_FOUND",
-        "Catalog Offering not found.",
+        "REVISION_CONFLICT",
+        "Selling availability changed. Review the current value again.",
       )
-    }
+  }
+  if (input.isAvailable) {
+    await assertExistingCatalogOfferingPublicationSafety(tx, input)
+  }
 
-    const store = await tx.store.findFirst({
-      where: { id: input.storeId, tenantId: input.tenantId },
-      select: { id: true },
-    })
-    if (!store) {
-      throw new CatalogError(
-        "STORE_NOT_FOUND",
-        "Store not found for this business.",
-      )
-    }
-
-    if (input.expectedAvailability !== undefined) {
-      const current = await tx.storeOfferingAvailability.findUnique({
-        where: { storeId_offeringId: { storeId: input.storeId, offeringId: input.offeringId } },
-        select: { isAvailable: true, updatedAt: true },
-      })
-      const expected = input.expectedAvailability
-      if ((current === null) !== (expected === null) ||
-          (current && expected && (current.isAvailable !== expected.isAvailable || current.updatedAt.getTime() !== expected.updatedAt.getTime())))
-        throw new CatalogError("REVISION_CONFLICT", "Selling availability changed. Review the current value again.")
-    }
-    if (input.isAvailable) {
-      await assertExistingCatalogOfferingPublicationSafety(tx, input)
-    }
-
-    return tx.storeOfferingAvailability.upsert({
-      create: {
-        isAvailable: input.isAvailable,
+  return tx.storeOfferingAvailability.upsert({
+    create: {
+      isAvailable: input.isAvailable,
+      offeringId: offering.id,
+      storeId: store.id,
+    },
+    update: { isAvailable: input.isAvailable },
+    where: {
+      storeId_offeringId: {
         offeringId: offering.id,
         storeId: store.id,
       },
-      update: { isAvailable: input.isAvailable },
-      where: {
-        storeId_offeringId: {
-          offeringId: offering.id,
-          storeId: store.id,
-        },
-      },
-    })
-
+    },
+  })
 }
 
 export async function archiveCatalogOffering(
@@ -1723,7 +1773,11 @@ export async function archiveCatalogOffering(
   input: { offeringId: string; tenantId: string },
 ) {
   const offering = await db.sellableOffering.findFirst({
-    where: { id: input.offeringId, tenantId: input.tenantId },
+    where: {
+      id: input.offeringId,
+      tenantId: input.tenantId,
+      catalogItem: { systemRole: null },
+    },
     select: { id: true },
   })
   if (!offering) {
@@ -1746,7 +1800,7 @@ export async function archiveCatalogVariant(
   return db.$transaction(async (tx) => {
     const variant = await tx.sellableVariant.findFirst({
       where: {
-        catalogItem: { tenantId: input.tenantId },
+        catalogItem: { systemRole: null, tenantId: input.tenantId },
         id: input.variantId,
       },
       select: { id: true },

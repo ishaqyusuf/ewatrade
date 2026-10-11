@@ -122,6 +122,7 @@ export async function globalSearch(
             { slug: textWhere },
           ],
           status: { not: "ARCHIVED" },
+          systemRole: null,
           tenantId: input.tenantId,
         },
       }),

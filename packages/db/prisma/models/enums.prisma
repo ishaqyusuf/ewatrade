@@ -95,6 +95,11 @@ enum CatalogRecordStatus {
   ARCHIVED
 }
 
+enum CatalogSystemRole {
+  QUICK_SALE
+  ADDITIONAL_COST
+}
+
 enum SellableOfferingKind {
   PRODUCT_UNIT
   SERVICE

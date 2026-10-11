@@ -157,6 +157,7 @@ export const productAssistantRouter = createTRPCRouter({
                 tenantId: scope.tenantId,
                 kind: "PRODUCT",
                 status: "ACTIVE",
+                systemRole: null,
                 name: { contains: productName, mode: "insensitive" },
               },
               select: { id: true, name: true },
@@ -215,6 +216,7 @@ export const productAssistantRouter = createTRPCRouter({
               tenantId: scope.tenantId,
               kind: "PRODUCT",
               status: "ACTIVE",
+              systemRole: null,
               name: { contains: name, mode: "insensitive" },
             },
           }))

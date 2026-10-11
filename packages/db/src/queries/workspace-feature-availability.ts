@@ -76,6 +76,7 @@ export async function getWorkspaceFeatureAvailability(
       take: 2,
       where: {
         tenantId: input.tenantId,
+        systemRole: null,
         offerings: {
           some: {
             storeAvailability: {
@@ -89,6 +90,7 @@ export async function getWorkspaceFeatureAvailability(
       select: { id: true },
       where: {
         status: "ACTIVE",
+        systemRole: null,
         tenantId: input.tenantId,
         offerings: {
           some: {

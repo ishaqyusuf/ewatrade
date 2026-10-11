@@ -187,6 +187,7 @@ export async function readGeneralOrderReview(
       where: {
         id: line.offeringId,
         tenantId: scope.tenantId,
+        catalogItem: { systemRole: null },
         status: "ACTIVE",
         storeAvailability: {
           some: { storeId: scope.storeId, isAvailable: true },

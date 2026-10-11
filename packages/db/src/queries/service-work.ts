@@ -518,6 +518,7 @@ export async function createServiceIntakeDraft(
       where: {
         id: { in: input.lines.map((line) => line.offeringId) },
         kind: SellableOfferingKind.SERVICE,
+        catalogItem: { systemRole: null },
         status: CatalogRecordStatus.ACTIVE,
         tenantId: input.tenantId,
       },

@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
               { description: { contains: query, mode: "insensitive" } },
             ],
             status: { not: "ARCHIVED" },
+            systemRole: null,
             tenantId,
           },
         })

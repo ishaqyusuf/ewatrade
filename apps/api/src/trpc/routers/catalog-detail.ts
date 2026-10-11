@@ -42,7 +42,7 @@ export const catalogDetailRouter = createTRPCRouter({
         ...catalogDetailScope(input, ctx.tenantContext),
       }
       const item = await ctx.db.catalogItem.findFirst({
-        where: { id: input.itemId, tenantId: scope.tenantId },
+        where: { id: input.itemId, tenantId: scope.tenantId, systemRole: null },
         select: { id: true },
       })
       if (!item)
@@ -60,7 +60,7 @@ export const catalogDetailRouter = createTRPCRouter({
         ...catalogDetailScope(input, ctx.tenantContext),
       }
       const item = await ctx.db.catalogItem.findFirst({
-        where: { id: input.itemId, tenantId: scope.tenantId },
+        where: { id: input.itemId, tenantId: scope.tenantId, systemRole: null },
         select: { id: true },
       })
       if (!item)

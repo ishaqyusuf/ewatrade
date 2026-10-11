@@ -125,6 +125,7 @@ export async function createServiceRequestForm(
       where: {
         id: { in: input.offeringIds },
         kind: SellableOfferingKind.SERVICE,
+        catalogItem: { systemRole: null },
         status: CatalogRecordStatus.ACTIVE,
         storeAvailability: {
           some: { isAvailable: true, storeId: input.storeId },

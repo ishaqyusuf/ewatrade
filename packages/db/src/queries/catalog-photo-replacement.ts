@@ -86,6 +86,7 @@ export async function replaceCatalogItemPhotos(
       const [item] = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
         SELECT "id" FROM "CatalogItem" WHERE "id"=${request.catalogItemId}
         AND "tenantId"=${request.tenantId} AND "archivedAt" IS NULL
+        AND "systemRole" IS NULL
         AND "status" <> 'ARCHIVED' FOR UPDATE
       `)
       if (!item)

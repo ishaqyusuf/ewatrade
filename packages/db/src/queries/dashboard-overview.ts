@@ -45,6 +45,7 @@ export async function getDashboardOverviewMetrics(
             offerings: {
               some: { storeAvailability: { some: { storeId: input.storeId } } },
             },
+            systemRole: null,
             tenantId: input.tenantId,
           },
         })

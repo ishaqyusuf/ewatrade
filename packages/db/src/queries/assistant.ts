@@ -1354,7 +1354,9 @@ export async function readSetupBusinessFacts(
       where: { id: scope.userId },
       select: { firstName: true, displayName: true },
     }),
-    db.catalogItem.count({ where: { tenantId: scope.tenantId } }),
+    db.catalogItem.count({
+      where: { tenantId: scope.tenantId, systemRole: null },
+    }),
     db.customer.count({ where: { tenantId: scope.tenantId } }),
   ])
   return {

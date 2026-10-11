@@ -29,8 +29,16 @@ import {
   WorkAuthorizationPolicy,
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
-import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
+import {
+  type CommercialOrderCustomLineInput,
+  catalogFreeLineKindForRole,
+  catalogFreeSnapshotNames,
+  catalogFreeSystemRole,
+  ensureCatalogFreeOfferingInTransaction,
+  isCustomOrderLineInput,
+  normalizeCatalogFreeLine,
+} from "./catalog-free-lines"
 import {
   commitCatalogStockReservationInTransaction,
   reserveCatalogOfferingStockInTransaction,
@@ -46,6 +54,7 @@ import {
   effectiveCommercialAmountPaid,
   recordCommercialOrderPaymentInTransaction,
 } from "./commercial-payments"
+import { fulfillCommercialOrderChargeOnlyServiceLineInTransaction } from "./commercial-service-fulfillment"
 import {
   lockCommerceFinancialContext,
   lockCommerceFinancialOrder,
@@ -64,12 +73,26 @@ import {
   customerHistoryWhere,
   openOrderWhere,
 } from "./order-visibility"
+import { runInOwnTransaction } from "./own-transaction"
 import {
   assertSaleProductUsage,
   saleEligibleCatalogItem,
 } from "./product-usage"
 import { assertRetailOpsOrderAllowance } from "./retail-ops-subscriptions"
 import { loadTenantActors } from "./tenant-actors"
+
+export type CommercialOrderCatalogLineInput = {
+  enteredTotalMinor?: number
+  note?: string
+  approvedQuotePriceMinor?: number
+  expectedBalanceRevision?: number
+  expectedConfigurationVersionId?: string
+  expectedFixedPriceMinor?: number
+  offeringId: string
+  progressiveAvailabilityAttestationId?: string
+  quantity: string
+  trustedUnitPriceMinor?: number
+}
 
 export type CreateCommercialOrderInput = {
   actorUserId: string
@@ -90,18 +113,7 @@ export type CreateCommercialOrderInput = {
     note?: string
     reference?: string
   }
-  lines: Array<{
-    enteredTotalMinor?: number
-    note?: string
-    approvedQuotePriceMinor?: number
-    expectedBalanceRevision?: number
-    expectedConfigurationVersionId?: string
-    expectedFixedPriceMinor?: number
-    offeringId: string
-    progressiveAvailabilityAttestationId?: string
-    quantity: string
-    trustedUnitPriceMinor?: number
-  }>
+  lines: Array<CommercialOrderCatalogLineInput | CommercialOrderCustomLineInput>
   notes?: string
   schemaVersion: number
   serviceChargeMinor?: number
@@ -289,6 +301,7 @@ function serializeOrder(order: OrderGraph) {
         : null,
       taxMinor: line.taxMinor,
       note: line.snapshot?.note ?? null,
+      customLine: serializeCustomLine(line.snapshot),
       totalMinor: line.totalMinor,
       unitPriceMinor: line.unitPriceMinor,
     })),
@@ -388,13 +401,21 @@ async function applyCommercialOrderProductLineInTransaction(
     {
       expectedStoreId: input.storeId,
       expectedCommercialOrderLineId: input.line.id,
-      beforeCommit: input.expectedReviewRevision === undefined ? undefined : async () => {
-        const review = await getCommercialProductLineReview(tx, {
-          tenantId: input.tenantId, storeId: input.storeId, orderLineId: input.line.id,
-        })
-        if (review.revision !== input.expectedReviewRevision)
-          throw new CatalogError("REVISION_CONFLICT", "Product stock or cost evidence changed. Review fulfilment again.")
-      },
+      beforeCommit:
+        input.expectedReviewRevision === undefined
+          ? undefined
+          : async () => {
+              const review = await getCommercialProductLineReview(tx, {
+                tenantId: input.tenantId,
+                storeId: input.storeId,
+                orderLineId: input.line.id,
+              })
+              if (review.revision !== input.expectedReviewRevision)
+                throw new CatalogError(
+                  "REVISION_CONFLICT",
+                  "Product stock or cost evidence changed. Review fulfilment again.",
+                )
+            },
     },
   )
   const fulfillment = await tx.productFulfillment.upsert({
@@ -455,6 +476,30 @@ async function fulfillCommercialOrderProductsInTransaction(
       line.productFulfillments.length === 0 &&
       line.stockReservation?.status === StockReservationStatus.ACTIVE,
   )
+  // Catalog-free lines are charge-only Services with nothing to pick, so
+  // "fulfil" records their performance. They go first because performance
+  // is refused once the Order is COMPLETED.
+  const catalogFreeLines = await tx.commercialOrderLine.findMany({
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+    where: {
+      kind: SellableOfferingKind.SERVICE,
+      orderId: input.orderId,
+      serviceFulfillment: null,
+      snapshot: { customLineRole: { not: null } },
+    },
+  })
+  for (const line of catalogFreeLines) {
+    await fulfillCommercialOrderChargeOnlyServiceLineInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      clientOperationId: `${input.clientOperationIdPrefix}:${line.id}`,
+      orderLineId: line.id,
+      reason: input.reason?.trim() || "Recorded as fulfilled",
+      schemaVersion: input.schemaVersion,
+      storeId: lockedOrder.order.storeId,
+      tenantId: input.tenantId,
+    })
+  }
 
   for (const line of unfulfilledProductLines) {
     await applyCommercialOrderProductLineInTransaction(tx, {
@@ -469,14 +514,22 @@ async function fulfillCommercialOrderProductsInTransaction(
   }
 
   let status: OrderStatus | null = null
-  if (unfulfilledProductLines.length > 0) {
+  if (unfulfilledProductLines.length + catalogFreeLines.length > 0) {
     status = await updateOrderStatusAfterProductFulfillment(tx, input.orderId)
   }
 
   return {
-    fulfilledLineCount: unfulfilledProductLines.length,
+    fulfilledLineCount:
+      unfulfilledProductLines.length + catalogFreeLines.length,
     status,
   }
+}
+
+function serializeCustomLine(
+  snapshot: { customLineRole: string | null; note: string | null } | null,
+) {
+  const kind = catalogFreeLineKindForRole(snapshot?.customLineRole)
+  return kind ? { description: snapshot?.note ?? null, kind } : null
 }
 
 function serializeIdempotentOrder(order: OrderGraph, hash: string) {
@@ -617,7 +670,8 @@ export async function createCommercialOrderGraphInTransaction(
   }
 
   const resolvedLines: Array<{
-    input: CreateCommercialOrderInput["lines"][number]
+    custom: ReturnType<typeof normalizeCatalogFreeLine> | null
+    input: CommercialOrderCatalogLineInput
     offering: Awaited<ReturnType<typeof tx.sellableOffering.findFirst>> & {
       catalogItem: { id: string; name: string }
       productUnitOffering: null | {
@@ -654,9 +708,56 @@ export async function createCommercialOrderGraphInTransaction(
 
   await assertSaleProductUsage(tx, {
     tenantId: input.tenantId,
-    offeringIds: input.lines.map((line) => line.offeringId),
+    offeringIds: input.lines.flatMap((line) =>
+      isCustomOrderLineInput(line) ? [] : [line.offeringId],
+    ),
   })
+  const catalogFreeOfferings = new Map<
+    string,
+    (typeof resolvedLines)[number]["offering"]
+  >()
   for (const lineInput of input.lines) {
+    if (isCustomOrderLineInput(lineInput)) {
+      const custom = normalizeCatalogFreeLine(lineInput)
+      const offering =
+        catalogFreeOfferings.get(custom.kind) ??
+        (await tx.sellableOffering.findFirstOrThrow({
+          include: {
+            catalogItem: { select: { id: true, name: true } },
+            productUnitOffering: { include: { inventoryUnit: true } },
+            serviceOffering: true,
+            storeAvailability: { where: { storeId: store.id } },
+            variant: {
+              include: {
+                selections: { include: { group: true, value: true } },
+              },
+            },
+          },
+          where: {
+            id: await ensureCatalogFreeOfferingInTransaction(tx, {
+              currencyCode: store.currencyCode,
+              kind: custom.kind,
+              storeId: store.id,
+              tenantId: input.tenantId,
+            }),
+            tenantId: input.tenantId,
+          },
+        }))
+      catalogFreeOfferings.set(custom.kind, offering)
+      resolvedLines.push({
+        custom,
+        input: {
+          note: custom.description ?? undefined,
+          offeringId: offering.id,
+          quantity: "1",
+        },
+        offering,
+        quantity: "1",
+        totalMinor: custom.amountMinor,
+        unitPriceMinor: null,
+      })
+      continue
+    }
     const progressiveManual = Boolean(
       lineInput.progressiveAvailabilityAttestationId,
     )
@@ -760,6 +861,7 @@ export async function createCommercialOrderGraphInTransaction(
           : 6,
     })
     resolvedLines.push({
+      custom: null,
       input: lineInput,
       offering,
       quantity,
@@ -775,12 +877,14 @@ export async function createCommercialOrderGraphInTransaction(
   if (
     input.fulfillNow &&
     !resolvedLines.some(
-      (line) => line.offering.kind === SellableOfferingKind.PRODUCT_UNIT,
+      (line) =>
+        line.custom !== null ||
+        line.offering.kind === SellableOfferingKind.PRODUCT_UNIT,
     )
   ) {
     throw new CatalogError(
       "INVALID_ORDER",
-      "Immediate stock fulfillment requires at least one Product line.",
+      "Immediate fulfillment requires a Product or catalog-free line.",
     )
   }
   const discountMinor = input.discountMinor ?? 0
@@ -878,11 +982,21 @@ export async function createCommercialOrderGraphInTransaction(
     }
 
     const productUnit = resolved.offering.productUnitOffering?.inventoryUnit
+    const customNames = resolved.custom
+      ? catalogFreeSnapshotNames(
+          resolved.custom.kind,
+          resolved.custom.description,
+        )
+      : null
     await tx.offeringSnapshot.create({
       data: {
+        customLineRole: resolved.custom
+          ? catalogFreeSystemRole(resolved.custom.kind)
+          : null,
         balanceSourceId: reservation?.balanceSourceId,
         catalogItemId: resolved.offering.catalogItem.id,
-        catalogItemName: resolved.offering.catalogItem.name,
+        catalogItemName:
+          customNames?.catalogItemName ?? resolved.offering.catalogItem.name,
         configurationVersionId: reservation?.configurationVersionId,
         currencyCode: resolved.offering.currencyCode,
         inventoryUnitId: productUnit?.id,
@@ -892,7 +1006,7 @@ export async function createCommercialOrderGraphInTransaction(
         barcode: resolved.offering.productUnitOffering?.barcode,
         offeringId: resolved.offering.id,
         offeringKind: resolved.offering.kind,
-        offeringName: resolved.offering.name,
+        offeringName: customNames?.offeringName ?? resolved.offering.name,
         optionSelections: resolved.offering.variant.selections.map(
           (selection) => ({
             groupKey: selection.group.key,
@@ -913,7 +1027,7 @@ export async function createCommercialOrderGraphInTransaction(
         unitFactor: productUnit?.factor,
         unitPriceMinor: resolved.unitPriceMinor,
         variantId: resolved.offering.variant.id,
-        variantName: resolved.offering.variant.name,
+        variantName: customNames?.variantName ?? resolved.offering.variant.name,
       },
     })
   }
@@ -1671,7 +1785,12 @@ export async function fulfillCommercialOrderProducts(
           id: true,
           lines: {
             select: { id: true },
-            where: { kind: SellableOfferingKind.PRODUCT_UNIT },
+            where: {
+              OR: [
+                { kind: SellableOfferingKind.PRODUCT_UNIT },
+                { snapshot: { customLineRole: { not: null } } },
+              ],
+            },
           },
           status: true,
         },
@@ -1684,7 +1803,7 @@ export async function fulfillCommercialOrderProducts(
       if (order.lines.length === 0) {
         throw new CatalogError(
           "INVALID_ORDER",
-          "This Order has no Product lines to fulfill.",
+          "This Order has no Product or catalog-free lines to fulfill.",
         )
       }
 
