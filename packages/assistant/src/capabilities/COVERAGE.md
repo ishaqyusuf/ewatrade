@@ -83,6 +83,9 @@ are explicit gaps. Database integration suites require their guarded test profil
 do not run them against a merchant database. Browser screenshots and run results
 are maintained separately in local Brain acceptance reports and artifacts.
 
+[Versioned conversation fixtures and run-recording rules](../../evaluations/README.md)
+track conversational evaluation separately from these source test links.
+
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
 | `sales.products.fulfill` | Fulfil the remaining items in this order | [packages/assistant/src/general/product-fulfillment.test.ts](../../../../packages/assistant/src/general/product-fulfillment.test.ts)<br>[packages/db/src/queries/product-batch-impact.test.ts](../../../../packages/db/src/queries/product-batch-impact.test.ts)<br>[packages/db/src/queries/commercial-product-batch-review.test.ts](../../../../packages/db/src/queries/commercial-product-batch-review.test.ts)<br>[apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts) |

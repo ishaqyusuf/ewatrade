@@ -198,6 +198,9 @@ are explicit gaps. Database integration suites require their guarded test profil
 do not run them against a merchant database. Browser screenshots and run results
 are maintained separately in local Brain acceptance reports and artifacts.
 
+[Versioned conversation fixtures and run-recording rules](../../evaluations/README.md)
+track conversational evaluation separately from these source test links.
+
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
 ${manifest
