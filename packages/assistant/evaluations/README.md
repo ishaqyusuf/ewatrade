@@ -22,6 +22,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Expense database acceptance, 11 October 2026](runs/2026-10-11-expense-database.md):43 assertions passed for actual category tool, unpaid/partial/owner-funded expenses, rollback/replay and balanced journals; owned cleanup verified.
+
 - [Expense editor component check, 11 October 2026](runs/2026-10-11-expense-editor.md): acknowledgment/overpayment refusal, exact amounts/timestamps, unpaid omission and cancel passed; screenshot retained; full proposal/database/web acceptance pending.
 
 - [Expense category lookup, 11 October 2026](runs/2026-10-11-expense-category-lookup.md): canonical scoped category query and planned assistant tool;3 tests/22 assertions and scoped types pass; actual-tool database/model acceptance pending.
