@@ -1864,251 +1864,264 @@ export async function fulfillCommercialOrderProductsInTransaction(
   return { fulfilledLineCount: result.fulfilledLineCount, status }
 }
 
-export async function returnCommercialOrderProductLine(
+export type ReturnCommercialOrderProductLineInput = {
+  actorUserId: string
+  clientReturnId: string
+  destinationBalanceSourceId?: string
+  disposition: "damaged" | "no_restock" | "quarantine" | "restock"
+  orderLineId: string
+  quantity: string
+  reason: string
+  schemaVersion: number
+  tenantId: string
+  storeId?: string
+}
+
+export function returnCommercialOrderProductLine(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientReturnId: string
-    destinationBalanceSourceId?: string
-    disposition: "damaged" | "no_restock" | "quarantine" | "restock"
-    orderLineId: string
-    quantity: string
-    reason: string
-    schemaVersion: number
-    tenantId: string
-  },
+  input: ReturnCommercialOrderProductLineInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    returnCommercialOrderProductLineInTransaction(tx, input),
+  )
+}
+
+/** Caller owns the transaction and current authorization; source effects stay atomic. */
+export async function returnCommercialOrderProductLineInTransaction(
+  tx: Prisma.TransactionClient,
+  input: ReturnCommercialOrderProductLineInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
-  const hash = payloadHash(input)
-  return db.$transaction(
-    async (tx) => {
-      const identity = await tx.commercialOrderLine.findFirst({
-        select: { orderId: true },
-        where: {
-          id: input.orderLineId,
-          kind: SellableOfferingKind.PRODUCT_UNIT,
-          order: { tenantId: input.tenantId },
-        },
-      })
-      if (!identity) {
-        throw new CatalogError(
-          "ORDER_NOT_FOUND",
-          "Fulfilled Product Order line not found.",
-        )
-      }
-      const lockedOrder = await lockCommerceFinancialOrder(tx, {
-        tenantId: input.tenantId,
-        orderId: identity.orderId,
-      })
-      if (!lockedOrder) {
-        throw new CatalogError(
-          "ORDER_NOT_FOUND",
-          "Fulfilled Product Order line not found.",
-        )
-      }
-      const previous = await tx.productReturn.findUnique({
-        where: {
-          tenantId_clientReturnId: {
-            clientReturnId: input.clientReturnId,
-            tenantId: input.tenantId,
-          },
-        },
-      })
-      if (previous) {
-        if (previous.payloadHash !== hash) {
-          throw new CatalogError(
-            "IDEMPOTENCY_MISMATCH",
-            "This Product Return identity was already used with different input.",
-          )
-        }
-        return previous
-      }
-
-      const line = await tx.commercialOrderLine.findFirst({
-        include: {
-          order: true,
-          productFulfillments: true,
-          productReturns: true,
-          snapshot: { include: { inventoryUnit: true } },
-        },
-        where: {
-          id: input.orderLineId,
-          orderId: lockedOrder.order.id,
-          kind: SellableOfferingKind.PRODUCT_UNIT,
-          order: { tenantId: input.tenantId },
-        },
-      })
-      if (!line?.snapshot || line.productFulfillments.length === 0) {
-        throw new CatalogError(
-          "ORDER_NOT_FOUND",
-          "Fulfilled Product Order line not found.",
-        )
-      }
-      const quantity = parseExactDecimal(input.quantity, {
-        allowZero: false,
-        maxScale: 6,
-      })
-      const fulfilledQuantity = line.productFulfillments.reduce(
-        (total, fulfillment) =>
-          addExactDecimals(total, fulfillment.quantity.toString()),
-        "0",
-      )
-      const returnedQuantity = line.productReturns.reduce(
-        (total, productReturn) =>
-          addExactDecimals(total, productReturn.quantity.toString()),
-        "0",
-      )
-      if (
-        compareExactDecimals(
-          addExactDecimals(returnedQuantity, quantity),
-          fulfilledQuantity,
-        ) > 0
-      ) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "Return quantity exceeds fulfilled quantity not already returned.",
-        )
-      }
-
-      const disposition =
-        input.disposition === "restock"
-          ? ProductReturnDisposition.RESTOCK
-          : input.disposition === "quarantine"
-            ? ProductReturnDisposition.QUARANTINE
-            : input.disposition === "damaged"
-              ? ProductReturnDisposition.DAMAGED
-              : ProductReturnDisposition.NO_RESTOCK
-      let destinationBalanceSourceId: string | null = null
-      let stockOperationId: string | null = null
-      let returnedAt = new Date()
-
-      if (disposition === ProductReturnDisposition.RESTOCK) {
-        destinationBalanceSourceId =
-          input.destinationBalanceSourceId ?? line.snapshot.balanceSourceId
-        if (!destinationBalanceSourceId || !line.snapshot.unitFactor) {
-          throw new CatalogError(
-            "INVALID_ORDER",
-            "Restock disposition requires the original or an explicit compatible Balance Source.",
-          )
-        }
-        await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "StockBalanceSource"
-        WHERE "id" = ${destinationBalanceSourceId}
-          AND "tenantId" = ${input.tenantId}
-          AND "storeId" = ${line.order.storeId}
-        FOR UPDATE
-      `
-        const balance = await tx.stockBalanceSource.findFirst({
-          include: { inventoryUnit: true },
-          where: {
-            id: destinationBalanceSourceId,
-            storeId: line.order.storeId,
-            tenantId: input.tenantId,
-          },
-        })
-        const isOriginalBalance = balance?.id === line.snapshot.balanceSourceId
-        const isCompatiblePackagedDestination =
-          balance?.kind === StockBalanceKind.PACKAGED_STOCK &&
-          balance.inventoryUnitId === line.snapshot.inventoryUnitId
-        if (
-          !balance ||
-          balance.variantId !== line.snapshot.variantId ||
-          (!isOriginalBalance && !isCompatiblePackagedDestination)
-        ) {
-          throw new CatalogError(
-            "INVALID_ORDER",
-            "Return destination must preserve the original Inventory Unit meaning.",
-          )
-        }
-        const canonicalQuantity = multiplyExactDecimals(
-          quantity,
-          line.snapshot.unitFactor.toString(),
-        )
-        const balanceQuantity =
-          balance.kind === StockBalanceKind.SHARED_POOL
-            ? canonicalQuantity
-            : quantity
-        const resultingOnHand = addExactDecimals(
-          balance.onHandQuantity.toString(),
-          balanceQuantity,
-        )
-        const update = await tx.stockBalanceSource.updateMany({
-          data: { onHandQuantity: resultingOnHand, revision: { increment: 1 } },
-          where: { id: balance.id, revision: balance.revision },
-        })
-        if (update.count !== 1) {
-          throw new CatalogError(
-            "REVISION_CONFLICT",
-            "The return Balance Source changed while posting.",
-          )
-        }
-        returnedAt = new Date()
-        const operation = await tx.stockOperation.create({
-          data: {
-            actorUserId: input.actorUserId,
-            effectiveAt: returnedAt,
-            clientOperationId: `${input.clientReturnId}:stock`,
-            payloadHash: hash,
-            reason: input.reason.trim(),
-            source: "commercial_order_return",
-            storeId: line.order.storeId,
-            tenantId: input.tenantId,
-            type: StockOperationType.RETURN,
-          },
-        })
-        stockOperationId = operation.id
-        await tx.stockMovement.create({
-          data: {
-            balanceSourceId: balance.id,
-            configurationVersionId:
-              line.snapshot.configurationVersionId ??
-              balance.inventoryUnit.configurationVersionId,
-            enteredInventoryUnitId:
-              line.snapshot.inventoryUnitId ?? balance.inventoryUnitId,
-            enteredQuantity: quantity,
-            operationId: operation.id,
-            previousOnHandQuantity: balance.onHandQuantity,
-            resultingOnHandQuantity: resultingOnHand,
-            signedCanonicalEffect: canonicalQuantity,
-            transactionScaleSnapshot:
-              line.snapshot.transactionScale ??
-              line.snapshot.inventoryUnit?.transactionScale ??
-              balance.inventoryUnit.transactionScale,
-            unitFactorSnapshot: line.snapshot.unitFactor,
-          },
-        })
-      }
-
-      const productReturn = await tx.productReturn.create({
-        data: {
-          actorUserId: input.actorUserId,
-          clientReturnId: input.clientReturnId,
-          createdAt: returnedAt,
-          destinationBalanceSourceId,
-          disposition,
-          orderId: line.orderId,
-          orderLineId: line.id,
-          payloadHash: hash,
-          quantity,
-          reason: input.reason.trim(),
-          schemaVersion: input.schemaVersion,
-          stockOperationId,
-          storeId: line.order.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      if (lockedOrder.context) {
-        await recordProductReturnValuationInTransaction(tx, {
-          tenantId: input.tenantId,
-          productReturnId: productReturn.id,
-        })
-        await postProductReturnFinanceJournalInTransaction(tx, {
-          tenantId: input.tenantId,
-          productReturnId: productReturn.id,
-        })
-      }
-      return productReturn
+  // Store is a scope assertion, not a new business payload for existing return identities.
+  const { storeId: _storeId, ...payload } = input
+  const hash = payloadHash(payload)
+  const identity = await tx.commercialOrderLine.findFirst({
+    select: { orderId: true },
+    where: {
+      id: input.orderLineId,
+      kind: SellableOfferingKind.PRODUCT_UNIT,
+      order: { tenantId: input.tenantId },
     },
-    { maxWait: 10_000, timeout: 30_000 },
+  })
+  if (!identity) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Fulfilled Product Order line not found.",
+    )
+  }
+  const lockedOrder = await lockCommerceFinancialOrder(tx, {
+    tenantId: input.tenantId,
+    orderId: identity.orderId,
+  })
+  if (!lockedOrder) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Fulfilled Product Order line not found.",
+    )
+  }
+  if (input.storeId !== undefined && lockedOrder.order.storeId !== input.storeId) {
+    throw new CatalogError("REVISION_CONFLICT", "Order is outside the selected Store.")
+  }
+  const previous = await tx.productReturn.findUnique({
+    where: {
+      tenantId_clientReturnId: {
+        clientReturnId: input.clientReturnId,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+  if (previous) {
+    if (previous.payloadHash !== hash) {
+      throw new CatalogError(
+        "IDEMPOTENCY_MISMATCH",
+        "This Product Return identity was already used with different input.",
+      )
+    }
+    return previous
+  }
+
+  const line = await tx.commercialOrderLine.findFirst({
+    include: {
+      order: true,
+      productFulfillments: true,
+      productReturns: true,
+      snapshot: { include: { inventoryUnit: true } },
+    },
+    where: {
+      id: input.orderLineId,
+      orderId: lockedOrder.order.id,
+      kind: SellableOfferingKind.PRODUCT_UNIT,
+      order: { tenantId: input.tenantId },
+    },
+  })
+  if (!line?.snapshot || line.productFulfillments.length === 0) {
+    throw new CatalogError(
+      "ORDER_NOT_FOUND",
+      "Fulfilled Product Order line not found.",
+    )
+  }
+  const quantity = parseExactDecimal(input.quantity, {
+    allowZero: false,
+    maxScale: 6,
+  })
+  const fulfilledQuantity = line.productFulfillments.reduce(
+    (total, fulfillment) =>
+      addExactDecimals(total, fulfillment.quantity.toString()),
+    "0",
   )
+  const returnedQuantity = line.productReturns.reduce(
+    (total, productReturn) =>
+      addExactDecimals(total, productReturn.quantity.toString()),
+    "0",
+  )
+  if (
+    compareExactDecimals(
+      addExactDecimals(returnedQuantity, quantity),
+      fulfilledQuantity,
+    ) > 0
+  ) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Return quantity exceeds fulfilled quantity not already returned.",
+    )
+  }
+
+  const disposition =
+    input.disposition === "restock"
+      ? ProductReturnDisposition.RESTOCK
+      : input.disposition === "quarantine"
+        ? ProductReturnDisposition.QUARANTINE
+        : input.disposition === "damaged"
+          ? ProductReturnDisposition.DAMAGED
+          : ProductReturnDisposition.NO_RESTOCK
+  let destinationBalanceSourceId: string | null = null
+  let stockOperationId: string | null = null
+  let returnedAt = new Date()
+
+  if (disposition === ProductReturnDisposition.RESTOCK) {
+    destinationBalanceSourceId =
+      input.destinationBalanceSourceId ?? line.snapshot.balanceSourceId
+    if (!destinationBalanceSourceId || !line.snapshot.unitFactor) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Restock disposition requires the original or an explicit compatible Balance Source.",
+      )
+    }
+    await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "StockBalanceSource"
+    WHERE "id" = ${destinationBalanceSourceId}
+      AND "tenantId" = ${input.tenantId}
+      AND "storeId" = ${line.order.storeId}
+    FOR UPDATE
+  `
+    const balance = await tx.stockBalanceSource.findFirst({
+      include: { inventoryUnit: true },
+      where: {
+        id: destinationBalanceSourceId,
+        storeId: line.order.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    const isOriginalBalance = balance?.id === line.snapshot.balanceSourceId
+    const isCompatiblePackagedDestination =
+      balance?.kind === StockBalanceKind.PACKAGED_STOCK &&
+      balance.inventoryUnitId === line.snapshot.inventoryUnitId
+    if (
+      !balance ||
+      balance.variantId !== line.snapshot.variantId ||
+      (!isOriginalBalance && !isCompatiblePackagedDestination)
+    ) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Return destination must preserve the original Inventory Unit meaning.",
+      )
+    }
+    const canonicalQuantity = multiplyExactDecimals(
+      quantity,
+      line.snapshot.unitFactor.toString(),
+    )
+    const balanceQuantity =
+      balance.kind === StockBalanceKind.SHARED_POOL
+        ? canonicalQuantity
+        : quantity
+    const resultingOnHand = addExactDecimals(
+      balance.onHandQuantity.toString(),
+      balanceQuantity,
+    )
+    const update = await tx.stockBalanceSource.updateMany({
+      data: { onHandQuantity: resultingOnHand, revision: { increment: 1 } },
+      where: { id: balance.id, revision: balance.revision },
+    })
+    if (update.count !== 1) {
+      throw new CatalogError(
+        "REVISION_CONFLICT",
+        "The return Balance Source changed while posting.",
+      )
+    }
+    returnedAt = new Date()
+    const operation = await tx.stockOperation.create({
+      data: {
+        actorUserId: input.actorUserId,
+        effectiveAt: returnedAt,
+        clientOperationId: `${input.clientReturnId}:stock`,
+        payloadHash: hash,
+        reason: input.reason.trim(),
+        source: "commercial_order_return",
+        storeId: line.order.storeId,
+        tenantId: input.tenantId,
+        type: StockOperationType.RETURN,
+      },
+    })
+    stockOperationId = operation.id
+    await tx.stockMovement.create({
+      data: {
+        balanceSourceId: balance.id,
+        configurationVersionId:
+          line.snapshot.configurationVersionId ??
+          balance.inventoryUnit.configurationVersionId,
+        enteredInventoryUnitId:
+          line.snapshot.inventoryUnitId ?? balance.inventoryUnitId,
+        enteredQuantity: quantity,
+        operationId: operation.id,
+        previousOnHandQuantity: balance.onHandQuantity,
+        resultingOnHandQuantity: resultingOnHand,
+        signedCanonicalEffect: canonicalQuantity,
+        transactionScaleSnapshot:
+          line.snapshot.transactionScale ??
+          line.snapshot.inventoryUnit?.transactionScale ??
+          balance.inventoryUnit.transactionScale,
+        unitFactorSnapshot: line.snapshot.unitFactor,
+      },
+    })
+  }
+
+  const productReturn = await tx.productReturn.create({
+    data: {
+      actorUserId: input.actorUserId,
+      clientReturnId: input.clientReturnId,
+      createdAt: returnedAt,
+      destinationBalanceSourceId,
+      disposition,
+      orderId: line.orderId,
+      orderLineId: line.id,
+      payloadHash: hash,
+      quantity,
+      reason: input.reason.trim(),
+      schemaVersion: input.schemaVersion,
+      stockOperationId,
+      storeId: line.order.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  if (lockedOrder.context) {
+    await recordProductReturnValuationInTransaction(tx, {
+      tenantId: input.tenantId,
+      productReturnId: productReturn.id,
+    })
+    await postProductReturnFinanceJournalInTransaction(tx, {
+      tenantId: input.tenantId,
+      productReturnId: productReturn.id,
+    })
+  }
+  return productReturn
 }

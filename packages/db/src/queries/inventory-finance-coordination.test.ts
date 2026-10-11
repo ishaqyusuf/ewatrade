@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import { commitCatalogStockReservation } from "./catalog-inventory"
-import { returnCommercialOrderProductLine } from "./commercial-orders"
+import { returnCommercialOrderProductLine, returnCommercialOrderProductLineInTransaction } from "./commercial-orders"
 import { postSingleBalanceStockOperation } from "./inventory-operations"
 
 function stableJson(value: unknown): string {
@@ -250,7 +250,7 @@ function productReturnFixture(
     $transaction: async <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) =>
       fn(tx as unknown as Prisma.TransactionClient),
   }
-  return { db: db as unknown as PrismaClient, events }
+  return { db: db as unknown as PrismaClient, tx: tx as unknown as Prisma.TransactionClient, events }
 }
 
 test("product return replay locks book and Order without recosting history", async () => {
@@ -307,4 +307,28 @@ test("return quantity cannot exceed performed quantity after the Order lock", as
   expect(fixture.events.indexOf("return-history")).toBeGreaterThan(
     fixture.events.indexOf("order-lock"),
   )
+})
+
+
+test("return transaction seam composes without opening a nested transaction", async () => {
+  const fixture = productReturnFixture({ hasBook: false })
+  const first = await returnCommercialOrderProductLineInTransaction(fixture.tx, { ...returnInput, storeId: "store-a" })
+  const replay = await returnCommercialOrderProductLineInTransaction(fixture.tx, { ...returnInput, storeId: "store-a" })
+  expect(replay).toEqual(first)
+  expect(fixture.events.filter(event => event === "return-write")).toHaveLength(1)
+  expect(fixture.events.indexOf("order-lock")).toBeLessThan(fixture.events.indexOf("return-write"))
+})
+
+test("return Store fence precedes an existing receipt lookup", async () => {
+  const fixture = productReturnFixture({ replay: true })
+  await expect(returnCommercialOrderProductLineInTransaction(fixture.tx, { ...returnInput, storeId: "store-other" })).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  expect(fixture.events).not.toContain("return-replay")
+  expect(fixture.events).not.toContain("return-write")
+})
+
+test("matching Store assertion preserves existing return replay identity", async () => {
+  const fixture = productReturnFixture({ replay: true })
+  const receipt = await returnCommercialOrderProductLineInTransaction(fixture.tx, { ...returnInput, storeId: "store-a" })
+  expect(receipt.id).toBe("retained-return")
+  expect(fixture.events).not.toContain("return-write")
 })
