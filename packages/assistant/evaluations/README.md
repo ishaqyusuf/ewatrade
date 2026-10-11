@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| `sales.product.return` v1 | [1](fixtures/product-return.v1.md) | Partial restock, ambiguity, dispositions, over-return, stale evidence, authority, injection, replay/recovery | None yet |
 | `sales.products.fulfill` v1 | [1](fixtures/bulk-fulfillment.v1.md) | Success, ambiguity, denial, stale target, injection, replay, outage | None yet |
 
 Other capabilities do not yet have versioned conversation fixtures here. H03 is
@@ -21,6 +22,8 @@ separate evidence; do not import them as successful model evaluations.
 - [Product-cost regression failure, 11 October 2026](runs/2026-10-11-product-cost-failure.md): timed out and lost its connection before valuation acceptance; owned fixtures cleaned.
 
 - [Product return editor component check, 11 October 2026](runs/2026-10-11-return-editor.md): exact quantity, disposition, destination clearing and cancel checked without database writes.
+
+- [Product return database failure, 11 October 2026](runs/2026-10-11-return-database-failure.md): transaction startup P2028; owned fixtures cleaned, acceptance incomplete.
 
 ## Recording a run
 

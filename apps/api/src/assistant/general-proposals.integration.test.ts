@@ -1,3 +1,4 @@
+import { verifyProductReturnComposition } from "./general-product-return.integration-check"
 import { verifyBulkFulfillmentComposition } from "./general-bulk-fulfillment.integration-check"
 import { verifyFulfillmentComposition } from "./general-fulfillment.integration-check"
 import { verifyOrderAmendmentProposals } from "./general-order-amendment.integration-check"
@@ -234,8 +235,8 @@ if (enabled) {
           await verifyGeneralProductTransport(ctx, session.token)
           return
         }
-        if (process.env.RUN_GENERAL_BULK_FULFILLMENT === "1") {
-          console.info("Bulk command acceptance: transport runs in the default suite")
+        if (process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
+          console.info("Focused command acceptance: transport runs in the default suite")
         } else if (
           process.env.RUN_GENERAL_STOCK_TRANSFER === "1" &&
           process.env.RUN_GENERAL_STOCK_TRANSFER_PROBE === "1"
@@ -312,6 +313,10 @@ if (enabled) {
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
+          await verifyProductReturnComposition(ctx, failingDb, conversation.id)
+          return
+        }
         if (process.env.RUN_GENERAL_BULK_FULFILLMENT === "1") {
           await verifyBulkFulfillmentComposition(ctx, failingDb, conversation.id)
           return
