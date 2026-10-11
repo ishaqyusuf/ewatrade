@@ -1,3 +1,4 @@
+import { readCommercialServiceEvidence } from "./commercial-service-evidence"
 import { assertCommercialServiceLineReview } from "./commercial-service-line-review"
 import { createHash } from "node:crypto"
 
@@ -227,48 +228,8 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
       )
     }
 
-    const line = await tx.commercialOrderLine.findFirst({
-      where: {
-        id: input.orderLineId,
-        orderId: locked.order.id,
-        order: { tenantId: input.tenantId },
-      },
-      select: {
-        id: true,
-        kind: true,
-        orderId: true,
-        quantity: true,
-        snapshot: {
-          select: {
-            serviceAuthorizationPolicy: true,
-            serviceWorkPolicy: true,
-          },
-        },
-        serviceJobLines: { select: { id: true } },
-        serviceAuthorization: true,
-        serviceFulfillment: true,
-        order: {
-          select: {
-            acceptedCommerceQuoteVersion: {
-              select: { quote: { select: { sourceType: true } } },
-            },
-            amountPaidMinor: true,
-            completedAt: true,
-            currencyCode: true,
-            deliveryDueAt: true,
-            id: true,
-            paymentStatus: true,
-            payments: { select: { id: true } },
-            prescriptionDeliveryAssignment: { select: { orderId: true } },
-            prescriptionPickupFulfillment: { select: { orderId: true } },
-            status: true,
-            store: { select: { tenantId: true } },
-            storeId: true,
-            tenantId: true,
-            totalMinor: true,
-          },
-        },
-      },
+    const line = await readCommercialServiceEvidence(tx, {
+      tenantId: input.tenantId, storeId: locked.order.storeId, orderLineId: input.orderLineId,
     })
     if (!line || line.orderId !== discovered.orderId) {
       throw new CatalogError(

@@ -72,6 +72,7 @@ function fixture(
   const tx = {
     $queryRaw: async (strings: TemplateStringsArray) => {
       const sql = strings.join(" ")
+      if (sql.includes("service-policy-evidence")) return [{ evidence: line() }]
       if (sql.includes('"FinanceBook"')) {
         calls.push("book")
         return [{ id: "book-1" }]
