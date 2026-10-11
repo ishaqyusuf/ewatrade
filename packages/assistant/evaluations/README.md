@@ -31,6 +31,8 @@ separate evidence; do not import them as successful model evaluations.
 
 - [Reviewed return financial failure, 11 October 2026](runs/2026-10-11-return-financial-failure.md): preview assertions passed, locked valuation exceeded30s; cleanup verified.
 
+- [Held-credit refund review source checks, 11 October 2026](runs/2026-10-11-held-credit-refund-review.md): 6 unit tests /50 assertions; assistant and database acceptance pending.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
