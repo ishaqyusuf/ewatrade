@@ -181,3 +181,7 @@ available. Do not claim a pass without the expected behavior and postconditions.
 Do not submit a write confirmation merely to obtain a model transcript: confirmation
 is its own explicitly scoped QA step. Keep model assertions separate from command
 and browser assertions. Mobile evaluations are excluded from the current work.
+
+- [Purchase registration proposal database acceptance, 11 October 2026](runs/2026-10-11-registration-proposal-database.md): 37 assertions pass; rollback, concurrent replay, fresh supplier/authority guards and actual reads; full web/model acceptance pending.
+
+- [Saved purchase agreement receipt web acceptance, 11 October 2026](runs/2026-10-11-registration-receipt-web.md): actual Open/Close preserves the assistant chat; saved canonical agreement details and screenshot; backend fixture confirmation only.

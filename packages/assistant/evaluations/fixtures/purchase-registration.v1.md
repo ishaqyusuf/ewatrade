@@ -14,5 +14,7 @@ Fixtures are not model evaluations.
 | PA07 | Register before invoice/ownership/arrival | No payable, payment, stock or ownership claim/effect |
 | PA08 | Edit and receipt Open/Close | Exact revised review and registration overlay over same chat |
 
-Editor, registration overlay and proposal database/web acceptance remain pending.
-Canonical registration regression is separate evidence.
+Editor component and receipt component/close checks are retained in the run catalog.
+Proposal database acceptance (37 assertions) and actual saved receipt Open/Close
+pass in their separate run reports. Full browser confirmation and live-model
+behavior remain pending. Canonical registration regression is separate evidence.
