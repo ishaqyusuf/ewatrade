@@ -1,30 +1,7 @@
+import { type Correction, correctionReason, readBillCorrectionPosting, readBillPaymentCorrectionSource, readExpenseVoidSource } from "./bill-correction-source"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
-import type { FinanceActor } from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
-import { FinanceError } from "./rules"
-
-type Correction = FinanceActor & {
-  bookId: string
-  clientCommandId: string
-  effectiveAt: Date
-  reason: string
-}
-
-function correctionReason(input: Correction) {
-  const reason = input.reason.trim()
-  if (
-    !reason ||
-    reason.length > 400 ||
-    !Number.isFinite(input.effectiveAt.getTime())
-  ) {
-    throw new FinanceError(
-      "INVALID_JOURNAL",
-      "A correction requires a valid date and reason of up to 400 characters.",
-    )
-  }
-  return reason
-}
 
 async function reverseBillSource(
   tx: Prisma.TransactionClient,
@@ -35,26 +12,7 @@ async function reverseBillSource(
   },
   reason: string,
 ) {
-  const original = await tx.financeJournalEntry.findUnique({
-    where: {
-      bookId_sourceKind_sourceId: {
-        bookId: input.bookId,
-        sourceKind: source.kind,
-        sourceId: source.id,
-      },
-    },
-    include: { lines: true, reversal: { select: { id: true } } },
-  })
-  if (!original || original.reversal || original.reversalOfId)
-    throw new FinanceError(
-      "CONFLICT",
-      "The original financial posting is unavailable or already reversed.",
-    )
-  if (input.effectiveAt < original.effectiveAt)
-    throw new FinanceError(
-      "INVALID_JOURNAL",
-      "A correction cannot precede the original posting.",
-    )
+  const original = await readBillCorrectionPosting(tx, input, source)
   await postFinanceJournalInTransaction(tx, {
     ...input,
     clientCommandId: financePostingCommandId(
@@ -88,30 +46,8 @@ export async function reverseFinanceBillPaymentInTransaction(
     input,
     "REVERSE_BILL_PAYMENT",
     { paymentId: input.paymentId, effectiveAt: input.effectiveAt, reason },
-    async (book) => {
-      const payment = await tx.financeBillPayment.findFirst({
-        where: { id: input.paymentId, bookId: book.id },
-        include: { bill: true, account: { select: { purpose: true } } },
-      })
-      if (!payment)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Bill payment not found in this business.",
-        )
-      if (
-        payment.reversedAt ||
-        payment.bill.voidedAt ||
-        payment.bill.kind !== "EXPENSE"
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "Only an active expense payment can be reversed here.",
-        )
-      if (payment.bill.paidMinor < payment.amountMinor)
-        throw new FinanceError(
-          "CONFLICT",
-          "The bill settlement needs reconciliation before correction.",
-        )
+    async () => {
+      const payment = await readBillPaymentCorrectionSource(tx, input)
       await reverseBillSource(
         tx,
         input,
@@ -152,42 +88,8 @@ export async function voidFinanceExpenseInTransaction(
     input,
     "VOID_EXPENSE",
     { billId: input.billId, effectiveAt: input.effectiveAt, reason },
-    async (book) => {
-      const bill = await tx.financeBill.findFirst({
-        where: { id: input.billId, bookId: book.id },
-      })
-      if (!bill)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Expense not found in this business.",
-        )
-      if (bill.kind !== "EXPENSE" || bill.voidedAt)
-        throw new FinanceError(
-          "CONFLICT",
-          "Only an active expense can be cancelled here.",
-        )
-      const [activePayments, reversedPayments] = await Promise.all([
-        tx.financeBillPayment.count({
-          where: { bookId: book.id, billId: bill.id, reversedAt: null },
-        }),
-        tx.financeBillPayment.aggregate({
-          where: { bookId: book.id, billId: bill.id },
-          _max: { reversalEffectiveAt: true },
-        }),
-      ])
-      if (bill.paidMinor !== BigInt(0) || activePayments > 0)
-        throw new FinanceError(
-          "CONFLICT",
-          "Reverse the expense payments before cancelling this bill.",
-        )
-      if (
-        reversedPayments._max.reversalEffectiveAt &&
-        input.effectiveAt < reversedPayments._max.reversalEffectiveAt
-      )
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "Cancellation cannot precede its payment reversals.",
-        )
+    async () => {
+      const bill = await readExpenseVoidSource(tx, input)
       await reverseBillSource(
         tx,
         input,
