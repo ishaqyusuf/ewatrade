@@ -16,11 +16,12 @@ export function useAssistantPrefillFocus(
   useEffect(() => {
     if (done.current || !ready || typeof handedOver !== "string" || !draft)
       return
-    done.current = true
-    const frame = requestAnimationFrame(() => {
+    // Android ignores focus while the screen is still sliding in.
+    const timer = setTimeout(() => {
+      done.current = true
       input.current?.focus()
       input.current?.setSelection(draft.length, draft.length)
-    })
-    return () => cancelAnimationFrame(frame)
+    }, 450)
+    return () => clearTimeout(timer)
   }, [draft, handedOver, input, ready])
 }

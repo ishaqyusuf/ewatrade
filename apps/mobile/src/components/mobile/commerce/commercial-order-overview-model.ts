@@ -8,12 +8,23 @@ import {
   formatCommerceQuantity,
 } from "./commerce-model"
 
+export type CommercialOrderActivityTone =
+  | "ink"
+  | "mint"
+  | "sky"
+  | "amber"
+  | "lilac"
+  | "rose"
+
 export type CommercialOrderActivity = {
   detail: string
   key: string
   label: string
   time: string
   occurredAt?: Date | string
+  tone?: CommercialOrderActivityTone
+  /** Before → after rows for changes, replacements and released stock. */
+  changes?: { label: string; before: string; after: string }[]
 }
 
 export function canFulfillCommercialOrderLine(line: CommercialOrderLine) {
@@ -66,10 +77,10 @@ export function buildCommercialOrderActivity(
 ): CommercialOrderActivity[] {
   const rows: CommercialOrderActivity[] = [
     {
-      detail: `Commercial Order created by ${order.createdBy?.name ?? "Unknown team member"}.`,
+      detail: `Taken by ${order.createdBy?.name ?? "a team member"}`,
       key: `created:${order.id}`,
       occurredAt: order.createdAt,
-      label: "Order received",
+      label: "Order created",
       time: formatCommerceDateTime(order.createdAt),
     },
   ]

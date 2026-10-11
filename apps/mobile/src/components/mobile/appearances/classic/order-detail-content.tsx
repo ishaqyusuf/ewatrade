@@ -47,9 +47,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function ClassicOrderDetailContent({
   activity,
+  assistant,
   cachedAt,
   onReceipt,
   onCall,
+  onChange,
   onMessage,
   error,
   fulfillingOrderLineId,
@@ -109,17 +111,27 @@ export function ClassicOrderDetailContent({
               isOffline || !onReceipt || !isReceiptOrderEligible(order.status),
           },
           {
-            label: "Call",
-            icon: "Phone",
-            onPress: onCall ?? (() => undefined),
-            disabled: !order.customerPhone || !onCall,
+            label: "Change",
+            icon: "SquarePen",
+            onPress: onChange ?? (() => undefined),
+            disabled: !onChange,
+            testID: "order-change-action",
           },
-          {
-            label: "Message",
-            icon: "MessageCircle",
-            onPress: onMessage ?? (() => undefined),
-            disabled: !order.customerPhone || !onMessage,
-          },
+          assistant
+            ? {
+                label: "Ask AI",
+                icon: "Sparkles",
+                gold: true,
+                onPress: assistant.onPress,
+                disabled: assistant.disabled,
+                testID: "order-ask-ai-action",
+              }
+            : {
+                label: "Message",
+                icon: "MessageCircle",
+                onPress: onMessage ?? (() => undefined),
+                disabled: !order.customerPhone || !onMessage,
+              },
         ]}
       />
 
@@ -150,6 +162,7 @@ export function ClassicOrderDetailContent({
 
       <OrderCustomerRow
         onCall={!order.customerPhone ? undefined : onCall}
+        onMessage={!order.customerPhone ? undefined : onMessage}
         onPress={onOpenCustomer}
         order={order}
       />
@@ -458,10 +471,12 @@ function OrderOverviewSummary({
 
 function OrderCustomerRow({
   onCall,
+  onMessage,
   onPress,
   order,
 }: {
   onCall?: () => void
+  onMessage?: () => void
   onPress: () => void
   order: CommercialOrder
 }) {
@@ -535,6 +550,28 @@ function OrderCustomerRow({
               .join(" · ") || "No contact details"}
           </Text>
         </View>
+        {onMessage ? (
+          <Pressable
+            accessibilityLabel={`Message ${name}`}
+            accessibilityRole="button"
+            haptic
+            onPress={onMessage}
+            style={{
+              alignItems: "center",
+              backgroundColor: colors.accent,
+              borderRadius: 999,
+              height: 44,
+              justifyContent: "center",
+              width: 44,
+            }}
+          >
+            <Icon
+              className="size-[19px]"
+              color={colors.accentForeground}
+              name="MessageCircle"
+            />
+          </Pressable>
+        ) : null}
         {onCall ? (
           <Pressable
             accessibilityLabel={`Call ${name}`}
@@ -882,12 +919,32 @@ function OrderActivityTimeline({
 }: {
   activity: CommercialOrderActivity[]
 }) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  const colors = useColors()
   return (
-    <OrderOverviewSection title="Activity">
+    <OrderOverviewSection
+      accessory={`${activity.length} ${activity.length === 1 ? "entry" : "entries"}`}
+      title="Activity"
+    >
       {activity.map((event, index) => (
-        <View className="flex-row gap-3 py-3" key={event.key}>
+        <View
+          className="flex-row gap-3 py-3"
+          key={event.key}
+          testID="order-activity-entry"
+        >
           <View className="items-center pt-1.5">
-            <View className="size-2 rounded-full bg-primary" />
+            <NativeView
+              style={{
+                backgroundColor:
+                  !event.tone || event.tone === "ink"
+                    ? colors.primary
+                    : palette[`${event.tone}Foreground`],
+                borderRadius: 999,
+                height: 10,
+                width: 10,
+              }}
+            />
             {index < activity.length - 1 ? (
               <View className="mt-1 w-0.5 flex-1 bg-border" />
             ) : null}
@@ -913,6 +970,27 @@ function OrderActivityTimeline({
             >
               {event.detail}
             </Text>
+            {event.changes?.length ? (
+              <View className="mt-1.5 gap-1 rounded-[12px] bg-muted px-2.5 py-2">
+                {event.changes.map((change) => (
+                  <View
+                    className="flex-row flex-wrap items-baseline gap-x-1.5"
+                    key={`${change.label}:${change.before}`}
+                  >
+                    <Text className="text-xs font-bold text-foreground">
+                      {change.label}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground line-through">
+                      {change.before}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">→</Text>
+                    <Text className="text-xs font-bold text-foreground">
+                      {change.after}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
       ))}

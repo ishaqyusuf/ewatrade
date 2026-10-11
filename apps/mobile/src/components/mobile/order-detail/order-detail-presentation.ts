@@ -10,6 +10,10 @@ export type OrderDetailContentProps = {
   onReceipt?: () => void
   onCall?: () => void
   onMessage?: () => void
+  /** Opens the Change sheet; absent while the order cannot load its options. */
+  onChange?: () => void
+  /** Ask AI about this order; absent when the business has no assistant. */
+  assistant?: { disabled: boolean; onPress: () => void }
   error: string | null
   fulfillingOrderLineId?: string
   isFulfillingAll: boolean

@@ -8,6 +8,10 @@ import {
   OrderDetailDispatchDocket,
   OrderDetailDispatchDocketPrimaryAction,
 } from "@/components/mobile/appearances/market-day/order-detail-dispatch-docket"
+import {
+  orderAssistantDraft,
+  useAskAssistant,
+} from "@/components/mobile/assistant/use-ask-assistant"
 import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -43,6 +47,9 @@ import {
   type OrderPaymentMethod,
   OrderPaymentSheet,
 } from "./order-action-sheets"
+import { OrderChangeSheetModal } from "./order-change-sheet"
+import { timelineActivity } from "./order-timeline-model"
+import { useOrderChanges } from "./use-order-changes"
 
 import { ClassicOrderDetailScreen } from "@/components/mobile/appearances/classic/order-detail-screen"
 import { MarketDayOrderDetailScreen } from "@/components/mobile/appearances/market-day/order-detail-screen"
@@ -101,10 +108,26 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       { enabled: false, retry: false },
     ),
   )
+  const timelineQuery = useQuery(
+    trpc.orders.timeline.queryOptions(
+      { orderId },
+      { enabled: !isOffline, retry: false },
+    ),
+  )
+  const assistant = useAskAssistant()
   const order =
     orderQuery.data ??
     cachedOrders.data?.find((candidate) => candidate.id === orderId) ??
     null
+  const changes = useOrderChanges({
+    isOffline,
+    onChanged: refreshOrderQueries,
+    onNotice: (message) => {
+      setError(null)
+      setNotice(message)
+    },
+    order,
+  })
   // Fade the overview in only when it replaces the loading state; a cached
   // Order rides the native push without an extra fade.
   const [orderReadyOnOpen] = useState(() => Boolean(order))
@@ -112,6 +135,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   async function refreshOrderQueries() {
     await Promise.all([
       queryClient.invalidateQueries(trpc.orders.get.queryFilter()),
+      queryClient.invalidateQueries(trpc.orders.timeline.queryFilter()),
+      queryClient.invalidateQueries(trpc.orders.changeOptions.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
       queryClient.invalidateQueries(trpc.orders.customerCount.queryFilter()),
@@ -173,9 +198,15 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     }),
   )
 
+  // Server history when online; the device builds a shorter one offline.
   const activity = useMemo(
-    () => (order ? buildCommercialOrderActivity(order) : []),
-    [order],
+    () =>
+      timelineQuery.data && !isOffline
+        ? timelineActivity(timelineQuery.data, order?.paymentStatus === "PAID")
+        : order
+          ? buildCommercialOrderActivity(order)
+          : [],
+    [order, timelineQuery.data, isOffline],
   )
   const fulfilLinePresentation = useMemo(
     () =>
@@ -379,6 +410,16 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       >
         <Content
           activity={activity}
+          onChange={() => changes.open("menu")}
+          assistant={
+            assistant.enabled
+              ? {
+                  disabled: !assistant.canOpen,
+                  onPress: () =>
+                    assistant.ask(orderAssistantDraft(order.orderNumber)),
+                }
+              : undefined
+          }
           businessName={profile?.businessName ?? "Business"}
           error={error}
           fulfillingOrderLineId={
@@ -508,6 +549,16 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         }
         reference={paymentReference}
         ref={paymentModal.ref}
+      />
+
+      <OrderChangeSheetModal
+        changes={changes}
+        isOffline={isOffline}
+        onRecordPayment={() => {
+          changes.close()
+          setTimeout(openPaymentForm, 250)
+        }}
+        order={order}
       />
 
       <OrderFulfilmentConfirmationSheet
