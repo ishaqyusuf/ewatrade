@@ -718,6 +718,10 @@ export async function createCommercialOrderGraphInTransaction(
     string,
     (typeof resolvedLines)[number]["offering"]
   >()
+  // Repeated lines use one catalog snapshot within this command. Eligibility
+  // mode is part of the key: a progressive DRAFT must never satisfy an ordinary
+  // sale. Price, quantity, attestation and reservation checks remain per line.
+  const catalogOfferings = new Map<string, (typeof resolvedLines)[number]["offering"]>()
   for (const lineInput of input.lines) {
     if (isCustomOrderLineInput(lineInput)) {
       const custom = normalizeCatalogFreeLine(lineInput)
@@ -763,7 +767,8 @@ export async function createCommercialOrderGraphInTransaction(
     const progressiveManual = Boolean(
       lineInput.progressiveAvailabilityAttestationId,
     )
-    const offering = await tx.sellableOffering.findFirst({
+    const offeringKey = JSON.stringify([lineInput.offeringId, progressiveManual])
+    const offering = catalogOfferings.get(offeringKey) ?? await tx.sellableOffering.findFirst({
       include: {
         catalogItem: { select: { id: true, name: true } },
         productUnitOffering: { include: { inventoryUnit: true } },
@@ -790,6 +795,7 @@ export async function createCommercialOrderGraphInTransaction(
         "An Order line selected an unavailable Offering.",
       )
     }
+    catalogOfferings.set(offeringKey, offering)
     if (
       offering.kind === SellableOfferingKind.SERVICE &&
       !offering.serviceOffering
