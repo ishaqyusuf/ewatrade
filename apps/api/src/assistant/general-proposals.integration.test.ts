@@ -1,3 +1,4 @@
+import { verifySupplierCreation } from "./general-supplier-create.integration-check"
 import { verifyExpenseComposition } from "./general-expense.integration-check"
 import { verifyMoneyMovementComposition } from "./general-money-movement.integration-check"
 import { verifyCustomerCreditComposition } from "./general-customer-credit.integration-check"
@@ -240,7 +241,7 @@ if (enabled) {
           await verifyGeneralProductTransport(ctx, session.token)
           return
         }
-        if (process.env.RUN_GENERAL_EXPENSE === "1" || process.env.RUN_GENERAL_MONEY_MOVEMENT === "1" || process.env.RUN_GENERAL_CUSTOMER_CREDIT === "1" || process.env.RUN_GENERAL_CUSTOMER_RECEIPT === "1" || process.env.RUN_GENERAL_HELD_CREDIT_REFUND === "1" || process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
+        if (process.env.RUN_GENERAL_SUPPLIER_CREATE === "1" || process.env.RUN_GENERAL_EXPENSE === "1" || process.env.RUN_GENERAL_MONEY_MOVEMENT === "1" || process.env.RUN_GENERAL_CUSTOMER_CREDIT === "1" || process.env.RUN_GENERAL_CUSTOMER_RECEIPT === "1" || process.env.RUN_GENERAL_HELD_CREDIT_REFUND === "1" || process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
           console.info("Focused command acceptance: transport runs in the default suite")
         } else if (
           process.env.RUN_GENERAL_STOCK_TRANSFER === "1" &&
@@ -318,6 +319,10 @@ if (enabled) {
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_SUPPLIER_CREATE === "1") {
+          await verifySupplierCreation(ctx, failingDb, conversation.id)
+          return
+        }
         if (process.env.RUN_GENERAL_EXPENSE === "1") {
           await verifyExpenseComposition(ctx, failingDb, conversation.id)
           return

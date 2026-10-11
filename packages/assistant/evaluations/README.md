@@ -26,6 +26,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier creation database acceptance, 11 October 2026](runs/2026-10-11-supplier-create-database.md):24 assertions passed for rollback/concurrent confirmation/recovery, duplicate refusal and actual supplier tools; one identity/no postings, owned cleanup verified.
+
 - [Supplier creation adapter, 11 October 2026](runs/2026-10-11-supplier-create-adapter.md): strict schema and canonical transactional adapter;14 assertions pass. Editor and database/web/model acceptance pending.
 
 - [Supplier creation review, 11 October 2026](runs/2026-10-11-supplier-create-review.md): canonical fresh-authority/Book/duplicate review and transaction export;7 tests/42 assertions pass. Assistant proposal and database/web acceptance pending.
