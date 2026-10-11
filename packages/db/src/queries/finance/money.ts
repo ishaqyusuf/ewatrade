@@ -1,4 +1,5 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import { runInOwnTransaction } from "../own-transaction"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, lockFinanceBook } from "./access"
 import { postFinanceJournalInTransaction } from "./posting"
 import { FinanceError, financeAmount } from "./rules"
@@ -19,8 +20,18 @@ export type FinanceMoneyInput = FinanceActor & {
       }
   )
 
-export async function recordFinanceMoneyMovement(
+export function recordFinanceMoneyMovement(
   db: PrismaClient,
+  input: FinanceMoneyInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    recordFinanceMoneyMovementInTransaction(tx, input),
+  )
+}
+
+/** Caller owns commit/rollback; all Book, account and posting checks remain canonical. */
+export async function recordFinanceMoneyMovementInTransaction(
+  tx: Prisma.TransactionClient,
   input: FinanceMoneyInput,
 ) {
   financeAmount(input.amountMinor)
@@ -37,79 +48,74 @@ export async function recordFinanceMoneyMovement(
       "Choose a supported money movement.",
     )
   }
-  return db.$transaction(
-    async (tx) => {
-      const book = await lockFinanceBook(tx, input)
-      const account = await tx.financeAccount.findFirst({
-        where: {
-          id: input.accountId,
-          bookId: book.id,
-          purpose: { in: ["CASH", "BANK", "CLEARING"] },
-          archivedAt: null,
-        },
-      })
-      if (!account)
-        throw new FinanceError("NOT_FOUND", "Choose an active money account.")
-      const opposite =
-        input.kind === "TRANSFER"
-          ? await tx.financeAccount.findFirst({
-              where: {
-                id: input.destinationAccountId,
-                bookId: book.id,
-                purpose: { in: ["CASH", "BANK", "CLEARING"] },
-                archivedAt: null,
-              },
-            })
-          : await tx.financeAccount.findUnique({
-              where: {
-                bookId_code: {
-                  bookId: book.id,
-                  code:
-                    input.kind === "OWNER_CONTRIBUTION"
-                      ? "3000"
-                      : input.kind === "OWNER_WITHDRAWAL"
-                        ? "3100"
-                        : "3900",
-                },
-              },
-            })
-      if (!opposite || opposite.id === account.id) {
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "Choose a different account in the same financial book.",
-        )
-      }
-      if (
-        input.kind === "OPENING_BALANCE" &&
-        input.effectiveAt.getTime() !== book.startsAt.getTime()
-      ) {
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "Opening balances use the bookkeeping start date.",
-        )
-      }
-      const outgoing =
-        input.kind === "TRANSFER" || input.kind === "OWNER_WITHDRAWAL"
-      return postFinanceJournalInTransaction(tx, {
-        ...input,
-        sourceKind: input.kind,
-        // One original opening balance per account; correction needs reversal.
-        sourceId:
-          input.kind === "OPENING_BALANCE" ? account.id : input.clientCommandId,
-        lines: [
-          {
-            accountId: account.id,
-            side: outgoing ? "CREDIT" : "DEBIT",
-            amountMinor: input.amountMinor,
-          },
-          {
-            accountId: opposite.id,
-            side: outgoing ? "DEBIT" : "CREDIT",
-            amountMinor: input.amountMinor,
-          },
-        ],
-      })
+  const book = await lockFinanceBook(tx, input)
+  const account = await tx.financeAccount.findFirst({
+    where: {
+      id: input.accountId,
+      bookId: book.id,
+      purpose: { in: ["CASH", "BANK", "CLEARING"] },
+      archivedAt: null,
     },
-    { maxWait: 10_000, timeout: 30_000 },
-  )
+  })
+  if (!account)
+    throw new FinanceError("NOT_FOUND", "Choose an active money account.")
+  const opposite =
+    input.kind === "TRANSFER"
+      ? await tx.financeAccount.findFirst({
+          where: {
+            id: input.destinationAccountId,
+            bookId: book.id,
+            purpose: { in: ["CASH", "BANK", "CLEARING"] },
+            archivedAt: null,
+          },
+        })
+      : await tx.financeAccount.findUnique({
+          where: {
+            bookId_code: {
+              bookId: book.id,
+              code:
+                input.kind === "OWNER_CONTRIBUTION"
+                  ? "3000"
+                  : input.kind === "OWNER_WITHDRAWAL"
+                    ? "3100"
+                    : "3900",
+            },
+          },
+        })
+  if (!opposite || opposite.id === account.id) {
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "Choose a different account in the same financial book.",
+    )
+  }
+  if (
+    input.kind === "OPENING_BALANCE" &&
+    input.effectiveAt.getTime() !== book.startsAt.getTime()
+  ) {
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "Opening balances use the bookkeeping start date.",
+    )
+  }
+  const outgoing =
+    input.kind === "TRANSFER" || input.kind === "OWNER_WITHDRAWAL"
+  return postFinanceJournalInTransaction(tx, {
+    ...input,
+    sourceKind: input.kind,
+    // One original opening balance per account; correction needs reversal.
+    sourceId:
+      input.kind === "OPENING_BALANCE" ? account.id : input.clientCommandId,
+    lines: [
+      {
+        accountId: account.id,
+        side: outgoing ? "CREDIT" : "DEBIT",
+        amountMinor: input.amountMinor,
+      },
+      {
+        accountId: opposite.id,
+        side: outgoing ? "DEBIT" : "CREDIT",
+        amountMinor: input.amountMinor,
+      },
+    ],
+  })
 }

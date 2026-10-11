@@ -4,7 +4,11 @@ export {
   createFinanceMoneyAccount,
   getFinanceBook,
 } from "./accounts"
-export { recordFinanceMoneyMovement } from "./money"
+export {
+  recordFinanceMoneyMovement,
+  recordFinanceMoneyMovementInTransaction,
+  type FinanceMoneyInput,
+} from "./money"
 export { getFinanceMoneyMovement } from "./money-reads"
 export { reverseFinanceMoney } from "./money-reversals"
 export {
