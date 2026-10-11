@@ -1,7 +1,8 @@
 # Supplier settlement — version 1
 
-E05 dashboard Owner/Admin scenarios. Proposals/editor/owning receipt source exists;
-all three capabilities remain planned pending full assistant/web confirmation.
+E05 dashboard Owner/Admin scenarios. All three settlement actions are source-available;
+full proposal rollback and actual dashboard confirmation/receipt flows pass locally.
+Source discovery availability and complete E05 acceptance remain open.
 Fixtures are not executed model evaluations.
 
 | ID | Scenario | Expected |
@@ -21,4 +22,5 @@ Fixtures are not executed model evaluations.
 | SS13 | Bounded advance history | Follow authorized continuation; do not guess an entry omitted from a statement page |
 
 Non-model evidence: [source/database/editor report](../runs/2026-10-11-supplier-settlement-source.md).
-Full proposal/database and saved-detail chat acceptance remain separate.
+Actual full proposal/web/readback evidence: [12 October report](../runs/2026-10-12-supplier-settlement-web.md).
+This does not establish successful model evaluations or full parent-ticket acceptance.

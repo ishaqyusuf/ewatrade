@@ -111,7 +111,7 @@ export function purchasePaymentReviewLines(
     `Record ${money(r.amountMinor)} already paid to ${r.supplierName} for ${r.description} from ${r.moneyAccountName}.`,
     `Invoice total ${money(r.totalMinor)}; previously settled ${money(r.paidBeforeMinor)}. Remaining payable ${money(r.outstandingBeforeMinor)} → ${money(r.outstandingAfterMinor)}.`,
     `Journal: debit ${r.payableAccountName}; credit ${r.moneyAccountName} · ${money(r.amountMinor)} each.`,
-    `Payment date: ${r.effectiveAt} (UTC).${r.reference ? ` Reference: ${r.reference}.` : ""}`,
+    `Payment date: ${r.effectiveAt} (UTC). Description: ${r.postingDescription}.${r.reference ? ` Reference: ${r.reference}.` : ""}`,
     "This records partial or full settlement of the existing invoice. No new purchase cost, invoice, ownership or stock receipt is recorded. No money is sent or bank settlement verified.",
   ]
 }
@@ -123,7 +123,7 @@ export function supplierAllocationReviewLines(
     `Apply ${money(r.amountMinor)} of ${r.supplierName}'s existing advance to ${r.billDescription}.`,
     `Original advance ${money(r.advanceOriginalMinor)} dated ${r.advanceEffectiveAt} (UTC). Unallocated ${money(r.advanceBeforeMinor)} → ${money(r.advanceAfterMinor)}.`,
     `Invoice total ${money(r.totalMinor)}; previously settled ${money(r.paidBeforeMinor)}. Remaining payable ${money(r.outstandingBeforeMinor)} → ${money(r.outstandingAfterMinor)}.`,
-    `Journal: debit ${r.payableAccountName}; credit ${r.advanceAccountName} · ${money(r.amountMinor)} each. Allocation date: ${r.effectiveAt} (UTC).`,
+    `Journal: debit ${r.payableAccountName}; credit ${r.advanceAccountName} · ${money(r.amountMinor)} each. Allocation date: ${r.effectiveAt} (UTC). Description: ${r.description}.`,
     "This applies existing supplier funds to the exact invoice. No cash moves and no purchase cost, invoice, ownership or stock receipt is created.",
   ]
 }

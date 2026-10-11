@@ -34,6 +34,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier settlement full proposals and actual web, 12 October 2026](runs/2026-10-12-supplier-settlement-web.md): advance/allocation/partial payment completion rollback, real chat Edit/re-review/Confirm and global Open/Close pass; exact balances/journals/stock and concurrent completed recovery verified. Three actions source-available; edited descriptions now visible. E05 remains partial; discovery activation and larger bounds remain open.
+
 - [Supplier settlement source, 11 October 2026](runs/2026-10-11-supplier-settlement-source.md): three strict canonical proposals and editor modes;10 tests/260 assertions/scoped types, actual canonical rollback/replay and editor checks pass. Global purchase-invoice sheet source added; local API unresponsive, saved detail/full chat confirmation pending. All three capabilities remain planned.
 
 - [Physical receipt proposal and actual web confirmation, 11 October 2026](runs/2026-10-11-receipt-proposal-web.md): full assistant rollback reaches completion in28.8s; focused tests/scoped types pass. Dashboard Edit/re-review/Confirm and global Open/Close pass; exact stock/valuation/journal readback, replay and duplicate-stage refusal verified. E05 stays partial; advances/allocation/settlement and larger bounds remain open.

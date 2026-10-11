@@ -58,7 +58,7 @@ test("supplier settlement actions retain independent source and explicit money/a
           | "purchase_payment",
       ),
     ).toMatchObject({
-      rollout: "planned",
+      rollout: "source",
       scope: "book",
       clients: ["dashboard"],
       policy: { roles: ["OWNER", "ADMIN"] },
