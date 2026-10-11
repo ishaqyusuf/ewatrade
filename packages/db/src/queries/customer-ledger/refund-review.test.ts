@@ -21,8 +21,8 @@ function fixture(options: {
       return { id: "book", currencyCode: "NGN", startsAt: new Date("2026-09-01"), closedThrough: options.closed ? input.effectiveAt : null }
     } },
     customerLedgerAccount: { findFirst: async (args: unknown) => {
-      expect(args).toEqual({ where: { id: "account", tenantId: "tenant" } })
-      return { id: "account", customerId: "customer", currencyCode: options.currency ?? "NGN", revision: 9n }
+      expect(args).toEqual({ where: { id: "account", tenantId: "tenant" }, include: { customer: { select: { name: true } } } })
+      return { id: "account", customerId: "customer", customer: { name: "QA customer" }, currencyCode: options.currency ?? "NGN", revision: 9n }
     } },
     customerLedgerEntry: { findFirst: async (args: unknown) => {
       expect(args).toEqual({ where: { id: "credit", accountId: "account", side: "CREDIT", kind: { in: ["OPENING_CREDIT", "RECEIPT"] }, reversals: { none: {} } } })

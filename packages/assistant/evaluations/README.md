@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| `customers.credit.refund` v1 | [1](fixtures/held-credit-refund.v1.md) | Completed payout, ambiguity, unused-credit limits, stale review, authority, injection, retry, provenance, receipt | None yet |
 | `sales.product.return` v1 | [1](fixtures/product-return.v1.md) | Partial restock, ambiguity, dispositions, over-return, stale evidence, authority, injection, replay/recovery | None yet |
 | `sales.products.fulfill` v1 | [1](fixtures/bulk-fulfillment.v1.md) | Success, ambiguity, denial, stale target, injection, replay, outage | None yet |
 

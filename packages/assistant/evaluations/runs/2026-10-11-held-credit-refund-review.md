@@ -16,3 +16,19 @@ refund, Order cancellation or new credit is implied. No write methods are suppli
 to the preview fixture. No connected database, assistant adapter, UI, live model,
 activation, mobile or deployment acceptance is claimed. E02 remains incomplete.
 Local log:`/private/tmp/e02-refund-review-tests.log`.
+
+## Assistant adapter source follow-up
+
+Baseline:`c105b0e8` plus strict action, planned dashboard-only manifest, canonical
+finance role/plan gate, review/target digest and transaction adapter.13 focused
+contract/coverage/source/API tests passed,82 assertions; scoped API source TypeScript
+and generated coverage pass. Invalid decimal input is rejected without a BigInt
+conversion exception. Explicit completed-payout acknowledgment is mandatory;
+tenant/actor/revision/command/provider overrides are rejected. Customer name is
+loaded from the scoped account for a recognizable review. Receipt points to the
+customer through the existing receipt kind. The runtime remains planned even if
+allowlisted. The conversation fixture has10 scenarios and no live-model runs.
+
+Dedicated dashboard editing, proposal DB atomicity/replay/stale acceptance, browser
+receipt acceptance and actual model evaluation remain pending. No mobile work,
+provider call, runtime activation or deployment occurred.
