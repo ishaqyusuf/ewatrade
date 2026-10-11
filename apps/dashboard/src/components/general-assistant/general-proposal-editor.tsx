@@ -16,6 +16,7 @@ import {
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { useState } from "react"
+import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
 import { GeneralSaleCustomer } from "./general-sale-customer"
@@ -40,6 +41,15 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "product_line_return")
+    return (
+      <GeneralProductReturnEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (
     props.proposal.payload.action === "order_cancel" ||
     props.proposal.payload.action === "order_metadata_update" ||
@@ -232,8 +242,8 @@ function GeneralProposalFields({
             <p className="text-sm text-muted-foreground">
               {payload.action === "product_batch_fulfill"
                 ? "This applies to all remaining product and catalog-free lines at their full saved quantities."
-                : "This applies to the selected order line at its full saved quantity."}
-              {" "}Review the refreshed details before confirming.
+                : "This applies to the selected order line at its full saved quantity."}{" "}
+              Review the refreshed details before confirming.
             </p>
             <Field>
               <FieldLabel htmlFor={field("reason")}>Reason</FieldLabel>

@@ -20,6 +20,8 @@ separate evidence; do not import them as successful model evaluations.
 
 - [Product-cost regression failure, 11 October 2026](runs/2026-10-11-product-cost-failure.md): timed out and lost its connection before valuation acceptance; owned fixtures cleaned.
 
+- [Product return editor component check, 11 October 2026](runs/2026-10-11-return-editor.md): exact quantity, disposition, destination clearing and cancel checked without database writes.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
