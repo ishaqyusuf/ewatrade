@@ -450,8 +450,12 @@ function Chips<T extends string>({
             accessibilityRole="radio"
             accessibilityState={{ selected: value === key }}
             className={cn(
-              "min-h-11 justify-center rounded-full px-4",
-              value === key ? "bg-foreground" : "border border-border bg-card",
+              // Same border width both ways: dropping the border on select
+              // leaves the label undrawn on Android.
+              "min-h-11 justify-center rounded-full border px-4",
+              value === key
+                ? "border-foreground bg-foreground"
+                : "border-border bg-card",
             )}
             haptic
             key={key}
