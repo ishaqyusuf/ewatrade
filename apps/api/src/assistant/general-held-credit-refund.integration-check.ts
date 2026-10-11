@@ -1,3 +1,4 @@
+import { verifyCustomerFundsTools } from "./general-customer-funds.integration-check"
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
@@ -31,6 +32,8 @@ export async function verifyHeldCreditRefundComposition(original: GeneralContext
       method: "CASH", amountMinor: "1000", description: "QA unused customer deposit", clientCommandId: randomUUID(),
     })
     const receipt = await db.customerLedgerReceipt.findUniqueOrThrow({ where: { id: deposit.id } })
+    const fundsTarget = { accountId: account.id, customerId: customer.id, creditEntryId: receipt.entryId }
+    const fundsBefore = await verifyCustomerFundsTools(ctx, conversationId, fundsTarget)
     const payload = { action: "held_credit_refund" as const, bookId: book.id, accountId: account.id,
       creditEntryId: receipt.entryId, moneyAccountId: money.id, method: "CASH" as const,
       amountMinor: "250", effectiveAt: new Date().toISOString(), reason: "Customer collected unused deposit", moneyAlreadyReturned: true as const }
@@ -75,6 +78,7 @@ export async function verifyHeldCreditRefundComposition(original: GeneralContext
     expect(journals[0]?.lines.find(line => line.accountId === money.id)).toMatchObject({ debitMinor: 0n, creditMinor: 250n })
     expect((await db.customerLedgerAccount.findUniqueOrThrow({ where: { id: account.id } })).revision).toBe(before.revision + 1n)
     await expect(draftGeneralProposal(ctx, conversationId, { ...payload, amountMinor: "751" })).rejects.toMatchObject({ code: "CONFLICT" })
+    await verifyCustomerFundsTools(ctx, conversationId, fundsTarget, fundsBefore)
     console.info("Held refund acceptance: rollback, balanced posting, remaining-credit cap and replay passed")
   } finally {
     Object.assign(capability, { rollout })

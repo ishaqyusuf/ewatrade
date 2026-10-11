@@ -261,3 +261,26 @@ test("dashboard service performance and manager release retain separate role bou
       expect(allowedActions(ctx)).not.toContain("service_line_authorize")
   }
 })
+
+test("customer funds reads retain finance authority and planned rollout", () => {
+  const ids = ["customers.account.read", "customers.sources.read", "customers.statement.read"]
+  for (const capability of capabilityManifest.filter(value => ids.includes(value.id))) {
+    const owner = actor("OWNER")
+    owner.requestHeaders = new Headers({ "x-assistant-client": "dashboard" })
+    expect(canUseCapability(owner, capability)).toBe(false)
+    const rollout = capability.rollout
+    try {
+      Object.assign(capability, { rollout: "source" })
+      for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"]) {
+        const ctx = actor(role)
+        ctx.requestHeaders = owner.requestHeaders
+        expect(canUseCapability(ctx, capability)).toBe(role === "OWNER" || role === "ADMIN")
+      }
+      const free = actor("OWNER", { plan: "free" })
+      free.requestHeaders = owner.requestHeaders
+      expect(canUseCapability(free, capability)).toBe(false)
+    } finally {
+      Object.assign(capability, { rollout })
+    }
+  }
+})

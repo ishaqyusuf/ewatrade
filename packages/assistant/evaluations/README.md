@@ -17,6 +17,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Customer funds tool/database acceptance, 11 October 2026](runs/2026-10-11-customer-funds-database.md): 44 assertions passed across actual read executors and refund composition; snapshot preserved, stale source rejected, cleanup verified.
+
 - [Customer funds read source verification, 11 October 2026](runs/2026-10-11-customer-funds-source.md): focused schema, exact-money and pagination checks; database/browser/model acceptance pending.
 
 - [Bulk fulfillment database acceptance, 11 October 2026](runs/2026-10-11-bulk-database.md): 24 assertions passed; no-Finance-Book scope only. This is not a model evaluation.
