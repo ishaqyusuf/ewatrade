@@ -74,3 +74,24 @@ movement is rejected even when prior source history is reused. The one-use token
 is consumed on failure and no valuation event is written. Valuation suite:
 15 tests passed / 51 assertions. This is deterministic unit evidence, not financial
 DB acceptance, live-model evaluation or browser acceptance.
+
+## Physical-evidence handoff acceptance attempt
+
+Source `49d2dd0d`; run `23905cd1-c2b2-48f0-872c-5587c6ad0169`.
+Verdict **fail**: 0 passed / 1 failed /16 assertions,180.14s. Fixture creation
+succeeded in13.929s. Reviewed return trace counted123 SQL calls (previous131),
+31.301s wall time and0.285ms pool wait. Execution reached the shared journal
+review, then expired at its initial FinanceJournalEntry lookup after31290ms,
+with the unchanged30000ms transaction limit. Cleanup verified; session69351
+exited1. No DB suite remains from this run.
+Log: `artifacts/assistant-operations-web/d03-return-financial-journal-handoff-connected.log`.
+
+An earlier sandboxed attempt `2c265e0f-8b4e-4786-9058-dd9d7730ddf2` failed to
+reach the database (0 assertions,582ms); cleanup could not be verified in that
+attempt. Its separate log is `d03-return-financial-journal-handoff.log`.
+
+The source change avoids eight repeated physical-evidence reads; timing improvement
+is observational across these runs, not a benchmark or financial acceptance.
+28 focused unit tests /94 assertions and scoped source TypeScript pass. Next:
+review repeated locked journal evidence and post-valuation cost reload; preserve
+all original-source validation and own-write boundaries. Capability stays planned.
