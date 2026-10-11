@@ -6,7 +6,6 @@ import { createRehearsalModel } from "@ewatrade/ai/rehearsal-model"
 import { resolveAssistantRuntimeConfiguration } from "@ewatrade/ai/runtime-config"
 import { respondGeneralRehearsal } from "@ewatrade/assistant/general/rehearsal"
 import { respondSetupRehearsal } from "@ewatrade/assistant/setup/rehearsal"
-import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 
 export type ResolvedAssistantModel = AssistantLanguageModel & {
   rehearsal: boolean
@@ -14,28 +13,29 @@ export type ResolvedAssistantModel = AssistantLanguageModel & {
 
 type Environment = Readonly<Record<string, string | undefined>>
 
+type ResolveAssistantModelInput = {
+  dataClassification: "LIVE" | "QA"
+  readRuntimeConfiguration: () => Promise<unknown>
+  environment?: Environment
+  createLiveModel?: typeof createAssistantLanguageModel
+}
+
 /**
  * Assistant text is an owner-approved exception to provider-free QA: QA chats
  * use DeepSeek with the same history, draft tools and budget as live chats.
  * Provider-free rehearsal remains an explicit non-production development mode.
  */
-export async function resolveSetupAssistantModel(input: {
-  dataClassification: "LIVE" | "QA"
-  readRuntimeConfiguration: () => Promise<unknown>
-  environment?: Environment
-  createLiveModel?: typeof createAssistantLanguageModel
-}): Promise<ResolvedAssistantModel | null> {
+async function resolveAssistantModel(
+  input: ResolveAssistantModelInput,
+  createRehearsal: () => ReturnType<typeof createRehearsalModel>,
+): Promise<ResolvedAssistantModel | null> {
   const environment = input.environment ?? process.env
   const rehearsalRequested =
     environment.ASSISTANT_REHEARSAL_MODE === "true" &&
     environment.APP_ENV !== "production"
   if (rehearsalRequested) {
     return {
-      model: createRehearsalModel((prompt) =>
-        respondSetupRehearsal(
-          prompt as Parameters<typeof respondSetupRehearsal>[0],
-        ),
-      ),
+      model: createRehearsal(),
       provider: "ewatrade-rehearsal",
       modelId: "rehearsal-v1",
       providerOptions: {},
@@ -60,47 +60,25 @@ export async function resolveSetupAssistantModel(input: {
   return model ? { ...model, rehearsal: false } : null
 }
 
-/**
- * General assistant (gated off). Unlike setup, QA data never
- * reaches a live provider here: QA chats use the provider-free rehearsal model.
- */
-export async function resolveGeneralAssistantModel(input: {
-  dataClassification: "LIVE" | "QA"
-  readRuntimeConfiguration: () => Promise<unknown>
-  environment?: Environment
-  createLiveModel?: typeof createAssistantLanguageModel
-}): Promise<ResolvedAssistantModel | null> {
-  const environment = input.environment ?? process.env
-  const rehearsalRequested =
-    environment.ASSISTANT_REHEARSAL_MODE === "true" &&
-    environment.APP_ENV !== "production"
-  if (input.dataClassification === "QA" || rehearsalRequested) {
-    const decision = evaluateQaProviderPolicy({
-      adapter: "test",
-      operation: "ai_analysis",
-      tenantDataClassification: input.dataClassification,
-    })
-    if (!decision.allowed) return null
-    return {
-      model: createRehearsalModel((prompt) =>
-        respondGeneralRehearsal(
-          prompt as Parameters<typeof respondGeneralRehearsal>[0],
-        ),
+export function resolveSetupAssistantModel(input: ResolveAssistantModelInput) {
+  return resolveAssistantModel(input, () =>
+    createRehearsalModel((prompt) =>
+      respondSetupRehearsal(
+        prompt as Parameters<typeof respondSetupRehearsal>[0],
       ),
-      provider: "ewatrade-rehearsal",
-      modelId: "rehearsal-v1",
-      providerOptions: {},
-      rehearsal: true,
-    }
-  }
-  const configuration = resolveAssistantRuntimeConfiguration(
-    await input.readRuntimeConfiguration(),
-    environment,
+    ),
   )
-  if (!configuration) return null
-  const model = (input.createLiveModel ?? createAssistantLanguageModel)(
-    configuration,
-    { environment },
+}
+
+/** General assistant: same routing as setup, with its own rehearsal script. */
+export function resolveGeneralAssistantModel(
+  input: ResolveAssistantModelInput,
+) {
+  return resolveAssistantModel(input, () =>
+    createRehearsalModel((prompt) =>
+      respondGeneralRehearsal(
+        prompt as Parameters<typeof respondGeneralRehearsal>[0],
+      ),
+    ),
   )
-  return model ? { ...model, rehearsal: false } : null
 }

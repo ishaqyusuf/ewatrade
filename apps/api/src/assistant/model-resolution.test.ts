@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { resolveSetupAssistantModel } from "./model-resolution"
+import {
+  resolveGeneralAssistantModel,
+  resolveSetupAssistantModel,
+} from "./model-resolution"
 
 const failIfCalled = () => {
   throw new Error("live provider factory must not be called")
@@ -60,5 +63,41 @@ describe("setup assistant model resolution", () => {
       environment: {},
     })
     expect(model).toBeNull()
+  })
+})
+
+describe("general assistant model resolution", () => {
+  test("QA chats use DeepSeek instead of the rehearsal script", async () => {
+    const model = await resolveGeneralAssistantModel({
+      dataClassification: "QA",
+      readRuntimeConfiguration: async () => null,
+      environment: { DEEPSEEK_API: "sk-live", APP_ENV: "production" },
+    })
+    expect(model?.rehearsal).toBe(false)
+    expect(model?.provider).toBe("deepseek")
+  })
+
+  test("QA chats refuse a non-DeepSeek runtime", async () => {
+    const model = await resolveGeneralAssistantModel({
+      dataClassification: "QA",
+      readRuntimeConfiguration: async () => ({
+        enabled: true,
+        provider: "OPENAI",
+        model: "gpt-4.1-mini",
+      }),
+      environment: { OPENAI_API_KEY: "sk-live" },
+      createLiveModel: failIfCalled,
+    })
+    expect(model).toBeNull()
+  })
+
+  test("explicit rehearsal outside production stays provider-free", async () => {
+    const model = await resolveGeneralAssistantModel({
+      dataClassification: "QA",
+      readRuntimeConfiguration: async () => null,
+      environment: { ASSISTANT_REHEARSAL_MODE: "true", DEEPSEEK_API: "sk" },
+      createLiveModel: failIfCalled,
+    })
+    expect(model?.rehearsal).toBe(true)
   })
 })

@@ -57,7 +57,11 @@ import {
 import { verifyUnitCommands } from "./general-unit-command.integration-check"
 import { verifyUnitProposals } from "./general-unit-proposal.integration-check"
 const enabled = process.env.RUN_GENERAL_ASSISTANT_INTEGRATION === "1"
-if (enabled) setDefaultTimeout(600_000)
+if (enabled) {
+  setDefaultTimeout(600_000)
+  // QA chats now reach DeepSeek; this suite must never spend provider money.
+  process.env.ASSISTANT_REHEARSAL_MODE = "true"
+}
 ;(enabled ? describe : describe.skip)(
   "General proposals on isolated Development",
   () => {
