@@ -29,9 +29,10 @@ const contracts = [
   {
     file: "apps/api/src/trpc/routers/orders.ts",
     markers: [
-      "reminderSettings: protectedProcedure",
-      "updateReminderSettings: protectedProcedure",
+      "reminderSettings: reminderProcedure",
+      "updateReminderSettings: reminderProcedure",
       "assertCanManageOrderReminders",
+      '"orderReminders"',
     ],
     forbidden: [],
     reason:

@@ -1,4 +1,3 @@
-import { orderAmendmentProcedures } from "./order-amendments"
 import {
   canManageSalesOperations,
   canManageTenant,
@@ -44,6 +43,7 @@ import {
   orderReceiptSettingsGetSchema,
   orderReceiptSettingsSaveSchema,
 } from "../../schemas/order-receipts"
+import { orderAmendmentProcedures } from "./order-amendments"
 
 import {
   orderLookupPageSchema,
@@ -175,6 +175,17 @@ const receiptProcedure = protectedProcedure.use(({ ctx, next }) => {
     ctx.tenantContext.tenant.retailOpsPlanId ??
       RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
     "invoices",
+  )
+  return next()
+})
+
+// Order reminder emails are a paid-plan feature: Free businesses get no
+// reminder settings and the hourly job sends them nothing (owner, 11 Oct 2026).
+const reminderProcedure = protectedProcedure.use(({ ctx, next }) => {
+  assertRetailOpsPlanIdFeature(
+    ctx.tenantContext.tenant.retailOpsPlanId ??
+      RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
+    "orderReminders",
   )
   return next()
 })
@@ -498,7 +509,7 @@ export const ordersRouter = createTRPCRouter({
       })
     }),
 
-  reminderSettings: protectedProcedure
+  reminderSettings: reminderProcedure
     .input(commercialOrderReminderSettingsGetSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageOrderReminders(ctx.tenantContext.membership.role)
@@ -566,7 +577,7 @@ export const ordersRouter = createTRPCRouter({
       }
     }),
 
-  updateReminderSettings: protectedProcedure
+  updateReminderSettings: reminderProcedure
     .input(commercialOrderReminderSettingsUpdateSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageOrderReminders(ctx.tenantContext.membership.role)

@@ -66,6 +66,7 @@ const PLAN_FEATURE_ORDER: RetailOpsPlanFeature[] = [
   "staff",
   "suppliers",
   "advancedReports",
+  "orderReminders",
   "multipleBusinesses",
 ]
 

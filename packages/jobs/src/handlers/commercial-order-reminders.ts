@@ -7,6 +7,11 @@ import {
   CommercialOrderReminderTiming as ReminderTimingEnum,
   SellableOfferingKind,
 } from "@ewatrade/db/enums"
+import { resolveRetailOpsPlanId } from "@ewatrade/db/queries"
+import {
+  findRetailOpsPlan,
+  planHasFeature,
+} from "@ewatrade/db/subscription-plans"
 import {
   createCommercialOrderFulfillmentReminderDispatch,
   planNotificationDeliveries,
@@ -53,6 +58,20 @@ export function isCommercialOrderReminderRecipientRole(role: string) {
   )
 }
 
+/** Order reminder emails are a paid-plan feature; Free businesses get none. */
+export function tenantSendsOrderReminders(tenant: {
+  metadata: unknown
+  subscription?: { plan: { key: string } } | null
+}) {
+  const plan = findRetailOpsPlan(
+    resolveRetailOpsPlanId({
+      metadata: tenant.metadata,
+      subscriptionPlanKey: tenant.subscription?.plan.key,
+    }),
+  )
+  return !!plan && planHasFeature(plan, "orderReminders")
+}
+
 function timingEnum(timing: CommercialOrderReminderTiming) {
   return timing === "same_day"
     ? ReminderTimingEnum.SAME_DAY
@@ -78,6 +97,7 @@ export async function commercialOrderRemindersHandler(
       },
       tenant: {
         include: {
+          subscription: { select: { plan: { select: { key: true } } } },
           users: {
             include: { user: true },
             where: {
@@ -121,6 +141,10 @@ export async function commercialOrderRemindersHandler(
 
   for (const order of candidates) {
     if (!order.deliveryDueAt) continue
+    if (!tenantSendsOrderReminders(order.tenant)) {
+      skipped += 1
+      continue
+    }
     const timing = commercialOrderReminderTiming({
       deliveryDueAt: order.deliveryDueAt,
       now,

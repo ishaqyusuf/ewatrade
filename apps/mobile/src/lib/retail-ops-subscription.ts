@@ -19,6 +19,7 @@ export type RetailOpsPlanFeature =
   | "finance"
   | "invoices"
   | "multipleBusinesses"
+  | "orderReminders"
   | "staff"
   | "suppliers"
 
@@ -46,6 +47,7 @@ const PAID_FEATURES: RetailOpsPlanFeature[] = [
   "finance",
   "invoices",
   "multipleBusinesses",
+  "orderReminders",
   "staff",
   "suppliers",
 ]

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 import {
   commercialOrderReminderTiming,
   isCommercialOrderReminderRecipientRole,
+  tenantSendsOrderReminders,
 } from "./commercial-order-reminders"
 
 describe("commercial Order reminder classification", () => {
@@ -47,5 +48,29 @@ describe("commercial Order reminder classification", () => {
     expect(isCommercialOrderReminderRecipientRole("ADMIN")).toBe(true)
     expect(isCommercialOrderReminderRecipientRole("MANAGER")).toBe(true)
     expect(isCommercialOrderReminderRecipientRole("CASHIER")).toBe(false)
+  })
+
+  test("sends nothing for Free businesses; paid plans and the launch default send", () => {
+    expect(
+      tenantSendsOrderReminders({
+        metadata: {},
+        subscription: { plan: { key: "free" } },
+      }),
+    ).toBe(false)
+    expect(
+      tenantSendsOrderReminders({
+        metadata: { retailOps: { subscription: { planId: "free" } } },
+        subscription: null,
+      }),
+    ).toBe(false)
+    expect(
+      tenantSendsOrderReminders({
+        metadata: {},
+        subscription: { plan: { key: "starter" } },
+      }),
+    ).toBe(true)
+    expect(
+      tenantSendsOrderReminders({ metadata: null, subscription: null }),
+    ).toBe(true)
   })
 })

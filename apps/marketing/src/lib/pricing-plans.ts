@@ -13,6 +13,7 @@ export const PLAN_FEATURE_LABELS: Record<RetailOpsPlanFeature, string> = {
   suppliers: "Suppliers",
   advancedReports: "Advanced reports",
   multipleBusinesses: "More than one business",
+  orderReminders: "Order reminder emails",
 }
 
 const FEATURE_ORDER: RetailOpsPlanFeature[] = [
@@ -21,6 +22,7 @@ const FEATURE_ORDER: RetailOpsPlanFeature[] = [
   "staff",
   "suppliers",
   "advancedReports",
+  "orderReminders",
   "multipleBusinesses",
 ]
 

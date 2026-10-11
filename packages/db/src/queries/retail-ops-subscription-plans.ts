@@ -22,6 +22,7 @@ export type RetailOpsPlanFeature =
   | "finance"
   | "invoices"
   | "multipleBusinesses"
+  | "orderReminders"
   | "staff"
   | "suppliers"
 
@@ -40,6 +41,7 @@ const PAID_FEATURES: RetailOpsPlanFeature[] = [
   "finance",
   "invoices",
   "multipleBusinesses",
+  "orderReminders",
   "staff",
   "suppliers",
 ]
@@ -126,6 +128,7 @@ export const RETAIL_OPS_PLAN_FEATURE_LABELS: Record<
   finance: "Finance",
   invoices: "Receipts and invoices",
   multipleBusinesses: "More than one business",
+  orderReminders: "Order reminder emails",
   staff: "Staff accounts",
   suppliers: "Suppliers and purchases",
 }
@@ -139,6 +142,7 @@ export const RETAIL_OPS_PLAN_FEATURE_ACTIONS: Record<
   finance: "use finance",
   invoices: "generate receipts",
   multipleBusinesses: "add another business",
+  orderReminders: "send order reminders",
   staff: "add staff",
   suppliers: "manage suppliers and purchases",
 }

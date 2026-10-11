@@ -127,6 +127,7 @@ const PLAN_FEATURE_BY_ITEM: Partial<
   Record<AdminMoreItemId, RetailOpsPlanFeature>
 > = {
   finance: "finance",
+  "order-reminders": "orderReminders",
   "receipt-settings": "invoices",
   team: "staff",
 }

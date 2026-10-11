@@ -136,12 +136,14 @@ describe("admin mobile navigation", () => {
     expect(free).not.toContain("finance")
     expect(free).not.toContain("receipt-settings")
     expect(free).not.toContain("team")
+    expect(free).not.toContain("order-reminders")
     expect(free).toContain("customers")
     expect(free).toContain("plan-billing")
     for (const unrestricted of [ids(getPlan("starter").features), ids()]) {
       expect(unrestricted).toContain("finance")
       expect(unrestricted).toContain("receipt-settings")
       expect(unrestricted).toContain("team")
+      expect(unrestricted).toContain("order-reminders")
     }
   })
 })
