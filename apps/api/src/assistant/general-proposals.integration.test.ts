@@ -1,3 +1,4 @@
+import { verifyHeldCreditRefundComposition } from "./general-held-credit-refund.integration-check"
 import { verifyProductReturnComposition } from "./general-product-return.integration-check"
 import { verifyBulkFulfillmentComposition } from "./general-bulk-fulfillment.integration-check"
 import { verifyFulfillmentComposition } from "./general-fulfillment.integration-check"
@@ -235,7 +236,7 @@ if (enabled) {
           await verifyGeneralProductTransport(ctx, session.token)
           return
         }
-        if (process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
+        if (process.env.RUN_GENERAL_HELD_CREDIT_REFUND === "1" || process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
           console.info("Focused command acceptance: transport runs in the default suite")
         } else if (
           process.env.RUN_GENERAL_STOCK_TRANSFER === "1" &&
@@ -313,6 +314,10 @@ if (enabled) {
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_HELD_CREDIT_REFUND === "1") {
+          await verifyHeldCreditRefundComposition(ctx, failingDb, conversation.id)
+          return
+        }
         if (process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
           await verifyProductReturnComposition(ctx, failingDb, conversation.id)
           return
