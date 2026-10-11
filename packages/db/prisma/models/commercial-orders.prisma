@@ -47,6 +47,8 @@ model CommercialOrder {
   prescriptionDeliveryAddress    PrescriptionDeliveryAddress?
   prescriptionDeliveryAssignment PrescriptionDeliveryAssignment?
   serviceBookings                ServiceBooking[]
+  activities                     CommercialOrderActivity[]
+  attachments                    CommercialOrderAttachment[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, clientOrderId])
@@ -328,4 +330,49 @@ model CommercialOrderAmendment {
   @@unique([tenantId, clientOperationId])
   @@index([tenantId, orderId, createdAt])
   @@index([tenantId, replacementOrderId])
+}
+
+/// Staff notes and evidence on an Order; append-only, newest last.
+model CommercialOrderActivity {
+  id               String                      @id @default(cuid())
+  tenantId         String
+  orderId          String
+  clientActivityId String
+  payloadHash      String
+  actorUserId      String
+  body             String?
+  /// "staff" from the order screens, "assistant" when attached through chat.
+  source           String                      @default("staff")
+  createdAt        DateTime                    @default(now())
+  order            CommercialOrder             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  attachments      CommercialOrderAttachment[]
+
+  @@unique([tenantId, clientActivityId])
+  @@index([orderId, createdAt])
+}
+
+/// Private photo or document on an Order activity; bytes live in private storage.
+model CommercialOrderAttachment {
+  id               String                          @id @default(cuid())
+  tenantId         String
+  orderId          String
+  activityId       String
+  kind             CommercialOrderAttachmentKind
+  status           CommercialOrderAttachmentStatus @default(PENDING_UPLOAD)
+  contentType      String
+  contentDigest    String
+  sizeBytes        Int
+  originalFileName String?
+  storageProvider  String?
+  storageStoreId   String?
+  storagePath      String?
+  uploadExpiresAt  DateTime
+  uploadedAt       DateTime?
+  createdAt        DateTime                        @default(now())
+  order            CommercialOrder                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  activity         CommercialOrderActivity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([activityId])
+  @@index([status, uploadExpiresAt])
 }

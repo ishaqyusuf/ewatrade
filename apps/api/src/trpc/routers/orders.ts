@@ -43,6 +43,7 @@ import {
   orderReceiptSettingsGetSchema,
   orderReceiptSettingsSaveSchema,
 } from "../../schemas/order-receipts"
+import { orderActivityRouter } from "./order-activity"
 import { orderAmendmentProcedures } from "./order-amendments"
 
 import {
@@ -192,6 +193,7 @@ const reminderProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 export const ordersRouter = createTRPCRouter({
   ...orderAmendmentProcedures,
+  activity: orderActivityRouter,
   receiptSettings: protectedProcedure
     .input(orderReceiptSettingsGetSchema)
     .query(async ({ ctx, input }) => {

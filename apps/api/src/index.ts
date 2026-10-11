@@ -19,6 +19,7 @@ import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
 import { registerAssistantAttachmentRoutes } from "./assistant/attachment-upload"
+import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
 import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
@@ -198,6 +199,7 @@ registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerAssistantChatRoutes(app)
 registerAssistantAttachmentRoutes(app)
+registerOrderAttachmentRoutes(app)
 registerVoiceGatewayRoutes(app)
 registerGeneralAssistantChatRoutes(app)
 registerPrescriptionMediaDeliveryRoutes(app)

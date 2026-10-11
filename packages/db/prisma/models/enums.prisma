@@ -95,6 +95,17 @@ enum CatalogRecordStatus {
   ARCHIVED
 }
 
+enum CommercialOrderAttachmentKind {
+  IMAGE
+  DOCUMENT
+  VIDEO
+}
+
+enum CommercialOrderAttachmentStatus {
+  PENDING_UPLOAD
+  READY
+}
+
 enum CatalogSystemRole {
   QUICK_SALE
   ADDITIONAL_COST
