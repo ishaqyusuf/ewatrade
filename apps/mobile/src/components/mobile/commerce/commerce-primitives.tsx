@@ -78,10 +78,8 @@ export function CommerceFilterChip({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={cn(
-        "min-h-11 min-w-20 items-center justify-center rounded-xl px-5",
-        active
-          ? "bg-foreground"
-          : "border border-border bg-card active:bg-accent",
+        "min-h-11 min-w-20 items-center justify-center rounded-xl border px-5",
+        active ? "border-foreground bg-foreground" : "border-border bg-card",
       )}
       haptic
       onPress={onPress}
