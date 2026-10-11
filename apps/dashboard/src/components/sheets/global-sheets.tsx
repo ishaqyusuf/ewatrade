@@ -11,6 +11,7 @@ import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
 import { DomainSheet } from "./domain-sheet"
+import { FinanceMovementDetailsSheet } from "./finance-movement-details-sheet"
 import { FinanceSheet } from "./finance-sheet"
 import { InventoryOperationDetailsSheet } from "./inventory-operation-details-sheet"
 import { OrderDetailsSheet } from "./order-details-sheet"
@@ -91,6 +92,7 @@ export function GlobalSheets({
       {access.finance ? (
         <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
       ) : null}
+      {access.finance ? <FinanceMovementDetailsSheet /> : null}
       {access.finance ? (
         <FinanceSheet
           actorUserId={actorUserId}

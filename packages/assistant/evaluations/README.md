@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| `finance.money_movement.record` v1 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
 | Apply/release customer credit | [1](fixtures/customer-credit.v1.md) | Source resolution, partial amounts, ambiguity, no-cash boundaries, stale/authority, retry, Order provenance | None yet |
 | `customers.receipt.record` v1 | [1](fixtures/customer-receipt.v1.md) | New deposit, existing order payment, ambiguity, stale/closed targets, authority, atomic retry, receipt | None yet |
 | `finance.money_accounts.read` v1 | [1](fixtures/money-accounts.v1.md) | Book scope, account ambiguity, continuation, balance boundary, access refusal | None yet |
@@ -19,6 +20,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Money movement proposals and components, 11 October 2026](runs/2026-10-11-money-movement-adapter.md): 7 tests/73 assertions; editor validation and unavailable global receipt checks passed; database/full web acceptance pending.
 
 - [Money movement preview, 11 October 2026](runs/2026-10-11-money-movement-review.md): shared canonical account resolution and exact review data;5 tests/55 assertions and scoped types pass; adapter/UI acceptance pending.
 

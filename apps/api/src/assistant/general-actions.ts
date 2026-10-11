@@ -1,3 +1,4 @@
+import { moneyMovement } from "./general-money-movement"
 import { customerCreditApply } from "./general-customer-credit-apply"
 import { customerAllocationRelease } from "./general-customer-allocation-release"
 import { customerReceipt } from "./general-customer-receipt"
@@ -545,6 +546,7 @@ const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
   customer_receipt: customerReceipt,
+  money_movement: moneyMovement,
   customer_credit_apply: customerCreditApply,
   customer_allocation_release: customerAllocationRelease,
   held_credit_refund: heldCreditRefund,
