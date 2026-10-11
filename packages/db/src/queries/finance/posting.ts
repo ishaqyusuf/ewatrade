@@ -254,7 +254,7 @@ async function postEarnedInventoryCostInTransaction(
 /** Private supported-source composition; callers already hold Book/Order locks. */
 export async function postProductReturnFinanceJournalInTransaction(
   tx: Prisma.TransactionClient,
-  source: { tenantId: string; productReturnId: string; recordedValuation?: object },
+  source: { tenantId: string; productReturnId: string; recordedValuation?: object; journalReviewToken?: object },
 ) {
   const cost = await resolveCommerceInventoryReturnPosting(tx, source)
   if (!cost) return null

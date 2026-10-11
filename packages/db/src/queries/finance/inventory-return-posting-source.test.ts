@@ -779,3 +779,28 @@ test("recorded journal evidence refuses forged, cross-transaction and cross-retu
     expect(() => consumeRecordedProductReturn(token, tx, scope)).toThrow()
   }
 })
+
+test("fresh locked journal preview is reused after current cost validation", async () => {
+  const { previewProductReturnJournal } = await import("./preview-product-return-journal")
+  const { lockProductReturnJournalReview } = await import("./product-return-journal-review-snapshot")
+  const { lockCommerceFinancialOrder } = await import("../customer-ledger/commerce-locks")
+  const tx = fixture()
+  const row = await tx.productReturn.findFirst({})
+  if (!row) throw new Error("Missing return")
+  row.clientReturnId = "command"
+  const scope = { tenantId: "tenant-1", storeId: "store-1", orderId: "order-1", clientReturnId: "command" }
+  const held = await lockCommerceFinancialOrder(tx, scope)
+  if (!held) throw new Error("Missing lock")
+  const preview = await previewProductReturnJournal(tx, { ...scope, disposition: "restock", bookId: "book-1", sourceCostMinor: "400" })
+  expect(preview.status).toBe("WILL_POST")
+  const token = lockProductReturnJournalReview(preview, tx, held, scope)
+  expect(token).toBeDefined()
+  tx.financeJournalEntry.findUnique = (() => { throw new Error("Repeated original-journal read") }) as typeof tx.financeJournalEntry.findUnique
+  const result = await resolveCommerceInventoryReturnPosting(tx, {
+    tenantId: scope.tenantId, productReturnId: "return-1", journalReviewToken: token,
+  })
+  expect(result?.input.lines[0]?.amountMinor).toBe("400")
+  await expect(resolveCommerceInventoryReturnPosting(tx, {
+    tenantId: scope.tenantId, productReturnId: "return-1", journalReviewToken: token,
+  })).rejects.toMatchObject({ code: "CONFLICT" })
+})

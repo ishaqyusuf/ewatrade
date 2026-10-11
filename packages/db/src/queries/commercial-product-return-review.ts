@@ -11,12 +11,17 @@ type ReturnReviewInput = Pick<ReturnCommercialOrderProductLineInput,
 
 /** Stock-only evidence. A complete assistant review must also bind financial effects. */
 export async function getCommercialProductReturnStockReview(db: Prisma.TransactionClient, input: ReturnReviewInput) {
+  return (await readCommercialProductReturnStockReview(db, input)).review
+}
+
+/** Internal composition shares the scoped line read with cost review. */
+export async function readCommercialProductReturnStockReview(db: Prisma.TransactionClient, input: ReturnReviewInput) {
   const line = await db.commercialOrderLine.findFirst({
     where: { id: input.orderLineId, kind: "PRODUCT_UNIT", order: { tenantId: input.tenantId, storeId: input.storeId } },
     include: {
       snapshot: true,
       order: { select: {
-        id: true, orderNumber: true, status: true, currencyCode: true,
+        id: true, tenantId: true, storeId: true, orderNumber: true, status: true, currencyCode: true,
         acceptedCommerceQuoteVersion: { select: { quote: { select: { sourceType: true } } } },
         prescriptionPickupFulfillment: { select: { orderId: true } },
         prescriptionDeliveryAssignment: { select: { orderId: true } },
@@ -60,7 +65,7 @@ export async function getCommercialProductReturnStockReview(db: Prisma.Transacti
     }
     balanceEvidence = balance
   }
-  return {
+  const review = {
     orderId: line.order.id, orderLineId: line.id, orderNumber: line.order.orderNumber,
     productName: snapshot.catalogItemName, offeringName: snapshot.offeringName,
     currencyCode: line.order.currencyCode, disposition: input.disposition, quantities, stock,
@@ -68,4 +73,5 @@ export async function getCommercialProductReturnStockReview(db: Prisma.Transacti
     // This digest is deliberately named stockRevision: it is insufficient for confirmation.
     stockRevision: createHash("sha256").update(JSON.stringify({ input, line, balanceEvidence }, (_key, value) => typeof value === "bigint" ? value.toString() : value)).digest("hex"),
   }
+  return { review, line }
 }

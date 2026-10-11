@@ -1,3 +1,4 @@
+import { consumeProductReturnJournalReview } from "./product-return-journal-review-snapshot"
 import { consumeRecordedProductReturn } from "./product-return-journal-source-snapshot"
 import { reviewProductReturnJournal } from "./product-return-journal-review"
 import {
@@ -28,7 +29,7 @@ function conflict(message: string): never {
 /** Resolve a RESTOCK journal solely from the immutable registered return cost. */
 export async function resolveCommerceInventoryReturnPosting(
   tx: Prisma.TransactionClient,
-  source: { tenantId: string; productReturnId: string; recordedValuation?: object },
+  source: { tenantId: string; productReturnId: string; recordedValuation?: object; journalReviewToken?: object },
 ): Promise<{ book: FinanceBook; input: FinancePostingInput } | null> {
   return resolveCommerceInventoryReturnSource(tx, source)
 }
@@ -45,7 +46,7 @@ export async function resolveHistoricalCommerceInventoryReturnPosting(
 
 async function resolveCommerceInventoryReturnSource(
   tx: Prisma.TransactionClient,
-  source: { tenantId: string; productReturnId: string; recordedValuation?: object },
+  source: { tenantId: string; productReturnId: string; recordedValuation?: object; journalReviewToken?: object },
   history?: {
     source: FinanceActor & { bookId: string }
     context: ReviewedCostBookContext
@@ -359,7 +360,13 @@ async function resolveCommerceInventoryReturnSource(
   )
     conflict("Product return valuation does not conserve its registered cost.")
 
-  const journalReview = await reviewProductReturnJournal(tx, {
+  const journalReview = source.journalReviewToken
+    ? consumeProductReturnJournalReview(source.journalReviewToken, tx, {
+        tenantId: source.tenantId, storeId: order.storeId, orderId: order.id,
+        bookId: book.id, sourceCostMinor: registered.sourceCostMinor.toString(),
+        clientReturnId: productReturn.clientReturnId,
+      })
+    : await reviewProductReturnJournal(tx, {
     tenantId: source.tenantId, bookId: book.id, productReturnId: productReturn.id,
     sourceCostMinor: registered.sourceCostMinor, order, historical: !!history,
     resolveGross: () => history

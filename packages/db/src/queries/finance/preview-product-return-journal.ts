@@ -1,3 +1,4 @@
+import { rememberProductReturnJournalReview } from "./product-return-journal-review-snapshot"
 import type { Prisma } from "../../../generated/prisma/client"
 import { resolveCommerceInventoryCostPosting } from "./inventory-cost-posting-source"
 import { reviewProductReturnJournal } from "./product-return-journal-review"
@@ -21,12 +22,13 @@ export async function previewProductReturnJournal(db: Prisma.TransactionClient, 
     sourceCostMinor: BigInt(input.sourceCostMinor),
     resolveGross: () => resolveCommerceInventoryCostPosting(db, { tenantId: input.tenantId, orderId: order.id }),
   })
-  if (!reviewed) return { status: input.sourceCostMinor === "0" ? "ZERO_COST" as const : "WAITING_FOR_ORIGINAL_COGS" as const }
-  return {
+  const result = !reviewed ? { status: input.sourceCostMinor === "0" ? "ZERO_COST" as const : "WAITING_FOR_ORIGINAL_COGS" as const } : {
     status: "WILL_POST" as const, amountMinor: input.sourceCostMinor,
     debitAccountId: reviewed.inventoryAccountId, creditAccountId: reviewed.costOfSalesAccountId,
     debit: "Inventory", credit: "Cost of sales",
     earliestEffectiveAt: reviewed.grossEffectiveAt.toISOString(),
     revision: reviewed.revision,
   }
+  rememberProductReturnJournalReview(result, db, { ...input, bookId: input.bookId, sourceCostMinor: input.sourceCostMinor }, reviewed)
+  return result
 }

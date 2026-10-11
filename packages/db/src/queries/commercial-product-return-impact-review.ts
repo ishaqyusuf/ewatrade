@@ -1,8 +1,8 @@
 import { previewProductReturnJournal } from "./finance/preview-product-return-journal"
 import { createHash } from "node:crypto"
 import type { Prisma } from "../../generated/prisma/client"
-import { getCommercialProductReturnStockReview } from "./commercial-product-return-review"
-import { previewProductReturnOriginalCost } from "./finance/preview-product-return-cost"
+import { getCommercialProductReturnStockReview, readCommercialProductReturnStockReview } from "./commercial-product-return-review"
+import { previewProductReturnOriginalCostFromSource } from "./finance/preview-product-return-cost"
 import { productReturnDestinationImpact } from "./finance/product-return-destination-impact"
 
 /** Complete impact evidence; confirmation must repeat this under canonical locks. */
@@ -10,8 +10,13 @@ export async function getCommercialProductReturnImpactReview(
   db: Prisma.TransactionClient,
   input: Parameters<typeof getCommercialProductReturnStockReview>[1],
 ) {
-  const stockReview = await getCommercialProductReturnStockReview(db, input)
-  const originalCost = await previewProductReturnOriginalCost(db, input)
+  const { review: stockReview, line } = await readCommercialProductReturnStockReview(db, input)
+  const originalCost = await previewProductReturnOriginalCostFromSource(db, input, {
+    id: line.id,
+    order: { currencyCode: line.order.currencyCode, tenantId: line.order.tenantId, storeId: line.order.storeId },
+    productFulfillments: [...line.productFulfillments].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).map(({ quantity }) => ({ quantity })),
+    productReturns: [...line.productReturns].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).map(({ quantity }) => ({ quantity })),
+  })
   let destination = null
   let destinationEvidence = null
   if (stockReview.stock && originalCost.bookId) {

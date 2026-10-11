@@ -1,3 +1,4 @@
+import { lockProductReturnJournalReview } from "./finance/product-return-journal-review-snapshot"
 import { lockProductReturnSource } from "./finance/product-return-source-snapshot"
 import type { Prisma } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
@@ -37,5 +38,8 @@ export async function assertCommercialProductReturnReview(
   })
   if (review.impactRevision !== input.expectedReviewRevision)
     throw new CatalogError("REVISION_CONFLICT", "Return quantities, stock or cost evidence changed. Review the return again.")
-  return { ...review, costSourceToken: lockProductReturnSource(review.originalCost, tx, heldOrder, input) }
+  return { ...review,
+    costSourceToken: lockProductReturnSource(review.originalCost, tx, heldOrder, input),
+    journalReviewToken: lockProductReturnJournalReview(review.journal, tx, heldOrder, input),
+  }
 }

@@ -6,19 +6,34 @@ import { productReturnValuationInclude } from "./product-return-evidence"
 import { reviewOriginalProductReturnCost } from "./product-return-cost-source"
 import { FinanceError } from "./rules"
 
+type CostReviewInput = { tenantId: string; storeId: string; orderLineId: string; quantity: string }
+type CostQuantitySource = {
+  id: string
+  order: { currencyCode: string; tenantId: string; storeId: string }
+  productFulfillments: { quantity: Prisma.Decimal }[]
+  productReturns: { quantity: Prisma.Decimal }[]
+}
+
 /** Original source cost only: destination pool and journal effects need separate review. */
-export async function previewProductReturnOriginalCost(db: Prisma.TransactionClient, input: {
-  tenantId: string; storeId: string; orderLineId: string; quantity: string
-}) {
+export async function previewProductReturnOriginalCost(db: Prisma.TransactionClient, input: CostReviewInput) {
   const source = await db.commercialOrderLine.findFirst({
     where: { id: input.orderLineId, kind: "PRODUCT_UNIT", order: { tenantId: input.tenantId, storeId: input.storeId } },
     select: {
-      id: true, order: { select: { currencyCode: true } },
+      id: true, order: { select: { currencyCode: true, tenantId: true, storeId: true } },
       productFulfillments: { orderBy: { id: "asc" }, select: { quantity: true } },
       productReturns: { orderBy: { id: "asc" }, select: { quantity: true } },
     },
   })
   if (!source) throw new FinanceError("NOT_FOUND", "Fulfilled Product line not found in this Store.")
+  return previewProductReturnOriginalCostFromSource(db, input, source)
+}
+
+/** Internal same-review composition; source must come from its scoped stock read. */
+export async function previewProductReturnOriginalCostFromSource(
+  db: Prisma.TransactionClient, input: CostReviewInput, source: CostQuantitySource,
+) {
+  if (source.id !== input.orderLineId || source.order.tenantId !== input.tenantId || source.order.storeId !== input.storeId)
+    throw new FinanceError("CONFLICT", "Return quantity evidence belongs to another Store or line.")
   productReturnQuantityImpact({
     quantity: input.quantity,
     fulfilledQuantities: source.productFulfillments.map(value => value.quantity.toFixed()),
