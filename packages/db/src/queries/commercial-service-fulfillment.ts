@@ -6,7 +6,7 @@ import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
 import { readCommercialOrderLinesComplete } from "./commercial-order-completion"
-import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
+import { assertHeldCommerceFinancialOrder, lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 
 const FULFILLMENT_COMMAND_ID_MIN_LENGTH = 8
 const FULFILLMENT_COMMAND_ID_MAX_LENGTH = 160
@@ -166,6 +166,7 @@ export function fulfillCommercialOrderChargeOnlyServiceLine(
 export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
   tx: Prisma.TransactionClient,
   input: FulfillCommercialOrderChargeOnlyServiceLineInput,
+  heldOrder?: NonNullable<Awaited<ReturnType<typeof lockCommerceFinancialOrder>>>,
 ) {
   const normalized = validateInput(input)
   const hash = payloadHash({
@@ -190,7 +191,10 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
       throw new CatalogError("ORDER_NOT_FOUND", "Service Order line not found.")
     }
 
-    const locked = await lockCommerceFinancialOrder(tx, {
+    if (heldOrder) assertHeldCommerceFinancialOrder(tx, heldOrder, {
+      tenantId: input.tenantId, orderId: discovered.orderId,
+    })
+    const locked = heldOrder ?? await lockCommerceFinancialOrder(tx, {
       orderId: discovered.orderId,
       tenantId: input.tenantId,
     })

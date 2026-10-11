@@ -1,6 +1,19 @@
 import type { Prisma } from "../../../generated/prisma/client"
 import { CatalogError } from "../catalog"
 
+// Lock evidence is valid only for the transaction and scope that acquired it.
+const heldOrderLocks = new WeakMap<object, { tx: Prisma.TransactionClient; tenantId: string; orderId: string }>()
+
+export function assertHeldCommerceFinancialOrder(
+  tx: Prisma.TransactionClient,
+  lock: object,
+  input: { tenantId: string; orderId: string },
+) {
+  const held = heldOrderLocks.get(lock)
+  if (!held || held.tx !== tx || held.tenantId !== input.tenantId || held.orderId !== input.orderId)
+    throw new CatalogError("REVISION_CONFLICT", "Order lock does not belong to this transaction and scope.")
+}
+
 /** Coordination only; callers retain the existing commerce authorization boundary. */
 export async function lockCommerceFinancialContext(
   tx: Prisma.TransactionClient,
@@ -74,5 +87,7 @@ export async function lockCommerceFinancialOrder(
       "Order financial ownership changed. Reload the Order before retrying.",
     )
   }
-  return { context, order }
+  const locked = { context, order }
+  heldOrderLocks.set(locked, { tx, tenantId: input.tenantId, orderId: input.orderId })
+  return locked
 }

@@ -503,7 +503,7 @@ async function applyCommercialOrderProductsInTransaction(
       schemaVersion: input.schemaVersion,
       storeId: lockedOrder.order.storeId,
       tenantId: input.tenantId,
-    })
+    }, lockedOrder)
   }
 
   for (const line of unfulfilledProductLines) {
