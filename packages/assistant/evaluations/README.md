@@ -21,6 +21,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Saved movement receipt web check, 11 October 2026](runs/2026-10-11-money-movement-receipt-web.md): Open displays exact recorded journal over assistant; Close preserves chat; backend-confirmed QA record and cleanup verified. Full dashboard confirmation remains pending.
+
 - [Owner funds and concurrent confirmation, 11 October 2026](runs/2026-10-11-money-movement-owner-database.md): 51 assertions passed for transfer/owner journals, simultaneous confirmation recovery and period closed after review; cleanup verified.
 
 - [Money movement database acceptance, 11 October 2026](runs/2026-10-11-money-movement-database.md): 25 assertions passed for transfer rollback/replay, balanced journal and canonical receipt; owned cleanup verified. Owner-funds/concurrency/full web acceptance remain pending.
