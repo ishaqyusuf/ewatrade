@@ -12,10 +12,12 @@ import * as DocumentPicker from "expo-document-picker"
 import { File } from "expo-file-system"
 import * as ImagePicker from "expo-image-picker"
 import { fetch } from "expo/fetch"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 export type AssistantReceipt = {
   localId: string
+  /** Voice notes are written out into the box, never sent as files. */
+  audio: boolean
   fileName: string
   phase: "uploading" | "reading" | "ready" | "failed"
   attachmentId: string | null
@@ -62,7 +64,12 @@ async function uploadBytes(path: string, buffer: ArrayBuffer, type: string) {
 }
 
 /** Receipt photos and PDFs for the business chat: pick, upload, wait until read. */
-export function useAssistantReceipts(conversationId: string) {
+export function useAssistantReceipts(
+  conversationId: string,
+  onTranscript: (text: string) => void = () => undefined,
+) {
+  const onTranscriptRef = useRef(onTranscript)
+  onTranscriptRef.current = onTranscript
   const trpc = useTRPC()
   const createIntent = useMutation(
     trpc.setupAssistant.attachments.createIntent.mutationOptions(),
@@ -70,14 +77,22 @@ export function useAssistantReceipts(conversationId: string) {
   const remove = useMutation(
     trpc.setupAssistant.attachments.remove.mutationOptions(),
   )
-  const [items, setItems] = useState<AssistantReceipt[]>([])
-  const mounted = useRef(true)
-  useEffect(
-    () => () => {
-      mounted.current = false
+  const [items, setItemsState] = useState<AssistantReceipt[]>([])
+  const itemsRef = useRef(items)
+  const setItems = useCallback(
+    (updater: (current: AssistantReceipt[]) => AssistantReceipt[]) => {
+      itemsRef.current = updater(itemsRef.current)
+      setItemsState(itemsRef.current)
     },
     [],
   )
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const update = (localId: string, patch: Partial<AssistantReceipt>) => {
     if (mounted.current)
       setItems((current) =>
@@ -97,29 +112,48 @@ export function useAssistantReceipts(conversationId: string) {
     ),
   )
   useEffect(() => {
-    for (const row of status.data ?? [])
-      if (row.status === "READY" || row.status === "FAILED")
+    for (const row of status.data ?? []) {
+      if (row.status !== "READY" && row.status !== "FAILED") continue
+      const item = itemsRef.current.find(
+        (entry) => entry.attachmentId === row.id && entry.phase === "reading",
+      )
+      if (!item) continue
+      if (item.audio && row.status === "READY") {
+        // Written out: the words go into the box; the recording is not sent.
+        if (row.transcript?.trim()) onTranscriptRef.current(row.transcript)
         setItems((current) =>
-          current.map((item) =>
-            item.attachmentId === row.id && item.phase === "reading"
-              ? row.status === "READY"
-                ? { ...item, phase: "ready" }
-                : {
-                    ...item,
-                    phase: "failed",
-                    error: "This file could not be read.",
-                  }
-              : item,
-          ),
+          current.filter((entry) => entry.localId !== item.localId),
         )
-  }, [status.data])
+        continue
+      }
+      setItems((current) =>
+        current.map((entry) =>
+          entry.localId === item.localId
+            ? row.status === "READY"
+              ? { ...entry, phase: "ready" }
+              : {
+                  ...entry,
+                  phase: "failed",
+                  error: item.audio
+                    ? "The voice note could not be written out."
+                    : "This file could not be read.",
+                }
+            : entry,
+        ),
+      )
+    }
+  }, [status.data, setItems])
 
-  async function add(file: {
-    uri: string
-    mimeType: string
-    fileName: string
-    sizeBytes: number
-  }) {
+  async function add(
+    file: {
+      uri: string
+      mimeType: string
+      fileName: string
+      sizeBytes: number
+    },
+    options: { audio?: boolean } = {},
+  ) {
+    const audio = options.audio === true
     const localId = Crypto.randomUUID()
     const failed = (error: string) =>
       update(localId, { error, phase: "failed" })
@@ -127,13 +161,17 @@ export function useAssistantReceipts(conversationId: string) {
       ...current,
       {
         attachmentId: null,
+        audio,
         error: null,
         fileName: file.fileName,
         localId,
         phase: "uploading",
       },
     ])
-    if (!(ORDER_ATTACHMENT_TYPES as readonly string[]).includes(file.mimeType))
+    if (
+      !audio &&
+      !(ORDER_ATTACHMENT_TYPES as readonly string[]).includes(file.mimeType)
+    )
       return failed(refusal.UNSUPPORTED_TYPE ?? "")
     if (file.sizeBytes <= 0 || file.sizeBytes > ORDER_ATTACHMENT_MAX_BYTES)
       return failed(refusal.TOO_LARGE ?? "")
@@ -207,9 +245,24 @@ export function useAssistantReceipts(conversationId: string) {
   }
 
   return {
-    items,
+    items: items.filter((item) => !item.audio),
+    /** A voice note is uploading or being written out. */
+    transcribing: items.some((item) => item.audio && item.phase !== "failed"),
+    voiceError: items.find((item) => item.audio && item.phase === "failed")
+      ?.error,
+    addRecording: (file: { uri: string; size: number }) =>
+      add(
+        {
+          fileName: "voice-note.m4a",
+          mimeType: "audio/mp4",
+          sizeBytes: file.size,
+          uri: file.uri,
+        },
+        { audio: true },
+      ),
+    clear: () => setItems(() => []),
     ready: items.flatMap((item) =>
-      item.phase === "ready" && item.attachmentId
+      !item.audio && item.phase === "ready" && item.attachmentId
         ? [{ attachmentId: item.attachmentId, fileName: item.fileName }]
         : [],
     ),

@@ -61,6 +61,7 @@ const Calendar = hugeIcon("Calendar")
 const CalendarCheck = hugeIcon("CalendarCheckIn01Icon")
 const Camera = hugeIcon("Camera")
 const Video = hugeIcon("Video01Icon")
+const Mic = hugeIcon("Mic01Icon")
 const Calculator = hugeIcon("CalculatorIcon")
 const ChartNoAxesColumn = hugeIcon("Analytics01Icon")
 const Check = hugeIcon("Check")
@@ -295,6 +296,7 @@ const appIcons = {
   CalendarCheck,
   Camera,
   Video,
+  Mic,
   Calculator,
   Check,
   CheckSquare,

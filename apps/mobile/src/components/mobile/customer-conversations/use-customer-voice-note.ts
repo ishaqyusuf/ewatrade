@@ -143,14 +143,19 @@ export function useCustomerVoiceNote(input: {
       return
     }
     if (recorderState.isRecording) {
-      setState((current) => ({
-        elapsedMs: recorderState.durationMillis,
-        kind: "recording",
-        levels: appendVoiceWaveformLevel(
-          current.kind === "recording" ? current.levels : [],
-          recorderState.metering,
-        ),
-      }))
+      // A late meter tick must not revive a recording that just stopped.
+      setState((current) =>
+        current.kind === "recording"
+          ? {
+              elapsedMs: recorderState.durationMillis,
+              kind: "recording",
+              levels: appendVoiceWaveformLevel(
+                current.levels,
+                recorderState.metering,
+              ),
+            }
+          : current,
+      )
       return
     }
     if (recorderState.durationMillis > 0 && recorderState.url) {
@@ -159,12 +164,10 @@ export function useCustomerVoiceNote(input: {
   }, [finalize, recorderState, state.kind, stop])
 
   useEffect(() => {
+    // Asking for the microphone briefly backgrounds Android, so only a
+    // recording in progress is discarded when the app leaves the foreground.
     const subscription = AppState.addEventListener("change", (next) => {
-      if (
-        next !== "active" &&
-        (state.kind === "recording" || state.kind === "requesting")
-      )
-        void stop(true)
+      if (next !== "active" && state.kind === "recording") void stop(true)
     })
     return () => subscription.remove()
   }, [state.kind, stop])

@@ -17,8 +17,8 @@ import { fetch as expoFetch } from "expo/fetch"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AppState } from "react-native"
 import { z } from "zod"
+import type { AssistantReadyFile } from "./assistant-chat-box"
 import { assistantError } from "./assistant-error"
-import type { AssistantReadyFile } from "./assistant-receipt-tray"
 import {
   assistantRequestHeaders,
   assistantScopeKey,

@@ -5,8 +5,8 @@ import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useRouter } from "expo-router"
-import type { ReactNode } from "react"
-import { ActivityIndicator, TextInput } from "react-native"
+import { type ReactNode, useEffect, useState } from "react"
+import { ActivityIndicator, Text as NativeText, TextInput } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { AssistantText } from "./assistant-text"
 
@@ -123,6 +123,27 @@ export function AssistantBubble({
   )
 }
 
+export type AssistantComposerVoice = {
+  recording: boolean
+  /** Uploading or writing out the recording. */
+  working: boolean
+  elapsedLabel: string
+  status: string | null
+  error: string | null
+  start: () => void
+  /** Stop and write the words into the box to check before sending. */
+  stop: () => void
+  /** Stop, write the words out and send them. */
+  stopAndSend: () => void
+  cancel: () => void
+  dismiss: () => void
+}
+
+/**
+ * One rounded box: + (attach) · text · mic · send. It stacks — text on top,
+ * buttons underneath — once the message wraps, and stays stacked until the
+ * box is cleared. The text field keeps its place so focus survives.
+ */
 export function AssistantComposer({
   value,
   placeholder = "Tell me about your business…",
@@ -135,6 +156,9 @@ export function AssistantComposer({
   children,
   inputRef,
   canSendEmpty = false,
+  onAttach,
+  attachOpen = false,
+  voice,
 }: {
   /** Files are ready, so an empty message may be sent. */
   canSendEmpty?: boolean
@@ -147,13 +171,72 @@ export function AssistantComposer({
   busy: boolean
   disabled: boolean
   reason?: string
+  /** Shown inside the box, above the text (attachments, attach menu). */
   children?: ReactNode
+  /** Shows the + button. */
+  onAttach?: () => void
+  attachOpen?: boolean
+  /** Shows the mic. */
+  voice?: AssistantComposerVoice
 }) {
   const insets = useSafeAreaInsets()
   const colors = useColors()
+  const [wrapped, setWrapped] = useState(false)
+  useEffect(() => {
+    if (!value) setWrapped(false)
+  }, [value])
+  const stacked = wrapped || value.includes("\n")
+  const working = voice?.working === true
+  const sendDisabled =
+    !busy || !onStop
+      ? disabled || working || (!value.trim() && !canSendEmpty)
+      : false
+  const plus = onAttach ? (
+    <ComposerIcon
+      icon={attachOpen ? "X" : "Plus"}
+      label={attachOpen ? "Close attach menu" : "Attach a photo or file"}
+      disabled={disabled || busy}
+      onPress={onAttach}
+    />
+  ) : null
+  const mic = voice ? (
+    <ComposerIcon
+      icon="Mic"
+      label="Record a voice note"
+      disabled={disabled || busy || working}
+      onPress={voice.start}
+    />
+  ) : null
+  const send = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={busy ? "Stop reply" : "Send message"}
+      accessibilityState={{ disabled: !busy && sendDisabled }}
+      disabled={!busy && sendDisabled}
+      haptic
+      onPress={busy ? onStop : onSend}
+      style={{
+        alignItems: "center",
+        backgroundColor: !busy && sendDisabled ? colors.muted : colors.primary,
+        borderRadius: 999,
+        height: 38,
+        justifyContent: "center",
+        width: 38,
+      }}
+    >
+      <Icon
+        name={busy ? "Square" : "ArrowUp"}
+        className="size-[19px]"
+        color={
+          !busy && sendDisabled
+            ? colors.mutedForeground
+            : colors.primaryForeground
+        }
+      />
+    </Pressable>
+  )
   return (
     <View className="gap-2 border-t border-border bg-background px-3 pt-2">
-      {children}
       {reason ? (
         <Text
           accessibilityLiveRegion="polite"
@@ -162,41 +245,181 @@ export function AssistantComposer({
           {reason}
         </Text>
       ) : null}
-      <View className="flex-row items-end gap-2">
-        <TextInput
-          ref={inputRef}
-          accessibilityLabel="Message the assistant"
-          className="min-h-[46px] max-h-[160px] flex-1 rounded-[23px] bg-card px-4 py-3 text-sm text-foreground"
-          editable={!disabled && !busy}
-          maxLength={8000}
-          multiline
-          placeholder={placeholder}
-          placeholderTextColor={colors.mutedForeground}
-          value={value}
-          onChangeText={onChange}
-        />
+      {voice?.error ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={busy ? "Stop reply" : "Send message"}
-          accessibilityState={{
-            disabled: !busy && (disabled || (!value.trim() && !canSendEmpty)),
-          }}
-          disabled={!busy && (disabled || (!value.trim() && !canSendEmpty))}
-          className="size-[46px] items-center justify-center rounded-full bg-primary disabled:bg-muted"
-          onPress={busy ? onStop : onSend}
+          accessibilityLabel="Dismiss voice note error"
+          onPress={voice.dismiss}
         >
-          <Icon
-            name={busy ? "Square" : "ArrowUp"}
-            className={
-              !busy && (disabled || (!value.trim() && !canSendEmpty))
-                ? "size-[21px] text-muted-foreground"
-                : "size-[21px] text-primary-foreground"
-            }
-          />
+          <Text className="text-xs text-destructive">{voice.error}</Text>
         </Pressable>
+      ) : voice?.status ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-xs text-muted-foreground"
+        >
+          {voice.status}
+        </Text>
+      ) : null}
+      <View
+        style={{
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderRadius: 26,
+          borderWidth: 1,
+          gap: 6,
+          paddingHorizontal: 6,
+          paddingVertical: 6,
+        }}
+      >
+        {children}
+        {voice?.recording ? (
+          <View className="min-h-[38px] flex-row items-center gap-2 px-1">
+            <ComposerIcon
+              icon="X"
+              label="Cancel recording"
+              disabled={false}
+              onPress={voice.cancel}
+            />
+            <View className="size-2 rounded-full bg-destructive" />
+            <Text className="flex-1 text-sm tabular-nums text-foreground">
+              Recording {voice.elapsedLabel}
+            </Text>
+            <ComposerIcon
+              icon="Square"
+              label="Stop and put the words in the box"
+              disabled={false}
+              onPress={voice.stop}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Stop and send"
+              haptic
+              onPress={voice.stopAndSend}
+              style={{
+                alignItems: "center",
+                backgroundColor: colors.primary,
+                borderRadius: 999,
+                height: 38,
+                justifyContent: "center",
+                width: 38,
+              }}
+            >
+              <Icon
+                name="ArrowUp"
+                className="size-[19px]"
+                color={colors.primaryForeground}
+              />
+            </Pressable>
+          </View>
+        ) : (
+          <View
+            style={{
+              alignItems: stacked ? "stretch" : "center",
+              flexDirection: stacked ? "column" : "row",
+              gap: stacked ? 2 : 4,
+            }}
+          >
+            {stacked ? null : plus}
+            <View style={{ flex: stacked ? undefined : 1 }}>
+              <TextInput
+                ref={inputRef}
+                accessibilityLabel="Message the assistant"
+                editable={!disabled && !busy && !working}
+                maxLength={8000}
+                multiline
+                accessibilityHint={value ? undefined : placeholder}
+                value={value}
+                onChangeText={onChange}
+                onContentSizeChange={(event) => {
+                  // Taller than one line: stack (and stay stacked until cleared).
+                  if (event.nativeEvent.contentSize.height > 30 && value)
+                    setWrapped(true)
+                }}
+                selectionColor={colors.primary}
+                style={{
+                  color: colors.foreground,
+                  fontSize: 15,
+                  maxHeight: 160,
+                  minHeight: 38,
+                  paddingHorizontal: stacked ? 10 : 6,
+                  paddingVertical: 8,
+                }}
+              />
+              {value ? null : (
+                // The field's own placeholder wraps on a multiline input;
+                // this one stays on one line and ends with "…".
+                <NativeText
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  numberOfLines={1}
+                  pointerEvents="none"
+                  style={{
+                    color: colors.mutedForeground,
+                    fontSize: 15,
+                    left: stacked ? 10 : 6,
+                    position: "absolute",
+                    right: stacked ? 10 : 6,
+                    top: 8,
+                  }}
+                >
+                  {placeholder}
+                </NativeText>
+              )}
+            </View>
+            {stacked ? (
+              <View className="flex-row items-center gap-1">
+                {plus}
+                <View className="flex-1" />
+                {mic}
+                {send}
+              </View>
+            ) : (
+              <>
+                {mic}
+                {send}
+              </>
+            )}
+          </View>
+        )}
       </View>
       <View style={{ height: Math.max(insets.bottom, 10) }} />
     </View>
+  )
+}
+
+function ComposerIcon({
+  icon,
+  label,
+  disabled,
+  onPress,
+}: {
+  icon: IconKeys
+  label: string
+  disabled: boolean
+  onPress: () => void
+}) {
+  const colors = useColors()
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      haptic
+      hitSlop={4}
+      onPress={onPress}
+      style={{
+        alignItems: "center",
+        borderRadius: 999,
+        height: 38,
+        justifyContent: "center",
+        opacity: disabled ? 0.45 : 1,
+        width: 38,
+      }}
+    >
+      <Icon className="size-[21px]" color={colors.foreground} name={icon} />
+    </Pressable>
   )
 }
 

@@ -23,11 +23,10 @@ import {
   ProposalCard,
   ResultCard,
 } from "./assistant-cards"
+import { AssistantChatBox } from "./assistant-chat-box"
 import { AssistantChatRow, AssistantHome } from "./assistant-home"
-import { AssistantReceiptTray } from "./assistant-receipt-tray"
 import {
   AssistantBubble,
-  AssistantComposer,
   AssistantDayMarker,
   AssistantHeader,
   AssistantThinking,
@@ -402,8 +401,11 @@ export function AskAssistantLive() {
             </View>
           }
         />
-        <AssistantComposer
-          canSendEmpty={vm.readyFiles.length > 0}
+        <AssistantChatBox
+          conversationId={vm.offline ? null : vm.conversationId}
+          mediaEnabled={vm.mediaEnabled}
+          resetKey={vm.trayKey}
+          onReadyChange={vm.setReadyFiles}
           value={vm.draft}
           onChange={vm.setDraft}
           onSend={() => void vm.send()}
@@ -411,22 +413,13 @@ export function AskAssistantLive() {
           busy={vm.busy}
           disabled={disabled || exhausted || !!vm.queued || !!noAccess}
           inputRef={input}
-          placeholder="Ask a question or say what to record…"
+          placeholder="Ask anything"
           reason={
             vm.offline
               ? "Saved answers are available offline. Reconnect to make changes."
               : undefined
           }
-        >
-          {vm.conversationId && vm.mediaEnabled && !vm.offline ? (
-            <AssistantReceiptTray
-              key={`${vm.conversationId}:${vm.trayKey}`}
-              conversationId={vm.conversationId}
-              disabled={vm.busy || exhausted || !!noAccess}
-              onReadyChange={vm.setReadyFiles}
-            />
-          ) : null}
-        </AssistantComposer>
+        />
         <Modal ref={saved.ref} title="All chats" snapPoints={["90%"]}>
           <BottomSheetScrollView
             contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 32 }}
