@@ -19,6 +19,7 @@ function order(overrides: Record<string, unknown> = {}) {
     subtotalMinor: 10000,
     totalMinor: 10000,
     discountMinor: 0,
+    creditMinor: 0,
     serviceChargeMinor: 0,
     taxMinor: 0,
     amountPaidMinor: 4000,

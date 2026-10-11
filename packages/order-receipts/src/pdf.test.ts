@@ -40,6 +40,27 @@ describe("Receipt PDF renderer", () => {
     expect(text).not.toContain("300.03")
     await pdf.destroy()
   })
+
+  test("explains a lowered total with the credit after sale", async () => {
+    const receipt = receiptFixture({
+      creditMinor: 450000,
+      totalMinor: 3000000,
+      receivedMinor: 3000000,
+    })
+    const bytes = await renderOrderReceipts([receipt])
+    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs")
+    const pdf = await getDocument({
+      data: new Uint8Array(bytes),
+      useSystemFonts: true,
+    }).promise
+    const content = await (await pdf.getPage(1)).getTextContent()
+    const text = content.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ")
+    expect(text).toContain("Credit after sale")
+    expect(text).toContain("4,500.00")
+    await pdf.destroy()
+  })
   test("embeds an actual font and produces bounded single, group and long PDFs", async () => {
     const folder = new URL(
       "../../../artifacts/order-receipts-dashboard/",

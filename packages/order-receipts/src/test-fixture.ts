@@ -18,6 +18,7 @@ export function receiptFixture(
     customerName: "Amína Yusuf",
     subtotalMinor: 3450000,
     discountMinor: 0,
+    creditMinor: 0,
     taxMinor: 0,
     serviceChargeMinor: 0,
     totalMinor: 3450000,

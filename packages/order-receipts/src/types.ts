@@ -47,6 +47,8 @@ export type OrderReceipt = {
   discountMinor: number
   taxMinor: number
   serviceChargeMinor: number
+  /** Order credits after the sale (overcharge, returned items). */
+  creditMinor: number
   totalMinor: number
   receivedMinor: number
   refundedMinor: number

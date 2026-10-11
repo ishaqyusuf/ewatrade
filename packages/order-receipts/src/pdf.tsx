@@ -266,6 +266,12 @@ export function ReceiptDocument({ receipts }: { receipts: OrderReceipt[] }) {
                   value={money(receipt.serviceChargeMinor)}
                 />
               ) : null}
+              {receipt.creditMinor ? (
+                <SummaryLine
+                  label="Credit after sale"
+                  value={`−${money(receipt.creditMinor)}`}
+                />
+              ) : null}
               <View style={styles.totalRow}>
                 <Text>Order total</Text>
                 <Text>{money(receipt.totalMinor)}</Text>

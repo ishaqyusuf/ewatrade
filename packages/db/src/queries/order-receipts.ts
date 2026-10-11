@@ -199,6 +199,7 @@ export async function getOrderReceipts(
           discountMinor: order.discountMinor,
           taxMinor: order.taxMinor,
           serviceChargeMinor: order.serviceChargeMinor,
+          creditMinor: order.creditMinor,
           totalMinor: order.totalMinor,
           receivedMinor,
           refundedMinor,
