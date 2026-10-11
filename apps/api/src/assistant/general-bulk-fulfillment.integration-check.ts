@@ -1,3 +1,4 @@
+import { withPerformanceTrace } from "@ewatrade/db/performance-tracing"
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { createCommercialOrder, createSimpleCatalogItem } from "@ewatrade/db/queries"
@@ -13,10 +14,13 @@ export async function verifyBulkFulfillmentComposition(original: GeneralContext,
   if (!storeId || ctx.tenantContext.tenant.dataClassification !== "QA") throw Error("Owned QA Store required")
   const actorUserId = ctx.session.user.id
   console.info("Bulk acceptance: create shared-balance products and catalog-free service")
-  const product = await createSimpleCatalogItem(db, {
+  const trace = <T>(stage: string, work: () => Promise<T>) => withPerformanceTrace(
+    "job", work, measurement => console.info(JSON.stringify({stage, ...measurement})),
+  )
+  const product = await trace("bulk-fixture-product", () => createSimpleCatalogItem(db, {
     tenantId, storeId, actorUserId, clientOperationId: randomUUID(),
     kind: "product", name: "Fulfilment product QA", canonicalUnitName: "Piece", priceMinor: 100,
-  })
+  }))
   const productOffering = await db.sellableOffering.findFirstOrThrow({
     where: { catalogItemId: product.id }, include: { productUnitOffering: { include: { inventoryUnit: { include: { configurationVersion: true } } } } },
   })
@@ -29,19 +33,19 @@ export async function verifyBulkFulfillmentComposition(original: GeneralContext,
   // Provision the reusable catalog-free Offering in its own canonical setup
   // command. The acceptance target is bulk fulfillment, not first-use provisioning.
   console.info("Bulk acceptance: provision catalog-free offering")
-  await createCommercialOrder(db, {
+  await trace("bulk-fixture-catalog-free", () => createCommercialOrder(db, {
     tenantId, storeId, actorUserId, clientOrderId: randomUUID(), schemaVersion: 1,
     fulfillNow: false, lines: [{ custom: "additional_cost", amountMinor: 1 }],
-  })
+  }))
   console.info("Bulk acceptance: create three-line target order")
-  const order = await createCommercialOrder(db, {
+  const order = await trace("bulk-fixture-order", () => createCommercialOrder(db, {
     tenantId, storeId, actorUserId, clientOrderId: randomUUID(), schemaVersion: 1, fulfillNow: false,
     lines: [
       { offeringId: productOffering.id, quantity: "1", expectedFixedPriceMinor: 100, expectedConfigurationVersionId: unit.configurationVersionId, expectedBalanceRevision: source.revision },
       { offeringId: productOffering.id, quantity: "2", expectedFixedPriceMinor: 100, expectedConfigurationVersionId: unit.configurationVersionId, expectedBalanceRevision: source.revision },
       { custom: "additional_cost", amountMinor: 50, description: "Packing" },
     ],
-  })
+  }))
   const balance = () => db.stockBalanceSource.findUniqueOrThrow({ where: { id: source.id } })
   const lineIds = (await db.commercialOrderLine.findMany({where:{orderId:order.id},select:{id:true}})).map(row=>row.id)
   const payload = { action: "product_batch_fulfill" as const, orderId: order.id, reason: "All items collected" }
