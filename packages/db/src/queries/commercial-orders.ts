@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { tracePhase } from "../performance-tracing"
+import { productReturnQuantityImpact, productReturnStockImpact } from "./product-return-impact"
 import { getCommercialProductLineReview } from "./commercial-product-line-review"
 import { assertCommercialProductBatchReview } from "./commercial-product-batch-review"
 
@@ -1960,31 +1961,11 @@ export async function returnCommercialOrderProductLineInTransaction(
       "Fulfilled Product Order line not found.",
     )
   }
-  const quantity = parseExactDecimal(input.quantity, {
-    allowZero: false,
-    maxScale: 6,
+  const { quantity } = productReturnQuantityImpact({
+    quantity: input.quantity,
+    fulfilledQuantities: line.productFulfillments.map(value => value.quantity.toString()),
+    returnedQuantities: line.productReturns.map(value => value.quantity.toString()),
   })
-  const fulfilledQuantity = line.productFulfillments.reduce(
-    (total, fulfillment) =>
-      addExactDecimals(total, fulfillment.quantity.toString()),
-    "0",
-  )
-  const returnedQuantity = line.productReturns.reduce(
-    (total, productReturn) =>
-      addExactDecimals(total, productReturn.quantity.toString()),
-    "0",
-  )
-  if (
-    compareExactDecimals(
-      addExactDecimals(returnedQuantity, quantity),
-      fulfilledQuantity,
-    ) > 0
-  ) {
-    throw new CatalogError(
-      "INVALID_ORDER",
-      "Return quantity exceeds fulfilled quantity not already returned.",
-    )
-  }
 
   const disposition =
     input.disposition === "restock"
@@ -2036,18 +2017,12 @@ export async function returnCommercialOrderProductLineInTransaction(
         "Return destination must preserve the original Inventory Unit meaning.",
       )
     }
-    const canonicalQuantity = multiplyExactDecimals(
+    const { canonicalQuantity, onHandAfter: resultingOnHand } = productReturnStockImpact({
       quantity,
-      line.snapshot.unitFactor.toString(),
-    )
-    const balanceQuantity =
-      balance.kind === StockBalanceKind.SHARED_POOL
-        ? canonicalQuantity
-        : quantity
-    const resultingOnHand = addExactDecimals(
-      balance.onHandQuantity.toString(),
-      balanceQuantity,
-    )
+      unitFactor: line.snapshot.unitFactor.toString(),
+      balanceKind: balance.kind,
+      onHandQuantity: balance.onHandQuantity.toString(),
+    })
     const update = await tx.stockBalanceSource.updateMany({
       data: { onHandQuantity: resultingOnHand, revision: { increment: 1 } },
       where: { id: balance.id, revision: balance.revision },
