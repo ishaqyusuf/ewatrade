@@ -1,3 +1,4 @@
+import { readCommercialServiceEvidence } from "./commercial-service-evidence"
 import { createHash } from "node:crypto"
 import type { Prisma } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
@@ -29,46 +30,7 @@ export async function getCommercialServiceLineReview(
     action: "authorize" | "fulfill"
   },
 ) {
-  const line = await db.commercialOrderLine.findFirst({
-    where: {
-      id: input.orderLineId,
-      order: { tenantId: input.tenantId, storeId: input.storeId },
-    },
-    select: {
-      id: true,
-      kind: true,
-      quantity: true,
-      snapshot: {
-        select: {
-          offeringName: true,
-          serviceWorkPolicy: true,
-          serviceAuthorizationPolicy: true,
-        },
-      },
-      serviceJobLines: { orderBy: { id: "asc" }, select: { id: true } },
-      serviceAuthorization: true,
-      serviceFulfillment: true,
-      order: {
-        select: {
-          id: true,
-          orderNumber: true,
-          status: true,
-          completedAt: true,
-          currencyCode: true,
-          amountPaidMinor: true,
-          totalMinor: true,
-          paymentStatus: true,
-          payments: { orderBy: { id: "asc" }, select: { id: true } },
-          deliveryDueAt: true,
-          acceptedCommerceQuoteVersion: {
-            select: { quote: { select: { sourceType: true } } },
-          },
-          prescriptionPickupFulfillment: { select: { orderId: true } },
-          prescriptionDeliveryAssignment: { select: { orderId: true } },
-        },
-      },
-    },
-  })
+  const line = await readCommercialServiceEvidence(db, input)
   if (!line) {
     throw new CatalogError("ORDER_NOT_FOUND", "Order line was not found in this Store.")
   }

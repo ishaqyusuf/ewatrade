@@ -44,7 +44,7 @@ test("catalog-free review survives actor context and rejects later service evide
       prescriptionPickupFulfillment: null, prescriptionDeliveryAssignment: null },
   }
   const db = {
-    $queryRaw: async () => [],
+    $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes("service-policy-evidence") ? [{ evidence: line }] : [],
     commercialOrder: { findFirst: async () => order },
     commercialOrderLine: { findMany: async () => [{ id: line.id, kind: line.kind }], findFirst: async () => line },
   } as unknown as Prisma.TransactionClient

@@ -30,13 +30,9 @@ function fixture() {
   }
   let missing = false
   const db = {
-    commercialOrderLine: {
-      findFirst: async (query: unknown) => {
-        expect(query).toMatchObject({ where: {
-          id: "line", order: { tenantId: "tenant", storeId: "store" },
-        } })
-        return missing ? null : line
-      },
+    $queryRaw: async (_parts: TemplateStringsArray, ...values: unknown[]) => {
+      expect(values).toEqual(["line", "tenant", "store", "tenant"])
+      return missing ? [] : [{ evidence: line }]
     },
   } as unknown as Prisma.TransactionClient
   return { line, db, hide: () => { missing = true } }
