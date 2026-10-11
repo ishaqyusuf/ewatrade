@@ -12,7 +12,7 @@ function fixture(change: { denied?: boolean; missingBook?: boolean; closed?: boo
     store: { findFirst: async (args: unknown) => { expect(args).toMatchObject({ where: { id: "store", tenantId: "tenant", currencyCode: "NGN" } }); return change.store ? null : { id: "store" } } },
     financeAccount: { findUnique: async () => ({ id: "inventory", kind: "ASSET", purpose: "INVENTORY", archivedAt: null }) },
     stockBalanceSource: { findFirst: async (args: unknown) => { expect(args).toMatchObject({ where: { id: "balance", tenantId: "tenant", storeId: "store" } }); return { kind: change.packaged ? "PACKAGED_STOCK" : "BULK", inventoryUnitId: "other-unit", inventoryUnit: { configurationVersionId: "config" }, product: { currentUnitConfigurationVersionId: change.config ? "changed" : "config" } } } },
-    inventoryUnit: { findUnique: async () => ({ id: "unit", configurationVersionId: "config", transactionScale: change.precision ? 0 : 2 }) },
+    inventoryUnit: { findUnique: async () => ({ id: "unit", name: "Bags", configurationVersionId: "config", transactionScale: change.precision ? 0 : 2 }) },
   } as unknown as Prisma.TransactionClient
 }
 test("registration review preserves exact agreement without posting effects", async () => {

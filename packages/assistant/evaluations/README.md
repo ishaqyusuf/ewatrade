@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Purchase registration | [1](fixtures/purchase-registration.v1.md) | Agreement-only draft, exact goods, scope/stale guards, rollback/recovery | None yet |
 | Purchase recognition reads | [1](fixtures/purchase-recognition-reads.v1.md) | Pre-invoice discovery, separate stages, correction/source evidence | None yet |
 | Purchase bill reads | [1](fixtures/purchase-reads.v1.md) | Settlement separation, recognition provenance, bounded history, exact scope | None yet |
 | Supplier creation | [1](fixtures/supplier-create.v1.md) | Identity normalization, ambiguity, duplicate/scope refusal, rollback/recovery and receipt | None yet |
@@ -27,6 +28,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Registration proposal source, 11 October 2026](runs/2026-10-11-registration-adapter.md): strict agreement-only action and canonical adapter;54 assertions pass. Editor/receipt overlay and proposal acceptance pending.
 
 - [Registration database regression, 11 October 2026](runs/2026-10-11-registration-database.md):16 assertions for review, transaction rollback, two-line replay and no posting effects;16 owned cleanup checks clear. Assistant integration pending.
 

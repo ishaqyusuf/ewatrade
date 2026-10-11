@@ -113,6 +113,7 @@ export async function resolvePurchaseRegistrationSource(
     "ASSET",
     "INVENTORY",
   )
+  const unitNames = new Map<string, string>()
   for (const line of lines) {
     const balance = await tx.stockBalanceSource.findFirst({
       where: {
@@ -139,6 +140,7 @@ export async function resolvePurchaseRegistrationSource(
         "CONFLICT",
         "The purchase goods units or Store scope have changed.",
       )
+    unitNames.set(line.enteredInventoryUnitId, unit.name)
     try {
       parseExactDecimal(line.enteredQuantity, {
         allowZero: false,
@@ -151,5 +153,5 @@ export async function resolvePurchaseRegistrationSource(
       )
     }
   }
-  return { supplier, store, inventory }
+  return { supplier, store, inventory, unitNames }
 }

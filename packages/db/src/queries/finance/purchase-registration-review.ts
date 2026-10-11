@@ -19,7 +19,7 @@ export async function getFinancePurchaseRegistrationReview(
     where: { id: input.bookId, tenantId: input.tenantId },
   })
   if (!book) throw new FinanceError("NOT_FOUND", "Financial book not found.")
-  const { supplier, store, inventory } =
+  const { supplier, store, inventory, unitNames } =
     await resolvePurchaseRegistrationSource(tx, input, book, lines)
   return {
     bookId: book.id,
@@ -37,6 +37,7 @@ export async function getFinancePurchaseRegistrationReview(
     lines: lines.map((line) => ({
       balanceSourceId: line.balanceSourceId,
       enteredInventoryUnitId: line.enteredInventoryUnitId,
+      enteredUnitName: unitNames.get(line.enteredInventoryUnitId),
       configurationVersionId: line.expectedConfigurationVersionId,
       description: line.description,
       amountMinor: line.amount.toString(),

@@ -1,3 +1,4 @@
+import { purchaseRegistrationAction } from "./purchase-registration"
 import { supplierCreateAction } from "./supplier-create"
 import { expenseVoidAction, billPaymentReverseAction } from "./bill-correction"
 import { billPaymentAction } from "./bill-payment"
@@ -255,6 +256,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   moneyMovementAction,
   expenseAction,
   billPaymentAction,
+  purchaseRegistrationAction,
   supplierCreateAction,
   expenseVoidAction,
   billPaymentReverseAction,
@@ -279,6 +281,7 @@ export type GeneralActionName = GeneralAction["action"]
 export const generalReceiptSchema = z
   .object({
     kind: z.enum([
+      "finance_purchase_registration",
       "finance_supplier",
       "finance_bill",
       "finance_movement",
@@ -299,7 +302,7 @@ export const generalReceiptSchema = z
     detail: z.string(),
   })
   .strict()
-  .refine(value => !["finance_movement", "finance_bill", "finance_supplier"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
+  .refine(value => !["finance_movement", "finance_bill", "finance_supplier", "finance_purchase_registration"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
 export const generalProposalSchema = z
   .object({
@@ -428,6 +431,7 @@ export function generalActionSummary(
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "purchase_register": return `Register purchase agreement · ${action.description}`
     case "supplier_create": return `Create supplier · ${action.name} (${action.code})`
     case "expense_void": return `Void unpaid expense · ${action.reason}`
     case "bill_payment_reverse": return `Reverse recorded bill payment · ${action.reason}`

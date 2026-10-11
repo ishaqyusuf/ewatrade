@@ -7,16 +7,17 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 539 (398 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 88
-- Merchant planned: 144
+- Merchant supported by a capability: 89
+- Merchant planned: 143
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 84 (44 read, 40 write)
+- Capabilities: 85 (44 read, 41 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `finance.purchase.register` | 1 | write (`purchase_register`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.registerPurchase` |
 | `finance.purchase_registrations.read` | 1 | read | `readPurchaseRegistrations` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognitions` |
 | `finance.purchase_recognition.read` | 1 | read | `readPurchaseRecognition` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognition` |
 | `finance.purchases.read` | 1 | read | `readPurchaseBills` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchases` |
@@ -115,6 +116,7 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `finance.purchase.register` | Register agreed supplier goods before invoice or receipt | [packages/assistant/src/general/purchase-registration.test.ts](../../../../packages/assistant/src/general/purchase-registration.test.ts)<br>[packages/db/src/queries/finance/purchase-registration-review.test.ts](../../../../packages/db/src/queries/finance/purchase-registration-review.test.ts) |
 | `finance.purchase_registrations.read` | Find purchase agreements in this Finance Book | [apps/api/src/assistant/general-purchase-recognition-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-recognition-reads.test.ts) |
 | `finance.purchase_recognition.read` | Read purchase recognition events in this Finance Book | [apps/api/src/assistant/general-purchase-recognition-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-recognition-reads.test.ts) |
 | `finance.purchases.read` | Find purchase bills in this Finance Book | [apps/api/src/assistant/general-purchase-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-reads.test.ts) |
@@ -214,7 +216,7 @@ track conversational evaluation separately from these source test links.
 | E02 | 3 |
 | E03 | 2 |
 | E04 | 1 |
-| E05 | 11 |
+| E05 | 10 |
 | G01 | 6 |
 | G02 | 8 |
 | G03 | 29 |
@@ -343,7 +345,7 @@ track conversational evaluation separately from these source test links.
 | `finance.recordPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.recordSupplierAdvance` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.recordSupplierOpening` | mutation | Owner/Admin only | finance | planned | E05 |
-| `finance.registerPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.registerPurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.register |
 | `finance.releaseSupplierAllocation` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.reports` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.reverseBillPayment` | mutation | Owner/Admin only | finance | supported | finance.bill_payment.reverse |
