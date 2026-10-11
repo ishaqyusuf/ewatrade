@@ -24,6 +24,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Correction receipt Open/Close, 11 October 2026](runs/2026-10-11-correction-receipt-open.md): saved cards load; Open shows corrected bill over same chat, Close preserves it; working receipt list and owned cleanup verified. Backend confirmations; full UI confirmation pending.
+
 - [Protected correction history, 11 October 2026](runs/2026-10-11-correction-history-router.md): retained router/middleware regression passes4assertions with synthetic completed correction DTOs and verified chat cleanup; HTTP/runtime investigation remains pending.
 
 - [Receipt lifecycle fix, 11 October 2026](runs/2026-10-11-receipt-lifecycle-fix.md): reproduced false mount-guard rejection, fixed subscription ordering, verified list/Refresh in browser and43 existing state assertions; owned cleanup complete.
