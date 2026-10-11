@@ -2,7 +2,11 @@ import { expect } from "bun:test"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import type { FinanceActor } from "./access"
 import { getFinancePurchaseReceiptReview } from "./purchase-receipt-review"
-import { recognizeFinancePurchaseInTransaction } from "./purchase-recognition"
+import {
+  recognizeFinancePurchaseInTransaction,
+  recognizeReviewedFinancePurchaseReceiptInTransaction,
+  purchaseReceiptReviewDigest,
+} from "./purchase-recognition"
 
 /** Caller supplies a guarded owned QA agreement; every attempted receipt write rolls back. */
 export async function verifyPurchaseReceiptReview(
@@ -14,6 +18,7 @@ export async function verifyPurchaseReceiptReview(
     reference: string
     clientCommandId: string
   },
+  mode: "canonical" | "reviewed" = "canonical",
 ) {
   const facts = async () => ({
     events: await db.financePurchaseRecognitionEvent.count({
@@ -44,16 +49,36 @@ export async function verifyPurchaseReceiptReview(
     expect(line.stock.revision).toBe(confirmation.expectedBalanceRevision)
     expect(line.valuation.sourceCostMinor).toBe(line.amountMinor)
   }
+  if (mode === "reviewed") {
+    await expect(
+      db.$transaction(
+        (tx) =>
+          recognizeReviewedFinancePurchaseReceiptInTransaction(tx, {
+            ...input,
+            expectedReviewDigest: "0".repeat(64),
+          }),
+        { maxWait: 10000, timeout: 30000 },
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
+    expect(await facts()).toEqual(before)
+  }
   const commandStart = performance.now()
   let verified = false
   try {
     await db.$transaction(
       async (tx) => {
-        await recognizeFinancePurchaseInTransaction(tx, {
-          ...input,
-          stage: "RECEIPT",
-          receipts: review.receipts,
-        })
+        if (mode === "reviewed") {
+          await recognizeReviewedFinancePurchaseReceiptInTransaction(tx, {
+            ...input,
+            expectedReviewDigest: purchaseReceiptReviewDigest(review),
+          })
+        } else {
+          await recognizeFinancePurchaseInTransaction(tx, {
+            ...input,
+            stage: "RECEIPT",
+            receipts: review.receipts,
+          })
+        }
         const events = await tx.financeInventoryValuationEvent.findMany({
           where: {
             bookId: input.bookId,
@@ -112,5 +137,12 @@ export async function verifyPurchaseReceiptReview(
   }
   const commandMs = performance.now() - commandStart
   expect(await facts()).toEqual(before)
-  return { review, reviewMs, commandMs, before, rollbackVerified: verified }
+  return {
+    mode,
+    review,
+    reviewMs,
+    commandMs,
+    before,
+    rollbackVerified: verified,
+  }
 }

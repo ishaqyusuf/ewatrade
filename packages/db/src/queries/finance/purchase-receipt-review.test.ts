@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
+import {
+  purchaseReceiptReviewDigest,
+  recognizeReviewedFinancePurchaseReceiptInTransaction,
+} from "./purchase-recognition"
 import { getFinancePurchaseReceiptReview } from "./purchase-receipt-review"
 const decimal = (v: string) => ({ toFixed: () => v })
 const input = {
@@ -312,5 +316,48 @@ test("authority, cutoff, retired units, custody, exact confirmations and revisio
   limit.balance.revision = 2147483647
   await expect(
     getFinancePurchaseReceiptReview(limit.tx, input),
+  ).rejects.toMatchObject({ code: "CONFLICT" })
+})
+
+test("receipt fingerprint changes with actual stock, valuation or source facts; malformed approval stops before reads", async () => {
+  const f = fixture()
+  const review = await getFinancePurchaseReceiptReview(f.tx, input)
+  const digest = purchaseReceiptReviewDigest(review)
+  expect(digest).toMatch(/^[a-f0-9]{64}$/)
+  for (const mutate of [
+    () => {
+      f.balance.revision++
+    },
+    () => {
+      f.state.movementCount++
+    },
+    () => {
+      f.document.costBill.payeeName = "Changed supplier label"
+    },
+    () => {
+      f.state.categories[0]!.name = "Changed category label"
+    },
+  ]) {
+    mutate()
+    expect(
+      purchaseReceiptReviewDigest(
+        await getFinancePurchaseReceiptReview(f.tx, input),
+      ),
+    ).not.toBe(digest)
+  }
+  await expect(
+    recognizeReviewedFinancePurchaseReceiptInTransaction(
+      {} as Prisma.TransactionClient,
+      {
+        tenantId: "tenant",
+        actorUserId: "owner",
+        bookId: "book",
+        recognitionId: "agreement",
+        effectiveAt: input.effectiveAt,
+        reference: input.reference,
+        clientCommandId: "confirmation",
+        expectedReviewDigest: "unreviewed",
+      },
+    ),
   ).rejects.toMatchObject({ code: "CONFLICT" })
 })

@@ -16,6 +16,18 @@ export async function getFinancePurchaseReceiptReview(
   if (input.stage !== "RECEIPT")
     throw new FinanceError("CONFLICT", "Choose a physical purchase receipt.")
   const { review, document } = await purchaseRecognitionReviewSource(tx, input)
+  return composePurchaseReceiptReview(tx, input, { review, document })
+}
+
+/** Internal composer; public review and locked confirmation load their own source. */
+export async function composePurchaseReceiptReview(
+  tx: Prisma.TransactionClient,
+  input: PurchaseRecognitionInput & { stage: "RECEIPT" },
+  source: Awaited<
+    ReturnType<typeof purchaseRecognitionReviewSource<"RECEIPT">>
+  >,
+) {
+  const { review, document } = source
   const ids = document.lines.map((line) => line.balanceSourceId)
   if (new Set(ids).size !== ids.length)
     throw new FinanceError(

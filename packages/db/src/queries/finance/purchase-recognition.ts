@@ -1,5 +1,14 @@
-import { normalizePurchaseRecognition, resolvePurchaseRecognitionSource } from "./purchase-recognition-preparation"
-import { normalizePurchaseRegistration, resolvePurchaseRegistrationSource } from "./purchase-registration-source"
+import { createHash } from "node:crypto"
+import { composePurchaseRecognitionReview } from "./purchase-recognition-review"
+import { composePurchaseReceiptReview } from "./purchase-receipt-review"
+import {
+  normalizePurchaseRecognition,
+  resolvePurchaseRecognitionSource,
+} from "./purchase-recognition-preparation"
+import {
+  normalizePurchaseRegistration,
+  resolvePurchaseRegistrationSource,
+} from "./purchase-registration-source"
 import { randomUUID } from "node:crypto"
 import type { StockCategorySelector } from "@ewatrade/utils/inventory-categories"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
@@ -8,11 +17,17 @@ import { postSingleBalanceStockOperationInTransaction } from "../inventory-opera
 import type { FinanceActor } from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
-import { purchaseRecognitionCategories } from "./purchase-recognition-receipt-source"
-import { purchaseRecognitionControl } from "./purchase-recognition-source"
+import {
+  assertReceiptMovement,
+  purchaseRecognitionCategories,
+} from "./purchase-recognition-receipt-source"
+import {
+  verifyLoadedPurchaseRecognitionEvent,
+  purchaseRecognitionControl,
+} from "./purchase-recognition-source"
 import { purchaseJournalEntryId } from "./purchase-source"
 import { FinanceError } from "./rules"
-import { recordPurchaseReceiptValuationsInTransaction } from "./valuation-receipts"
+import { recordRecognitionReceiptValuations } from "./valuation-receipts"
 
 export type RegisterFinancePurchaseInput = FinanceActor & {
   bookId: string
@@ -48,7 +63,8 @@ export async function registerFinancePurchaseInTransaction(
   tx: Prisma.TransactionClient,
   input: RegisterFinancePurchaseInput,
 ) {
-  const { description, lines, totalMinor } = normalizePurchaseRegistration(input)
+  const { description, lines, totalMinor } =
+    normalizePurchaseRegistration(input)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   return financeDocumentCommand(
     tx,
@@ -63,7 +79,8 @@ export async function registerFinancePurchaseInTransaction(
       })),
     },
     async (book) => {
-      const { supplier, store, inventory } = await resolvePurchaseRegistrationSource(tx, input, book, lines)
+      const { supplier, store, inventory } =
+        await resolvePurchaseRegistrationSource(tx, input, book, lines)
       const costBill = await tx.financeBill.create({
         data: {
           bookId: book.id,
@@ -123,15 +140,83 @@ export async function recognizeFinancePurchaseInTransaction(
   tx: Prisma.TransactionClient,
   input: RecognizeFinancePurchaseInput,
 ) {
+  return recognizePurchase(tx, input)
+}
+
+export function purchaseReceiptReviewDigest(
+  review: Awaited<ReturnType<typeof composePurchaseReceiptReview>>,
+) {
+  return createHash("sha256").update(JSON.stringify(review)).digest("hex")
+}
+
+/** Fresh full review is checked under Book/sorted stock locks before any financial or stock write. */
+export async function recognizeReviewedFinancePurchaseReceiptInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Omit<
+    RecognizeFinancePurchaseInput,
+    "stage" | "receipts" | "dueAt" | "invoiceAmountMinor"
+  > & { expectedReviewDigest: string },
+) {
+  if (!/^[a-f0-9]{64}$/.test(input.expectedReviewDigest))
+    throw new FinanceError("CONFLICT", "Refresh the physical receipt review.")
+  const { expectedReviewDigest, ...command } = input
+  return recognizePurchase(
+    tx,
+    { ...command, stage: "RECEIPT" },
+    expectedReviewDigest,
+  )
+}
+
+async function recognizePurchase(
+  tx: Prisma.TransactionClient,
+  input: RecognizeFinancePurchaseInput,
+  expectedReviewDigest?: string,
+) {
   const { reference, invoiceAmount } = normalizePurchaseRecognition(input)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   return financeDocumentCommand(
     tx,
     input,
-    "RECOGNIZE_PURCHASE",
-    { ...payload, reference },
+    expectedReviewDigest
+      ? "RECOGNIZE_REVIEWED_PURCHASE_RECEIPT"
+      : "RECOGNIZE_PURCHASE",
+    {
+      ...payload,
+      reference,
+      ...(expectedReviewDigest ? { expectedReviewDigest } : {}),
+    },
     async (book) => {
-      const { document, posting } = await resolvePurchaseRecognitionSource(tx, input, book, invoiceAmount)
+      const { document, posting } = await resolvePurchaseRecognitionSource(
+        tx,
+        input,
+        book,
+        invoiceAmount,
+      )
+      let receiptConfirmations = input.receipts
+      if (expectedReviewDigest) {
+        // Ordinary stock writers use optimistic revisions; these row locks also
+        // hold movement counts/quantities stable from review through receipt.
+        const ids = document.lines.map((line) => line.balanceSourceId).sort()
+        await tx.$queryRaw`SELECT id FROM "StockBalanceSource" WHERE id = ANY(${ids}::text[]) AND "tenantId" = ${input.tenantId} ORDER BY id FOR UPDATE`
+        const receiptInput = { ...input, stage: "RECEIPT" as const }
+        const header = await composePurchaseRecognitionReview(
+          tx,
+          receiptInput,
+          book,
+          { document, posting },
+        )
+        const review = await composePurchaseReceiptReview(
+          tx,
+          receiptInput,
+          header,
+        )
+        if (purchaseReceiptReviewDigest(review) !== expectedReviewDigest)
+          throw new FinanceError(
+            "CONFLICT",
+            "Purchase receipt facts, stock or valuation changed. Review again.",
+          )
+        receiptConfirmations = review.receipts
+      }
       const debit = await purchaseRecognitionControl(
         tx,
         book.id,
@@ -201,7 +286,7 @@ export async function recognizeFinancePurchaseInTransaction(
         ],
       })
       const journalEntryId = purchaseJournalEntryId(journal)
-      await tx.financePurchaseRecognitionEvent.create({
+      const recordedEvent = await tx.financePurchaseRecognitionEvent.create({
         data: {
           id: eventId,
           bookId: book.id,
@@ -235,7 +320,7 @@ export async function recognizeFinancePurchaseInTransaction(
         })
       }
       if (input.stage === "RECEIPT") {
-        const receipts = input.receipts
+        const receipts = receiptConfirmations
         if (
           !Array.isArray(receipts) ||
           receipts.length !== document.lines.length ||
@@ -325,12 +410,64 @@ export async function recognizeFinancePurchaseInTransaction(
             expectedStockRevision: confirmation.expectedBalanceRevision + 1,
           })
         }
-        await recordPurchaseReceiptValuationsInTransaction(tx, {
-          tenantId: input.tenantId,
-          bookId: book.id,
-          actorUserId: input.actorUserId,
-          receipts: valuations,
-        })
+        await recordRecognitionReceiptValuations(
+          tx,
+          {
+            tenantId: input.tenantId,
+            bookId: book.id,
+            actorUserId: input.actorUserId,
+            receipts: valuations,
+          },
+          async (actualReceipts) => {
+            const journalEntry = await tx.financeJournalEntry.findUniqueOrThrow(
+              {
+                where: { id: journalEntryId },
+                include: { lines: { take: 3 }, reversal: true },
+              },
+            )
+            const event = {
+              ...recordedEvent,
+              journalEntry,
+              reversal: null,
+              invoiceBill: null,
+            }
+            const datedDocument = {
+              ...document,
+              events: [...document.events, event],
+            }
+            verifyLoadedPurchaseRecognitionEvent(
+              datedDocument,
+              event,
+              debit,
+              credit,
+            )
+            if (journalEntry.reversal)
+              throw new FinanceError(
+                "CONFLICT",
+                "The new receipt journal was already reversed.",
+              )
+            const dates = new Map<string, Date>()
+            for (const receipt of actualReceipts) {
+              if (receipt.billLine.bill.id !== document.costBillId)
+                throw new FinanceError(
+                  "CONFLICT",
+                  "The receipt no longer belongs to its exact purchase.",
+                )
+              const line = document.lines.find(
+                (l) => l.costBillLineId === receipt.billLine.id,
+              )
+              const fact = assertReceiptMovement(
+                datedDocument,
+                event,
+                line,
+                receipt.stockMovement,
+                input.actorUserId,
+              )
+              dates.set(receipt.stockMovementId, fact.effectiveAt)
+            }
+            return dates
+          },
+        )
       }
       return { id: eventId }
     },

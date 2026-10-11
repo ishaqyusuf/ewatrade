@@ -33,6 +33,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Locked physical receipt confirmation, 11 October 2026](runs/2026-10-11-receipt-confirmation.md): fresh complete review digest checked under Book/sorted stock locks, actual new event/journal/movement proof reused;22 tests/136 assertions and scoped types pass. Stale digest refuses; matching two-line receipt/valuation rolls back after28.1s inside30s. Whole assistant proposal transaction/editor remain pending.
+
 - [Physical receipt review, 11 October 2026](runs/2026-10-11-receipt-review.md): exact stock/category/known-or-unknown valuation review shares writer calculation;17 tests/88 assertions and scoped types pass. Real two-line review11.8s matches rollback-only command27.8s. Atomic assistant composition remains pending; no receipt activation.
 
 - [Two-line receipt performance, 11 October 2026](runs/2026-10-11-receipt-performance.md): original rollback-only command timed out31.7s; batched immutable receipt proof completes27.7s with exact two valuations and unchanged saved counts.12 tests/80 assertions and scoped types pass. Full assistant physical receipt review/confirmation remains pending.

@@ -91,7 +91,7 @@ export async function getPurchaseRecognitionReceiptDate(
 type ReceiptMovement = Prisma.StockMovementGetPayload<{
   include: { operation: true }
 }>
-function assertReceiptMovement(
+export function assertReceiptMovement(
   document: PurchaseRecognitionDocument,
   event: PurchaseRecognitionDocument["events"][number] | undefined,
   line: PurchaseRecognitionDocument["lines"][number] | undefined,

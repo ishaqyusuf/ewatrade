@@ -66,7 +66,8 @@ proposals pass focused database checks and their dashboard editor passes compone
 checks. The real chat invoice/ownership edit, review, confirmation and saved receipt
 Open/Close pass, with exact posting readback. Batched physical receipt passes a
 local two-line rollback probe in 27.7s. Canonical physical receipt review matches
-actual valuation, but combined assistant confirmation still needs transaction headroom;
+actual valuation. Canonical locked review plus receipt confirmation passes in 28.1s;
+the surrounding assistant proposal transaction still needs headroom verification;
 advances/allocation and settlement remain open.
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.

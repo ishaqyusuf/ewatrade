@@ -1,4 +1,4 @@
-import type { Prisma } from "../../../generated/prisma/client"
+import type { FinanceBook, Prisma } from "../../../generated/prisma/client"
 import { assertFinanceManager } from "./access"
 import {
   normalizePurchaseRecognition,
@@ -74,6 +74,23 @@ export async function purchaseRecognitionReviewSource<
     book,
     invoiceAmount,
   )
+  return composePurchaseRecognitionReview(tx, input, book, {
+    document,
+    posting,
+  })
+}
+
+/** Internal composition from the command's freshly resolved source, under its Book lock. */
+export async function composePurchaseRecognitionReview<
+  Stage extends "INVOICE" | "OWNERSHIP" | "RECEIPT",
+>(
+  tx: Prisma.TransactionClient,
+  input: PurchaseRecognitionInput & { stage: Stage },
+  book: FinanceBook,
+  source: Awaited<ReturnType<typeof resolvePurchaseRecognitionSource>>,
+) {
+  const { document, posting } = source
+  const { reference } = normalizePurchaseRecognition(input)
   const [debit, credit, store] = await Promise.all([
     controlReview(tx, book.id, posting.debit),
     controlReview(tx, book.id, posting.credit),

@@ -72,6 +72,26 @@ export async function recordPurchaseReceiptValuationsInTransaction(
     receipts: Array<{ receiptId: string; expectedStockRevision: number }>
   },
 ) {
+  return recordRecognitionReceiptValuations(tx, input, async (receipts) =>
+    getPurchaseRecognitionReceiptDates(tx, {
+      ...input,
+      receipts: receipts.map((r) => ({
+        costBillId: r.billLine.bill.id,
+        costBillLineId: r.billLine.id,
+        stockMovementId: r.stockMovementId,
+      })),
+    }),
+  )
+}
+
+/** Repository-internal composition: caller proves fresh dated owner against these actual loaded receipts. */
+export async function recordRecognitionReceiptValuations(
+  tx: Prisma.TransactionClient,
+  input: Omit<ValuationInput, "receiptId" | "expectedStockRevision"> & {
+    receipts: Array<{ receiptId: string; expectedStockRevision: number }>
+  },
+  resolveDates: (receipts: Receipt[]) => Promise<Map<string, Date>>,
+) {
   if (
     !input.receipts.length ||
     input.receipts.length > 10 ||
@@ -101,14 +121,7 @@ export async function recordPurchaseReceiptValuationsInTransaction(
       "CONFLICT",
       "The complete registered purchase receipts are unavailable.",
     )
-  const dates = await getPurchaseRecognitionReceiptDates(tx, {
-    ...input,
-    receipts: receipts.map((r) => ({
-      costBillId: r.billLine.bill.id,
-      costBillLineId: r.billLine.id,
-      stockMovementId: r.stockMovementId,
-    })),
-  })
+  const dates = await resolveDates(receipts)
   const events = []
   for (const confirmation of input.receipts) {
     const receipt = receipts.find((r) => r.id === confirmation.receiptId)
