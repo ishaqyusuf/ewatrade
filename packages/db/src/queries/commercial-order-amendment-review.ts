@@ -1,6 +1,9 @@
 import type { Prisma } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
-import { assessOrderAmendment } from "./commercial-order-amendment-policy"
+import {
+  assessOrderAmendment,
+  assessOrderDetailsAmendment,
+} from "./commercial-order-amendment-policy"
 
 /** Internal read groundwork. Callers must authorize; confirmation must reread under locks. */
 export async function getCommercialOrderAmendmentEligibility(
@@ -85,7 +88,7 @@ export async function getCommercialOrderAmendmentEligibility(
                   reservedQuantity: true,
                   onHandQuantity: true,
                   revision: true,
-                  inventoryUnit: {select: {name:true}},
+                  inventoryUnit: { select: { name: true } },
                 },
               },
               enteredInventoryUnit: { select: { stockBehavior: true } },
@@ -171,5 +174,6 @@ export async function getCommercialOrderAmendmentEligibility(
     evidence,
     source: order,
     eligibility: assessOrderAmendment(evidence),
+    detailsEligibility: assessOrderDetailsAmendment(evidence),
   }
 }

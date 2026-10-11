@@ -109,10 +109,11 @@ test("confirmation retains before/after evidence and replays without touching st
 })
 test("paid history and changed order fields invalidate a reviewed amendment", async () => {
   const f = fixture()
-  const input = await command(f)
+  const input = await command(f, { customerId: "customer" })
   f.row._count.payments = 1
   await expect(amend(f.tx, input)).rejects.toThrow("Payment")
   expect(f.row.notes).toBe("Original instructions")
+  expect(f.row.customerId).toBeNull()
   const g = fixture()
   const stale = await command(g)
   g.row.notes = "Intervening change"
@@ -124,4 +125,21 @@ test("no-op amendments are refused instead of creating empty history", async () 
   await expect(
     preview(f.tx, { ...scope, patch: { notes: "Original instructions" } }),
   ).rejects.toThrow("unchanged")
+})
+test("delivery and note stay editable after payment and fulfilment", async () => {
+  const f = fixture()
+  f.row._count.payments = 1
+  f.row._count.serviceFulfillments = 1
+  const reviewed = await preview(f.tx, { ...scope, patch: { notes: "Gate 2" } })
+  expect(reviewed.eligible).toBe(true)
+  await amend(f.tx, await command(f, { notes: "Gate 2" }))
+  expect(f.row.notes).toBe("Gate 2")
+  const customer = await preview(f.tx, {
+    ...scope,
+    patch: { customerId: "customer", notes: "Gate 3" },
+  })
+  expect(customer.eligible).toBe(false)
+  expect(customer.blockers.map((block) => block.code)).toContain(
+    "PAYMENT_HISTORY",
+  )
 })

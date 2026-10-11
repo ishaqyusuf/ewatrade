@@ -97,11 +97,17 @@ export async function previewCommercialOrderMetadataAmendment(
       "The proposed order fields are unchanged.",
     )
   const beforeSnapshot = json(source)
+  // Delivery and note alone stay editable after payment or fulfilment.
+  const detailsOnly = changes.customerId === undefined
   return {
     orderId: source.id,
     orderNumber: source.orderNumber,
-    eligible: review.eligibility.eligibleForOrdinaryAmendment,
-    blockers: review.eligibility.blockers,
+    eligible: detailsOnly
+      ? review.detailsEligibility.eligible
+      : review.eligibility.eligibleForOrdinaryAmendment,
+    blockers: detailsOnly
+      ? review.detailsEligibility.blockers
+      : review.eligibility.blockers,
     before,
     after,
     changedFields,
@@ -124,7 +130,7 @@ export type AmendCommercialOrderMetadataInput = Scope & {
   reason: string
   patch: OrderMetadataPatch
 }
-/** Caller owns current actor authorization; this path only amends eligible unpaid/unfulfilled orders. */
+/** Caller owns current actor authorization. Customer changes need an unpaid, unfulfilled order; delivery and note do not. */
 export async function amendCommercialOrderMetadataInTransaction(
   tx: Prisma.TransactionClient,
   input: AmendCommercialOrderMetadataInput,

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import {
   type OrderAmendmentEvidence,
   assessOrderAmendment,
+  assessOrderDetailsAmendment,
 } from "./commercial-order-amendment-policy"
 const ordinary: OrderAmendmentEvidence = {
   status: "CONFIRMED",
@@ -118,4 +119,35 @@ test("inactive Store blocks all ordinary amendment paths", () => {
       (x) => x.code,
     ),
   ).toContain("STORE_UNAVAILABLE")
+})
+
+test("delivery and note stay editable after money or stock moved", () => {
+  const moved = {
+    ...ordinary,
+    status: "COMPLETED",
+    paymentStatus: "PAID",
+    amountPaidMinor: 450000,
+    paymentCount: 1,
+    fulfillmentCount: 1,
+    committedReservationCount: 1,
+    ledgerEntryCount: 2,
+  }
+  expect(assessOrderAmendment(moved).eligibleForOrdinaryAmendment).toBe(false)
+  expect(assessOrderDetailsAmendment(moved)).toEqual({
+    eligible: true,
+    blockers: [],
+  })
+})
+test("closed, prescription and booking orders keep delivery and note locked", () => {
+  for (const [patch, code] of [
+    [{ status: "CANCELLED" }, "ORDER_CLOSED"],
+    [{ status: "REFUNDED" }, "ORDER_CLOSED"],
+    [{ prescriptionOwned: true }, "PRESCRIPTION_SOURCE"],
+    [{ bookingCount: 1 }, "BOOKING_SOURCE"],
+    [{ storeActive: false }, "STORE_UNAVAILABLE"],
+  ] as const) {
+    const result = assessOrderDetailsAmendment({ ...ordinary, ...patch })
+    expect(result.eligible).toBe(false)
+    expect(result.blockers.map((block) => block.code)).toContain(code)
+  }
 })

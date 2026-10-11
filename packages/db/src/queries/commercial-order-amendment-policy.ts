@@ -136,3 +136,26 @@ export function assessOrderAmendment(evidence: OrderAmendmentEvidence) {
     cancellationStrategy: "release_active_reservations" as const,
   }
 }
+
+// Delivery time and note move no money or stock, so payment, fulfilment,
+// ledger, quote and service history do not lock them.
+const DETAILS_BLOCKERS = new Set([
+  "INCOMPLETE_EVIDENCE",
+  "STORE_UNAVAILABLE",
+  "PRESCRIPTION_SOURCE",
+  "BOOKING_SOURCE",
+])
+
+/** Eligibility for a metadata amendment that changes only delivery time and/or note. */
+export function assessOrderDetailsAmendment(evidence: OrderAmendmentEvidence) {
+  const blockers = assessOrderAmendment(evidence).blockers.filter((block) =>
+    DETAILS_BLOCKERS.has(block.code),
+  )
+  if (["CANCELLED", "REFUNDED"].includes(evidence.status))
+    blockers.push({
+      code: "ORDER_CLOSED",
+      reason: "Cancelled and refunded orders cannot change.",
+      requiredWorkflow: "return_refund",
+    })
+  return { eligible: blockers.length === 0, blockers }
+}
