@@ -47,15 +47,16 @@ export function setupProductVariants(payload: SetupProductPayload) {
     const override = payload.variants?.find((variant) =>
       setupSelectionsEqual(variant.selections, selections),
     )
+    const priceMinor =
+      override?.priceMinor ??
+      override?.sellingUnitPrices?.find((price) =>
+        setupNameEqual(price.unitName, payload.unitName),
+      )?.priceMinor ??
+      payload.priceMinor
     return {
       selections,
       label: selections.map((entry) => entry.value).join(" / ") || payload.name,
-      priceMinor:
-        override?.priceMinor ??
-        override?.sellingUnitPrices?.find((price) =>
-          setupNameEqual(price.unitName, payload.unitName),
-        )?.priceMinor ??
-        payload.priceMinor,
+      priceMinor,
       pendingUnitPrices: (override?.sellingUnitPrices ?? []).filter(
         (price) =>
           !setupNameEqual(price.unitName, payload.unitName) &&
@@ -74,11 +75,29 @@ export function setupProductVariants(payload: SetupProductPayload) {
           priceMinor:
             override?.sellingUnitPrices?.find((price) =>
               setupNameEqual(price.unitName, unit.name),
-            )?.priceMinor ?? unit.priceMinor,
+            )?.priceMinor ??
+            unit.priceMinor ??
+            setupPackPrice(priceMinor, unit.containsQuantity),
         })),
       openingStock: setupVariantStock(payload, override),
     }
   })
+}
+
+/** A pack sells at its size times the unit price unless the owner priced it. */
+export function setupPackPrice(
+  unitPriceMinor: number | undefined,
+  containsQuantity: string,
+) {
+  if (
+    unitPriceMinor === undefined ||
+    !isExactDecimal(containsQuantity, { allowZero: false, maxScale: 6 })
+  )
+    return undefined
+  const minor = Number(
+    multiplyExactDecimals(String(unitPriceMinor), containsQuantity, 6),
+  )
+  return Number.isInteger(minor) && minor <= 100_000_000 ? minor : undefined
 }
 
 /** Preserve raw counts until conversions are known; never guess a pack size. */

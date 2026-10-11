@@ -13,6 +13,7 @@ import {
   unitConfigurationPublishAction,
 } from "./unit-configuration"
 import { stockAdjustmentAction, stockCorrectionAction } from "./stock-adjustment"
+import { productCreateAction, productCreateSummary } from "./product-create"
 const id = z.string().trim().min(1).max(128)
 const name = z.string().trim().min(1).max(160)
 const money = z.number().int().min(0).max(100_000_000)
@@ -29,14 +30,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
       email: z.string().email().max(254).optional(),
     })
     .strict(),
-  z
-    .object({
-      action: z.literal("product_create"),
-      name,
-      canonicalUnitName: z.string().trim().min(1).max(80),
-      priceMinor: money,
-    })
-    .strict(),
+  productCreateAction,
   z
     .object({
       action: z.literal("order_create"),
@@ -416,7 +410,7 @@ export function generalActionSummary(
         .filter(Boolean)
         .join(" · ")
     case "product_create":
-      return `${action.name} · ${action.canonicalUnitName} · ${amount(action.priceMinor)} per unit`
+      return productCreateSummary(action, amount)
     case "order_create":
       return `${action.lines.length} line${action.lines.length === 1 ? "" : "s"} on the order\n${action.customerId ? "Saved customer" : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}`
     case "customer_update":

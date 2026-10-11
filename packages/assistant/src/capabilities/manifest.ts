@@ -283,7 +283,7 @@ export const capabilityManifest = [
     schema: actionSchema("product_create"),
     effect: "record",
     receipt: "product",
-    title: "Add a simple product",
+    title: "Add a product",
     domain: "catalog",
     tool: "draftAction",
     policy: { roles: managers },

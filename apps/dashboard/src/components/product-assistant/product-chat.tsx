@@ -15,6 +15,7 @@ import { SetupPrerequisites } from "@/components/setup-assistant/setup-prerequis
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { setupProductPayloadSchema } from "@ewatrade/assistant/setup/contracts"
+import { setupPackPrice } from "@ewatrade/assistant/setup/variants"
 import { Button, cn } from "@ewatrade/ui"
 import { formatMinorMoney } from "@ewatrade/utils/currency"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
@@ -235,7 +236,12 @@ export function ProductChat({
             <dt className="text-muted-foreground">
               {unit.name} · {unit.containsQuantity} {payload?.unitName}
             </dt>
-            <dd>{money(unit.priceMinor)}</dd>
+            <dd>
+              {money(
+                unit.priceMinor ??
+                  setupPackPrice(payload?.priceMinor, unit.containsQuantity),
+              )}
+            </dd>
           </div>
         ))}
         <div>

@@ -4,6 +4,7 @@ import {
   type GeneralProposal,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
+import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
 import {
   Button,
   Field,
@@ -16,9 +17,10 @@ import {
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { useState } from "react"
-import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
+import { GeneralProductCreateEditor } from "./general-product-create-editor"
+import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralSaleCustomer } from "./general-sale-customer"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
 import { GeneralStockCountEditor } from "./general-stock-count-editor"
@@ -45,6 +47,19 @@ export function GeneralProposalEditor(props: {
     return (
       <GeneralProductReturnEditor
         initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "product_create" &&
+    !isSimpleProductCreate(props.proposal.payload)
+  )
+    return (
+      <GeneralProductCreateEditor
+        initial={props.proposal.payload}
+        currencyCode={props.currencyCode}
         disabled={props.disabled}
         onSave={props.onSave}
         onCancel={props.onCancel}

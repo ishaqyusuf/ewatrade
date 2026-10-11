@@ -861,7 +861,7 @@ export function createGeneralTools(
     }),
     draftAction: tool({
       description:
-        "Stage an exact new customer, customer detail update, simple product, order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens.",
+        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens.",
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {

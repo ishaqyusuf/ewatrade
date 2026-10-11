@@ -1,4 +1,3 @@
-import { productLineReturn } from "./general-product-return"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
@@ -6,11 +5,17 @@ import type {
   GeneralReceipt,
 } from "@ewatrade/assistant/general/contracts"
 import {
+  isSimpleProductCreate,
+  productCreateDraft,
+  productCreatePayload,
+} from "@ewatrade/assistant/general/product-create"
+import {
   lockGeneralPaymentOrder,
   readGeneralOrderReview,
 } from "@ewatrade/db/assistant-general"
 import {
   CustomerDirectoryError,
+  createCatalogItemInTransaction,
   createCommercialOrderInTransaction,
   createCustomerInTransaction,
   createSimpleCatalogItemInTransaction,
@@ -39,13 +44,14 @@ import {
   orderReplace,
 } from "./general-order-amendment"
 import { productAvailabilityUpdate } from "./general-product-availability"
+import { productBatchFulfill } from "./general-product-batch-fulfillment"
 import {
   productDetailsUpdate,
   productIdentifiersUpdate,
 } from "./general-product-details"
-import { productBatchFulfill } from "./general-product-batch-fulfillment"
 import { productLineFulfill } from "./general-product-fulfillment"
 import { productPriceUpdate } from "./general-product-price"
+import { productLineReturn } from "./general-product-return"
 import {
   productUnitConfigurationDraft,
   productUnitConfigurationPublish,
@@ -60,6 +66,7 @@ import {
   stockTransferReceive,
 } from "./general-stock-transfer"
 import { proposalDigest } from "./proposal-security"
+import { catalogCommandForSetupEntity } from "./setup-commit"
 
 export type GeneralTransactionContext = Omit<GeneralContext, "db"> & {
   db: Prisma.TransactionClient
@@ -287,23 +294,38 @@ const customerCreate: GeneralActionAdapter<Action<"customer_create">> = {
 }
 
 const productCreate: GeneralActionAdapter<Action<"product_create">> = {
+  // Pack prices and pack-counted stock are written out, so the card is exact.
+  prepare: async (_ctx, payload) => productCreateDraft(payload),
   validate: async () => null,
   stale: "This draft changed. Review it again.",
   unavailable: "This product draft is unavailable.",
   async execute(ctx, payload, key) {
     const scope = requireGeneralScope(ctx)
-    const { action: _, ...input } = payload
-    const result = await createSimpleCatalogItemInTransaction(ctx.db, {
-      ...catalogCreateSimpleItemSchema.parse({
-        ...input,
-        kind: "product",
-        storeId: scope.storeId,
-        clientOperationId: key,
-      }),
-      storeId: scope.storeId,
-      tenantId: scope.tenantId,
-      actorUserId: scope.userId,
-    })
+    const result = isSimpleProductCreate(payload)
+      ? await createSimpleCatalogItemInTransaction(ctx.db, {
+          ...catalogCreateSimpleItemSchema.parse({
+            name: payload.name,
+            description: payload.description,
+            canonicalUnitName: payload.canonicalUnitName,
+            priceMinor: payload.priceMinor,
+            openingStockQuantity: payload.openingStock,
+            kind: "product",
+            storeId: scope.storeId,
+            clientOperationId: key,
+          }),
+          storeId: scope.storeId,
+          tenantId: scope.tenantId,
+          actorUserId: scope.userId,
+        })
+      : // Packs and options use the same Catalog mapping as Setup.
+        await createCatalogItemInTransaction(ctx.db, {
+          ...catalogCommandForSetupEntity(key, productCreatePayload(payload), {
+            actorUserId: scope.userId,
+            storeId: scope.storeId,
+            tenantId: scope.tenantId,
+          }),
+          clientOperationId: key,
+        })
     return {
       kind: "product",
       recordId: result.id,

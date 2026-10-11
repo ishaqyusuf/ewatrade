@@ -891,14 +891,13 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           deps.productOnly &&
           (items.length !== 1 ||
             items[0]?.kind !== "product" ||
-            !items[0]?.unitName?.trim() ||
             items[0]?.options?.length ||
             items[0]?.variants?.length)
         )
           return {
             status: "failed" as const,
             warnings: [
-              "Stage exactly one product with an explicit stock counting unit. Ask the owner for the missing unit. Advanced options require Back to form.",
+              "Stage exactly one product. Advanced options require Back to form.",
             ],
           }
         if (deps.productOnly)

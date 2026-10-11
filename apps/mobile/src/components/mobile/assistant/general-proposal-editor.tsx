@@ -7,6 +7,7 @@ import {
   type GeneralProposal,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
+import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
 import {
   getCountry,
   toInternationalPhone,
@@ -18,6 +19,7 @@ import { ActionButton } from "../action-button"
 import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
+import { GeneralProductCreateRows } from "./general-product-create-rows"
 export function GeneralProposalEditor({
   proposal,
   disabled,
@@ -55,7 +57,8 @@ export function GeneralProposalEditor({
     if (disabled) return
     const amount = majorToMinor(price)
     if (
-      (payload.action === "product_create" ||
+      ((payload.action === "product_create" &&
+        isSimpleProductCreate(payload)) ||
         payload.action === "payment_record") &&
       amount === null
     ) {
@@ -65,7 +68,9 @@ export function GeneralProposalEditor({
     const candidate = {
       ...payload,
       ...(payload.action === "product_create"
-        ? { priceMinor: amount }
+        ? isSimpleProductCreate(payload)
+          ? { priceMinor: amount }
+          : {}
         : payload.action === "payment_record"
           ? { amountMinor: amount }
           : payload.action === "customer_create"
@@ -184,7 +189,16 @@ export function GeneralProposalEditor({
             />
           </>
         ) : null}
-        {payload.action === "product_create" ? (
+        {payload.action === "product_create" &&
+        !isSimpleProductCreate(payload) ? (
+          <GeneralProductCreateRows
+            payload={payload}
+            disabled={disabled}
+            onChange={(variants) => patch({ variants })}
+          />
+        ) : null}
+        {payload.action === "product_create" &&
+        isSimpleProductCreate(payload) ? (
           <FormField
             label="Unit"
             value={payload.canonicalUnitName}
@@ -192,7 +206,8 @@ export function GeneralProposalEditor({
             onChangeText={(canonicalUnitName) => patch({ canonicalUnitName })}
           />
         ) : null}
-        {payload.action === "product_create" ||
+        {(payload.action === "product_create" &&
+          isSimpleProductCreate(payload)) ||
         payload.action === "payment_record" ? (
           <FormField
             label={

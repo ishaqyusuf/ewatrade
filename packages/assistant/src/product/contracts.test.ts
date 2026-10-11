@@ -147,7 +147,7 @@ describe("focused product contract", () => {
     unknown.form.openingStockQuantity = ""
     expect(productSeed(unknown)?.payload.openingStock).toBeUndefined()
   })
-  test("internal use needs no price; sale and every selling unit do", () => {
+  test("internal use needs no price; sale does, and packs default to size × unit price", () => {
     const snapshot = productSnapshot()
     snapshot.form.price = ""
     expect(productCreationReady(productSeed(snapshot)?.payload, snapshot)).toBe(
@@ -161,6 +161,16 @@ describe("focused product contract", () => {
     expect(
       productCreationReady(
         { ...sale, sellingUnits: [{ name: "Tray", containsQuantity: "30" }] },
+        productSnapshot(),
+      ),
+    ).toBe(true)
+    expect(
+      productCreationReady(
+        {
+          ...sale,
+          priceMinor: undefined,
+          sellingUnits: [{ name: "Tray", containsQuantity: "30" }],
+        },
         productSnapshot(),
       ),
     ).toBe(false)
@@ -260,11 +270,14 @@ describe("focused product contract", () => {
       options,
     )
     expect(multiple.status).toBe("failed")
+    // A first description stages straight away; the unit is kept or defaults.
     const missingUnit = await execute(
       { items: [{ kind: "product", name: "Eggs", price: "150" }] },
       options,
     )
-    expect(missingUnit.status).toBe("failed")
+    expect(missingUnit.status).toBe("success")
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.payload).toMatchObject({ name: "Eggs", priceMinor: 15000 })
   })
 })
 describe("read-only business allowance", () => {
