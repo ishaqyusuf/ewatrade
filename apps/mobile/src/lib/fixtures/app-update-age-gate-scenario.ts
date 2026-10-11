@@ -36,8 +36,9 @@ mock.module("@/components/mobile/auth-header", () => ({
   AuthActionButton: box,
   AuthBrandHeader: box,
 }))
-mock.module("@/components/mobile/screen", () => ({ MobileScreen: box }))
-mock.module("@/components/mobile/status-banner", () => ({ StatusBanner: box }))
+mock.module("@/components/mobile/green-till/auth-screen", () => ({
+  AuthFlowScreen: box,
+}))
 
 const { AccountAgeStartupGate } = await import(
   "@/components/mobile/account-age-startup-gate"
@@ -45,17 +46,24 @@ const { AccountAgeStartupGate } = await import(
 const render = () =>
   renderToStaticMarkup(createElement(AccountAgeStartupGate, null, "WORKSPACE"))
 for (const value of [
-  { isPending: true },
-  { isError: true },
-  { isSuccess: true, data: { eligible: false } },
+  { isSuccess: true, data: { ageBand: null, eligible: false } },
+  { isSuccess: true, data: { ageBand: "UNDER_13", eligible: false } },
 ]) {
   status = value
   const markup = render()
   assert.ok(markup.includes('data-update-restore="false"'))
   assert.ok(!markup.includes("WORKSPACE"))
 }
-status = { isSuccess: true, data: { eligible: true } }
-assert.equal(render(), "WORKSPACE")
+// The current gate opens the workspace while the background status request is
+// pending or unavailable; the normal workspace owns updates in these states.
+for (const value of [
+  { isPending: true },
+  { isError: true },
+  { isSuccess: true, data: { ageBand: "ADULT", eligible: true } },
+]) {
+  status = value
+  assert.equal(render(), "WORKSPACE")
+}
 auth = { ...auth, isAuthenticated: false }
 assert.equal(render(), "WORKSPACE")
 console.log("age-gate: passed")
