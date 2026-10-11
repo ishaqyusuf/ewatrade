@@ -30,6 +30,7 @@ test.skipIf(!enabled)(
     )
       throw Error("QA scope mismatch")
     const session = await db.session.findFirstOrThrow({
+      orderBy: { createdAt: "desc" },
       where: { userId: user.id, expiresAt: { gt: new Date() } },
     })
     const conversation = await startGeneralConversation(db, {
@@ -101,6 +102,30 @@ test.skipIf(!enabled)(
       console.log(
         "Protected router including middleware passed with two completed correction DTOs",
       )
+      if (process.env.RUN_GENERAL_CORRECTION_HTTP === "1") {
+        const url = new URL(
+          "http://localhost:3095/api/trpc/assistant.conversation",
+        )
+        url.searchParams.set(
+          "input",
+          JSON.stringify({ json: { conversationId: conversation.id } }),
+        )
+        const response = await fetch(url, {
+          headers: {
+            authorization: `Bearer ${session.token}`,
+            "x-assistant-client": "dashboard",
+            "x-store-id": storeId,
+          },
+        })
+        const body = await response.json()
+        console.info(
+          "Serving correction history response",
+          response.status,
+          body.error?.json?.data?.code ?? "ok",
+        )
+        expect(response.status).toBe(200)
+        expect(body.result?.data?.json?.proposals).toHaveLength(2)
+      }
     } finally {
       await db.assistantConversation.delete({ where: { id: conversation.id } })
       expect(
