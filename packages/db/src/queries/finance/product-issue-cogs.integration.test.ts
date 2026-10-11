@@ -20,6 +20,11 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
   test("values packaged Product issues and posts retained COGS atomically with EARNED", async () => {
     const { prisma: db } = await import("../../client")
     const runId = randomUUID()
+    const startedAt = Date.now()
+    const checkpoint = (stage: string) => console.info(JSON.stringify({
+      suite: "product-issue-cogs", runId, stage, elapsedMs: Date.now() - startedAt,
+    }))
+    checkpoint("started")
     const tenantIds: string[] = []
     const storeIds: string[] = []
     const catalogItemIds: string[] = []
@@ -271,6 +276,7 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
         if (line.stockReservation) reservationIds.push(line.stockReservation.id)
         return { order, line }
       }
+      checkpoint("opening-stock-ready")
       const first = await makeOrder("first-sale", "0.5")
 
       const fulfillmentInput = {
@@ -422,6 +428,7 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
       })
       expect(firstOrderSourceEntries).toHaveLength(3)
 
+      checkpoint("reviewed-first-issue-and-journals-verified")
       const second = await makeOrder("second-sale", "1.5")
       const secondFulfillment = await fulfillCommercialOrderProductLine(db, {
         actorUserId: user.id,
@@ -469,6 +476,7 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
       })
       expect(secondOrderSourceEntries).toHaveLength(3)
 
+      checkpoint("depletion-verified")
       const unknown = await makeOrder(
         "unknown-opening-sale",
         "1",
@@ -723,6 +731,7 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
         }),
       ).toBe(11)
     } finally {
+      checkpoint("cleanup-started")
       await db.$transaction(
         async (tx) => {
           if (bookId) {
@@ -839,6 +848,7 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
         reservations: 0,
         users: 0,
       })
+      checkpoint("cleanup-verified")
     }
   })
 })

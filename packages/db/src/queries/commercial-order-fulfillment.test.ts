@@ -5,6 +5,7 @@ import {
   fulfillCommercialOrderProductLine,
   fulfillCommercialOrderProductLineInTransaction,
   fulfillCommercialOrderProducts,
+  fulfillCommercialOrderProductsInTransaction,
 } from "./commercial-orders"
 
 const tenantId = "tenant-a"
@@ -131,7 +132,8 @@ function fulfillmentFixture(options: FixtureOptions = {}) {
         return query.select?.orderId ? { orderId } : line
       },
       findMany: async (args: unknown) => {
-        const query = args as { include?: Record<string, unknown> }
+        const query = args as { include?: Record<string, unknown>; where?: { kind?: string } }
+        if (query.where?.kind === "SERVICE") return []
         events.push("read:product-lines")
         if (query.include?.productFulfillments) {
           return [
@@ -393,4 +395,22 @@ test("product line composes in caller transaction and rejects a different Store"
   ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(wrong.fulfillmentUpsertCount).toBe(0)
   expect(wrong.orderUpdates).toHaveLength(0)
+})
+
+
+test("batch composes without a nested transaction and fences Store before replay", async () => {
+  const f = fulfillmentFixture()
+  const input = { actorUserId, clientOperationId: "batch-caller", orderId,
+    reason: "Packing", schemaVersion: 1, tenantId, storeId: "store-a" }
+  const first = await fulfillCommercialOrderProductsInTransaction(f.tx, input)
+  expect(first).toEqual({ fulfilledLineCount: 1, status: "COMPLETED" })
+  expect(await fulfillCommercialOrderProductsInTransaction(f.tx, input)).toEqual(first)
+  await expect(fulfillCommercialOrderProductsInTransaction(f.tx, {
+    ...input, storeId: "other-store",
+  })).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(fulfillCommercialOrderProductsInTransaction(f.tx, {
+    ...input, reason: "Changed intention",
+  })).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+  expect(f.fulfillmentUpsertCount).toBe(1)
+  expect(f.batchCommandCreateCount).toBe(1)
 })

@@ -443,7 +443,7 @@ async function applyCommercialOrderProductLineInTransaction(
   return fulfillment
 }
 
-async function fulfillCommercialOrderProductsInTransaction(
+async function applyCommercialOrderProductsInTransaction(
   tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
@@ -1122,7 +1122,7 @@ export async function createCommercialOrderGraphInTransaction(
   }
 
   if (input.fulfillNow) {
-    await fulfillCommercialOrderProductsInTransaction(tx, {
+    await applyCommercialOrderProductsInTransaction(tx, {
       actorUserId: input.actorUserId,
       clientOperationIdPrefix: `${input.clientOrderId}:fulfillment`,
       orderId: order.id,
@@ -1728,125 +1728,129 @@ export async function fulfillCommercialOrderProductLineInTransaction(
   }
 }
 
-export async function fulfillCommercialOrderProducts(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientOperationId: string
-    orderId: string
-    reason?: string
-    schemaVersion: number
-    tenantId: string
-  },
-) {
-  assertSchemaVersion(input.schemaVersion)
-  const hash = payloadHash({
+export type FulfillCommercialOrderProductsInput = {
+  actorUserId: string
+  clientOperationId: string
+  orderId: string
+  reason?: string
+  schemaVersion: number
+  tenantId: string
+  storeId?: string
+}
+
+function productBatchHash(input: FulfillCommercialOrderProductsInput) {
+  return payloadHash({
     orderId: input.orderId,
     reason: input.reason?.trim() || null,
     schemaVersion: input.schemaVersion,
     tenantId: input.tenantId,
   })
+}
 
-  const serializePrevious = (previous: {
-    fulfilledLineCount: number
-    payloadHash: string
-    resultStatus: OrderStatus
-  }) => {
-    if (previous.payloadHash !== hash) {
-      throw new CatalogError(
-        "IDEMPOTENCY_MISMATCH",
-        "This fulfillment identity was already used with different input.",
-      )
-    }
-    return {
-      fulfilledLineCount: previous.fulfilledLineCount,
-      status: previous.resultStatus,
-    }
-  }
+function serializeProductBatchReplay(
+  previous: { fulfilledLineCount: number; payloadHash: string; resultStatus: OrderStatus },
+  input: FulfillCommercialOrderProductsInput,
+) {
+  if (previous.payloadHash !== productBatchHash(input))
+    throw new CatalogError("IDEMPOTENCY_MISMATCH", "This fulfillment identity was already used with different input.")
+  return { fulfilledLineCount: previous.fulfilledLineCount, status: previous.resultStatus }
+}
 
+export async function fulfillCommercialOrderProducts(
+  db: PrismaClient,
+  input: FulfillCommercialOrderProductsInput,
+) {
   try {
-    return await db.$transaction(async (tx) => {
-      if (!(await lockCommerceFinancialOrder(tx, input))) {
-        throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
-      }
-      const previous = await tx.commercialOrderFulfillmentCommand.findUnique({
-        where: {
-          tenantId_clientOperationId: {
-            clientOperationId: input.clientOperationId,
-            tenantId: input.tenantId,
-          },
-        },
-      })
-      if (previous) return serializePrevious(previous)
-
-      const order = await tx.commercialOrder.findFirst({
-        select: {
-          deliveryDueAt: true,
-          id: true,
-          lines: {
-            select: { id: true },
-            where: {
-              OR: [
-                { kind: SellableOfferingKind.PRODUCT_UNIT },
-                { snapshot: { customLineRole: { not: null } } },
-              ],
-            },
-          },
-          status: true,
-        },
-        where: { id: input.orderId, tenantId: input.tenantId },
-      })
-      if (!order) {
-        throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
-      }
-      assertOrderCanBeFulfilled(order.deliveryDueAt)
-      if (order.lines.length === 0) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "This Order has no Product or catalog-free lines to fulfill.",
-        )
-      }
-
-      const result = await fulfillCommercialOrderProductsInTransaction(tx, {
-        actorUserId: input.actorUserId,
-        clientOperationIdPrefix: input.clientOperationId,
-        orderId: order.id,
-        reason: input.reason,
-        schemaVersion: input.schemaVersion,
-        tenantId: input.tenantId,
-      })
-      const status = result.status ?? order.status
-      await tx.commercialOrderFulfillmentCommand.create({
-        data: {
-          actorUserId: input.actorUserId,
-          clientOperationId: input.clientOperationId,
-          fulfilledLineCount: result.fulfilledLineCount,
-          orderId: order.id,
-          payloadHash: hash,
-          resultStatus: status,
-          tenantId: input.tenantId,
-        },
-      })
-      return { fulfilledLineCount: result.fulfilledLineCount, status }
-    })
+    return await runInOwnTransaction(db, (tx) =>
+      fulfillCommercialOrderProductsInTransaction(tx, input),
+    )
   } catch (error) {
-    if (
-      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-      error.code !== "P2002"
-    ) {
-      throw error
-    }
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error
+    // Read replay only after the owned transaction has rolled back.
     const previous = await db.commercialOrderFulfillmentCommand.findUnique({
       where: {
         tenantId_clientOperationId: {
-          clientOperationId: input.clientOperationId,
           tenantId: input.tenantId,
+          clientOperationId: input.clientOperationId,
         },
+        ...(input.storeId === undefined ? {} : { order: { storeId: input.storeId } }),
       },
     })
     if (!previous) throw error
-    return serializePrevious(previous)
+    return serializeProductBatchReplay(previous, input)
   }
+}
+
+export async function fulfillCommercialOrderProductsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FulfillCommercialOrderProductsInput,
+) {
+  assertSchemaVersion(input.schemaVersion)
+  const lockedOrder = await lockCommerceFinancialOrder(tx, input)
+  if (!lockedOrder) {
+    throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+  }
+  if (input.storeId !== undefined && lockedOrder.order.storeId !== input.storeId)
+    throw new CatalogError("REVISION_CONFLICT", "Order is outside the selected Store.")
+  const previous = await tx.commercialOrderFulfillmentCommand.findUnique({
+    where: {
+      tenantId_clientOperationId: {
+        clientOperationId: input.clientOperationId,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+  if (previous) return serializeProductBatchReplay(previous, input)
+
+  const order = await tx.commercialOrder.findFirst({
+    select: {
+      deliveryDueAt: true,
+      id: true,
+      lines: {
+        select: { id: true },
+        where: {
+          OR: [
+            { kind: SellableOfferingKind.PRODUCT_UNIT },
+            { snapshot: { customLineRole: { not: null } } },
+          ],
+        },
+      },
+      status: true,
+    },
+    where: { id: input.orderId, tenantId: input.tenantId },
+  })
+  if (!order) {
+    throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+  }
+  assertOrderCanBeFulfilled(order.deliveryDueAt)
+  if (order.lines.length === 0) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "This Order has no Product or catalog-free lines to fulfill.",
+    )
+  }
+
+  const result = await applyCommercialOrderProductsInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    clientOperationIdPrefix: input.clientOperationId,
+    orderId: order.id,
+    reason: input.reason,
+    schemaVersion: input.schemaVersion,
+    tenantId: input.tenantId,
+  })
+  const status = result.status ?? order.status
+  await tx.commercialOrderFulfillmentCommand.create({
+    data: {
+      actorUserId: input.actorUserId,
+      clientOperationId: input.clientOperationId,
+      fulfilledLineCount: result.fulfilledLineCount,
+      orderId: order.id,
+      payloadHash: productBatchHash(input),
+      resultStatus: status,
+      tenantId: input.tenantId,
+    },
+  })
+  return { fulfilledLineCount: result.fulfilledLineCount, status }
 }
 
 export async function returnCommercialOrderProductLine(
