@@ -182,12 +182,20 @@ export function useCustomerVoiceNote(input: {
       startGenerationRef.current += 1
       discardRef.current = true
       void (async () => {
+        // The native recorder may already be released on unmount.
+        const uri = (() => {
+          try {
+            return recorder.uri
+          } catch {
+            return null
+          }
+        })()
         try {
           if (recorder.isRecording) await recorder.stop()
-          discardUri(recorder.uri)
         } catch {
-          discardUri(recorder.uri)
+          // Released or already stopped; the file is discarded below.
         } finally {
+          discardUri(uri)
           await setAudioModeAsync({ allowsRecording: false }).catch(() => {})
         }
       })()
