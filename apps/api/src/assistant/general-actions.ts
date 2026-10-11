@@ -1,3 +1,4 @@
+import { customerReceipt } from "./general-customer-receipt"
 import { heldCreditRefund } from "./general-held-credit-refund"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
@@ -541,6 +542,7 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
 const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
+  customer_receipt: customerReceipt,
   held_credit_refund: heldCreditRefund,
   product_line_return: productLineReturn,
   product_line_fulfill: productLineFulfill,

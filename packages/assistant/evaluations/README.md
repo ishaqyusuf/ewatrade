@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| `customers.receipt.record` v1 | [1](fixtures/customer-receipt.v1.md) | New deposit, existing order payment, ambiguity, stale/closed targets, authority, atomic retry, receipt | None yet |
 | `finance.money_accounts.read` v1 | [1](fixtures/money-accounts.v1.md) | Book scope, account ambiguity, continuation, balance boundary, access refusal | None yet |
 | Customer funds reads | [1](fixtures/customer-funds.v1.md) | Account resolution, deposit provenance, source revision, statement snapshot, access refusal | None yet |
 | `customers.credit.refund` v1 | [1](fixtures/held-credit-refund.v1.md) | Completed payout, ambiguity, unused-credit limits, stale review, authority, injection, retry, provenance, receipt | None yet |
@@ -17,6 +18,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Customer receipt source verification, 11 October 2026](runs/2026-10-11-customer-receipt-source.md): canonical transaction seam, preview, revision guard and planned adapter; 11 tests / 69 assertions.
 
 - [Held-credit refund dashboard acceptance, 11 October 2026](runs/2026-10-11-held-credit-refund-web.md): review/edit/confirm, customer overlay, exact saved financial effects and owned fixture cleanup passed; provider-free.
 
