@@ -4,6 +4,7 @@ import type { FinanceActor } from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
 import { FinanceError, financeAmount } from "./rules"
+import { assertFinanceSupplierCodeAvailable } from "./supplier-create-source"
 import {
   assertOriginalSupplierPosting,
   normalizeFinanceSupplier,
@@ -116,15 +117,7 @@ export async function createFinanceSupplierInTransaction(
     "CREATE_FINANCE_SUPPLIER",
     { ...payload, code, name },
     async (book) => {
-      const existing = await tx.financeSupplierAccount.findUnique({
-        where: { bookId_code: { bookId: book.id, code } },
-        select: { id: true },
-      })
-      if (existing)
-        throw new FinanceError(
-          "CONFLICT",
-          "That supplier code is already in use.",
-        )
+      await assertFinanceSupplierCodeAvailable(tx, book.id, code)
       const supplier = await tx.financeSupplierAccount.create({
         data: { bookId: book.id, code, name, actorUserId: input.actorUserId },
         select: { id: true },

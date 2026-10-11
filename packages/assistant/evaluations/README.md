@@ -25,6 +25,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier creation review, 11 October 2026](runs/2026-10-11-supplier-create-review.md): canonical fresh-authority/Book/duplicate review and transaction export;7 tests/42 assertions pass. Assistant proposal and database/web acceptance pending.
+
 - [Supplier read source, 11 October 2026](runs/2026-10-11-supplier-reads-source.md):14assertions and scoped types pass; canonical search/statements registered as planned dashboard tools. Actual-tool acceptance pending.
 
 - [Correction receipt Open/Close, 11 October 2026](runs/2026-10-11-correction-receipt-open.md): saved cards load; Open shows corrected bill over same chat, Close preserves it; working receipt list and owned cleanup verified. Backend confirmations; full UI confirmation pending.

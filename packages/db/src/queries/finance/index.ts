@@ -55,10 +55,12 @@ export { adjustFinanceCashCount } from "./cash-adjustments"
 export { reverseFinanceCashAdjustment } from "./cash-adjustment-reversals"
 export {
   createFinanceSupplier,
+  createFinanceSupplierInTransaction,
   recordFinanceSupplierOpening,
   recordFinanceSupplierAdvance,
   reverseFinanceSupplierEntry,
 } from "./supplier-writes"
+export { getFinanceSupplierCreationReview } from "./supplier-create-review"
 export {
   listFinanceSuppliers,
   getFinanceSupplierStatement,
