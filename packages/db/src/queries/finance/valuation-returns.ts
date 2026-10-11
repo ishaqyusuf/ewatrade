@@ -3,9 +3,9 @@ import {
   multiplyExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 import type { Prisma } from "../../../generated/prisma/client"
-import type { FinanceInventoryUnknownReason } from "../../../generated/prisma/enums"
 import { FinanceError, assertFinancePostingDate } from "./rules"
 import { productReturnValuationInclude } from "./product-return-evidence"
+import { productReturnDestinationImpact } from "./product-return-destination-impact"
 import { reviewOriginalProductReturnCost } from "./product-return-cost-source"
 import {
   addQuantities,
@@ -247,60 +247,14 @@ export async function recordProductReturnValuationInTransaction(
       bookId_balanceSourceId: { bookId: book.id, balanceSourceId: balance.id },
     },
   })
-  if (pool && operation.effectiveAt < pool.latestEffectiveAt) {
-    throw new FinanceError(
-      "INVALID_JOURNAL",
-      "A Product return cannot precede its latest valuation event.",
-    )
-  }
   const movementCount = await tx.stockMovement.count({
     where: { balanceSourceId: balance.id },
   })
-  if (!Number.isSafeInteger(movementCount) || movementCount < 1) {
-    conflict("Inventory movement history cannot be counted.")
-  }
-  const movementCountExact = BigInt(movementCount)
-  let valueBeforeMinor: bigint | null = null
-  let poolUnknown: FinanceInventoryUnknownReason | null = null
-  if (!pool) {
-    if (before === "0" && movementCountExact === BigInt(1))
-      valueBeforeMinor = ZERO
-    else
-      poolUnknown =
-        before === "0" ? "UNCAPTURED_MOVEMENTS" : "MISSING_OPENING_COST"
-  } else if (
-    normalizeQuantity(pool.quantity.toFixed()) !== before ||
-    pool.lastMovementCount + BigInt(1) !== movementCountExact
-  ) {
-    poolUnknown = "UNCAPTURED_MOVEMENTS"
-  } else if (pool.valueMinor === null) {
-    poolUnknown = pool.unknownReason ?? "PRIOR_UNKNOWN_COST"
-  } else {
-    if (
-      pool.valueMinor < ZERO ||
-      pool.valueMinor > MAX_DATABASE_MINOR ||
-      pool.unknownReason !== null
-    ) {
-      conflict("The inventory valuation pool is inconsistent.")
-    }
-    valueBeforeMinor = pool.valueMinor
-  }
-  const valueAfterMinor =
-    valueBeforeMinor === null || header.sourceCostMinor === null
-      ? null
-      : valueBeforeMinor + header.sourceCostMinor
-  if (valueAfterMinor !== null && valueAfterMinor > MAX_DATABASE_MINOR) {
-    throw new FinanceError(
-      "INVALID_AMOUNT",
-      "Inventory carrying value exceeds its limit.",
-    )
-  }
-  const sequence = (pool?.lastSequence ?? ZERO) + BigInt(1)
-  if (sequence > MAX_DATABASE_MINOR)
-    conflict("Inventory valuation sequence exceeds its limit.")
-  const resolvedUnknown =
-    poolUnknown ??
-    (header.sourceCostMinor === null ? header.unknownReason : null)
+  const { valueBeforeMinor, valueAfterMinor, sequence, resolvedUnknown, movementCountExact } =
+    productReturnDestinationImpact({
+      pool, before, movementCount, effectiveAt: operation.effectiveAt,
+      sourceCostMinor: header.sourceCostMinor, sourceUnknownReason: header.unknownReason,
+    })
   const poolData = {
     quantity: after,
     valueMinor: valueAfterMinor,
