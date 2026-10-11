@@ -1,3 +1,4 @@
+import { rememberProductReturnSource } from "./product-return-source-snapshot"
 import { createHash } from "node:crypto"
 import { Prisma } from "../../../generated/prisma/client"
 import { productReturnQuantityImpact } from "../product-return-impact"
@@ -53,7 +54,7 @@ export async function previewProductReturnOriginalCost(db: Prisma.TransactionCli
     },
     physicalReturnAt: new Date(),
   })
-  return {
+  const result = {
     bookId: book.id,
     status: plan.sourceCostMinor === null ? "UNKNOWN" as const : "KNOWN" as const,
     sourceCostMinor: plan?.sourceCostMinor?.toString() ?? null,
@@ -65,4 +66,6 @@ export async function previewProductReturnOriginalCost(db: Prisma.TransactionCli
     })) ?? [],
     sourceRevision: createHash("sha256").update(JSON.stringify({ input, line, book }, (_key, value) => typeof value === "bigint" ? value.toString() : value)).digest("hex"),
   }
+  rememberProductReturnSource(result, db, input, { book, line, order: line.order })
+  return result
 }

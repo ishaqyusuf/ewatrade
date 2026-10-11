@@ -1,3 +1,4 @@
+import { consumeProductReturnSource } from "./product-return-source-snapshot"
 import {
   compareExactDecimals,
   multiplyExactDecimals,
@@ -41,31 +42,39 @@ function signedQuantity(value: Prisma.Decimal) {
 
 export { allocateOriginalIssueReturnCost } from "./product-return-cost-plan"
 
+async function loadReturnEvidence(tx: Prisma.TransactionClient, input: {
+  tenantId: string; productReturnId: string; costSourceToken?: object
+}) {
+  if (input.costSourceToken) {
+    const current = await tx.productReturn.findFirst({
+      where: { id: input.productReturnId, tenantId: input.tenantId },
+      include: { stockOperation: productReturnValuationInclude.stockOperation, financeCost: productReturnValuationInclude.financeCost },
+    })
+    if (!current) throw new FinanceError("NOT_FOUND", "Product return not found.")
+    const source = consumeProductReturnSource(input.costSourceToken, tx, current)
+    return { productReturn: { ...current, order: source.order, orderLine: source.line }, sourceBook: source.book }
+  }
+  const productReturn = await tx.productReturn.findFirst({
+    where: { id: input.productReturnId, tenantId: input.tenantId },
+    include: productReturnValuationInclude,
+  })
+  if (!productReturn) throw new FinanceError("NOT_FOUND", "Product return not found.")
+  return { productReturn, sourceBook: null }
+}
+
 /**
  * Private Product return adapter. The owning Commerce transaction already
  * holds the FinanceBook, Order and destination-balance locks before calling.
  */
 export async function recordProductReturnValuationInTransaction(
   tx: Prisma.TransactionClient,
-  input: { tenantId: string; productReturnId: string },
+  input: { tenantId: string; productReturnId: string; costSourceToken?: object },
 ) {
-  const productReturn = await tx.productReturn.findFirst({
-    where: { id: input.productReturnId, tenantId: input.tenantId },
-    include: productReturnValuationInclude,
-  })
-  if (!productReturn) {
-    throw new FinanceError("NOT_FOUND", "Product return not found.")
-  }
-
+  const { productReturn, sourceBook } = await loadReturnEvidence(tx, input)
   const { order, orderLine: line } = productReturn
   const { snapshot } = line
-  const book = await tx.financeBook.findUnique({
-    where: {
-      tenantId_currencyCode: {
-        tenantId: input.tenantId,
-        currencyCode: order.currencyCode,
-      },
-    },
+  const book = sourceBook ?? await tx.financeBook.findUnique({
+    where: { tenantId_currencyCode: { tenantId: input.tenantId, currencyCode: order.currencyCode } },
   })
   // Product returns remain supported in existing no-Book workspaces.
   if (!book) return null

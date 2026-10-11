@@ -1,3 +1,4 @@
+import { lockProductReturnSource } from "./finance/product-return-source-snapshot"
 import type { Prisma } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
 import { assertHeldCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
@@ -7,7 +8,7 @@ import { getCommercialProductReturnImpactReview } from "./commercial-product-ret
 export async function assertCommercialProductReturnReview(
   tx: Prisma.TransactionClient,
   input: Parameters<typeof getCommercialProductReturnImpactReview>[1] & {
-    orderId: string; expectedReviewRevision: string
+    orderId: string; expectedReviewRevision: string; clientReturnId: string
   },
   heldOrder: object,
 ) {
@@ -36,5 +37,5 @@ export async function assertCommercialProductReturnReview(
   })
   if (review.impactRevision !== input.expectedReviewRevision)
     throw new CatalogError("REVISION_CONFLICT", "Return quantities, stock or cost evidence changed. Review the return again.")
-  return review
+  return { ...review, costSourceToken: lockProductReturnSource(review.originalCost, tx, heldOrder, input) }
 }

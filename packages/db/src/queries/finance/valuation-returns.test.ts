@@ -117,6 +117,7 @@ function baseFixture(
   }
   const returnHistory: Array<Record<string, unknown>> = []
   const productReturn = {
+    clientReturnId: "command",
     id: "return-1",
     tenantId: "tenant-1",
     storeId: "store-1",
@@ -488,4 +489,51 @@ test("composed return review combines stock and destination value without record
   expect(review.journal.status).toBe("WAITING_FOR_ORIGINAL_COGS")
   expect(fixture.state.header).toBeNull()
   expect(fixture.state.event).toBeNull()
+})
+
+test("locked return reuses source history once but reads the new return and validates its scope", async () => {
+  const { lockCommerceFinancialOrder } = await import("../customer-ledger/commerce-locks")
+  const { lockProductReturnSource } = await import("./product-return-source-snapshot")
+  const fixture = baseFixture({ disposition: "DAMAGED" })
+  let currentReads = 0
+  const tx = {
+    ...fixture.tx,
+    commercialOrder: { findFirst: async () => fixture.productReturn.order },
+    $queryRaw: async () => [{ id: "book-1" }],
+    productReturn: { findFirst: async (args: { include: Record<string, unknown> }) => {
+      currentReads++
+      expect(args.include.orderLine).toBeUndefined()
+      const { order: _order, orderLine: _line, ...current } = fixture.productReturn
+      return current
+    } },
+  } as unknown as Prisma.TransactionClient
+  const scope = { clientReturnId: "command", tenantId: "tenant-1", storeId: "store-1", orderId: fixture.productReturn.order.id, orderLineId: fixture.productReturn.orderLine.id, quantity: fixture.productReturn.quantity.toFixed() }
+  const held = await lockCommerceFinancialOrder(tx, scope)
+  const preview = await previewProductReturnOriginalCost(tx, scope)
+  const token = lockProductReturnSource(preview, tx, held!, scope)
+  expect(token).toBeDefined()
+  // Locked Book/source history must not be loaded again; current return still is.
+  tx.financeBook.findUnique = (() => { throw Error("Repeated Book read") }) as typeof tx.financeBook.findUnique
+  const saved = await recordProductReturnValuationInTransaction(tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id, costSourceToken: token })
+  expect(saved?.sourceCostMinor?.toString()).toBe(preview.sourceCostMinor)
+  expect(currentReads).toBe(1)
+  await expect(recordProductReturnValuationInTransaction(tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id, costSourceToken: token })).rejects.toMatchObject({ code: "CONFLICT" })
+})
+
+test("source reuse refuses forged tokens and cross-transaction evidence", async () => {
+  const { consumeProductReturnSource, lockProductReturnSource } = await import("./product-return-source-snapshot")
+  const { lockCommerceFinancialOrder } = await import("../customer-ledger/commerce-locks")
+  const fixture = baseFixture({ disposition: "DAMAGED" })
+  const tx = { ...fixture.tx, commercialOrder: { findFirst: async () => fixture.productReturn.order }, $queryRaw: async () => [{ id: "book-1" }] } as unknown as Prisma.TransactionClient
+  const scope = { clientReturnId: "command", tenantId: "tenant-1", storeId: "store-1", orderId: fixture.productReturn.order.id, orderLineId: fixture.productReturn.orderLine.id, quantity: fixture.productReturn.quantity.toFixed() }
+  const held = await lockCommerceFinancialOrder(tx, scope)
+  const preview = await previewProductReturnOriginalCost(tx, scope)
+  expect(() => lockProductReturnSource(preview, tx, {}, scope)).toThrow()
+  const token = lockProductReturnSource(preview, tx, held!, scope)!
+  expect(() => consumeProductReturnSource({}, tx, fixture.productReturn)).toThrow()
+  expect(() => consumeProductReturnSource(token, fixture.tx, fixture.productReturn)).toThrow()
+  const nextPreview = await previewProductReturnOriginalCost(tx, scope)
+  const nextToken = lockProductReturnSource(nextPreview, tx, held!, scope)!
+  expect(() => consumeProductReturnSource(nextToken, tx, { ...fixture.productReturn, clientReturnId: "other-command" })).toThrow()
+  expect(fixture.state.header).toBeNull()
 })

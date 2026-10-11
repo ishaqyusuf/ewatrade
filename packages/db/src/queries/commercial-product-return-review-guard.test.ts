@@ -29,7 +29,7 @@ function fixture() {
 }
 test("review guard requires actual same-transaction Order lock evidence", async () => {
   const f = fixture()
-  await expect(assertCommercialProductReturnReview(f.tx, { ...input, orderId: "order", expectedReviewRevision: "stale" }, {})).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(assertCommercialProductReturnReview(f.tx, { ...input, orderId: "order", clientReturnId: "command", expectedReviewRevision: "stale" }, {})).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(f.locks).toEqual([])
 })
 test("unchanged review passes only after financial, Order and stock locks", async () => {
@@ -37,7 +37,7 @@ test("unchanged review passes only after financial, Order and stock locks", asyn
   const review = await getCommercialProductReturnImpactReview(f.tx, input)
   const held = await lockCommerceFinancialOrder(f.tx, { tenantId: "tenant", orderId: "order" })
   expect(held).not.toBeNull()
-  const result = await assertCommercialProductReturnReview(f.tx, { ...input, orderId: "order", expectedReviewRevision: review.impactRevision }, held!)
+  const result = await assertCommercialProductReturnReview(f.tx, { ...input, orderId: "order", clientReturnId: "command", expectedReviewRevision: review.impactRevision }, held!)
   expect(result.impactRevision).toBe(review.impactRevision)
   expect(f.locks).toEqual(["book", "order", "stock:source"])
 })
@@ -46,6 +46,6 @@ test("new return history refuses the old review after locking", async () => {
   const review = await getCommercialProductReturnImpactReview(f.tx, input)
   f.returns.push({ quantity: new Prisma.Decimal("0.5") })
   const held = await lockCommerceFinancialOrder(f.tx, { tenantId: "tenant", orderId: "order" })
-  await expect(assertCommercialProductReturnReview(f.tx, { ...input, orderId: "order", expectedReviewRevision: review.impactRevision }, held!)).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(assertCommercialProductReturnReview(f.tx, { ...input, orderId: "order", clientReturnId: "command", expectedReviewRevision: review.impactRevision }, held!)).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(f.locks.at(-1)).toBe("stock:source")
 })

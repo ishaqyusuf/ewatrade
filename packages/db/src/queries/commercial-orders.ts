@@ -1963,14 +1963,17 @@ export async function returnCommercialOrderProductLineInTransaction(
       "Fulfilled Product Order line not found.",
     )
   }
+  let costSourceToken: object | undefined
   if (input.expectedReviewRevision !== undefined) {
-    await assertCommercialProductReturnReview(tx, {
+    const reviewed = await assertCommercialProductReturnReview(tx, {
+      clientReturnId: input.clientReturnId,
       tenantId: input.tenantId, storeId: lockedOrder.order.storeId,
       orderId: lockedOrder.order.id, orderLineId: input.orderLineId,
       quantity: input.quantity, disposition: input.disposition,
       destinationBalanceSourceId: input.destinationBalanceSourceId,
       expectedReviewRevision: input.expectedReviewRevision,
     }, lockedOrder)
+    costSourceToken = reviewed.costSourceToken
   }
 
   const { quantity } = productReturnQuantityImpact({
@@ -2104,6 +2107,7 @@ export async function returnCommercialOrderProductLineInTransaction(
     await recordProductReturnValuationInTransaction(tx, {
       tenantId: input.tenantId,
       productReturnId: productReturn.id,
+      costSourceToken,
     })
     await postProductReturnFinanceJournalInTransaction(tx, {
       tenantId: input.tenantId,
