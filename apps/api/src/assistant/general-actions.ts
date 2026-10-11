@@ -1,3 +1,4 @@
+import { billPayment } from "./general-bill-payment"
 import { expenseRecord } from "./general-expense"
 import { moneyMovement } from "./general-money-movement"
 import { customerCreditApply } from "./general-customer-credit-apply"
@@ -549,6 +550,7 @@ const adapters: {
   customer_receipt: customerReceipt,
   money_movement: moneyMovement,
   expense_record: expenseRecord,
+  bill_payment: billPayment,
   customer_credit_apply: customerCreditApply,
   customer_allocation_release: customerAllocationRelease,
   held_credit_refund: heldCreditRefund,

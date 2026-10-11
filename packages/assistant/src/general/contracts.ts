@@ -1,3 +1,4 @@
+import { billPaymentAction } from "./bill-payment"
 import { expenseAction } from "./expense"
 import { moneyMovementAction } from "./money-movement"
 import { customerCreditApplyAction, customerAllocationReleaseAction } from "./customer-credit"
@@ -236,6 +237,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   customerReceiptAction,
   moneyMovementAction,
   expenseAction,
+  billPaymentAction,
   customerCreditApplyAction,
   customerAllocationReleaseAction,
   heldCreditRefundAction,
@@ -381,6 +383,7 @@ export function generalActionSummary(
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "bill_payment": return "Record payment against existing expense bill"
     case "expense_record": return `Record expense · ${action.payeeName} · ${action.description}`
     case "money_movement": return `Record ${action.kind.toLowerCase().replaceAll("_", " ")} · ${action.description}`
     case "customer_credit_apply": return "Apply existing customer credit"

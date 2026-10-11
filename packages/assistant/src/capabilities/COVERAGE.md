@@ -6,17 +6,18 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 536 (395 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 75
-- Merchant planned: 155
-- Merchant form-only: 120
+- Router procedures: 537 (396 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 76
+- Merchant planned: 154
+- Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 71 (36 read, 35 write)
+- Capabilities: 72 (36 read, 36 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `finance.bill.pay` | 1 | write (`bill_payment`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.payBill` |
 | `finance.expense.record` | 1 | write (`expense_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordExpense` |
 | `finance.money_movement.record` | 1 | write (`money_movement`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordMoney` |
 | `customers.entry.read` | 1 | read | `readCustomerEntry` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.entryDetail` |
@@ -102,6 +103,7 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `finance.bill.pay` | Record the remaining rent payment I already made | [packages/assistant/src/general/bill-payment.test.ts](../../../../packages/assistant/src/general/bill-payment.test.ts)<br>[packages/db/src/queries/finance/bill-payment-review.test.ts](../../../../packages/db/src/queries/finance/bill-payment-review.test.ts) |
 | `finance.expense.record` | Record rent already incurred, with the amount still owed | [packages/assistant/src/general/expense.test.ts](../../../../packages/assistant/src/general/expense.test.ts)<br>[packages/db/src/queries/finance/expense-review.test.ts](../../../../packages/db/src/queries/finance/expense-review.test.ts) |
 | `finance.money_movement.record` | Record cash I already deposited into the bank | [packages/assistant/src/general/money-movement.test.ts](../../../../packages/assistant/src/general/money-movement.test.ts)<br>[packages/db/src/queries/finance/money-review.test.ts](../../../../packages/db/src/queries/finance/money-review.test.ts) |
 | `customers.entry.read` | Read customer entry allocations | [apps/api/src/assistant/general-customer-allocations.test.ts](../../../../apps/api/src/assistant/general-customer-allocations.test.ts) |
@@ -187,7 +189,7 @@ track conversational evaluation separately from these source test links.
 | E01 | 6 |
 | E02 | 3 |
 | E03 | 2 |
-| E04 | 6 |
+| E04 | 5 |
 | E05 | 18 |
 | G01 | 6 |
 | G02 | 8 |
@@ -259,6 +261,7 @@ track conversational evaluation separately from these source test links.
 | `customers.getById` | query | read | customers | supported | customers.read |
 | `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page |
 | `customers.update` | mutation | Owner/Admin only | customers | supported | customers.update |
+| `domains.availability` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.connectExternal` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.createCheckout` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
@@ -300,7 +303,7 @@ track conversational evaluation separately from these source test links.
 | `finance.journal` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.moneyAccounts` | query | Owner/Admin only | finance | supported | finance.money_accounts.read |
 | `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
-| `finance.payBill` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.payBill` | mutation | Owner/Admin only | finance | supported | finance.bill.pay |
 | `finance.payPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.periodAudit` | query | Owner/Admin only | finance | planned | G02 |
 | `finance.periodCloseChecklist` | query | Owner/Admin only | finance | planned | G02 |
