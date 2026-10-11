@@ -98,39 +98,6 @@ export function SetupSection({
   )
 }
 
-type SetupChoicePillProps = {
-  children: ReactNode
-  onPress?: () => void
-  selected?: boolean
-}
-
-export function SetupChoicePill({
-  children,
-  onPress,
-  selected,
-}: SetupChoicePillProps) {
-  return (
-    <Pressable
-      className={cn(
-        "min-h-10 items-center justify-center rounded-full border px-4",
-        selected ? "border-primary bg-primary" : "border-border bg-background",
-      )}
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <Text
-        className={cn(
-          "text-xs font-bold",
-          selected ? "text-primary-foreground" : "text-foreground",
-        )}
-      >
-        {children}
-      </Text>
-    </Pressable>
-  )
-}
-
 type SetupCheckboxRowProps = {
   checked: boolean
   description: string

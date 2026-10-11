@@ -103,7 +103,6 @@ export {
 export { StaffInviteContent, StaffInviteSheet } from "./staff-invite-sheet"
 export { StaffOnboardingMarketNameplate } from "./staff-onboarding-market-nameplate"
 export {
-  SetupChoicePill,
   SetupFlowHeader,
   SetupInlineNotice,
   SetupSection,
