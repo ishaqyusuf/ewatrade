@@ -1,7 +1,7 @@
 import { useTRPC } from "@/trpc/client"
 import type { ResolvedAddress } from "@ewatrade/utils/geo-address"
 import { useMutation } from "@tanstack/react-query"
-import * as Location from "expo-location"
+import type * as LocationModule from "expo-location"
 import { useState } from "react"
 
 export type CurrentAddressStatus = "idle" | "busy" | "found"
@@ -21,6 +21,15 @@ export function useCurrentAddress() {
     setError(null)
     setStatus("busy")
     try {
+      // Loaded on tap: a build without the native module must still start.
+      let Location: typeof LocationModule
+      try {
+        Location = await import("expo-location")
+      } catch {
+        throw new Error(
+          "Location isn't available in this version of the app. Type the address below.",
+        )
+      }
       const permission = await Location.requestForegroundPermissionsAsync()
       if (!permission.granted) {
         setError(
