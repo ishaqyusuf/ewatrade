@@ -18,6 +18,8 @@ model CommercialOrder {
   taxMinor                       Int                                 @default(0)
   totalMinor                     Int
   amountPaidMinor                Int                                 @default(0)
+  /// Total of post-sale credits (overcharge corrections, returned goods); totalMinor already excludes it.
+  creditMinor                    Int                                 @default(0)
   customerName                   String?
   customerPhone                  String?
   customerEmail                  String?
@@ -49,6 +51,7 @@ model CommercialOrder {
   serviceBookings                ServiceBooking[]
   activities                     CommercialOrderActivity[]
   attachments                    CommercialOrderAttachment[]
+  credits                        CommercialOrderCredit[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, clientOrderId])
@@ -375,4 +378,32 @@ model CommercialOrderAttachment {
   @@index([orderId, createdAt])
   @@index([activityId])
   @@index([status, uploadExpiresAt])
+}
+
+/// Why an order asks for less after the sale.
+enum CommercialOrderCreditKind {
+  OVERCHARGE
+  RETURNED_ITEMS
+}
+
+/// Immutable post-sale credit: the order's totalMinor drops by amountMinor and
+/// creditMinor rises by it, so a refund for it does not reopen a balance.
+model CommercialOrderCredit {
+  id                String                    @id @default(cuid())
+  tenantId          String
+  orderId           String
+  clientOperationId String
+  payloadHash       String
+  kind              CommercialOrderCreditKind
+  amountMinor       Int
+  reason            String
+  actorUserId       String
+  refundPaymentId   String?
+  /// ProductReturn ids covered by a RETURNED_ITEMS credit.
+  productReturnIds  String[]
+  createdAt         DateTime                  @default(now())
+  order             CommercialOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientOperationId])
+  @@index([orderId, createdAt])
 }
