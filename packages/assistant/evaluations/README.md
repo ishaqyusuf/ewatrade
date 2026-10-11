@@ -22,6 +22,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Expense category lookup, 11 October 2026](runs/2026-10-11-expense-category-lookup.md): canonical scoped category query and planned assistant tool;3 tests/22 assertions and scoped types pass; actual-tool database/model acceptance pending.
+
 - [Expense proposal integration, 11 October 2026](runs/2026-10-11-expense-adapter.md): strict action, canonical adapter and global bill receipt;5 tests/64 assertions and scoped types pass; editor/discovery/database/web pending.
 
 - [Expense review preparation, 11 October 2026](runs/2026-10-11-expense-review.md): shared canonical normalization and unpaid/partial/owner-funded review;3 tests/46 assertions and scoped types pass; assistant/database/web acceptance pending.

@@ -1,3 +1,4 @@
+export { listFinanceExpenseCategories } from "./expense-category-reads"
 export { listFinanceMoneyAccounts } from "./money-account-reads"
 export {
   createFinanceBook,

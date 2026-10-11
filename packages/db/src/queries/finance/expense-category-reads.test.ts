@@ -1,0 +1,100 @@
+import { expect, test } from "bun:test"
+import type { PrismaClient } from "../../../generated/prisma/client"
+import { listFinanceExpenseCategories } from "./expense-category-reads"
+
+function fixture(options: { denied?: boolean; missingBook?: boolean } = {}) {
+  const calls: unknown[] = []
+  const tx = {
+    $queryRaw: async () => [],
+    membership: {
+      findFirst: async () =>
+        options.denied ? null : { tenant: { isActive: true } },
+    },
+    financeBook: {
+      findFirst: async (args: unknown) => {
+        expect(args).toMatchObject({
+          where: { id: "book", tenantId: "tenant" },
+        })
+        return options.missingBook
+          ? null
+          : {
+              id: "book",
+              currencyCode: "USD",
+              startsAt: new Date(),
+              closedThrough: null,
+            }
+      },
+    },
+    financeAccount: {
+      findMany: async (args: unknown) => {
+        calls.push(args)
+        return [
+          { id: "rent", code: "5001", name: "Rent", purpose: "OPERATING_EXPENSE" },
+          { id: "utilities", code: "5002", name: "Utilities", purpose: "OPERATING_EXPENSE" },
+        ]
+      },
+    },
+  }
+  const db = {
+    $transaction: async (work: (tx: unknown) => unknown, options: unknown) => {
+      expect(options).toEqual({
+        isolationLevel: "RepeatableRead",
+        maxWait: 10_000,
+        timeout: 30_000,
+      })
+      return work(tx)
+    },
+  } as unknown as PrismaClient
+  return { db, calls }
+}
+const input = { tenantId: "tenant", actorUserId: "owner", bookId: "book" }
+
+test("expense category lookup scopes the Book and excludes archived/non-expense accounts", async () => {
+  const { db, calls } = fixture()
+  const page = await listFinanceExpenseCategories(db, {
+    ...input,
+    afterCode: "5000",
+    limit: 1,
+  })
+  expect(calls[0]).toMatchObject({
+    where: {
+      bookId: "book",
+      archivedAt: null,
+      kind: "EXPENSE",
+      purpose: "OPERATING_EXPENSE",
+      code: { gt: "5000" },
+    },
+    orderBy: { code: "asc" },
+    take: 2,
+  })
+  expect(page.accounts).toHaveLength(1)
+  expect(page.nextCursor).toBe("5001")
+  expect(page.book.currencyCode).toBe("USD")
+  expect(page.coverage).toBe("ACTIVE_EXPENSE_CATEGORY_IDENTITIES")
+  expect(page).not.toHaveProperty("balanceMinor")
+})
+
+test("category lookup refuses missing Book or inactive authority before loading accounts", async () => {
+  for (const options of [{ denied: true }, { missingBook: true }]) {
+    const { db, calls } = fixture(options)
+    await expect(listFinanceExpenseCategories(db, input)).rejects.toMatchObject({
+      code: options.denied ? "FORBIDDEN" : "NOT_FOUND",
+    })
+    expect(calls).toHaveLength(0)
+  }
+})
+
+test("category lookup refuses invalid paging and returns no cursor at list end", async () => {
+  const { db } = fixture()
+  for (const page of [
+    { limit: 0 },
+    { limit: 51 },
+    { limit: 1.5 },
+    { afterCode: "bad cursor" },
+  ]) {
+    await expect(
+      listFinanceExpenseCategories(db, { ...input, ...page }),
+    ).rejects.toMatchObject({ code: "INVALID_JOURNAL" })
+  }
+  expect((await listFinanceExpenseCategories(db, input)).nextCursor).toBeNull()
+})

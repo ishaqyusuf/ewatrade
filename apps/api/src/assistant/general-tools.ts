@@ -1,6 +1,6 @@
 import { generalCustomerEntryInput, generalCustomerAllocationHistoryInput, generalCustomerEntryAnswer, generalCustomerAllocationHistoryAnswer } from "./general-customer-allocations"
 import { financeRouter } from "../trpc/routers/finance"
-import { financeMoneyAccountsSchema } from "../schemas/finance"
+import { financeMoneyAccountsSchema, financeExpenseCategoriesSchema } from "../schemas/finance"
 import { generalCustomerAccountsInput, generalCustomerSourcesInput, generalCustomerStatementInput, generalCustomerAccountAnswer, generalCustomerSourcesAnswers, generalCustomerStatementAnswer } from "./general-customer-funds"
 import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
 import {
@@ -856,6 +856,15 @@ export function createGeneralTools(
             .accounts({ ...input, limit: 10 }),
         ),
     }),
+    readExpenseCategories: tool({
+      description: "Find up to 10 active operating expense category identities in the exact Finance Book. Continue with nextCursor as afterCode in the same Book. These are categories, not expenses already recorded. Ask which category if ambiguous; do not invent IDs or silently create categories.",
+      inputSchema: financeExpenseCategoriesSchema.omit({ limit: true }),
+      execute: input => wrap("readExpenseCategories", async fresh => {
+        const page = await financeRouter.createCaller(fresh).expenseCategories({ ...input, limit: 10 })
+        onAnswer({ id: `expense_categories_${crypto.randomUUID()}`, title: "Expense categories", value: `${page.accounts.length} on this page`, scope: `Finance Book · ${page.book.currencyCode}`, asOf: new Date().toISOString(), detail: `${page.accounts.map(account => account.name).join("; ") || "No active expense categories on this page."} ${page.nextCursor ? "More categories available." : "End of this list."} Category identities only; no spending total is implied.` })
+        return page
+      }),
+    }),
     readMoneyAccounts: tool({
       description: "Find up to 10 active cash, bank or clearing account identities in an exact Finance Book. Continue with nextCursor as afterCode in the same Book. This is not a balance, provider settlement or proof of payout. Ask which account when ambiguous.",
       inputSchema: financeMoneyAccountsSchema.omit({ limit: true }),
@@ -917,7 +926,7 @@ export function createGeneralTools(
     }),
     draftAction: tool({
       description:
-        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens.",
+        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens. When expense_record is available, resolve categories with readExpenseCategories and business payment accounts with readMoneyAccounts. Require an already-incurred expense and explicit confirmation for any payment already made. Omit payment for unpaid bills; use OWNER_CAPITAL only when the owner personally paid, never for business cash. Ask about ambiguous category, funding, dates or amounts before drafting. This records bookkeeping and never sends money.",
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {

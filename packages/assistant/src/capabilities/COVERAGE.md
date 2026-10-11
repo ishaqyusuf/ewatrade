@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 535 (394 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 74
+- Router procedures: 536 (395 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 75
 - Merchant planned: 155
 - Merchant form-only: 120
 - Merchant excluded: 45
-- Capabilities: 70 (35 read, 35 write)
+- Capabilities: 71 (36 read, 35 write)
 
 ## Capabilities
 
@@ -24,6 +24,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.credit.apply` | 1 | write (`customer_credit_apply`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.applyCredit` |
 | `customers.allocation.release` | 1 | write (`customer_allocation_release`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.releaseAllocation` |
 | `customers.receipt.record` | 1 | write (`customer_receipt`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.recordReceipt` |
+| `finance.expense_categories.read` | 1 | read | `readExpenseCategories` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.expenseCategories` |
 | `finance.money_accounts.read` | 1 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
 | `customers.account.read` | 1 | read | `readCustomerAccount` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.accountDetail` |
 | `customers.sources.read` | 1 | read | `readCustomerLedgerSources` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.sources` |
@@ -108,6 +109,7 @@ track conversational evaluation separately from these source test links.
 | `customers.credit.apply` | Apply existing customer credit | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
 | `customers.allocation.release` | Release customer allocation | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
 | `customers.receipt.record` | Record a new customer deposit I already received | [packages/assistant/src/general/customer-receipt.test.ts](../../../../packages/assistant/src/general/customer-receipt.test.ts)<br>[packages/db/src/queries/customer-ledger/receipt-review.test.ts](../../../../packages/db/src/queries/customer-ledger/receipt-review.test.ts) |
+| `finance.expense_categories.read` | Which expense category should rent use? | [packages/db/src/queries/finance/expense-category-reads.test.ts](../../../../packages/db/src/queries/finance/expense-category-reads.test.ts) |
 | `finance.money_accounts.read` | Which bank account did I return the deposit from? | [packages/db/src/queries/finance/money-account-reads.test.ts](../../../../packages/db/src/queries/finance/money-account-reads.test.ts) |
 | `customers.account.read` | Read customer funds and matching Book | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
 | `customers.sources.read` | Read current customer ledger sources | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
@@ -288,6 +290,7 @@ track conversational evaluation separately from these source test links.
 | `finance.createExpenseCategory` | mutation | Owner/Admin only | finance | planned | E04 |
 | `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | planned | E01 |
 | `finance.createSupplier` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.expenseCategories` | query | Owner/Admin only | finance | supported | finance.expense_categories.read |
 | `finance.expenseReceipts.attach` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.expenseReceipts.createIntent` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.expenseReceipts.get` | query | Owner/Admin only | finance | planned | H04 |

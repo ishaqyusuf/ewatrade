@@ -28,6 +28,7 @@ export const financeMoneyAccountsSchema = financeBookSchema.extend({
   afterCode: z.string().regex(/^[A-Z0-9_-]{1,32}$/i).optional(),
   limit: z.number().int().min(1).max(50).default(20),
 }).strict()
+export const financeExpenseCategoriesSchema = financeMoneyAccountsSchema
 export const financeFiscalCalendarSchema = financeBookSchema
   .extend({
     clientCommandId: id,
