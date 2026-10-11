@@ -134,7 +134,10 @@ export function AssistantComposer({
   reason,
   children,
   inputRef,
+  canSendEmpty = false,
 }: {
+  /** Files are ready, so an empty message may be sent. */
+  canSendEmpty?: boolean
   inputRef?: { current: TextInput | null }
   value: string
   placeholder?: string
@@ -176,16 +179,16 @@ export function AssistantComposer({
           accessibilityRole="button"
           accessibilityLabel={busy ? "Stop reply" : "Send message"}
           accessibilityState={{
-            disabled: !busy && (disabled || !value.trim()),
+            disabled: !busy && (disabled || (!value.trim() && !canSendEmpty)),
           }}
-          disabled={!busy && (disabled || !value.trim())}
+          disabled={!busy && (disabled || (!value.trim() && !canSendEmpty))}
           className="size-[46px] items-center justify-center rounded-full bg-primary disabled:bg-muted"
           onPress={busy ? onStop : onSend}
         >
           <Icon
             name={busy ? "Square" : "ArrowUp"}
             className={
-              !busy && (disabled || !value.trim())
+              !busy && (disabled || (!value.trim() && !canSendEmpty))
                 ? "size-[21px] text-muted-foreground"
                 : "size-[21px] text-primary-foreground"
             }

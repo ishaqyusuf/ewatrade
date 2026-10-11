@@ -1,3 +1,4 @@
+import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -22,6 +23,7 @@ import {
   ResultCard,
 } from "./assistant-cards"
 import { AssistantChatRow, AssistantHome } from "./assistant-home"
+import { AssistantReceiptTray } from "./assistant-receipt-tray"
 import {
   AssistantBubble,
   AssistantComposer,
@@ -269,6 +271,29 @@ export function AskAssistantLive() {
             return (
               <View className="gap-3">
                 <AssistantDayMarker times={times} ids={ids} index={index} />
+                {item.role === "user"
+                  ? item.parts.flatMap((part) =>
+                      part.type === "data-setup-attachment"
+                        ? [
+                            <View
+                              key={part.data.attachmentId}
+                              className="max-w-[80%] flex-row items-center gap-1.5 self-end rounded-full bg-card px-3 py-1.5"
+                            >
+                              <Icon
+                                className="size-[13px] text-muted-foreground"
+                                name="ReceiptText"
+                              />
+                              <Text
+                                className="text-xs text-muted-foreground"
+                                numberOfLines={1}
+                              >
+                                {part.data.fileName}
+                              </Text>
+                            </View>,
+                          ]
+                        : [],
+                    )
+                  : null}
                 {text ? (
                   <AssistantBubble text={text} user={item.role === "user"} />
                 ) : null}
@@ -362,6 +387,7 @@ export function AskAssistantLive() {
           }
         />
         <AssistantComposer
+          canSendEmpty={vm.readyFiles.length > 0}
           value={vm.draft}
           onChange={vm.setDraft}
           onSend={() => void vm.send()}
@@ -375,7 +401,16 @@ export function AskAssistantLive() {
               ? "Saved answers are available offline. Reconnect to make changes."
               : undefined
           }
-        />
+        >
+          {vm.conversationId && vm.mediaEnabled && !vm.offline ? (
+            <AssistantReceiptTray
+              key={`${vm.conversationId}:${vm.trayKey}`}
+              conversationId={vm.conversationId}
+              disabled={vm.busy || exhausted || !!noAccess}
+              onReadyChange={vm.setReadyFiles}
+            />
+          ) : null}
+        </AssistantComposer>
         <Modal ref={saved.ref} title="All chats" snapPoints={["90%"]}>
           <BottomSheetScrollView
             contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 32 }}

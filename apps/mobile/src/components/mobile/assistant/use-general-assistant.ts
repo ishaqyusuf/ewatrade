@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AppState } from "react-native"
 import { z } from "zod"
 import { assistantError } from "./assistant-error"
+import type { AssistantReadyFile } from "./assistant-receipt-tray"
 import {
   assistantRequestHeaders,
   assistantScopeKey,
@@ -86,6 +87,9 @@ export function useGeneralAssistant() {
   const [pending, setPending] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
   const [queued, setQueued] = useState<string | null>(null)
+  // Receipt photos/PDFs read and ready to go with the next message.
+  const [readyFiles, setReadyFiles] = useState<AssistantReadyFile[]>([])
+  const [trayKey, setTrayKey] = useState(0)
   const storageKey = `ewatrade:general-assistant:v1:${scope}`
   const availability = useQuery(
     trpc.assistant.availability.queryOptions(undefined, {
@@ -195,7 +199,27 @@ export function useGeneralAssistant() {
               message: {
                 id: last.id,
                 role: "user",
-                parts: last.parts.filter((p) => p.type === "text"),
+                parts: last.parts.flatMap(
+                  (
+                    p,
+                  ): Array<
+                    | { type: "text"; text: string }
+                    | {
+                        type: "data-setup-attachment"
+                        data: { attachmentId: string }
+                      }
+                  > =>
+                    p.type === "text"
+                      ? [{ type: "text", text: p.text }]
+                      : p.type === "data-setup-attachment"
+                        ? [
+                            {
+                              type: p.type,
+                              data: { attachmentId: p.data.attachmentId },
+                            },
+                          ]
+                        : [],
+                ),
               },
             },
           }
@@ -357,11 +381,24 @@ export function useGeneralAssistant() {
         void conversations.refetch()
       }
     })
-  const sendText = async (text: string) => {
+  const sendText = async (text: string, files: AssistantReadyFile[] = []) => {
     attemptedText.current = text
     setNotice(null)
     try {
-      await chat.sendMessage({ text })
+      await chat.sendMessage({
+        parts: [
+          ...(text ? [{ type: "text" as const, text }] : []),
+          ...files.map((file) => ({
+            type: "data-setup-attachment" as const,
+            data: {
+              attachmentId: file.attachmentId,
+              kind: "IMAGE",
+              fileName: file.fileName,
+              summary: "",
+            },
+          })),
+        ],
+      })
     } catch (error) {
       if (canWork()) {
         setDraft((current) => current || text)
@@ -372,10 +409,24 @@ export function useGeneralAssistant() {
   /** Asks in the open thread, or starts one first and sends once it's ready. */
   const ask = async (value: string) => {
     const text = value.trim()
-    if (!canWork() || !text || busy || runId || pending || queued) return
+    // Ready receipts only exist in an open chat, so they never queue.
+    const files = conversationId ? readyFiles : []
+    if (
+      !canWork() ||
+      (!text && !files.length) ||
+      busy ||
+      runId ||
+      pending ||
+      queued
+    )
+      return
     if (conversationId && state.isError) return
     setDraft("")
-    if (conversationId) return sendText(text)
+    if (conversationId) {
+      setReadyFiles([])
+      setTrayKey((key) => key + 1)
+      return sendText(text, files)
+    }
     setQueued(text)
     if (!(await newThread())) {
       setQueued(null)
@@ -432,6 +483,10 @@ export function useGeneralAssistant() {
     setNotice(null)
   }
   return {
+    readyFiles,
+    setReadyFiles,
+    trayKey,
+    mediaEnabled: availability.data?.mediaEnabled === true,
     sessionUnavailable,
     availability,
     conversations,
