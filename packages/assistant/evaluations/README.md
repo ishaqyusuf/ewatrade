@@ -16,6 +16,8 @@ separate evidence; do not import them as successful model evaluations.
 
 - [Bulk fulfillment database acceptance, 11 October 2026](runs/2026-10-11-bulk-database.md): 24 assertions passed; no-Finance-Book scope only. This is not a model evaluation.
 
+- [Bulk fulfillment dashboard acceptance, 11 October 2026](runs/2026-10-11-bulk-web.md): review/edit/confirm, global order sheet and saved-state readback passed. Provider-free QA draft.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
