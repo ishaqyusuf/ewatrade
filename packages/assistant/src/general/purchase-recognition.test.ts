@@ -28,9 +28,9 @@ test("recognition requires an explicit independent fact with strict source and e
     expect(generalActionSchema.safeParse({ ...ownership, ...change }).success).toBe(false)
 })
 
-test("recognition is planned dashboard finance authority and receipts open the owning agreement", () => {
+test("recognition has dashboard finance authority and receipts open the owning agreement", () => {
   expect(capabilityForAction("purchase_recognize")).toMatchObject({
-    id: "finance.purchase.recognize", rollout: "planned", clients: ["dashboard"],
+    id: "finance.purchase.recognize", rollout: "source", clients: ["dashboard"],
     scope: "book", policy: { roles: ["OWNER", "ADMIN"] }, receipt: "finance_purchase_registration",
   })
   const receipt = { kind: "finance_purchase_registration", recordId: "agreement", title: "Invoice recognized", detail: "No stock or payment." }

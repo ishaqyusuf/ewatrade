@@ -33,6 +33,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Purchase fact chat flow, 11 October 2026](runs/2026-10-11-recognition-web.md): actual dashboard invoice/ownership edit, review, confirmation and global receipt Open/Close pass; exact two journals, one payable and zero owned stock effects verified. Source available; E05 partial. QA fixtures retained pending cleanup permission.
+
 - [Purchase fact editor, 11 October 2026](runs/2026-10-11-recognition-editor.md): actual invoice/ownership component integration, acknowledgment/date/money/reference guards, exact target/timestamp preservation, disabled/Cancel behavior and screenshots pass; full chat confirmation pending.
 
 - [Purchase fact proposal integration, 11 October 2026](runs/2026-10-11-recognition-proposals.md): strict invoice/ownership action and owning agreement receipt; 74 source/display assertions, scoped types and 57 isolated database assertions pass. Initial fixture failure retained; browser acceptance pending.

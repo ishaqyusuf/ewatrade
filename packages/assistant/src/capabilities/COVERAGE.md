@@ -17,7 +17,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
-| `finance.purchase.recognize` | 1 | write (`purchase_recognize`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recognizePurchase` |
+| `finance.purchase.recognize` | 1 | write (`purchase_recognize`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.recognizePurchase` |
 | `finance.purchase.register` | 1 | write (`purchase_register`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.registerPurchase` |
 | `finance.purchase_registrations.read` | 1 | read | `readPurchaseRegistrations` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognitions` |
 | `finance.purchase_recognition.read` | 1 | read | `readPurchaseRecognition` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognition` |
