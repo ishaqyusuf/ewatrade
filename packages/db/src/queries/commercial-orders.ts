@@ -455,8 +455,11 @@ async function applyCommercialOrderProductsInTransaction(
     schemaVersion: number
     tenantId: string
   },
+  existingLock?: NonNullable<Awaited<ReturnType<typeof lockCommerceFinancialOrder>>>,
 ) {
-  const lockedOrder = await lockCommerceFinancialOrder(tx, input)
+  // Private composition only: the reviewed batch caller already holds these
+  // locks in this transaction. Creation still acquires them through this helper.
+  const lockedOrder = existingLock ?? await lockCommerceFinancialOrder(tx, input)
   if (!lockedOrder) {
     throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
   }
@@ -1847,7 +1850,7 @@ export async function fulfillCommercialOrderProductsInTransaction(
     reason: input.reason,
     schemaVersion: input.schemaVersion,
     tenantId: input.tenantId,
-  }))
+  }, lockedOrder))
   const status = result.status ?? order.status
   await tx.commercialOrderFulfillmentCommand.create({
     data: {

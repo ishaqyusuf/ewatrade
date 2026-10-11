@@ -317,10 +317,8 @@ test("batch replay returns the stored result without repeating fulfillment write
   expect(writesAfterFirst).toBe(1)
   expect(fixture.fulfillmentUpsertCount).toBe(writesAfterFirst)
   expect(fixture.batchCommandCreateCount).toBe(1)
+  // One financial/Order lock acquisition per command, including replay.
   expect(fixture.events.filter((event) => event.startsWith("lock:"))).toEqual([
-    "lock:finance-book",
-    "lock:customer-account",
-    "lock:order",
     "lock:finance-book",
     "lock:customer-account",
     "lock:order",
@@ -404,6 +402,9 @@ test("batch composes without a nested transaction and fences Store before replay
     reason: "Packing", schemaVersion: 1, tenantId, storeId: "store-a" }
   const first = await fulfillCommercialOrderProductsInTransaction(f.tx, input)
   expect(first).toEqual({ fulfilledLineCount: 1, status: "COMPLETED" })
+  expect(f.events.filter(event => event === "lock:finance-book")).toHaveLength(1)
+  expect(f.events.filter(event => event === "lock:order")).toHaveLength(1)
+  expect(f.events.indexOf("lock:order")).toBeLessThan(f.events.indexOf("write:product-fulfillment"))
   expect(await fulfillCommercialOrderProductsInTransaction(f.tx, input)).toEqual(first)
   await expect(fulfillCommercialOrderProductsInTransaction(f.tx, {
     ...input, storeId: "other-store",
