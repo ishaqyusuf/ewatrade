@@ -95,3 +95,19 @@ is observational across these runs, not a benchmark or financial acceptance.
 28 focused unit tests /94 assertions and scoped source TypeScript pass. Next:
 review repeated locked journal evidence and post-valuation cost reload; preserve
 all original-source validation and own-write boundaries. Capability stays planned.
+
+## Shared quantity/journal review attempt — setup timeout
+
+Source `e58b8ae8`; run `1235b958-54b8-4517-a297-396fa8a64864`.
+Verdict **fail**:0pass/1fail/3assertions,163.62s. Failed during fixture setup,
+before the original-sale stage or reviewed return checkpoint. FinanceJournalLine
+createMany encountered an expired transaction after130916ms against30000ms.
+This duration is evidence of the failed attempt, not proof of its underlying cause.
+Cleanup verified; session98930 exited1. No DB suite remains.
+Log: `artifacts/assistant-operations-web/d03-return-financial-review-reuse.log`.
+The changed reviewed-return path was not exercised; financial acceptance remains
+unverified. Do not infer success or failure of journal reuse from this fixture error.
+
+Follow-up source check normalizes minimal quantity projection property order so
+standalone/composed no-Book revisions agree even with different ORM object key
+orders. Targeted2tests11assertions pass; this is not a financial acceptance retry.

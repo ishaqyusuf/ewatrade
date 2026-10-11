@@ -30,8 +30,16 @@ export async function previewProductReturnOriginalCost(db: Prisma.TransactionCli
 
 /** Internal same-review composition; source must come from its scoped stock read. */
 export async function previewProductReturnOriginalCostFromSource(
-  db: Prisma.TransactionClient, input: CostReviewInput, source: CostQuantitySource,
+  db: Prisma.TransactionClient, input: CostReviewInput, rawSource: CostQuantitySource,
 ) {
+  // Normalize projection/property order so standalone and composed no-Book
+  // reviews have the same revision even when ORM result key order differs.
+  const source = {
+    id: rawSource.id,
+    order: { currencyCode: rawSource.order.currencyCode, tenantId: rawSource.order.tenantId, storeId: rawSource.order.storeId },
+    productFulfillments: rawSource.productFulfillments.map(({ quantity }) => ({ quantity })),
+    productReturns: rawSource.productReturns.map(({ quantity }) => ({ quantity })),
+  }
   if (source.id !== input.orderLineId || source.order.tenantId !== input.tenantId || source.order.storeId !== input.storeId)
     throw new FinanceError("CONFLICT", "Return quantity evidence belongs to another Store or line.")
   productReturnQuantityImpact({

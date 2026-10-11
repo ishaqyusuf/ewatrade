@@ -31,6 +31,9 @@ test("shared quantity evidence preserves review revision without another line re
   const input = { tenantId: "tenant", storeId: "store", orderLineId: "line", quantity: "0.5" }
   const standalone = await previewProductReturnOriginalCost(db, input)
   expect(await previewProductReturnOriginalCostFromSource(db, input, source)).toEqual(standalone)
+  expect(await previewProductReturnOriginalCostFromSource(db, input, {
+    ...source, order: { storeId: "store", tenantId: "tenant", currencyCode: "NGN" },
+  })).toEqual(standalone)
   expect(lineReads).toBe(1)
   await expect(previewProductReturnOriginalCostFromSource(db, { ...input, quantity: "1.500001" }, source)).rejects.toMatchObject({ code: "INVALID_ORDER" })
   for (const changed of [{ ...input, tenantId: "other" }, { ...input, storeId: "other" }, { ...input, orderLineId: "other" }]) {
