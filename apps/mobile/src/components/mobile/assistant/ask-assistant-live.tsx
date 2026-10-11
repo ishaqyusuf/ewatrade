@@ -8,6 +8,7 @@ import {
   type GeneralProposal,
   generalActionSummary,
 } from "@ewatrade/assistant/general/contracts"
+import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { useEffect, useRef, useState } from "react"
@@ -37,6 +38,7 @@ import {
   generalPlainText,
   generalReceiptRoute,
 } from "./general-model"
+import { GeneralProductThumb } from "./general-product-picture"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { useGeneralAssistant } from "./use-general-assistant"
 export function AskAssistantLive() {
@@ -330,13 +332,27 @@ export function AskAssistantLive() {
                   ) : (
                     <ProposalCard
                       title={capabilityForAction(proposal.payload.action).title}
-                      summary={
+                      media={
+                        proposal.payload.action === "product_create" ? (
+                          <GeneralProductThumb payload={proposal.payload} />
+                        ) : undefined
+                      }
+                      summary={(
                         proposal.review?.join("\n") ??
                         generalActionSummary(
                           proposal.payload,
                           vm.data?.currencyCode ?? "NGN",
                         )
-                      }
+                      )
+                        .split("\n")
+                        // The picture shows beside the text, so its line is not repeated.
+                        .filter(
+                          (line) =>
+                            proposal.payload.action !== "product_create" ||
+                            !proposal.payload.illustrationId ||
+                            line !== productCreatePicture(proposal.payload),
+                        )
+                        .join("\n")}
                       state={
                         proposal.status === "COMPLETED"
                           ? "confirmed"

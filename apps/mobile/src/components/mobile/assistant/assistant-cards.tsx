@@ -44,9 +44,12 @@ export function ProposalCard({
   onConfirm,
   onEdit,
   onCancel,
+  media,
 }: {
   title: string
   summary: string
+  /** A picture beside the summary, e.g. a product draft's photo. */
+  media?: ReactNode
   state:
     | "pending"
     | "confirmed"
@@ -84,8 +87,13 @@ export function ProposalCard({
           tone={state === "confirmed" ? "ok" : "muted"}
         />
       </View>
-      {summary ? (
-        <Text className="text-sm text-foreground">{summary}</Text>
+      {summary || media ? (
+        <View className="flex-row gap-3">
+          {media}
+          {summary ? (
+            <Text className="flex-1 text-sm text-foreground">{summary}</Text>
+          ) : null}
+        </View>
       ) : null}
       {state === "pending" ? (
         <>

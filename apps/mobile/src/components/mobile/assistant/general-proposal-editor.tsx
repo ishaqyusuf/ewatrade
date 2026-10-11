@@ -1,4 +1,3 @@
-import { catalogFreeLineDisplay } from "@ewatrade/utils/catalog-free-lines"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Text } from "@/components/ui/text"
@@ -9,6 +8,7 @@ import {
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
 import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
+import { catalogFreeLineDisplay } from "@ewatrade/utils/catalog-free-lines"
 import {
   getCountry,
   toInternationalPhone,
@@ -21,6 +21,10 @@ import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
 import { GeneralProductCreateRows } from "./general-product-create-rows"
+import {
+  GeneralProductPictureField,
+  useProductPicture,
+} from "./general-product-picture"
 export function GeneralProposalEditor({
   proposal,
   disabled,
@@ -54,8 +58,9 @@ export function GeneralProposalEditor({
   const [error, setError] = useState<string | null>(null)
   const patch = (value: Record<string, unknown>) =>
     setPayload((current) => ({ ...current, ...value }) as GeneralAction)
-  const save = () => {
-    if (disabled) return
+  const picture = useProductPicture(initial, disabled)
+  const save = async () => {
+    if (disabled || picture.uploading) return
     const amount = majorToMinor(price)
     if (
       ((payload.action === "product_create" &&
@@ -66,8 +71,13 @@ export function GeneralProposalEditor({
       setError("Enter a valid amount.")
       return
     }
+    // A new product photo uploads first; a failed upload shows its message.
+    const media =
+      payload.action === "product_create" ? await picture.resolve() : {}
+    if (!media) return
     const candidate = {
       ...payload,
+      ...media,
       ...(payload.action === "product_create"
         ? isSimpleProductCreate(payload)
           ? { priceMinor: amount }
@@ -222,6 +232,9 @@ export function GeneralProposalEditor({
             onChangeText={setPrice}
           />
         ) : null}
+        {payload.action === "product_create" ? (
+          <GeneralProductPictureField picture={picture} disabled={disabled} />
+        ) : null}
         {payload.action === "payment_record" ? (
           <>
             <Text className="text-sm font-bold text-foreground">
@@ -299,7 +312,10 @@ export function GeneralProposalEditor({
             {error}
           </Text>
         ) : null}
-        <ActionButton disabled={disabled} onPress={save}>
+        <ActionButton
+          disabled={disabled || picture.uploading}
+          onPress={() => void save()}
+        >
           Save draft
         </ActionButton>
       </BottomSheetKeyboardAwareScrollView>
