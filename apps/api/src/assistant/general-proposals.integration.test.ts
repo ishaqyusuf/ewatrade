@@ -848,6 +848,7 @@ if (enabled) {
               if (!owned) throw Error("Refusing unowned fixture cleanup")
               // Reservations and order lines restrict deletion of their catalog
               // references. Remove this fixture's orders before cascading its tenant.
+              await tx.productReturn.deleteMany({ where: { tenantId: owned.id } })
               await tx.productFulfillment.deleteMany({ where: { orderLine: { order: { tenantId: owned.id } } } })
               await tx.commercialServiceFulfillment.deleteMany({ where: { tenantId: owned.id } })
               await tx.commercialServiceAuthorization.deleteMany({ where: { tenantId: owned.id } })

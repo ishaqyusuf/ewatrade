@@ -20,6 +20,7 @@ export async function verifyProductReturnComposition(original: GeneralContext, f
   const rollout = capability.rollout
   Object.assign(capability, { rollout: "source" })
   try {
+    expect(await db.financeBook.count({ where: { tenantId } })).toBe(0)
     const actorUserId = ctx.session.user.id
     console.info("Return acceptance: create fulfilled fractional-quantity source")
     const product = await createSimpleCatalogItem(db, {

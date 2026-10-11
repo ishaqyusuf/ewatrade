@@ -27,3 +27,23 @@ finally; the application manifest remains planned.
 
 Log: `artifacts/assistant-operations-web/d03-return-database-acceptance.log`.
 No live database suite remains from this run. No mobile work or hosted deployment.
+
+## Traced retry
+
+Run `56314a9f-d939-4494-bf04-d55878378377`, source `78c1ffc6` plus the QA cleanup
+ordering fix and explicit no-Book assertion. Process exited1 after239.31s,
+zero pass/one fail/22assertions. Owned fixture cleanup completed.
+
+Reached and passed exact missing-target/over-return codes, stale stock refusal,
+receipt-failure rollback, successful0.5restock and replay. Failed during the subsequent
+non-restock phase: original-cost relation loading encountered an expired transaction
+at32196ms (limit30000ms). Full all-disposition acceptance remains failed. Two measured
+drafts took14609ms/15128ms,57SQLcalls each, pool acquisition0.082ms/0.042ms. SQL time
+is aggregate duration and must not be interpreted as wall time or lock wait.
+
+Log: `artifacts/assistant-operations-web/d03-return-database-traced.log`.
+No database process remains. The no-Book cost preview was subsequently changed to
+validate scoped exact quantities and check the Book before loading financial history.
+Financial-Book behavior still uses the full validator. Focused16tests48assertions
+and scoped source TypeScript passed; database verification of the optimization is
+pending. This is not a proven fix for the earlier transaction-start failure.

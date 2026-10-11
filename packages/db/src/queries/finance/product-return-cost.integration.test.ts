@@ -1,3 +1,4 @@
+import { getCommercialProductReturnImpactReview } from "../commercial-product-return-impact-review"
 import { expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
@@ -316,10 +317,12 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
         orderLineId: string,
         quantity: string,
         disposition: "damaged" | "no_restock" | "quarantine" | "restock",
+        expectedReviewRevision?: string,
       ) {
         const returned = await returnCommercialOrderProductLine(db, {
           actorUserId: user.id,
           clientReturnId: `product-return-cost-${label}-${runId}`,
+          expectedReviewRevision,
           disposition,
           orderLineId,
           quantity,
@@ -401,11 +404,21 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
       expect((await mainPool()).quantity.toFixed()).toBe("12")
       expect((await mainPool()).valueMinor).toBe(BigInt(900))
 
+      const firstReturnReview = await getCommercialProductReturnImpactReview(db, {
+        tenantId: tenant.id, storeId: store.id, orderLineId: original.line.id,
+        quantity: "0.5", disposition: "restock",
+      })
+      expect(firstReturnReview.originalCost.sourceCostMinor).toBe("250")
+      expect(firstReturnReview.destination).toMatchObject({ valueBeforeMinor: "900", valueAfterMinor: "1150", valueDeltaMinor: "250" })
+      expect(firstReturnReview.journal).toMatchObject({ status: "WILL_POST", amountMinor: "250" })
+      expect(firstReturnReview.customerCredit).toBe("NOT_RECORDED")
+      expect(firstReturnReview.cashRefund).toBe("NOT_RECORDED")
       const firstReturn = await returnLine(
         "original-half",
         original.line.id,
         "0.5",
         "restock",
+        firstReturnReview.impactRevision,
       )
       const firstReturnCost =
         await db.financeProductReturnCost.findUniqueOrThrow({
