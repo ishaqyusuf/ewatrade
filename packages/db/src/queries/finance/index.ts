@@ -34,6 +34,8 @@ export {
   listFinanceAccountLedger,
 } from "./account-activity"
 export {
+  reverseFinanceBillPaymentInTransaction,
+  voidFinanceExpenseInTransaction,
   reverseFinanceBillPayment,
   voidFinanceExpense,
 } from "./bill-corrections"

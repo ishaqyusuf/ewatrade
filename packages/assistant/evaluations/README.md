@@ -6,6 +6,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Expense/payment corrections | [1](fixtures/bill-correction.v1.md) | Exact original targets, no-transfer boundaries, void/payment guards, stale/retry and rollback | None yet |
 | `finance.money_movement.record` v1 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
 | `finance.expense.record` v1 | [1](fixtures/expense.v1.md) | Unpaid/partial/owner-funded expense, ambiguity, posting guards, atomic retry, receipt | None yet |
 | `finance.bill.pay` v1 | [1](fixtures/bill-payment.v1.md) | Existing bill resolution, partial/owner payment, stale/void/closed guards, retry, editor | None yet |
@@ -22,6 +23,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Bill correction proposal adapters, 11 October 2026](runs/2026-10-11-bill-correction-adapter.md): 16 schema assertions and scoped adapter types pass; coverage blocked by unrelated order-activity classifications. Correction editor/database/web/model acceptance pending.
 
 - [Bill correction review preparation, 11 October 2026](runs/2026-10-11-bill-correction-review.md): shared reversal/void source checks;44 unit assertions and scoped types pass; canonical correction integration19 assertions passed.
 

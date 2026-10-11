@@ -1,3 +1,4 @@
+import { billCorrection } from "./general-bill-correction"
 import { billPayment } from "./general-bill-payment"
 import { expenseRecord } from "./general-expense"
 import { moneyMovement } from "./general-money-movement"
@@ -551,6 +552,8 @@ const adapters: {
   money_movement: moneyMovement,
   expense_record: expenseRecord,
   bill_payment: billPayment,
+  expense_void: billCorrection,
+  bill_payment_reverse: billCorrection,
   customer_credit_apply: customerCreditApply,
   customer_allocation_release: customerAllocationRelease,
   held_credit_refund: heldCreditRefund,
