@@ -358,11 +358,21 @@ test("absent finance book still locks the Order before product fulfillment", asy
   ])
 })
 
-test("fresh no-book fulfillment reaches issue capture after its source write", async () => {
+test("fresh no-book fulfillment records stock without reading a valuation graph", async () => {
   const fixture = fulfillmentFixture({
     hasFinanceBook: false,
     existingFulfillment: false,
   })
+  await fulfillCommercialOrderProductLine(fixture.db, fulfillmentInput)
+  expect(fixture.events).not.toContain("read:issue-source")
+  expect(fixture.fulfillmentCreateCount).toBe(1)
+  expect(fixture.events.indexOf("write:order-status")).toBeGreaterThan(
+    fixture.events.indexOf("write:product-fulfillment"),
+  )
+})
+
+test("a present Finance Book retains issue capture after its source write", async () => {
+  const fixture = fulfillmentFixture({ hasFinanceBook: true, existingFulfillment: false })
   await fulfillCommercialOrderProductLine(fixture.db, fulfillmentInput)
   expect(fixture.events.indexOf("read:issue-source")).toBeGreaterThan(
     fixture.events.indexOf("write:product-fulfillment"),

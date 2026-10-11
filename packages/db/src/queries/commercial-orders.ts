@@ -372,6 +372,7 @@ async function applyCommercialOrderProductLineInTransaction(
     tenantId: string
     storeId: string
     expectedReviewRevision?: string
+    financialContext: { bookId: string } | null
   },
 ) {
   if (!input.line.stockReservation) {
@@ -431,7 +432,7 @@ async function applyCommercialOrderProductLineInTransaction(
     },
   })
   // Replayed legacy fulfillment is not a reviewed historical cost import.
-  if (!previousFulfillment) {
+  if (!previousFulfillment && input.financialContext !== null) {
     await recordProductFulfillmentValuationInTransaction(tx, {
       tenantId: input.tenantId,
       fulfillmentId: fulfillment.id,
@@ -510,6 +511,7 @@ async function applyCommercialOrderProductsInTransaction(
       schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
       storeId: lockedOrder.order.storeId,
+      financialContext: lockedOrder.context,
     })
   }
 
@@ -1725,6 +1727,7 @@ export async function fulfillCommercialOrderProductLineInTransaction(
     tenantId: input.tenantId,
     storeId: lockedOrder.order.storeId,
     expectedReviewRevision: input.expectedReviewRevision,
+    financialContext: lockedOrder.context,
   })
   await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
   return {
