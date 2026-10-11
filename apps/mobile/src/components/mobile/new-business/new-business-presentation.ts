@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
 import type { BusinessProfile } from "@ewatrade/utils"
+import type { ReactNode } from "react"
 export type BusinessSectionProps = {
   title: string
   description?: string
