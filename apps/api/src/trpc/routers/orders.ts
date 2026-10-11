@@ -45,6 +45,7 @@ import {
 } from "../../schemas/order-receipts"
 import { orderActivityRouter } from "./order-activity"
 import { orderAmendmentProcedures } from "./order-amendments"
+import { orderTimelineProcedures } from "./order-timeline"
 
 import {
   orderLookupPageSchema,
@@ -193,6 +194,7 @@ const reminderProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 export const ordersRouter = createTRPCRouter({
   ...orderAmendmentProcedures,
+  ...orderTimelineProcedures,
   activity: orderActivityRouter,
   receiptSettings: protectedProcedure
     .input(orderReceiptSettingsGetSchema)
