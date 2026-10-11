@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
+import Link from "next/link"
 import type { OrderRow } from "./columns"
 
 export function OrderActionsMenu({ order }: { order: OrderRow }) {
@@ -34,6 +35,13 @@ export function OrderActionsMenu({ order }: { order: OrderRow }) {
           }
         >
           Details
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          render={
+            <Link href={`/sales/orders/${encodeURIComponent(order.id)}`} />
+          }
+        >
+          Open page
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!isReceiptOrderEligible(order.status)}
