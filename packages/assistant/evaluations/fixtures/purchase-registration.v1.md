@@ -1,6 +1,6 @@
 # Purchase registration proposals — version 1
 
-Planned dashboard Owner/Admin finance.purchase.register, active Store only.
+Source-available dashboard Owner/Admin finance.purchase.register, active Store only.
 Fixtures are not model evaluations.
 
 | ID | Scenario | Expected |
@@ -16,5 +16,12 @@ Fixtures are not model evaluations.
 
 Editor component and receipt component/close checks are retained in the run catalog.
 Proposal database acceptance (37 assertions) and actual saved receipt Open/Close
-pass in their separate run reports. Full browser confirmation and live-model
-behavior remain pending. Canonical registration regression is separate evidence.
+pass in their separate run reports. Full browser confirmation is now recorded below;
+remaining scenario and live-model behavior stays separate. Canonical registration
+regression is separate evidence.
+
+[12 October actual agreement web report](../runs/2026-10-12-supplier-registration-web.md):
+PA01/PA07/PA08 pass real goods resolution, fresh agreement-only acknowledgment,
+Edit/re-review/Confirm and owning Open/Close. Exact2.375/1 bags,1200/100 minor and
+.123 date retain original targets; no new payable/posting/stock. Completed recovery
+returns the original receipt. This does not accept every fixture scenario or E05.

@@ -84,3 +84,17 @@ activation and full chat acceptance, larger physical receipt operating bounds,
 full signed stale-source/operational acceptance and live-model evaluation remain
 separate requirements. No mobile work, provider call, schema/migration, timeout
 increase, fixture deletion, push or deployment occurred.
+
+## Assertion preservation follow-up — 12 October 2026
+
+While composing goods from actual tool reads for registration, Bun's standalone
+`toMatchObject` with asymmetric array matchers replaced values in its input. A
+small local reproduction confirmed that behavior. Discovery assertions now operate
+on structured clones, preserving the original executor results for downstream use
+and evidence. The original artifact is retained separately. The focused real read
+check was repeated after this fix and exited naturally with code0: all12 reads,
+10 answers and unchanged facts pass, with raw supplier/invoice/allocation/agreement/
+funding IDs independently checked in the saved JSON. Commands15 existed before and
+after this follow-up because a separate QA supplier creation had completed. Scoped
+affected API/helper TypeScript passed. This is a justified harness correction and
+repeat, not an additional accepted ticket or model run.

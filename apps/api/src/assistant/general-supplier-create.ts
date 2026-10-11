@@ -37,7 +37,7 @@ export const supplierCreate = {
     const { review, target } = await current(ctx, payload)
     return { target, lines: [
       `Create supplier: ${review.name} (${review.code}).`,
-      `Finance Book: ${review.bookId} · ${review.currencyCode}.`,
+      `Business currency: ${review.currencyCode}.`,
       "Starts with no payable or advance balance. Purchases, opening balances, payments and stock receipts are separate operations.",
     ] }
   },

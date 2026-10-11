@@ -1,6 +1,6 @@
 # Supplier creation — version 1
 
-Planned dashboard Owner/Admin capability: finance.supplier.create.
+Source-available dashboard Owner/Admin capability: finance.supplier.create.
 These scenarios are fixtures, not recorded model passes.
 
 | ID | Request or condition | Expected behavior |
@@ -15,4 +15,9 @@ These scenarios are fixtures, not recorded model passes.
 | SC08 | Edit, Confirm, Open, Close | Saved exact identity; statement overlays assistant and Close preserves chat |
 
 Schema rejects actor/tenant/command IDs and financial amount fields. Receipt requires
-Book provenance. Database, full web and live-model execution remain pending.
+Book provenance. Isolated database and bounded full web evidence are recorded;
+remaining authority/scenario and live-model acceptance stays separate.
+
+[12 October actual supplier web report](../runs/2026-10-12-supplier-registration-web.md):
+SC01/SC07/SC08 pass revised identity review/Confirm/statement Open/Close with zero
+balances and no stock/posting, duplicate refusal and completed recovery. No model run.

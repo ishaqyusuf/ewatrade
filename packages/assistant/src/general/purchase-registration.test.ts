@@ -6,6 +6,6 @@ const payload = { action: "purchase_register", bookId: "book", supplierId: "supp
 test("purchase registration is strict and requires explicit agreement-only exact goods", () => {
   expect(generalActionSchema.safeParse(payload).success).toBe(true)
   for (const change of [{ agreementOnly: false }, { storeId: "other" }, { tenantId: "other" }, { clientCommandId: "key" }, { agreedAt: "yesterday" }, { lines: [] }, { lines: [line,line] }, { lines: [{ ...line, enteredQuantity: "1e2" }] }, { lines: [{ ...line, amountMinor: "0" }] }, { lines: [{ ...line, categories: [] }] }, { lines: [{ ...line, amountMinor: "100000000000000" }, { ...line, balanceSourceId: "other", amountMinor: "1" }] }]) expect(generalActionSchema.safeParse({ ...payload,...change }).success).toBe(false)
-  expect(capabilityForAction("purchase_register")).toMatchObject({ rollout: "planned", clients: ["dashboard"], scope: "store", policy: { roles: ["OWNER","ADMIN"] } })
+  expect(capabilityForAction("purchase_register")).toMatchObject({ rollout: "source", clients: ["dashboard"], scope: "store", policy: { roles: ["OWNER","ADMIN"] } })
   expect(generalReceiptSchema.safeParse({ kind: "finance_purchase_registration", recordId: "recognition", title: "Registered", detail: "Agreement" }).success).toBe(false)
 })

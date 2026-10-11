@@ -72,7 +72,7 @@ export async function verifySupplierPurchaseDiscovery(
     return execute(input, { toolCallId: randomUUID(), messages: [] })
   }
   results.suppliers = await read("readSuppliers", { query: fixture.supplierCode })
-  expect(results.suppliers).toMatchObject({
+  expect(structuredClone(results.suppliers)).toMatchObject({
     status: "available",
     data: {
       bookId: fixture.bookId,
@@ -81,11 +81,11 @@ export async function verifySupplierPurchaseDiscovery(
   })
   const book = { bookId: fixture.bookId }
   results.emptySuppliers = await read("readSuppliers", { query: randomUUID() })
-  expect(results.emptySuppliers).toMatchObject({
+  expect(structuredClone(results.emptySuppliers)).toMatchObject({
     status: "available", data: { bookId: fixture.bookId, data: [] },
   })
   results.statement = await read("readSupplierStatement", { ...book, supplierId: fixture.supplierId })
-  expect(results.statement).toMatchObject({
+  expect(structuredClone(results.statement)).toMatchObject({
     status: "available",
     data: {
       payableMinor: fixture.payableMinor,
@@ -94,12 +94,12 @@ export async function verifySupplierPurchaseDiscovery(
     },
   })
   results.purchaseBills = await read("readPurchaseBills", { ...book, supplierId: fixture.supplierId, status: "PARTIAL" })
-  expect(results.purchaseBills).toMatchObject({
+  expect(structuredClone(results.purchaseBills)).toMatchObject({
     status: "available",
     data: { items: [expect.objectContaining({ id: fixture.billId, outstandingMinor: fixture.payableMinor })] },
   })
   results.purchaseBill = await read("readPurchaseBill", { ...book, billId: fixture.billId })
-  expect(results.purchaseBill).toMatchObject({
+  expect(structuredClone(results.purchaseBill)).toMatchObject({
     status: "available",
     data: {
       id: fixture.billId,
@@ -112,12 +112,12 @@ export async function verifySupplierPurchaseDiscovery(
     },
   })
   results.registrations = await read("readPurchaseRegistrations", { ...book, supplierId: fixture.supplierId })
-  expect(results.registrations).toMatchObject({
+  expect(structuredClone(results.registrations)).toMatchObject({
     status: "available",
     data: { items: [expect.objectContaining({ id: fixture.recognitionId })] },
   })
   results.recognition = await read("readPurchaseRecognition", { ...book, recognitionId: fixture.recognitionId })
-  expect(results.recognition).toMatchObject({
+  expect(structuredClone(results.recognition)).toMatchObject({
     status: "available",
     data: {
       id: fixture.recognitionId,
@@ -128,7 +128,7 @@ export async function verifySupplierPurchaseDiscovery(
     },
   })
   results.moneyAccounts = await read("readMoneyAccounts", book)
-  expect(results.moneyAccounts).toMatchObject({
+  expect(structuredClone(results.moneyAccounts)).toMatchObject({
     status: "available",
     data: { book: { id: fixture.bookId }, accounts: expect.arrayContaining([
       expect.objectContaining({ id: fixture.moneyAccountId }),
@@ -142,7 +142,7 @@ export async function verifySupplierPurchaseDiscovery(
     ["readPurchaseRecognition", { ...book, recognitionId: missing }],
   ] as const) {
     const result = await read(name, input)
-    expect(result).toMatchObject({ status: "unavailable" })
+    expect(structuredClone(result)).toMatchObject({ status: "unavailable" })
     results[`missing_${name}`] = result
   }
   const after = await facts()

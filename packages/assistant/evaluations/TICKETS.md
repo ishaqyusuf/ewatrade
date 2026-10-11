@@ -72,8 +72,11 @@ Edit/re-review/Confirm, saved receipt Open/Close and exact journal/balance/stock
 readback with concurrent completed recovery. Three actions are source-available.
 Supplier/purchase discovery is now source-available: name/code search resolves the
 canonical Book, 12 real read checks pass and saved statement/invoice overlays retain
-the assistant. Creation/registration activation and full chat acceptance, larger
-operating bounds and full signed stale-source acceptance remain open. Evidence:
+the assistant. Supplier creation and agreement registration are now source-available
+and pass actual Edit/re-review/Confirm/Open/Close with exact saved effects and
+completed recovery. Larger operating bounds and full signed stale-source/operational
+acceptance remain open. Evidence:
+[supplier creation/registration web report](runs/2026-10-12-supplier-registration-web.md),
 [supplier discovery report](runs/2026-10-12-supplier-discovery.md),
 [supplier settlement web report](runs/2026-10-12-supplier-settlement-web.md) and
 [physical receipt proposal/web report](runs/2026-10-11-receipt-proposal-web.md).
