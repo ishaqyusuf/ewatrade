@@ -46,6 +46,7 @@ import {
 } from "../../schemas/order-receipts"
 import { orderActivityRouter } from "./order-activity"
 import { orderAmendmentProcedures } from "./order-amendments"
+import { orderMoneyProcedures } from "./order-money"
 import { orderTimelineProcedures } from "./order-timeline"
 
 import {
@@ -129,7 +130,7 @@ function resolveStoreId(
   return storeId
 }
 
-function orderError(error: CatalogError | FinanceError) {
+export function orderError(error: CatalogError | FinanceError) {
   if (error instanceof FinanceError) {
     const code =
       error.code === "FORBIDDEN"
@@ -198,6 +199,7 @@ const reminderProcedure = protectedProcedure.use(({ ctx, next }) => {
 export const ordersRouter = createTRPCRouter({
   ...orderAmendmentProcedures,
   ...orderTimelineProcedures,
+  ...orderMoneyProcedures,
   activity: orderActivityRouter,
   receiptSettings: protectedProcedure
     .input(orderReceiptSettingsGetSchema)

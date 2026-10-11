@@ -56,3 +56,10 @@ test("scoped staff read order history and options and add order notes", () => {
   }
   expect(staffProcedureAction("orders.activity.add", "mutation")).toBe("orders")
 })
+
+test("scoped returns are order work; refunds are reconciliation", () => {
+  expect(staffProcedureAction("orders.returnItems", "mutation")).toBe("orders")
+  expect(staffProcedureAction("orders.refund", "mutation")).toBe(
+    "reconciliation",
+  )
+})

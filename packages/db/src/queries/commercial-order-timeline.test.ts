@@ -62,8 +62,10 @@ const baseOrder = {
   createdByUserId: "musa",
   completedAt: null,
   updatedAt: at("12:00:00"),
+  totalMinor: 7050000,
   payments: [],
   amendments: [],
+  credits: [],
   replacementAmendments: [
     { id: "a0", order: { id: "old", orderNumber: "ORD-0139" } },
   ],
@@ -324,4 +326,47 @@ test("a replacement order's created entry carries the change and reason", async 
       { field: "total", before: 2800000, after: 4200000 },
     ],
   })
+})
+
+test("credits show why and how the total dropped, oldest first", async () => {
+  const timeline = await getCommercialOrderTimeline(
+    fakeDb({
+      ...baseOrder,
+      totalMinor: 6830000,
+      replacementAmendments: [],
+      lines: [line("l1", "Day-old chicks", "chick")],
+      credits: [
+        {
+          id: "c1",
+          kind: "OVERCHARGE",
+          amountMinor: 50000,
+          reason: "Overcharged",
+          actorUserId: "ishaq",
+          createdAt: at("11:00:00"),
+        },
+        {
+          id: "c2",
+          kind: "RETURNED_ITEMS",
+          amountMinor: 170000,
+          reason: "Customer returned it",
+          actorUserId: "ishaq",
+          createdAt: at("12:00:00"),
+        },
+      ],
+    }),
+    scope,
+  )
+  const credits = timeline.items.filter((item) => item.kind === "credited")
+  expect(credits).toMatchObject([
+    {
+      creditKind: "overcharge",
+      amountMinor: 50000,
+      changes: [{ field: "total", before: 7050000, after: 7000000 }],
+    },
+    {
+      creditKind: "returned_items",
+      amountMinor: 170000,
+      changes: [{ field: "total", before: 7000000, after: 6830000 }],
+    },
+  ])
 })

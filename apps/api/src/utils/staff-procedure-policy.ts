@@ -50,6 +50,8 @@ const orders = new Set([
   "orders.recordPayment",
   "orders.returnProductLine",
   "orders.activity.add",
+  // Money back is checked again inside: owners and managers only.
+  "orders.returnItems",
   "inventory.reserveOffering",
   "inventory.releaseReservation",
   "inventory.commitReservation",
@@ -77,6 +79,7 @@ const stock = new Set([
 ])
 const reconciliation = new Set([
   "orders.cancel",
+  "orders.refund",
   "orders.amendMetadata",
   "orders.replace",
   "orders.cancellationReview",

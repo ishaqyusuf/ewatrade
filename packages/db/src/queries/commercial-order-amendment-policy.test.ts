@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import {
   type OrderAmendmentEvidence,
   assessOrderAmendment,
+  assessOrderCreditEligibility,
   assessOrderDetailsAmendment,
 } from "./commercial-order-amendment-policy"
 const ordinary: OrderAmendmentEvidence = {
@@ -147,6 +148,31 @@ test("closed, prescription and booking orders keep delivery and note locked", ()
     [{ storeActive: false }, "STORE_UNAVAILABLE"],
   ] as const) {
     const result = assessOrderDetailsAmendment({ ...ordinary, ...patch })
+    expect(result.eligible).toBe(false)
+    expect(result.blockers.map((block) => block.code)).toContain(code)
+  }
+})
+test("credits are allowed after payment and fulfilment but not on owned sources", () => {
+  const moved = {
+    ...ordinary,
+    status: "COMPLETED",
+    paymentStatus: "PAID",
+    amountPaidMinor: 450000,
+    paymentCount: 1,
+    fulfillmentCount: 1,
+    committedReservationCount: 1,
+  }
+  expect(assessOrderCreditEligibility(moved)).toEqual({
+    eligible: true,
+    blockers: [],
+  })
+  for (const [patch, code] of [
+    [{ ledgerEntryCount: 1 }, "LEDGER_SOURCE"],
+    [{ quoteOwned: true }, "QUOTE_SOURCE"],
+    [{ status: "CANCELLED" }, "ORDER_CLOSED"],
+    [{ trackedWorkCount: 1 }, "SERVICE_SOURCE"],
+  ] as const) {
+    const result = assessOrderCreditEligibility({ ...moved, ...patch })
     expect(result.eligible).toBe(false)
     expect(result.blockers.map((block) => block.code)).toContain(code)
   }

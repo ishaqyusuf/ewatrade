@@ -14,7 +14,7 @@ const commercialOrderPaymentInputSchema = z
   })
   .strict()
 
-const exactOrderQuantitySchema = z
+export const exactOrderQuantitySchema = z
   .string()
   .trim()
   .superRefine((value, ctx) => {

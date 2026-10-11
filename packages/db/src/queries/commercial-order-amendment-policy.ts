@@ -159,3 +159,30 @@ export function assessOrderDetailsAmendment(evidence: OrderAmendmentEvidence) {
     })
   return { eligible: blockers.length === 0, blockers }
 }
+
+// A credit lowers the total after money or stock moved; sources that own
+// their own money trail (customer ledger, quotes, service work, prescriptions,
+// bookings) keep their workflows.
+const CREDIT_BLOCKERS = new Set([
+  "INCOMPLETE_EVIDENCE",
+  "STORE_UNAVAILABLE",
+  "LEDGER_SOURCE",
+  "SERVICE_SOURCE",
+  "QUOTE_SOURCE",
+  "PRESCRIPTION_SOURCE",
+  "BOOKING_SOURCE",
+])
+
+/** Eligibility for an order credit (overcharge correction or returned goods). */
+export function assessOrderCreditEligibility(evidence: OrderAmendmentEvidence) {
+  const blockers = assessOrderAmendment(evidence).blockers.filter((block) =>
+    CREDIT_BLOCKERS.has(block.code),
+  )
+  if (["CANCELLED", "REFUNDED"].includes(evidence.status))
+    blockers.push({
+      code: "ORDER_CLOSED",
+      reason: "Cancelled and refunded orders cannot change.",
+      requiredWorkflow: "return_refund",
+    })
+  return { eligible: blockers.length === 0, blockers }
+}

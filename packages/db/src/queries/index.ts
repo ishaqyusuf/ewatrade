@@ -139,6 +139,7 @@ export { getCommercialOrderAmendmentEligibility } from "./commercial-order-amend
 
 export * from "./commercial-order-cancellation"
 export * from "./commercial-order-change-options"
+export * from "./commercial-order-credits"
 
 export * from "./commercial-order-metadata-amendment"
 

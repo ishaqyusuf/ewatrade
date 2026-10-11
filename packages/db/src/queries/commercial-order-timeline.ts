@@ -15,6 +15,7 @@ export type CommercialOrderTimelineKind =
   | "replaced"
   | "cancelled"
   | "completed"
+  | "credited"
 
 export type CommercialOrderTimelineChange =
   | { field: "customer"; before: string | null; after: string | null }
@@ -39,6 +40,8 @@ export type CommercialOrderTimelineItem = {
   reference: string | null
   reason: string | null
   disposition: string | null
+  /** credited: why the total dropped. */
+  creditKind: "overcharge" | "returned_items" | null
   lines: { label: string; quantity: string }[]
   changes: CommercialOrderTimelineChange[]
   linkedOrder: { id: string; orderNumber: string } | null
@@ -117,6 +120,7 @@ const KIND_ORDER: Record<CommercialOrderTimelineKind, number> = {
   returned: 4,
   replaced: 5,
   cancelled: 5,
+  credited: 5,
   completed: 6,
 }
 
@@ -134,6 +138,7 @@ export async function getCommercialOrderTimeline(
       id: true,
       orderNumber: true,
       currencyCode: true,
+      totalMinor: true,
       status: true,
       createdAt: true,
       createdByUserId: true,
@@ -206,6 +211,17 @@ export async function getCommercialOrderTimeline(
           replacementOrder: { select: { id: true, orderNumber: true } },
         },
       },
+      credits: {
+        select: {
+          id: true,
+          kind: true,
+          amountMinor: true,
+          reason: true,
+          actorUserId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
       replacementAmendments: {
         select: {
           id: true,
@@ -264,6 +280,7 @@ export async function getCommercialOrderTimeline(
     reference: null,
     reason: null,
     disposition: null,
+    creditKind: null,
     lines: [],
     changes: [],
     linkedOrder: null,
@@ -446,6 +463,24 @@ export async function getCommercialOrderTimeline(
         })),
       })
     }
+  }
+  // Each credit lowered the total; walk back from today's total for before/after.
+  let totalAfter = order.totalMinor
+  for (const credit of [...order.credits].reverse()) {
+    const totalBefore = totalAfter + credit.amountMinor
+    items.push({
+      ...empty(),
+      id: `credited:${credit.id}`,
+      kind: "credited",
+      occurredAt: credit.createdAt.toISOString(),
+      actorUserId: credit.actorUserId,
+      amountMinor: credit.amountMinor,
+      reason: credit.reason,
+      creditKind:
+        credit.kind === "OVERCHARGE" ? "overcharge" : "returned_items",
+      changes: [{ field: "total", before: totalBefore, after: totalAfter }],
+    })
+    totalAfter = totalBefore
   }
   // Older paths cancel without an amendment row; show it without inventing a time.
   if (order.status === "CANCELLED" && !cancelRecorded)

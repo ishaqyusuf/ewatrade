@@ -1,12 +1,12 @@
-import { assertCommercialProductReturnReview } from "./commercial-product-return-review-guard"
 import { createHash } from "node:crypto"
 import { tracePhase } from "../performance-tracing"
+import { assertCommercialProductBatchReview } from "./commercial-product-batch-review"
+import { getCommercialProductLineReview } from "./commercial-product-line-review"
+import { assertCommercialProductReturnReview } from "./commercial-product-return-review-guard"
 import {
   productReturnQuantityImpact,
   productReturnStockImpact,
 } from "./product-return-impact"
-import { getCommercialProductLineReview } from "./commercial-product-line-review"
-import { assertCommercialProductBatchReview } from "./commercial-product-batch-review"
 
 import {
   addExactDecimals,
@@ -216,6 +216,8 @@ function serializeOrder(order: OrderGraph) {
     amountPaidMinor,
     balanceDueMinor: Math.max(0, order.totalMinor - amountPaidMinor),
     clientOrderId: order.clientOrderId,
+    /** Post-sale credits already taken off totalMinor. */
+    creditMinor: order.creditMinor,
     createdAt: order.createdAt,
     createdByUserId: order.createdByUserId,
     currencyCode: order.currencyCode,

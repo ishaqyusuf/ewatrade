@@ -5,7 +5,10 @@ import {
 } from "@ewatrade/utils/exact-decimal"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
-import type { OrderAmendmentBlock } from "./commercial-order-amendment-policy"
+import {
+  type OrderAmendmentBlock,
+  assessOrderCreditEligibility,
+} from "./commercial-order-amendment-policy"
 import { getCommercialOrderAmendmentEligibility } from "./commercial-order-amendment-review"
 import type { OrderScope } from "./order-visibility"
 
@@ -128,6 +131,8 @@ export async function getCommercialOrderChangeOptions(
     orderNumber: order.orderNumber,
     refund,
     returnLine,
+    // Whether a refund or return may also lower the total (an order credit).
+    credit: lock("Checking…") as CommercialOrderChangeOption,
   }
 
   if (!input.canAmend) {
@@ -136,6 +141,7 @@ export async function getCommercialOrderChangeOptions(
     )
     return {
       ...base,
+      credit: managers,
       customer: managers,
       details: managers,
       items: managers,
@@ -146,6 +152,7 @@ export async function getCommercialOrderChangeOptions(
     const store = lock("Switch to this order's store to change it")
     return {
       ...base,
+      credit: store,
       customer: store,
       details: store,
       items: store,
@@ -169,8 +176,12 @@ export async function getCommercialOrderChangeOptions(
     !closed
       ? lock(`${option.reason}${INSTEAD}`)
       : option
+  const credit = assessOrderCreditEligibility(review.evidence)
   return {
     ...base,
+    credit: credit.eligible
+      ? allow()
+      : lock(blockerReason(credit.blockers, order.status)),
     customer: ordinary,
     details: review.detailsEligibility.eligible
       ? allow()
