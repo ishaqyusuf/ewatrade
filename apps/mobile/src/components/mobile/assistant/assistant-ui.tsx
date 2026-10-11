@@ -5,10 +5,30 @@ import { View } from "@/components/ui/view"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useRouter } from "expo-router"
-import { type ReactNode, useEffect, useState } from "react"
-import { ActivityIndicator, Text as NativeText, TextInput } from "react-native"
+import { type ReactNode, useEffect, useRef, useState } from "react"
+import {
+  ActivityIndicator,
+  LayoutAnimation,
+  Text as NativeText,
+  TextInput,
+} from "react-native"
+import { useReducedMotion } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { AssistantText } from "./assistant-text"
+
+// The composer eases between one row and stacked instead of jumping.
+const stackMotion = {
+  duration: 200,
+  create: {
+    type: LayoutAnimation.Types.easeInEaseOut,
+    property: LayoutAnimation.Properties.opacity,
+  },
+  update: { type: LayoutAnimation.Types.easeInEaseOut },
+}
+
+function easeStack(reduceMotion: boolean) {
+  if (!reduceMotion) LayoutAnimation.configureNext(stackMotion)
+}
 
 export function AssistantHeader({
   title,
@@ -181,10 +201,17 @@ export function AssistantComposer({
 }) {
   const insets = useSafeAreaInsets()
   const colors = useColors()
+  const reduceMotion = useReducedMotion()
   const [wrapped, setWrapped] = useState(false)
+  // The newest text. A paste reports its new height in the same batch as its
+  // text, before `value` has caught up.
+  const text = useRef(value)
   useEffect(() => {
-    if (!value) setWrapped(false)
-  }, [value])
+    text.current = value
+    if (value || !wrapped) return
+    easeStack(reduceMotion)
+    setWrapped(false)
+  }, [value, wrapped, reduceMotion])
   const stacked = wrapped || value.includes("\n")
   const working = voice?.working === true
   const sendDisabled =
@@ -330,11 +357,17 @@ export function AssistantComposer({
                 multiline
                 accessibilityHint={value ? undefined : placeholder}
                 value={value}
-                onChangeText={onChange}
+                onChangeText={(next) => {
+                  text.current = next
+                  if (!stacked && next.includes("\n")) easeStack(reduceMotion)
+                  onChange(next)
+                }}
                 onContentSizeChange={(event) => {
                   // Taller than one line: stack (and stay stacked until cleared).
-                  if (event.nativeEvent.contentSize.height > 30 && value)
-                    setWrapped(true)
+                  if (wrapped || !text.current) return
+                  if (event.nativeEvent.contentSize.height <= 30) return
+                  if (!stacked) easeStack(reduceMotion)
+                  setWrapped(true)
                 }}
                 selectionColor={colors.primary}
                 style={{
