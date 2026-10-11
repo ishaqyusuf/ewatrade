@@ -37,3 +37,24 @@ it does not prove the earlier saved correction-chat or receipt-generation error 
 No model call, financial mutation, additional chat creation or server restart in this
 follow-up. Temporary tab closed. Next acceptance should re-exercise correction history
 and expense receipt reads using a stable runtime.
+
+## Follow-up: saved correction chat query isolated
+
+Recreated owned web QA correction fixture. Browser diagnostic reports
+INTERNAL_SERVER_ERROR with sanitized validation text, not NOT_FOUND/FORBIDDEN.
+Direct current-source reads against that same fixture passed: conversation present,
+zero messages, two proposals, active-run read and both generalProposalWithReview calls.
+Thus those direct reads do not reproduce the serving request failure.
+
+Temporary route entry/error-class diagnostics wrote no entry during retries. Verified
+Next rewrite goes to ewatrade-api.localhost and Portless maps it to3095, PID78644 in
+this repo/apps/api running bun --hot src/local.ts. Touching the existing entrypoint
+mtime did not resolve the failure or produce a route diagnostic. An older serving
+route or failure before the handler remains possible; neither is proven. No process
+was stopped/replaced. Both frontend/server diagnostics removed, verified no source diff.
+
+Fixture cleanup completed, exact owned books0/chats0. Temporary tab closed. Logs
+/private/tmp/e04-chat-diagnostic-{fixture,cleanup}.log; direct-read diagnostic retained
+locally in artifacts/assistant-operations-web/correction-chat-read-diagnostic.ts.
+Next isolate request validation/middleware or use an independently controlled API
+runtime before repeating correction web acceptance. No mobile or deployment.
