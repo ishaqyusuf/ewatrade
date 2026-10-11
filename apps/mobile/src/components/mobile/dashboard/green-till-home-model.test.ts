@@ -57,6 +57,14 @@ describe("Green Till Home model", () => {
         status: "CANCELLED",
       }).tone,
     ).toBe("muted")
+    expect(
+      orderPaymentPill({
+        amountPaidMinor: 0,
+        balanceDueMinor: 0,
+        paymentStatus: "REFUNDED",
+        status: "COMPLETED",
+      }),
+    ).toEqual({ label: "Refunded", tone: "muted" })
   })
 
   test("uses a store icon for walk-ins and initials otherwise", () => {

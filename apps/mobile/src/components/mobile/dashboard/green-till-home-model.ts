@@ -56,10 +56,13 @@ export function countLabel(count: number, singular: string, plural?: string) {
 export function orderPaymentPill(order: {
   amountPaidMinor: number
   balanceDueMinor: number
+  paymentStatus?: string
   status: string
 }): { label: string; tone: StatusPillTone } {
   if (order.status === "CANCELLED") return { label: "Cancelled", tone: "muted" }
-  if (order.status === "REFUNDED") return { label: "Refunded", tone: "muted" }
+  // A completed order whose money all went back is refunded, not paid.
+  if (order.status === "REFUNDED" || order.paymentStatus === "REFUNDED")
+    return { label: "Refunded", tone: "muted" }
   if (order.status === "DRAFT") return { label: "Draft", tone: "muted" }
   if (order.balanceDueMinor <= 0) return { label: "Paid", tone: "ok" }
   if (order.amountPaidMinor > 0) return { label: "Part paid", tone: "warn" }
