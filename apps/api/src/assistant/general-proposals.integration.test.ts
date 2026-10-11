@@ -234,7 +234,9 @@ if (enabled) {
           await verifyGeneralProductTransport(ctx, session.token)
           return
         }
-        if (
+        if (process.env.RUN_GENERAL_BULK_FULFILLMENT === "1") {
+          console.info("Bulk command acceptance: transport runs in the default suite")
+        } else if (
           process.env.RUN_GENERAL_STOCK_TRANSFER === "1" &&
           process.env.RUN_GENERAL_STOCK_TRANSFER_PROBE === "1"
         ) {
