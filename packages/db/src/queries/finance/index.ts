@@ -80,6 +80,7 @@ export {
 
 export {
   registerFinancePurchase,
+  registerFinancePurchaseInTransaction,
   recognizeFinancePurchase,
 } from "./purchase-recognition"
 export { reverseFinancePurchaseRecognition } from "./purchase-recognition-reversals"
@@ -95,3 +96,5 @@ export {
 } from "./expense-receipt-entrypoints"
 
 export { getFinanceMoneyMovementReview } from "./money-review"
+
+export { getFinancePurchaseRegistrationReview } from "./purchase-registration-review"
