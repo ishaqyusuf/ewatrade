@@ -1,9 +1,10 @@
+import { normalizeFinanceBillPayment, reviewFinanceBillPaymentSource } from "./bill-payment-source"
 import { normalizeFinanceExpense } from "./expense-input"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import type { FinanceActor } from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
-import { FinanceError, financeAmount } from "./rules"
+import { FinanceError } from "./rules"
 
 export type FinanceBillPaymentDetails = {
   amountMinor: string
@@ -129,27 +130,7 @@ export async function payFinanceBillInTransaction(
   tx: Prisma.TransactionClient,
   input: FinanceBillPaymentInput,
 ) {
-  const amount = financeAmount(input.amountMinor)
-  const ownerFunded = input.funding === "OWNER_CAPITAL"
-  if (
-    (input.funding !== undefined &&
-      !["OWNER_CAPITAL", "BUSINESS_ACCOUNT"].includes(input.funding)) ||
-    (ownerFunded ? input.accountId !== undefined : !input.accountId)
-  ) {
-    throw new FinanceError(
-      "INVALID_JOURNAL",
-      "Choose a business payment account or owner capital funding.",
-    )
-  }
-  if (
-    !Number.isFinite(input.effectiveAt.getTime()) ||
-    (input.reference && input.reference.length > 160)
-  ) {
-    throw new FinanceError(
-      "INVALID_JOURNAL",
-      "Check the payment date and reference.",
-    )
-  }
+  const { amount, ownerFunded } = normalizeFinanceBillPayment(input)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   return financeDocumentCommand(
     tx,
@@ -157,59 +138,7 @@ export async function payFinanceBillInTransaction(
     "PAY_BILL",
     payload,
     async (book) => {
-      const bill = await tx.financeBill.findFirst({
-        where: { id: input.billId, bookId: book.id },
-      })
-      if (!bill)
-        throw new FinanceError("NOT_FOUND", "Bill not found in this business.")
-      if (bill.kind !== "EXPENSE")
-        throw new FinanceError(
-          "CONFLICT",
-          "Purchase bills require the purchase settlement command.",
-        )
-      if (bill.voidedAt)
-        throw new FinanceError(
-          "CONFLICT",
-          "A cancelled bill cannot receive another payment.",
-        )
-      if (input.effectiveAt < bill.incurredAt)
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "A bill payment cannot precede the expense. Record advances separately.",
-        )
-      if (amount > bill.totalMinor - bill.paidMinor)
-        throw new FinanceError(
-          "CONFLICT",
-          "Payment exceeds the bill's outstanding amount.",
-        )
-      const account = await tx.financeAccount.findFirst({
-        where: {
-          bookId: book.id,
-          ...(ownerFunded
-            ? {
-                code: "3000",
-                kind: "EQUITY" as const,
-                purpose: "CAPITAL" as const,
-              }
-            : {
-                id: input.accountId,
-                purpose: {
-                  in: ["CASH", "BANK", "CLEARING"] as Array<
-                    "CASH" | "BANK" | "CLEARING"
-                  >,
-                },
-              }),
-          archivedAt: null,
-        },
-      })
-      if (!account)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Choose an active payment account in this business.",
-        )
-      const payable = await tx.financeAccount.findUniqueOrThrow({
-        where: { bookId_code: { bookId: book.id, code: "2000" } },
-      })
+      const { bill, account, payable } = await reviewFinanceBillPaymentSource(tx, input, book)
       const payment = await tx.financeBillPayment.create({
         data: {
           bookId: book.id,
