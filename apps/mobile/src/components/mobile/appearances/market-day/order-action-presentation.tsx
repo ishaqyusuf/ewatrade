@@ -82,11 +82,11 @@ export function MarketDayOrderPaymentChoice({
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       className={cn(
-        "items-center justify-center rounded-xl",
+        "items-center justify-center rounded-xl border",
         largeText ? "min-h-14 min-w-[46%] flex-1 px-4" : "min-h-11 px-3",
         selected
-          ? "bg-market-palm"
-          : "border border-market-line bg-market-field",
+          ? "border-market-palm bg-market-palm"
+          : "border-market-line bg-market-field",
       )}
       haptic
       onPress={onPress}
