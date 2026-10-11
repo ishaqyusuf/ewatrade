@@ -44,8 +44,19 @@ export const SETUP_MEDIA_DISABLED = {
 } as const
 
 /** Refuses uploads when media is off, whatever the UI shows. */
-export function isAssistantVoiceEnabled() {
-  return process.env.ASSISTANT_VOICE_ENABLED === "true"
+/**
+ * Voice notes are on in local and preview. Production stays off until a fast
+ * hosted transcriber exists (local Whisper alone is too slow there), unless
+ * ASSISTANT_VOICE_PRODUCTION_ENABLED is explicitly "true".
+ */
+export function isAssistantVoiceEnabled(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+) {
+  if (env.ASSISTANT_VOICE_ENABLED !== "true") return false
+  return (
+    env.APP_ENV !== "production" ||
+    env.ASSISTANT_VOICE_PRODUCTION_ENABLED === "true"
+  )
 }
 
 export function requireSetupAssistantMedia(kind?: string) {

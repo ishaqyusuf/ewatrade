@@ -16,12 +16,12 @@ function db(lease: unknown, attempts: Record<string, Attempt[]> = {}) {
 const live = {
   url: "https://voice-123.ngrok-free.app",
   generation: "00000000-0000-4000-8000-000000000000",
-  environment: "production",
+  environment: "preview",
   expiresAt: Date.now() + 60_000,
 }
 const env = (extra: Record<string, string> = {}) => ({
   ASSISTANT_VOICE_ENABLED: "true",
-  APP_ENV: "production",
+  APP_ENV: "preview",
   ...extra,
 })
 
@@ -56,7 +56,7 @@ test("local Whisper needs enrolment and a live lease for this environment", asyn
   expect(
     (
       await assistantVoiceAvailability(
-        db({ ...live, environment: "preview" }),
+        db({ ...live, environment: "production" }),
         "t1",
         enrolled,
       )

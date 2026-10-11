@@ -3,6 +3,7 @@ import { localWhisperEnrolled } from "@ewatrade/ai/transcription"
 import { normalizeGatewayUrl } from "@ewatrade/ai/transcription-contracts"
 import { readVoiceGateway } from "@ewatrade/db/assistant-voice"
 import type { TRPCContext } from "../trpc/init"
+import { isAssistantVoiceEnabled } from "./setup-context"
 
 type Environment = Readonly<Record<string, string | undefined>>
 
@@ -55,7 +56,7 @@ export async function assistantVoiceAvailability(
   tenantId: string,
   env: Environment = process.env,
 ): Promise<VoiceAvailability> {
-  if (env.ASSISTANT_VOICE_ENABLED !== "true")
+  if (!isAssistantVoiceEnabled(env))
     return { available: false, provider: null, reason: "off" }
   if (localWhisperEnrolled(tenantId, env)) {
     const row = await readVoiceGateway(db)
