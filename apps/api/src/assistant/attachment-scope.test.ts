@@ -2,19 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { TRPCError } from "@trpc/server"
 import { requireAssistantAttachmentScope } from "./attachment-scope"
 
-const keys = [
-  "ASSISTANT_SETUP_ENABLED",
-  "ASSISTANT_GENERAL_ENABLED",
-  "ASSISTANT_APPROVAL_SIGNING_KEY",
-] as const
-const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
+const previousKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
 beforeEach(() => {
-  process.env.ASSISTANT_SETUP_ENABLED = "true"
-  process.env.ASSISTANT_GENERAL_ENABLED = "true"
   process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "k".repeat(32)
 })
 afterEach(() => {
-  for (const key of keys) process.env[key] = previous[key]
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previousKey
 })
 
 function ctx(role: string) {
@@ -58,15 +51,8 @@ describe("assistant voice and file uploads", () => {
     })
   })
 
-  test("general-only roles fall back when the setup assistant is off", () => {
-    process.env.ASSISTANT_SETUP_ENABLED = "false"
-    expect(requireAssistantAttachmentScope(ctx("OWNER")).purposes).toEqual([
-      "GENERAL",
-    ])
-  })
-
-  test("without either assistant the setup refusal is reported", () => {
-    process.env.ASSISTANT_GENERAL_ENABLED = "false"
+  test("without the business chat the setup refusal is reported", () => {
+    Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
     expect(code(() => requireAssistantAttachmentScope(ctx("CASHIER")))).toBe(
       "FORBIDDEN",
     )

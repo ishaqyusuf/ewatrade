@@ -492,7 +492,6 @@ export function useGeneralAssistant() {
     readyFiles,
     setReadyFiles,
     trayKey,
-    mediaEnabled: availability.data?.mediaEnabled === true,
     sessionUnavailable,
     availability,
     conversations,

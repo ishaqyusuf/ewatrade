@@ -3,17 +3,12 @@ import { asSchema } from "ai"
 import type { GeneralContext } from "./general-context"
 import { createGeneralTools } from "./general-tools"
 
-const env = {
-  enabled: process.env.ASSISTANT_GENERAL_ENABLED,
-  key: process.env.ASSISTANT_APPROVAL_SIGNING_KEY,
-}
+const previousKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
 beforeAll(() => {
-  process.env.ASSISTANT_GENERAL_ENABLED = "true"
   process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "k".repeat(32)
 })
 afterAll(() => {
-  process.env.ASSISTANT_GENERAL_ENABLED = env.enabled
-  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = env.key
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previousKey
 })
 
 const owner = {

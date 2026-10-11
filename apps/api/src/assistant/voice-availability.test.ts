@@ -20,36 +20,28 @@ const live = {
   expiresAt: Date.now() + 60_000,
 }
 const env = (extra: Record<string, string> = {}) => ({
-  ASSISTANT_VOICE_ENABLED: "true",
   APP_ENV: "preview",
   ...extra,
 })
 
-test("off unless the voice flag is on", async () => {
-  expect(
-    (
-      await assistantVoiceAvailability(db(live), "t1", {
-        APP_ENV: "production",
-      })
-    ).reason,
-  ).toBe("off")
+test("no transcriber means no mic", async () => {
+  expect(await assistantVoiceAvailability(db(null), env())).toEqual({
+    available: false,
+    provider: null,
+    reason: "no_provider",
+  })
 })
 
-test("local Whisper needs enrolment and a live lease for this environment", async () => {
-  const enrolled = env({ ASSISTANT_LOCAL_TENANT_IDS: "*" })
-  expect(
-    (await assistantVoiceAvailability(db(live), "t1", enrolled)).provider,
-  ).toBe("local_whisper")
-  // Not enrolled, expired lease, or another environment's lease: unavailable.
-  expect(
-    (await assistantVoiceAvailability(db(live), "t1", env())).available,
-  ).toBe(false)
+test("local Whisper needs a live lease for this environment", async () => {
+  expect((await assistantVoiceAvailability(db(live), env())).provider).toBe(
+    "local_whisper",
+  )
+  // Expired lease, or another environment's lease: unavailable.
   expect(
     (
       await assistantVoiceAvailability(
         db({ ...live, expiresAt: Date.now() - 1 }),
-        "t1",
-        enrolled,
+        env(),
       )
     ).available,
   ).toBe(false)
@@ -57,8 +49,7 @@ test("local Whisper needs enrolment and a live lease for this environment", asyn
     (
       await assistantVoiceAvailability(
         db({ ...live, environment: "production" }),
-        "t1",
-        enrolled,
+        env(),
       )
     ).available,
   ).toBe(false)
@@ -66,15 +57,15 @@ test("local Whisper needs enrolment and a live lease for this environment", asyn
 
 test("a cloud key counts until its last attempt fails on auth or credit", async () => {
   const withKey = env({ XAI_API_KEY: "key" })
-  expect(
-    (await assistantVoiceAvailability(db(null), "t1", withKey)).provider,
-  ).toBe("xai")
+  expect((await assistantVoiceAvailability(db(null), withKey)).provider).toBe(
+    "xai",
+  )
   const noCredit = {
     xai: [
       { outcome: "failed", errorCode: "RATE_LIMITED", startedAt: new Date() },
     ],
   }
-  expect(
-    await assistantVoiceAvailability(db(null, noCredit), "t1", withKey),
-  ).toEqual({ available: false, provider: null, reason: "no_provider" })
+  expect(await assistantVoiceAvailability(db(null, noCredit), withKey)).toEqual(
+    { available: false, provider: null, reason: "no_provider" },
+  )
 })

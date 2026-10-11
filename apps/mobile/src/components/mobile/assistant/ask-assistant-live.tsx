@@ -409,7 +409,6 @@ export function AskAssistantLive() {
         />
         <AssistantChatBox
           conversationId={vm.offline ? null : vm.conversationId}
-          mediaEnabled={vm.mediaEnabled}
           resetKey={vm.trayKey}
           onReadyChange={vm.setReadyFiles}
           value={vm.draft}

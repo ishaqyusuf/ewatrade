@@ -50,7 +50,6 @@ export function requireGeneralScope(
   ctx: GeneralScopeContext,
 ): AssistantScope & { dataClassification: "LIVE" | "QA" } {
   if (
-    process.env.ASSISTANT_GENERAL_ENABLED !== "true" ||
     !process.env.ASSISTANT_APPROVAL_SIGNING_KEY ||
     process.env.ASSISTANT_APPROVAL_SIGNING_KEY.length < 32
   )
@@ -217,7 +216,7 @@ export function assertCapability(
   if (!generalCapabilityEnabled(capability))
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "This capability is not enabled for this assistant pilot.",
+      message: "The assistant can't do this yet.",
     })
   if (!supportsGeneralCapability(ctx, capability))
     throw new TRPCError({

@@ -462,7 +462,6 @@ export function GeneralComposer({
 }) {
   const { enabled, disabled, exhausted } = generalChatFlags(vm)
   const off = !enabled || !vm.conversationId || exhausted || vm.state.isError
-  const mediaEnabled = vm.availability.data?.mediaEnabled === true
   const props = {
     hasAttachments: vm.readyAttachments.length > 0,
     value: vm.draft,
@@ -477,7 +476,7 @@ export function GeneralComposer({
     voiceConversationId: enabled ? vm.conversationId : null,
     footer,
   }
-  return vm.conversationId && enabled && mediaEnabled ? (
+  return vm.conversationId && enabled ? (
     <GeneralAttachComposer
       key={`${vm.conversationId}:${vm.attachmentTrayKey}`}
       conversationId={vm.conversationId}

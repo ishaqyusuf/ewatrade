@@ -27,7 +27,6 @@ import { z } from "zod"
 import { catalogCommandForSetupEntity } from "../../assistant/setup-commit"
 import {
   SETUP_BUDGET_LIMITS,
-  isSetupAssistantEnabled,
   requireSetupAssistantScope,
 } from "../../assistant/setup-context"
 import { readSetupPrerequisites } from "../../assistant/setup-prerequisites"
@@ -61,7 +60,6 @@ const productProcedure = protectedProcedure.use(async ({ next }) => {
 export const productAssistantRouter = createTRPCRouter({
   capabilities: productProcedure.query(async ({ ctx }) => {
     if (
-      !isSetupAssistantEnabled() ||
       !["OWNER", "ADMIN"].includes(ctx.tenantContext.membership.role) ||
       !ctx.tenantContext.activeStore
     )

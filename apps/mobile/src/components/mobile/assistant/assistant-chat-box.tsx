@@ -24,13 +24,11 @@ type ComposerProps = Omit<
  */
 export function AssistantChatBox({
   conversationId,
-  mediaEnabled,
   resetKey,
   onReadyChange,
   ...composer
 }: ComposerProps & {
   conversationId: string | null
-  mediaEnabled: boolean
   /** Changes after a send so sent files leave the box. */
   resetKey: number
   onReadyChange: (files: AssistantReadyFile[]) => void
@@ -96,7 +94,7 @@ export function AssistantChatBox({
     )
   }, [readyKey])
 
-  const canAttach = Boolean(conversationId) && mediaEnabled
+  const canAttach = Boolean(conversationId)
   const canTalk = Boolean(conversationId) && capabilities.data?.enabled === true
   const state = recorder.state
   const pick = (source: "camera" | "library" | "pdf") => {

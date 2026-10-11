@@ -26,10 +26,6 @@ import {
   setupAttachmentStorage,
   setupAttachmentTarget,
 } from "../../assistant/attachment-storage"
-import {
-  isAssistantVoiceEnabled,
-  requireSetupAssistantMedia,
-} from "../../assistant/setup-context"
 import { assistantVoiceAvailability } from "../../assistant/voice-availability"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
@@ -70,11 +66,9 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
   /** The mic is offered only when a voice note can be written out now. */
   voiceCapabilities: protectedProcedure.query(async ({ ctx }) => {
     const scope = requireAssistantAttachmentScope(ctx)
-    const voice =
-      isAssistantVoiceEnabled() &&
-      isSetupAttachmentStorageAvailable(scope.dataClassification)
-        ? await assistantVoiceAvailability(ctx.db, scope.tenantId)
-        : null
+    const voice = isSetupAttachmentStorageAvailable(scope.dataClassification)
+      ? await assistantVoiceAvailability(ctx.db)
+      : null
     return {
       enabled: voice?.available === true,
       maxDurationMs: 120_000,
@@ -115,7 +109,6 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
     .input(z.object({ attachmentId: z.string().min(1).max(64) }))
     .mutation(async ({ ctx, input }) => {
       const scope = requireAssistantAttachmentScope(ctx)
-      requireSetupAssistantMedia("AUDIO")
       const result = await ctx.db.assistantAttachment.updateMany({
         where: {
           id: input.attachmentId,
@@ -158,7 +151,6 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
       const scope = requireAssistantAttachmentScope(ctx)
       const checked = validateSetupAttachmentIntent(input)
       if (!checked.ok) return { ok: false as const, reason: checked.reason }
-      requireSetupAssistantMedia(checked.kind)
       const conversation = await ctx.db.assistantConversation.findFirst({
         where: {
           id: input.conversationId,

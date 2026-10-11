@@ -7,9 +7,8 @@
  *                                   # openings fall back to the fixed template
  *   bun run assistant:runtime on    # back on with the current provider/model
  *
- * The whole feature (chat, list and entry points) is controlled separately by
- * ASSISTANT_SETUP_ENABLED, which needs a redeploy. QA businesses always use the
- * provider-free rehearsal model and are not affected by this switch.
+ * QA businesses always use the provider-free rehearsal model and are not
+ * affected by this switch.
  */
 import {
   ASSISTANT_RUNTIME_CONFIGURATION_KEY,

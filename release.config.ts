@@ -11,7 +11,6 @@ const featuresOff = [
   "ACCOUNT_PRIVACY_NOTICE_RECIPIENT_HMAC_KEY",
   "CATALOG_PHOTO_REVIEW_OPENAI_API_KEY", // photo review is off
   "APPLE_CLIENT_IDS", // Sign in with Apple, iOS only
-  "ASSISTANT_SETUP_MEDIA_ENABLED", // setup voice/photos/files stay off until OpenAI credit
 ]
 const tooling = [
   "APP_UPDATE_BACKEND", // local app-update publisher tooling only

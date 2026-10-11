@@ -1,16 +1,14 @@
 import { assistantProviderApiKey } from "@ewatrade/ai/provider"
-import { localWhisperEnrolled } from "@ewatrade/ai/transcription"
 import { normalizeGatewayUrl } from "@ewatrade/ai/transcription-contracts"
 import { readVoiceGateway } from "@ewatrade/db/assistant-voice"
 import type { TRPCContext } from "../trpc/init"
-import { isAssistantVoiceEnabled } from "./setup-context"
 
 type Environment = Readonly<Record<string, string | undefined>>
 
 export type VoiceAvailability = {
   available: boolean
   provider: "local_whisper" | "openai" | "xai" | null
-  reason: "off" | "no_provider" | null
+  reason: "no_provider" | null
 }
 
 /** The latest attempt says the key is wrong or out of credit. */
@@ -53,25 +51,20 @@ async function cloudUsable(db: TRPCContext["db"], provider: string) {
  */
 export async function assistantVoiceAvailability(
   db: TRPCContext["db"],
-  tenantId: string,
   env: Environment = process.env,
 ): Promise<VoiceAvailability> {
-  if (!isAssistantVoiceEnabled(env))
-    return { available: false, provider: null, reason: "off" }
-  if (localWhisperEnrolled(tenantId, env)) {
-    const row = await readVoiceGateway(db)
-    const lease = row?.value as
-      | { url?: string; environment?: string; expiresAt?: number }
-      | null
-      | undefined
-    if (
-      lease?.url &&
-      normalizeGatewayUrl(lease.url) &&
-      lease.environment === env.APP_ENV &&
-      (lease.expiresAt ?? 0) > Date.now()
-    )
-      return { available: true, provider: "local_whisper", reason: null }
-  }
+  const row = await readVoiceGateway(db)
+  const lease = row?.value as
+    | { url?: string; environment?: string; expiresAt?: number }
+    | null
+    | undefined
+  if (
+    lease?.url &&
+    normalizeGatewayUrl(lease.url) &&
+    lease.environment === env.APP_ENV &&
+    (lease.expiresAt ?? 0) > Date.now()
+  )
+    return { available: true, provider: "local_whisper", reason: null }
   if (
     assistantProviderApiKey("OPENAI", env) &&
     (await cloudUsable(db, "openai"))

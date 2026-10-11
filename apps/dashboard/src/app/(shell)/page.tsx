@@ -54,7 +54,6 @@ export default async function DashboardHomePage() {
   )
   // Matches the shell's catalog sheet and assistant launcher gating.
   const navigationContext = {
-    assistantEnabled: process.env.ASSISTANT_SETUP_ENABLED === "true",
     staffAccessMode: ctx?.membership.staffAccessMode,
     catalogEditor: ctx?.membership.catalogEditor,
   }

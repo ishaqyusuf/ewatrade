@@ -80,8 +80,6 @@ for (const environment of environments) {
     currentValue(text, "ASSISTANT_VOICE_PUBLISH_SECRET") ?? secret()
   const gatewaySecret =
     currentValue(text, "ASSISTANT_VOICE_GATEWAY_SECRET") ?? secret()
-  text = upsert(text, "ASSISTANT_VOICE_ENABLED", "true")
-  text = upsert(text, "ASSISTANT_LOCAL_TENANT_IDS", "*")
   text = upsert(text, "ASSISTANT_VOICE_PUBLISH_SECRET", publishSecret)
   text = upsert(text, "ASSISTANT_VOICE_GATEWAY_SECRET", gatewaySecret)
   writeFileSync(environment.file, text)
@@ -91,7 +89,7 @@ for (const environment of environments) {
     publishSecret,
     gatewaySecret,
   })
-  console.log(`✓ ${environment.file}: voice on, all tenants, secrets set`)
+  console.log(`✓ ${environment.file}: secrets set`)
 }
 
 // The Mac publishes its tunnel to every environment from the local profile.
@@ -117,8 +115,6 @@ for (const environment of environments) {
     { encoding: "utf8" },
   ).stdout
   const values: [string, string, boolean][] = [
-    ["ASSISTANT_VOICE_ENABLED", "true", false],
-    ["ASSISTANT_LOCAL_TENANT_IDS", "*", false],
     ["ASSISTANT_VOICE_PUBLISH_SECRET", target.publishSecret, true],
   ]
   for (const [name, value, sensitive] of values) {

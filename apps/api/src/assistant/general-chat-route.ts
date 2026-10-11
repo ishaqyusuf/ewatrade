@@ -48,10 +48,6 @@ import {
 } from "./chat-attachments"
 import { resolveModel } from "./chat-route"
 import {
-  SETUP_MEDIA_DISABLED,
-  isSetupAssistantMediaEnabled,
-} from "./setup-context"
-import {
   GENERAL_BUDGET_LIMITS,
   generalBudgetScopeKey,
 } from "./general-allowance"
@@ -167,13 +163,6 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
       const attachmentIds = body.message.parts.flatMap((part) =>
         part.type === SETUP_ATTACHMENT_PART ? [part.data.attachmentId] : [],
       )
-      if (attachmentIds.length && !isSetupAssistantMediaEnabled())
-        return failure(
-          c,
-          412,
-          SETUP_MEDIA_DISABLED.code,
-          SETUP_MEDIA_DISABLED.message,
-        )
       const attachments = await listAssistantAttachments(
         ctx.db,
         scope,

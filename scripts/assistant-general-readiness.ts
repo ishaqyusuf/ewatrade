@@ -126,7 +126,6 @@ try {
       fingerprints,
     },
     pilot: {
-      restricted: process.env.ASSISTANT_GENERAL_CAPABILITIES !== undefined,
       capabilities: capabilityManifest
         .filter((value) => generalCapabilityEnabled(value))
         .map((value) => value.id),

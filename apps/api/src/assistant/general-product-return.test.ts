@@ -3,16 +3,13 @@ import type { GeneralTransactionContext } from "./general-actions"
 import { productLineReturn } from "./general-product-return"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import { generalCapabilityEnabled } from "./general-rollout"
-const previous = { enabled: process.env.ASSISTANT_GENERAL_ENABLED, key: process.env.ASSISTANT_APPROVAL_SIGNING_KEY }
+const previousKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
 beforeAll(() => {
-  process.env.ASSISTANT_GENERAL_ENABLED = "true"
   process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "r".repeat(32)
 })
 afterAll(() => {
-  for (const [name, value] of [["ASSISTANT_GENERAL_ENABLED", previous.enabled], ["ASSISTANT_APPROVAL_SIGNING_KEY", previous.key]]) {
-    if (value === undefined) Reflect.deleteProperty(process.env, name!)
-    else process.env[name!] = value
-  }
+  if (previousKey === undefined) Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+  else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previousKey
 })
 const payload = { action: "product_line_return" as const, orderLineId: "line", quantity: "1", disposition: "restock" as const, reason: "Customer return" }
 function context(order: unknown, role = "OWNER") {
@@ -30,10 +27,8 @@ function context(order: unknown, role = "OWNER") {
     },
   } as unknown as GeneralTransactionContext }
 }
-test("return stays unavailable even when explicitly selected before acceptance", () => {
-  const capability = capabilityForAction("product_line_return")
-  expect(generalCapabilityEnabled(capability, {})).toBe(false)
-  expect(generalCapabilityEnabled(capability, { ASSISTANT_GENERAL_CAPABILITIES: capability.id })).toBe(false)
+test("return stays unavailable before acceptance", () => {
+  expect(generalCapabilityEnabled(capabilityForAction("product_line_return"))).toBe(false)
 })
 test("foreign or invisible return line is refused before financial reads", async () => {
   const fixture = context(null, "CASHIER")

@@ -1,19 +1,7 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { TRPCError } from "@trpc/server"
 import { assertSetupConversationCurrent } from "../trpc/routers/setup-assistant"
-import {
-  isSetupAssistantMediaEnabled,
-  requireSetupAssistantMedia,
-  requireSetupAssistantScope,
-} from "./setup-context"
-
-const previousFlag = process.env.ASSISTANT_SETUP_ENABLED
-beforeEach(() => {
-  process.env.ASSISTANT_SETUP_ENABLED = "true"
-})
-afterEach(() => {
-  process.env.ASSISTANT_SETUP_ENABLED = previousFlag
-})
+import { requireSetupAssistantScope } from "./setup-context"
 
 function ctx(role: string, store: { id: string } | null = { id: "store_a" }) {
   return {
@@ -48,16 +36,12 @@ describe("setup scope is re-checked on every request", () => {
     )
   })
 
-  test("the scope follows the active Store and the flag", () => {
+  test("the scope follows the active Store", () => {
     expect(requireSetupAssistantScope(ctx("OWNER"))).toMatchObject({
       tenantId: "tenant_1",
       storeId: "store_a",
       userId: "user_1",
     })
-    process.env.ASSISTANT_SETUP_ENABLED = "false"
-    expect(code(() => requireSetupAssistantScope(ctx("OWNER")))).toBe(
-      "NOT_FOUND",
-    )
   })
 
   test("a Store switch mid-add refuses instead of using the other Store's list", () => {
@@ -77,33 +61,5 @@ describe("setup scope is re-checked on every request", () => {
     expect(
       code(() => assertSetupConversationCurrent(null, "conv_store_a")),
     ).toBe("OK")
-  })
-})
-
-describe("photos, files and voice notes", () => {
-  test("are off unless their own flag is on", () => {
-    expect(isSetupAssistantMediaEnabled({})).toBe(false)
-    expect(
-      isSetupAssistantMediaEnabled({ ASSISTANT_SETUP_ENABLED: "true" }),
-    ).toBe(false)
-    expect(
-      isSetupAssistantMediaEnabled({ ASSISTANT_SETUP_MEDIA_ENABLED: "true" }),
-    ).toBe(true)
-  })
-
-  test("upload intents are refused while they are off", () => {
-    const previous = process.env.ASSISTANT_SETUP_MEDIA_ENABLED
-    try {
-      process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "false"
-      expect(code(() => requireSetupAssistantMedia())).toBe(
-        "PRECONDITION_FAILED",
-      )
-      process.env.ASSISTANT_SETUP_MEDIA_ENABLED = "true"
-      expect(code(() => requireSetupAssistantMedia())).toBe("OK")
-    } finally {
-      if (previous === undefined)
-        Reflect.deleteProperty(process.env, "ASSISTANT_SETUP_MEDIA_ENABLED")
-      else process.env.ASSISTANT_SETUP_MEDIA_ENABLED = previous
-    }
   })
 })

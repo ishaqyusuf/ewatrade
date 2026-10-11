@@ -25,11 +25,6 @@ import {
   setupAttachmentStorage,
   setupAttachmentTarget,
 } from "./attachment-storage"
-import {
-  SETUP_MEDIA_DISABLED,
-  isAssistantVoiceEnabled,
-  isSetupAssistantMediaEnabled,
-} from "./setup-context"
 
 const attachmentIdSchema = z.string().min(1).max(64)
 
@@ -100,19 +95,6 @@ export function registerAssistantAttachmentRoutes(
           return refuse(context, 400, "BAD_REQUEST", "Invalid file.")
         const { db, scope, analyticsOrigin } = await admit(context)
         const row = await readAssistantAttachment(db, scope, attachmentId.data)
-        if (
-          !(row.kind === "AUDIO"
-            ? isAssistantVoiceEnabled()
-            : isSetupAssistantMediaEnabled())
-        ) {
-          void context.req.raw.body?.cancel().catch(() => undefined)
-          return refuse(
-            context,
-            412,
-            SETUP_MEDIA_DISABLED.code,
-            SETUP_MEDIA_DISABLED.message,
-          )
-        }
         // A replay after a successful upload returns the current state.
         if (row.status !== "PENDING_UPLOAD") {
           void context.req.raw.body?.cancel().catch(() => undefined)

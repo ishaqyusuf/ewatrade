@@ -52,7 +52,6 @@ type DashboardNavDefinition = Omit<DashboardNavItem, "children"> & {
 export type DashboardNavContext = Partial<
   Omit<WorkspaceFeatureAvailability, "hasInventoryActivity" | "storeId">
 > & {
-  assistantEnabled?: boolean
   staffAccessMode?: "LEGACY" | "SCOPED"
   catalogEditor?: boolean
   businessProfileKey?: string | null
@@ -126,7 +125,6 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     icon: "assistant",
     label: "Assistant",
     canAccess: (role) => role === "OWNER" || role === "ADMIN",
-    isVisible: (context) => context.assistantEnabled === true,
   },
   {
     description: "Daily business overview",

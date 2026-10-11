@@ -18,7 +18,6 @@ export function config(env: NodeJS.ProcessEnv, root: string) {
     env.ASSISTANT_WHISPER_SERVICE_DIR || "../al-ghurobaa/services/transcriber",
   )
   return {
-    enabled: env.ASSISTANT_VOICE_LOCAL_ENABLED !== "false",
     url,
     service,
     python: resolve(

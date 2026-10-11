@@ -4,22 +4,12 @@ import type { GeneralContext } from "./general-context"
 import { assertGeneralAction, canUseCapability } from "./general-context"
 import { createGeneralTools } from "./general-tools"
 
-const env = {
-  enabled: process.env.ASSISTANT_GENERAL_ENABLED,
-  key: process.env.ASSISTANT_APPROVAL_SIGNING_KEY,
-  capabilities: process.env.ASSISTANT_GENERAL_CAPABILITIES,
-}
+const previousKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
 beforeAll(() => {
-  Reflect.deleteProperty(process.env, "ASSISTANT_GENERAL_CAPABILITIES")
-  process.env.ASSISTANT_GENERAL_ENABLED = "true"
   process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "k".repeat(32)
 })
 afterAll(() => {
-  if (env.capabilities === undefined)
-    Reflect.deleteProperty(process.env, "ASSISTANT_GENERAL_CAPABILITIES")
-  else process.env.ASSISTANT_GENERAL_CAPABILITIES = env.capabilities
-  process.env.ASSISTANT_GENERAL_ENABLED = env.enabled
-  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = env.key
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previousKey
 })
 
 function actor(
@@ -120,6 +110,7 @@ test("owners get every capability; Free plan hides finance-gated ledger reads", 
     "readCustomerAccounts",
   )
   expect(allowedActions(actor("OWNER"))).toEqual([
+    "order_attachment_add",
     "customer_create",
     "product_create",
     "order_create",
@@ -138,7 +129,7 @@ test("sales reps can read orders and draft sales only", () => {
     "readOrder",
     "draftAction",
   ])
-  expect(allowedActions(rep)).toEqual(["order_create"])
+  expect(allowedActions(rep)).toEqual(["order_attachment_add", "order_create"])
   expect(() => assertGeneralAction(rep, "payment_record")).toThrow(
     "Sales reps can draft sales",
   )
@@ -171,28 +162,6 @@ test("scoped staff without the Store assignment lose the assistant entirely", ()
   expect(() => assertGeneralAction(elsewhere, "order_create")).toThrow(
     "Choose an accessible Store",
   )
-})
-
-test("pilot restriction hides tools and rejects direct action authority", () => {
-  const previous = process.env.ASSISTANT_GENERAL_CAPABILITIES
-  try {
-    process.env.ASSISTANT_GENERAL_CAPABILITIES = "sales.summary.read"
-    const owner = actor("OWNER")
-    owner.requestHeaders = new Headers({ "x-assistant-client": "dashboard" })
-    expect(listed(owner)).toEqual(["readSalesSummary"])
-    expect(allowedActions(owner)).toEqual([])
-    expect(() => assertGeneralAction(owner, "customer_create")).toThrow(
-      "not enabled",
-    )
-    process.env.ASSISTANT_GENERAL_CAPABILITIES = "customers.create"
-    expect(() =>
-      assertGeneralAction(actor("CASHIER"), "customer_create"),
-    ).toThrow()
-  } finally {
-    if (previous === undefined)
-      Reflect.deleteProperty(process.env, "ASSISTANT_GENERAL_CAPABILITIES")
-    else process.env.ASSISTANT_GENERAL_CAPABILITIES = previous
-  }
 })
 
 test("dashboard operational reads respect stock Store grants and order role ceilings", () => {

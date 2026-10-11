@@ -21,72 +21,17 @@ export const SETUP_BUDGET_LIMITS = {
   windowMs: 30 * 24 * 60 * 60 * 1000,
 }
 
-export function isSetupAssistantEnabled(
-  environment: Readonly<Record<string, string | undefined>> = process.env,
-) {
-  return environment.ASSISTANT_SETUP_ENABLED === "true"
-}
-
-/**
- * Photos, files and voice notes in the setup chat. Off by default: reading
- * them needs OpenAI, so the owner types until this is switched on.
- */
-export function isSetupAssistantMediaEnabled(
-  environment: Readonly<Record<string, string | undefined>> = process.env,
-) {
-  return environment.ASSISTANT_SETUP_MEDIA_ENABLED === "true"
-}
-
-export const SETUP_MEDIA_DISABLED = {
-  code: "MEDIA_DISABLED",
-  message:
-    "Photos, files and voice notes are switched off for now. Type your message instead.",
-} as const
-
-/** Refuses uploads when media is off, whatever the UI shows. */
-/**
- * Voice notes are on in local and preview. Production stays off until a fast
- * hosted transcriber exists (local Whisper alone is too slow there), unless
- * ASSISTANT_VOICE_PRODUCTION_ENABLED is explicitly "true".
- */
-export function isAssistantVoiceEnabled(
-  env: Readonly<Record<string, string | undefined>> = process.env,
-) {
-  if (env.ASSISTANT_VOICE_ENABLED !== "true") return false
-  return (
-    env.APP_ENV !== "production" ||
-    env.ASSISTANT_VOICE_PRODUCTION_ENABLED === "true"
-  )
-}
-
-export function requireSetupAssistantMedia(kind?: string) {
-  if (
-    !(kind === "AUDIO"
-      ? isAssistantVoiceEnabled()
-      : isSetupAssistantMediaEnabled())
-  )
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: SETUP_MEDIA_DISABLED.message,
-    })
-}
-
 type ProtectedContext = TRPCContext & {
   session: NonNullable<TRPCContext["session"]>
   tenantContext: NonNullable<TRPCContext["tenantContext"]>
 }
 
-/** Owners and admins of the active Store only; the flag is checked server-side. */
+/** Owners and admins of the active Store only. */
 export function requireSetupAssistantScope(
   ctx: ProtectedContext,
 ): AssistantScope & {
   dataClassification: "LIVE" | "QA"
 } {
-  if (!isSetupAssistantEnabled())
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "The setup assistant is not available.",
-    })
   const { tenantContext } = ctx
   if (!["OWNER", "ADMIN"].includes(tenantContext.membership.role))
     throw new TRPCError({
@@ -128,7 +73,7 @@ export async function loadSetupBusinessContext(
     currencyCode: facts.currencyCode,
     countryCode: facts.countryCode,
     existing: facts.existing,
-    mediaEnabled: isSetupAssistantMediaEnabled(),
+    mediaEnabled: true,
   }
   return { context, firstName: facts.firstName }
 }

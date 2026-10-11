@@ -48,7 +48,7 @@ export type SetupBusinessContext = {
   countryCode: string | null
   existing: { catalogItems: number; customers: number }
   /**
-   * Photos, files and voice notes can be sent (ASSISTANT_SETUP_MEDIA_ENABLED).
+   * Photos, files and voice notes can be sent.
    * Absent means off: the owner types everything.
    */
   mediaEnabled?: boolean

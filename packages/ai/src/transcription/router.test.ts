@@ -26,7 +26,6 @@ function fixture(
   const transcribe = createFallbackTranscriber({
     environment: {
       APP_ENV: "local",
-      ASSISTANT_LOCAL_TENANT_IDS: "tenant",
       ASSISTANT_VOICE_GATEWAY_SECRET: "s".repeat(32),
       OPENAI_API_KEY: "test-only",
       ASSISTANT_XAI_API_KEY: "test-only",

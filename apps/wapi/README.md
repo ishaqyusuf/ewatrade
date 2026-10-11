@@ -25,7 +25,6 @@ editing settings. No native/mobile app changes are needed.
 
 | Setting | Default / purpose |
 | --- | --- |
-| `ASSISTANT_VOICE_LOCAL_ENABLED` | `true`; `false` keeps the TUI task idle |
 | `ASSISTANT_WHISPER_SERVICE_DIR` | Sibling `../al-ghurobaa/services/transcriber` |
 | `ASSISTANT_WHISPER_PYTHON` | `.venv311/bin/python` relative to service directory; absolute paths supported |
 | `ASSISTANT_WHISPER_URL` | `http://127.0.0.1:8787`, loopback only |

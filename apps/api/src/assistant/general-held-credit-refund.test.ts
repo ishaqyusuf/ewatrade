@@ -5,13 +5,11 @@ import type { getCustomerLedgerCreditRefundReview } from "@ewatrade/db/queries"
 import type { GeneralTransactionContext } from "./general-actions"
 import { heldCreditRefund, heldCreditRefundReviewLines } from "./general-held-credit-refund"
 import { generalCapabilityEnabled } from "./general-rollout"
-const saved = { enabled: process.env.ASSISTANT_GENERAL_ENABLED, key: process.env.ASSISTANT_APPROVAL_SIGNING_KEY }
-beforeAll(() => { process.env.ASSISTANT_GENERAL_ENABLED = "true"; process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "t".repeat(32) })
+const savedKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
+beforeAll(() => { process.env.ASSISTANT_APPROVAL_SIGNING_KEY = "t".repeat(32) })
 afterAll(() => {
-  for (const [name, value] of [["ASSISTANT_GENERAL_ENABLED", saved.enabled], ["ASSISTANT_APPROVAL_SIGNING_KEY", saved.key]]) {
-    if (value === undefined) Reflect.deleteProperty(process.env, name!)
-    else process.env[name!] = value
-  }
+  if (savedKey === undefined) Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+  else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = savedKey
 })
 const payload: Extract<GeneralAction, { action: "held_credit_refund" }> = {
   action: "held_credit_refund", bookId: "book", accountId: "account", creditEntryId: "credit",
@@ -24,10 +22,8 @@ function context(role: string, plan = "pro") {
     activeStore: { id: "store" }, stores: [{ id: "store" }], staffAccess: { status: "ACTIVE", mode: "LEGACY" },
   }, db: {} } as unknown as GeneralTransactionContext
 }
-test("held-credit refund remains unavailable before acceptance even if allowlisted", () => {
-  const capability = capabilityForAction("held_credit_refund")
-  expect(generalCapabilityEnabled(capability, {})).toBe(false)
-  expect(generalCapabilityEnabled(capability, { ASSISTANT_GENERAL_CAPABILITIES: capability.id })).toBe(false)
+test("held-credit refund remains unavailable before acceptance", () => {
+  expect(generalCapabilityEnabled(capabilityForAction("held_credit_refund"))).toBe(false)
 })
 test("adapter enforces finance role and plan before reading customer funds", async () => {
   await expect(heldCreditRefund.validate(context("MANAGER"), payload)).rejects.toMatchObject({ code: "FORBIDDEN" })

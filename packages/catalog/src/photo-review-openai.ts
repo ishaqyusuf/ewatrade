@@ -22,9 +22,7 @@ function apiKey() {
 }
 
 export function isCatalogPhotoReviewConfigured() {
-  return (
-    process.env.CATALOG_PHOTO_REVIEW_ENABLED === "true" && Boolean(apiKey())
-  )
+  return Boolean(apiKey())
 }
 
 function object(value: unknown): Record<string, unknown> {

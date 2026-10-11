@@ -55,7 +55,6 @@ export default async function ShellLayout({
     () => undefined,
   )
   const navigationContext = {
-    assistantEnabled: process.env.ASSISTANT_SETUP_ENABLED === "true",
     staffAccessMode: ctx.membership.staffAccessMode,
     catalogEditor: ctx.membership.catalogEditor,
     isPlatformAdmin: session.user.isPlatformAdmin,

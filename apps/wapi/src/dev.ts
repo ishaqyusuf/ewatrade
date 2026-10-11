@@ -86,10 +86,6 @@ async function health() {
 }
 
 async function tick() {
-  if (!settings.enabled)
-    return status(
-      "Disabled by ASSISTANT_VOICE_LOCAL_ENABLED=false. Restart after changing settings.",
-    )
   const state = await health()
   if (stopped) return
   if (state !== "ready" && publisher) {

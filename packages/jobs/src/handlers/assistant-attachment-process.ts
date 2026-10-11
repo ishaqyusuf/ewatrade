@@ -186,8 +186,6 @@ export function defaultAssistantAttachmentDeps(
             return parsed.success ? parsed.data : null
           },
           assertActive: async () => {
-            if (process.env.ASSISTANT_VOICE_ENABLED !== "true")
-              throw new TranscriptionError("VOICE_DISABLED", true)
             try {
               await assertVoiceAttemptActive(
                 prisma,

@@ -36,11 +36,7 @@ import {
   describeCommitError,
   isOpeningBalancePending,
 } from "../../assistant/setup-commit"
-import {
-  isSetupAssistantEnabled,
-  isSetupAssistantMediaEnabled,
-  requireSetupAssistantScope,
-} from "../../assistant/setup-context"
+import { requireSetupAssistantScope } from "../../assistant/setup-context"
 import {
   SETUP_VISIT_GAP_MS,
   composeSetupOpening,
@@ -114,11 +110,7 @@ export const setupAssistantRouter = createTRPCRouter({
 
   state: protectedProcedure.query(async ({ ctx }) => {
     const role = ctx.tenantContext.membership.role
-    if (
-      !isSetupAssistantEnabled() ||
-      !["OWNER", "ADMIN"].includes(role) ||
-      !ctx.tenantContext.activeStore
-    )
+    if (!["OWNER", "ADMIN"].includes(role) || !ctx.tenantContext.activeStore)
       return { enabled: false as const }
     const scope = requireSetupAssistantScope(ctx)
     const location = await ctx.db.store.findFirst({
@@ -140,7 +132,7 @@ export const setupAssistantRouter = createTRPCRouter({
         followUp: setupFollowUpState([]),
         areas: summarizeSetupAreas(null, []),
         attachments: [],
-        mediaEnabled: isSetupAssistantMediaEnabled(),
+        mediaEnabled: true,
         businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
       }
     const [messages, draft, sent, activeRun] = await Promise.all([
@@ -193,7 +185,7 @@ export const setupAssistantRouter = createTRPCRouter({
       followUp: setupFollowUpState(draft.entities),
       areas: summarizeSetupAreas(draft.areas, draft.entities),
       attachments,
-      mediaEnabled: isSetupAssistantMediaEnabled(),
+      mediaEnabled: true,
       /** Ranks library illustrations in the setup list's picker. */
       businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
     }
@@ -519,7 +511,7 @@ export const setupAssistantRouter = createTRPCRouter({
                 (entity) => entity.state === "FAILED",
               ).length,
               followUp: summarizeSetupFollowUp(draft.entities),
-              mediaEnabled: isSetupAssistantMediaEnabled(),
+              mediaEnabled: true,
               // Adding a product from the chat leads straight into the rest of the list.
               inviteMore:
                 input.keys !== undefined &&

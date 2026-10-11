@@ -23,9 +23,7 @@ const RECEIPT = new Uint8Array([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
 ])
 
-const enabled =
-  process.env.RUN_DATABASE_INTEGRATION_TESTS === "1" &&
-  process.env.ASSISTANT_GENERAL_ENABLED === "true"
+const enabled = process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
 if (enabled) setDefaultTimeout(180_000)
 ;(enabled ? describe : describe.skip)(
   "assistant receipt attached to an order on Neon development",
