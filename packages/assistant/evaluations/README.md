@@ -29,6 +29,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Registration editor, 11 October 2026](runs/2026-10-11-registration-editor.md): layout comparison and actual component acknowledgment/zero guards, exact decimal/minor amount/timestamp, target preservation and Cancel verified; screenshot retained. Full confirmation pending.
+
 - [Registration receipt overlay source, 11 October 2026](runs/2026-10-11-registration-receipt-source.md): global sheet, readable agreement/recognition detail, corrected-event component and missing-Book/Close browser checks; scoped types pass. Saved-record acceptance pending.
 
 - [Registration proposal source, 11 October 2026](runs/2026-10-11-registration-adapter.md): strict agreement-only action and canonical adapter;54 assertions pass. Editor/receipt overlay and proposal acceptance pending.

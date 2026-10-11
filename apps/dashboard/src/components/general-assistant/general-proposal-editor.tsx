@@ -17,6 +17,7 @@ import {
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { CATALOG_FREE_LINE_LABELS } from "@ewatrade/utils/catalog-free-lines"
 import { useState } from "react"
+import { GeneralPurchaseRegistrationEditor } from "./general-purchase-registration-editor"
 import { GeneralSupplierEditor } from "./general-supplier-editor"
 import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import { GeneralBillPaymentEditor } from "./general-bill-payment-editor"
@@ -51,6 +52,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "purchase_register")
+    return <GeneralPurchaseRegistrationEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel}/>
   if (props.proposal.payload.action === "supplier_create")
     return <GeneralSupplierEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel}/>
   if (
