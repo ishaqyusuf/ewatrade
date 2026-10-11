@@ -24,6 +24,8 @@ function context(role: string, db: unknown) {
     tenantContext: {
       tenant: { id: "session-tenant", qaPurgeStartedAt: null },
       membership: { id: "membership-1", role },
+      activeStore: { id: "session-store" },
+      stores: [{ id: "session-store" }],
     },
   }
 }
@@ -39,7 +41,18 @@ test("Product return maps finance posting errors while retaining operator access
     const message = `Return finance failure: ${financeCode}`
     let transactionCount = 0
     let scopedTenant: string | undefined
+    let visibilityScope: unknown
     const db = {
+      store: {
+        findFirst: async () => ({ salesRepOrderVisibility: "OWN_SALES" }),
+      },
+      // The rep's own line passes the creator visibility guard.
+      commercialOrderLine: {
+        findFirst: async (args: { where: { order: unknown } }) => {
+          visibilityScope = args.where.order
+          return { id: input.orderLineId }
+        },
+      },
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) => {
         transactionCount += 1
         const tx = {
@@ -63,6 +76,11 @@ test("Product return maps finance posting errors while retaining operator access
     })
     expect(transactionCount).toBe(1)
     expect(scopedTenant).toBe("session-tenant")
+    expect(visibilityScope).toEqual({
+      tenantId: "session-tenant",
+      storeId: "session-store",
+      createdByUserId: "session-actor",
+    })
   }
 })
 
