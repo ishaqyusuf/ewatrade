@@ -435,13 +435,21 @@ function OrderOverviewSummary({
       </View>
     )
   const due = order.balanceDueMinor > 0
+  // Everything came back: lead with the credit, not a ₦0 total.
+  const credited = !due && order.totalMinor === 0 && order.creditMinor > 0
   const payment = ledgerPayment(order.paymentStatus)
   return (
     <View className="gap-3">
       <HeroCard
-        label={due ? "Balance due" : "Paid in full"}
+        label={
+          credited ? "Credited in full" : due ? "Balance due" : "Paid in full"
+        }
         amount={formatMinorMoney(
-          due ? order.balanceDueMinor : order.totalMinor,
+          credited
+            ? order.creditMinor
+            : due
+              ? order.balanceDueMinor
+              : order.totalMinor,
           order.currencyCode,
         )}
         pill={{ label: payment.label, tone: due ? "draft" : "synced" }}
@@ -465,11 +473,15 @@ function OrderOverviewSummary({
               : "Not set",
           },
         ]}
-        meter={{
-          label: `${paidPercent}% paid`,
-          percent: paidPercent,
-          tone: due ? "gold" : "up",
-        }}
+        meter={
+          credited
+            ? undefined
+            : {
+                label: `${paidPercent}% paid`,
+                percent: paidPercent,
+                tone: due ? "gold" : "up",
+              }
+        }
       />
     </View>
   )
