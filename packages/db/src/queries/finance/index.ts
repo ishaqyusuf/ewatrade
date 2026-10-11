@@ -100,3 +100,4 @@ export { getFinanceMoneyMovementReview } from "./money-review"
 
 export { getFinancePurchaseRegistrationReview } from "./purchase-registration-review"
 export { getFinancePurchaseRecognitionReview } from "./purchase-recognition-review"
+export { getFinancePurchaseReceiptReview } from "./purchase-receipt-review"

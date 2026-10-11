@@ -33,6 +33,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Physical receipt review, 11 October 2026](runs/2026-10-11-receipt-review.md): exact stock/category/known-or-unknown valuation review shares writer calculation;17 tests/88 assertions and scoped types pass. Real two-line review11.8s matches rollback-only command27.8s. Atomic assistant composition remains pending; no receipt activation.
+
 - [Two-line receipt performance, 11 October 2026](runs/2026-10-11-receipt-performance.md): original rollback-only command timed out31.7s; batched immutable receipt proof completes27.7s with exact two valuations and unchanged saved counts.12 tests/80 assertions and scoped types pass. Full assistant physical receipt review/confirmation remains pending.
 
 - [Purchase fact chat flow, 11 October 2026](runs/2026-10-11-recognition-web.md): actual dashboard invoice/ownership edit, review, confirmation and global receipt Open/Close pass; exact two journals, one payable and zero owned stock effects verified. Source available; E05 partial. QA fixtures retained pending cleanup permission.

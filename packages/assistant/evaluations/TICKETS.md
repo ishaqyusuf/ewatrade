@@ -3,7 +3,8 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-A04 remains in the original denominator and is deferred at the owner's request.
+Of the 32 not yet accepted: 11 are partial, 20 are pending implementation, and
+1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
 Legend: ✓ complete for the current web scope; ◐ partially implemented/verified;
@@ -64,7 +65,8 @@ have focused database and saved receipt Open/Close evidence. Invoice and ownersh
 proposals pass focused database checks and their dashboard editor passes component
 checks. The real chat invoice/ownership edit, review, confirmation and saved receipt
 Open/Close pass, with exact posting readback. Batched physical receipt passes a
-local two-line rollback probe in27.7s; complete assistant receipt review/confirmation,
+local two-line rollback probe in 27.7s. Canonical physical receipt review matches
+actual valuation, but combined assistant confirmation still needs transaction headroom;
 advances/allocation and settlement remain open.
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.
