@@ -20,6 +20,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Customer credit database and discovery acceptance, 11 October 2026](runs/2026-10-11-customer-credit-database.md): 44 assertions passed for apply/release, rollback/replay, balanced journals and actual lookup tools; cleanup verified.
+
 - [Customer credit proposals and editor, 11 October 2026](runs/2026-10-11-customer-credit-adapters.md): planned adapters, strict actions and component browser checks; full database/web acceptance pending.
 
 - [Customer credit source verification, 11 October 2026](runs/2026-10-11-customer-credit-source.md): apply/release transaction seams and shared previews; 11 tests / 102 assertions. Assistant and database acceptance pending.

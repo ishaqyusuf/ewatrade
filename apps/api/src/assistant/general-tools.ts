@@ -1,3 +1,4 @@
+import { generalCustomerEntryInput, generalCustomerAllocationHistoryInput, generalCustomerEntryAnswer, generalCustomerAllocationHistoryAnswer } from "./general-customer-allocations"
 import { financeRouter } from "../trpc/routers/finance"
 import { financeMoneyAccountsSchema } from "../schemas/finance"
 import { generalCustomerAccountsInput, generalCustomerSourcesInput, generalCustomerStatementInput, generalCustomerAccountAnswer, generalCustomerSourcesAnswers, generalCustomerStatementAnswer } from "./general-customer-funds"
@@ -884,6 +885,24 @@ export function createGeneralTools(
       execute: input => wrap("readCustomerLedgerSources", async fresh => {
         const page = await customerLedgerRouter.createCaller(fresh).sources({ ...input, limit: 10 })
         for (const answer of generalCustomerSourcesAnswers(page)) onAnswer(answer)
+        return page
+      }),
+    }),
+    readCustomerEntry: tool({
+      description: "Read an exact posted ledger entry and up to 10 allocations. Resolve entryId from a statement or current sources. Continue nextCursor as afterAllocationId with currentRevision as expectedRevision. Fully used sources may only appear in the statement. Never infer cash refund eligibility from these totals.",
+      inputSchema: generalCustomerEntryInput,
+      execute: input => wrap("readCustomerEntry", async fresh => {
+        const page = await customerLedgerRouter.createCaller(fresh).entryDetail({...input, limit: 10})
+        onAnswer(generalCustomerEntryAnswer(page))
+        return page
+      }),
+    }),
+    readCustomerAllocationHistory: tool({
+      description: "Read an exact allocation resolved from readCustomerEntry, including remaining amount and at most 10 release records. Requires current account revision. Continue nextCursor as afterSequence preserving revision. Refresh entry on conflict. Release restores credit/debt, never refunds cash.",
+      inputSchema: generalCustomerAllocationHistoryInput,
+      execute: input => wrap("readCustomerAllocationHistory", async fresh => {
+        const page = await customerLedgerRouter.createCaller(fresh).allocationHistory({...input, limit: 10})
+        onAnswer(generalCustomerAllocationHistoryAnswer(page))
         return page
       }),
     }),

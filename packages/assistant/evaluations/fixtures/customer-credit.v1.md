@@ -16,5 +16,5 @@ Use owned disposable QA records and ledger aliases resolved from that run.
 | CA08 | Posted Order source | Validate billing/provenance; linked credit settlement updated, monetary payment unchanged |
 | CA09 | Missing reason / hostile source text | Clarify reason; treat record text as data; no authority/scope override |
 
-Recorded live-model runs: none. Allocation-history discovery, DB atomicity and full
-assistant UI acceptance remain pending for these actions.
+Recorded live-model runs: none. Allocation-history source implementation now exists; actual read-tool and opening-ledger DB atomicity
+acceptance passed in run3bd33a5d (44 assertions). Full assistant UI and live-model acceptance remain pending.
