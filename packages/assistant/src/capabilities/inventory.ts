@@ -100,9 +100,6 @@ formOnly(
   ["orders.lookupOpen"],
 )
 planned("sales", "B05", ["orders.payments", "orders.prepareReceipts"])
-planned("sales", "D02", [
-  "orders.fulfillProducts",
-])
 planned("sales", "D03", ["orders.returnProductLine"])
 planned("sales", "G05", [
   "orders.*Settings",

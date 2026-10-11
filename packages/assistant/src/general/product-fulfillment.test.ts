@@ -8,3 +8,11 @@ test("reserved product action cannot override quantity, source, scope, cost or d
     expect(generalActionSchema.safeParse({ ...payload, [field]: "override" }).success).toBe(false)
   expect(capabilityForAction("product_line_fulfill").clients).toEqual(["dashboard"])
 })
+
+test("batch fulfillment binds a saved order and cannot smuggle line, date or scope overrides", () => {
+  const payload = { action: "product_batch_fulfill", orderId: "order", reason: "Ready for collection" }
+  expect(generalActionSchema.parse(payload)).toEqual(payload)
+  for (const field of ["orderLineIds", "quantity", "storeId", "tenantId", "performedAt", "expectedReviewRevision", "status"])
+    expect(generalActionSchema.safeParse({ ...payload, [field]: "override" }).success).toBe(false)
+  expect(capabilityForAction("product_batch_fulfill").clients).toEqual(["dashboard"])
+})

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { getCommercialProductLineReview } from "./commercial-product-line-review"
+import { assertCommercialProductBatchReview } from "./commercial-product-batch-review"
 
 import {
   addExactDecimals,
@@ -1736,6 +1737,7 @@ export type FulfillCommercialOrderProductsInput = {
   schemaVersion: number
   tenantId: string
   storeId?: string
+  expectedReviewRevision?: string
 }
 
 function productBatchHash(input: FulfillCommercialOrderProductsInput) {
@@ -1830,6 +1832,7 @@ export async function fulfillCommercialOrderProductsInTransaction(
     )
   }
 
+  await assertCommercialProductBatchReview(tx, input)
   const result = await applyCommercialOrderProductsInTransaction(tx, {
     actorUserId: input.actorUserId,
     clientOperationIdPrefix: input.clientOperationId,

@@ -6,17 +6,18 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 541 (394 merchant, 147 public/account/internal)
-- Merchant supported by a capability: 60
-- Merchant planned: 168
+- Router procedures: 534 (393 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 61
+- Merchant planned: 167
 - Merchant form-only: 120
-- Merchant excluded: 46
-- Capabilities: 56 (29 read, 27 write)
+- Merchant excluded: 45
+- Capabilities: 57 (29 read, 28 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `sales.products.fulfill` | 1 | write (`product_batch_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProducts` |
 | `sales.product.fulfill` | 1 | write (`product_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProductLine` |
 | `sales.service.authorize` | 1 | write (`service_line_authorize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `orders.authorizeChargeOnlyServiceLine` |
 | `sales.service.fulfill` | 1 | write (`service_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillChargeOnlyServiceLine` |
@@ -84,6 +85,7 @@ are maintained separately in local Brain acceptance reports and artifacts.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `sales.products.fulfill` | Fulfil the remaining items in this order | [packages/assistant/src/general/product-fulfillment.test.ts](../../../../packages/assistant/src/general/product-fulfillment.test.ts)<br>[packages/db/src/queries/product-batch-impact.test.ts](../../../../packages/db/src/queries/product-batch-impact.test.ts)<br>[packages/db/src/queries/commercial-product-batch-review.test.ts](../../../../packages/db/src/queries/commercial-product-batch-review.test.ts) |
 | `sales.product.fulfill` | Fulfil this reserved product line | [packages/db/src/queries/commercial-product-line-review.test.ts](../../../../packages/db/src/queries/commercial-product-line-review.test.ts)<br>[apps/api/src/assistant/general-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-fulfillment.integration-check.ts) |
 | `sales.service.authorize` | Authorize a charge-only service | [packages/assistant/src/general/service-fulfillment.test.ts](../../../../packages/assistant/src/general/service-fulfillment.test.ts)<br>[packages/db/src/queries/commercial-service-line-review.test.ts](../../../../packages/db/src/queries/commercial-service-line-review.test.ts)<br>[apps/api/src/assistant/general-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-fulfillment.integration-check.ts) |
 | `sales.service.fulfill` | Record charge-only service performance | [packages/assistant/src/general/service-fulfillment.test.ts](../../../../packages/assistant/src/general/service-fulfillment.test.ts)<br>[packages/db/src/queries/commercial-service-line-review.test.ts](../../../../packages/db/src/queries/commercial-service-line-review.test.ts)<br>[apps/api/src/assistant/general-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-fulfillment.integration-check.ts) |
@@ -149,7 +151,6 @@ are maintained separately in local Brain acceptance reports and artifacts.
 | B03 | 5 |
 | B05 | 2 |
 | C05 | 1 |
-| D02 | 1 |
 | D03 | 1 |
 | D04 | 3 |
 | D05 | 11 |
@@ -341,7 +342,7 @@ are maintained separately in local Brain acceptance reports and artifacts.
 | `orders.customerCount` | query | read | sales | supported | sales.order_contacts.count |
 | `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | supported | sales.service.fulfill |
 | `orders.fulfillProductLine` | mutation | orders | sales | supported | sales.product.fulfill |
-| `orders.fulfillProducts` | mutation | orders | sales | planned | D02 |
+| `orders.fulfillProducts` | mutation | orders | sales | supported | sales.products.fulfill |
 | `orders.get` | query | read | sales | supported | sales.order.read |
 | `orders.list` | query | read | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
 | `orders.listPage` | query | read | sales | supported | sales.orders.read |
@@ -419,7 +420,6 @@ are maintained separately in local Brain acceptance reports and artifacts.
 | `productAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `qaAccess.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |

@@ -1,4 +1,4 @@
-import { productLineFulfillAction } from "./product-fulfillment"
+import { productLineFulfillAction, productBatchFulfillAction } from "./product-fulfillment"
 import { serviceAuthorizeAction, serviceFulfillAction } from "./service-fulfillment"
 import { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
 export { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
@@ -234,6 +234,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   stockTransferReceiveAction,
   stockTransferCancelAction,
   productLineFulfillAction,
+  productBatchFulfillAction,
   serviceAuthorizeAction,
   serviceFulfillAction,
   orderCancelAction,
@@ -368,6 +369,7 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
+    case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
     case "product_line_fulfill": return `Fulfil reserved product line · ${action.reason}`
     case "service_line_authorize": return `Authorize service line · ${action.reason}`
     case "service_line_fulfill": return `Record service performance · ${action.reason}`

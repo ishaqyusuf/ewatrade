@@ -42,6 +42,7 @@ import {
   productDetailsUpdate,
   productIdentifiersUpdate,
 } from "./general-product-details"
+import { productBatchFulfill } from "./general-product-batch-fulfillment"
 import { productLineFulfill } from "./general-product-fulfillment"
 import { productPriceUpdate } from "./general-product-price"
 import {
@@ -517,6 +518,7 @@ const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
   product_line_fulfill: productLineFulfill,
+  product_batch_fulfill: productBatchFulfill,
   service_line_authorize: serviceLineAction,
   service_line_fulfill: serviceLineAction,
   stock_receive: stockReceive,

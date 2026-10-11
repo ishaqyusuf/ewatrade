@@ -4,3 +4,9 @@ export const productLineFulfillAction = z.object({
   orderLineId: z.string().trim().min(1).max(128),
   reason: z.string().trim().min(1).max(500),
 }).strict()
+
+export const productBatchFulfillAction = z.object({
+  action: z.literal("product_batch_fulfill"),
+  orderId: z.string().trim().min(1).max(128),
+  reason: z.string().trim().min(1).max(500),
+}).strict()

@@ -224,13 +224,16 @@ function GeneralProposalFields({
       }}
     >
       <FieldGroup>
-        {payload.action === "product_line_fulfill" ||
+        {payload.action === "product_batch_fulfill" ||
+        payload.action === "product_line_fulfill" ||
         payload.action === "service_line_authorize" ||
         payload.action === "service_line_fulfill" ? (
           <>
             <p className="text-sm text-muted-foreground">
-              This applies to the selected order line at its full saved
-              quantity. Review the refreshed details before confirming.
+              {payload.action === "product_batch_fulfill"
+                ? "This applies to all remaining product and catalog-free lines at their full saved quantities."
+                : "This applies to the selected order line at its full saved quantity."}
+              {" "}Review the refreshed details before confirming.
             </p>
             <Field>
               <FieldLabel htmlFor={field("reason")}>Reason</FieldLabel>
