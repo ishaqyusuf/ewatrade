@@ -50,6 +50,9 @@ export function directDatabaseUrlForPrismaCli(databaseUrl) {
   url.searchParams.delete("channel_binding")
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "")
   if (!hostname.endsWith(".neon.tech")) return url.toString()
+  // Neon's TLS handshake can exceed the schema engine's 5s default.
+  if (!url.searchParams.has("connect_timeout"))
+    url.searchParams.set("connect_timeout", "30")
   const labels = hostname.split(".")
   const endpoint = labels[0]
   if (!endpoint?.endsWith("-pooler")) return url.toString()

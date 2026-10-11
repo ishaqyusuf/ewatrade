@@ -15,7 +15,7 @@ describe("database profile", () => {
         "postgresql://owner:secret@ep-development-pooler.eu-west-2.aws.neon.tech/ewatrade?sslmode=require&channel_binding=require",
       ),
     ).toBe(
-      "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade?sslmode=require",
+      "postgresql://owner:secret@ep-development.eu-west-2.aws.neon.tech/ewatrade?sslmode=require&connect_timeout=30",
     )
     expect(
       directDatabaseUrlForPrismaCli(
