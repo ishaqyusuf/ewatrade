@@ -89,8 +89,8 @@ export function BusinessChoice({
       onPress={onPress}
       haptic
       className={cn(
-        "min-h-11 items-center justify-center rounded-full px-4 py-2",
-        selected ? "bg-primary" : "border border-border bg-background",
+        "min-h-11 items-center justify-center rounded-full border px-4 py-2",
+        selected ? "border-primary bg-primary" : "border-border bg-background",
       )}
     >
       <Text
