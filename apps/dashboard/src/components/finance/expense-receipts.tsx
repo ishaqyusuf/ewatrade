@@ -24,7 +24,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import {
   digestExpenseReceipt,
   downloadExpenseReceiptOriginal,
@@ -148,6 +148,19 @@ function ExpenseReceiptWorkspace({
     online,
   })
   activeScope.current = { ...scope, actorUserId, tenantId, cancelled, online }
+  // Restore the guard before query subscriptions resume during Strict Mode replay.
+  useLayoutEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      readGeneration.current.invalidate()
+      activeRead.current = null
+      controller.current?.abort()
+      void queryClient.cancelQueries({ queryKey: receiptQueryKey })
+      queryClient.removeQueries({ queryKey: receiptQueryKey })
+    }
+  }, [queryClient, receiptQueryKey])
+
   const query = useInfiniteQuery({
     ...listOptions,
     queryFn: async (queryContext) => {
@@ -201,18 +214,6 @@ function ExpenseReceiptWorkspace({
     queryClient.removeQueries({ queryKey: receiptQueryKey })
     void queryRef.current.refetch()
   }, [actorUserId, queryClient, receiptQueryKey, tenantId])
-
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-      readGeneration.current.invalidate()
-      activeRead.current = null
-      controller.current?.abort()
-      void queryClient.cancelQueries({ queryKey: receiptQueryKey })
-      queryClient.removeQueries({ queryKey: receiptQueryKey })
-    }
-  }, [queryClient, receiptQueryKey])
 
   useEffect(() => {
     const handleOffline = () => {
