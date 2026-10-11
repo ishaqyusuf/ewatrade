@@ -28,13 +28,28 @@ export async function verifyBillCorrectionComposition(ctx: GeneralContext, faili
     console.info("Bill correction acceptance: paid void refusal and atomic reversal")
     await expect(draftGeneralProposal(ctx, conversationId, voidPayload)).rejects.toMatchObject({ code: "CONFLICT" })
     const first: GeneralAction = { ...common, action: "bill_payment_reverse", paymentId: payments[0]!.id }
+    await expect(draftGeneralProposal(ctx, conversationId, { ...first, bookId: "qa-unavailable-book" })).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await expect(draftGeneralProposal(ctx, conversationId, { ...first, paymentId: "qa-unavailable-payment" })).rejects.toMatchObject({ code: "NOT_FOUND" })
+    await expect(draftGeneralProposal(ctx, conversationId, { ...first, effectiveAt: "2026-10-01T12:00:00Z" })).rejects.toMatchObject({ code: "INVALID_JOURNAL" })
     const stale = await draft(first), command = await draft(first)
+    console.info("Bill correction acceptance: fresh period and authority guards")
+    await db.financeBook.update({ where: { id: bookId }, data: { closedThrough: new Date("2026-10-05") } })
+    try { await expect(decideGeneralProposal(ctx, command)).rejects.toMatchObject({ code: "CLOSED_PERIOD" }) }
+    finally { await db.financeBook.update({ where: { id: bookId }, data: { closedThrough: null } }) }
+    const membership = await db.membership.findUniqueOrThrow({ where: { id: ctx.tenantContext.membership.id } })
+    await db.membership.update({ where: { id: membership.id }, data: { role: "CASHIER" } })
+    try { await expect(decideGeneralProposal(ctx, command)).rejects.toMatchObject({ code: "FORBIDDEN" }) }
+    finally { await db.membership.update({ where: { id: membership.id }, data: { role: membership.role } }) }
     const before = await db.financeJournalEntry.count({ where: { bookId } })
     await expect(decideGeneralProposal({ ...ctx, db: failingDb }, command)).rejects.toThrow("Injected receipt failure")
     expect((await db.financeBill.findUniqueOrThrow({ where: { id: billId } })).paidMinor).toBe(1000n)
     expect((await db.financeBillPayment.findUniqueOrThrow({ where: { id: payments[0]!.id } })).reversedAt).toBeNull()
     expect(await db.financeJournalEntry.count({ where: { bookId } })).toBe(before)
+    const attempts = await Promise.allSettled([decideGeneralProposal(ctx, command), decideGeneralProposal(ctx, command)])
+    expect(attempts.some(result => result.status === "fulfilled")).toBe(true)
+    for (const result of attempts) if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "CONFLICT" })
     const saved = await decideGeneralProposal(ctx, command)
+    for (const result of attempts) if (result.status === "fulfilled") expect(result.value.receipt).toEqual(saved.receipt)
     expect(saved.receipt).toMatchObject({ kind: "finance_bill", recordId: billId, bookId })
     expect((await decideGeneralProposal(ctx, command)).receipt).toEqual(saved.receipt)
     await expect(decideGeneralProposal(ctx, stale)).rejects.toMatchObject({ code: "CONFLICT" })
@@ -44,6 +59,7 @@ export async function verifyBillCorrectionComposition(ctx: GeneralContext, faili
     console.info("Bill correction acceptance: owner reversal then expense void")
     await decideGeneralProposal(ctx, await draft({ ...common, action: "bill_payment_reverse", paymentId: payments[1]!.id }))
     expect((await db.financeBill.findUniqueOrThrow({ where: { id: billId } })).paidMinor).toBe(0n)
+    await expect(draftGeneralProposal(ctx, conversationId, { ...voidPayload, effectiveAt: "2026-10-03T12:00:00Z" })).rejects.toMatchObject({ code: "INVALID_JOURNAL" })
     const voidCommand = await draft(voidPayload)
     await expect(decideGeneralProposal({ ...ctx, db: failingDb }, voidCommand)).rejects.toThrow("Injected receipt failure")
     expect((await db.financeBill.findUniqueOrThrow({ where: { id: billId } })).voidedAt).toBeNull()
@@ -56,6 +72,15 @@ export async function verifyBillCorrectionComposition(ctx: GeneralContext, faili
     const journals = await db.financeJournalEntry.findMany({ where: { bookId }, include: { lines: true } })
     expect(journals).toHaveLength(before + 3)
     for (const journal of journals) expect(journal.lines.reduce((sum, line) => sum + line.debitMinor - line.creditMinor, 0n)).toBe(0n)
-    console.info("Bill correction acceptance: rollback/replay, retained history and balanced reversals passed")
+    const reversals = journals.filter(journal => journal.reversalOfId !== null)
+    expect(reversals).toHaveLength(3)
+    for (const reversal of reversals) {
+      const original = journals.find(journal => journal.id === reversal.reversalOfId)
+      expect(original).toBeDefined()
+      const sides = (lines: typeof reversal.lines, reverse: boolean) => lines.map(line => ({ accountId: line.accountId, debit: (reverse ? line.creditMinor : line.debitMinor).toString(), credit: (reverse ? line.debitMinor : line.creditMinor).toString() })).sort((a,b) => a.accountId.localeCompare(b.accountId))
+      expect(sides(reversal.lines, false)).toEqual(sides(original!.lines, true))
+      expect(reversal.effectiveAt.toISOString()).toBe(common.effectiveAt)
+    }
+    console.info("Bill correction acceptance: authority/period guards, concurrent replay, exact reversal sides and retained history passed")
   } finally { capabilities.forEach((c, index) => Object.assign(c, { rollout: rollouts[index] })) }
 }

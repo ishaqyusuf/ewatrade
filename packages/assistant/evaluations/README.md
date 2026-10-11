@@ -24,6 +24,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Correction authority, period and concurrency, 11 October 2026](runs/2026-10-11-bill-correction-guards.md): 139 combined assertions passed, including fresh authority/period checks, unavailable targets, concurrent recovery and exact original-account reversal sides; cleanup verified.
+
 - [Correction proposal database acceptance, 11 October 2026](runs/2026-10-11-bill-correction-database.md): 120 combined assertions passed; reversal/void rollback and replay, paid-void refusal, retained history, balanced journals and owned cleanup verified.
 
 - [Correction editor component, 11 October 2026](runs/2026-10-11-bill-correction-editor.md): reversal acknowledgment/reason guards, edited reason, exact timestamp and cancel verified; screenshot retained. Full proposal acceptance pending.
