@@ -25,3 +25,9 @@ Validation includes registry publication/withdrawal, strict destination validati
 Preview-only serving, safe download errors, updater client scenarios and release
 runner regressions. Signed-device installation and live URL verification are
 separate release acceptance checks.
+
+The native build check uses AbortController with an 8-second timer because React
+Native's AbortSignal does not provide timeout(). Actual-client scenarios run with
+that static method unavailable and verify an aborted request. Device acceptance
+found this compatibility gap before final release; build29 was withdrawn while
+the corrected OTA and APK were prepared.
