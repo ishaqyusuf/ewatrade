@@ -39,6 +39,7 @@ import {
 } from "./general-model"
 import { GeneralProductThumb } from "./general-product-picture"
 import { GeneralProposalEditor } from "./general-proposal-editor"
+import { useAssistantPrefillFocus } from "./use-assistant-prefill"
 import { useGeneralAssistant } from "./use-general-assistant"
 export function AskAssistantLive() {
   const vm = useGeneralAssistant()
@@ -70,6 +71,11 @@ export function AskAssistantLive() {
         : vm.availability.isError
           ? "Availability could not load. Reconnect and try again."
           : null
+  useAssistantPrefillFocus(
+    input,
+    vm.draft,
+    !(disabled || exhausted || vm.queued || noAccess),
+  )
   useEffect(() => {
     if (vm.offline || vm.scopeChanged) {
       editor.dismiss()

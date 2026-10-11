@@ -38,7 +38,10 @@ const runSchema = z.object({
   errorCode: z.string().nullable(),
 })
 export function useGeneralAssistant() {
-  const params = useLocalSearchParams<{ query?: string | string[] }>()
+  const params = useLocalSearchParams<{
+    query?: string | string[]
+    draft?: string | string[]
+  }>()
   const auth = useAuthContext()
   const trpc = useTRPC()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
@@ -79,6 +82,9 @@ export function useGeneralAssistant() {
     data: GeneralSnapshot
   } | null>(null)
   const [draft, setDraft] = useState(() => {
+    // A screen may hand over a starter line, e.g. "For order ORD-020:\n".
+    if (typeof params.draft === "string" && params.draft.trim())
+      return params.draft.slice(0, 8000)
     const query =
       typeof params.query === "string" ? params.query.trim().slice(0, 160) : ""
     return query ? `Find ${query}` : ""
