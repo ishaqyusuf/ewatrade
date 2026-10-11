@@ -64,39 +64,6 @@ export function CommercePageHeader({
   )
 }
 
-export function CommerceFilterChip({
-  active,
-  label,
-  onPress,
-}: {
-  active: boolean
-  label: string
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      className={cn(
-        "min-h-11 min-w-20 items-center justify-center rounded-xl border px-5",
-        active ? "border-foreground bg-foreground" : "border-border bg-card",
-      )}
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <Text
-        className={cn(
-          "text-sm font-bold",
-          active ? "text-background" : "text-foreground",
-        )}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  )
-}
-
 export function CommerceMetricTile({
   icon,
   label,
