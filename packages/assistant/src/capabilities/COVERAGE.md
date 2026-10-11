@@ -7,16 +7,18 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 535 (394 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 68
-- Merchant planned: 161
+- Merchant supported by a capability: 70
+- Merchant planned: 159
 - Merchant form-only: 120
 - Merchant excluded: 45
-- Capabilities: 64 (33 read, 31 write)
+- Capabilities: 66 (33 read, 33 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `customers.credit.apply` | 1 | write (`customer_credit_apply`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.applyCredit` |
+| `customers.allocation.release` | 1 | write (`customer_allocation_release`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.releaseAllocation` |
 | `customers.receipt.record` | 1 | write (`customer_receipt`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.recordReceipt` |
 | `finance.money_accounts.read` | 1 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
 | `customers.account.read` | 1 | read | `readCustomerAccount` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.accountDetail` |
@@ -95,6 +97,8 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `customers.credit.apply` | Apply existing customer credit | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
+| `customers.allocation.release` | Release customer allocation | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
 | `customers.receipt.record` | Record a new customer deposit I already received | [packages/assistant/src/general/customer-receipt.test.ts](../../../../packages/assistant/src/general/customer-receipt.test.ts)<br>[packages/db/src/queries/customer-ledger/receipt-review.test.ts](../../../../packages/db/src/queries/customer-ledger/receipt-review.test.ts) |
 | `finance.money_accounts.read` | Which bank account did I return the deposit from? | [packages/db/src/queries/finance/money-account-reads.test.ts](../../../../packages/db/src/queries/finance/money-account-reads.test.ts) |
 | `customers.account.read` | Read customer funds and matching Book | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
@@ -171,7 +175,7 @@ track conversational evaluation separately from these source test links.
 | D04 | 3 |
 | D05 | 11 |
 | E01 | 6 |
-| E02 | 7 |
+| E02 | 5 |
 | E03 | 3 |
 | E04 | 7 |
 | E05 | 18 |
@@ -228,7 +232,7 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.accountDetail` | query | Owner/Admin only | finance | supported | customers.account.read |
 | `customerLedger.accounts` | query | Owner/Admin only | customers | supported | customers.accounts.read |
 | `customerLedger.allocationHistory` | query | Owner/Admin only | customers | planned | E02 |
-| `customerLedger.applyCredit` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.applyCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.apply |
 | `customerLedger.commandStatus` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.ensureAccount` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.entryDetail` | query | Owner/Admin only | customers | planned | E02 |
@@ -236,7 +240,7 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.recordOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
 | `customerLedger.recordReceipt` | mutation | Owner/Admin only | finance | supported | customers.receipt.record |
 | `customerLedger.refundUnusedCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.refund |
-| `customerLedger.releaseAllocation` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.releaseAllocation` | mutation | Owner/Admin only | finance | supported | customers.allocation.release |
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.sources` | query | Owner/Admin only | finance | supported | customers.sources.read |
 | `customerLedger.statement` | query | Owner/Admin only | finance | supported | customers.statement.read |

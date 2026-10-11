@@ -1,3 +1,4 @@
+import { customerCreditApplyAction, customerAllocationReleaseAction } from "./customer-credit"
 import { customerReceiptAction } from "./customer-receipt"
 import { heldCreditRefundAction } from "./held-credit-refund"
 import { productLineReturnAction } from "./product-return"
@@ -231,6 +232,8 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   stockTransferReceiveAction,
   stockTransferCancelAction,
   customerReceiptAction,
+  customerCreditApplyAction,
+  customerAllocationReleaseAction,
   heldCreditRefundAction,
   productLineReturnAction,
   productLineFulfillAction,
@@ -370,6 +373,8 @@ export function generalActionSummary(
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "customer_credit_apply": return "Apply existing customer credit"
+    case "customer_allocation_release": return `Release customer credit allocation · ${action.reason}`
     case "customer_receipt": return `Record received customer funds · ${action.description}`
     case "held_credit_refund": return `Record returned customer funds · ${action.reason}`
     case "product_line_return": return `Return ${action.quantity} · ${action.disposition.replaceAll("_", " ")} · ${action.reason}`

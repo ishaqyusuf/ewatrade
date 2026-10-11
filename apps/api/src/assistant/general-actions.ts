@@ -1,3 +1,5 @@
+import { customerCreditApply } from "./general-customer-credit-apply"
+import { customerAllocationRelease } from "./general-customer-allocation-release"
 import { customerReceipt } from "./general-customer-receipt"
 import { heldCreditRefund } from "./general-held-credit-refund"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
@@ -543,6 +545,8 @@ const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
   customer_receipt: customerReceipt,
+  customer_credit_apply: customerCreditApply,
+  customer_allocation_release: customerAllocationRelease,
   held_credit_refund: heldCreditRefund,
   product_line_return: productLineReturn,
   product_line_fulfill: productLineFulfill,
