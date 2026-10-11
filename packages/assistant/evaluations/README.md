@@ -19,6 +19,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Customer credit source verification, 11 October 2026](runs/2026-10-11-customer-credit-source.md): apply/release transaction seams and shared previews; 11 tests / 102 assertions. Assistant and database acceptance pending.
+
 - [Customer receipt dashboard acceptance, 11 October 2026](runs/2026-10-11-customer-receipt-web.md): normal edit/review/confirm, customer overlay, exact saved effects and cleanup passed with screenshots; provider-free.
 
 - [Customer receipt database acceptance, 11 October 2026](runs/2026-10-11-customer-receipt-database.md): 32 assertions passed, atomic rollback/replay, one balanced journal and unchanged opening debt; owned cleanup verified.
