@@ -1,3 +1,4 @@
+import { withPerformanceTrace } from "../../performance-tracing"
 import { getCommercialProductReturnImpactReview } from "../commercial-product-return-impact-review"
 import { expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
@@ -20,6 +21,7 @@ setDefaultTimeout(480_000)
 describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
   test("restores original issue cost through returns, replay, and EARNED", async () => {
     const { prisma: db } = await import("../../client")
+    const trace = <T>(stage: string, work: () => Promise<T>) => withPerformanceTrace("job", work, measurement => console.info(JSON.stringify({ stage, ...measurement })))
     const runId = randomUUID()
     console.info(`Product return financial QA run: ${runId}`)
     const tenantIds: string[] = []
@@ -264,7 +266,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
         const currentBalance = await db.stockBalanceSource.findUniqueOrThrow({
           where: { id: targetBalance.id },
         })
-        const order = await createCommercialOrder(db, {
+        const order = await trace(`return-finance-order-${label}`, () => createCommercialOrder(db, {
           actorUserId: user.id,
           clientOrderId: `product-return-cost-${label}-${runId}`,
           schemaVersion: 1,
@@ -278,7 +280,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
               expectedConfigurationVersionId: configuration.id,
             },
           ],
-        })
+        }))
         const line = await db.commercialOrderLine.findFirstOrThrow({
           where: { orderId: order.id },
           include: { stockReservation: true },
@@ -320,7 +322,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
         disposition: "damaged" | "no_restock" | "quarantine" | "restock",
         expectedReviewRevision?: string,
       ) {
-        const returned = await returnCommercialOrderProductLine(db, {
+        const returned = await trace(`return-finance-command-${label}`, () => returnCommercialOrderProductLine(db, {
           actorUserId: user.id,
           clientReturnId: `product-return-cost-${label}-${runId}`,
           expectedReviewRevision,
@@ -330,7 +332,7 @@ describeWithServiceCommerceDatabase("Product return cost acceptance", () => {
           reason: `QA ${label} return`,
           schemaVersion: 1,
           tenantId: tenant.id,
-        })
+        }))
         returnIds.push(returned.id)
         return returned
       }

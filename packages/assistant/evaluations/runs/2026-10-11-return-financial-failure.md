@@ -34,3 +34,18 @@ Current-return movement inventoryUnit and saved valuationEvent remain loaded. Th
 same failed stage after pruning shows that further repeated evidence loading must be
 addressed across locked review and execution; any reuse must be transaction-bound,
 retain canonical provenance checks and account for writes within that transaction.
+
+## Evidence-reuse verification attempt — fixture failure
+
+Runbcce9ccd-63ee-4a2b-87fd-8f1168815525 on committed0d66660b failed before reaching
+reviewed return execution. Fixture order creation expired at stockReservation.findUnique
+in catalog-inventory.ts after32810ms/30000ms. Result0pass1fail3assertions94.39s.
+Cleanup verified; process8320 exited1. No live DB suite remains.
+
+Log:`artifacts/assistant-operations-web/d03-return-financial-reuse.log`.
+This is not evidence for or against the locked source-reuse optimization; its
+financial acceptance remains unverified. The test now traces fixture order creation
+and each return command separately. The local runner enables existing pool/SQL
+instrumentation so those stage traces can distinguish transaction acquisition from
+query work. Syntax bundle and diff check pass; instrumentation has not been rerun.
+No timeout change or production workaround was made.
