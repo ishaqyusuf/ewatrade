@@ -42,11 +42,40 @@ export function usePageFabSlotMode(): PageFabSlotMode | null {
 
 const ASSISTANT_REQUEST = "ewatrade:open-quick-assistant"
 
-/** Returns false when no mounted assistant launcher took the request. */
-export function requestQuickAssistant() {
+// A composer prefill waits here until an assistant chat takes it: the quick
+// panel mounts lazily, and the /assistant fallback mounts after navigation.
+let pendingDraft: string | null = null
+const draftListeners = new Set<() => void>()
+
+/**
+ * Opens the quick assistant, optionally with `draft` in its composer.
+ * Returns false when no mounted assistant launcher took the request; the
+ * draft then stays pending for the /assistant page.
+ */
+export function requestQuickAssistant({ draft }: { draft?: string } = {}) {
+  if (draft) {
+    pendingDraft = draft
+    for (const listener of draftListeners) listener()
+  }
   const request = new Event(ASSISTANT_REQUEST, { cancelable: true })
   window.dispatchEvent(request)
   return request.defaultPrevented
+}
+
+/** Calls `take` with a pending prefill on mount and whenever a new one arrives. */
+export function useAssistantDraftRequests(take: (draft: string) => void) {
+  useEffect(() => {
+    const onDraft = () => {
+      const draft = pendingDraft
+      pendingDraft = null
+      if (draft) take(draft)
+    }
+    onDraft()
+    draftListeners.add(onDraft)
+    return () => {
+      draftListeners.delete(onDraft)
+    }
+  }, [take])
 }
 
 export function useQuickAssistantRequests(open: () => void) {

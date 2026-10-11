@@ -1,4 +1,5 @@
 "use client"
+import { useAssistantDraftRequests } from "@/components/page-fab/fab-slot"
 import { useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
 import type {
@@ -54,6 +55,10 @@ export function useGeneralAssistant({
   const autoStartAttempted = useRef(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [draft, setDraft] = useState("")
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  /** A prefill waiting for the composer to be ready for focus. */
+  const [prefill, setPrefill] = useState<{ value: string } | null>(null)
   // Receipt photos/PDFs read and ready to go with the next message.
   const [readyAttachments, setReadyAttachments] = useState<
     GeneralReadyAttachment[]
@@ -176,6 +181,38 @@ export function useGeneralAssistant({
     },
   })
   const busy = chat.status === "submitted" || chat.status === "streaming"
+  // "Ask AI" prefills keep unsent text below the new first line. Set directly:
+  // the user has not typed, so no typing analytics.
+  const takeDraft = useCallback((value: string) => {
+    const current = draftRef.current
+    const next = !current.trim()
+      ? value
+      : current.startsWith(value)
+        ? current
+        : `${value}${current}`
+    setDraft(next)
+    setPrefill({ value: next })
+  }, [])
+  useAssistantDraftRequests(takeDraft)
+  useEffect(() => {
+    if (!prefill) return
+    // The composer stays disabled until the chat is ready; focus once it is.
+    const deadline = Date.now() + 15_000
+    let frame = 0
+    const place = () => {
+      const input = Array.from(
+        document.querySelectorAll<HTMLTextAreaElement>("textarea"),
+      ).find((row) => row.value === prefill.value && !row.disabled)
+      if (input) {
+        input.focus()
+        input.setSelectionRange(input.value.length, input.value.length)
+        input.scrollTop = input.scrollHeight
+        setPrefill(null)
+      } else if (Date.now() < deadline) frame = requestAnimationFrame(place)
+    }
+    frame = requestAnimationFrame(place)
+    return () => cancelAnimationFrame(frame)
+  }, [prefill])
   useEffect(() => {
     if (conversationId) appliedAt.current = 0
   }, [conversationId])
