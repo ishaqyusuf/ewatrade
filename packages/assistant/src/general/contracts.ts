@@ -1,3 +1,4 @@
+import { expenseAction } from "./expense"
 import { moneyMovementAction } from "./money-movement"
 import { customerCreditApplyAction, customerAllocationReleaseAction } from "./customer-credit"
 import { customerReceiptAction } from "./customer-receipt"
@@ -234,6 +235,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   stockTransferCancelAction,
   customerReceiptAction,
   moneyMovementAction,
+  expenseAction,
   customerCreditApplyAction,
   customerAllocationReleaseAction,
   heldCreditRefundAction,
@@ -254,6 +256,7 @@ export type GeneralActionName = GeneralAction["action"]
 export const generalReceiptSchema = z
   .object({
     kind: z.enum([
+      "finance_bill",
       "finance_movement",
       "customer",
       "product",
@@ -272,7 +275,7 @@ export const generalReceiptSchema = z
     detail: z.string(),
   })
   .strict()
-  .refine(value => value.kind !== "finance_movement" || Boolean(value.bookId), {message:"A recorded money movement requires its Finance Book.",path:["bookId"]})
+  .refine(value => !["finance_movement", "finance_bill"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
 export const generalProposalSchema = z
   .object({
@@ -378,6 +381,7 @@ export function generalActionSummary(
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "expense_record": return `Record expense · ${action.payeeName} · ${action.description}`
     case "money_movement": return `Record ${action.kind.toLowerCase().replaceAll("_", " ")} · ${action.description}`
     case "customer_credit_apply": return "Apply existing customer credit"
     case "customer_allocation_release": return `Release customer credit allocation · ${action.reason}`

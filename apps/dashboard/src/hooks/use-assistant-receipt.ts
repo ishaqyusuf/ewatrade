@@ -6,6 +6,8 @@ import { parseAsString, useQueryStates } from "nuqs"
 export function useAssistantReceipt() {
   const [, setParams] = useQueryStates(
     {
+      financeSheet: parseAsString,
+      billId: parseAsString,
       financeMovement: parseAsString,
       financeMovementBook: parseAsString,
       customerDetail: parseAsString,
@@ -23,6 +25,8 @@ export function useAssistantReceipt() {
   )
   return (receipt: GeneralReceipt) => {
     const closed = {
+      financeSheet: null,
+      billId: null,
       financeMovement: null,
       financeMovementBook: null,
       customerDetail: null,
@@ -37,6 +41,8 @@ export function useAssistantReceipt() {
       inventoryOperation: null,
     }
     switch (receipt.kind) {
+      case "finance_bill":
+        return setParams({...closed, financeSheet: "bill", billId: receipt.recordId})
       case "finance_movement":
         return setParams({...closed, financeMovement: receipt.recordId, financeMovementBook: receipt.bookId ?? null})
       case "customer":

@@ -7,6 +7,7 @@ it is not an executed result, enabled capability, or deployment claim.
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
 | `finance.money_movement.record` v1 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
+| `finance.expense.record` v1 | [1](fixtures/expense.v1.md) | Unpaid/partial/owner-funded expense, ambiguity, posting guards, atomic retry, receipt | None yet |
 | Apply/release customer credit | [1](fixtures/customer-credit.v1.md) | Source resolution, partial amounts, ambiguity, no-cash boundaries, stale/authority, retry, Order provenance | None yet |
 | `customers.receipt.record` v1 | [1](fixtures/customer-receipt.v1.md) | New deposit, existing order payment, ambiguity, stale/closed targets, authority, atomic retry, receipt | None yet |
 | `finance.money_accounts.read` v1 | [1](fixtures/money-accounts.v1.md) | Book scope, account ambiguity, continuation, balance boundary, access refusal | None yet |
@@ -20,6 +21,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Expense proposal integration, 11 October 2026](runs/2026-10-11-expense-adapter.md): strict action, canonical adapter and global bill receipt;5 tests/64 assertions and scoped types pass; editor/discovery/database/web pending.
 
 - [Expense review preparation, 11 October 2026](runs/2026-10-11-expense-review.md): shared canonical normalization and unpaid/partial/owner-funded review;3 tests/46 assertions and scoped types pass; assistant/database/web acceptance pending.
 
