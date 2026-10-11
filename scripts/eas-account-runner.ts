@@ -105,11 +105,11 @@ if (
   (target !== "preview" ||
     buildPlatform !== "ios" ||
     iosSimulator ||
-    !["build", "submit"].includes(operation) ||
+    !["build", "submit", "update"].includes(operation) ||
     actionArgs.filter((arg) => arg === "--ios-testflight").length !== 1)
 ) {
   throw new Error(
-    "--ios-testflight requires a Preview iOS build or submit, without --ios-simulator.",
+    "--ios-testflight requires a Preview iOS build, submit or update, without --ios-simulator.",
   )
 }
 if (
@@ -133,6 +133,7 @@ const expectedSimulatorArtifactCommit =
 const reviewedUpdate =
   operation === "update" &&
   (target === "prod" ||
+    iosTestFlight ||
     actionArgs.includes("--release-checks") ||
     actionArgs.some(
       (arg) =>
@@ -302,6 +303,15 @@ if (iosTestFlight && operation === "submit") {
       "TestFlight submission accepts only the exact build ID and wait/non-interactive options.",
     )
   }
+}
+if (
+  iosTestFlight &&
+  operation === "update" &&
+  forwardedArgs.some((arg) => arg !== "--non-interactive")
+) {
+  throw new Error(
+    "TestFlight OTA accepts only --non-interactive after the reviewed source selector.",
+  )
 }
 const publishPreviewBuild =
   operation === "build" && target === "preview" && buildPlatform === "android"
@@ -703,6 +713,7 @@ async function assertExactCommittedMobileSource(
       "packages",
       "scripts/eas-account-runner.ts",
       "scripts/check-testflight-preview.mjs",
+      "scripts/publish-testflight-preview.ts",
       "package.json",
       "bun.lock",
       "bun.lockb",
@@ -811,6 +822,15 @@ function getActionCommand(
       platform,
       "--profile",
       iosTestFlight ? "testflight-preview" : TARGET_PROFILES[target],
+    ]
+  }
+
+  if (operation === "update" && iosTestFlight) {
+    return [
+      "eas",
+      "env:exec",
+      "preview",
+      "bun --env-file=/dev/null ../../scripts/publish-testflight-preview.ts",
     ]
   }
 
@@ -944,6 +964,7 @@ function getUsage(): string {
     "  bun run eas:submit [--prod] [--platform android|ios] --id <build-id> --expected-version <version> --expected-commit <full-sha> [--account <name>]",
     "  bun run eas:view <--dev|--preview|--prod> --id <build-id> [--account <name>]",
     "  bun run eas:download <--dev|--preview|--prod> --id <build-id> --output <path> [--account <name>]",
+    "  bun run eas:update --preview --platform ios --ios-testflight --expected-commit <full-sha> --non-interactive",
     "  bun run eas:update --preview [--platform android|ios|all] [--account <name>]",
     "  bun run eas:update <--preview --release-checks|--prod> --expected-commit <full-sha> [--platform android|ios|all] [--account <name>]",
     "  bun run eas:env:sync --prod [--account <name>]",

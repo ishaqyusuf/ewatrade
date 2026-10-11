@@ -84,7 +84,7 @@ test("rejects simulator, ordinary Preview bundle, Production channel and wrong a
 for (const args of [
   ["build", "--prod", "--platform", "ios", "--ios-testflight"],
   ["build", "--preview", "--platform", "android", "--ios-testflight"],
-  ["update", "--preview", "--platform", "ios", "--ios-testflight"],
+  ["update", "--preview", "--platform", "all", "--ios-testflight"],
   [
     "build",
     "--preview",
@@ -99,8 +99,22 @@ for (const args of [
       ["bun", "--env-file=/dev/null", "scripts/eas-account-runner.ts", ...args],
       { stdout: "pipe", stderr: "pipe" },
     )
-    expect(await p.exited).not.toBe(0)
-    expect(await new Response(p.stderr).text()).toContain(
-      "--ios-testflight requires",
-    )
+    const [code, stderr] = await Promise.all([
+      p.exited,
+      new Response(p.stderr).text(),
+    ])
+    expect(code).not.toBe(0)
+    expect(stderr).toContain("--ios-testflight requires")
   })
+
+test("TestFlight OTA rejects every runtime except the installed build", async () => {
+  const { assertTestFlightRuntime, TESTFLIGHT_RUNTIME } = await import(
+    "./publish-testflight-preview"
+  )
+  expect(() => assertTestFlightRuntime(TESTFLIGHT_RUNTIME)).not.toThrow()
+  for (const runtime of ["", "unknown", "a".repeat(40)]) {
+    expect(() => assertTestFlightRuntime(runtime)).toThrow(
+      "A new native build is required",
+    )
+  }
+})

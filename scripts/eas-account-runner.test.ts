@@ -41,6 +41,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [0, "ios", "build", "preview_simulator"],
   [0, "ios", "build", "preview_testflight"],
   [0, "ios", "submit", "preview_testflight"],
+  [0, "ios", "update", "preview_testflight"],
   [1, "android", "build", "preview_simulator"],
   [1, "ios", "build", "simulator_prod"],
   [1, "ios", "update", "preview_simulator_update"],
@@ -437,38 +438,45 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
               "--scope",
               "project",
             ]
-          : operation === "update"
+          : operation === "update" && mismatch === "preview_testflight"
             ? [
-                "update",
-                "--platform",
-                platform,
-                "--channel",
-                preview ? "preview" : "production",
-                "--environment",
-                preview ? "preview" : "production",
-                "--message",
-                quickPreview
-                  ? "Preview OTA update"
-                  : `OTA update ${reviewedCommit.slice(0, 12)}`,
+                "env:exec",
+                "preview",
+                "bun --env-file=/dev/null ../../scripts/publish-testflight-preview.ts",
                 "--non-interactive",
               ]
-            : [
-                operation,
-                "--platform",
-                platform,
-                "--profile",
-                development
-                  ? "development"
-                  : mismatch === "preview_testflight"
-                    ? "testflight-preview"
-                    : mismatch === "preview_simulator"
-                      ? "preview-simulator"
-                      : preview
-                        ? "preview"
-                        : "production",
-                ...(operation === "submit" ? ["--id", exactBuildId] : []),
-                "--non-interactive",
-              ],
+            : operation === "update"
+              ? [
+                  "update",
+                  "--platform",
+                  platform,
+                  "--channel",
+                  preview ? "preview" : "production",
+                  "--environment",
+                  preview ? "preview" : "production",
+                  "--message",
+                  quickPreview
+                    ? "Preview OTA update"
+                    : `OTA update ${reviewedCommit.slice(0, 12)}`,
+                  "--non-interactive",
+                ]
+              : [
+                  operation,
+                  "--platform",
+                  platform,
+                  "--profile",
+                  development
+                    ? "development"
+                    : mismatch === "preview_testflight"
+                      ? "testflight-preview"
+                      : mismatch === "preview_simulator"
+                        ? "preview-simulator"
+                        : preview
+                          ? "preview"
+                          : "production",
+                  ...(operation === "submit" ? ["--id", exactBuildId] : []),
+                  "--non-interactive",
+                ],
     )
     if (operation === "submit") {
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
@@ -493,7 +501,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
       expect(await readFile(preflightCapturePath, "utf8")).toBe(
         quickPreview
           ? "attachment\n"
-          : `${preview ? "" : platform === "ios" || platform === "all" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
+          : `${mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" || platform === "all" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
       )
       expect(
         await readFile(
