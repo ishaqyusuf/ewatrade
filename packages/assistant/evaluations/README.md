@@ -18,6 +18,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Held-credit refund dashboard acceptance, 11 October 2026](runs/2026-10-11-held-credit-refund-web.md): review/edit/confirm, customer overlay, exact saved financial effects and owned fixture cleanup passed; provider-free.
+
 - [Money account tool/database acceptance, 11 October 2026](runs/2026-10-11-money-account-database.md): actual account discovery and unknown-Book refusal; refund regression passed 46 assertions, cleanup verified.
 
 - [Money account lookup source verification, 11 October 2026](runs/2026-10-11-money-account-source.md): 18 tests / 150 assertions; scoped TypeScript passes.
