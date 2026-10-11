@@ -77,6 +77,17 @@ function secret() {
 }
 
 function errorResponse(error: unknown) {
+  if (!(error instanceof QaAccessError)) {
+    // Do not log Prisma messages: they may include SQL, inputs or credentials.
+    const code = error && typeof error === "object" && "code" in error &&
+      typeof error.code === "string" && /^P[0-9]{4}$/.test(error.code)
+      ? error.code : "UNEXPECTED"
+    console.error("[qa-access] backend request failed", { code })
+    return NextResponse.json(
+      { message: "QA access is temporarily unavailable. Please try again." },
+      { status: 503 },
+    )
+  }
   const category =
     error instanceof QaAccessError ? error.category : "authorization_required"
   return NextResponse.json(

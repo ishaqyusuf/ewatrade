@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, expect, mock, spyOn, test } from "bun:test"
 import { NextRequest } from "next/server"
 
 const keys = [
@@ -12,6 +12,7 @@ const keys = [
 const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
 const calls: string[] = []
 let stale = false
+let backendFailure: Error | null = null
 const reference = "p".repeat(40)
 const token = "opaque-server-token"
 const profile = {
@@ -58,6 +59,7 @@ mock.module("@ewatrade/db/qa-access", () => ({
   },
   selectQaAccessProfile: async () => {
     calls.push("select")
+    if (backendFailure) throw backendFailure
     if (stale) throw new QaAccessError("authorization_required")
     return {
       token: "ordinary-session-token",
@@ -71,6 +73,7 @@ const { GET, POST } = await import("./route.qa")
 beforeEach(() => {
   calls.length = 0
   stale = false
+  backendFailure = null
   process.env.APP_ENV = "local"
   process.env.NODE_ENV = "development"
   process.env.QA_ACCELERATOR_ENABLED = "true"
@@ -209,4 +212,17 @@ test("select requires authorization and returns all session/context cookies with
     "better-auth.session_token",
     "better-auth.session_data",
   ])
+})
+
+
+test("backend failures are unavailable without exposing database diagnostics", async () => {
+  backendFailure = Object.assign(new Error("private SQL and credential material"), { code: "P2028" })
+  const log = spyOn(console, "error").mockImplementation(() => {})
+  try {
+    const response = await POST(request({ action: "select", profileReference: reference }, { cookie: true }))
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ message: "QA access is temporarily unavailable. Please try again." })
+    expect(log).toHaveBeenCalledWith("[qa-access] backend request failed", { code: "P2028" })
+    expect(response.headers.get("set-cookie")).toBeNull()
+  } finally { log.mockRestore() }
 })
