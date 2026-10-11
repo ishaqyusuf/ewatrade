@@ -1,3 +1,4 @@
+import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { createHash } from "node:crypto"
 import type { Prisma } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
@@ -28,7 +29,7 @@ export async function getCommercialProductReturnStockReview(db: Prisma.Transacti
     returnedQuantities: line.productReturns.map(value => value.quantity.toFixed()),
   })
   let stock: null | (ReturnType<typeof productReturnStockImpact> & {
-    balanceSourceId: string; unitName: string; reservedBefore: string; reservedAfter: string
+    balanceSourceId: string; unitName: string; reservedBefore: string; reservedAfter: string; canonicalBefore: string
   }) = null
   let balanceEvidence: unknown = null
   if (input.disposition === "restock") {
@@ -46,6 +47,7 @@ export async function getCommercialProductReturnStockReview(db: Prisma.Transacti
     stock = {
       ...productReturnStockImpact({ quantity: quantities.quantity, unitFactor: snapshot.unitFactor.toFixed(), balanceKind: balance.kind, onHandQuantity: balance.onHandQuantity.toFixed() }),
       balanceSourceId: balance.id, unitName: balance.inventoryUnit.name,
+      canonicalBefore: balance.kind === "PACKAGED_STOCK" ? multiplyExactDecimals(balance.onHandQuantity.toFixed(), snapshot.unitFactor.toFixed(), 18) : balance.onHandQuantity.toFixed(),
       reservedBefore: balance.reservedQuantity.toFixed(), reservedAfter: balance.reservedQuantity.toFixed(),
     }
     balanceEvidence = balance
@@ -56,6 +58,6 @@ export async function getCommercialProductReturnStockReview(db: Prisma.Transacti
     currencyCode: line.order.currencyCode, disposition: input.disposition, quantities, stock,
     financialReview: "PENDING" as const,
     // This digest is deliberately named stockRevision: it is insufficient for confirmation.
-    stockRevision: createHash("sha256").update(JSON.stringify({ input, line, balanceEvidence })).digest("hex"),
+    stockRevision: createHash("sha256").update(JSON.stringify({ input, line, balanceEvidence }, (_key, value) => typeof value === "bigint" ? value.toString() : value)).digest("hex"),
   }
 }

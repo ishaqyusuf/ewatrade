@@ -1,3 +1,4 @@
+import { getCommercialProductReturnImpactReview } from "../commercial-product-return-impact-review"
 import { previewProductReturnOriginalCost } from "./preview-product-return-cost"
 import { describe, expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
@@ -242,7 +243,7 @@ function baseFixture(
       },
     },
   }
-  return { tx: tx as unknown as Prisma.TransactionClient, state, productReturn }
+  return { tx: tx as unknown as Prisma.TransactionClient, state, productReturn, balance }
 }
 
 describe("private original-cost Product return adapter", () => {
@@ -460,4 +461,28 @@ test("original-cost preview observes current Book closure without writing", asyn
     quantity: fixture.productReturn.quantity.toFixed(),
   })).rejects.toMatchObject({ code: "CLOSED_PERIOD" })
   expect(fixture.state.header).toBeNull()
+})
+
+
+test("composed return review combines stock and destination value without recording credit or refund", async () => {
+  const fixture = baseFixture({ disposition: "RESTOCK" })
+  const tx = {
+    ...fixture.tx,
+    stockBalanceSource: { findFirst: async () => ({
+      ...fixture.balance, onHandQuantity: decimal("4"), reservedQuantity: decimal("0"),
+      inventoryUnit: { ...fixture.balance.inventoryUnit, name: "Piece" },
+    }) },
+    stockMovement: { count: async () => 1 },
+  } as unknown as Prisma.TransactionClient
+  const review = await getCommercialProductReturnImpactReview(tx, {
+    tenantId: "tenant-1", storeId: "store-1", orderLineId: fixture.productReturn.orderLine.id,
+    quantity: fixture.productReturn.quantity.toFixed(), disposition: "restock",
+  })
+  expect(review.stock).toMatchObject({ onHandBefore: "4", onHandAfter: "5", canonicalBefore: "4" })
+  expect(review.destination).toMatchObject({ valueBeforeMinor: "200", valueAfterMinor: "240", valueDeltaMinor: "40" })
+  expect(review.customerCredit).toBe("NOT_RECORDED")
+  expect(review.cashRefund).toBe("NOT_RECORDED")
+  expect(review.financialReview).toBe("JOURNAL_PENDING")
+  expect(fixture.state.header).toBeNull()
+  expect(fixture.state.event).toBeNull()
 })

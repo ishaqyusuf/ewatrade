@@ -35,6 +35,7 @@ export async function previewProductReturnOriginalCost(db: Prisma.TransactionCli
     physicalReturnAt: new Date(),
   }) : null
   return {
+    bookId: book?.id ?? null,
     status: !book ? "NO_FINANCE_BOOK" as const : plan?.sourceCostMinor === null ? "UNKNOWN" as const : "KNOWN" as const,
     sourceCostMinor: plan?.sourceCostMinor?.toString() ?? null,
     unknownReason: plan?.unknownReason ?? null,
