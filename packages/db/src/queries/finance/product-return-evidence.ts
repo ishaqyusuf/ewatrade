@@ -14,7 +14,7 @@ export const productReturnValuationInclude = {
                   movements: {
                     include: {
                       balanceSource: {
-                        include: { store: true, inventoryUnit: true },
+                        include: { store: true },
                       },
                       valuationEvent: true,
                     },
@@ -34,7 +34,6 @@ export const productReturnValuationInclude = {
               financeCost: {
                 include: {
                   allocations: { orderBy: [{ fulfillmentId: "asc" }] },
-                  valuationEvent: true,
                   productReturn: true,
                 },
               },

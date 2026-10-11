@@ -19,3 +19,18 @@ assistant browser acceptance remain open, runtime capability stays planned, and 
 hosted deployment is implied. Next investigation: duplicated financial evidence
 loads within the locked reviewed-return execution, preserving all provenance and
 accounting checks rather than removing review guarantees.
+
+## Unused-relation pruning retry
+
+Run296009b0-b24c-471f-bc87-18a95e593245, baselinee4f08a3d plus removal of unused
+historical fulfillment inventoryUnit and prior financeCost valuationEvent relations.
+20focusedtests56assertions and scoped source TypeScript passed before execution.
+The financial retry still failed at valuation financeBook.findUnique after34611ms:
+0pass1fail16assertions191.80s. Cleanup verified, process exited1. No DB process live.
+Log:`artifacts/assistant-operations-web/d03-return-financial-pruned.log`.
+
+This pruning does not remove any validator field access or claim timeout resolution.
+Current-return movement inventoryUnit and saved valuationEvent remain loaded. The
+same failed stage after pruning shows that further repeated evidence loading must be
+addressed across locked review and execution; any reuse must be transaction-bound,
+retain canonical provenance checks and account for writes within that transaction.
