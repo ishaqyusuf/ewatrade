@@ -142,6 +142,8 @@ planned("services", "D04", ["services.*Intake*"])
 planned("services", "D05", ["services.*"])
 planned("services", "G05", ["services.*Settings"])
 planned("services", "H04", ["services.*Evidence*"])
+// Saved Order notes and attachment metadata are not yet exposed by a read tool.
+planned("sales", "H04", ["orders.activity.list"])
 formOnly("services", "Bulk queue updates stay in the queue view.", [
   "services.batchUpdate",
 ])

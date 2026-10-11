@@ -6,17 +6,20 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 537 (396 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 78
-- Merchant planned: 152
+- Router procedures: 539 (398 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 84
+- Merchant planned: 148
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 74 (38 read, 36 write)
+- Capabilities: 80 (40 read, 40 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `finance.supplier.create` | 1 | write (`supplier_create`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.createSupplier` |
+| `finance.expense.void` | 1 | write (`expense_void`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.voidExpense` |
+| `finance.bill_payment.reverse` | 1 | write (`bill_payment_reverse`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.reverseBillPayment` |
 | `finance.bill.pay` | 1 | write (`bill_payment`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.payBill` |
 | `finance.expense.record` | 1 | write (`expense_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordExpense` |
 | `finance.money_movement.record` | 1 | write (`money_movement`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordMoney` |
@@ -26,6 +29,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.allocation.release` | 1 | write (`customer_allocation_release`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.releaseAllocation` |
 | `customers.receipt.record` | 1 | write (`customer_receipt`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.recordReceipt` |
 | `finance.bills.read` | 1 | read | `readExpenseBills` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.bills` |
+| `finance.suppliers.read` | 1 | read | `readSuppliers` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.suppliers` |
+| `finance.supplier_statement.read` | 1 | read | `readSupplierStatement` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.supplierStatement` |
 | `finance.bill.read` | 1 | read | `readExpenseBill` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.bill` |
 | `finance.expense_categories.read` | 1 | read | `readExpenseCategories` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.expenseCategories` |
 | `finance.money_accounts.read` | 1 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
@@ -41,6 +46,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.cancel` | 1 | write (`order_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.cancel`, `orders.cancellationReview` |
 | `sales.order.metadata.update` | 1 | write (`order_metadata_update`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.amendMetadata`, `orders.metadataReview` |
 | `sales.order.replace` | 1 | write (`order_replace`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.replace`, `orders.replacementReview` |
+| `sales.order.attachment.add` | 1 | write (`order_attachment_add`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard, mobile | source | `orders.activity.add` |
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `search.global` |
 | `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard | source | `catalog.detail.orders`, `catalog.detail.activity` |
 | `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.detail.overview` |
@@ -105,6 +111,9 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `finance.supplier.create` | Add ACME as a supplier in this Finance Book | [packages/assistant/src/general/supplier-create.test.ts](../../../../packages/assistant/src/general/supplier-create.test.ts)<br>[packages/db/src/queries/finance/supplier-create-review.test.ts](../../../../packages/db/src/queries/finance/supplier-create-review.test.ts) |
+| `finance.expense.void` | Void this incorrectly recorded unpaid expense | [packages/assistant/src/general/bill-correction.test.ts](../../../../packages/assistant/src/general/bill-correction.test.ts)<br>[packages/db/src/queries/finance/bill-correction-review.test.ts](../../../../packages/db/src/queries/finance/bill-correction-review.test.ts) |
+| `finance.bill_payment.reverse` | Correct this duplicate bill payment record | [packages/assistant/src/general/bill-correction.test.ts](../../../../packages/assistant/src/general/bill-correction.test.ts)<br>[packages/db/src/queries/finance/bill-correction-review.test.ts](../../../../packages/db/src/queries/finance/bill-correction-review.test.ts) |
 | `finance.bill.pay` | Record the remaining rent payment I already made | [packages/assistant/src/general/bill-payment.test.ts](../../../../packages/assistant/src/general/bill-payment.test.ts)<br>[packages/db/src/queries/finance/bill-payment-review.test.ts](../../../../packages/db/src/queries/finance/bill-payment-review.test.ts) |
 | `finance.expense.record` | Record rent already incurred, with the amount still owed | [packages/assistant/src/general/expense.test.ts](../../../../packages/assistant/src/general/expense.test.ts)<br>[packages/db/src/queries/finance/expense-review.test.ts](../../../../packages/db/src/queries/finance/expense-review.test.ts) |
 | `finance.money_movement.record` | Record cash I already deposited into the bank | [packages/assistant/src/general/money-movement.test.ts](../../../../packages/assistant/src/general/money-movement.test.ts)<br>[packages/db/src/queries/finance/money-review.test.ts](../../../../packages/db/src/queries/finance/money-review.test.ts) |
@@ -114,6 +123,8 @@ track conversational evaluation separately from these source test links.
 | `customers.allocation.release` | Release customer allocation | [packages/assistant/src/general/customer-credit.test.ts](../../../../packages/assistant/src/general/customer-credit.test.ts)<br>[packages/db/src/queries/customer-ledger/credit-review.test.ts](../../../../packages/db/src/queries/customer-ledger/credit-review.test.ts) |
 | `customers.receipt.record` | Record a new customer deposit I already received | [packages/assistant/src/general/customer-receipt.test.ts](../../../../packages/assistant/src/general/customer-receipt.test.ts)<br>[packages/db/src/queries/customer-ledger/receipt-review.test.ts](../../../../packages/db/src/queries/customer-ledger/receipt-review.test.ts) |
 | `finance.bills.read` | Find the unpaid rent bill | [apps/api/src/assistant/general-bill-reads.test.ts](../../../../apps/api/src/assistant/general-bill-reads.test.ts) |
+| `finance.suppliers.read` | Search suppliers in this Finance Book | [apps/api/src/assistant/general-supplier-reads.test.ts](../../../../apps/api/src/assistant/general-supplier-reads.test.ts) |
+| `finance.supplier_statement.read` | Read supplier statement in this Finance Book | [apps/api/src/assistant/general-supplier-reads.test.ts](../../../../apps/api/src/assistant/general-supplier-reads.test.ts) |
 | `finance.bill.read` | What remains owed on this rent bill? | [apps/api/src/assistant/general-bill-reads.test.ts](../../../../apps/api/src/assistant/general-bill-reads.test.ts) |
 | `finance.expense_categories.read` | Which expense category should rent use? | [packages/db/src/queries/finance/expense-category-reads.test.ts](../../../../packages/db/src/queries/finance/expense-category-reads.test.ts) |
 | `finance.money_accounts.read` | Which bank account did I return the deposit from? | [packages/db/src/queries/finance/money-account-reads.test.ts](../../../../packages/db/src/queries/finance/money-account-reads.test.ts) |
@@ -129,6 +140,7 @@ track conversational evaluation separately from these source test links.
 | `sales.order.cancel` | Cancel an unpaid order | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
 | `sales.order.metadata.update` | Update order details | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
 | `sales.order.replace` | Replace reviewed order quantities and prices | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
+| `sales.order.attachment.add` | Attach this receipt to order 1042 | [packages/db/src/queries/commercial-order-activity.integration.test.ts](../../../../packages/db/src/queries/commercial-order-activity.integration.test.ts) |
 | `search.records` | Find Amina<br>Do we have eggs? | [apps/api/src/assistant/general-availability.test.ts](../../../../apps/api/src/assistant/general-availability.test.ts) |
 | `catalog.history.read` | Show this item's history | [apps/api/src/assistant/general-catalog-history.test.ts](../../../../apps/api/src/assistant/general-catalog-history.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.item.read` | How much is a crate of eggs? | None registered |
@@ -193,14 +205,14 @@ track conversational evaluation separately from these source test links.
 | E01 | 6 |
 | E02 | 3 |
 | E03 | 2 |
-| E04 | 3 |
-| E05 | 18 |
+| E04 | 1 |
+| E05 | 15 |
 | G01 | 6 |
 | G02 | 8 |
 | G03 | 29 |
 | G04 | 7 |
 | G05 | 31 |
-| H04 | 9 |
+| H04 | 10 |
 | S01 | 1 |
 | S02 | 1 |
 | S03 | 1 |
@@ -296,7 +308,7 @@ track conversational evaluation separately from these source test links.
 | `finance.configureFiscalCalendar` | mutation | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `finance.createExpenseCategory` | mutation | Owner/Admin only | finance | planned | E04 |
 | `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | planned | E01 |
-| `finance.createSupplier` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.createSupplier` | mutation | Owner/Admin only | finance | supported | finance.supplier.create |
 | `finance.expenseCategories` | query | Owner/Admin only | finance | supported | finance.expense_categories.read |
 | `finance.expenseReceipts.attach` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.expenseReceipts.createIntent` | mutation | Owner/Admin only | finance | planned | H04 |
@@ -326,7 +338,7 @@ track conversational evaluation separately from these source test links.
 | `finance.registerPurchase` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.releaseSupplierAllocation` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.reports` | query | Owner/Admin only | finance | planned | G01 |
-| `finance.reverseBillPayment` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.reverseBillPayment` | mutation | Owner/Admin only | finance | supported | finance.bill_payment.reverse |
 | `finance.reverseCashAdjustment` | mutation | Owner/Admin only | finance | planned | G02 |
 | `finance.reverseMoney` | mutation | Owner/Admin only | finance | planned | E03 |
 | `finance.reversePurchasePayment` | mutation | Owner/Admin only | finance | planned | E05 |
@@ -334,9 +346,9 @@ track conversational evaluation separately from these source test links.
 | `finance.reverseSupplierEntry` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.setup` | mutation | Owner/Admin only | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
 | `finance.supplierPayableAging` | query | Owner/Admin only | finance | planned | G01 |
-| `finance.suppliers` | query | Owner/Admin only | finance | planned | E05 |
-| `finance.supplierStatement` | query | Owner/Admin only | finance | planned | E05 |
-| `finance.voidExpense` | mutation | Owner/Admin only | finance | planned | E04 |
+| `finance.suppliers` | query | Owner/Admin only | finance | supported | finance.suppliers.read |
+| `finance.supplierStatement` | query | Owner/Admin only | finance | supported | finance.supplier_statement.read |
+| `finance.voidExpense` | mutation | Owner/Admin only | finance | supported | finance.expense.void |
 | `finance.yearEndPreview` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `inventory.auditExport` | query | stock | inventory | form_only | Bulk file export; download it from the page. |
 | `inventory.balancePage` | query | stock | inventory | supported | inventory.balances.read |
@@ -373,6 +385,8 @@ track conversational evaluation separately from these source test links.
 | `offline.review` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.settings` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.updateSettings` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
+| `orders.activity.add` | mutation | Owner/Admin only | sales | supported | sales.order.attachment.add |
+| `orders.activity.list` | query | Owner/Admin only | sales | planned | H04 |
 | `orders.amendMetadata` | mutation | reconciliation | sales | supported | sales.order.metadata.update |
 | `orders.authorizeChargeOnlyServiceLine` | mutation | reconciliation | sales | supported | sales.service.authorize |
 | `orders.cancel` | mutation | reconciliation | sales | supported | sales.order.cancel |

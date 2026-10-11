@@ -26,6 +26,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Coverage reconciled, 11 October 2026](runs/2026-10-11-coverage-reconciled.md): classified saved Order activity read as planned H04, regenerated current catalog; coverage test passes4 assertions. Earlier classification blocker resolved.
+
 - [Supplier creation database acceptance, 11 October 2026](runs/2026-10-11-supplier-create-database.md):24 assertions passed for rollback/concurrent confirmation/recovery, duplicate refusal and actual supplier tools; one identity/no postings, owned cleanup verified.
 
 - [Supplier creation adapter, 11 October 2026](runs/2026-10-11-supplier-create-adapter.md): strict schema and canonical transactional adapter;14 assertions pass. Editor and database/web/model acceptance pending.
