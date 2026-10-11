@@ -537,6 +537,22 @@ export const ordersRouter = createTRPCRouter({
     .input(commercialOrderPaymentSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanOperateOrders(ctx.tenantContext.membership.role)
+      // Reps may take payment on any order they look up. A refund is money
+      // out, so like returnProductLine it needs normal creator visibility.
+      if (input.type === "refund") {
+        const scope = await orderScope(ctx)
+        if (scope.createdByUserId) {
+          const order = await ctx.db.commercialOrder.findFirst({
+            where: { ...scope, id: input.orderId },
+            select: { id: true },
+          })
+          if (!order)
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Commercial Order not found.",
+            })
+        }
+      }
       try {
         return await recordCommercialOrderPayment(ctx.db, {
           ...input,

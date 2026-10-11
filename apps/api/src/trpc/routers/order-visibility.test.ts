@@ -250,6 +250,94 @@ describe("order visibility API boundaries", () => {
       createdByUserId: "rep-a",
     })
   })
+
+  test("reps pay and fulfil looked-up orders; refunds need creator visibility", async () => {
+    const payment = {
+      amountMinor: 500,
+      clientPaymentId: "payment-0001",
+      method: "cash",
+      orderId: "other-order",
+    } as const
+    const creatorReads = (f: ReturnType<typeof fixture>) =>
+      f.reads.filter((read) => "createdByUserId" in read.args.where)
+    for (const role of ["CASHIER", "OPERATOR"]) {
+      // Lookup exception: the canonical command runs without a creator filter.
+      const f = fixture(role)
+      Object.assign(f.db, {
+        commercialOrderLine: { findFirst: async () => null },
+      })
+      const caller = createCallerFactory(ordersRouter)(f.ctx)
+      await expect(caller.recordPayment(payment)).rejects.toMatchObject({
+        code: "NOT_FOUND",
+      })
+      await expect(
+        caller.fulfillProducts({
+          clientOperationId: "fulfil-0001",
+          orderId: "other-order",
+          schemaVersion: 1,
+        }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" })
+      await expect(
+        caller.fulfillProductLine({
+          clientOperationId: "fulfil-0002",
+          orderLineId: "other-line",
+          schemaVersion: 1,
+        }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" })
+      expect(creatorReads(f)).toHaveLength(0)
+      expect(f.reads.filter((read) => read.table === "get")).toHaveLength(2)
+
+      const refund = fixture(role)
+      await expect(
+        createCallerFactory(ordersRouter)(refund.ctx).recordPayment({
+          ...payment,
+          type: "refund",
+        }),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "Commercial Order not found.",
+      })
+      // Only the guard read ran; the payment command was never reached.
+      expect(
+        refund.reads
+          .filter((read) => read.table === "get")
+          .map((read) => read.args.where),
+      ).toEqual([
+        {
+          tenantId: "tenant-a",
+          storeId: "store-a",
+          createdByUserId: "rep-a",
+          id: "other-order",
+        },
+      ])
+    }
+
+    // Own refunds, ALL_STORE_ORDERS reps and managers reach the command.
+    const own = fixture("CASHIER")
+    Object.assign(own.db.commercialOrder, {
+      findFirst: async (args: { where: Record<string, unknown> }) => {
+        own.reads.push({ table: "get", args })
+        return args.where.createdByUserId ? { id: "own-order" } : null
+      },
+    })
+    for (const f of [
+      own,
+      fixture("CASHIER", "ALL_STORE_ORDERS"),
+      fixture("MANAGER"),
+    ]) {
+      await expect(
+        createCallerFactory(ordersRouter)(f.ctx).recordPayment({
+          ...payment,
+          type: "refund",
+        }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" })
+      expect(f.reads.at(-1)?.args.where).toEqual({
+        id: "other-order",
+        tenantId: "tenant-a",
+      })
+    }
+    expect(creatorReads(own)).toHaveLength(1)
+  })
 })
 
 test("only Owner/Admin can update; either choice or Keep records shared review", async () => {
