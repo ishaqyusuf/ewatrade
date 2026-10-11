@@ -16,6 +16,7 @@ import { FinanceSheet } from "./finance-sheet"
 import { InventoryOperationDetailsSheet } from "./inventory-operation-details-sheet"
 import { OrderDetailsSheet } from "./order-details-sheet"
 import { PrescriptionRequestSheet } from "./prescription-request-sheet"
+import { PurchaseBillDetailsSheet } from "./purchase-bill-details-sheet"
 import { PurchaseRegistrationDetailsSheet } from "./purchase-registration-details-sheet"
 import { ReceiptSheet } from "./receipt-sheet"
 import { ServiceCommerceSheet } from "./service-commerce-sheet"
@@ -107,6 +108,7 @@ export function GlobalSheets({
       ) : null}
       {access.finance ? <FinanceMovementDetailsSheet /> : null}
       {access.finance ? <PurchaseRegistrationDetailsSheet /> : null}
+      {access.finance ? <PurchaseBillDetailsSheet /> : null}
       {access.finance ? (
         <FinanceSheet
           actorUserId={actorUserId}

@@ -1,3 +1,5 @@
+import { supplierAdvanceAction, supplierAdvanceAllocateAction, purchasePaymentAction } from "./supplier-settlement"
+export { supplierSettlementDraftInstructions } from "./supplier-settlement"
 import { purchaseRecognitionAction } from "./purchase-recognition"
 export { purchaseRecognitionDraftInstructions } from "./purchase-recognition"
 import { purchaseRegistrationAction } from "./purchase-registration"
@@ -261,6 +263,9 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   purchaseRegistrationAction,
   purchaseRecognitionAction,
   supplierCreateAction,
+  supplierAdvanceAction,
+  supplierAdvanceAllocateAction,
+  purchasePaymentAction,
   expenseVoidAction,
   billPaymentReverseAction,
   customerCreditApplyAction,
@@ -284,6 +289,7 @@ export type GeneralActionName = GeneralAction["action"]
 export const generalReceiptSchema = z
   .object({
     kind: z.enum([
+      "finance_purchase_bill",
       "finance_purchase_registration",
       "finance_supplier",
       "finance_bill",
@@ -305,7 +311,7 @@ export const generalReceiptSchema = z
     detail: z.string(),
   })
   .strict()
-  .refine(value => !["finance_movement", "finance_bill", "finance_supplier", "finance_purchase_registration"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
+  .refine(value => !["finance_movement", "finance_bill", "finance_supplier", "finance_purchase_bill", "finance_purchase_registration"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
 export const generalProposalSchema = z
   .object({
@@ -437,6 +443,12 @@ export function generalActionSummary(
     case "purchase_recognize":
       return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
     case "purchase_register": return `Register purchase agreement · ${action.description}`
+    case "supplier_advance":
+      return `Record supplier advance · ${action.description}`
+    case "supplier_advance_allocate":
+      return `Apply existing supplier advance · ${action.description}`
+    case "purchase_payment":
+      return `Record purchase invoice payment · ${action.description}`
     case "supplier_create": return `Create supplier · ${action.name} (${action.code})`
     case "expense_void": return `Void unpaid expense · ${action.reason}`
     case "bill_payment_reverse": return `Reverse recorded bill payment · ${action.reason}`

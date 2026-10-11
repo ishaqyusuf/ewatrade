@@ -32,6 +32,7 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import { supplierAdvance, supplierAdvanceAllocate, purchasePayment } from "./general-supplier-settlement"
 import { purchaseRecognize } from "./general-purchase-recognition"
 import { purchaseRegister } from "./general-purchase-registration"
 import { supplierCreate } from "./general-supplier-create"
@@ -590,6 +591,9 @@ const adapters: {
   purchase_register: purchaseRegister,
   purchase_recognize: purchaseRecognize,
   supplier_create: supplierCreate,
+  supplier_advance: supplierAdvance,
+  supplier_advance_allocate: supplierAdvanceAllocate,
+  purchase_payment: purchasePayment,
   expense_void: billCorrection,
   bill_payment_reverse: billCorrection,
   customer_credit_apply: customerCreditApply,

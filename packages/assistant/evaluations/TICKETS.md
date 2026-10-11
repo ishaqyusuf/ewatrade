@@ -67,7 +67,10 @@ Open/Close, with exact saved posting/stock/valuation readback. Full two-line ass
 receipt confirmation reaches forced completion rollback in 28.8s within the existing
 30s budget; saved facts are unchanged. Completed receipt replay and duplicate-stage
 refusal pass. **E05 remains partial and unbookmarked:** larger operating bounds,
-advances/allocation and settlement remain open. Evidence:
+advances/allocation and settlement now have strict proposal, shared canonical review,
+rollback/replay and editor evidence; full chat confirmation and saved-detail acceptance
+remain open. Their capabilities remain planned. Evidence:
+[supplier settlement source](runs/2026-10-11-supplier-settlement-source.md) and
 [physical receipt proposal/web report](runs/2026-10-11-receipt-proposal-web.md).
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.

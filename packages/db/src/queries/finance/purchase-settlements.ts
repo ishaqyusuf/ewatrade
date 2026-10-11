@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
-import type { FinanceActor } from "./access"
+import {
+  assertFinanceManager,
+  lockFinanceBook,
+  type FinanceActor,
+} from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
 import {
@@ -12,7 +16,7 @@ import {
   purchaseJournalEntryId,
   requirePurchaseDate,
 } from "./purchase-source"
-import { FinanceError, financeAmount } from "./rules"
+import { FinanceError, financeAmount, assertFinancePostingDate } from "./rules"
 import { assertOriginalSupplierPosting } from "./supplier-rules"
 
 const PAYABLE_CODE = "2000"
@@ -305,42 +309,8 @@ export async function payFinancePurchaseBillInTransaction(
     "PAY_PURCHASE_BILL",
     { ...payload, description: description ?? null },
     async (book) => {
-      const { bill, supplierEntry, payable } = await verifyPurchaseBill(
-        tx,
-        book.id,
-        input.billId,
-      )
-      const supplierId = bill.supplierId
-      if (!supplierId)
-        throw new FinanceError("CONFLICT", "The purchase bill has no supplier.")
-      if (input.effectiveAt < bill.incurredAt)
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "A payment cannot precede the purchase bill.",
-        )
-      requireNotBeforeLatest(
-        input.effectiveAt,
-        await getLatestBillSupplierEntryAt(tx, book.id, bill.id),
-      )
-      if (amount > bill.totalMinor - bill.paidMinor)
-        throw new FinanceError(
-          "CONFLICT",
-          "Payment exceeds the purchase bill's outstanding amount.",
-        )
-      const money = await tx.financeAccount.findFirst({
-        where: {
-          id: input.moneyAccountId,
-          bookId: book.id,
-          kind: "ASSET",
-          purpose: { in: ["CASH", "BANK", "CLEARING"] },
-          archivedAt: null,
-        },
-      })
-      if (!money)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Choose an active cash, bank or clearing account in this business.",
-        )
+      const { bill, supplierEntry, payable, money, supplierId } =
+        await reviewPurchasePaymentSource(tx, input, book.id)
       const payment = await tx.financeBillPayment.create({
         data: {
           bookId: book.id,
@@ -685,68 +655,13 @@ export async function allocateFinanceSupplierAdvanceInTransaction(
     async (book) => {
       const {
         bill,
-        supplierEntry: billEntry,
+        billEntry,
         payable,
-      } = await verifyPurchaseBill(tx, book.id, input.billId)
-      const supplierId = bill.supplierId
-      if (!supplierId)
-        throw new FinanceError("CONFLICT", "The purchase bill has no supplier.")
-      const { entry: advanceEntry, advance } = await verifyAdvance(
-        tx,
-        book.id,
-        input.advanceEntryId,
-      )
-      if (advanceEntry.supplierId !== bill.supplierId)
-        throw new FinanceError(
-          "CONFLICT",
-          "The supplier advance and purchase bill belong to different suppliers.",
-        )
-      if (
-        input.effectiveAt < bill.incurredAt ||
-        input.effectiveAt < advanceEntry.effectiveAt
-      )
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "An allocation cannot precede its bill or advance.",
-        )
-      requireNotBeforeLatest(
-        input.effectiveAt,
-        await getLatestBillSupplierEntryAt(tx, book.id, bill.id),
-      )
-      const [allocated, released] = await Promise.all([
-        tx.financeSupplierAllocation.aggregate({
-          where: { bookId: book.id, advanceEntryId: advanceEntry.id },
-          _sum: { amountMinor: true },
-          _max: { effectiveAt: true },
-        }),
-        tx.financeSupplierAllocationRelease.aggregate({
-          where: {
-            bookId: book.id,
-            allocation: { advanceEntryId: advanceEntry.id },
-          },
-          _sum: { amountMinor: true },
-          _max: { effectiveAt: true },
-        }),
-      ])
-      const latestAdvanceSettlementAt =
-        allocated._max.effectiveAt && released._max.effectiveAt
-          ? allocated._max.effectiveAt > released._max.effectiveAt
-            ? allocated._max.effectiveAt
-            : released._max.effectiveAt
-          : (allocated._max.effectiveAt ?? released._max.effectiveAt)
-      requireNotBeforeLatest(input.effectiveAt, latestAdvanceSettlementAt)
-      const remainingAdvance =
-        advanceEntry.amountMinor -
-        (allocated._sum.amountMinor ?? BigInt(0)) +
-        (released._sum.amountMinor ?? BigInt(0))
-      if (
-        amount > remainingAdvance ||
-        amount > bill.totalMinor - bill.paidMinor
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "Allocation exceeds the remaining advance or bill payable.",
-        )
+        supplierId,
+        advanceEntry,
+        advance,
+        remainingAdvance,
+      } = await reviewSupplierAllocationSource(tx, input, book.id)
       const allocationId = randomUUID()
       const posted = await postFinanceJournalInTransaction(tx, {
         ...input,
@@ -1018,4 +933,257 @@ export async function releaseFinanceSupplierAllocation(
     (tx) => releaseFinanceSupplierAllocationInTransaction(tx, input),
     { maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+async function reviewPurchasePaymentSource(
+  tx: Transaction,
+  input: Omit<PayFinancePurchaseBillInput, "clientCommandId">,
+  bookId: string,
+) {
+  const amount = financeAmount(input.amountMinor)
+  const { bill, supplierEntry, payable } = await verifyPurchaseBill(
+    tx,
+    bookId,
+    input.billId,
+  )
+  const supplierId = bill.supplierId
+  if (!supplierId)
+    throw new FinanceError("CONFLICT", "The purchase bill has no supplier.")
+  if (input.effectiveAt < bill.incurredAt)
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "A payment cannot precede the purchase bill.",
+    )
+  requireNotBeforeLatest(
+    input.effectiveAt,
+    await getLatestBillSupplierEntryAt(tx, bookId, bill.id),
+  )
+  if (amount > bill.totalMinor - bill.paidMinor)
+    throw new FinanceError(
+      "CONFLICT",
+      "Payment exceeds the purchase bill's outstanding amount.",
+    )
+  const money = await tx.financeAccount.findFirst({
+    where: {
+      id: input.moneyAccountId,
+      bookId: bookId,
+      kind: "ASSET",
+      purpose: { in: ["CASH", "BANK", "CLEARING"] },
+      archivedAt: null,
+    },
+  })
+  if (!money)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Choose an active cash, bank or clearing account in this business.",
+    )
+  return { bill, supplierEntry, payable, money, supplierId }
+}
+
+async function reviewSupplierAllocationSource(
+  tx: Transaction,
+  input: Omit<AllocateFinanceSupplierAdvanceInput, "clientCommandId">,
+  bookId: string,
+) {
+  const amount = financeAmount(input.amountMinor)
+  const {
+    bill,
+    supplierEntry: billEntry,
+    payable,
+  } = await verifyPurchaseBill(tx, bookId, input.billId)
+  const supplierId = bill.supplierId
+  if (!supplierId)
+    throw new FinanceError("CONFLICT", "The purchase bill has no supplier.")
+  const { entry: advanceEntry, advance } = await verifyAdvance(
+    tx,
+    bookId,
+    input.advanceEntryId,
+  )
+  if (advanceEntry.supplierId !== bill.supplierId)
+    throw new FinanceError(
+      "CONFLICT",
+      "The supplier advance and purchase bill belong to different suppliers.",
+    )
+  if (
+    input.effectiveAt < bill.incurredAt ||
+    input.effectiveAt < advanceEntry.effectiveAt
+  )
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "An allocation cannot precede its bill or advance.",
+    )
+  requireNotBeforeLatest(
+    input.effectiveAt,
+    await getLatestBillSupplierEntryAt(tx, bookId, bill.id),
+  )
+  const [allocated, released] = await Promise.all([
+    tx.financeSupplierAllocation.aggregate({
+      where: { bookId: bookId, advanceEntryId: advanceEntry.id },
+      _sum: { amountMinor: true },
+      _max: { effectiveAt: true },
+    }),
+    tx.financeSupplierAllocationRelease.aggregate({
+      where: {
+        bookId: bookId,
+        allocation: { advanceEntryId: advanceEntry.id },
+      },
+      _sum: { amountMinor: true },
+      _max: { effectiveAt: true },
+    }),
+  ])
+  const latestAdvanceSettlementAt =
+    allocated._max.effectiveAt && released._max.effectiveAt
+      ? allocated._max.effectiveAt > released._max.effectiveAt
+        ? allocated._max.effectiveAt
+        : released._max.effectiveAt
+      : (allocated._max.effectiveAt ?? released._max.effectiveAt)
+  requireNotBeforeLatest(input.effectiveAt, latestAdvanceSettlementAt)
+  const remainingAdvance =
+    advanceEntry.amountMinor -
+    (allocated._sum.amountMinor ?? BigInt(0)) +
+    (released._sum.amountMinor ?? BigInt(0))
+  if (amount > remainingAdvance || amount > bill.totalMinor - bill.paidMinor)
+    throw new FinanceError(
+      "CONFLICT",
+      "Allocation exceeds the remaining advance or bill payable.",
+    )
+  return {
+    bill,
+    billEntry,
+    payable,
+    supplierId,
+    advanceEntry,
+    advance,
+    remainingAdvance,
+  }
+}
+
+async function settlementReviewBook(
+  tx: Transaction,
+  input: FinanceActor & { bookId: string; effectiveAt: Date },
+  lockBook = false,
+) {
+  if (!lockBook) await assertFinanceManager(tx, input)
+  requirePurchaseDate(input.effectiveAt)
+  const book = lockBook
+    ? await lockFinanceBook(tx, input)
+    : await tx.financeBook.findFirst({
+        where: { id: input.bookId, tenantId: input.tenantId },
+      })
+  if (!book) throw new FinanceError("NOT_FOUND", "Financial book not found.")
+  assertFinancePostingDate({
+    effectiveAt: input.effectiveAt,
+    startsAt: book.startsAt,
+    closedThrough: book.closedThrough,
+    now: new Date(),
+  })
+  return book
+}
+
+export async function getFinancePurchasePaymentReview(
+  tx: Transaction,
+  input: Omit<PayFinancePurchaseBillInput, "clientCommandId">,
+  lockBook = false,
+) {
+  const amount = financeAmount(input.amountMinor)
+  if (input.reference && input.reference.length > 160)
+    throw new FinanceError("INVALID_JOURNAL", "Check the payment reference.")
+  const description = input.description
+    ? text(input.description, "description")
+    : undefined
+  const book = await settlementReviewBook(tx, input, lockBook)
+  const { bill, payable, money } = await reviewPurchasePaymentSource(
+    tx,
+    input,
+    book.id,
+  )
+  const supplier = await tx.financeSupplierAccount.findFirstOrThrow({
+    where: { id: bill.supplierId!, bookId: book.id },
+    select: { id: true, name: true, code: true },
+  })
+  return {
+    bookId: book.id,
+    currencyCode: book.currencyCode,
+    startsAt: book.startsAt.toISOString(),
+    closedThrough: book.closedThrough?.toISOString() ?? null,
+    billId: bill.id,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    supplierCode: supplier.code,
+    description: bill.description,
+    incurredAt: bill.incurredAt.toISOString(),
+    dueAt: bill.dueAt?.toISOString() ?? null,
+    totalMinor: bill.totalMinor.toString(),
+    paidBeforeMinor: bill.paidMinor.toString(),
+    paidAfterMinor: (bill.paidMinor + amount).toString(),
+    outstandingBeforeMinor: (bill.totalMinor - bill.paidMinor).toString(),
+    outstandingAfterMinor: (
+      bill.totalMinor -
+      bill.paidMinor -
+      amount
+    ).toString(),
+    amountMinor: amount.toString(),
+    moneyAccountId: money.id,
+    moneyAccountName: money.name,
+    moneyAccountPurpose: money.purpose,
+    payableAccountId: payable.id,
+    payableAccountName: payable.name,
+    effectiveAt: input.effectiveAt.toISOString(),
+    reference: input.reference?.trim() || null,
+    postingDescription: description ?? `Purchase payment: ${bill.description}`,
+    effect: "RECORD_ALREADY_PAID_PURCHASE" as const,
+    moneyTransfer: "NOT_PERFORMED" as const,
+  }
+}
+
+export async function getFinanceSupplierAllocationReview(
+  tx: Transaction,
+  input: Omit<AllocateFinanceSupplierAdvanceInput, "clientCommandId">,
+  lockBook = false,
+) {
+  const amount = financeAmount(input.amountMinor),
+    description = text(input.description, "description")
+  const book = await settlementReviewBook(tx, input, lockBook)
+  const { bill, payable, supplierId, advanceEntry, advance, remainingAdvance } =
+    await reviewSupplierAllocationSource(tx, input, book.id)
+  const supplier = await tx.financeSupplierAccount.findFirstOrThrow({
+    where: { id: supplierId, bookId: book.id },
+    select: { id: true, name: true, code: true },
+  })
+  return {
+    bookId: book.id,
+    currencyCode: book.currencyCode,
+    startsAt: book.startsAt.toISOString(),
+    closedThrough: book.closedThrough?.toISOString() ?? null,
+    billId: bill.id,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    supplierCode: supplier.code,
+    billDescription: bill.description,
+    incurredAt: bill.incurredAt.toISOString(),
+    dueAt: bill.dueAt?.toISOString() ?? null,
+    totalMinor: bill.totalMinor.toString(),
+    paidBeforeMinor: bill.paidMinor.toString(),
+    paidAfterMinor: (bill.paidMinor + amount).toString(),
+    outstandingBeforeMinor: (bill.totalMinor - bill.paidMinor).toString(),
+    outstandingAfterMinor: (
+      bill.totalMinor -
+      bill.paidMinor -
+      amount
+    ).toString(),
+    advanceEntryId: advanceEntry.id,
+    advanceEffectiveAt: advanceEntry.effectiveAt.toISOString(),
+    advanceOriginalMinor: advanceEntry.amountMinor.toString(),
+    advanceBeforeMinor: remainingAdvance.toString(),
+    advanceAfterMinor: (remainingAdvance - amount).toString(),
+    payableAccountId: payable.id,
+    payableAccountName: payable.name,
+    advanceAccountId: advance.id,
+    advanceAccountName: advance.name,
+    amountMinor: amount.toString(),
+    effectiveAt: input.effectiveAt.toISOString(),
+    description,
+    effect: "APPLY_EXISTING_SUPPLIER_ADVANCE" as const,
+    moneyTransfer: "NOT_PERFORMED" as const,
+  }
 }

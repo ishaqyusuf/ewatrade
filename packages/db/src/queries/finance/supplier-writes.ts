@@ -11,6 +11,11 @@ import {
   normalizeFinanceSupplierDescription,
 } from "./supplier-rules"
 
+import {
+  normalizeSupplierAdvance,
+  reviewSupplierAdvanceSource,
+} from "./supplier-advance-review"
+
 const SUPPLIER_REVERSAL_SOURCE = "SUPPLIER_ENTRY_REVERSAL"
 
 export type CreateFinanceSupplierInput = FinanceActor & {
@@ -291,9 +296,7 @@ export async function recordFinanceSupplierAdvanceInTransaction(
   tx: Prisma.TransactionClient,
   input: FinanceSupplierAdvanceInput,
 ) {
-  const amount = financeAmount(input.amountMinor)
-  const description = normalizeFinanceSupplierDescription(input.description)
-  requireEffectiveDate(input.effectiveAt)
+  const { amount, description } = normalizeSupplierAdvance(input)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   return financeDocumentCommand(
     tx,
@@ -301,29 +304,10 @@ export async function recordFinanceSupplierAdvanceInTransaction(
     "RECORD_SUPPLIER_ADVANCE",
     { ...payload, description },
     async (book) => {
-      await getSupplier(tx, book.id, input.supplierId)
-      const advance = await getControlAccount(
-        tx,
-        book.id,
-        "1250",
-        "ASSET",
-        "SUPPLIER_ADVANCE",
-      )
-      const moneyAccount = await tx.financeAccount.findFirst({
-        where: {
-          id: input.moneyAccountId,
-          bookId: book.id,
-          kind: "ASSET",
-          purpose: { in: ["CASH", "BANK", "CLEARING"] },
-          archivedAt: null,
-        },
-        select: { id: true },
+      const { advance, moneyAccount } = await reviewSupplierAdvanceSource(tx, {
+        ...input,
+        bookId: book.id,
       })
-      if (!moneyAccount)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Choose an active cash, bank, or clearing account.",
-        )
       const supplierEntryId = randomUUID()
       const journalResult = await postFinanceJournalInTransaction(tx, {
         ...input,
