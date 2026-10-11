@@ -43,6 +43,10 @@ import { useGeneralAssistant } from "./use-general-assistant"
 
 export type GeneralAssistantVM = ReturnType<typeof useGeneralAssistant>
 
+/** Standard dialog frame for the assistant: padded, rounded, normal text. */
+export const GENERAL_DIALOG =
+  "flex max-h-[85svh] max-w-lg flex-col gap-4 rounded-lg p-6 text-foreground shadow-lg"
+
 const suggestions = [
   "How much did we sell today?",
   "Find a product",
@@ -422,12 +426,12 @@ export function GeneralThread({
         }}
       >
         {editing ? (
-          <DialogContent className="max-w-[455px]">
-            <DialogHeader className="mb-4 pr-8">
-              <DialogTitle className="text-lg font-semibold">
+          <DialogContent className={GENERAL_DIALOG}>
+            <DialogHeader className="pr-8">
+              <DialogTitle className="text-lg leading-none font-semibold">
                 Edit draft
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm text-muted-foreground">
                 Save changes, then review the updated card before confirming.
               </DialogDescription>
             </DialogHeader>

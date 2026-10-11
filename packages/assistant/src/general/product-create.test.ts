@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test"
 import { generalActionSchema, generalActionSummary } from "./contracts"
-import { isSimpleProductCreate, productCreateDraft } from "./product-create"
+import {
+  isSimpleProductCreate,
+  productCreateDraft,
+  productCreatePayload,
+} from "./product-create"
 
 // "Eggs: small 150, big 200 a piece, 30 make a crate, 20 big crates, 10 small."
 const eggs = {
@@ -97,4 +101,28 @@ test("a simple product keeps its single-price draft", () => {
   expect(generalActionSummary(parsed, "NGN")).toBe(
     "Indomie · ₦250.00 per Pack\nstock 40 Pack",
   )
+})
+
+test("a draft gets a matching library picture; a photo replaces it", () => {
+  const parsed = generalActionSchema.parse(eggs)
+  if (parsed.action !== "product_create") throw Error("wrong action")
+  const draft = productCreateDraft(parsed)
+  expect(draft.illustrationId).toBe("ill-egg")
+  expect(generalActionSummary(draft, "NGN").split("\n").at(-1)).toBe(
+    "Picture: Egg",
+  )
+  const photo = productCreateDraft({ ...draft, photoAssetId: "asset_1" })
+  expect(photo.illustrationId).toBeUndefined()
+  expect(productCreatePayload(photo).illustrationId).toBeUndefined()
+  expect(generalActionSummary(photo, "NGN").split("\n").at(-1)).toBe(
+    "Photo added",
+  )
+  // Removing the picture is kept; it is not picked again.
+  expect(
+    productCreateDraft({ ...draft, illustrationId: null }).illustrationId,
+  ).toBeNull()
+  expect(
+    generalActionSchema.safeParse({ ...eggs, illustrationId: "ill-unknown" })
+      .success,
+  ).toBe(false)
 })

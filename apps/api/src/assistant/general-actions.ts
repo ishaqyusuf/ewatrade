@@ -1,12 +1,3 @@
-import { orderAttachmentAdd } from "./general-order-attachment"
-import { billCorrection } from "./general-bill-correction"
-import { billPayment } from "./general-bill-payment"
-import { expenseRecord } from "./general-expense"
-import { moneyMovement } from "./general-money-movement"
-import { customerCreditApply } from "./general-customer-credit-apply"
-import { customerAllocationRelease } from "./general-customer-allocation-release"
-import { customerReceipt } from "./general-customer-receipt"
-import { heldCreditRefund } from "./general-held-credit-refund"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
@@ -41,17 +32,26 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import { billCorrection } from "./general-bill-correction"
+import { billPayment } from "./general-bill-payment"
 import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import {
   type GeneralContext,
   assertGeneralAction,
   requireGeneralScope,
 } from "./general-context"
+import { customerAllocationRelease } from "./general-customer-allocation-release"
+import { customerCreditApply } from "./general-customer-credit-apply"
+import { customerReceipt } from "./general-customer-receipt"
+import { expenseRecord } from "./general-expense"
+import { heldCreditRefund } from "./general-held-credit-refund"
+import { moneyMovement } from "./general-money-movement"
 import {
   orderCancel,
   orderMetadataUpdate,
   orderReplace,
 } from "./general-order-amendment"
+import { orderAttachmentAdd } from "./general-order-attachment"
 import { productAvailabilityUpdate } from "./general-product-availability"
 import { productBatchFulfill } from "./general-product-batch-fulfillment"
 import {
@@ -303,14 +303,41 @@ const customerCreate: GeneralActionAdapter<Action<"customer_create">> = {
 }
 
 const productCreate: GeneralActionAdapter<Action<"product_create">> = {
-  // Pack prices and pack-counted stock are written out, so the card is exact.
+  // Pack prices, pack-counted stock and the picture are written out, so the
+  // card is exact.
   prepare: async (_ctx, payload) => productCreateDraft(payload),
-  validate: async () => null,
+  // An uploaded photo must still be this business's, finished and unattached.
+  async validate(ctx, payload) {
+    if (!payload.photoAssetId) return null
+    const scope = requireGeneralScope(ctx)
+    const photo = await ctx.db.catalogPhotoAsset.findFirst({
+      where: {
+        id: payload.photoAssetId,
+        tenantId: scope.tenantId,
+        catalogItemId: null,
+        uploadedAt: { not: null },
+        storagePath: { not: null },
+        state: { in: ["PENDING_REVIEW", "APPROVED"] },
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    })
+    if (!photo)
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This photo is no longer available. Add it again.",
+      })
+    return null
+  },
   stale: "This draft changed. Review it again.",
   unavailable: "This product draft is unavailable.",
   async execute(ctx, payload, key) {
     const scope = requireGeneralScope(ctx)
-    const result = isSimpleProductCreate(payload)
+    const plain =
+      isSimpleProductCreate(payload) &&
+      !payload.illustrationId &&
+      !payload.photoAssetId
+    const result = plain
       ? await createSimpleCatalogItemInTransaction(ctx.db, {
           ...catalogCreateSimpleItemSchema.parse({
             name: payload.name,
@@ -326,7 +353,7 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
           tenantId: scope.tenantId,
           actorUserId: scope.userId,
         })
-      : // Packs and options use the same Catalog mapping as Setup.
+      : // Packs, options and pictures use the same Catalog mapping as Setup.
         await createCatalogItemInTransaction(ctx.db, {
           ...catalogCommandForSetupEntity(key, productCreatePayload(payload), {
             actorUserId: scope.userId,
@@ -334,6 +361,9 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
             tenantId: scope.tenantId,
           }),
           clientOperationId: key,
+          ...(payload.photoAssetId
+            ? { photoAssetIds: [payload.photoAssetId] }
+            : {}),
         })
     return {
       kind: "product",
@@ -351,8 +381,7 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     const scope = requireGeneralScope(ctx)
     const lines = await Promise.all(
       payload.lines.map(async (line) => {
-        if ("custom" in line || line.expectedConfigurationVersionId)
-          return line
+        if ("custom" in line || line.expectedConfigurationVersionId) return line
         const offering = await ctx.db.sellableOffering.findFirst({
           where: { id: line.offeringId, tenantId: scope.tenantId },
           select: {

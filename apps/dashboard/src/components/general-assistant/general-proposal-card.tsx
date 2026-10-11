@@ -4,7 +4,9 @@ import {
   type GeneralProposal,
   generalActionSummary,
 } from "@ewatrade/assistant/general/contracts"
+import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
 import { Badge, Button } from "@ewatrade/ui"
+import { GeneralProductPicture } from "./general-product-picture"
 
 const statusLabel: Record<GeneralProposal["status"], string> = {
   PENDING: "Needs your review",
@@ -49,9 +51,15 @@ export function GeneralProposalCard({
         </Button>
       </section>
     )
+  const product =
+    proposal.payload.action === "product_create" ? proposal.payload : null
+  // The picture shows as an image, so its text line is not repeated.
+  const picture = product ? productCreatePicture(product) : null
   const lines = (
     proposal.review ?? [generalActionSummary(proposal.payload, currencyCode)]
-  ).flatMap((line) => line.split("\n"))
+  )
+    .flatMap((line) => line.split("\n"))
+    .filter((line) => line !== picture)
   const lapsed = new Date(proposal.expiresAt).getTime() <= Date.now()
   const pending = proposal.status === "PENDING" && !lapsed
   // Expired drafts stay editable; saving issues a fresh approval.
@@ -68,12 +76,20 @@ export function GeneralProposalCard({
           {renewable ? statusLabel.EXPIRED : statusLabel[proposal.status]}
         </Badge>
       </div>
-      <ul className="space-y-1 text-sm">
-        {lines.map((line, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
-          <li key={index}>{line}</li>
-        ))}
-      </ul>
+      <div className="flex min-w-0 gap-3">
+        {product ? (
+          <GeneralProductPicture
+            payload={product}
+            onAdd={pending || renewable ? onEdit : undefined}
+          />
+        ) : null}
+        <ul className="min-w-0 flex-1 space-y-1 text-sm">
+          {lines.map((line, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
+            <li key={index}>{line}</li>
+          ))}
+        </ul>
+      </div>
       {pending ? (
         <p className="text-xs text-muted-foreground">
           Nothing changes until you confirm. Expires{" "}

@@ -1,3 +1,7 @@
+import {
+  findCatalogIllustration,
+  recommendCatalogIllustration,
+} from "@ewatrade/utils/catalog-illustrations"
 import { z } from "zod"
 import {
   type SetupProductPayload,
@@ -26,6 +30,10 @@ export const productCreateAction = z
     sellingUnits: setup.sellingUnits,
     options: setup.options,
     variants: setup.variants,
+    /** Library picture; null when the owner removed it. A photo replaces it. */
+    illustrationId: setup.illustrationId,
+    /** A Catalog photo the owner uploaded on this draft's card. */
+    photoAssetId: z.string().trim().min(1).max(128).optional(),
   })
   .strict()
   .superRefine((action, ctx) => {
@@ -52,6 +60,8 @@ export function productCreatePayload(
     sellingUnits: action.sellingUnits,
     options: action.options,
     variants: action.variants,
+    // Catalog keeps a photo or an illustration, never both.
+    illustrationId: action.photoAssetId ? undefined : action.illustrationId,
   }
 }
 
@@ -66,17 +76,29 @@ export function isSimpleProductCreate(action: ProductCreateAction) {
 
 /**
  * Writes every derived value into the draft so the card shows exactly what
- * will be saved: one row per option combination with its unit and pack
- * prices, and stock counted in the main unit.
+ * will be saved: a matching library illustration unless there is a photo or
+ * the owner removed it, one row per option combination with its unit and
+ * pack prices, and stock counted in the main unit.
  */
 export function productCreateDraft(
   action: ProductCreateAction,
 ): ProductCreateAction {
-  if (isSimpleProductCreate(action)) return action
+  const picture: Partial<ProductCreateAction> = action.photoAssetId
+    ? { illustrationId: undefined }
+    : action.illustrationId === undefined
+      ? {
+          illustrationId: recommendCatalogIllustration({
+            name: action.name,
+            kind: "product",
+          })?.id,
+        }
+      : {}
+  if (isSimpleProductCreate(action)) return { ...action, ...picture }
   const rows = setupProductVariants(productCreatePayload(action))
   const shared = !action.options?.length
   return {
     ...action,
+    ...picture,
     openingStock: undefined,
     variants: rows.map((row) => ({
       selections: row.selections,
@@ -92,18 +114,27 @@ export function productCreateDraft(
   }
 }
 
-/** Card lines: the product, then one line per option with prices and stock. */
+/** "Photo added" or "Picture: Egg tray"; null when there is neither. */
+export function productCreatePicture(action: ProductCreateAction) {
+  if (action.photoAssetId) return "Photo added"
+  const illustration = findCatalogIllustration(action.illustrationId)
+  return illustration ? `Picture: ${illustration.label}` : null
+}
+
+/** Card lines: the product, one line per option with prices and stock, then its picture. */
 export function productCreateSummary(
   action: ProductCreateAction,
   money: (minor: number) => string,
 ) {
   const unit = action.canonicalUnitName
+  const picture = productCreatePicture(action)
   const stockText = (quantity: string | undefined) =>
     quantity === undefined ? "no opening stock" : `stock ${quantity} ${unit}`
   if (isSimpleProductCreate(action))
     return [
       `${action.name} · ${action.priceMinor === undefined ? "price needed" : `${money(action.priceMinor)} per ${unit}`}`,
       action.openingStock === undefined ? null : stockText(action.openingStock),
+      picture,
     ]
       .filter(Boolean)
       .join("\n")
@@ -127,5 +158,6 @@ export function productCreateSummary(
   return [
     `${action.name} · counted in ${unit}${packs ? ` · ${packs}` : ""}`,
     ...rows,
+    ...(picture ? [picture] : []),
   ].join("\n")
 }

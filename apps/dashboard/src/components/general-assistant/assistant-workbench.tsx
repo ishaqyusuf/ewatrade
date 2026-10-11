@@ -21,6 +21,7 @@ import { useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { AssistantLinks } from "./assistant-links"
 import {
+  GENERAL_DIALOG,
   GeneralChatList,
   GeneralComposer,
   type GeneralPendingReview,
@@ -203,9 +204,9 @@ export function AssistantWorkbench() {
         </section>
       </div>
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="flex max-h-[80svh] max-w-[455px] flex-col gap-4 p-6 text-foreground">
+        <DialogContent className={GENERAL_DIALOG}>
           <DialogHeader className="pr-8">
-            <DialogTitle className="text-lg font-semibold">
+            <DialogTitle className="text-lg leading-none font-semibold">
               Chat history
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">

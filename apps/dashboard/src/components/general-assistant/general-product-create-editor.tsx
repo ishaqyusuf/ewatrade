@@ -1,8 +1,14 @@
 "use client"
+import { CatalogIllustrationPicker } from "@/components/catalog-item/catalog-illustration-picker"
+import { CatalogIllustrationPreview } from "@/components/catalog-item/catalog-illustration-preview"
+import { CatalogPhotoPreview } from "@/components/catalog-item/catalog-photo-preview"
+import { useCatalogPhoto } from "@/hooks/use-catalog-photo"
 import {
   type GeneralAction,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
+import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
+import { CATALOG_PHOTO_CONTENT_TYPES } from "@ewatrade/catalog/photo-contracts"
 import {
   Button,
   Field,
@@ -12,10 +18,17 @@ import {
   MoneyInput,
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
-import { useState } from "react"
+import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
+import { Image01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useRef, useState } from "react"
+import { useAssistantStoreId } from "./general-product-picture"
 type Action = Extract<GeneralAction, { action: "product_create" }>
 
-/** Packs and options: one price per unit and a stock count for each option. */
+/**
+ * A product draft: name, counting unit, a price per unit and stock for each
+ * option (one row for a simple product), and its photo or library picture.
+ */
 export function GeneralProductCreateEditor({
   initial,
   currencyCode,
@@ -29,60 +42,106 @@ export function GeneralProductCreateEditor({
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
-  const unit = initial.canonicalUnitName
+  const simple = isSimpleProductCreate(initial)
   const packs = initial.sellingUnits ?? []
   const variants = initial.variants ?? []
+  const storeId = useAssistantStoreId()
+  const photo = useCatalogPhoto(storeId ?? "")
+  const operation = useRef(crypto.randomUUID())
   const [name, setName] = useState(initial.name)
+  const [unit, setUnit] = useState(initial.canonicalUnitName)
+  // Undefined lets the server pick a matching picture; null means removed.
+  const [illustrationId, setIllustrationId] = useState(initial.illustrationId)
+  const [keptPhoto, setKeptPhoto] = useState(initial.photoAssetId)
+  const [picking, setPicking] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+  // The draft's picture unless a photo replaces it.
+  const illustration =
+    photo.file || keptPhoto
+      ? undefined
+      : findCatalogIllustration(illustrationId)
   const [rows, setRows] = useState(
-    variants.map((variant) => ({
-      prices: [
-        minorToMajorInput(variant.priceMinor),
-        ...packs.map((pack) =>
-          minorToMajorInput(
-            variant.sellingUnitPrices?.find(
-              (price) => price.unitName === pack.name,
-            )?.priceMinor,
-          ),
-        ),
-      ],
-      stock: variant.openingStock ?? "",
-    })),
+    simple
+      ? [
+          {
+            prices: [minorToMajorInput(initial.priceMinor)],
+            stock: initial.openingStock ?? "",
+          },
+        ]
+      : variants.map((variant) => ({
+          prices: [
+            minorToMajorInput(variant.priceMinor),
+            ...packs.map((pack) =>
+              minorToMajorInput(
+                variant.sellingUnitPrices?.find(
+                  (price) => price.unitName === pack.name,
+                )?.priceMinor,
+              ),
+            ),
+          ],
+          stock: variant.openingStock ?? "",
+        })),
   )
   const [error, setError] = useState<string | null>(null)
+  const busy = disabled || photo.uploading
   const units = [unit, ...packs.map((pack) => pack.name)]
   const label = (index: number) =>
     variants[index]?.selections.map((entry) => entry.value).join(" / ") ||
+    name ||
     initial.name
   const setRow = (index: number, next: Partial<(typeof rows)[number]>) =>
     setRows((current) =>
       current.map((row, at) => (at === index ? { ...row, ...next } : row)),
     )
-  function save() {
-    if (disabled) return
+  async function save() {
+    if (busy) return
     try {
-      const next = rows.map((row, index) => {
-        const minor = row.prices.map((price, at) => {
+      const priced = rows.map((row, index) => ({
+        minor: row.prices.map((price, at) => {
           const value = majorToMinor(price)
           if (value === null)
             throw Error(`Enter a price for ${label(index)} per ${units[at]}.`)
           return value
-        })
-        return {
-          selections: variants[index]?.selections ?? [],
-          priceMinor: minor[0],
-          sellingUnitPrices: packs.flatMap((pack, at) => {
-            const priceMinor = minor[at + 1]
-            return priceMinor === undefined
-              ? []
-              : [{ unitName: pack.name, priceMinor }]
-          }),
-          openingStock: row.stock.trim() || undefined,
+        }),
+        stock: row.stock.trim() || undefined,
+      }))
+      // A new photo replaces any earlier one and the library picture. A failed
+      // upload shows its own message under the picture.
+      let photoAssetId = keptPhoto
+      if (photo.file) {
+        try {
+          photoAssetId = (
+            await photo.upload(`assistant-product-${operation.current}`)
+          )[0]
+        } catch {
+          setError(null)
+          return
         }
-      })
+      }
       const parsed = generalActionSchema.safeParse({
         ...initial,
         name,
-        variants: next,
+        canonicalUnitName: unit,
+        illustrationId: photoAssetId ? undefined : illustrationId,
+        photoAssetId,
+        ...(simple
+          ? {
+              priceMinor: priced[0]?.minor[0],
+              openingStock: priced[0]?.stock,
+            }
+          : {
+              variants: priced.map((row, index) => ({
+                selections: variants[index]?.selections ?? [],
+                priceMinor: row.minor[0],
+                sellingUnitPrices: packs.flatMap((pack, at) => {
+                  const priceMinor = row.minor[at + 1]
+                  return priceMinor === undefined
+                    ? []
+                    : [{ unitName: pack.name, priceMinor }]
+                }),
+                openingStock: row.stock,
+              })),
+            }),
       })
       if (!parsed.success)
         throw Error(
@@ -101,20 +160,32 @@ export function GeneralProductCreateEditor({
       className="grid gap-5"
       onSubmit={(event) => {
         event.preventDefault()
-        save()
+        void save()
       }}
     >
       <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="product-create-name">Name</FieldLabel>
-          <Input
-            id="product-create-name"
-            value={name}
-            maxLength={160}
-            disabled={disabled}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="product-create-name">Name</FieldLabel>
+            <Input
+              id="product-create-name"
+              value={name}
+              maxLength={160}
+              disabled={busy}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="product-create-unit">Counted in</FieldLabel>
+            <Input
+              id="product-create-unit"
+              value={unit}
+              maxLength={80}
+              disabled={busy}
+              onChange={(event) => setUnit(event.target.value)}
+            />
+          </Field>
+        </div>
         {rows.map((row, index) => (
           <fieldset
             // biome-ignore lint/suspicious/noArrayIndexKey: rows follow the saved option order
@@ -124,15 +195,15 @@ export function GeneralProductCreateEditor({
             <legend className="px-1 text-sm font-medium">{label(index)}</legend>
             <div className="grid gap-3 sm:grid-cols-2">
               {units.map((unitName, at) => (
-                <Field key={unitName}>
+                <Field key={`${at}:${unitName}`}>
                   <FieldLabel htmlFor={`product-create-${index}-${at}`}>
-                    Price per {unitName}
+                    Price per {unitName || "unit"}
                   </FieldLabel>
                   <MoneyInput
                     id={`product-create-${index}-${at}`}
                     currencyCode={currencyCode}
                     value={row.prices[at] ?? ""}
-                    disabled={disabled}
+                    disabled={busy}
                     onChange={(event) =>
                       setRow(index, {
                         prices: row.prices.map((price, other) =>
@@ -145,14 +216,14 @@ export function GeneralProductCreateEditor({
               ))}
               <Field>
                 <FieldLabel htmlFor={`product-create-${index}-stock`}>
-                  Opening stock ({unit})
+                  Opening stock ({unit || "unit"})
                 </FieldLabel>
                 <Input
                   id={`product-create-${index}-stock`}
                   inputMode="decimal"
                   value={row.stock}
                   placeholder="None"
-                  disabled={disabled}
+                  disabled={busy}
                   onChange={(event) =>
                     setRow(index, { stock: event.target.value })
                   }
@@ -161,6 +232,112 @@ export function GeneralProductCreateEditor({
             </div>
           </fieldset>
         ))}
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">Picture</p>
+          <div className="flex items-center gap-3">
+            <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/40">
+              {photo.preview ? (
+                <img
+                  src={photo.preview}
+                  alt={name}
+                  className="size-full object-cover"
+                />
+              ) : keptPhoto && storeId ? (
+                <CatalogPhotoPreview
+                  assetId={keptPhoto}
+                  storeId={storeId}
+                  label={`${name} photo`}
+                  compact
+                />
+              ) : illustration ? (
+                <div className="size-full p-1.5">
+                  <CatalogIllustrationPreview
+                    illustrationId={illustration.id}
+                    compact
+                  />
+                </div>
+              ) : (
+                <HugeiconsIcon
+                  icon={Image01Icon}
+                  className="size-5 text-muted-foreground"
+                />
+              )}
+            </div>
+            <div className="flex min-w-0 flex-wrap gap-2">
+              <input
+                ref={fileInput}
+                type="file"
+                accept={CATALOG_PHOTO_CONTENT_TYPES.join(",")}
+                className="sr-only"
+                tabIndex={-1}
+                onChange={(event) => {
+                  const selected = event.currentTarget.files?.[0]
+                  if (selected && photo.select(selected)) setPicking(false)
+                  event.currentTarget.value = ""
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy || !storeId}
+                onClick={() => fileInput.current?.click()}
+              >
+                {photo.file || keptPhoto ? "Replace photo" : "Upload photo"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                aria-expanded={picking}
+                onClick={() => setPicking((open) => !open)}
+              >
+                {illustration && !photo.file && !keptPhoto
+                  ? "Change illustration"
+                  : "Choose illustration"}
+              </Button>
+              {photo.file || keptPhoto || illustration ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    if (photo.file) photo.select(null)
+                    else if (keptPhoto) setKeptPhoto(undefined)
+                    else setIllustrationId(null)
+                  }}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {picking ? (
+            <CatalogIllustrationPicker
+              kind="product"
+              selectedId={illustration?.id ?? null}
+              disabled={busy}
+              onSelect={(id) => {
+                photo.select(null)
+                setKeptPhoto(undefined)
+                setIllustrationId(id)
+                setPicking(false)
+              }}
+            />
+          ) : null}
+          {photo.error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {photo.error}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              A photo replaces the illustration. JPG, PNG, WebP or HEIC, up to
+              10 MB.
+            </p>
+          )}
+        </div>
       </FieldGroup>
       {error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -171,8 +348,8 @@ export function GeneralProductCreateEditor({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={disabled}>
-          Save draft
+        <Button type="submit" disabled={busy}>
+          {photo.uploading ? "Uploading photo…" : "Save draft"}
         </Button>
       </div>
     </form>

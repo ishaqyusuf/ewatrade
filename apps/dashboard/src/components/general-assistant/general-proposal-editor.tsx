@@ -1,12 +1,9 @@
 "use client"
-import { CATALOG_FREE_LINE_LABELS } from "@ewatrade/utils/catalog-free-lines"
-import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
-import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
 import {
   Button,
   Field,
@@ -18,16 +15,18 @@ import {
   Textarea,
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
+import { CATALOG_FREE_LINE_LABELS } from "@ewatrade/utils/catalog-free-lines"
 import { useState } from "react"
-import { GeneralCloseoutEditor } from "./general-closeout-editor"
-import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
-import { GeneralProductCreateEditor } from "./general-product-create-editor"
+import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import { GeneralBillPaymentEditor } from "./general-bill-payment-editor"
-import { GeneralExpenseEditor } from "./general-expense-editor"
-import { GeneralMoneyMovementEditor } from "./general-money-movement-editor"
+import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralCustomerCreditEditor } from "./general-customer-credit-editor"
 import { GeneralCustomerReceiptEditor } from "./general-customer-receipt-editor"
+import { GeneralExpenseEditor } from "./general-expense-editor"
 import { GeneralHeldCreditRefundEditor } from "./general-held-credit-refund-editor"
+import { GeneralMoneyMovementEditor } from "./general-money-movement-editor"
+import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
+import { GeneralProductCreateEditor } from "./general-product-create-editor"
 import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralSaleCustomer } from "./general-sale-customer"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
@@ -129,10 +128,7 @@ export function GeneralProposalEditor(props: {
         onCancel={props.onCancel}
       />
     )
-  if (
-    props.proposal.payload.action === "product_create" &&
-    !isSimpleProductCreate(props.proposal.payload)
-  )
+  if (props.proposal.payload.action === "product_create")
     return (
       <GeneralProductCreateEditor
         initial={props.proposal.payload}
