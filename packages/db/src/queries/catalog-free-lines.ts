@@ -10,26 +10,32 @@ import {
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog-errors"
 
+import {
+  CATALOG_FREE_DESCRIPTION_MAX_LENGTH,
+  CATALOG_FREE_LINE_LABELS,
+  CATALOG_FREE_NO_DESCRIPTION,
+  type CatalogFreeLineKind,
+  catalogFreeLineKinds,
+} from "@ewatrade/utils/catalog-free-lines"
+
 /**
  * Catalog-free Order lines let a business record sales before it has a
  * Catalog. Each kind is backed by one hidden, built-in charge-only Service
  * item per Tenant so stock, finance and reporting keep their Offering joins.
  */
-export const catalogFreeLineKinds = ["quick_sale", "additional_cost"] as const
-export type CatalogFreeLineKind = (typeof catalogFreeLineKinds)[number]
+export {
+  CATALOG_FREE_DESCRIPTION_MAX_LENGTH,
+  CATALOG_FREE_LINE_LABELS,
+  CATALOG_FREE_NO_DESCRIPTION,
+  type CatalogFreeLineKind,
+  catalogFreeLineKinds,
+}
 
 export type CommercialOrderCustomLineInput = {
   custom: CatalogFreeLineKind
   description?: string
   amountMinor: number
 }
-
-export const CATALOG_FREE_LINE_LABELS: Record<CatalogFreeLineKind, string> = {
-  additional_cost: "Additional cost",
-  quick_sale: "Quick sale",
-}
-export const CATALOG_FREE_NO_DESCRIPTION = "(no description)"
-export const CATALOG_FREE_DESCRIPTION_MAX_LENGTH = 200
 
 const roleByKind: Record<CatalogFreeLineKind, CatalogSystemRole> = {
   additional_cost: CatalogSystemRole.ADDITIONAL_COST,
