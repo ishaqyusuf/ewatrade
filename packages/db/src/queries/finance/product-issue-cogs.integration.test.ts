@@ -214,7 +214,8 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
         code: `COGS-${runId.slice(0, 8)}`,
         name: "Product issue COGS QA supplier",
       })
-      await recordFinancePurchase(db, {
+      checkpoint("opening-purchase-started")
+      await trace("opening-purchase", () => recordFinancePurchase(db, {
         ...actor,
         bookId: book.id,
         clientCommandId: `product-issue-cogs-opening-${runId}`,
@@ -234,7 +235,7 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
             categories: [{ name: `COGS ${runId.slice(0, 8)}` }],
           },
         ],
-      })
+      }))
       const pool = () =>
         db.financeInventoryPool.findUniqueOrThrow({
           where: {
