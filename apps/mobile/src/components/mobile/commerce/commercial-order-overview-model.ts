@@ -1,4 +1,8 @@
-import { formatMinorMoney } from "@ewatrade/utils"
+import {
+  addExactDecimals,
+  compareExactDecimals,
+  formatMinorMoney,
+} from "@ewatrade/utils"
 import {
   type CommercialOrder,
   type CommercialOrderLine,
@@ -33,6 +37,24 @@ export function canFulfillCommercialOrderLine(line: CommercialOrderLine) {
     line.productFulfillments.length === 0 &&
     line.reservation?.status === "ACTIVE"
   )
+}
+
+/** How much of a handed-over product line came back, if any. */
+export function commercialOrderLineReturnState(line: CommercialOrderLine) {
+  const sum = (values: { quantity: string }[]) =>
+    values.reduce(
+      (total, value) => addExactDecimals(total, value.quantity),
+      "0",
+    )
+  const returned = sum(line.productReturns)
+  if (compareExactDecimals(returned, "0") <= 0) return null
+  const handedOver = sum(line.productFulfillments)
+  return compareExactDecimals(returned, handedOver) >= 0
+    ? { all: true, label: "Returned" }
+    : {
+        all: false,
+        label: `${formatCommerceQuantity(returned)} of ${formatCommerceQuantity(handedOver)} returned`,
+      }
 }
 
 /** Typed-price lines are fulfilled by the all-lines command only. */

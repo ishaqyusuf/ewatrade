@@ -12,6 +12,7 @@ import {
 import {
   type CommercialOrderActivity,
   canFulfillCommercialOrderLine,
+  commercialOrderLineReturnState,
   getCommercialOrderOverviewSummary,
 } from "@/components/mobile/commerce/commercial-order-overview-model"
 import { recordAvatar } from "@/components/mobile/dashboard/green-till-home-model"
@@ -675,6 +676,7 @@ function OrderLineRow({
     line.unitPriceMinor === null
       ? "price set in order"
       : formatMinorMoney(line.unitPriceMinor, order.currencyCode)
+  const returned = commercialOrderLineReturnState(line)
   const state = catalogFree
     ? line.serviceFulfillment
       ? { label: "Fulfilled", icon: "Check" as const, tint: "mint" as const }
@@ -685,21 +687,31 @@ function OrderLineRow({
           icon: "Wrench" as const,
           tint: "lilac" as const,
         }
-      : line.productFulfillments.length > 0
-        ? { label: "Fulfilled", icon: "Check" as const, tint: "mint" as const }
-        : line.reservation?.status === "ACTIVE"
+      : returned
+        ? {
+            label: returned.label,
+            icon: "Undo2" as const,
+            tint: "amber" as const,
+          }
+        : line.productFulfillments.length > 0
           ? {
-              label: "Reserved · ready",
-              icon: "Package" as const,
-              tint: "sky" as const,
+              label: "Fulfilled",
+              icon: "Check" as const,
+              tint: "mint" as const,
             }
-          : line.reservation
+          : line.reservation?.status === "ACTIVE"
             ? {
-                label: commerceStatusLabel(line.reservation.status),
+                label: "Reserved · ready",
                 icon: "Package" as const,
-                tint: null,
+                tint: "sky" as const,
               }
-            : { label: "Not reserved", icon: "Package" as const, tint: null }
+            : line.reservation
+              ? {
+                  label: commerceStatusLabel(line.reservation.status),
+                  icon: "Package" as const,
+                  tint: null,
+                }
+              : { label: "Not reserved", icon: "Package" as const, tint: null }
   return (
     <View
       className={cn(

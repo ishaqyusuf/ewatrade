@@ -3,6 +3,7 @@ import type { CommercialOrder } from "./commerce-model"
 import {
   buildCommercialOrderActivity,
   canFulfillCommercialOrderLine,
+  commercialOrderLineReturnState,
   getCommercialOrderOverviewSummary,
 } from "./commercial-order-overview-model"
 
@@ -140,6 +141,42 @@ function makeOrder(): CommercialOrder {
 }
 
 describe("commercial order overview model", () => {
+  test("says how much of a handed-over line came back", () => {
+    const [line] = makeOrder().lines
+    if (!line) throw new Error("fixture line missing")
+    const handed = (quantity: string) => ({
+      id: `f-${quantity}`,
+      quantity,
+      stockOperationId: "op-f",
+    })
+    const back = (quantity: string) => ({
+      disposition: "RESTOCK" as const,
+      id: `r-${quantity}`,
+      quantity,
+      stockOperationId: "op-r",
+    })
+    expect(
+      commercialOrderLineReturnState({
+        ...line,
+        productFulfillments: [handed("2")],
+      }),
+    ).toBeNull()
+    expect(
+      commercialOrderLineReturnState({
+        ...line,
+        productFulfillments: [handed("2")],
+        productReturns: [back("0.5")],
+      }),
+    ).toEqual({ all: false, label: "0.5 of 2 returned" })
+    expect(
+      commercialOrderLineReturnState({
+        ...line,
+        productFulfillments: [handed("2")],
+        productReturns: [back("1"), back("1")],
+      }),
+    ).toEqual({ all: true, label: "Returned" })
+  })
+
   test("derives summary counts without blending product and service work", () => {
     const order = makeOrder()
     const [productLine, serviceLine] = order.lines
