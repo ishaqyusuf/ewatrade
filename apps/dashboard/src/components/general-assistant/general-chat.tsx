@@ -150,11 +150,14 @@ export function GeneralThread({
   compact = false,
   focusId = null,
   onFocused,
+  contentClassName,
 }: {
   vm: GeneralAssistantVM
   compact?: boolean
   focusId?: string | null
   onFocused?: () => void
+  /** Width of the message column, e.g. a centred reading width on the page. */
+  contentClassName?: string
 }) {
   const openReceipt = useAssistantReceipt()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
@@ -188,6 +191,7 @@ export function GeneralThread({
           className={cn(
             "flex flex-col gap-5 py-6",
             compact ? "px-4" : "px-4 sm:px-6",
+            contentClassName,
           )}
         >
           {compact && !enabled ? (
@@ -275,20 +279,7 @@ export function GeneralThread({
                 Ask about sales, orders, products and stock, or draft a
                 customer, sale or payment. Nothing changes until you confirm.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {suggestions.map((suggestion) => (
-                  <Button
-                    key={suggestion}
-                    size="sm"
-                    variant="outline"
-                    className="rounded-[999px]"
-                    disabled={disabled}
-                    onClick={() => vm.setDraft(suggestion)}
-                  >
-                    {suggestion}
-                  </Button>
-                ))}
-              </div>
+              <GeneralSuggestions vm={vm} />
             </div>
           ) : null}
           {vm.chat.messages.map((message) => {
@@ -462,6 +453,33 @@ export function GeneralComposer({
   )
 }
 
+/** Starter questions that fill the composer. */
+export function GeneralSuggestions({
+  vm,
+  className,
+}: {
+  vm: GeneralAssistantVM
+  className?: string
+}) {
+  const { disabled } = generalChatFlags(vm)
+  return (
+    <div className={cn("flex flex-wrap gap-2", className)}>
+      {suggestions.map((suggestion) => (
+        <Button
+          key={suggestion}
+          size="sm"
+          variant="outline"
+          className="rounded-[999px]"
+          disabled={disabled}
+          onClick={() => vm.setDraft(suggestion)}
+        >
+          {suggestion}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
 export function allowanceLine(vm: GeneralAssistantVM) {
   if (!vm.data) return null
   return `${vm.data.allowance.remainingRequests} messages left · resets ${new Date(
@@ -500,9 +518,12 @@ function groupChats(chats: SavedChat[], now = new Date()) {
 export function GeneralChatList({
   vm,
   pendingChats,
+  onChosen,
 }: {
   vm: GeneralAssistantVM
   pendingChats: Set<string>
+  /** Called after a chat is opened, e.g. to close the history dialog. */
+  onChosen?: () => void
 }) {
   const { disabled } = generalChatFlags(vm)
   return (
@@ -519,7 +540,10 @@ export function GeneralChatList({
                   type="button"
                   disabled={disabled}
                   aria-current={conversation.id === vm.conversationId}
-                  onClick={() => vm.choose(conversation.id)}
+                  onClick={() => {
+                    vm.choose(conversation.id)
+                    onChosen?.()
+                  }}
                   className={cn(
                     "w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:opacity-60",
                     conversation.id === vm.conversationId &&
