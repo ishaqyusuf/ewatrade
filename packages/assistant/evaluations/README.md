@@ -26,6 +26,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier receipt Open/Close, 11 October 2026](runs/2026-10-11-supplier-receipt-web.md): saved receipt opens exact supplier statement over chat, zero balances/activity, Close preserves chat; owned cleanup verified. Backend confirmation only.
+
 - [Supplier editor component, 11 October 2026](runs/2026-10-11-supplier-editor.md): three layouts compared; field refusal, normalized save/preserved Book and Cancel checked in browser, screenshot retained. Full chat flow pending.
 
 - [Coverage reconciled, 11 October 2026](runs/2026-10-11-coverage-reconciled.md): classified saved Order activity read as planned H04, regenerated current catalog; coverage test passes4 assertions. Earlier classification blocker resolved.
