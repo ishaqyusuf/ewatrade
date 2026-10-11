@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Prisma } from "../../generated/prisma/client"
-import { getCommercialProductLineReview } from "./commercial-product-line-review"
+import { getCommercialProductLineReview, getCommercialProductLineReviews } from "./commercial-product-line-review"
 const input = { tenantId: "tenant", storeId: "store", orderLineId: "line" }
 const decimal = (value: string) => new Prisma.Decimal(value)
 function fixture(packaged = false) {
@@ -74,4 +74,29 @@ test("review refuses missing scope, changed reservation, future schedule and com
   await expect(getCommercialProductLineReview(f.db, input)).rejects.toMatchObject({ code: "INVALID_ORDER" })
   f.hide()
   await expect(getCommercialProductLineReview(f.db, input)).rejects.toMatchObject({ code: "ORDER_NOT_FOUND" })
+})
+
+test("batched review preserves requested order and exact single-line digests", async () => {
+  const f = fixture()
+  const second = { ...f.line, id: "second", stockReservation: { ...f.line.stockReservation, commercialOrderLineId: "second" } }
+  let loads = 0
+  const db = { ...f.db, commercialOrderLine: {
+    findFirst: async ({ where }: { where: { id: string } }) => where.id === "second" ? second : f.line,
+    findMany: async (query: unknown) => {
+      loads++
+      expect(query).toMatchObject({ where: { id: { in: ["line", "second"] }, order: { tenantId: "tenant", storeId: "store" } } })
+      return [second, f.line]
+    },
+  } } as unknown as Prisma.TransactionClient
+  const expected = [await getCommercialProductLineReview(db, input), await getCommercialProductLineReview(db, { ...input, orderLineId: "second" })]
+  const result = await getCommercialProductLineReviews(db, { tenantId: "tenant", storeId: "store", orderLineIds: ["line", "second"] })
+  expect(result).toEqual(expected)
+  expect(loads).toBe(1)
+})
+
+test("batched review refuses a missing scoped line instead of silently omitting it", async () => {
+  const f = fixture()
+  const db = { ...f.db, commercialOrderLine: { findMany: async () => [f.line] } } as unknown as Prisma.TransactionClient
+  await expect(getCommercialProductLineReviews(db, { tenantId: "tenant", storeId: "store", orderLineIds: ["line", "missing"] }))
+    .rejects.toMatchObject({ code: "ORDER_NOT_FOUND" })
 })

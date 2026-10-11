@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import type { Prisma } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog-errors"
-import { getCommercialProductLineReview } from "./commercial-product-line-review"
+import { getCommercialProductLineReviews } from "./commercial-product-line-review"
 import { getCommercialServiceLineReview } from "./commercial-service-line-review"
 import { productBatchImpact } from "./product-batch-impact"
 
@@ -24,12 +24,12 @@ export async function getCommercialProductBatchReview(
     select: { id: true, kind: true },
   })
   if (!targets.length) throw new CatalogError("INVALID_ORDER", "This Order has no remaining eligible fulfillment lines.")
-  const products: Awaited<ReturnType<typeof getCommercialProductLineReview>>[] = []
+  const products = await getCommercialProductLineReviews(db, { ...input,
+    orderLineIds: targets.filter(target => target.kind === "PRODUCT_UNIT").map(target => target.id),
+  })
   const services: Awaited<ReturnType<typeof getCommercialServiceLineReview>>[] = []
   for (const target of targets) {
-    if (target.kind === "PRODUCT_UNIT") {
-      products.push(await getCommercialProductLineReview(db, { ...input, orderLineId: target.id }))
-    } else {
+    if (target.kind !== "PRODUCT_UNIT") {
       const service = await getCommercialServiceLineReview(db, { ...input, orderLineId: target.id, action: "fulfill" })
       if (!service.eligible)
         throw new CatalogError("INVALID_ORDER", service.blocker?.message ?? "A catalog-free line cannot be fulfilled.")

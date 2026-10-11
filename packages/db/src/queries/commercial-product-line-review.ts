@@ -6,14 +6,7 @@ import { isCommercialOrderFulfillmentAllowed } from "./commercial-order-completi
 import { previewOrdinaryAdjustmentCost } from "./finance/preview-ordinary-adjustment-cost"
 import { reservationCommitImpact } from "./reservation-commit-impact"
 
-/** Authorized callers only. Confirmation must repeat under financial/order/reservation/balance locks. */
-export async function getCommercialProductLineReview(
-  db: Prisma.TransactionClient,
-  input: { tenantId: string; storeId: string; orderLineId: string },
-) {
-  const line = await db.commercialOrderLine.findFirst({
-    where: { id: input.orderLineId, order: { tenantId: input.tenantId, storeId: input.storeId } },
-    include: {
+const productLineReviewInclude = {
       snapshot: true,
       productFulfillments: { select: { id: true }, orderBy: { id: "asc" } },
       stockReservation: { include: { enteredInventoryUnit: true, balanceSource: { include: { inventoryUnit: true } } } },
@@ -23,8 +16,39 @@ export async function getCommercialProductLineReview(
         prescriptionPickupFulfillment: { select: { orderId: true } },
         prescriptionDeliveryAssignment: { select: { orderId: true } },
       } },
-    },
+    } satisfies Prisma.CommercialOrderLineInclude
+
+type ProductReviewLine = Prisma.CommercialOrderLineGetPayload<{ include: typeof productLineReviewInclude }>
+type ProductReviewScope = { tenantId: string; storeId: string; orderLineId: string }
+
+/** Authorized callers only. Confirmation repeats under canonical locks. */
+export async function getCommercialProductLineReview(db: Prisma.TransactionClient, input: ProductReviewScope) {
+  const line = await db.commercialOrderLine.findFirst({
+    where: { id: input.orderLineId, order: { tenantId: input.tenantId, storeId: input.storeId } },
+    include: productLineReviewInclude,
   })
+  return reviewProductLine(db, input, line)
+}
+
+/** Batch relation loads without changing individual line validation or digests. */
+export async function getCommercialProductLineReviews(
+  db: Prisma.TransactionClient,
+  input: { tenantId: string; storeId: string; orderLineIds: string[] },
+) {
+  if (!input.orderLineIds.length) return []
+  const lines = await db.commercialOrderLine.findMany({
+    where: { id: { in: input.orderLineIds }, order: { tenantId: input.tenantId, storeId: input.storeId } },
+    include: productLineReviewInclude,
+  })
+  const byId = new Map(lines.map(line => [line.id, line]))
+  const reviews: Awaited<ReturnType<typeof reviewProductLine>>[] = []
+  for (const orderLineId of input.orderLineIds) {
+    reviews.push(await reviewProductLine(db, { tenantId: input.tenantId, storeId: input.storeId, orderLineId }, byId.get(orderLineId) ?? null))
+  }
+  return reviews
+}
+
+async function reviewProductLine(db: Prisma.TransactionClient, input: ProductReviewScope, line: ProductReviewLine | null) {
   if (!line) throw new CatalogError("ORDER_NOT_FOUND", "Order line was not found in this Store.")
   const reservation = line.stockReservation
   const snapshot = line.snapshot
