@@ -12,6 +12,10 @@ Other capabilities do not yet have versioned conversation fixtures here. H03 is
 incomplete. Existing unit/integration tests and local web acceptance records remain
 separate evidence; do not import them as successful model evaluations.
 
+## Recorded non-model evidence
+
+- [Bulk fulfillment database acceptance, 11 October 2026](runs/2026-10-11-bulk-database.md): 24 assertions passed; no-Finance-Book scope only. This is not a model evaluation.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
