@@ -1,5 +1,6 @@
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
+import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import { createFinanceBook, getFinanceMoneyMovement } from "@ewatrade/db/queries"
 import type { GeneralContext } from "./general-context"
@@ -21,7 +22,7 @@ export async function verifyMoneyMovementComposition(original: GeneralContext, f
     const cash = await db.financeAccount.findFirstOrThrow({ where: { bookId: book.id, purpose: "CASH" } })
     const bank = await db.financeAccount.findFirstOrThrow({ where: { bookId: book.id, purpose: "BANK" } })
     const payload = { action: "money_movement" as const, kind: "TRANSFER" as const, bookId: book.id, accountId: cash.id, destinationAccountId: bank.id, amountMinor: "1000", description: "Completed QA cash deposit", effectiveAt: "2026-10-01T12:00:00.123Z", movementAlreadyCompleted: true as const }
-    async function draft(input = payload) {
+    async function draft(input: Extract<GeneralAction, {action: "money_movement"}> = payload) {
       const result = await draftGeneralProposal(ctx, conversationId, input)
       const row = await db.assistantActionProposal.findUniqueOrThrow({ where: { id: result.proposalId } })
       const reviewed = await generalProposalWithReview(ctx, row)
@@ -55,6 +56,32 @@ export async function verifyMoneyMovementComposition(original: GeneralContext, f
     expect(await db.financeCommand.count({ where: { bookId: book.id } })).toBe(1)
     expect(await db.customerLedgerReceipt.count({ where: { entry: { tenantId } } })).toBe(0)
     console.info("Money movement acceptance: one balanced journal and receipt read passed")
+    console.info("Money movement acceptance: owner funds and concurrent confirmation")
+    for (const kind of ["OWNER_CONTRIBUTION", "OWNER_WITHDRAWAL"] as const) {
+      const ownerCommand = await draft({ ...payload, kind, destinationAccountId: undefined, amountMinor: "250", description: `Completed QA ${kind}` })
+      const attempts = await Promise.allSettled([decideGeneralProposal(ctx, ownerCommand), decideGeneralProposal(ctx, ownerCommand)])
+      expect(attempts.some(result => result.status === "fulfilled")).toBe(true)
+      for (const result of attempts) {
+        if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "CONFLICT" })
+      }
+      const recovered = await decideGeneralProposal(ctx, ownerCommand)
+      for (const result of attempts) if (result.status === "fulfilled") expect(result.value.receipt).toEqual(recovered.receipt)
+      const saved = await getFinanceMoneyMovement(db, { ...actor, bookId: book.id, entryId: recovered.receipt!.recordId })
+      const equity = await db.financeAccount.findUniqueOrThrow({ where: { bookId_code: { bookId: book.id, code: kind === "OWNER_CONTRIBUTION" ? "3000" : "3100" } } })
+      expect(saved.sourceKind).toBe(kind)
+      expect(saved.lines).toHaveLength(2)
+      expect(saved.lines.find(line => line.accountId === cash.id)).toMatchObject(kind === "OWNER_CONTRIBUTION" ? { debitMinor: "250", creditMinor: "0" } : { debitMinor: "0", creditMinor: "250" })
+      expect(saved.lines.find(line => line.accountId === equity.id)).toMatchObject(kind === "OWNER_CONTRIBUTION" ? { debitMinor: "0", creditMinor: "250" } : { debitMinor: "250", creditMinor: "0" })
+      expect(await db.financeJournalEntry.count({ where: { bookId: book.id, sourceKind: kind } })).toBe(1)
+    }
+    console.info("Money movement acceptance: period closed after review")
+    const closedCommand = await draft()
+    await db.financeBook.update({ where: { id: book.id }, data: { closedThrough: new Date("2026-10-02T00:00:00.000Z") } })
+    await expect(decideGeneralProposal(ctx, closedCommand)).rejects.toMatchObject({ code: "CLOSED_PERIOD" })
+    expect((await db.assistantActionProposal.findUniqueOrThrow({ where: { id: closedCommand.proposalId } })).status).toBe("PENDING")
+    expect(await db.financeJournalEntry.count({ where: { bookId: book.id } })).toBe(3)
+    expect(await db.financeCommand.count({ where: { bookId: book.id } })).toBe(3)
+    console.info("Money movement acceptance: owner directions, concurrent replay and closed period passed")
   } finally {
     Object.assign(capability, { rollout })
     console.info("Money movement acceptance: cleanup owned fixtures")

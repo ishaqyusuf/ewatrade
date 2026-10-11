@@ -21,6 +21,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Owner funds and concurrent confirmation, 11 October 2026](runs/2026-10-11-money-movement-owner-database.md): 51 assertions passed for transfer/owner journals, simultaneous confirmation recovery and period closed after review; cleanup verified.
+
 - [Money movement database acceptance, 11 October 2026](runs/2026-10-11-money-movement-database.md): 25 assertions passed for transfer rollback/replay, balanced journal and canonical receipt; owned cleanup verified. Owner-funds/concurrency/full web acceptance remain pending.
 
 - [Money movement proposals and components, 11 October 2026](runs/2026-10-11-money-movement-adapter.md): 7 tests/73 assertions; editor validation and unavailable global receipt checks passed; database/full web acceptance pending.
