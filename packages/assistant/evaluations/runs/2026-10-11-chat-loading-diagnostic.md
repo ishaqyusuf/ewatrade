@@ -21,3 +21,19 @@ left untouched. No access guard weakened, no speculative fix, no mobile work.
 
 Next: capture the failing response or error-boundary cause before changing code; then
 repeat the exact saved-chat and receipt-read flows. E04/full web acceptance incomplete.
+
+## Follow-up: composer failure captured and reload recovered
+
+Browser console captured TypeError: Cannot read properties of undefined (reading
+length), originating in GeneralComposer at 2026-10-11T15:35:02.132Z. Current source
+reads vm.readyAttachments.length; concurrent attachment work added that field to
+useGeneralAssistant. Both files were being edited by another session. No competing
+source edit or commit was made here.
+
+A reload against the current files completed: existing empty chat loaded, welcome
+heading/composer rendered, and screenshot e04-composer-recovered.jpg confirmed the
+same successful state. This supports a transient mismatch during concurrent development;
+it does not prove the earlier saved correction-chat or receipt-generation error fixed.
+No model call, financial mutation, additional chat creation or server restart in this
+follow-up. Temporary tab closed. Next acceptance should re-exercise correction history
+and expense receipt reads using a stable runtime.
