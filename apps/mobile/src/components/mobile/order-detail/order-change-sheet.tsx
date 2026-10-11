@@ -1238,8 +1238,8 @@ function ReturnForm({
         !moneyOn || !chosen.length
           ? "Record return"
           : refund > 0
-            ? `Return and refund ${money(refund)}`
-            : `Return and take off ${money(value)}`
+            ? `Refund ${money(refund)}`
+            : `Take off ${money(value)}`
       }
       onConfirm={() =>
         void changes.returnItems({
