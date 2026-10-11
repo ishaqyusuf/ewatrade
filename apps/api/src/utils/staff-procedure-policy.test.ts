@@ -44,3 +44,15 @@ test("assistant staging delegates decisions to scoped action checks; stock inspe
     staffProcedureAction("assistant.executeAnyAction", "mutation"),
   ).toBeNull()
 })
+
+test("scoped staff read order history and options and add order notes", () => {
+  for (const path of [
+    "orders.timeline",
+    "orders.changeOptions",
+    "orders.activity.list",
+  ]) {
+    expect(staffProcedureAction(path, "query")).toBe("read")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+  }
+  expect(staffProcedureAction("orders.activity.add", "mutation")).toBe("orders")
+})

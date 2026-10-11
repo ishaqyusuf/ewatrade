@@ -27,6 +27,10 @@ const reads = new Set([
   "orders.reportSummary",
   "orders.operationalSummary",
   "orders.get",
+  // Order history, Change menu options and notes; each applies orderScope.
+  "orders.timeline",
+  "orders.changeOptions",
+  "orders.activity.list",
   "orders.lookupOpen",
   "orders.lookupOpenPage",
   "stores.orderVisibility",
@@ -45,6 +49,7 @@ const orders = new Set([
   "orders.fulfillProducts",
   "orders.recordPayment",
   "orders.returnProductLine",
+  "orders.activity.add",
   "inventory.reserveOffering",
   "inventory.releaseReservation",
   "inventory.commitReservation",
@@ -71,8 +76,12 @@ const stock = new Set([
   "inventory.transitionTransfer",
 ])
 const reconciliation = new Set([
-  "orders.cancel", "orders.amendMetadata", "orders.replace",
-  "orders.cancellationReview", "orders.metadataReview", "orders.replacementReview",
+  "orders.cancel",
+  "orders.amendMetadata",
+  "orders.replace",
+  "orders.cancellationReview",
+  "orders.metadataReview",
+  "orders.replacementReview",
   "inventory.reconciliationReport",
   "inventory.closeouts",
   "inventory.closeoutReview",
