@@ -1,6 +1,6 @@
 "use client"
-import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 import { CatalogAppearance } from "@/components/catalog-item/catalog-appearance"
+import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 import { CatalogItemSheet } from "@/components/catalog-item/catalog-item-sheet"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { Button } from "@ewatrade/ui"
@@ -23,6 +23,8 @@ import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
 import { StoreConversationSheet } from "./store-conversation-sheet"
 
 export type GlobalSheetAccess = {
+  /** Website & domain launch gate and role; the sheet mounts only when true. */
+  domains?: boolean
   sales: boolean
   catalog?: boolean
   scopedStaff?: boolean
@@ -76,7 +78,9 @@ export function GlobalSheets({
           </Button>
         </div>
       ) : null}
-      {!access.scopedStaff ? <DomainSheet store={store} /> : null}
+      {access.domains && !access.scopedStaff ? (
+        <DomainSheet store={store} />
+      ) : null}
       {access.catalog ? <CatalogItemDetailModal store={store} /> : null}
       {access.sales ? (
         <>

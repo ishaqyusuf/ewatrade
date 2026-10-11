@@ -137,12 +137,15 @@ export function buildAdminMoreSections({
   planFeatures,
   role,
   staffAccessMode,
+  websiteDomainsEnabled = false,
 }: {
   availability: MobileWorkspaceFeatureAvailability
   /** Unknown (offline or unread) plans are not gated here. */
   planFeatures?: readonly RetailOpsPlanFeature[]
   role: AdminManagementRole
   staffAccessMode?: "LEGACY" | "SCOPED"
+  /** Website & domain launch gate from the API; hidden unless true. */
+  websiteDomainsEnabled?: boolean
 }): AdminMoreSection[] {
   const storeItems: AdminMoreItem[] = [
     {
@@ -223,15 +226,16 @@ export function buildAdminMoreSections({
       id: "receipt-settings",
       label: "Receipt settings",
     })
-    storefrontItems.push({
-      action: {
-        href: "/domain-management-modal" as LinkProps["href"],
-        kind: "route",
-      },
-      icon: "Globe",
-      id: "website-domain",
-      label: "Website & domain",
-    })
+    if (websiteDomainsEnabled)
+      storefrontItems.push({
+        action: {
+          href: "/domain-management-modal" as LinkProps["href"],
+          kind: "route",
+        },
+        icon: "Globe",
+        id: "website-domain",
+        label: "Website & domain",
+      })
     storefrontItems.push({
       action: { href: "/subscription-modal", kind: "route" },
       icon: "CreditCard",

@@ -1,5 +1,6 @@
 import { type Prisma, prisma } from "@ewatrade/db"
 import {
+  isWebsiteDomainsLaunchApproved,
   markDomainOrderPaid,
   markDomainOrderRefunded,
   recordDomainRefundEvent,
@@ -25,6 +26,11 @@ const paystackEventSchema = z.object({
 
 export function registerDomainPaystackWebhook(app: OpenAPIHono) {
   app.post("/api/domains/webhooks/paystack", async (c) => {
+    // Held back until launch; 503 lets the provider retry after approval.
+    if (!isWebsiteDomainsLaunchApproved()) {
+      return c.json({ error: "Domain purchases are unavailable." }, 503)
+    }
+
     const secretKey = process.env.PAYSTACK_SECRET_KEY?.trim()
 
     if (!secretKey) {

@@ -13,6 +13,7 @@ import {
   createExternalDomainConnection,
   getDomainOrder,
   getDomainRegistrantProfile,
+  isWebsiteDomainsLaunchApproved,
   listDomainConnections,
   updateDomainConnectionStatus,
   upsertDomainRegistrantProfile,
@@ -87,8 +88,24 @@ function storefrontProjectId() {
   return requireEnv("VERCEL_STOREFRONT_PROJECT_ID")
 }
 
+// Website & domain is held back until launch approval (owner, 11 Oct 2026);
+// see isWebsiteDomainsLaunchApproved for which environments keep it on.
+const domainsProcedure = protectedProcedure.use(({ next }) => {
+  if (!isWebsiteDomainsLaunchApproved()) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Website & domain isn’t available yet.",
+    })
+  }
+  return next()
+})
+
 export const domainsRouter = createTRPCRouter({
-  list: protectedProcedure
+  /** Lets the apps hide Website & domain before calling anything else. */
+  availability: protectedProcedure.query(() => ({
+    enabled: isWebsiteDomainsLaunchApproved(),
+  })),
+  list: domainsProcedure
     .input(domainListSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)
@@ -99,7 +116,7 @@ export const domainsRouter = createTRPCRouter({
       })
     }),
 
-  registrantProfile: protectedProcedure.query(async ({ ctx }) => {
+  registrantProfile: domainsProcedure.query(async ({ ctx }) => {
     assertCanManageDomains(ctx.tenantContext.membership.role)
     const profile = await getDomainRegistrantProfile(ctx.db, {
       tenantId: ctx.tenantContext.tenant.id,
@@ -118,7 +135,7 @@ export const domainsRouter = createTRPCRouter({
       : null
   }),
 
-  saveRegistrantProfile: protectedProcedure
+  saveRegistrantProfile: domainsProcedure
     .input(domainRegistrantSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)
@@ -143,7 +160,7 @@ export const domainsRouter = createTRPCRouter({
       }
     }),
 
-  checkAvailability: protectedProcedure
+  checkAvailability: domainsProcedure
     .input(domainAvailabilitySchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)
@@ -208,7 +225,7 @@ export const domainsRouter = createTRPCRouter({
       }
     }),
 
-  createCheckout: protectedProcedure
+  createCheckout: domainsProcedure
     .input(createDomainCheckoutSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)
@@ -273,7 +290,7 @@ export const domainsRouter = createTRPCRouter({
       })
     }),
 
-  order: protectedProcedure
+  order: domainsProcedure
     .input(domainOrderSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)
@@ -283,7 +300,7 @@ export const domainsRouter = createTRPCRouter({
       })
     }),
 
-  connectExternal: protectedProcedure
+  connectExternal: domainsProcedure
     .input(connectExternalDomainSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)
@@ -311,7 +328,7 @@ export const domainsRouter = createTRPCRouter({
       }
     }),
 
-  verifyConnection: protectedProcedure
+  verifyConnection: domainsProcedure
     .input(verifyDomainConnectionSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanManageDomains(ctx.tenantContext.membership.role)

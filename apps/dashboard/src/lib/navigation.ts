@@ -60,6 +60,8 @@ export type DashboardNavContext = Partial<
   operatingModel?: BusinessOperatingModel | null
   /** Resolved plan features; undefined skips plan gating (the API still enforces). */
   planFeatures?: RetailOpsPlanFeature[]
+  /** Website & domain launch gate; hidden and redirected unless true. */
+  websiteDomainsEnabled?: boolean
 }
 
 const canUseDashboard = (role: EwaTradeRole | null) => role !== null
@@ -332,7 +334,9 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         href: "/settings/domains",
         icon: "settings",
         label: "Domains",
-        canAccess: canManageTenantRole,
+        // canAccess (not isVisible) so direct links redirect too.
+        canAccess: (role, context) =>
+          context.websiteDomainsEnabled === true && canManageTenantRole(role),
       },
       {
         description: "Customer communication channels",

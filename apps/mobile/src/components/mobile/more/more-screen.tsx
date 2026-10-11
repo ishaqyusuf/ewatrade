@@ -136,6 +136,14 @@ function MoreContent({
       staleTime: 60_000,
     }),
   )
+  // Website & domain is held back until launch; the API says where it is on.
+  const domainsAvailability = useQuery(
+    trpc.domains.availability.queryOptions(undefined, {
+      enabled: !account && !isOffline && (role === "OWNER" || role === "ADMIN"),
+      retry: false,
+      staleTime: 5 * 60_000,
+    }),
+  )
   const planSnapshot =
     subscription.data?.tenant.id === auth.profile?.businessId
       ? subscription.data
@@ -150,6 +158,7 @@ function MoreContent({
             : undefined,
           role,
           staffAccessMode: auth.profile?.staffAccessMode,
+          websiteDomainsEnabled: domainsAvailability.data?.enabled === true,
         })
       : []
   const offlineSettings = useQuery(

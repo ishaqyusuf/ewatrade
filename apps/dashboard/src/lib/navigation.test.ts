@@ -21,6 +21,7 @@ function context(
     hasServiceItems: false,
     hasServiceJobs: false,
     hasStaff: false,
+    websiteDomainsEnabled: true,
     ...overrides,
   }
 }
@@ -98,6 +99,23 @@ describe("dashboard navigation policy", () => {
     ])
     expect(adminItems).toEqual(ownerItems)
     expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(28)
+  })
+
+  test("hides and redirects Website & domain until launch approval", () => {
+    for (const websiteDomainsEnabled of [false, undefined]) {
+      const off = context({ websiteDomainsEnabled })
+      expect(
+        flatten(getDashboardNavigation("OWNER", off)).some(
+          (item) => item.href === "/settings/domains",
+        ),
+      ).toBe(false)
+      expect(canAccessDashboardPath("/settings/domains", "OWNER", off)).toBe(
+        false,
+      )
+    }
+    expect(
+      canAccessDashboardPath("/settings/domains", "OWNER", context()),
+    ).toBe(true)
   })
 
   test("nests every existing Finance, Reports, and Settings page", () => {

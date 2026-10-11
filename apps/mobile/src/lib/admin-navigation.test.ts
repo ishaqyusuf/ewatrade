@@ -77,6 +77,7 @@ describe("admin mobile navigation", () => {
         hasServiceItems: true,
       },
       role: "OWNER",
+      websiteDomainsEnabled: true,
     })
     const ownerItems = ownerSections.flatMap((section) => section.items)
 
@@ -121,6 +122,20 @@ describe("admin mobile navigation", () => {
       false,
     )
     expect(managerItems.some((item) => item.id === "plan-billing")).toBe(false)
+  })
+
+  test("hides Website & domain until the API reports it launched", () => {
+    const ids = (websiteDomainsEnabled?: boolean) =>
+      buildAdminMoreSections({
+        availability,
+        role: "OWNER",
+        websiteDomainsEnabled,
+      })
+        .flatMap((section) => section.items)
+        .map((item) => item.id)
+    expect(ids()).not.toContain("website-domain")
+    expect(ids(false)).not.toContain("website-domain")
+    expect(ids(true)).toContain("website-domain")
   })
 
   test("hides Free plan exclusions while keeping unknown plans ungated", () => {

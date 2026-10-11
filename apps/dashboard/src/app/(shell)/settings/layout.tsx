@@ -3,7 +3,10 @@ import { getDashboardNavigation } from "@/lib/navigation"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { prisma } from "@ewatrade/db"
-import { getRetailOpsTenantPlan } from "@ewatrade/db/queries"
+import {
+  getRetailOpsTenantPlan,
+  isWebsiteDomainsLaunchApproved,
+} from "@ewatrade/db/queries"
 
 export default async function SettingsLayout({
   children,
@@ -24,6 +27,7 @@ export default async function SettingsLayout({
       businessProfileKey: store?.businessOnboarding?.businessProfileKey,
       operatingModel: store?.businessOnboarding?.operatingModel,
       planFeatures,
+      websiteDomainsEnabled: isWebsiteDomainsLaunchApproved(),
     }).find((item) => item.href === "/settings")?.children ?? []
   return (
     <div className="w-full min-w-0 max-w-[800px]">

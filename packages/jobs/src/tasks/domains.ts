@@ -1,3 +1,4 @@
+import { isWebsiteDomainsLaunchApproved } from "@ewatrade/db/queries"
 import { task } from "@trigger.dev/sdk/v3"
 
 import {
@@ -16,6 +17,8 @@ export const domainRegistration = task({
   queue: { concurrencyLimit: 5 },
   retry: { maxAttempts: 3 },
   run: async (input: DomainRegistrationPayload) => {
+    // Website & domain is held back until launch approval (owner, 11 Oct).
+    if (!isWebsiteDomainsLaunchApproved()) return
     await domainRegistrationHandler(input, 1)
   },
 })
@@ -31,6 +34,7 @@ export const domainConnectionVerification = task({
     minTimeoutInMs: 30_000,
   },
   run: async (input: DomainConnectionVerificationPayload) => {
+    if (!isWebsiteDomainsLaunchApproved()) return
     await domainConnectionVerificationHandler(input, 1)
   },
 })
@@ -39,6 +43,7 @@ export const domainReconciliation = task({
   id: "domains.reconcile",
   maxDuration: 300,
   run: async () => {
+    if (!isWebsiteDomainsLaunchApproved()) return { skipped: "not launched" }
     return domainReconciliationHandler({ limit: 100 }, 1)
   },
 })

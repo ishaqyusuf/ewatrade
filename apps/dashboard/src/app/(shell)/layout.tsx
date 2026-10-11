@@ -11,7 +11,10 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { prisma } from "@ewatrade/db"
-import { getRetailOpsTenantPlan } from "@ewatrade/db/queries"
+import {
+  getRetailOpsTenantPlan,
+  isWebsiteDomainsLaunchApproved,
+} from "@ewatrade/db/queries"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -59,6 +62,7 @@ export default async function ShellLayout({
     operatingModel: store.businessOnboarding?.operatingModel,
     businessProfileKey: store.businessOnboarding?.businessProfileKey,
     planFeatures,
+    websiteDomainsEnabled: isWebsiteDomainsLaunchApproved(),
   }
 
   if (
@@ -98,6 +102,11 @@ export default async function ShellLayout({
               navigationContext,
             ),
             scopedStaff,
+            domains: canAccessDashboardPath(
+              "/settings/domains",
+              ctx.membership.role,
+              navigationContext,
+            ),
             finance:
               ["OWNER", "ADMIN"].includes(ctx.membership.role.toUpperCase()) &&
               (planFeatures?.includes("finance") ?? true),
