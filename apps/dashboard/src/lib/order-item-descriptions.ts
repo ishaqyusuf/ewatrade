@@ -1,5 +1,13 @@
+import {
+  type CatalogFreeLineKind,
+  catalogFreeLineDisplay,
+} from "@ewatrade/utils/catalog-free-lines"
+
+type CatalogFreeLine = { kind: CatalogFreeLineKind; description: string | null }
+
 type OrderItemLine = {
   quantity: string
+  customLine?: CatalogFreeLine | null
   snapshot: {
     catalogItemName: string
     variantName: string
@@ -17,6 +25,14 @@ export function formatOrderItemGroups(lines: OrderItemLine[]) {
   const groups = new Map<string, { name: string; details: string[] }>()
 
   for (const line of lines) {
+    if (line.customLine) {
+      const display = catalogFreeLineDisplay(line.customLine)
+      const key = `custom:${display.title.toLowerCase()}`
+      const group = groups.get(key) ?? { name: display.title, details: [] }
+      group.details.push(display.detail ?? "Typed price")
+      groups.set(key, group)
+      continue
+    }
     const name = line.snapshot?.catalogItemName.trim() || "Item"
     const variant = line.snapshot?.variantName.trim() || ""
     const unit = line.snapshot?.inventoryUnitName?.trim() || ""

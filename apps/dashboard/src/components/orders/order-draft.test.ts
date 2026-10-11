@@ -6,6 +6,7 @@ import {
   changeOrderOption,
   makeOrderDraftLine,
   orderCatalogChoices,
+  orderLinesTotalMinor,
   parseOrderItemTotal,
 } from "./order-draft"
 
@@ -266,4 +267,17 @@ describe("catalog-first order drafts", () => {
       orderCatalogChoices([item], availableOrderOfferings([item], "store")),
     ).toEqual([])
   })
+})
+
+test("totals catalog and catalog-free lines exactly", () => {
+  expect(
+    orderLinesTotalMinor([
+      { expectedFixedPriceMinor: 1_250, quantity: "2" },
+      { enteredTotalMinor: 5_000, quantity: "3" },
+      { amountMinor: 700 },
+    ]),
+  ).toBe(8_200)
+  expect(
+    orderLinesTotalMinor([{ expectedFixedPriceMinor: 333, quantity: "0.5" }]),
+  ).toBeNull()
 })

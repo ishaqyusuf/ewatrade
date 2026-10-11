@@ -2,6 +2,7 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { getSaleOfferingDisabledReasons } from "@ewatrade/utils"
 import {
   EXACT_QUANTITY_MAX_SCALE,
+  multiplyExactDecimals,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
 import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
@@ -242,4 +243,36 @@ export function parseOrderItemTotal(value: string) {
       "Total price for this item must be greater than zero and at most 1,000,000.",
     )
   return Number(minor)
+}
+
+/** Mirrors server pricing; null when a line total is not an exact minor amount. */
+export function orderLinesTotalMinor(
+  lines: Array<
+    | {
+        enteredTotalMinor?: number
+        expectedFixedPriceMinor?: number
+        quantity: string
+      }
+    | { amountMinor: number }
+  >,
+) {
+  let total = 0
+  for (const line of lines) {
+    if ("amountMinor" in line) {
+      total += line.amountMinor
+      continue
+    }
+    if (line.enteredTotalMinor !== undefined) {
+      total += line.enteredTotalMinor
+      continue
+    }
+    if (line.expectedFixedPriceMinor === undefined) return null
+    const exact = multiplyExactDecimals(
+      String(line.expectedFixedPriceMinor),
+      line.quantity,
+    )
+    if (!/^\d+$/.test(exact)) return null
+    total += Number(exact)
+  }
+  return total
 }

@@ -1,19 +1,30 @@
 "use client"
 import {
   Button,
+  Checkbox,
+  CheckboxField,
   ControlField,
   FieldGroup,
   FormActions,
   Input,
+  SelectControl,
   SubmitButton,
 } from "@ewatrade/ui"
+import {
+  type CatalogFreeLineDraft,
+  catalogFreeLinesError,
+  catalogFreeOrderLines,
+} from "@ewatrade/utils/catalog-free-lines"
 
+import { OrderCatalogFreeLines } from "./order-catalog-free-lines"
 import { customerDraftFromSearch } from "./order-customer-search"
 import {
   type OrderDraftLine,
   availableOrderOfferings,
   buildOrderLines,
   makeOrderDraftLine,
+  orderLinesTotalMinor,
+  orderMoney,
 } from "./order-draft"
 import { OrderItemPicker } from "./order-item-picker"
 import { OrderItemRow } from "./order-item-row"
@@ -38,6 +49,31 @@ import {
 } from "./order-customer-picker"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
+type PaymentMethod = "cash" | "bank_transfer" | "pos" | "card" | "other"
+
+const PAYMENT_METHOD_OPTIONS: Array<{ value: PaymentMethod; label: string }> = [
+  { value: "cash", label: "Cash" },
+  { value: "bank_transfer", label: "Bank transfer" },
+  { value: "pos", label: "POS" },
+  { value: "card", label: "Card" },
+  { value: "other", label: "Other" },
+]
+
+/** Catalog lines first, then typed-price lines; throws a readable message. */
+function buildAllOrderLines(
+  drafts: OrderDraftLine[],
+  offerings: ReturnType<typeof availableOrderOfferings>,
+  catalogFreeLines: CatalogFreeLineDraft[],
+) {
+  if (!drafts.length && !catalogFreeLines.length)
+    throw new Error("Add an item, or type a price to sell without the catalog.")
+  const catalogFreeError = catalogFreeLinesError(catalogFreeLines)
+  if (catalogFreeError) throw new Error(catalogFreeError)
+  return [
+    ...(drafts.length ? buildOrderLines(drafts, offerings) : []),
+    ...catalogFreeOrderLines(catalogFreeLines),
+  ]
+}
 
 export function OrderForm({
   store,
@@ -51,6 +87,12 @@ export function OrderForm({
     trpc.catalog.listItems.queryOptions({}, { retry: false }),
   )
   const [drafts, setDrafts] = useState<OrderDraftLine[]>([])
+  const [catalogFreeLines, setCatalogFreeLines] = useState<
+    CatalogFreeLineDraft[]
+  >([])
+  const [fulfillNow, setFulfillNow] = useState(false)
+  const [paidInFull, setPaidInFull] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
   const [customerName, setCustomerName] = useState("")
   const [selectedCustomer, setSelectedCustomer] =
     useState<OrderCustomerSelection | null>(null)
@@ -76,6 +118,15 @@ export function OrderForm({
     () => availableOrderOfferings(items, store.id),
     [items, store.id],
   )
+  const totalMinor = useMemo(() => {
+    try {
+      return orderLinesTotalMinor(
+        buildAllOrderLines(drafts, offerings, catalogFreeLines),
+      )
+    } catch {
+      return null
+    }
+  }, [catalogFreeLines, drafts, offerings])
   const createMutation = useMutation(
     trpc.orders.create.mutationOptions({
       onError: (failure) => setError(failure.message),
@@ -122,9 +173,9 @@ export function OrderForm({
       setError("Enter a name for the new customer.")
       return
     }
-    let lines: ReturnType<typeof buildOrderLines>
+    let lines: ReturnType<typeof buildAllOrderLines>
     try {
-      lines = buildOrderLines(drafts, offerings)
+      lines = buildAllOrderLines(drafts, offerings, catalogFreeLines)
     } catch (failure) {
       setError(
         failure instanceof Error
@@ -133,7 +184,16 @@ export function OrderForm({
       )
       return
     }
+    const paidMinor = paidInFull ? orderLinesTotalMinor(lines) : null
+    if (paidInFull && !paidMinor) {
+      setError("The total could not be worked out to mark this order paid.")
+      return
+    }
     const payload = {
+      fulfillNow: fulfillNow || undefined,
+      paidInFull: paidMinor
+        ? { amountMinor: paidMinor, method: paymentMethod }
+        : null,
       customerId: selectedCustomer?.id,
       customerMode: creatingCustomer
         ? ("create" as const)
@@ -148,7 +208,17 @@ export function OrderForm({
     const digest = JSON.stringify(payload)
     if (submission.current?.payload !== digest)
       submission.current = { payload: digest, id: crypto.randomUUID() }
-    createMutation.mutate({ ...payload, clientOrderId: submission.current.id })
+    const { paidInFull: paid, ...order } = payload
+    createMutation.mutate({
+      ...order,
+      clientOrderId: submission.current.id,
+      initialPayment: paid
+        ? {
+            ...paid,
+            clientPaymentId: `${submission.current.id}:payment`,
+          }
+        : undefined,
+    })
   }
 
   return (
@@ -161,7 +231,8 @@ export function OrderForm({
         formId="dashboard.order.create"
         isDirty={
           Boolean(customerEmail || customerName || customerPhone) ||
-          drafts.length > 0
+          drafts.length > 0 ||
+          catalogFreeLines.length > 0
         }
         onFill={(context, sequence) => {
           const offering = offerings.find(
@@ -228,9 +299,10 @@ export function OrderForm({
           setError(null)
         }}
       />
-      {!drafts.length ? (
+      {!drafts.length && !catalogFreeLines.length ? (
         <p className="text-sm text-muted-foreground">
-          Search the catalog to add your first item.
+          Search the catalog to add an item, or type a price to record the sale
+          without the catalog.
         </p>
       ) : null}
       <div className="grid gap-3">
@@ -262,6 +334,56 @@ export function OrderForm({
             </FormFeedback>
           )
         })}
+      </div>
+      <OrderCatalogFreeLines
+        lines={catalogFreeLines}
+        currencyCode={store.currencyCode}
+        disabled={createMutation.isPending}
+        onChange={(next) => {
+          setCatalogFreeLines(next)
+          setError(null)
+        }}
+      />
+      {totalMinor !== null ? (
+        <div className="flex items-baseline justify-between border-t border-border pt-3">
+          <span className="text-sm text-muted-foreground">Order total</span>
+          <span className="text-base font-semibold tabular-nums">
+            {orderMoney(totalMinor, store.currencyCode)}
+          </span>
+        </div>
+      ) : null}
+      <div className="grid gap-3">
+        <CheckboxField
+          label="Mark as fulfilled now"
+          description="Items were handed over or the work is done."
+        >
+          <Checkbox
+            checked={fulfillNow}
+            disabled={createMutation.isPending}
+            onCheckedChange={(checked) => setFulfillNow(checked === true)}
+          />
+        </CheckboxField>
+        <CheckboxField
+          label="Paid in full"
+          description="Records the full order total as received."
+        >
+          <Checkbox
+            checked={paidInFull}
+            disabled={createMutation.isPending}
+            onCheckedChange={(checked) => setPaidInFull(checked === true)}
+          />
+        </CheckboxField>
+        {paidInFull ? (
+          <ControlField label="Payment method" className="sm:max-w-xs">
+            <SelectControl<PaymentMethod>
+              aria-label="Payment method"
+              disabled={createMutation.isPending}
+              options={PAYMENT_METHOD_OPTIONS}
+              value={paymentMethod}
+              onValueChange={setPaymentMethod}
+            />
+          </ControlField>
+        ) : null}
       </div>
       <button
         type="button"

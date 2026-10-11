@@ -1,11 +1,13 @@
 "use client"
 
+import { catalogFreeLineDisplay } from "@ewatrade/utils/catalog-free-lines"
+
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useReceiptParams } from "@/hooks/use-receipt-params"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useRef } from "react"
 import { orderMoney } from "./order-draft"
@@ -96,35 +98,49 @@ export function OrderDetails({
             .replaceAll("_", " ")}
         </p>
       </div>
-      {order.lines.map((line) => (
-        <div key={line.id} className="grid gap-2 border border-border p-4">
-          <h4 className="font-medium">
-            {line.snapshot?.catalogItemName ?? "Item"}
-          </h4>
-          <p className="text-sm">
-            {line.snapshot?.variantName} · {line.quantity}{" "}
-            {line.snapshot?.inventoryUnitName ?? ""}
-          </p>
-          {line.unitPriceMinor === null ? (
+      {order.lines.map((line) =>
+        line.customLine ? (
+          <div key={line.id} className="grid gap-2 border border-border p-4">
+            <h4 className="font-medium">
+              {catalogFreeLineDisplay(line.customLine).title}
+            </h4>
             <p className="text-sm text-muted-foreground">
-              Price entered during order
+              {catalogFreeLineDisplay(line.customLine).detail ?? "Typed price"}
             </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {orderMoney(line.unitPriceMinor, order.currencyCode)} per{" "}
-              {line.snapshot?.inventoryUnitName ?? "unit"}
+            <p className="font-semibold">
+              Item total: {orderMoney(line.totalMinor, order.currencyCode)}
             </p>
-          )}
-          <p className="font-semibold">
-            Item total: {orderMoney(line.totalMinor, order.currencyCode)}
-          </p>
-          {line.note ? (
-            <p className="whitespace-pre-wrap break-words text-sm">
-              {line.note}
+          </div>
+        ) : (
+          <div key={line.id} className="grid gap-2 border border-border p-4">
+            <h4 className="font-medium">
+              {line.snapshot?.catalogItemName ?? "Item"}
+            </h4>
+            <p className="text-sm">
+              {line.snapshot?.variantName} · {line.quantity}{" "}
+              {line.snapshot?.inventoryUnitName ?? ""}
             </p>
-          ) : null}
-        </div>
-      ))}
+            {line.unitPriceMinor === null ? (
+              <p className="text-sm text-muted-foreground">
+                Price entered during order
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {orderMoney(line.unitPriceMinor, order.currencyCode)} per{" "}
+                {line.snapshot?.inventoryUnitName ?? "unit"}
+              </p>
+            )}
+            <p className="font-semibold">
+              Item total: {orderMoney(line.totalMinor, order.currencyCode)}
+            </p>
+            {line.note ? (
+              <p className="whitespace-pre-wrap break-words text-sm">
+                {line.note}
+              </p>
+            ) : null}
+          </div>
+        ),
+      )}
       {order.notes ? (
         <div className="grid gap-1">
           <h4 className="text-sm font-medium">Sale notes</h4>

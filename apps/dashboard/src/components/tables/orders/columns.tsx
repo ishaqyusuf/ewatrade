@@ -56,16 +56,25 @@ export function orderColumns(): ColumnDef<OrderRow>[] {
         headerLabel: "Items",
         skeleton: { type: "text" as const, width: "w-48" },
       },
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          {formatOrderItemGroups(row.original.lines).map((group) => (
-            <div key={group.name}>
-              <p>{group.name}</p>
-              <p className="text-xs text-muted-foreground">{group.details}</p>
-            </div>
-          ))}
-        </div>
-      ),
+      cell: ({ row }) => {
+        // Rows are one fixed height; extra groups collapse to "+N more".
+        const [first, ...rest] = formatOrderItemGroups(row.original.lines)
+        return first ? (
+          <div className="min-w-0">
+            <p className="truncate">
+              {first.name}
+              {rest.length ? (
+                <span className="text-muted-foreground">
+                  {` +${rest.length} more`}
+                </span>
+              ) : null}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {first.details}
+            </p>
+          </div>
+        ) : null
+      },
     },
     {
       accessorKey: "totalMinor",

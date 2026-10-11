@@ -60,4 +60,24 @@ describe("Order item descriptions", () => {
       { name: "Widget", details: "4" },
     ])
   })
+
+  test("labels typed-price lines and undescribed additional costs", () => {
+    expect(
+      formatOrderItemGroups([
+        {
+          customLine: { description: "Rice", kind: "quick_sale" },
+          quantity: "1",
+          snapshot: null,
+        },
+        {
+          customLine: { description: null, kind: "additional_cost" },
+          quantity: "1",
+          snapshot: null,
+        },
+      ]),
+    ).toEqual([
+      { name: "Rice", details: "Typed price" },
+      { name: "Additional cost", details: "(no description)" },
+    ])
+  })
 })

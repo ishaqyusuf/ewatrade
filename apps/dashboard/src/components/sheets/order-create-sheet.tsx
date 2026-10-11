@@ -29,7 +29,7 @@ export function OrderCreateSheet({
         <SheetFrame
           closeError={closeError}
           title="New order"
-          description="Choose items first. Customer details are optional."
+          description="Pick catalog items or type a price. Customer details are optional."
         >
           <OrderForm
             key={`${store.id}:create`}
