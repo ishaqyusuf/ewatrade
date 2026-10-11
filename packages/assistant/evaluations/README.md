@@ -1,5 +1,8 @@
 # Assistant conversation evaluations
 
+[Bookmarked 45-ticket status board](TICKETS.md): implementation versus acceptance,
+including pending and deferred work.
+
 This is the versioned catalog of conversational scenarios. It complements the
 [capability/test index](../src/capabilities/COVERAGE.md). A fixture describes a test;
 it is not an executed result, enabled capability, or deployment claim.
