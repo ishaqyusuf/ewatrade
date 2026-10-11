@@ -23,6 +23,27 @@ export function respondGeneralRehearsal(
           .join("\n") ?? "")
   const command = text.trim()
   const minor = (value: string) => Math.round(Number(value) * 100)
+  // Receipt flows: owner text outside attachment blocks, plus the sent file id.
+  const attachmentId = /attachmentId="([^"]{1,128})"/.exec(text)?.[1]
+  const ownerText = text
+    .replace(/<UNTRUSTED_CONTEXT[\s\S]*?<\/UNTRUSTED_CONTEXT>/g, "")
+    .trim()
+  const attachToOrder = /^attach (?:this|receipt|file) to order (\S{1,128})$/i.exec(ownerText)
+  if (attachToOrder?.[1])
+    return attachmentId
+      ? { kind: "tool", toolName: "draftAction", input: { action: "order_attachment_add", orderId: attachToOrder[1], attachmentId } }
+      : { kind: "text", text: "Send the receipt photo or PDF with your message, then ask again." }
+  const typedSale = /^record sale (.{1,200}?) for (\d+(?:\.\d{1,2})?)(?: paid (cash|card|pos|bank_transfer|other))?$/i.exec(ownerText)
+  if (typedSale?.[1] && typedSale[2])
+    return {
+      kind: "tool",
+      toolName: "draftAction",
+      input: {
+        action: "order_create",
+        lines: [{ custom: "quick_sale", amountMinor: minor(typedSale[2]), description: typedSale[1] }],
+        ...(typedSale[3] ? { initialPayment: { amountMinor: minor(typedSale[2]), method: typedSale[3].toLowerCase() } } : {}),
+      },
+    }
   if (/^read stock operations$/i.test(command)) return { kind: "tool", toolName: "readStockOperations", input: {} }
   const operationRead = /^read stock operation (\S{1,128})$/i.exec(command)
   if (operationRead?.[1]) return { kind: "tool", toolName: "readStockOperation", input: { operationId: operationRead[1] } }

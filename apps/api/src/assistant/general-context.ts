@@ -112,6 +112,8 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "sales.order.cancel": tenant=>assertCanAmendOrders(tenant.membership.role),
   "sales.order.metadata.update": tenant=>assertCanAmendOrders(tenant.membership.role),
   "sales.order.replace": tenant=>assertCanAmendOrders(tenant.membership.role),
+  "sales.order.attachment.add": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
   "search.records": () => {},
   "catalog.history.read": (tenant) => assertCanReadCatalog(tenant.membership.role),
   "catalog.page": (tenant) => assertCanReadCatalog(tenant.membership.role),

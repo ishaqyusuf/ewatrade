@@ -287,3 +287,94 @@ export async function markCommercialOrderAttachmentUploaded(
   })
   return count === 1
 }
+
+/**
+ * Records a file that already exists elsewhere (e.g. a receipt sent to the
+ * assistant) as an Order activity entry. `store` copies the bytes under the
+ * new attachment id; the caller's transaction keeps row and copy together.
+ */
+export async function addStoredFileToCommercialOrderInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    tenantId: string
+    scope: OrderScope
+    orderId: string
+    actorUserId: string
+    clientActivityId: string
+    body?: string
+    source: "staff" | "assistant"
+    file: CommercialOrderAttachmentInput
+    store: (attachmentId: string) => Promise<{
+      storagePath: string
+      storageProvider: string
+      storageStoreId: string | null
+    }>
+  },
+) {
+  const existing = await tx.commercialOrderActivity.findUnique({
+    select: activitySelect,
+    where: {
+      tenantId_clientActivityId: {
+        clientActivityId: input.clientActivityId,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+  if (existing) return serialize(existing)
+  const order = await tx.commercialOrder.findFirst({
+    select: { id: true },
+    where: { ...input.scope, id: input.orderId, tenantId: input.tenantId },
+  })
+  if (!order)
+    throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+  const body = input.body?.trim() || null
+  if (body && body.length > ORDER_ACTIVITY_BODY_MAX_LENGTH)
+    throw new CatalogError(
+      "INVALID_ORDER",
+      `Notes must be at most ${ORDER_ACTIVITY_BODY_MAX_LENGTH} characters.`,
+    )
+  const now = new Date()
+  const activity = await tx.commercialOrderActivity.create({
+    data: {
+      actorUserId: input.actorUserId,
+      body,
+      clientActivityId: input.clientActivityId,
+      orderId: order.id,
+      payloadHash: hashPayload(
+        {
+          ...input,
+          attachments: [input.file],
+        },
+        body,
+      ),
+      source: input.source,
+      tenantId: input.tenantId,
+    },
+    select: { id: true },
+  })
+  const attachment = await tx.commercialOrderAttachment.create({
+    data: {
+      activityId: activity.id,
+      contentDigest: input.file.contentDigest,
+      contentType: input.file.contentType,
+      kind: input.file.kind,
+      orderId: order.id,
+      originalFileName: input.file.originalFileName?.slice(0, 200),
+      sizeBytes: input.file.sizeBytes,
+      tenantId: input.tenantId,
+      uploadExpiresAt: now,
+    },
+    select: { id: true },
+  })
+  const stored = await input.store(attachment.id)
+  await tx.commercialOrderAttachment.update({
+    data: { ...stored, status: "READY", uploadedAt: new Date() },
+    where: { id: attachment.id },
+  })
+  return serialize(
+    await tx.commercialOrderActivity.findUniqueOrThrow({
+      select: activitySelect,
+      where: { id: activity.id },
+    }),
+  )
+}

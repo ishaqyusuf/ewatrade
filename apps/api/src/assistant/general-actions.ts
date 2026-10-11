@@ -1,3 +1,4 @@
+import { orderAttachmentAdd } from "./general-order-attachment"
 import { billCorrection } from "./general-bill-correction"
 import { billPayment } from "./general-bill-payment"
 import { expenseRecord } from "./general-expense"
@@ -568,6 +569,7 @@ const adapters: {
   order_cancel: orderCancel,
   order_metadata_update: orderMetadataUpdate,
   order_replace: orderReplace,
+  order_attachment_add: orderAttachmentAdd,
   inventory_closeout_create: closeoutCreate,
   inventory_closeout_finalize: closeoutFinalize,
   stock_transfer_dispatch: stockTransferDispatch,

@@ -16,10 +16,15 @@ import {
   reserveAssistantBudget,
 } from "@ewatrade/db/assistant"
 import {
+  listAssistantAttachments,
+  readAssistantAttachmentsForConversation,
+} from "@ewatrade/db/assistant-attachments"
+import {
   readGeneralActiveRun,
   readGeneralConversation,
   readGeneralRun,
 } from "@ewatrade/db/assistant-general"
+import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
@@ -35,7 +40,17 @@ import {
 import type { Context } from "hono"
 import { z } from "zod"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
+import {
+  attachmentSendRefusal,
+  referencedAttachmentIds,
+  storedUserParts,
+  withAttachmentText,
+} from "./chat-attachments"
 import { resolveModel } from "./chat-route"
+import {
+  SETUP_MEDIA_DISABLED,
+  isSetupAssistantMediaEnabled,
+} from "./setup-context"
 import {
   GENERAL_BUDGET_LIMITS,
   generalBudgetScopeKey,
@@ -54,15 +69,26 @@ const requestSchema = z
         role: z.literal("user"),
         parts: z
           .array(
-            z
-              .object({
-                type: z.literal("text"),
-                text: z.string().min(1).max(8000),
-              })
-              .strict(),
+            z.union([
+              z
+                .object({
+                  type: z.literal("text"),
+                  text: z.string().min(1).max(8000),
+                })
+                .strict(),
+              // A photo or PDF uploaded to this chat (e.g. a receipt).
+              z
+                .object({
+                  type: z.literal(SETUP_ATTACHMENT_PART),
+                  data: z
+                    .object({ attachmentId: z.string().min(1).max(64) })
+                    .strict(),
+                })
+                .strict(),
+            ]),
           )
           .min(1)
-          .max(4),
+          .max(8),
       })
       .strict(),
   })
@@ -135,6 +161,38 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
           "The assistant is unavailable. Your saved answers and proposals are still here.",
         )
       const budgetScopeKey = generalBudgetScopeKey(scope)
+      const textParts = body.message.parts.filter(
+        (part): part is { type: "text"; text: string } => part.type === "text",
+      )
+      const attachmentIds = body.message.parts.flatMap((part) =>
+        part.type === SETUP_ATTACHMENT_PART ? [part.data.attachmentId] : [],
+      )
+      if (attachmentIds.length && !isSetupAssistantMediaEnabled())
+        return failure(
+          c,
+          412,
+          SETUP_MEDIA_DISABLED.code,
+          SETUP_MEDIA_DISABLED.message,
+        )
+      const attachments = await listAssistantAttachments(
+        ctx.db,
+        scope,
+        attachmentIds,
+      )
+      const refusal = attachmentSendRefusal(attachments, {
+        conversationId: conversation.id,
+        messageId: body.message.id,
+        requested: attachmentIds,
+      })
+      if (refusal)
+        return failure(
+          c,
+          409,
+          refusal,
+          refusal === "ATTACHMENT_NOT_READY"
+            ? "Wait until every file has been read, then send again."
+            : "One of these files is not available. Attach it again.",
+        )
       const begun = await ctx.db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${conversation.id} FOR UPDATE`
         if (await readGeneralActiveRun(tx, scope, conversation.id))
@@ -150,7 +208,15 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
           promptVersion: GENERAL_PROMPT_VERSION,
           provider: model.provider,
           requestId: body.requestId,
-          userMessage: { ...body.message },
+          userMessage: {
+            ...body.message,
+            parts: storedUserParts(
+              textParts,
+              attachments,
+              attachmentIds,
+            ) as unknown as AssistantStoredMessage["parts"],
+          },
+          attachmentIds,
         })
       })
       if (begun.replay)
@@ -190,7 +256,21 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
         role: z.enum(["assistant", "user", "system"]),
         parts: z.array(generalStoredPartSchema),
       })
-      const history: GeneralUIMessage[] = stored.flatMap((message) => {
+      // Attachments reach the model only as delimited, untrusted text.
+      const sentAttachments = await readAssistantAttachmentsForConversation(
+        ctx.db,
+        {
+          conversationId: conversation.id,
+          attachmentIds: referencedAttachmentIds(
+            stored as unknown as Parameters<typeof referencedAttachmentIds>[0],
+          ),
+        },
+      )
+      const readable = withAttachmentText(
+        stored as unknown as Parameters<typeof withAttachmentText>[0],
+        sentAttachments,
+      ) as unknown as typeof stored
+      const history: GeneralUIMessage[] = readable.flatMap((message) => {
         const parsed = savedMessageSchema.safeParse({
           ...message,
           parts: Array.isArray(message.parts)

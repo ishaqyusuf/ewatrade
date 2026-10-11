@@ -327,3 +327,34 @@ test("order drafts accept catalog-free typed-price lines", () => {
     }).success,
   ).toBe(false)
 })
+
+test("rehearsal drafts typed-price sales and receipt attachments", () => {
+  const sale = respondGeneralRehearsal([
+    { role: "user", content: "record sale Fresh fish for 2500 paid cash" },
+  ])
+  expect(sale).toMatchObject({
+    kind: "tool",
+    input: {
+      action: "order_create",
+      initialPayment: { amountMinor: 250_000, method: "cash" },
+      lines: [{ amountMinor: 250_000, custom: "quick_sale", description: "Fresh fish" }],
+    },
+  })
+  const attach = respondGeneralRehearsal([
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "attach this to order ord_1" },
+        {
+          type: "text",
+          text: '<UNTRUSTED_CONTEXT source="attachment" attachmentId="att_9" kind="IMAGE" name="r.jpg">\nreceipt\n</UNTRUSTED_CONTEXT>',
+        },
+      ],
+    },
+  ])
+  expect(attach).toMatchObject({
+    kind: "tool",
+    input: { action: "order_attachment_add", attachmentId: "att_9", orderId: "ord_1" },
+  })
+  expect(generalActionSchema.safeParse((attach as { input: unknown }).input).success).toBe(true)
+})

@@ -175,8 +175,12 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
         conversation.status !== "ACTIVE"
       )
         return { ok: false as const, reason: "CONVERSATION_CLOSED" as const }
-      // General chats take voice notes only; they are written out, not sent.
-      if (conversation.purpose === "GENERAL" && checked.kind !== "AUDIO")
+      // General chats take voice notes (written out, not sent) and photos or
+      // PDFs such as receipts, which are read and sent with the message.
+      if (
+        conversation.purpose === "GENERAL" &&
+        !["AUDIO", "IMAGE", "PDF"].includes(checked.kind)
+      )
         return { ok: false as const, reason: "UNSUPPORTED_TYPE" as const }
       if (!isSetupAttachmentStorageAvailable(scope.dataClassification))
         return { ok: false as const, reason: "UPLOADS_UNAVAILABLE" as const }

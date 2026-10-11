@@ -9,6 +9,7 @@ import { productLineReturnAction } from "./product-return"
 import { productLineFulfillAction, productBatchFulfillAction } from "./product-fulfillment"
 import { serviceAuthorizeAction, serviceFulfillAction } from "./service-fulfillment"
 import { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
+import { orderAttachmentAddAction } from "./order-attachment"
 export { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
 import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
 import { stockTransferDispatchAction, stockTransferReceiveAction, stockTransferCancelAction } from "./stock-transfer"
@@ -266,6 +267,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   orderCancelAction,
   orderMetadataAction,
   orderReplaceAction,
+  orderAttachmentAddAction,
   closeoutCreateAction,
   closeoutFinalizeAction,
 ])
@@ -471,5 +473,7 @@ export function generalActionSummary(
         .join("\n")
     case "payment_record":
       return `${amount(action.amountMinor)} · ${action.method.replaceAll("_", " ")} · order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
+    case "order_attachment_add":
+      return `Attach file ${action.attachmentId} to order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
   }
 }
