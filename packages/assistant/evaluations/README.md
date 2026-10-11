@@ -36,6 +36,8 @@ separate evidence; do not import them as successful model evaluations.
 
 - [Held-credit refund editor browser check, 11 October 2026](runs/2026-10-11-held-credit-refund-editor.md): isolated component checks and screenshots; full assistant flow pending.
 
+- [Held-credit refund proposal database acceptance, 11 October 2026](runs/2026-10-11-held-credit-refund-database.md): 30 assertions passed, including stale review, atomic rollback, balanced journal and replay; cleanup verified.
+
 ## Recording a run
 
 Use disposable, explicitly scoped QA records. Substitute fixture aliases from the
