@@ -112,8 +112,8 @@ export function SetupChoicePill({
   return (
     <Pressable
       className={cn(
-        "min-h-10 items-center justify-center rounded-full px-4",
-        selected ? "bg-primary" : "border border-border bg-background",
+        "min-h-10 items-center justify-center rounded-full border px-4",
+        selected ? "border-primary bg-primary" : "border-border bg-background",
       )}
       haptic
       onPress={onPress}
