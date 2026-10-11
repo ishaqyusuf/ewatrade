@@ -33,12 +33,18 @@ describe("dashboard getting started actions", () => {
         disabled: false,
         href: "/?catalogItem=create&catalogCreateKind=service",
       },
-      { disabled: true, href: "/sales?orderSheet=create" },
+      { disabled: false, href: "/sales?orderSheet=create" },
       { disabled: false, href: "/staff?staffSheet=invite" },
     ])
   })
 
-  test("enables the first order after a sellable item exists", () => {
+  test("keeps the first order enabled with or without a sellable item", () => {
+    expect(
+      getGettingStartedActions("OWNER", emptyAvailability).find(
+        (action) => action.label === "Create first order",
+      ),
+    ).toEqual(expect.objectContaining({ disabled: false }))
+
     const actions = getGettingStartedActions("OWNER", {
       ...emptyAvailability,
       hasActiveSellableItems: true,

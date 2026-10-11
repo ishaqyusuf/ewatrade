@@ -19,7 +19,7 @@ const EMPTY_AVAILABILITY: MobileWorkspaceFeatureAvailability = {
 }
 
 describe("admin create actions", () => {
-  test("prioritizes first-item choices and explains locked operations", () => {
+  test("prioritizes first-item choices, keeps orders open, and explains locked stock", () => {
     const actions = buildAdminCreateActions(EMPTY_AVAILABILITY, false)
 
     expect(actions.map((action) => action.label)).toEqual([
@@ -32,9 +32,10 @@ describe("admin create actions", () => {
     ])
     expect(actions.slice(0, 2).every((action) => !action.disabled)).toBe(true)
     expect(actions[4]).toMatchObject({
-      disabled: true,
-      statusLabel: "First item",
+      disabled: false,
+      detail: "Record a sale — pick catalog items or type a price.",
     })
+    expect(actions[4]?.statusLabel).toBeUndefined()
     expect(actions[5]).toMatchObject({
       disabled: true,
       statusLabel: "Product",
@@ -56,7 +57,7 @@ describe("admin create actions", () => {
     expect(actions[3]?.disabled).toBe(false)
   })
 
-  test("unlocks order and stock actions from their independent prerequisites", () => {
+  test("unlocks stock from its product prerequisite while orders stay open", () => {
     const actions = buildAdminCreateActions(
       {
         ...EMPTY_AVAILABILITY,

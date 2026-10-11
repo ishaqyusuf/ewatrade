@@ -90,7 +90,6 @@ const contracts = [
     markers: [
       'label: "Product"',
       'label: "Service"',
-      "statusLabel: availability.hasActiveSellableItems",
       "statusLabel: availability.hasProductItems",
     ],
   },

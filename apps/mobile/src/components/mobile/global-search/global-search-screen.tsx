@@ -97,7 +97,7 @@ export function GlobalSearchScreen() {
   const actions = useMemo<(SearchAction & { short: string })[]>(
     () => [
       {
-        detail: "Start an order and select sellable items.",
+        detail: "Start an order — pick catalog items or type a price.",
         icon: "PlusCircle",
         id: "create-order",
         label: "Create order",

@@ -57,7 +57,6 @@ export type GreenTillOwnerHomeProps = {
     title: string
   }
   businessName: string
-  canCreateSale: boolean
   isOffline: boolean
   onAddItem: () => void
   onInviteTeam?: () => void
@@ -152,7 +151,6 @@ function EverydayHome(props: GreenTillOwnerHomeProps) {
       <QuickActionRow
         actions={[
           {
-            disabled: !props.canCreateSale,
             gold: true,
             icon: "Plus",
             label: "New sale",
@@ -278,9 +276,11 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
     },
     {
       key: "order",
-      onPress: first && props.canCreateSale ? props.onNewSale : undefined,
-      state: first ? "now" : "locked",
-      sub: first ? "Takes about a minute" : "Unlocks after your first item",
+      onPress: props.onNewSale,
+      state: first ? "now" : "todo",
+      sub: first
+        ? "Takes about a minute"
+        : "Pick catalog items or type a price",
       title: "Take your first order",
     },
   ]
@@ -379,7 +379,6 @@ function HomeSkeleton() {
 }
 
 export type GreenTillRepHomeProps = {
-  canCreateSale: boolean
   isOffline: boolean
   onCloseout: () => void
   onCustomers?: () => void
@@ -437,20 +436,16 @@ export function GreenTillRepHome(props: GreenTillRepHomeProps) {
       ) : (
         <HeroCard
           amount={sales.amount}
-          cta={
-            props.canCreateSale
-              ? {
-                  icon: "Plus",
-                  label: "Start a sale",
-                  onPress: props.onNewSale,
-                  testID: "rep-start-sale",
-                }
-              : undefined
-          }
+          cta={{
+            icon: "Plus",
+            label: "Start a sale",
+            onPress: props.onNewSale,
+            testID: "rep-start-sale",
+          }}
           label={`Your sales today${sales.asOf ? ` · as of ${sales.asOf}` : ""}`}
           pill={pill}
           stats={sales.stats}
-          sub={`${sales.orderCount} ${sales.orderCount === 1 ? "sale" : "sales"}${props.canCreateSale ? "" : " · no sellable items yet"}`}
+          sub={`${sales.orderCount} ${sales.orderCount === 1 ? "sale" : "sales"}`}
           testID="rep-sales-hero"
         />
       )}

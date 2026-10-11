@@ -267,22 +267,21 @@ export function ClassicOrdersSkeleton() {
 
 export function ClassicFirstOrderGate({
   catalogReady,
+  onAddItemPress,
   onPrimaryPress,
-}: { catalogReady: boolean; onPrimaryPress: () => void }) {
+}: {
+  catalogReady: boolean
+  onAddItemPress: () => void
+  onPrimaryPress: () => void
+}) {
   return (
     <View className="gap-4">
       <HeroCard
         label="Before your first order"
-        title={
-          catalogReady
-            ? "Your first order is ready to start."
-            : "Orders start with an item."
-        }
-        sub="Add what you sell, then record your first sale."
+        title="Your first order is ready to start."
+        sub="Record a sale — pick catalog items or type a price."
         cta={{
-          label: catalogReady
-            ? "Create first order"
-            : "Add a Product or Service",
+          label: "Create first order",
           onPress: onPrimaryPress,
         }}
       />
@@ -291,16 +290,16 @@ export function ClassicFirstOrderGate({
           {
             key: "catalog",
             title: "Add what you sell",
-            sub: "Name it and set a price.",
+            sub: "Optional — name it and set a price.",
             state: catalogReady ? "done" : "now",
-            onPress: !catalogReady ? onPrimaryPress : undefined,
+            onPress: !catalogReady ? onAddItemPress : undefined,
           },
           {
             key: "sale",
             title: "Take the first order",
             sub: "Record payment and fulfilment together.",
-            state: catalogReady ? "now" : "locked",
-            onPress: catalogReady ? onPrimaryPress : undefined,
+            state: "now",
+            onPress: onPrimaryPress,
           },
         ]}
       />

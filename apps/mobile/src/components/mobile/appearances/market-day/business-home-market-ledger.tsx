@@ -259,7 +259,7 @@ export function BusinessHomeMarketLedgerSetup({
                 "text-market-accent-ink",
               )}
             >
-              {catalogReady ? "Order next" : "Catalog next"}
+              {catalogReady ? "Order next" : "Sell or add items"}
             </Text>
           </View>
           <Text
@@ -271,7 +271,7 @@ export function BusinessHomeMarketLedgerSetup({
           >
             {catalogReady
               ? "Your catalog is ready. Take one order to turn on your trading overview."
-              : "Add one Product or Service to unlock orders, stock, and revenue."}
+              : "Take your first order now, or add a Product or Service for stock and faster sales."}
           </Text>
 
           <View className={cn(styles.stepList, "border-t-market-line")}>
@@ -289,15 +289,14 @@ export function BusinessHomeMarketLedgerSetup({
               step="01"
             />
             <LedgerStep
-              current={catalogReady}
+              current
               detail={
                 catalogReady
                   ? "Create a sale and your overview will come alive."
-                  : "Available as soon as your first item is ready."
+                  : "Record a sale — pick catalog items or type a price."
               }
-              disabled={!catalogReady}
               label="Take your first order"
-              onPress={catalogReady ? onCreateOrderPress : undefined}
+              onPress={onCreateOrderPress}
               step="02"
             />
             <LedgerStep

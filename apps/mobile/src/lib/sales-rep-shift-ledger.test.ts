@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { getSalesRepShiftLedgerPresentation } from "./sales-rep-shift-ledger"
 
 describe("Sales Rep Shift Ledger presentation", () => {
-  test("makes the next sale dominant when the existing catalog gate is ready", () => {
+  test("makes the next sale dominant when the catalog is ready", () => {
     expect(
       getSalesRepShiftLedgerPresentation({
         hasSellableCatalogItem: true,
@@ -11,7 +11,7 @@ describe("Sales Rep Shift Ledger presentation", () => {
         workspaceState: "available",
       }),
     ).toEqual({
-      catalogFactDetail: "Orders can be created",
+      catalogFactDetail: "Pick items from your catalog",
       catalogFactValue: "Ready",
       readinessLabel: "Ready to sell",
       saleActionDetail: "Choose an item, customer, and payment.",
@@ -23,7 +23,7 @@ describe("Sales Rep Shift Ledger presentation", () => {
     })
   })
 
-  test("keeps setup and pending-sync state truthful", () => {
+  test("keeps selling enabled without a catalog and pending-sync state truthful", () => {
     expect(
       getSalesRepShiftLedgerPresentation({
         hasSellableCatalogItem: false,
@@ -32,11 +32,12 @@ describe("Sales Rep Shift Ledger presentation", () => {
         workspaceState: "available",
       }),
     ).toMatchObject({
-      catalogFactDetail: "A sellable item is required",
+      catalogFactDetail: "Add items for faster sales",
       catalogFactValue: "Needs item",
-      readinessLabel: "Selling needs setup",
-      saleActionDisabled: true,
-      saleActionLabel: "Sale unavailable",
+      readinessLabel: "Ready to sell",
+      saleActionDetail: "Pick catalog items or type a price.",
+      saleActionDisabled: false,
+      saleActionLabel: "Start a new sale",
       syncLabel: "2 waiting to sync",
       syncTone: "attention",
     })

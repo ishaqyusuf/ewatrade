@@ -130,7 +130,6 @@ export function OrdersScreen() {
     availabilityResolved,
     isDockHidden,
     isOffline,
-    openCreate,
     provisionalOrders,
   } = useAdminTabs()
   const edgeFeedback = useScrollEdgeFeedback()
@@ -486,13 +485,10 @@ export function OrdersScreen() {
               {showFirstOrderGate ? (
                 <FirstOrderGate
                   catalogReady={availability.hasActiveSellableItems}
-                  onPrimaryPress={() => {
-                    if (availability.hasActiveSellableItems) {
-                      router.push("/create-sale-modal")
-                    } else {
-                      router.push("/first-product-setup-modal")
-                    }
-                  }}
+                  onAddItemPress={() =>
+                    router.push("/first-product-setup-modal")
+                  }
+                  onPrimaryPress={() => router.push("/create-sale-modal")}
                 />
               ) : (
                 <>
@@ -707,13 +703,7 @@ export function OrdersScreen() {
           accessibilityLabel="Add order"
           tone={isMarketDay ? undefined : "gold"}
           dockHidden
-          onPress={() => {
-            if (availability.hasActiveSellableItems) {
-              router.push("/create-sale-modal")
-            } else {
-              openCreate()
-            }
-          }}
+          onPress={() => router.push("/create-sale-modal")}
           sitsAboveDock
           testID="orders-add-fab"
         />

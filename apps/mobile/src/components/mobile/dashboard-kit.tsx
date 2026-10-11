@@ -322,13 +322,13 @@ export function DashboardStoreSetup({
             className="text-xs font-bold text-primary"
             numberOfLines={largeTextLayout ? 2 : 1}
           >
-            {catalogReady ? "Order next" : "Catalog next"}
+            {catalogReady ? "Order next" : "Sell or add items"}
           </Text>
         </View>
         <Text className="text-sm leading-5 text-muted-foreground">
           {catalogReady
             ? "Your catalog is ready. Take one order to turn on your trading overview."
-            : "Add one Product or Service to unlock orders, stock, and revenue."}
+            : "Take your first order now, or add a Product or Service for stock and faster sales."}
         </Text>
         <View className="h-1.5 overflow-hidden rounded-full bg-muted">
           <View
@@ -354,16 +354,15 @@ export function DashboardStoreSetup({
           step="01"
         />
         <DashboardSetupStep
-          current={catalogReady}
+          current
           detail={
             catalogReady
               ? "Create a sale and your overview will come alive."
-              : "Available as soon as your first item is ready."
+              : "Record a sale — pick catalog items or type a price."
           }
-          disabled={!catalogReady}
-          icon={catalogReady ? "ReceiptText" : "Lock"}
+          icon="ReceiptText"
           label="Take your first order"
-          onPress={catalogReady ? onCreateOrderPress : undefined}
+          onPress={onCreateOrderPress}
           step="02"
         />
         <DashboardSetupStep

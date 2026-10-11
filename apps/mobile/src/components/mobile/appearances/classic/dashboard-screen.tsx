@@ -139,7 +139,7 @@ export function ClassicDashboardSetup(props: DashboardSetupProps) {
         <Text className="mt-2 text-sm text-muted-foreground">
           {props.catalogReady
             ? "Your catalog is ready. Take your first order."
-            : "Add a Product or Service, then take your first order."}
+            : "Take your first order now, or add a Product or Service."}
         </Text>
         <DashboardActionRow
           disabled={props.catalogReady}
@@ -150,7 +150,6 @@ export function ClassicDashboardSetup(props: DashboardSetupProps) {
           onPress={props.onAddItemPress}
         />
         <DashboardActionRow
-          disabled={!props.catalogReady}
           icon="ReceiptText"
           label="Take your first order"
           onPress={props.onCreateOrderPress}

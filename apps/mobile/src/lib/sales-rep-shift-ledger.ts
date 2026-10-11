@@ -17,26 +17,20 @@ export function getSalesRepShiftLedgerPresentation({
         ? "Loading the latest sales workspace."
         : workspaceState === "unavailable"
           ? "Refresh to confirm the counter is ready."
-          : hasSellableCatalogItem
-            ? "Your counter is ready for the next customer."
-            : "A sellable item is needed before the next customer."
+          : "Your counter is ready for the next customer."
 
   return {
     catalogFactDetail: hasSellableCatalogItem
-      ? "Orders can be created"
-      : "A sellable item is required",
+      ? "Pick items from your catalog"
+      : "Add items for faster sales",
     catalogFactValue: hasSellableCatalogItem ? "Ready" : "Needs item",
     heroCue,
-    readinessLabel: hasSellableCatalogItem
-      ? "Ready to sell"
-      : "Selling needs setup",
+    readinessLabel: "Ready to sell",
     saleActionDetail: hasSellableCatalogItem
       ? "Choose an item, customer, and payment."
-      : "Ask a manager to add an active sellable item.",
-    saleActionDisabled: !hasSellableCatalogItem,
-    saleActionLabel: hasSellableCatalogItem
-      ? "Start a new sale"
-      : "Sale unavailable",
+      : "Pick catalog items or type a price.",
+    saleActionDisabled: false,
+    saleActionLabel: "Start a new sale",
     syncLabel:
       pendingCommandCount > 0
         ? `${pendingCommandCount} waiting to sync`

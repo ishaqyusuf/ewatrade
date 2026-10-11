@@ -399,8 +399,7 @@ export function OperationsDashboardSurface({
     {
       detail: hasSellableCatalogItem
         ? "Create an order from active Products or Services."
-        : "Create your first product/service to use order feature",
-      disabled: !hasSellableCatalogItem,
+        : "Record a sale — pick catalog items or type a price.",
       label: "Order",
       onPress: () => openCreateRoute("/create-sale-modal"),
     },
@@ -473,11 +472,8 @@ export function OperationsDashboardSurface({
       tone: "warning",
     },
     {
-      disabled: !hasSellableCatalogItem,
       icon: "PlusCircle",
-      label: hasSellableCatalogItem
-        ? "Create a new order"
-        : "Add a sellable item to create orders",
+      label: "Create a new order",
       onPress: () => router.push("/create-sale-modal" as never),
       tone: "primary",
     },
@@ -501,7 +497,6 @@ export function OperationsDashboardSurface({
     <Screen
       businessName={profile?.businessName ?? "Business"}
       centralAction={{
-        disabled: isAttendant && !hasSellableCatalogItem,
         icon: "Plus",
         label: navigation.centralActionLabel,
         onPress: isAttendant
@@ -627,7 +622,6 @@ export function OperationsDashboardSurface({
                 }
           }
           businessName={profile?.businessName ?? "your business"}
-          canCreateSale={hasSellableCatalogItem}
           isOffline={isOffline}
           onAddItem={openQuickCreate}
           onInviteTeam={
@@ -635,10 +629,7 @@ export function OperationsDashboardSurface({
               ? () => router.push("/staff-invite-modal" as never)
               : undefined
           }
-          onNewSale={() => {
-            if (hasSellableCatalogItem)
-              router.push("/create-sale-modal" as never)
-          }}
+          onNewSale={() => router.push("/create-sale-modal" as never)}
           onOrders={() => router.push("/orders" as never)}
           onPayment={() => router.push("/payments-received-modal" as never)}
           onStockIn={() => router.push("/stock-intake-modal" as never)}
@@ -724,7 +715,6 @@ export function OperationsDashboardSurface({
         />
       ) : isAttendant && !isMarketDay ? (
         <GreenTillRepHome
-          canCreateSale={hasSellableCatalogItem}
           isOffline={isOffline}
           onCloseout={() => router.push("/closeout-modal" as never)}
           onCustomers={
@@ -1001,11 +991,10 @@ export function OperationsDashboardSurface({
             />
           ) : orderRows.length === 0 ? (
             <OwnerEmpty
-              actionDisabled={!hasSellableCatalogItem}
               actionLabel="Create first order"
               message={
                 featureVisibility.showGettingStarted
-                  ? "Add an item, then create your first order. It will appear here."
+                  ? "Record your first sale — pick catalog items or type a price. It will appear here."
                   : "New orders will appear here as soon as they are created."
               }
               onActionPress={() => router.push("/create-sale-modal" as never)}

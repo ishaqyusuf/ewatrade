@@ -64,15 +64,12 @@ export function buildAdminCreateActions(
     {
       detail: availability.hasActiveSellableItems
         ? "Create an order from active Products or Services."
-        : "Add a Product or Service first.",
-      disabled: !availability.hasActiveSellableItems,
+        : "Record a sale — pick catalog items or type a price.",
+      disabled: false,
       emphasis: "standard",
       icon: "ReceiptText",
       label: "Order",
       route: "/create-sale-modal",
-      statusLabel: availability.hasActiveSellableItems
-        ? undefined
-        : "First item",
     },
     {
       detail: availability.hasProductItems

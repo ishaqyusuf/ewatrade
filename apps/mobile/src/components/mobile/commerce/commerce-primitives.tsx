@@ -136,9 +136,11 @@ export function CommerceMetricTile({
 
 export function CommerceFirstOrderGate({
   catalogReady,
+  onAddItemPress,
   onPrimaryPress,
 }: {
   catalogReady: boolean
+  onAddItemPress: () => void
   onPrimaryPress: () => void
 }) {
   const largeTextLayout = useLargeTextLayout()
@@ -155,14 +157,12 @@ export function CommerceFirstOrderGate({
           Before your first order
         </Text>
         <Text className="mt-3 text-2xl font-extrabold tracking-tight text-primary-foreground">
-          {catalogReady
-            ? "Your first order is ready to start."
-            : "Orders start with an item."}
+          Your first order is ready to start.
         </Text>
         <Text className="mt-2 text-sm leading-5 text-primary-foreground/80">
           {catalogReady
             ? "Your catalog is ready. Create a sale to begin payment and fulfilment tracking."
-            : "Add one Product or Service. Then this screen becomes your live order ledger."}
+            : "Record a sale — pick catalog items or type a price. Then this screen becomes your live order ledger."}
         </Text>
 
         <View className="mt-5 border-y border-primary-foreground/20">
@@ -179,14 +179,9 @@ export function CommerceFirstOrderGate({
             step="01"
           />
           <CommerceOrderGateStep
-            current={catalogReady}
-            detail={
-              catalogReady
-                ? "Record payment and fulfilment together."
-                : "Unlocks after step 01."
-            }
-            disabled={!catalogReady}
-            icon={catalogReady ? "ReceiptText" : "Lock"}
+            current
+            detail="Record payment and fulfilment together."
+            icon="ReceiptText"
             label="Take the first order"
             step="02"
           />
@@ -199,9 +194,21 @@ export function CommerceFirstOrderGate({
           onPress={onPrimaryPress}
         >
           <Text className="text-center text-sm font-extrabold text-primary">
-            {catalogReady ? "Create first order" : "Add a Product or Service"}
+            Create first order
           </Text>
         </Pressable>
+        {catalogReady ? null : (
+          <Pressable
+            accessibilityRole="button"
+            className="mt-3 min-h-[44px] items-center justify-center px-5 active:opacity-90"
+            haptic
+            onPress={onAddItemPress}
+          >
+            <Text className="text-center text-sm font-bold text-primary-foreground/80">
+              Add a Product or Service
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       <View className="gap-3">

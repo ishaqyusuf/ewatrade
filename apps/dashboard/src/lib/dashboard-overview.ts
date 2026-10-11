@@ -49,8 +49,8 @@ export function getGettingStartedActions(
     actions.push({
       description: availability.hasActiveSellableItems
         ? "Create an order from an active Product or Service."
-        : "Add an active fixed-price item before creating an order.",
-      disabled: !availability.hasActiveSellableItems,
+        : "Record a sale — pick catalog items or type a price.",
+      disabled: false,
       href: "/sales?orderSheet=create",
       label: "Create first order",
     })
