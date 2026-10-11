@@ -33,6 +33,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Purchase fact proposal integration, 11 October 2026](runs/2026-10-11-recognition-proposals.md): strict invoice/ownership action and owning agreement receipt; 74 source/display assertions, scoped types and 57 isolated database assertions pass. Initial fixture failure retained; browser acceptance pending.
+
 - [Purchase recognition review, 11 October 2026](runs/2026-10-11-recognition-review.md): 8 tests/60 assertions and scoped types pass; isolated database 23 assertions passes with exact invoice/ownership journals, rollback/replay and 16 cleanup checks. Assistant/browser and physical receipt acceptance remain pending.
 
 - [Registration editor, 11 October 2026](runs/2026-10-11-registration-editor.md): layout comparison and actual component acknowledgment/zero guards, exact decimal/minor amount/timestamp, target preservation and Cancel verified; screenshot retained. Full confirmation pending.

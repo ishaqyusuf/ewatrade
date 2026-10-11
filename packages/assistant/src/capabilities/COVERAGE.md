@@ -7,16 +7,17 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 539 (398 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 89
-- Merchant planned: 143
+- Merchant supported by a capability: 90
+- Merchant planned: 142
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 85 (44 read, 41 write)
+- Capabilities: 86 (44 read, 42 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `finance.purchase.recognize` | 1 | write (`purchase_recognize`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recognizePurchase` |
 | `finance.purchase.register` | 1 | write (`purchase_register`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.registerPurchase` |
 | `finance.purchase_registrations.read` | 1 | read | `readPurchaseRegistrations` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognitions` |
 | `finance.purchase_recognition.read` | 1 | read | `readPurchaseRecognition` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.purchaseRecognition` |
@@ -116,6 +117,7 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `finance.purchase.recognize` | Recognize the invoice for this exact agreement<br>Record explicitly confirmed ownership of agreed goods | [packages/assistant/src/general/purchase-recognition.test.ts](../../../../packages/assistant/src/general/purchase-recognition.test.ts)<br>[packages/db/src/queries/finance/purchase-recognition-review.test.ts](../../../../packages/db/src/queries/finance/purchase-recognition-review.test.ts) |
 | `finance.purchase.register` | Register agreed supplier goods before invoice or receipt | [packages/assistant/src/general/purchase-registration.test.ts](../../../../packages/assistant/src/general/purchase-registration.test.ts)<br>[packages/db/src/queries/finance/purchase-registration-review.test.ts](../../../../packages/db/src/queries/finance/purchase-registration-review.test.ts) |
 | `finance.purchase_registrations.read` | Find purchase agreements in this Finance Book | [apps/api/src/assistant/general-purchase-recognition-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-recognition-reads.test.ts) |
 | `finance.purchase_recognition.read` | Read purchase recognition events in this Finance Book | [apps/api/src/assistant/general-purchase-recognition-reads.test.ts](../../../../apps/api/src/assistant/general-purchase-recognition-reads.test.ts) |
@@ -216,7 +218,7 @@ track conversational evaluation separately from these source test links.
 | E02 | 3 |
 | E03 | 2 |
 | E04 | 1 |
-| E05 | 10 |
+| E05 | 9 |
 | G01 | 6 |
 | G02 | 8 |
 | G03 | 29 |
@@ -338,7 +340,7 @@ track conversational evaluation separately from these source test links.
 | `finance.purchaseRecognition` | query | Owner/Admin only | finance | supported | finance.purchase_recognition.read |
 | `finance.purchaseRecognitions` | query | Owner/Admin only | finance | supported | finance.purchase_registrations.read |
 | `finance.purchases` | query | Owner/Admin only | finance | supported | finance.purchases.read |
-| `finance.recognizePurchase` | mutation | Owner/Admin only | finance | planned | E05 |
+| `finance.recognizePurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.recognize |
 | `finance.recordCashCount` | mutation | Owner/Admin only | finance | planned | G02 |
 | `finance.recordExpense` | mutation | Owner/Admin only | finance | supported | finance.expense.record |
 | `finance.recordMoney` | mutation | Owner/Admin only | finance | supported | finance.money_movement.record |

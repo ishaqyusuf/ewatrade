@@ -86,6 +86,7 @@ export function requireGeneralScope(
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "finance.bills.read": tenant => assertFinanceAccess(tenant),
+  "finance.purchase.recognize": tenant => assertFinanceAccess(tenant),
   "finance.purchase.register": tenant => assertFinanceAccess(tenant),
   "finance.supplier.create": tenant => assertFinanceAccess(tenant),
   "finance.purchase_registrations.read": tenant => assertFinanceAccess(tenant),

@@ -1,3 +1,4 @@
+import { verifyPurchaseRecognitionProposals } from "./general-purchase-recognition.integration-check"
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { capabilityForAction, capabilityManifest } from "@ewatrade/assistant/capabilities/manifest"
@@ -11,8 +12,8 @@ export async function verifyPurchaseRegistration(original: GeneralContext, faili
   const ctx = { ...original, requestHeaders: new Headers(original.requestHeaders) }
   ctx.requestHeaders.set("x-assistant-client", "dashboard")
   const db = ctx.db, tenantId = ctx.tenantContext.tenant.id
-  if (process.env.RUN_GENERAL_PURCHASE_REGISTER !== "1" || !await db.tenant.findFirst({ where: { id: tenantId, dataClassification: "QA", slug: `general-${ctx.requestId}` }, select: { id: true } })) throw Error("Owned registration QA fixture required")
-  const capabilities = [capabilityForAction("purchase_register"), ...capabilityManifest.filter(c => ["finance.purchase_registrations.read", "finance.purchase_recognition.read", "finance.purchases.read"].includes(c.id))]
+  if ((process.env.RUN_GENERAL_PURCHASE_REGISTER !== "1" && process.env.RUN_GENERAL_PURCHASE_RECOGNIZE !== "1") || !await db.tenant.findFirst({ where: { id: tenantId, dataClassification: "QA", slug: `general-${ctx.requestId}` }, select: { id: true } })) throw Error("Owned registration QA fixture required")
+  const capabilities = [capabilityForAction("purchase_register"), ...(process.env.RUN_GENERAL_PURCHASE_RECOGNIZE === "1" ? [capabilityForAction("purchase_recognize")] : []), ...capabilityManifest.filter(c => ["finance.purchase_registrations.read", "finance.purchase_recognition.read", "finance.purchases.read"].includes(c.id))]
   const rollouts = capabilities.map(c => c.rollout)
   capabilities.forEach(c => Object.assign(c, { rollout: "source" }))
   let bookId: string | undefined
@@ -66,6 +67,10 @@ export async function verifyPurchaseRegistration(original: GeneralContext, faili
     expect(await db.financePurchaseRecognitionLine.count({ where: { bookId } })).toBe(2)
     expect(await db.financeBill.findMany({ where: { bookId }, select: { kind: true, totalMinor: true } })).toEqual([{ kind: "PURCHASE_ACCRUAL", totalMinor: 1100n }])
     expect(await db.financeCommand.count({ where: { bookId } })).toBe(2)
+    if (process.env.RUN_GENERAL_PURCHASE_RECOGNIZE === "1") {
+      await verifyPurchaseRecognitionProposals(ctx, failingDb, conversationId, bookId, recognitionId)
+      return
+    }
     const tools = createGeneralTools(ctx, conversationId, () => { throw Error("Read created proposal") }, () => {})
     const list = tools.readPurchaseRegistrations?.execute, detail = tools.readPurchaseRecognition?.execute, bills = tools.readPurchaseBills?.execute
     if (!list || !detail || !bills) throw Error("Purchase read tools missing")
@@ -92,6 +97,10 @@ export async function verifyPurchaseRegistration(original: GeneralContext, faili
         const owned = await tx.financeBook.findFirst({ where: { id: bookId, tenantId, tenant: { dataClassification: "QA", slug: `general-${ctx.requestId}` } }, select: { id: true } })
         if (!owned) throw Error("Owned registration Book missing")
         const scope = { bookId: owned.id }
+        await tx.financePurchaseRecognitionEvent.deleteMany({ where: scope })
+        await tx.financeSupplierEntry.deleteMany({ where: scope })
+        await tx.financeJournalLine.deleteMany({ where: scope })
+        await tx.financeJournalEntry.deleteMany({ where: scope })
         await tx.financePurchaseRecognitionLine.deleteMany({ where: scope })
         await tx.financePurchaseRecognition.deleteMany({ where: scope })
         await tx.financeBillLine.deleteMany({ where: scope })

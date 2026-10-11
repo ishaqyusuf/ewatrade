@@ -242,7 +242,7 @@ if (enabled) {
           await verifyGeneralProductTransport(ctx, session.token)
           return
         }
-        if (process.env.RUN_GENERAL_PURCHASE_REGISTER === "1" || process.env.RUN_GENERAL_SUPPLIER_CREATE === "1" || process.env.RUN_GENERAL_EXPENSE === "1" || process.env.RUN_GENERAL_MONEY_MOVEMENT === "1" || process.env.RUN_GENERAL_CUSTOMER_CREDIT === "1" || process.env.RUN_GENERAL_CUSTOMER_RECEIPT === "1" || process.env.RUN_GENERAL_HELD_CREDIT_REFUND === "1" || process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
+        if ((process.env.RUN_GENERAL_PURCHASE_REGISTER === "1" || process.env.RUN_GENERAL_PURCHASE_RECOGNIZE === "1") || process.env.RUN_GENERAL_SUPPLIER_CREATE === "1" || process.env.RUN_GENERAL_EXPENSE === "1" || process.env.RUN_GENERAL_MONEY_MOVEMENT === "1" || process.env.RUN_GENERAL_CUSTOMER_CREDIT === "1" || process.env.RUN_GENERAL_CUSTOMER_RECEIPT === "1" || process.env.RUN_GENERAL_HELD_CREDIT_REFUND === "1" || process.env.RUN_GENERAL_BULK_FULFILLMENT === "1" || process.env.RUN_GENERAL_PRODUCT_RETURN === "1") {
           console.info("Focused command acceptance: transport runs in the default suite")
         } else if (
           process.env.RUN_GENERAL_STOCK_TRANSFER === "1" &&
@@ -320,7 +320,7 @@ if (enabled) {
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
-        if (process.env.RUN_GENERAL_PURCHASE_REGISTER === "1") {
+        if ((process.env.RUN_GENERAL_PURCHASE_REGISTER === "1" || process.env.RUN_GENERAL_PURCHASE_RECOGNIZE === "1")) {
           await verifyPurchaseRegistration(ctx, failingDb, conversation.id)
           return
         }

@@ -32,6 +32,7 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import { purchaseRecognize } from "./general-purchase-recognition"
 import { purchaseRegister } from "./general-purchase-registration"
 import { supplierCreate } from "./general-supplier-create"
 import { billCorrection } from "./general-bill-correction"
@@ -587,6 +588,7 @@ const adapters: {
   expense_record: expenseRecord,
   bill_payment: billPayment,
   purchase_register: purchaseRegister,
+  purchase_recognize: purchaseRecognize,
   supplier_create: supplierCreate,
   expense_void: billCorrection,
   bill_payment_reverse: billCorrection,

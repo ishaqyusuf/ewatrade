@@ -1,3 +1,5 @@
+import { purchaseRecognitionAction } from "./purchase-recognition"
+export { purchaseRecognitionDraftInstructions } from "./purchase-recognition"
 import { purchaseRegistrationAction } from "./purchase-registration"
 import { supplierCreateAction } from "./supplier-create"
 import { expenseVoidAction, billPaymentReverseAction } from "./bill-correction"
@@ -257,6 +259,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   expenseAction,
   billPaymentAction,
   purchaseRegistrationAction,
+  purchaseRecognitionAction,
   supplierCreateAction,
   expenseVoidAction,
   billPaymentReverseAction,
@@ -431,6 +434,8 @@ export function generalActionSummary(
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
     case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "purchase_recognize":
+      return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
     case "purchase_register": return `Register purchase agreement · ${action.description}`
     case "supplier_create": return `Create supplier · ${action.name} (${action.code})`
     case "expense_void": return `Void unpaid expense · ${action.reason}`

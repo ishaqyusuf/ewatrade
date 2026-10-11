@@ -60,9 +60,9 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
 Current implementation focus: E05. Supplier creation and purchase registration
-have focused database and saved receipt Open/Close evidence. Canonical invoice and
-ownership review/posting checks pass; assistant recognition proposals, physical
-receipt, full browser confirmation, advances/allocation and settlement remain open.
+have focused database and saved receipt Open/Close evidence. Invoice and ownership
+proposals pass focused database checks; their dashboard editor, physical receipt,
+full browser confirmation, advances/allocation and settlement remain open.
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.
 
