@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     })
     const input = {
       ...lead,
+      type: "EARLY_ACCESS" as const,
       accessUrl,
       accessExpiresAt: session.expiresAt.toISOString(),
     }
