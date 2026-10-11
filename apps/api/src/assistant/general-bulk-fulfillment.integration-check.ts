@@ -26,6 +26,14 @@ export async function verifyBulkFulfillmentComposition(original: GeneralContext,
     tenantId, storeId, productId: unit.configurationVersion.productId, variantId: productOffering.variantId,
     inventoryUnitId: unit.id, kind: "SHARED_POOL", onHandQuantity: "6",
   } })
+  // Provision the reusable catalog-free Offering in its own canonical setup
+  // command. The acceptance target is bulk fulfillment, not first-use provisioning.
+  console.info("Bulk acceptance: provision catalog-free offering")
+  await createCommercialOrder(db, {
+    tenantId, storeId, actorUserId, clientOrderId: randomUUID(), schemaVersion: 1,
+    fulfillNow: false, lines: [{ custom: "additional_cost", amountMinor: 1 }],
+  })
+  console.info("Bulk acceptance: create three-line target order")
   const order = await createCommercialOrder(db, {
     tenantId, storeId, actorUserId, clientOrderId: randomUUID(), schemaVersion: 1, fulfillNow: false,
     lines: [
