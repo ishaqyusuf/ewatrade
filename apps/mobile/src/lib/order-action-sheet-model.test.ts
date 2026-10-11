@@ -123,3 +123,24 @@ test("closed orders cannot open fulfilment even when a stale reservation looks a
     ).toBeNull()
   }
 })
+
+test("offers to mark typed-price lines fulfilled without stock", () => {
+  const order = {
+    ...ORDER,
+    lines: [
+      {
+        ...ORDER.lines[0],
+        customLine: { description: null, kind: "quick_sale" as const },
+        kind: "service" as const,
+        productFulfillments: [],
+        reservation: null,
+        serviceFulfillment: null,
+      },
+    ],
+  } as unknown as typeof ORDER
+  expect(getOrderFulfilmentConfirmation(order, { kind: "all" })).toMatchObject({
+    actionLabel: "Mark fulfilled",
+    detailTitle: "Quick sale",
+    summaryValue: "1 line",
+  })
+})

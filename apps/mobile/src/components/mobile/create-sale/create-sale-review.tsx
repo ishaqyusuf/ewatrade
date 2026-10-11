@@ -17,6 +17,7 @@ import { useState } from "react"
 import { View } from "react-native"
 import { Platform } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { CatalogFreeSaleSummaryRows } from "./catalog-free-sale-lines"
 import { PAYMENT_METHODS } from "./create-sale-model"
 import { deliveryDateLabel } from "./create-sale-model"
 import type { SaleStepViewProps } from "./create-sale-presentation"
@@ -61,6 +62,7 @@ export function CreateSaleReview({
     submit,
     isSubmitting,
   } = model
+  const saleLineCount = selectedRows.length + model.catalogFreeLines.length
 
   const [enteringPartPayment, setEnteringPartPayment] = useState(false)
   if (!market)
@@ -117,7 +119,7 @@ export function CreateSaleReview({
 
           {market ? (
             <TotalSummary
-              helper={`${selectedRows.length} item${selectedRows.length === 1 ? "" : "s"}`}
+              helper={`${saleLineCount} item${saleLineCount === 1 ? "" : "s"}`}
               label="Total to collect"
               value={formatMinorMoney(totalMinor, currencyCode)}
             />
@@ -137,7 +139,7 @@ export function CreateSaleReview({
               pill={{
                 label: isOffline
                   ? "Will queue"
-                  : `${saleUnitCount(selectedRows.map((row) => row.quantity))} units`,
+                  : `${saleUnitCount(model.saleUnits)} units`,
                 tone: isOffline ? "offline" : "draft",
               }}
               sub={`Total ${formatMinorMoney(totalMinor, currencyCode)} · received ${formatMinorMoney(paymentSummary.receivedMinor, currencyCode)}`}
@@ -411,6 +413,7 @@ export function CreateSaleReview({
                 </View>
               ),
             )}
+            <CatalogFreeSaleSummaryRows model={model} hasRowsAbove={false} />
             <View className={tone("flex-row items-center gap-3 py-4")}>
               <View
                 className={tone(

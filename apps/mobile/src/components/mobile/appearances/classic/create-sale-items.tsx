@@ -1,5 +1,6 @@
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
+import { CatalogFreeSaleLines } from "@/components/mobile/create-sale/catalog-free-sale-lines"
 import type { OfferingRow } from "@/components/mobile/create-sale/create-sale-model"
 import type { SaleStepViewProps } from "@/components/mobile/create-sale/create-sale-presentation"
 import {
@@ -87,6 +88,9 @@ export function ClassicSaleItems({
     productSearch,
     setProductSearch,
     fetchNextChoices,
+    catalogFreeLines,
+    hasSaleLines,
+    saleUnits,
   } = model
   const search = productSearch.trim()
   const matches = (offering: OfferingRow) =>
@@ -142,8 +146,9 @@ export function ClassicSaleItems({
       }),
     )
   }
-  const canContinue = selectedRows.length > 0 && !model.actionsLocked
-  const unitCount = saleUnitCount(selectedRows.map((row) => row.quantity))
+  const canContinue = hasSaleLines && !model.actionsLocked
+  const unitCount = saleUnitCount(saleUnits)
+  const saleLineCount = selectedRows.length + catalogFreeLines.length
 
   return (
     <View className="flex-1">
@@ -196,35 +201,43 @@ export function ClassicSaleItems({
               formId="mobile.order.create"
               isDirty={
                 selectedLines.length > 0 ||
+                catalogFreeLines.length > 0 ||
                 Boolean(selectedCustomer) ||
                 paymentMethod !== "cash"
               }
               onFill={fillDraft}
               onUndo={undoFill}
             />
+            {itemKind === "service" ? null : (
+              <CatalogFreeSaleLines model={model} />
+            )}
           </View>
         }
         ListEmptyComponent={
-          <View className="items-center gap-1.5 rounded-[20px] border border-dashed border-border px-4 py-6">
-            <Icon
-              className="size-[22px] text-muted-foreground"
-              name={search ? "Search" : "ReceiptText"}
-            />
-            <Text className="text-center text-sm font-bold text-foreground">
-              {choicesLoading
-                ? "Loading Catalog"
-                : search
-                  ? `No items match “${productSearch.trim()}”`
-                  : "Nothing to sell yet"}
-            </Text>
-            <Text className="text-center text-xs text-muted-foreground">
-              {choicesLoading
-                ? "Loading available products and services."
-                : search
-                  ? "Check the spelling, or search by unit."
-                  : "Items need a selling price and available stock in this store. Ask an owner to check the catalog."}
-            </Text>
-          </View>
+          catalogFreeLines.length && !search ? null : (
+            <View className="items-center gap-1.5 rounded-[20px] border border-dashed border-border px-4 py-6">
+              <Icon
+                className="size-[22px] text-muted-foreground"
+                name={search ? "Search" : "ReceiptText"}
+              />
+              <Text className="text-center text-sm font-bold text-foreground">
+                {choicesLoading
+                  ? "Loading Catalog"
+                  : search
+                    ? `No items match “${productSearch.trim()}”`
+                    : "Nothing to sell yet"}
+              </Text>
+              <Text className="text-center text-xs text-muted-foreground">
+                {choicesLoading
+                  ? "Loading available products and services."
+                  : search
+                    ? "Check the spelling, or search by unit."
+                    : itemKind === "service"
+                      ? "Items need a selling price and available stock in this store. Ask an owner to check the catalog."
+                      : "No catalog yet? Tap “Type a price” to record the sale anyway."}
+              </Text>
+            </View>
+          )
         }
         renderItem={({ item: entry }) =>
           entry.type === "label" ? (
@@ -285,8 +298,8 @@ export function ClassicSaleItems({
                   Sale total
                 </Text>
                 <Text className="text-[12.5px] font-bold text-muted-foreground">
-                  {selectedRows.length
-                    ? saleItemsLabel(selectedRows.length, unitCount)
+                  {saleLineCount
+                    ? saleItemsLabel(saleLineCount, unitCount)
                     : "Add the first item"}
                 </Text>
               </View>

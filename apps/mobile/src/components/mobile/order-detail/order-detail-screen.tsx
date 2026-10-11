@@ -164,8 +164,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         setError(null)
         setNotice(
           result.fulfilledLineCount === 1
-            ? "1 Product line fulfilled."
-            : `${result.fulfilledLineCount} Product lines fulfilled.`,
+            ? "1 line fulfilled."
+            : `${result.fulfilledLineCount} lines fulfilled.`,
         )
         fulfilAllModal.dismiss()
         await refreshOrderQueries()

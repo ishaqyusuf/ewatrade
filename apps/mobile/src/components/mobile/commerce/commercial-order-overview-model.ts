@@ -24,25 +24,39 @@ export function canFulfillCommercialOrderLine(line: CommercialOrderLine) {
   )
 }
 
+/** Typed-price lines are fulfilled by the all-lines command only. */
+export function canFulfillCatalogFreeLine(line: CommercialOrderLine) {
+  return Boolean(line.customLine) && !line.serviceFulfillment
+}
+
 export function getCommercialOrderOverviewSummary(order: CommercialOrder) {
   const itemCount = order.lines.reduce(
     (total, line) => total + Number(line.quantity),
     0,
   )
   const productLines = order.lines.filter((line) => line.kind === "product")
-  const serviceLines = order.lines.filter((line) => line.kind === "service")
+  // Typed-price lines have no stock or Job; "Fulfil" just records them done.
+  const catalogFreeLines = order.lines.filter((line) => line.customLine)
+  const serviceLines = order.lines.filter(
+    (line) => line.kind === "service" && !line.customLine,
+  )
   const fulfilledProductLines = productLines.filter(
     (line) => line.productFulfillments.length > 0,
   )
+  const fulfilledCatalogFreeLines = catalogFreeLines.filter(
+    (line) => line.serviceFulfillment,
+  )
 
   return {
-    fulfilledProductLineCount: fulfilledProductLines.length,
-    fulfillableProductLineCount: productLines.filter(
-      canFulfillCommercialOrderLine,
-    ).length,
+    fulfilledProductLineCount:
+      fulfilledProductLines.length + fulfilledCatalogFreeLines.length,
+    fulfillableProductLineCount:
+      productLines.filter(canFulfillCommercialOrderLine).length +
+      catalogFreeLines.length -
+      fulfilledCatalogFreeLines.length,
     itemCount,
     lineCount: order.lines.length,
-    productLineCount: productLines.length,
+    productLineCount: productLines.length + catalogFreeLines.length,
     serviceLineCount: serviceLines.length,
   }
 }
@@ -96,6 +110,14 @@ export function buildCommercialOrderActivity(
           : "Time unavailable",
       })
     }
+    if (line.customLine && line.serviceFulfillment)
+      rows.push({
+        detail: `${commerceLineTitle(line)} marked fulfilled.`,
+        key: `custom-fulfilment:${line.serviceFulfillment.id}`,
+        occurredAt: line.serviceFulfillment.performedAt,
+        label: "Fulfilled",
+        time: formatCommerceDateTime(line.serviceFulfillment.performedAt),
+      })
     for (const productReturn of line.productReturns) {
       rows.push({
         detail: `${formatCommerceQuantity(productReturn.quantity)} × ${commerceLineTitle(line)} returned · ${commerceStatusLabel(productReturn.disposition)}.`,

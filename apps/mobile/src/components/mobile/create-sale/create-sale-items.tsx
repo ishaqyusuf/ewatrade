@@ -15,6 +15,7 @@ import { View } from "react-native"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
+import { CatalogFreeSaleLines } from "./catalog-free-sale-lines"
 import type { SaleStepViewProps } from "./create-sale-presentation"
 import { saleUnitCount } from "./sale-unit-count"
 import { useSalePresentation } from "./use-sale-presentation"
@@ -128,6 +129,7 @@ export function CreateSaleItems({
           formId="mobile.order.create"
           isDirty={
             selectedLines.length > 0 ||
+            model.catalogFreeLines.length > 0 ||
             Boolean(selectedCustomer) ||
             paymentMethod !== "cash"
           }
@@ -135,6 +137,11 @@ export function CreateSaleItems({
           onUndo={undoFill}
         />
       </View>
+      {itemKind === "service" ? null : (
+        <View className={tone("pb-4")}>
+          <CatalogFreeSaleLines model={model} />
+        </View>
+      )}
     </View>
   )
 
@@ -155,7 +162,7 @@ export function CreateSaleItems({
         keyboardShouldPersistTaps="handled"
         keyExtractor={(line) => line.id}
         ListEmptyComponent={
-          choicesLoading ? (
+          model.catalogFreeLines.length ? null : choicesLoading ? (
             <ListSkeleton count={3} label="Loading Catalog" variant="item" />
           ) : (
             <View className={tone("flex-1 justify-center pb-24")}>
@@ -232,7 +239,7 @@ export function CreateSaleItems({
         </View>
       ) : null}
 
-      {selectedRows.length > 0 ? (
+      {model.hasSaleLines ? (
         <BottomSearchFooter
           variant={market ? "market-day" : "default"}
           onHeightChange={setActionsHeight}
@@ -255,8 +262,7 @@ export function CreateSaleItems({
                   "text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground",
                 )}
               >
-                Total · {saleUnitCount(selectedRows.map((row) => row.quantity))}{" "}
-                units
+                Total · {saleUnitCount(model.saleUnits)} units
               </Text>
               <Text className={tone("text-xl font-extrabold text-foreground")}>
                 {formatMinorMoney(totalMinor, currencyCode)}

@@ -1,5 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
+import { CatalogFreeSaleSummaryRows } from "@/components/mobile/create-sale/catalog-free-sale-lines"
 import {
   PAYMENT_METHODS,
   deliveryDateLabel,
@@ -80,7 +81,11 @@ export function ClassicSaleCheckout({
         ? "part"
         : "pending"
   const balance = paymentSummary.balanceDueMinor
-  const itemCount = `${selectedRows.length} ${selectedRows.length === 1 ? "item" : "items"}`
+  const saleLineCount = selectedRows.length + model.catalogFreeLines.length
+  const hasStockLines = selectedRows.some(
+    (row) => row.offering.kind === "product_unit",
+  )
+  const itemCount = `${saleLineCount} ${saleLineCount === 1 ? "item" : "items"}`
   const methodLabel =
     PAYMENT_METHODS.find(([value]) => value === paymentMethod)?.[1] ?? "Cash"
   const initials = selectedCustomer?.name
@@ -387,6 +392,10 @@ export function ClassicSaleCheckout({
                 </View>
               ),
             )}
+            <CatalogFreeSaleSummaryRows
+              model={model}
+              hasRowsAbove={selectedRows.length > 0}
+            />
           </View>
 
           <SectionLabel>DELIVERY</SectionLabel>
@@ -464,11 +473,13 @@ export function ClassicSaleCheckout({
             <View className="min-h-[58px] flex-row items-center gap-3 py-2.5">
               <View className="min-w-0 flex-1">
                 <Text className="text-sm font-bold text-foreground">
-                  Fulfil stock now
+                  {hasStockLines ? "Fulfil stock now" : "Mark as fulfilled"}
                 </Text>
                 <Text className="text-xs text-muted-foreground">
                   {fulfillmentOption.reason ??
-                    "Commit reserved stock when you confirm"}
+                    (hasStockLines
+                      ? "Commit reserved stock when you confirm"
+                      : "Handed over or done when you confirm")}
                 </Text>
               </View>
               <Switch

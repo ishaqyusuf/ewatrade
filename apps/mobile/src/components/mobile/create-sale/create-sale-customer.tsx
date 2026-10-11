@@ -102,7 +102,7 @@ export function CreateSaleCustomerStep({
                     model.currencyCode,
                   ).replace(/\.00(?=\D*$)/, "")}
                   pill={{
-                    label: `${model.selectedRows.length} ${model.selectedRows.length === 1 ? "item" : "items"}`,
+                    label: `${model.selectedRows.length + model.catalogFreeLines.length} ${model.selectedRows.length + model.catalogFreeLines.length === 1 ? "item" : "items"}`,
                     tone: isOffline ? "offline" : "synced",
                   }}
                   sub={

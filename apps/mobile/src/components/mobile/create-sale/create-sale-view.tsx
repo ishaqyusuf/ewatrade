@@ -32,17 +32,15 @@ export function CreateSaleView({
   return (
     <VariableContextProvider
       value={{
-        "--sale-items-bottom":
-          model.selectedRows.length > 0 ? actionsHeight + 24 : 96,
+        "--sale-items-bottom": model.hasSaleLines ? actionsHeight + 24 : 96,
         "--sale-customer-bottom":
           model.showCustomerSearch && !model.isOffline
             ? actionsHeight + 24
             : 24,
         "--sale-actions-bottom": actionsHeight + 24,
-        "--sale-fab-bottom":
-          model.selectedRows.length > 0
-            ? actionsHeight + 16
-            : Math.max(insets.bottom, 16),
+        "--sale-fab-bottom": model.hasSaleLines
+          ? actionsHeight + 16
+          : Math.max(insets.bottom, 16),
       }}
     >
       <View

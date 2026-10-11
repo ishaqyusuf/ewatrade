@@ -610,34 +610,39 @@ function OrderLineRow({
   const canFulfill =
     !isClosedOrder(order.status) && canFulfillCommercialOrderLine(line)
   const title = commerceLineTitle(line)
-  const service = line.kind === "service"
+  const catalogFree = Boolean(line.customLine)
+  const service = line.kind === "service" && !catalogFree
   const tint = service ? "lilac" : catalogAvatarTint(title, "product")
   const option = commerceLineOption(line)
   const price =
     line.unitPriceMinor === null
       ? "price set in order"
       : formatMinorMoney(line.unitPriceMinor, order.currencyCode)
-  const state = service
-    ? {
-        label: "In Service jobs",
-        icon: "Wrench" as const,
-        tint: "lilac" as const,
-      }
-    : line.productFulfillments.length > 0
+  const state = catalogFree
+    ? line.serviceFulfillment
       ? { label: "Fulfilled", icon: "Check" as const, tint: "mint" as const }
-      : line.reservation?.status === "ACTIVE"
-        ? {
-            label: "Reserved · ready",
-            icon: "Package" as const,
-            tint: "sky" as const,
-          }
-        : line.reservation
+      : { label: "Not fulfilled yet", icon: "Clock" as const, tint: null }
+    : service
+      ? {
+          label: "In Service jobs",
+          icon: "Wrench" as const,
+          tint: "lilac" as const,
+        }
+      : line.productFulfillments.length > 0
+        ? { label: "Fulfilled", icon: "Check" as const, tint: "mint" as const }
+        : line.reservation?.status === "ACTIVE"
           ? {
-              label: commerceStatusLabel(line.reservation.status),
+              label: "Reserved · ready",
               icon: "Package" as const,
-              tint: null,
+              tint: "sky" as const,
             }
-          : { label: "Not reserved", icon: "Package" as const, tint: null }
+          : line.reservation
+            ? {
+                label: commerceStatusLabel(line.reservation.status),
+                icon: "Package" as const,
+                tint: null,
+              }
+            : { label: "Not reserved", icon: "Package" as const, tint: null }
   return (
     <View
       className={cn(
@@ -680,9 +685,11 @@ function OrderLineRow({
           {title}
         </Text>
         <Text className="text-xs text-muted-foreground" selectable>
-          {`${option ? `${option} · ` : ""}${formatCommerceQuantity(line.quantity)} × ${price}`}
+          {catalogFree
+            ? option
+            : `${option ? `${option} · ` : ""}${formatCommerceQuantity(line.quantity)} × ${price}`}
         </Text>
-        {line.note ? (
+        {line.note && !catalogFree ? (
           <Text className="text-xs text-muted-foreground" selectable>
             {line.note}
           </Text>
@@ -918,8 +925,8 @@ function fulfilmentDetail(
   if (summary.productLineCount > 0) {
     parts.push(
       summary.fulfilledProductLineCount === summary.productLineCount
-        ? "All Product lines fulfilled"
-        : `${summary.fulfilledProductLineCount} of ${summary.productLineCount} Product lines fulfilled`,
+        ? "All lines fulfilled"
+        : `${summary.fulfilledProductLineCount} of ${summary.productLineCount} lines fulfilled`,
     )
   }
   if (summary.fulfillableProductLineCount > 0) {

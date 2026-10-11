@@ -31,6 +31,13 @@ import {
 } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
+import {
+  type CatalogFreeLineDraft,
+  type CatalogFreeLineKind,
+  catalogFreeLinesError,
+  catalogFreeLinesTotalMinor,
+  catalogFreeOrderLines,
+} from "@ewatrade/utils/catalog-free-lines"
 import { rankBySearch } from "@ewatrade/utils/search-rank"
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker"
 import {
@@ -146,6 +153,10 @@ export function useCreateSale({
   const deferredProductSearch = useDeferredValue(productSearch)
   const [selectedLines, setSelectedLines] = useState<
     SaleItemPickerLine<OfferingRow>[]
+  >([])
+  // Typed-price lines (Quick sale / Additional cost) that skip the Catalog.
+  const [catalogFreeLines, setCatalogFreeLines] = useState<
+    CatalogFreeLineDraft[]
   >([])
   const [focusedQuantityId, setFocusedQuantityId] = useState<string | null>(
     null,
@@ -326,17 +337,26 @@ export function useCreateSale({
   const lineCountsByOfferingId = useMemo(() => {
     return getSaleItemPickerLineCounts(selectedLines)
   }, [selectedLines])
-  const totalMinor = selectedRows.reduce(
-    (total, line) => total + (line.totalMinor ?? 0),
-    0,
-  )
-  const currencyCode = selectedRows[0]?.offering.currencyCode ?? "NGN"
+  const totalMinor =
+    selectedRows.reduce((total, line) => total + (line.totalMinor ?? 0), 0) +
+    catalogFreeLinesTotalMinor(catalogFreeLines)
+  const currencyCode =
+    selectedRows[0]?.offering.currencyCode ?? profile?.currencyCode ?? "NGN"
+  const hasSaleLines = selectedRows.length + catalogFreeLines.length > 0
+  const saleUnits = [
+    ...selectedRows.map((row) => row.quantity),
+    ...catalogFreeLines
+      .filter((line) => line.kind === "quick_sale")
+      .map(() => "1"),
+  ]
   const paymentSummary = salePaymentSummary(totalMinor, amountReceived)
+  // Catalog-free lines have nothing to pick, so they can be handed over now too.
+  const hasFulfillableLines =
+    catalogFreeLines.length > 0 ||
+    selectedRows.some((line) => line.offering.kind === "product_unit")
   const fulfillmentOption = useSaleFulfillment({
     deliveryDueAt,
-    hasProductLines: selectedRows.some(
-      (line) => line.offering.kind === "product_unit",
-    ),
+    hasProductLines: hasFulfillableLines,
     requested: fulfillNowRequested,
   })
   const loadedCustomers = useMemo(
@@ -474,6 +494,31 @@ export function useCreateSale({
     setSelectedLines((lines) => removeSaleItemPickerLine(lines, lineId))
   }
 
+  function addCatalogFreeLine(kind: CatalogFreeLineKind) {
+    if (submissionPending.current || submitted.current) return
+    setError(null)
+    setCatalogFreeLines((lines) => [
+      ...lines,
+      { amount: "", description: "", id: Crypto.randomUUID(), kind },
+    ])
+  }
+
+  function updateCatalogFreeLine(
+    lineId: string,
+    patch: Partial<Pick<CatalogFreeLineDraft, "amount" | "description">>,
+  ) {
+    if (submissionPending.current || submitted.current) return
+    setCatalogFreeLines((lines) =>
+      lines.map((line) => (line.id === lineId ? { ...line, ...patch } : line)),
+    )
+  }
+
+  function removeCatalogFreeLine(lineId: string) {
+    if (submissionPending.current || submitted.current) return
+    setError(null)
+    setCatalogFreeLines((lines) => lines.filter((line) => line.id !== lineId))
+  }
+
   function openItemPicker() {
     if (submissionPending.current || submitted.current) return
     Keyboard.dismiss()
@@ -521,8 +566,13 @@ export function useCreateSale({
 
   function proceedToCustomer() {
     if (submissionPending.current || submitted.current) return
-    if (selectedRows.length === 0) {
-      setError("Select at least one item and enter its quantity.")
+    if (!hasSaleLines) {
+      setError("Add an item, or type a price to sell without the catalog.")
+      return
+    }
+    const catalogFreeError = catalogFreeLinesError(catalogFreeLines)
+    if (catalogFreeError) {
+      setError(catalogFreeError)
       return
     }
     if (
@@ -664,29 +714,37 @@ export function useCreateSale({
       setStep("items")
       return
     }
+    const catalogFreeError = catalogFreeLinesError(catalogFreeLines)
+    if (catalogFreeError) {
+      setError(catalogFreeError)
+      setStep("items")
+      return
+    }
     if (paymentSummary.error) {
       setError(paymentSummary.error)
       return
     }
-    const lines = selectedRows.flatMap(({ offering, quantity, totalMinor }) =>
-      totalMinor === null || offering.fixedPriceMinor === null
-        ? []
-        : [
-            {
-              expectedBalanceRevision:
-                offering.kind === "product_unit"
-                  ? offering.balanceRevision
-                  : undefined,
-              expectedConfigurationVersionId:
-                offering.kind === "product_unit"
-                  ? offering.configurationVersionId
-                  : undefined,
-              expectedFixedPriceMinor: offering.fixedPriceMinor,
-              offeringId: offering.id,
-              quantity,
-            },
-          ],
+    const catalogLines = selectedRows.flatMap(
+      ({ offering, quantity, totalMinor }) =>
+        totalMinor === null || offering.fixedPriceMinor === null
+          ? []
+          : [
+              {
+                expectedBalanceRevision:
+                  offering.kind === "product_unit"
+                    ? offering.balanceRevision
+                    : undefined,
+                expectedConfigurationVersionId:
+                  offering.kind === "product_unit"
+                    ? offering.configurationVersionId
+                    : undefined,
+                expectedFixedPriceMinor: offering.fixedPriceMinor,
+                offeringId: offering.id,
+                quantity,
+              },
+            ],
     )
+    const lines = [...catalogLines, ...catalogFreeOrderLines(catalogFreeLines)]
     if (lines.length === 0) {
       setError("Select at least one item and enter its quantity.")
       setStep("items")
@@ -706,9 +764,7 @@ export function useCreateSale({
     Keyboard.dismiss()
     const fulfillNow = getSaleFulfillmentOption({
       deliveryDueAt,
-      hasProductLines: selectedRows.some(
-        (line) => line.offering.kind === "product_unit",
-      ),
+      hasProductLines: hasFulfillableLines,
       now: new Date(),
       requested: fulfillNowRequested,
     }).fulfillNow
@@ -735,11 +791,11 @@ export function useCreateSale({
         const result: CreateSaleCompletion = {
           amount: formatMinorMoney(totalMinor, currencyCode),
           customer: selectedCustomer?.name ?? "Guest customer",
-          itemCount: selectedRows.length,
+          itemCount: selectedRows.length + catalogFreeLines.length,
           paymentState: paymentSummary.paymentState,
           paymentMethod:
             paymentSummary.receivedMinor > 0 ? paymentMethod : undefined,
-          unitCount: saleUnitCount(selectedRows.map((row) => row.quantity)),
+          unitCount: saleUnitCount(saleUnits),
           balance: formatMinorMoney(
             paymentSummary.balanceDueMinor,
             currencyCode,
@@ -771,11 +827,11 @@ export function useCreateSale({
       const result: CreateSaleCompletion = {
         amount: formatMinorMoney(totalMinor, currencyCode),
         customer: selectedCustomer?.name ?? "Guest customer",
-        itemCount: selectedRows.length,
+        itemCount: selectedRows.length + catalogFreeLines.length,
         paymentState: paymentSummary.paymentState,
         paymentMethod:
           paymentSummary.receivedMinor > 0 ? paymentMethod : undefined,
-        unitCount: saleUnitCount(selectedRows.map((row) => row.quantity)),
+        unitCount: saleUnitCount(saleUnits),
         balance: formatMinorMoney(paymentSummary.balanceDueMinor, currencyCode),
         reference: order.orderNumber,
         orderId: order.id,
@@ -861,6 +917,12 @@ export function useCreateSale({
     changeDeliveryDueAt,
     selectedLines,
     selectedRows,
+    catalogFreeLines,
+    hasSaleLines,
+    saleUnits,
+    addCatalogFreeLine,
+    updateCatalogFreeLine,
+    removeCatalogFreeLine,
     selectedCustomer,
     step,
     setStep: guardEdit(setStep),

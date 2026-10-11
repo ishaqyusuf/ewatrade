@@ -1,11 +1,17 @@
-export type OfflineOrderLine = {
-  approvedQuotePriceMinor?: number
-  expectedBalanceRevision?: number
-  expectedConfigurationVersionId?: string
-  expectedFixedPriceMinor?: number
-  offeringId: string
-  quantity: string
-}
+export type OfflineOrderLine =
+  | {
+      approvedQuotePriceMinor?: number
+      expectedBalanceRevision?: number
+      expectedConfigurationVersionId?: string
+      expectedFixedPriceMinor?: number
+      offeringId: string
+      quantity: string
+    }
+  | {
+      amountMinor: number
+      custom: "quick_sale" | "additional_cost"
+      description?: string
+    }
 
 export type OfflineOrderPayment = {
   amountMinor: number

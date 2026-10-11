@@ -4,7 +4,10 @@ import {
   commerceLineTitle,
   formatCommerceQuantity,
 } from "@/components/mobile/commerce/commerce-model"
-import { canFulfillCommercialOrderLine } from "@/components/mobile/commerce/commercial-order-overview-model"
+import {
+  canFulfillCatalogFreeLine,
+  canFulfillCommercialOrderLine,
+} from "@/components/mobile/commerce/commercial-order-overview-model"
 import { isClosedOrder } from "./order-action-eligibility"
 
 export const ORDER_PAYMENT_METHODS = [
@@ -59,14 +62,32 @@ export function getOrderFulfilmentConfirmation(
     }
   }
 
-  const readyLines = order.lines.filter(canFulfillCommercialOrderLine)
+  const stockLines = order.lines.filter(canFulfillCommercialOrderLine)
+  const catalogFreeLines = order.lines.filter(canFulfillCatalogFreeLine)
+  const readyLines = [...stockLines, ...catalogFreeLines]
   if (readyLines.length === 0) return null
   const lineLabel = readyLines.length === 1 ? "line" : "lines"
 
+  if (stockLines.length === 0)
+    return {
+      actionLabel: "Mark fulfilled",
+      detail: "Typed-price lines have no stock to move.",
+      detailTitle: readyLines.map(commerceLineTitle).join(", "),
+      kind: "all",
+      orderLineId: null,
+      summaryLabel: "READY TO FULFIL",
+      summaryValue: `${readyLines.length} ${lineLabel}`,
+      title: "Mark order fulfilled",
+      warning:
+        "This records the sale as handed over or done. Confirm only when it is.",
+    }
+
   return {
     actionLabel: "Fulfil all ready",
-    detail: "Commits every active Product reservation in this Order.",
-    detailTitle: `${readyLines.length} Product ${lineLabel}`,
+    detail: catalogFreeLines.length
+      ? "Commits every active Product reservation and marks typed-price lines done."
+      : "Commits every active Product reservation in this Order.",
+    detailTitle: `${readyLines.length} ${catalogFreeLines.length ? "" : "Product "}${lineLabel}`,
     kind: "all",
     orderLineId: null,
     summaryLabel: "READY TO FULFIL",

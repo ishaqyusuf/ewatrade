@@ -1,5 +1,6 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { catalogFreeLineDisplay } from "@ewatrade/utils/catalog-free-lines"
 import type { LinkProps } from "expo-router"
 
 export type CommercialOrder = RouterOutputs["orders"]["list"][number]
@@ -82,6 +83,7 @@ export function formatCommerceDateTime(value: Date | string) {
 }
 
 export function commerceLineTitle(line: CommercialOrderLine) {
+  if (line.customLine) return catalogFreeLineDisplay(line.customLine).title
   const title = line.snapshot?.catalogItemName ?? "Archived item"
   const unit =
     line.kind === "product" ? line.snapshot?.inventoryUnitName : undefined
@@ -89,6 +91,8 @@ export function commerceLineTitle(line: CommercialOrderLine) {
 }
 
 export function commerceLineOption(line: CommercialOrderLine) {
+  if (line.customLine)
+    return catalogFreeLineDisplay(line.customLine).detail ?? "Typed price"
   if (line.kind === "product") {
     return (
       line.snapshot?.variantName ?? line.snapshot?.offeringName ?? "Product"
