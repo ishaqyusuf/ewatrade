@@ -29,6 +29,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Registration receipt overlay source, 11 October 2026](runs/2026-10-11-registration-receipt-source.md): global sheet, readable agreement/recognition detail, corrected-event component and missing-Book/Close browser checks; scoped types pass. Saved-record acceptance pending.
+
 - [Registration proposal source, 11 October 2026](runs/2026-10-11-registration-adapter.md): strict agreement-only action and canonical adapter;54 assertions pass. Editor/receipt overlay and proposal acceptance pending.
 
 - [Registration database regression, 11 October 2026](runs/2026-10-11-registration-database.md):16 assertions for review, transaction rollback, two-line replay and no posting effects;16 owned cleanup checks clear. Assistant integration pending.

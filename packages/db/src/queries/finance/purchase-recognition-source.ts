@@ -35,7 +35,7 @@ export const purchaseRecognitionInclude = {
       },
     },
   },
-  lines: { take: 11, include: { costBillLine: true } },
+  lines: { take: 11, include: { costBillLine: true, enteredInventoryUnit: { select: { name: true } } } },
   events: {
     take: 7,
     include: {
@@ -78,19 +78,11 @@ export async function loadPurchaseRecognition(
     "INVENTORY",
   )
   assertLoadedPurchaseRecognitionCosts(document, input, inventory.id)
+  const book = await tx.financeBook.findUniqueOrThrow({
+    where: { id: input.bookId }, select: { currencyCode: true },
+  })
   const store = await tx.store.findFirst({
-    where: {
-      id: document.storeId,
-      tenantId: input.tenantId,
-      currencyCode: {
-        equals: (
-          await tx.financeBook.findUniqueOrThrow({
-            where: { id: input.bookId },
-            select: { currencyCode: true },
-          })
-        ).currencyCode,
-      },
-    },
+    where: { id: document.storeId, tenantId: input.tenantId, currencyCode: book.currencyCode },
     select: { id: true },
   })
   if (!store)
@@ -98,7 +90,7 @@ export async function loadPurchaseRecognition(
       "CONFLICT",
       "The purchase Store scope or currency has changed.",
     )
-  return document
+  return { ...document, currencyCode: book.currencyCode }
 }
 
 export type PurchaseRecognitionDocument =

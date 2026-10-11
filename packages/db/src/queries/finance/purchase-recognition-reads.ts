@@ -16,6 +16,8 @@ export async function getFinancePurchaseRecognition(
       return {
         id: document.id,
         bookId: document.bookId,
+        currencyCode: document.currencyCode,
+        supplierName: document.costBill.payeeName,
         supplierId: document.supplierId,
         storeId: document.storeId,
         agreedAt: document.agreedAt,
@@ -39,6 +41,7 @@ export async function getFinancePurchaseRecognition(
               amountMinor: line.costBillLine.amountMinor.toString(),
               balanceSourceId: line.balanceSourceId,
               enteredInventoryUnitId: line.enteredInventoryUnitId,
+              enteredUnitName: line.enteredInventoryUnit.name,
               configurationVersionId: line.configurationVersionId,
               enteredQuantity: line.enteredQuantity.toFixed(),
               categories: line.categories,

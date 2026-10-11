@@ -9,6 +9,8 @@ export function useAssistantReceipt() {
       financeSheet: parseAsString,
       billId: parseAsString,
       supplierId: parseAsString,
+      purchaseRegistration: parseAsString,
+      purchaseRegistrationBook: parseAsString,
       financeMovement: parseAsString,
       financeMovementBook: parseAsString,
       customerDetail: parseAsString,
@@ -29,6 +31,8 @@ export function useAssistantReceipt() {
       financeSheet: null,
       billId: null,
       supplierId: null,
+      purchaseRegistration: null,
+      purchaseRegistrationBook: null,
       financeMovement: null,
       financeMovementBook: null,
       customerDetail: null,
@@ -43,6 +47,8 @@ export function useAssistantReceipt() {
       inventoryOperation: null,
     }
     switch (receipt.kind) {
+      case "finance_purchase_registration":
+        return setParams({...closed,purchaseRegistration:receipt.recordId,purchaseRegistrationBook:receipt.bookId??null})
       case "finance_supplier":
         return setParams({...closed, financeSheet: "supplier-statement", supplierId: receipt.recordId})
       case "finance_bill":
