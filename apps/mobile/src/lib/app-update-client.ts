@@ -116,45 +116,52 @@ export async function checkNativeBuild(manual = false): Promise<boolean> {
   const url = new URL("/api/mobile/builds/check", getBaseUrl())
   for (const [key, value] of Object.entries(installed))
     url.searchParams.set(key, String(value))
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(8000),
-    headers: { Accept: "application/json" },
-  })
-  // Allow staged rollout when this API has not been deployed yet.
-  if (response.status === 404) {
-    clearBuildOffer()
-    return false
-  }
-  if (!response.ok)
-    throw new Error("Could not check new builds. Try again when connected.")
-  const result = await response.json()
-  if (!result || typeof result !== "object" || !("build" in result))
-    throw new Error("Invalid build response")
-  if (!result.build) {
-    clearBuildOffer()
-    return false
-  }
-  const build = parsePublishedBuild(result.build)
-  if (!isNewerBuild(build, installed)) {
-    clearBuildOffer()
-    return false
-  }
-  let dismissed = false
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
   try {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem(DISMISS_KEY)) ?? "null",
-    )
-    dismissed = value?.revision === build.revision && value?.until > Date.now()
-  } catch {
-    /* A malformed local preference must not break updates. */
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    })
+    // Allow staged rollout when this API has not been deployed yet.
+    if (response.status === 404) {
+      clearBuildOffer()
+      return false
+    }
+    if (!response.ok)
+      throw new Error("Could not check new builds. Try again when connected.")
+    const result = await response.json()
+    if (!result || typeof result !== "object" || !("build" in result))
+      throw new Error("Invalid build response")
+    if (!result.build) {
+      clearBuildOffer()
+      return false
+    }
+    const build = parsePublishedBuild(result.build)
+    if (!isNewerBuild(build, installed)) {
+      clearBuildOffer()
+      return false
+    }
+    let dismissed = false
+    try {
+      const value = JSON.parse(
+        (await AsyncStorage.getItem(DISMISS_KEY)) ?? "null",
+      )
+      dismissed =
+        value?.revision === build.revision && value?.until > Date.now()
+    } catch {
+      /* A malformed local preference must not break updates. */
+    }
+    useAppUpdate.setState({
+      build,
+      phase: "available",
+      error: null,
+      visible: manual || !dismissed,
+    })
+    return manual || !dismissed
+  } finally {
+    clearTimeout(timeout)
   }
-  useAppUpdate.setState({
-    build,
-    phase: "available",
-    error: null,
-    visible: manual || !dismissed,
-  })
-  return manual || !dismissed
 }
 
 function clearBuildOffer() {

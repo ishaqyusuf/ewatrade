@@ -18,6 +18,7 @@ for (const scenario of [
   "legacy-offline",
   "production",
   "native-install",
+  "native-check-timeout",
   "native-withdrawn",
   "native-verification-failure",
   "native-permission-retry",
