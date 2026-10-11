@@ -6,6 +6,7 @@ import {
 import type { Prisma } from "../../../generated/prisma/client"
 import type { FinanceInventoryUnknownReason } from "../../../generated/prisma/enums"
 import { FinanceError, assertFinancePostingDate } from "./rules"
+import { planProductReturnCost, type CostState } from "./product-return-cost-plan"
 import {
   addQuantities,
   calculateWeightedAverageIssue,
@@ -39,41 +40,7 @@ function signedQuantity(value: Prisma.Decimal) {
     : normalizeQuantity(text)
 }
 
-export type CostState = {
-  quantity: string
-  cost: bigint | null
-  unknownReason: FinanceInventoryUnknownReason | null
-}
-
-export function allocateOriginalIssueReturnCost(
-  before: CostState,
-  quantity: string,
-  issueKnown: boolean,
-): { after: CostState; allocatedCost: bigint | null } {
-  if (!issueKnown || before.cost === null) {
-    return {
-      after: {
-        quantity: subtractQuantities(before.quantity, quantity),
-        cost: null,
-        unknownReason: before.unknownReason ?? "PRIOR_UNKNOWN_COST",
-      },
-      allocatedCost: null,
-    }
-  }
-  const result = calculateWeightedAverageIssue({
-    quantityBefore: before.quantity,
-    valueBeforeMinor: before.cost,
-    quantityIssued: quantity,
-  })
-  return {
-    after: {
-      quantity: result.quantityAfter,
-      cost: result.valueAfterMinor,
-      unknownReason: null,
-    },
-    allocatedCost: result.valueIssuedMinor,
-  }
-}
+export { allocateOriginalIssueReturnCost } from "./product-return-cost-plan"
 
 /**
  * Private Product return adapter. The owning Commerce transaction already
@@ -654,73 +621,16 @@ export async function recordProductReturnValuationInTransaction(
   if (compareExactDecimals(previouslyReturned, line.quantity.toFixed()) > 0) {
     conflict("Saved Product return quantities exceed the Order line quantity.")
   }
-  let unallocated = canonicalReturned
-  const allocations: Omit<
-    Prisma.FinanceProductReturnCostAllocationUncheckedCreateInput,
-    "returnCostId"
-  >[] = []
-  let sourceCostTotal = ZERO
-  let allCostsKnown = !hasUncapturedPriorReturn
-  let unknownReason: FinanceInventoryUnknownReason | null =
-    hasUncapturedPriorReturn ? "UNCAPTURED_RETURNS" : null
-  for (const fulfillment of hasUncapturedPriorReturn ? [] : fulfillments) {
-    if (unallocated === "0") break
-    const info = issueByFulfillment.get(fulfillment.id)
-    if (!info) conflict("Product return fulfillment source disappeared.")
-    const before = priorAllocationByFulfillment.get(fulfillment.id) ?? {
-      quantity: info.quantity,
-      cost: info.sourceCost,
-      unknownReason: info.unknownReason,
-    }
-    if (before.quantity === "0") continue
-    const quantity =
-      compareExactDecimals(unallocated, before.quantity) <= 0
-        ? unallocated
-        : before.quantity
-    const calculated = allocateOriginalIssueReturnCost(
-      before,
-      quantity,
-      info.sourceCost !== null,
-    )
-    allocations.push({
-      tenantId: input.tenantId,
-      bookId: book.id,
-      orderLineId: line.id,
-      fulfillmentId: fulfillment.id,
-      originalIssueId: info.issue?.id ?? null,
-      canonicalQuantity: quantity,
-      remainingQuantityBefore: before.quantity,
-      remainingQuantityAfter: calculated.after.quantity,
-      sourceCostMinor: calculated.allocatedCost,
-      remainingCostBeforeMinor: before.cost,
-      remainingCostAfterMinor: calculated.after.cost,
-      unknownReason:
-        calculated.allocatedCost === null
-          ? (info.unknownReason ??
-            calculated.after.unknownReason ??
-            "PRIOR_UNKNOWN_COST")
-          : null,
-    })
-    if (calculated.allocatedCost === null) {
-      allCostsKnown = false
-      unknownReason ??=
-        info.unknownReason ??
-        calculated.after.unknownReason ??
-        "PRIOR_UNKNOWN_COST"
-    } else sourceCostTotal += calculated.allocatedCost
-    unallocated = subtractQuantities(unallocated, quantity)
-  }
-  if (!hasUncapturedPriorReturn && unallocated !== "0") {
-    conflict(
-      "Product return quantity exceeds original fulfillment quantity remaining.",
-    )
-  }
-  if (sourceCostTotal > MAX_DATABASE_MINOR) {
-    throw new FinanceError(
-      "INVALID_AMOUNT",
-      "Returned original cost exceeds its limit.",
-    )
-  }
+  const costPlan = planProductReturnCost({
+    tenantId: input.tenantId, bookId: book.id, orderLineId: line.id,
+    canonicalReturned, hasUncapturedPriorReturn,
+    fulfillmentIds: fulfillments.map(value => value.id),
+    issues: new Map([...issueByFulfillment].map(([id, info]) => [id, {
+      quantity: info.quantity, sourceCost: info.sourceCost,
+      unknownReason: info.unknownReason, originalIssueId: info.issue?.id ?? null,
+    }])),
+    priorAllocations: priorAllocationByFulfillment,
+  })
 
   const header = await tx.financeProductReturnCost.create({
     data: {
@@ -729,13 +639,11 @@ export async function recordProductReturnValuationInTransaction(
       orderLineId: line.id,
       productReturnId: productReturn.id,
       canonicalQuantity: canonicalReturned,
-      sourceCostMinor: allCostsKnown ? sourceCostTotal : null,
-      unknownReason: allCostsKnown
-        ? null
-        : (unknownReason ?? "PRIOR_UNKNOWN_COST"),
+      sourceCostMinor: costPlan.sourceCostMinor,
+      unknownReason: costPlan.unknownReason,
     },
   })
-  for (const allocation of allocations) {
+  for (const allocation of costPlan.allocations) {
     await tx.financeProductReturnCostAllocation.create({
       data: { ...allocation, returnCostId: header.id },
     })
