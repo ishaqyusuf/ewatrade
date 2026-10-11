@@ -22,6 +22,7 @@ type PaymentMethod = RouterInputs["orders"]["recordPayment"]["method"]
 type ReturnDisposition =
   RouterInputs["orders"]["returnProductLine"]["disposition"]
 
+const SHEET_CLOSE_MS = 400
 const operationId = (prefix: string) => `${prefix}-${Crypto.randomUUID()}`
 const blocked = (blockers: { reason: string }[]) =>
   new Error(
@@ -50,6 +51,9 @@ export function useOrderChanges({
   const modal = useModal()
   const [sheet, setSheet] = useState<OrderChangeSheet>("menu")
   const [error, setError] = useState<string | null>(null)
+  // A sheet closed from code can keep a stale handle and refuse to present
+  // again; once it has closed, a fresh instance takes its place.
+  const [instance, setInstance] = useState(0)
   // Covers the review read as well as the write, so Save shows progress at once.
   const [working, setWorking] = useState(false)
   const orderId = order?.id ?? ""
@@ -70,9 +74,15 @@ export function useOrderChanges({
     ),
   )
 
-  async function finish(message: string) {
+  // Let the sheet finish closing before the screen re-renders or changes.
+  const closeSheet = async () => {
     setError(null)
     modal.dismiss()
+    await new Promise((resolve) => setTimeout(resolve, SHEET_CLOSE_MS))
+    setInstance((current) => current + 1)
+  }
+  async function finish(message: string) {
+    await closeSheet()
     onNotice(message)
     await onChanged()
   }
@@ -105,6 +115,7 @@ export function useOrderChanges({
     cancelReview: cancelReview.data ?? null,
     cancelReviewLoading: cancelReview.isFetching,
     modalRef: modal.ref,
+    instance,
     open(next: OrderChangeSheet = "menu") {
       setError(null)
       setSheet(next)
@@ -115,8 +126,7 @@ export function useOrderChanges({
       setSheet(next)
     },
     close() {
-      setError(null)
-      modal.dismiss()
+      void closeSheet()
     },
     async saveMetadata(patch: MetadataPatch, reason: string, done: string) {
       if (!order || busy) return
@@ -163,12 +173,16 @@ export function useOrderChanges({
           orderId: order.id,
           reason,
         })
-        await finish("Items changed. This is the new order.")
-        if (receipt.replacementOrderId)
-          router.replace({
-            pathname: "/order/[orderId]",
-            params: { orderId: receipt.replacementOrderId },
-          })
+        const next = receipt.replacementOrderId
+        if (!next) return await finish("Items changed.")
+        // Swapping the screen while the sheet animates out crashes Fabric;
+        // close the sheet first, then open the new order and refresh lists.
+        await closeSheet()
+        router.replace({
+          pathname: "/order/[orderId]",
+          params: { orderId: next },
+        })
+        void onChanged()
       } catch (failure) {
         fail(failure)
       } finally {

@@ -28,6 +28,11 @@ import { type ReactNode, useDeferredValue, useState } from "react"
 import { Platform } from "react-native"
 import type { OrderChangeSheet, OrderChanges } from "./use-order-changes"
 
+// Stable arrays: a new snap-point array on every render can interrupt the
+// close animation and leave the sheet unable to present again.
+const SNAP_POINTS = ["88%"]
+const SNAP_POINTS_LARGE_TEXT = ["94%"]
+
 const TITLES: Record<OrderChangeSheet, string> = {
   menu: "Change order",
   customer: "Change customer",
@@ -54,8 +59,9 @@ export function OrderChangeSheetModal({
   const sheet = changes.sheet
   return (
     <Modal
+      key={changes.instance}
       ref={changes.modalRef}
-      snapPoints={[largeText ? "94%" : "88%"]}
+      snapPoints={largeText ? SNAP_POINTS_LARGE_TEXT : SNAP_POINTS}
       title={sheet === "menu" ? `Change ${order.orderNumber}` : TITLES[sheet]}
     >
       <View className="flex-1" key={sheet}>
@@ -850,7 +856,7 @@ function CancelForm({
               ? releases
                   .map(
                     (release) =>
-                      `${formatCommerceQuantity(release.quantity)} ${release.unitName} of ${title(release.orderLineId)}`,
+                      `${formatCommerceQuantity(release.quantity)} × ${title(release.orderLineId)}`,
                   )
                   .join(", ")
               : "No stock is reserved for this order."

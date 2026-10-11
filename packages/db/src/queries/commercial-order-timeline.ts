@@ -76,6 +76,37 @@ const text = (value: unknown) =>
 const minor = (value: unknown) =>
   typeof value === "number" && Number.isSafeInteger(value) ? value : null
 
+/** Line quantity/price and total differences recorded by a replacement. */
+function termChanges(
+  terms: Record<string, unknown>,
+  labelFor: (row: Record<string, unknown>) => string,
+): CommercialOrderTimelineChange[] {
+  const rows = Array.isArray(terms.lines) ? terms.lines.map(record) : []
+  const changes: CommercialOrderTimelineChange[] = rows
+    .filter(
+      (row) =>
+        String(row.quantity) !== String(row.originalQuantity) ||
+        row.unitPriceMinor !== row.originalUnitPriceMinor,
+    )
+    .map((row) => ({
+      field: "line" as const,
+      label: labelFor(row),
+      before: {
+        quantity: String(row.originalQuantity),
+        unitPriceMinor: minor(row.originalUnitPriceMinor),
+      },
+      after: {
+        quantity: String(row.quantity),
+        unitPriceMinor: minor(row.unitPriceMinor),
+      },
+    }))
+  const before = minor(terms.originalTotalMinor)
+  const after = minor(terms.totalMinor)
+  if (before !== null && after !== null && before !== after)
+    changes.push({ field: "total", before, after })
+  return changes
+}
+
 // Created first and completed last when events share a timestamp.
 const KIND_ORDER: Record<CommercialOrderTimelineKind, number> = {
   created: 0,
@@ -111,6 +142,7 @@ export async function getCommercialOrderTimeline(
       lines: {
         select: {
           id: true,
+          offeringId: true,
           kind: true,
           quantity: true,
           snapshot: {
@@ -177,6 +209,8 @@ export async function getCommercialOrderTimeline(
       replacementAmendments: {
         select: {
           id: true,
+          reason: true,
+          afterSnapshot: true,
           order: { select: { id: true, orderNumber: true } },
         },
       },
@@ -234,14 +268,24 @@ export async function getCommercialOrderTimeline(
     changes: [],
     linkedOrder: null,
   })
-  const replaces = order.replacementAmendments[0]?.order ?? null
+  // A replacement order carries what changed, and why, from the old order.
+  const origin = order.replacementAmendments[0]
+  const lineByOffering = new Map(
+    order.lines.map((line) => [line.offeringId, line]),
+  )
   items.push({
     ...empty(),
     id: `created:${order.id}`,
     kind: "created",
     occurredAt: order.createdAt.toISOString(),
     actorUserId: order.createdByUserId,
-    linkedOrder: replaces,
+    linkedOrder: origin?.order ?? null,
+    reason: origin?.reason ?? null,
+    changes: origin
+      ? termChanges(record(record(origin.afterSnapshot).terms), (row) =>
+          lineLabel(lineByOffering.get(String(row.offeringId))),
+        )
+      : [],
   })
 
   for (const payment of order.payments)
@@ -376,35 +420,9 @@ export async function getCommercialOrderTimeline(
       })
     } else if (amendment.kind === "REPLACE") {
       cancelRecorded = true
-      const terms = record(after.terms)
-      const termLines = Array.isArray(terms.lines) ? terms.lines : []
-      const changes: CommercialOrderTimelineChange[] = termLines
-        .map(record)
-        .filter(
-          (row) =>
-            String(row.quantity) !== String(row.originalQuantity) ||
-            row.unitPriceMinor !== row.originalUnitPriceMinor,
-        )
-        .map((row) => ({
-          field: "line" as const,
-          label: lineLabel(lineById.get(String(row.orderLineId))),
-          before: {
-            quantity: String(row.originalQuantity),
-            unitPriceMinor: minor(row.originalUnitPriceMinor),
-          },
-          after: {
-            quantity: String(row.quantity),
-            unitPriceMinor: minor(row.unitPriceMinor),
-          },
-        }))
-      const beforeTotal = minor(terms.originalTotalMinor)
-      const afterTotal = minor(terms.totalMinor)
-      if (
-        beforeTotal !== null &&
-        afterTotal !== null &&
-        beforeTotal !== afterTotal
+      const changes = termChanges(record(after.terms), (row) =>
+        lineLabel(lineById.get(String(row.orderLineId))),
       )
-        changes.push({ field: "total", before: beforeTotal, after: afterTotal })
       items.push({
         ...common,
         id: `replaced:${amendment.id}`,

@@ -149,7 +149,7 @@ export function ClassicOrderDetailContent({
       {notice ? (
         <StatusBanner icon="CircleCheck" message={notice} tone="success" />
       ) : null}
-      {fulfillmentScheduledForFuture ? (
+      {fulfillmentScheduledForFuture && !closed ? (
         <StatusBanner
           icon="Calendar"
           message={`Product fulfillment becomes available at ${formatCommerceDateTime(

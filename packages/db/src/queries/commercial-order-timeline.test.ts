@@ -278,3 +278,50 @@ test("refunds carry the reason the refund form saved as the payment note", async
     reason: "Item returned",
   })
 })
+
+test("a replacement order's created entry carries the change and reason", async () => {
+  const feed = { ...line("n2", "Feed 25kg", "bag"), offeringId: "feed" }
+  const timeline = await getCommercialOrderTimeline(
+    fakeDb({
+      ...baseOrder,
+      lines: [feed],
+      replacementAmendments: [
+        {
+          id: "r1",
+          reason: "Customer added more",
+          afterSnapshot: {
+            terms: {
+              lines: [
+                {
+                  offeringId: "feed",
+                  quantity: "3",
+                  originalQuantity: "2",
+                  unitPriceMinor: 1400000,
+                  originalUnitPriceMinor: 1400000,
+                },
+              ],
+              originalTotalMinor: 2800000,
+              totalMinor: 4200000,
+            },
+          },
+          order: { id: "old", orderNumber: "ORD-0139" },
+        },
+      ],
+    }),
+    scope,
+  )
+  expect(timeline.items[0]).toMatchObject({
+    kind: "created",
+    reason: "Customer added more",
+    linkedOrder: { orderNumber: "ORD-0139" },
+    changes: [
+      {
+        field: "line",
+        label: "Feed 25kg - bag",
+        before: { quantity: "2" },
+        after: { quantity: "3" },
+      },
+      { field: "total", before: 2800000, after: 4200000 },
+    ],
+  })
+})

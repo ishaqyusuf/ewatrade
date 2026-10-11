@@ -556,7 +556,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         isOffline={isOffline}
         onRecordPayment={() => {
           changes.close()
-          setTimeout(openPaymentForm, 250)
+          setTimeout(openPaymentForm, 450)
         }}
         order={order}
       />

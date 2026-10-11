@@ -120,7 +120,7 @@ export function timelineActivity(
           label: item.linkedOrder
             ? `Order created · replaces ${item.linkedOrder.orderNumber}`
             : "Order created",
-          detail: `Taken by ${who(item)}`,
+          detail: `Taken by ${who(item)}${said(item)}`,
           tone: "ink",
         }
       case "payment":
