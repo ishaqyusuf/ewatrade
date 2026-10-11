@@ -138,7 +138,7 @@ export function timelineActivity(
           label: credit
             ? `Customer credit released ${amount}`
             : `Refund ${amount}`,
-          detail: `${commerceStatusLabel(item.method ?? "OTHER")}${item.reference ? ` · ${item.reference}` : ""} · ${who(item)}`,
+          detail: `${commerceStatusLabel(item.method ?? "OTHER")}${item.reference ? ` · ${item.reference}` : ""} · ${who(item)}${said(item)}`,
           tone: "rose",
         }
       case "fulfilled":

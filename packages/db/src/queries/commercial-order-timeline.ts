@@ -157,6 +157,7 @@ export async function getCommercialOrderTimeline(
           method: true,
           amountMinor: true,
           reference: true,
+          note: true,
           recordedByUserId: true,
           recordedAt: true,
         },
@@ -253,6 +254,8 @@ export async function getCommercialOrderTimeline(
       amountMinor: payment.amountMinor,
       method: payment.method,
       reference: payment.reference,
+      // Refund forms save their reason as the payment note.
+      reason: payment.type === "REFUND" ? payment.note : null,
     })
 
   const batches = new Map<string, Draft>()

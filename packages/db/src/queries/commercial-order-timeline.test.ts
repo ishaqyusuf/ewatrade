@@ -250,3 +250,31 @@ test("replacement and cancellation keep line changes, links and released stock",
     ],
   })
 })
+
+test("refunds carry the reason the refund form saved as the payment note", async () => {
+  const timeline = await getCommercialOrderTimeline(
+    fakeDb({
+      ...baseOrder,
+      replacementAmendments: [],
+      lines: [line("l1", "Day-old chicks", "chick")],
+      payments: [
+        {
+          id: "r1",
+          type: "REFUND",
+          method: "CASH",
+          amountMinor: 8000,
+          reference: null,
+          note: "Item returned",
+          recordedByUserId: "ishaq",
+          recordedAt: at("12:00:00"),
+        },
+      ],
+    }),
+    scope,
+  )
+  expect(timeline.items.at(-1)).toMatchObject({
+    kind: "refund",
+    amountMinor: 8000,
+    reason: "Item returned",
+  })
+})
