@@ -350,7 +350,8 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     const scope = requireGeneralScope(ctx)
     const lines = await Promise.all(
       payload.lines.map(async (line) => {
-        if (line.expectedConfigurationVersionId) return line
+        if ("custom" in line || line.expectedConfigurationVersionId)
+          return line
         const offering = await ctx.db.sellableOffering.findFirst({
           where: { id: line.offeringId, tenantId: scope.tenantId },
           select: {
@@ -395,6 +396,7 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         throw conflict("Initial payment exceeds the order total.")
     }
     for (const line of payload.lines) {
+      if ("custom" in line) continue
       const offering = await ctx.db.sellableOffering.findFirst({
         where: {
           id: line.offeringId,

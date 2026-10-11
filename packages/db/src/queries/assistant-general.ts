@@ -166,13 +166,20 @@ export async function lockGeneralMembership(
 export async function readGeneralOrderReview(
   db: DbClient,
   scope: AssistantScope,
-  input: Array<{
-    offeringId: string
-    quantity: string
-    expectedFixedPriceMinor?: number
-    enteredTotalMinor?: number
-    expectedConfigurationVersionId?: string
-  }>,
+  input: Array<
+    | {
+        offeringId: string
+        quantity: string
+        expectedFixedPriceMinor?: number
+        enteredTotalMinor?: number
+        expectedConfigurationVersionId?: string
+      }
+    | {
+        custom: "quick_sale" | "additional_cost"
+        amountMinor: number
+        description?: string
+      }
+  >,
   currencyCode = "NGN",
 ) {
   const money = (minor: number) =>
@@ -180,9 +187,29 @@ export async function readGeneralOrderReview(
   const { resolveCommercialLinePrice } = await import(
     "./commercial-line-pricing"
   )
+  const { catalogFreeLineDisplay } = await import(
+    "@ewatrade/utils/catalog-free-lines"
+  )
   const lines: string[] = []
   let totalMinor = 0
   for (const line of input) {
+    if ("custom" in line) {
+      const display = catalogFreeLineDisplay({
+        description: line.description,
+        kind: line.custom,
+      })
+      totalMinor += line.amountMinor
+      lines.push(
+        [
+          display.title,
+          display.detail ?? "typed price",
+          money(line.amountMinor),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      )
+      continue
+    }
     const offering = await db.sellableOffering.findFirst({
       where: {
         id: line.offeringId,

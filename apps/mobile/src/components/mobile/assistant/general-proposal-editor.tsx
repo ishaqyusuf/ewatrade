@@ -1,3 +1,4 @@
+import { catalogFreeLineDisplay } from "@ewatrade/utils/catalog-free-lines"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Text } from "@/components/ui/text"
@@ -254,22 +255,31 @@ export function GeneralProposalEditor({
               Use the sale form to change products or customer. Here you can
               adjust quantities and notes.
             </Text>
-            {payload.lines.map((line, index) => (
-              <FormField
-                key={`${line.offeringId}:${index}`}
-                label={`Quantity · line ${index + 1}`}
-                value={line.quantity}
-                editable={!disabled}
-                keyboardType="decimal-pad"
-                onChangeText={(quantity) =>
-                  patch({
-                    lines: payload.lines.map((current, i) =>
-                      i === index ? { ...current, quantity } : current,
-                    ),
-                  })
-                }
-              />
-            ))}
+            {payload.lines.map((line, index) =>
+              "custom" in line ? (
+                <Text
+                  key={`custom:${index}`}
+                  className="text-sm text-foreground"
+                >
+                  {`${catalogFreeLineDisplay({ description: line.description, kind: line.custom }).title} · ${minorToMajorInput(line.amountMinor)}`}
+                </Text>
+              ) : (
+                <FormField
+                  key={`${line.offeringId}:${index}`}
+                  label={`Quantity · line ${index + 1}`}
+                  value={line.quantity}
+                  editable={!disabled}
+                  keyboardType="decimal-pad"
+                  onChangeText={(quantity) =>
+                    patch({
+                      lines: payload.lines.map((current, i) =>
+                        i === index ? { ...current, quantity } : current,
+                      ),
+                    })
+                  }
+                />
+              ),
+            )}
             <FormField
               label="Notes"
               value={payload.notes ?? ""}

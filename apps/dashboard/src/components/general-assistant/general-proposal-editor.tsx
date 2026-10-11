@@ -1,4 +1,5 @@
 "use client"
+import { CATALOG_FREE_LINE_LABELS } from "@ewatrade/utils/catalog-free-lines"
 import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import {
   type GeneralAction,
@@ -50,18 +51,66 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
-  if (props.proposal.payload.action === "expense_void" || props.proposal.payload.action === "bill_payment_reverse")
-    return <GeneralBillCorrectionEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+  if (
+    props.proposal.payload.action === "expense_void" ||
+    props.proposal.payload.action === "bill_payment_reverse"
+  )
+    return (
+      <GeneralBillCorrectionEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "bill_payment")
-    return <GeneralBillPaymentEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralBillPaymentEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "expense_record")
-    return <GeneralExpenseEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralExpenseEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "money_movement")
-    return <GeneralMoneyMovementEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
-  if (props.proposal.payload.action === "customer_credit_apply" || props.proposal.payload.action === "customer_allocation_release")
-    return <GeneralCustomerCreditEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralMoneyMovementEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "customer_credit_apply" ||
+    props.proposal.payload.action === "customer_allocation_release"
+  )
+    return (
+      <GeneralCustomerCreditEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "customer_receipt")
-    return <GeneralCustomerReceiptEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralCustomerReceiptEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "held_credit_refund")
     return (
       <GeneralHeldCreditRefundEditor
@@ -208,9 +257,11 @@ function GeneralProposalFields({
   const [lineTotals, setLineTotals] = useState(
     initial.action === "order_create"
       ? initial.lines.map((line) =>
-          line.enteredTotalMinor === undefined
-            ? ""
-            : minorToMajorInput(line.enteredTotalMinor),
+          "custom" in line
+            ? minorToMajorInput(line.amountMinor)
+            : line.enteredTotalMinor === undefined
+              ? ""
+              : minorToMajorInput(line.enteredTotalMinor),
         )
       : [],
   )
@@ -238,12 +289,17 @@ function GeneralProposalFields({
       ...(payload.action === "order_create"
         ? {
             lines: payload.lines.map((line, index) =>
-              line.enteredTotalMinor === undefined
-                ? line
-                : {
+              "custom" in line
+                ? {
                     ...line,
-                    enteredTotalMinor: majorToMinor(lineTotals[index] ?? ""),
-                  },
+                    amountMinor: majorToMinor(lineTotals[index] ?? ""),
+                  }
+                : line.enteredTotalMinor === undefined
+                  ? line
+                  : {
+                      ...line,
+                      enteredTotalMinor: majorToMinor(lineTotals[index] ?? ""),
+                    },
             ),
           }
         : {}),
@@ -667,48 +723,90 @@ function GeneralProposalFields({
                 </p>
               </>
             ) : null}
-            {payload.lines.map((line, index) => (
-              <Field key={`${line.offeringId}:${index}`}>
-                <FieldLabel htmlFor={field(`quantity-${index}`)}>
-                  Quantity · line {index + 1}
-                </FieldLabel>
-                <Input
-                  id={field(`quantity-${index}`)}
-                  inputMode="decimal"
-                  value={line.quantity}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    patch({
-                      lines: payload.lines.map((current, i) =>
-                        i === index
-                          ? { ...current, quantity: event.target.value }
-                          : current,
-                      ),
-                    })
-                  }
-                />
-                {line.enteredTotalMinor !== undefined ? (
-                  <>
-                    <FieldLabel htmlFor={field(`total-${index}`)}>
-                      Item total · line {index + 1}
-                    </FieldLabel>
-                    <MoneyInput
-                      id={field(`total-${index}`)}
-                      currencyCode={currencyCode}
-                      value={lineTotals[index] ?? ""}
-                      disabled={disabled}
-                      onChange={(event) =>
-                        setLineTotals((current) =>
-                          current.map((value, i) =>
-                            i === index ? event.target.value : value,
-                          ),
-                        )
-                      }
-                    />
-                  </>
-                ) : null}
-              </Field>
-            ))}
+            {payload.lines.map((line, index) =>
+              "custom" in line ? (
+                <Field key={`custom:${index}`}>
+                  <FieldLabel htmlFor={field(`total-${index}`)}>
+                    {CATALOG_FREE_LINE_LABELS[line.custom]} · line {index + 1}
+                  </FieldLabel>
+                  <MoneyInput
+                    id={field(`total-${index}`)}
+                    currencyCode={currencyCode}
+                    value={lineTotals[index] ?? ""}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      setLineTotals((current) =>
+                        current.map((value, i) =>
+                          i === index ? event.target.value : value,
+                        ),
+                      )
+                    }
+                  />
+                  <FieldLabel htmlFor={field(`description-${index}`)}>
+                    Description (optional)
+                  </FieldLabel>
+                  <Input
+                    id={field(`description-${index}`)}
+                    maxLength={200}
+                    value={line.description ?? ""}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      patch({
+                        lines: payload.lines.map((current, i) =>
+                          i === index
+                            ? {
+                                ...current,
+                                description: event.target.value || undefined,
+                              }
+                            : current,
+                        ),
+                      })
+                    }
+                  />
+                </Field>
+              ) : (
+                <Field key={`${line.offeringId}:${index}`}>
+                  <FieldLabel htmlFor={field(`quantity-${index}`)}>
+                    Quantity · line {index + 1}
+                  </FieldLabel>
+                  <Input
+                    id={field(`quantity-${index}`)}
+                    inputMode="decimal"
+                    value={line.quantity}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      patch({
+                        lines: payload.lines.map((current, i) =>
+                          i === index
+                            ? { ...current, quantity: event.target.value }
+                            : current,
+                        ),
+                      })
+                    }
+                  />
+                  {line.enteredTotalMinor !== undefined ? (
+                    <>
+                      <FieldLabel htmlFor={field(`total-${index}`)}>
+                        Item total · line {index + 1}
+                      </FieldLabel>
+                      <MoneyInput
+                        id={field(`total-${index}`)}
+                        currencyCode={currencyCode}
+                        value={lineTotals[index] ?? ""}
+                        disabled={disabled}
+                        onChange={(event) =>
+                          setLineTotals((current) =>
+                            current.map((value, i) =>
+                              i === index ? event.target.value : value,
+                            ),
+                          )
+                        }
+                      />
+                    </>
+                  ) : null}
+                </Field>
+              ),
+            )}
             <Field>
               <FieldLabel htmlFor={field("notes")}>Notes</FieldLabel>
               <Textarea

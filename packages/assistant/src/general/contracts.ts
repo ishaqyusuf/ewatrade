@@ -28,6 +28,14 @@ const quantity = z
   .string()
   .regex(/^\d{1,12}(\.\d{1,6})?$/)
   .refine((v) => Number(v) > 0, "Quantity must be positive")
+/** Quick sale (typed price) or Additional cost; description is optional. */
+export const orderCustomLine = z
+  .object({
+    custom: z.enum(["quick_sale", "additional_cost"]),
+    amountMinor: money.refine((value) => value > 0, "Amount must be positive"),
+    description: z.string().trim().max(200).optional(),
+  })
+  .strict()
 export const generalActionSchema = z.discriminatedUnion("action", [
   z
     .object({
@@ -56,21 +64,27 @@ export const generalActionSchema = z.discriminatedUnion("action", [
       notes: z.string().trim().max(2000).optional(),
       lines: z
         .array(
-          z
-            .object({
-              offeringId: id,
-              quantity,
-              expectedConfigurationVersionId: id.optional(),
-              expectedFixedPriceMinor: money.optional(),
-              enteredTotalMinor: money.refine((value) => value > 0).optional(),
-            })
-            .strict()
-            .refine(
-              (line) =>
-                (line.expectedFixedPriceMinor !== undefined) !==
-                (line.enteredTotalMinor !== undefined),
-              "Choose a fixed price snapshot or an explicit item total.",
-            ),
+          z.union([
+            z
+              .object({
+                offeringId: id,
+                quantity,
+                expectedConfigurationVersionId: id.optional(),
+                expectedFixedPriceMinor: money.optional(),
+                enteredTotalMinor: money
+                  .refine((value) => value > 0)
+                  .optional(),
+              })
+              .strict()
+              .refine(
+                (line) =>
+                  (line.expectedFixedPriceMinor !== undefined) !==
+                  (line.enteredTotalMinor !== undefined),
+                "Choose a fixed price snapshot or an explicit item total.",
+              ),
+            // Sold without a Catalog item: a typed amount (e.g. from a receipt).
+            orderCustomLine,
+          ]),
         )
         .min(1)
         .max(30),

@@ -309,3 +309,21 @@ test("unit rehearsal only drafts validated configuration and separate publicatio
     },
   })
 })
+
+test("order drafts accept catalog-free typed-price lines", () => {
+  const parsed = generalActionSchema.safeParse({
+    action: "order_create",
+    lines: [
+      { amountMinor: 250_000, custom: "quick_sale", description: "Rice" },
+      { amountMinor: 50_000, custom: "additional_cost" },
+    ],
+    initialPayment: { amountMinor: 300_000, method: "cash" },
+  })
+  expect(parsed.success).toBe(true)
+  expect(
+    generalActionSchema.safeParse({
+      action: "order_create",
+      lines: [{ amountMinor: 0, custom: "quick_sale" }],
+    }).success,
+  ).toBe(false)
+})
