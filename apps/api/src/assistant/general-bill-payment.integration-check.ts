@@ -1,3 +1,4 @@
+import { verifyBillCorrectionComposition } from "./general-bill-correction.integration-check"
 import { expect } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { capabilityForAction, capabilityManifest } from "@ewatrade/assistant/capabilities/manifest"
@@ -70,6 +71,7 @@ export async function verifyBillPaymentComposition(ctx: GeneralContext, failingD
     expect(journals).toHaveLength(7)
     for (const journal of journals) expect(journal.lines.reduce((sum, line) => sum + line.debitMinor - line.creditMinor, 0n)).toBe(0n)
     expect(journals.flatMap(j => j.lines).filter(line => line.accountId === cashId).reduce((sum, line) => sum + line.debitMinor - line.creditMinor, 0n)).toBe(-500n)
+    if (process.env.RUN_GENERAL_BILL_CORRECTION === "1") await verifyBillCorrectionComposition(ctx, failingDb, conversationId, bookId, bill.id)
     console.info("Bill payment acceptance: one payment per confirmation, owner funding and no duplicate expense passed")
   } finally { capabilities.forEach((c, index) => Object.assign(c, { rollout: rollouts[index] })) }
 }

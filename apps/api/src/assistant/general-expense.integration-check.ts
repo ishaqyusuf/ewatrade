@@ -86,6 +86,7 @@ export async function verifyExpenseComposition(original: GeneralContext, failing
       await tx.financeBill.deleteMany({ where })
       await tx.financeCommand.deleteMany({ where })
       await tx.financeJournalLine.deleteMany({ where })
+      await tx.financeJournalEntry.deleteMany({ where: { ...where, reversalOfId: { not: null } } })
       await tx.financeJournalEntry.deleteMany({ where })
       await tx.financeAccount.deleteMany({ where })
       await tx.financeBook.deleteMany({ where: { tenantId } })
