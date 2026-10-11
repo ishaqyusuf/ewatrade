@@ -112,6 +112,10 @@ if (enabled) setDefaultTimeout(120_000)
           }),
         ).rejects.toThrow("amount above zero")
       } finally {
+        // Performance evidence restricts Order deletion, so remove it first.
+        await prisma.commercialServiceFulfillment.deleteMany({
+          where: { tenantId },
+        })
         await prisma.tenant.deleteMany({ where: { id: tenantId } })
         await prisma.user.deleteMany({ where: { id: userId } })
         await prisma.$disconnect()

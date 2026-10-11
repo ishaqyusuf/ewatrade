@@ -7,7 +7,10 @@ import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
 import { readCommercialOrderLinesComplete } from "./commercial-order-completion"
-import { assertHeldCommerceFinancialOrder, lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
+import {
+  assertHeldCommerceFinancialOrder,
+  lockCommerceFinancialOrder,
+} from "./customer-ledger/commerce-locks"
 
 const FULFILLMENT_COMMAND_ID_MIN_LENGTH = 8
 const FULFILLMENT_COMMAND_ID_MAX_LENGTH = 160
@@ -167,7 +170,9 @@ export function fulfillCommercialOrderChargeOnlyServiceLine(
 export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
   tx: Prisma.TransactionClient,
   input: FulfillCommercialOrderChargeOnlyServiceLineInput,
-  heldOrder?: NonNullable<Awaited<ReturnType<typeof lockCommerceFinancialOrder>>>,
+  heldOrder?: NonNullable<
+    Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  >,
 ) {
   const normalized = validateInput(input)
   const hash = payloadHash({
@@ -192,13 +197,17 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
       throw new CatalogError("ORDER_NOT_FOUND", "Service Order line not found.")
     }
 
-    if (heldOrder) assertHeldCommerceFinancialOrder(tx, heldOrder, {
-      tenantId: input.tenantId, orderId: discovered.orderId,
-    })
-    const locked = heldOrder ?? await lockCommerceFinancialOrder(tx, {
-      orderId: discovered.orderId,
-      tenantId: input.tenantId,
-    })
+    if (heldOrder)
+      assertHeldCommerceFinancialOrder(tx, heldOrder, {
+        tenantId: input.tenantId,
+        orderId: discovered.orderId,
+      })
+    const locked =
+      heldOrder ??
+      (await lockCommerceFinancialOrder(tx, {
+        orderId: discovered.orderId,
+        tenantId: input.tenantId,
+      }))
     if (!locked) {
       throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
     }
@@ -229,7 +238,9 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
     }
 
     const line = await readCommercialServiceEvidence(tx, {
-      tenantId: input.tenantId, storeId: locked.order.storeId, orderLineId: input.orderLineId,
+      tenantId: input.tenantId,
+      storeId: locked.order.storeId,
+      orderLineId: input.orderLineId,
     })
     if (!line || line.orderId !== discovered.orderId) {
       throw new CatalogError(
@@ -317,4 +328,69 @@ export async function fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
     }
     throw error
   }
+}
+
+/**
+ * Records performance of every unperformed catalog-free line in one pass.
+ * Caller holds the financial Order lock and has checked the Order can be
+ * fulfilled now; status is recomputed by the caller afterwards. System lines
+ * are always CHARGE_ONLY / ON_ORDER_CONFIRMATION, so the per-line review and
+ * Job checks of the canonical command reduce to the filters below.
+ */
+export async function fulfillCatalogFreeLinesInTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    actorUserId: string
+    clientOperationIdPrefix: string
+    orderId: string
+    reason?: string
+    schemaVersion: number
+    tenantId: string
+  },
+) {
+  const lines = await tx.commercialOrderLine.findMany({
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { id: true, quantity: true },
+    where: {
+      kind: "SERVICE",
+      order: { tenantId: input.tenantId },
+      orderId: input.orderId,
+      serviceFulfillment: null,
+      serviceJobLines: { none: {} },
+      snapshot: {
+        customLineRole: { not: null },
+        serviceWorkPolicy: "CHARGE_ONLY",
+      },
+    },
+  })
+  if (lines.length === 0) return 0
+  await assertActivePosMember(tx, input)
+  const performedAt = new Date()
+  const rows = lines.map((line) => {
+    const normalized = validateInput({
+      clientOperationId: `${input.clientOperationIdPrefix}:${line.id}`,
+      reason: input.reason?.trim() || "Recorded as fulfilled",
+      schemaVersion: input.schemaVersion,
+    })
+    return {
+      actorUserId: input.actorUserId,
+      clientOperationId: normalized.clientOperationId,
+      orderId: input.orderId,
+      orderLineId: line.id,
+      payloadHash: payloadHash({
+        actorUserId: input.actorUserId,
+        clientOperationId: normalized.clientOperationId,
+        orderLineId: line.id,
+        reason: normalized.reason,
+        schemaVersion: input.schemaVersion,
+        tenantId: input.tenantId,
+      }),
+      performedAt,
+      quantity: line.quantity,
+      reason: normalized.reason,
+      tenantId: input.tenantId,
+    }
+  })
+  await tx.commercialServiceFulfillment.createMany({ data: rows })
+  return rows.length
 }

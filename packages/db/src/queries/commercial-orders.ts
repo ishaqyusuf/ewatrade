@@ -1,7 +1,10 @@
 import { assertCommercialProductReturnReview } from "./commercial-product-return-review-guard"
 import { createHash } from "node:crypto"
 import { tracePhase } from "../performance-tracing"
-import { productReturnQuantityImpact, productReturnStockImpact } from "./product-return-impact"
+import {
+  productReturnQuantityImpact,
+  productReturnStockImpact,
+} from "./product-return-impact"
 import { getCommercialProductLineReview } from "./commercial-product-line-review"
 import { assertCommercialProductBatchReview } from "./commercial-product-batch-review"
 
@@ -58,7 +61,7 @@ import {
   effectiveCommercialAmountPaid,
   recordCommercialOrderPaymentInTransaction,
 } from "./commercial-payments"
-import { fulfillCommercialOrderChargeOnlyServiceLineInTransaction } from "./commercial-service-fulfillment"
+import { fulfillCatalogFreeLinesInTransaction } from "./commercial-service-fulfillment"
 import {
   lockCommerceFinancialContext,
   lockCommerceFinancialOrder,
@@ -425,14 +428,16 @@ async function applyCommercialOrderProductLineInTransaction(
   )
   // The parent Order and reservation locks serialize this source identity.
   // A prior source is immutable; fresh work needs one insert, not another upsert read.
-  const fulfillment = previousFulfillment ?? await tx.productFulfillment.create({
-    data: {
-      orderLineId: input.line.id,
-      quantity: input.line.quantity,
-      reservationId: input.line.stockReservation.id,
-      stockOperationId: operation.id,
-    },
-  })
+  const fulfillment =
+    previousFulfillment ??
+    (await tx.productFulfillment.create({
+      data: {
+        orderLineId: input.line.id,
+        quantity: input.line.quantity,
+        reservationId: input.line.stockReservation.id,
+        stockOperationId: operation.id,
+      },
+    }))
   // Replayed legacy fulfillment is not a reviewed historical cost import.
   if (!previousFulfillment && input.financialContext !== null) {
     await recordProductFulfillmentValuationInTransaction(tx, {
@@ -453,11 +458,14 @@ async function applyCommercialOrderProductsInTransaction(
     schemaVersion: number
     tenantId: string
   },
-  existingLock?: NonNullable<Awaited<ReturnType<typeof lockCommerceFinancialOrder>>>,
+  existingLock?: NonNullable<
+    Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  >,
 ) {
   // Private composition only: the reviewed batch caller already holds these
   // locks in this transaction. Creation still acquires them through this helper.
-  const lockedOrder = existingLock ?? await lockCommerceFinancialOrder(tx, input)
+  const lockedOrder =
+    existingLock ?? (await lockCommerceFinancialOrder(tx, input))
   if (!lockedOrder) {
     throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
   }
@@ -482,27 +490,14 @@ async function applyCommercialOrderProductsInTransaction(
   // Catalog-free lines are charge-only Services with nothing to pick, so
   // "fulfil" records their performance. They go first because performance
   // is refused once the Order is COMPLETED.
-  const catalogFreeLines = await tx.commercialOrderLine.findMany({
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    select: { id: true },
-    where: {
-      kind: SellableOfferingKind.SERVICE,
-      orderId: input.orderId,
-      serviceFulfillment: null,
-      snapshot: { customLineRole: { not: null } },
-    },
+  const catalogFreeLineCount = await fulfillCatalogFreeLinesInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    clientOperationIdPrefix: input.clientOperationIdPrefix,
+    orderId: input.orderId,
+    reason: input.reason,
+    schemaVersion: input.schemaVersion,
+    tenantId: input.tenantId,
   })
-  for (const line of catalogFreeLines) {
-    await fulfillCommercialOrderChargeOnlyServiceLineInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      clientOperationId: `${input.clientOperationIdPrefix}:${line.id}`,
-      orderLineId: line.id,
-      reason: input.reason?.trim() || "Recorded as fulfilled",
-      schemaVersion: input.schemaVersion,
-      storeId: lockedOrder.order.storeId,
-      tenantId: input.tenantId,
-    }, lockedOrder)
-  }
 
   for (const line of unfulfilledProductLines) {
     await applyCommercialOrderProductLineInTransaction(tx, {
@@ -518,13 +513,12 @@ async function applyCommercialOrderProductsInTransaction(
   }
 
   let status: OrderStatus | null = null
-  if (unfulfilledProductLines.length + catalogFreeLines.length > 0) {
+  if (unfulfilledProductLines.length + catalogFreeLineCount > 0) {
     status = await updateOrderStatusAfterProductFulfillment(tx, input.orderId)
   }
 
   return {
-    fulfilledLineCount:
-      unfulfilledProductLines.length + catalogFreeLines.length,
+    fulfilledLineCount: unfulfilledProductLines.length + catalogFreeLineCount,
     status,
   }
 }
@@ -723,23 +717,22 @@ export async function createCommercialOrderGraphInTransaction(
   // Repeated lines use one catalog snapshot within this command. Eligibility
   // mode is part of the key: a progressive DRAFT must never satisfy an ordinary
   // sale. Price, quantity, attestation and reservation checks remain per line.
-  const catalogOfferings = new Map<string, (typeof resolvedLines)[number]["offering"]>()
+  const catalogOfferings = new Map<
+    string,
+    (typeof resolvedLines)[number]["offering"]
+  >()
   for (const lineInput of input.lines) {
     if (isCustomOrderLineInput(lineInput)) {
       const custom = normalizeCatalogFreeLine(lineInput)
-      const offering =
-        catalogFreeOfferings.get(custom.kind) ??
-        (await tx.sellableOffering.findFirstOrThrow({
+      // Built-in items have no stock unit, options or availability gate,
+      // so skip those relation reads (each is a round trip).
+      let offering = catalogFreeOfferings.get(custom.kind)
+      if (!offering) {
+        const found = await tx.sellableOffering.findFirstOrThrow({
           include: {
             catalogItem: { select: { id: true, name: true } },
-            productUnitOffering: { include: { inventoryUnit: true } },
             serviceOffering: true,
-            storeAvailability: { where: { storeId: store.id } },
-            variant: {
-              include: {
-                selections: { include: { group: true, value: true } },
-              },
-            },
+            variant: true,
           },
           where: {
             id: await ensureCatalogFreeOfferingInTransaction(tx, {
@@ -750,8 +743,15 @@ export async function createCommercialOrderGraphInTransaction(
             }),
             tenantId: input.tenantId,
           },
-        }))
-      catalogFreeOfferings.set(custom.kind, offering)
+        })
+        offering = {
+          ...found,
+          productUnitOffering: null,
+          storeAvailability: [{ isAvailable: true }],
+          variant: { ...found.variant, selections: [] },
+        }
+        catalogFreeOfferings.set(custom.kind, offering)
+      }
       resolvedLines.push({
         custom,
         input: {
@@ -769,28 +769,33 @@ export async function createCommercialOrderGraphInTransaction(
     const progressiveManual = Boolean(
       lineInput.progressiveAvailabilityAttestationId,
     )
-    const offeringKey = JSON.stringify([lineInput.offeringId, progressiveManual])
-    const offering = catalogOfferings.get(offeringKey) ?? await tx.sellableOffering.findFirst({
-      include: {
-        catalogItem: { select: { id: true, name: true } },
-        productUnitOffering: { include: { inventoryUnit: true } },
-        serviceOffering: true,
-        storeAvailability: { where: { storeId: store.id } },
-        variant: {
-          include: {
-            selections: { include: { group: true, value: true } },
+    const offeringKey = JSON.stringify([
+      lineInput.offeringId,
+      progressiveManual,
+    ])
+    const offering =
+      catalogOfferings.get(offeringKey) ??
+      (await tx.sellableOffering.findFirst({
+        include: {
+          catalogItem: { select: { id: true, name: true } },
+          productUnitOffering: { include: { inventoryUnit: true } },
+          serviceOffering: true,
+          storeAvailability: { where: { storeId: store.id } },
+          variant: {
+            include: {
+              selections: { include: { group: true, value: true } },
+            },
           },
         },
-      },
-      where: {
-        id: lineInput.offeringId,
-        catalogItem: saleEligibleCatalogItem,
-        status: progressiveManual
-          ? { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] }
-          : CatalogRecordStatus.ACTIVE,
-        tenantId: input.tenantId,
-      },
-    })
+        where: {
+          id: lineInput.offeringId,
+          catalogItem: saleEligibleCatalogItem,
+          status: progressiveManual
+            ? { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] }
+            : CatalogRecordStatus.ACTIVE,
+          tenantId: input.tenantId,
+        },
+      }))
     if (!offering) {
       throw new CatalogError(
         "OFFERING_UNAVAILABLE",
@@ -1760,12 +1765,22 @@ function productBatchHash(input: FulfillCommercialOrderProductsInput) {
 }
 
 function serializeProductBatchReplay(
-  previous: { fulfilledLineCount: number; payloadHash: string; resultStatus: OrderStatus },
+  previous: {
+    fulfilledLineCount: number
+    payloadHash: string
+    resultStatus: OrderStatus
+  },
   input: FulfillCommercialOrderProductsInput,
 ) {
   if (previous.payloadHash !== productBatchHash(input))
-    throw new CatalogError("IDEMPOTENCY_MISMATCH", "This fulfillment identity was already used with different input.")
-  return { fulfilledLineCount: previous.fulfilledLineCount, status: previous.resultStatus }
+    throw new CatalogError(
+      "IDEMPOTENCY_MISMATCH",
+      "This fulfillment identity was already used with different input.",
+    )
+  return {
+    fulfilledLineCount: previous.fulfilledLineCount,
+    status: previous.resultStatus,
+  }
 }
 
 export async function fulfillCommercialOrderProducts(
@@ -1777,7 +1792,11 @@ export async function fulfillCommercialOrderProducts(
       fulfillCommercialOrderProductsInTransaction(tx, input),
     )
   } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== "P2002"
+    )
+      throw error
     // Read replay only after the owned transaction has rolled back.
     const previous = await db.commercialOrderFulfillmentCommand.findUnique({
       where: {
@@ -1785,7 +1804,9 @@ export async function fulfillCommercialOrderProducts(
           tenantId: input.tenantId,
           clientOperationId: input.clientOperationId,
         },
-        ...(input.storeId === undefined ? {} : { order: { storeId: input.storeId } }),
+        ...(input.storeId === undefined
+          ? {}
+          : { order: { storeId: input.storeId } }),
       },
     })
     if (!previous) throw error
@@ -1798,12 +1819,20 @@ export async function fulfillCommercialOrderProductsInTransaction(
   input: FulfillCommercialOrderProductsInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
-  const lockedOrder = await tracePhase("fulfillmentLock", () => lockCommerceFinancialOrder(tx, input))
+  const lockedOrder = await tracePhase("fulfillmentLock", () =>
+    lockCommerceFinancialOrder(tx, input),
+  )
   if (!lockedOrder) {
     throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
   }
-  if (input.storeId !== undefined && lockedOrder.order.storeId !== input.storeId)
-    throw new CatalogError("REVISION_CONFLICT", "Order is outside the selected Store.")
+  if (
+    input.storeId !== undefined &&
+    lockedOrder.order.storeId !== input.storeId
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Order is outside the selected Store.",
+    )
   const previous = await tx.commercialOrderFulfillmentCommand.findUnique({
     where: {
       tenantId_clientOperationId: {
@@ -1842,15 +1871,23 @@ export async function fulfillCommercialOrderProductsInTransaction(
     )
   }
 
-  await tracePhase("fulfillmentReview", () => assertCommercialProductBatchReview(tx, input))
-  const result = await tracePhase("fulfillmentEffects", () => applyCommercialOrderProductsInTransaction(tx, {
-    actorUserId: input.actorUserId,
-    clientOperationIdPrefix: input.clientOperationId,
-    orderId: order.id,
-    reason: input.reason,
-    schemaVersion: input.schemaVersion,
-    tenantId: input.tenantId,
-  }, lockedOrder))
+  await tracePhase("fulfillmentReview", () =>
+    assertCommercialProductBatchReview(tx, input),
+  )
+  const result = await tracePhase("fulfillmentEffects", () =>
+    applyCommercialOrderProductsInTransaction(
+      tx,
+      {
+        actorUserId: input.actorUserId,
+        clientOperationIdPrefix: input.clientOperationId,
+        orderId: order.id,
+        reason: input.reason,
+        schemaVersion: input.schemaVersion,
+        tenantId: input.tenantId,
+      },
+      lockedOrder,
+    ),
+  )
   const status = result.status ?? order.status
   await tx.commercialOrderFulfillmentCommand.create({
     data: {
@@ -1896,7 +1933,11 @@ export async function returnCommercialOrderProductLineInTransaction(
 ) {
   assertSchemaVersion(input.schemaVersion)
   // Store is a scope assertion, not a new business payload for existing return identities.
-  const { storeId: _storeId, expectedReviewRevision: _review, ...payload } = input
+  const {
+    storeId: _storeId,
+    expectedReviewRevision: _review,
+    ...payload
+  } = input
   const hash = payloadHash(payload)
   const identity = await tx.commercialOrderLine.findFirst({
     select: { orderId: true },
@@ -1922,8 +1963,14 @@ export async function returnCommercialOrderProductLineInTransaction(
       "Fulfilled Product Order line not found.",
     )
   }
-  if (input.storeId !== undefined && lockedOrder.order.storeId !== input.storeId) {
-    throw new CatalogError("REVISION_CONFLICT", "Order is outside the selected Store.")
+  if (
+    input.storeId !== undefined &&
+    lockedOrder.order.storeId !== input.storeId
+  ) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Order is outside the selected Store.",
+    )
   }
   const previous = await tx.productReturn.findUnique({
     where: {
@@ -1966,22 +2013,33 @@ export async function returnCommercialOrderProductLineInTransaction(
   let journalReviewToken: object | undefined
   let costSourceToken: object | undefined
   if (input.expectedReviewRevision !== undefined) {
-    const reviewed = await assertCommercialProductReturnReview(tx, {
-      clientReturnId: input.clientReturnId,
-      tenantId: input.tenantId, storeId: lockedOrder.order.storeId,
-      orderId: lockedOrder.order.id, orderLineId: input.orderLineId,
-      quantity: input.quantity, disposition: input.disposition,
-      destinationBalanceSourceId: input.destinationBalanceSourceId,
-      expectedReviewRevision: input.expectedReviewRevision,
-    }, lockedOrder)
+    const reviewed = await assertCommercialProductReturnReview(
+      tx,
+      {
+        clientReturnId: input.clientReturnId,
+        tenantId: input.tenantId,
+        storeId: lockedOrder.order.storeId,
+        orderId: lockedOrder.order.id,
+        orderLineId: input.orderLineId,
+        quantity: input.quantity,
+        disposition: input.disposition,
+        destinationBalanceSourceId: input.destinationBalanceSourceId,
+        expectedReviewRevision: input.expectedReviewRevision,
+      },
+      lockedOrder,
+    )
     costSourceToken = reviewed.costSourceToken
     journalReviewToken = reviewed.journalReviewToken
   }
 
   const { quantity } = productReturnQuantityImpact({
     quantity: input.quantity,
-    fulfilledQuantities: line.productFulfillments.map(value => value.quantity.toString()),
-    returnedQuantities: line.productReturns.map(value => value.quantity.toString()),
+    fulfilledQuantities: line.productFulfillments.map((value) =>
+      value.quantity.toString(),
+    ),
+    returnedQuantities: line.productReturns.map((value) =>
+      value.quantity.toString(),
+    ),
   })
 
   const disposition =
@@ -2034,12 +2092,13 @@ export async function returnCommercialOrderProductLineInTransaction(
         "Return destination must preserve the original Inventory Unit meaning.",
       )
     }
-    const { canonicalQuantity, onHandAfter: resultingOnHand } = productReturnStockImpact({
-      quantity,
-      unitFactor: line.snapshot.unitFactor.toString(),
-      balanceKind: balance.kind,
-      onHandQuantity: balance.onHandQuantity.toString(),
-    })
+    const { canonicalQuantity, onHandAfter: resultingOnHand } =
+      productReturnStockImpact({
+        quantity,
+        unitFactor: line.snapshot.unitFactor.toString(),
+        balanceKind: balance.kind,
+        onHandQuantity: balance.onHandQuantity.toString(),
+      })
     const update = await tx.stockBalanceSource.updateMany({
       data: { onHandQuantity: resultingOnHand, revision: { increment: 1 } },
       where: { id: balance.id, revision: balance.revision },

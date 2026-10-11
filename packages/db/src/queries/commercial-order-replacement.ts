@@ -11,6 +11,7 @@ import {
   type OrderReplacementChanges,
   orderReplacementChangesSchema,
 } from "./commercial-order-replacement-terms"
+import { catalogFreeLineKindForRole } from "./catalog-free-lines"
 import { createCommercialOrderGraphInTransaction } from "./commercial-orders"
 import { lockCommerceFinancialContext } from "./customer-ledger/commerce-locks"
 import { runInOwnTransaction } from "./own-transaction"
@@ -216,6 +217,19 @@ export async function prepareCommercialOrderReplacementInTransaction(
             "INVALID_ORDER",
             "Original snapshot unavailable.",
           )
+        const customKind = catalogFreeLineKindForRole(original.customLineRole)
+        if (customKind) {
+          if (line.quantity !== "1")
+            throw new CatalogError(
+              "INVALID_ORDER",
+              "Change the amount of a Quick sale or Additional cost, not its quantity.",
+            )
+          return {
+            amountMinor: line.totalMinor,
+            custom: customKind,
+            description: original.note ?? undefined,
+          }
+        }
         return {
           offeringId: line.offeringId,
           quantity: line.quantity,
