@@ -1,6 +1,6 @@
 import { generalMoney, type GeneralAction } from "@ewatrade/assistant/general/contracts"
-import { fulfillCommercialOrderProductsInTransaction, getCommercialProductBatchReview } from "@ewatrade/db/queries"
-import type { GeneralActionAdapter, GeneralTransactionContext } from "./general-actions"
+import { CatalogError, fulfillCommercialOrderProductsInTransaction, getCommercialProductBatchReview } from "@ewatrade/db/queries"
+import { conflict, type GeneralActionAdapter, type GeneralTransactionContext } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
 
 type BatchAction = Extract<GeneralAction, { action: "product_batch_fulfill" }>
@@ -9,25 +9,35 @@ async function current(ctx: GeneralTransactionContext, payload: BatchAction) {
   const review = await getCommercialProductBatchReview(ctx.db, { ...scope, orderId: payload.orderId })
   return { scope, review, target: { id: review.orderId, revision: review.revision } }
 }
-async function execute(ctx: GeneralTransactionContext, payload: BatchAction, key: string, prepared?: Awaited<ReturnType<typeof current>>) {
-  const { scope, review } = prepared ?? await current(ctx, payload)
+async function execute(ctx: GeneralTransactionContext, payload: BatchAction, key: string, expectedRevision?: string) {
+  const scope = requireGeneralScope(ctx)
+  const revision = expectedRevision ?? (await current(ctx, payload)).review.revision
   const result = await fulfillCommercialOrderProductsInTransaction(ctx.db, {
     tenantId: scope.tenantId, storeId: scope.storeId, actorUserId: scope.userId,
     orderId: payload.orderId, reason: payload.reason, clientOperationId: key,
-    schemaVersion: 1, expectedReviewRevision: review.revision,
+    schemaVersion: 1, expectedReviewRevision: revision,
+  }).catch(error => {
+    if (error instanceof CatalogError && error.code === "REVISION_CONFLICT")
+      throw conflict("Order lines, stock or cost evidence changed. Review fulfilment again.")
+    throw error
   })
   return {
-    kind: "order" as const, recordId: review.orderId, title: "Order fulfilment recorded",
-    detail: `${review.orderNumber} · ${result.fulfilledLineCount} lines fulfilled. Order status: ${result.status}.`,
+    kind: "order" as const, recordId: payload.orderId, title: "Order fulfilment recorded",
+    detail: `${result.fulfilledLineCount} lines fulfilled. Order status: ${result.status}.`,
   }
 }
 export const productBatchFulfill = {
   stale: "Order lines, stock or cost evidence changed. Review fulfilment again.",
   unavailable: "This Order cannot be fulfilled now.",
   async validate(ctx, payload) { return (await current(ctx, payload)).target },
-  async prepareExecution(ctx, payload) {
-    const prepared = await current(ctx, payload)
-    return { target: prepared.target, execute: key => execute(ctx, payload, key, prepared) }
+  async prepareExecution(ctx, payload, execution) {
+    // The signed proposal supplies this digest. The canonical command validates
+    // it under financial/Order/reservation/balance locks before its first write.
+    // Avoid reading the same expensive graph once here and again under locks.
+    return {
+      target: { id: payload.orderId, revision: execution.expectedReviewDigest },
+      execute: key => execute(ctx, payload, key, execution.expectedReviewDigest),
+    }
   },
   async review(ctx, payload) {
     const { review, target } = await current(ctx, payload)
