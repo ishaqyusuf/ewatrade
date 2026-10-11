@@ -1,4 +1,5 @@
 "use client"
+import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -49,6 +50,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "expense_void" || props.proposal.payload.action === "bill_payment_reverse")
+    return <GeneralBillCorrectionEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "bill_payment")
     return <GeneralBillPaymentEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "expense_record")

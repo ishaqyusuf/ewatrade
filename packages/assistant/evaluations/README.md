@@ -24,6 +24,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Correction editor component, 11 October 2026](runs/2026-10-11-bill-correction-editor.md): reversal acknowledgment/reason guards, edited reason, exact timestamp and cancel verified; screenshot retained. Full proposal acceptance pending.
+
 - [Bill correction proposal adapters, 11 October 2026](runs/2026-10-11-bill-correction-adapter.md): 16 schema assertions and scoped adapter types pass; coverage blocked by unrelated order-activity classifications. Correction editor/database/web/model acceptance pending.
 
 - [Bill correction review preparation, 11 October 2026](runs/2026-10-11-bill-correction-review.md): shared reversal/void source checks;44 unit assertions and scoped types pass; canonical correction integration19 assertions passed.
