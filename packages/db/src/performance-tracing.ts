@@ -11,6 +11,9 @@ export type PerformancePhase =
   | "serialization"
   | "proposalReview"
   | "proposalExecution"
+  | "fulfillmentLock"
+  | "fulfillmentReview"
+  | "fulfillmentEffects"
 
 type Measurement = { count: number; milliseconds: number; failures: number }
 export type PerformanceTrace = {

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { tracePhase } from "../performance-tracing"
 import { getCommercialProductLineReview } from "./commercial-product-line-review"
 import { assertCommercialProductBatchReview } from "./commercial-product-batch-review"
 
@@ -1788,7 +1789,7 @@ export async function fulfillCommercialOrderProductsInTransaction(
   input: FulfillCommercialOrderProductsInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
-  const lockedOrder = await lockCommerceFinancialOrder(tx, input)
+  const lockedOrder = await tracePhase("fulfillmentLock", () => lockCommerceFinancialOrder(tx, input))
   if (!lockedOrder) {
     throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
   }
@@ -1832,15 +1833,15 @@ export async function fulfillCommercialOrderProductsInTransaction(
     )
   }
 
-  await assertCommercialProductBatchReview(tx, input)
-  const result = await applyCommercialOrderProductsInTransaction(tx, {
+  await tracePhase("fulfillmentReview", () => assertCommercialProductBatchReview(tx, input))
+  const result = await tracePhase("fulfillmentEffects", () => applyCommercialOrderProductsInTransaction(tx, {
     actorUserId: input.actorUserId,
     clientOperationIdPrefix: input.clientOperationId,
     orderId: order.id,
     reason: input.reason,
     schemaVersion: input.schemaVersion,
     tenantId: input.tenantId,
-  })
+  }))
   const status = result.status ?? order.status
   await tx.commercialOrderFulfillmentCommand.create({
     data: {
