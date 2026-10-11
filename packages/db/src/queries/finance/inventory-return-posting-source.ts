@@ -1,3 +1,4 @@
+import { reviewProductReturnJournal } from "./product-return-journal-review"
 import {
   addExactDecimals,
   compareExactDecimals,
@@ -384,146 +385,14 @@ async function resolveCommerceInventoryReturnSource(
   )
     conflict("Product return valuation does not conserve its registered cost.")
 
-  // Re-derive gross COGS from the complete original issue ledger, then require
-  // its immutable journal before permitting any returned-cost recognition.
-  const grossEntry = await tx.financeJournalEntry.findUnique({
-    where: {
-      bookId_sourceKind_sourceId: {
-        bookId: book.id,
-        sourceKind: "COMMERCIAL_ORDER_COGS",
-        sourceId: order.id,
-      },
-    },
-    include: { lines: { include: { account: true } } },
+  const journalReview = await reviewProductReturnJournal(tx, {
+    tenantId: source.tenantId, bookId: book.id, productReturnId: productReturn.id,
+    sourceCostMinor: registered.sourceCostMinor, order, historical: !!history,
+    resolveGross: () => history
+      ? resolveHistoricalCommerceInventoryCostPosting(tx, { ...history.source, orderId: order.id }, history.context)
+      : resolveCommerceInventoryCostPosting(tx, { tenantId: source.tenantId, orderId: order.id }),
   })
-  if (!grossEntry) return null
-  const gross = history
-    ? await resolveHistoricalCommerceInventoryCostPosting(
-        tx,
-        { ...history.source, orderId: order.id },
-        history.context,
-      )
-    : await resolveCommerceInventoryCostPosting(tx, {
-        tenantId: source.tenantId,
-        orderId: order.id,
-      })
-  if (!gross) return null
-  const grossAmount = BigInt(gross.input.lines[0]?.amountMinor ?? "0")
-  if (
-    grossEntry.reversalOfId !== null ||
-    grossEntry.storeId !== order.storeId ||
-    grossEntry.actorUserId !== order.createdByUserId ||
-    grossEntry.effectiveAt.getTime() !== order.completedAt.getTime() ||
-    grossEntry.lines.length !== 2 ||
-    grossEntry.lines.filter(
-      (line) =>
-        line.account.code === "5000" &&
-        line.account.kind === "EXPENSE" &&
-        line.account.purpose === "COST_OF_SALES" &&
-        line.debitMinor === grossAmount &&
-        line.creditMinor === ZERO,
-    ).length !== 1 ||
-    grossEntry.lines.filter(
-      (line) =>
-        line.account.code === "1300" &&
-        line.account.kind === "ASSET" &&
-        line.account.purpose === "INVENTORY" &&
-        line.creditMinor === grossAmount &&
-        line.debitMinor === ZERO,
-    ).length !== 1 ||
-    grossAmount <= ZERO
-  )
-    conflict(
-      "The original Product Order COGS journal is missing or inconsistent.",
-    )
-  const grossReversal = await tx.financeJournalEntry.findFirst({
-    where: { bookId: book.id, reversalOfId: grossEntry.id },
-    select: { id: true },
-  })
-  if (grossReversal)
-    conflict("The original Product Order COGS journal is no longer active.")
-
-  const orderReturns = await tx.productReturn.findMany({
-    where: { tenantId: source.tenantId, orderId: order.id },
-    select: {
-      id: true,
-      disposition: true,
-      financeCost: { select: { sourceCostMinor: true } },
-    },
-  })
-  const priorEntries = await tx.financeJournalEntry.findMany({
-    where: {
-      bookId: book.id,
-      sourceKind: "PRODUCT_RETURN_COGS",
-      sourceId: { in: orderReturns.map((candidate) => candidate.id) },
-    },
-    include: { lines: { include: { account: true } } },
-  })
-  let priorReturnCost = ZERO
-  for (const entry of priorEntries) {
-    const original = orderReturns.find(
-      (candidate) => candidate.id === entry.sourceId,
-    )
-    if (
-      !original ||
-      original.disposition !== "RESTOCK" ||
-      original.financeCost?.sourceCostMinor == null
-    )
-      conflict("A Product return journal has no matching known RESTOCK source.")
-    if (
-      entry.storeId !== order.storeId ||
-      entry.effectiveAt < grossEntry.effectiveAt ||
-      entry.reversalOfId !== null ||
-      entry.lines.length !== 2
-    )
-      conflict("A Product return journal has inconsistent scope or chronology.")
-    const debit = entry.lines.find((line) => line.account.code === "1300")
-    const credit = entry.lines.find((line) => line.account.code === "5000")
-    if (
-      !debit ||
-      !credit ||
-      debit.account.kind !== "ASSET" ||
-      debit.account.purpose !== "INVENTORY" ||
-      credit.account.kind !== "EXPENSE" ||
-      credit.account.purpose !== "COST_OF_SALES" ||
-      debit.debitMinor <= ZERO ||
-      debit.debitMinor !== credit.creditMinor ||
-      debit.debitMinor !== original.financeCost.sourceCostMinor ||
-      debit.creditMinor !== ZERO ||
-      credit.debitMinor !== ZERO
-    )
-      conflict(
-        "A Product return journal does not match reserved inventory accounts.",
-      )
-    if (entry.sourceId !== productReturn.id) priorReturnCost += debit.debitMinor
-  }
-  if (priorReturnCost + registered.sourceCostMinor > grossAmount)
-    conflict("Returned Product cost exceeds the original Order COGS.")
-  if (registered.sourceCostMinor === ZERO) return null
-
-  const accounts = await tx.financeAccount.findMany({
-    where: {
-      bookId: book.id,
-      ...(history ? {} : { archivedAt: null }),
-      code: { in: ["1300", "5000"] },
-    },
-    select: { id: true, code: true, kind: true, purpose: true },
-    take: 3,
-  })
-  const account = (code: string, kind: string, purpose: string) => {
-    const matches = accounts.filter(
-      (candidate) =>
-        candidate.code === code &&
-        candidate.kind === kind &&
-        candidate.purpose === purpose,
-    )
-    if (matches.length !== 1 || !matches[0]?.id.trim())
-      throw new FinanceError(
-        "NOT_FOUND",
-        `Required inventory return account ${code} is unavailable.`,
-      )
-    return matches[0].id
-  }
+  if (!journalReview) return null
   const amountMinor = registered.sourceCostMinor.toString()
   financeAmount(amountMinor)
   const input: FinancePostingInput = {
@@ -537,19 +406,19 @@ async function resolveCommerceInventoryReturnSource(
     sourceKind: "PRODUCT_RETURN_COGS",
     sourceId: productReturn.id,
     effectiveAt:
-      operation.effectiveAt > grossEntry.effectiveAt
+      operation.effectiveAt > journalReview.grossEffectiveAt
         ? operation.effectiveAt
-        : grossEntry.effectiveAt,
+        : journalReview.grossEffectiveAt,
     storeId: order.storeId,
     description: `Returned inventory cost: ${order.orderNumber}`,
     lines: [
       {
-        accountId: account("1300", "ASSET", "INVENTORY"),
+        accountId: journalReview.inventoryAccountId,
         side: "DEBIT",
         amountMinor,
       },
       {
-        accountId: account("5000", "EXPENSE", "COST_OF_SALES"),
+        accountId: journalReview.costOfSalesAccountId,
         side: "CREDIT",
         amountMinor,
       },
