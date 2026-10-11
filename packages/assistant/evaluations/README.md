@@ -24,6 +24,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Saved corrected bill overlay, 11 October 2026](runs/2026-10-11-bill-correction-web.md): direct sheet shows cancelled expense and reversed payment; Close retains assistant route. Chat/attachment access errors prevent full acceptance; owned fixture cleanup verified.
+
 - [Correction authority, period and concurrency, 11 October 2026](runs/2026-10-11-bill-correction-guards.md): 139 combined assertions passed, including fresh authority/period checks, unavailable targets, concurrent recovery and exact original-account reversal sides; cleanup verified.
 
 - [Correction proposal database acceptance, 11 October 2026](runs/2026-10-11-bill-correction-database.md): 120 combined assertions passed; reversal/void rollback and replay, paid-void refusal, retained history, balanced journals and owned cleanup verified.
