@@ -1,3 +1,4 @@
+import { previewProductReturnOriginalCost } from "./preview-product-return-cost"
 import { describe, expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
 import {
@@ -190,6 +191,11 @@ function baseFixture(
     allocations: [],
   }
   const tx = {
+    commercialOrderLine: { findFirst: async () => ({
+      ...productReturn.orderLine,
+      order: productReturn.order,
+      productReturns: productReturn.orderLine.productReturns.filter(value => value.id !== productReturn.id),
+    }) },
     productReturn: { findFirst: async () => productReturn },
     financeBook: {
       findUnique: async () => ({
@@ -413,4 +419,45 @@ describe("private original-cost Product return adapter", () => {
       }),
     ).rejects.toThrow("provenance does not match")
   })
+})
+
+
+test("original-cost preview matches canonical allocation without writes", async () => {
+  const fixture = baseFixture({ disposition: "DAMAGED" })
+  const preview = await previewProductReturnOriginalCost(fixture.tx, {
+    tenantId: "tenant-1", storeId: "store-1", orderLineId: fixture.productReturn.orderLine.id,
+    quantity: fixture.productReturn.quantity.toFixed(),
+  })
+  expect(fixture.state.header).toBeNull()
+  expect(fixture.state.allocations).toHaveLength(0)
+  expect(fixture.state.event).toBeNull()
+  const result = await recordProductReturnValuationInTransaction(fixture.tx, { tenantId: "tenant-1", productReturnId: "return-1" })
+  expect(preview.sourceCostMinor).toBe(result?.sourceCostMinor?.toString() ?? null)
+  expect(preview.status).toBe("KNOWN")
+})
+
+test("original-cost preview preserves missing issue cost and refuses changed provenance", async () => {
+  const unknown = baseFixture({ disposition: "DAMAGED", issueEvent: null })
+  const input = { tenantId: "tenant-1", storeId: "store-1", orderLineId: unknown.productReturn.orderLine.id, quantity: unknown.productReturn.quantity.toFixed() }
+  expect(await previewProductReturnOriginalCost(unknown.tx, input)).toMatchObject({ status: "UNKNOWN", sourceCostMinor: null, unknownReason: "MISSING_ISSUE_COST" })
+  unknown.productReturn.orderLine.snapshot.variantId = "foreign-variant"
+  await expect(previewProductReturnOriginalCost(unknown.tx, input)).rejects.toMatchObject({ code: "CONFLICT" })
+  expect(unknown.state.header).toBeNull()
+})
+
+test("original-cost preview observes current Book closure without writing", async () => {
+  const fixture = baseFixture({ disposition: "DAMAGED" })
+  const original = fixture.tx.financeBook.findUnique.bind(fixture.tx.financeBook)
+  const closedTx = {
+    ...fixture.tx,
+    financeBook: { findUnique: async (...args: Parameters<typeof original>) => {
+      const book = await original(...args)
+      return book ? { ...book, closedThrough: new Date(Date.now() + 60_000) } : null
+    } },
+  } as unknown as Prisma.TransactionClient
+  await expect(previewProductReturnOriginalCost(closedTx, {
+    tenantId: "tenant-1", storeId: "store-1", orderLineId: fixture.productReturn.orderLine.id,
+    quantity: fixture.productReturn.quantity.toFixed(),
+  })).rejects.toMatchObject({ code: "CLOSED_PERIOD" })
+  expect(fixture.state.header).toBeNull()
 })
