@@ -20,6 +20,7 @@ import { useState } from "react"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
 import { GeneralProductCreateEditor } from "./general-product-create-editor"
+import { GeneralExpenseEditor } from "./general-expense-editor"
 import { GeneralMoneyMovementEditor } from "./general-money-movement-editor"
 import { GeneralCustomerCreditEditor } from "./general-customer-credit-editor"
 import { GeneralCustomerReceiptEditor } from "./general-customer-receipt-editor"
@@ -47,6 +48,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "expense_record")
+    return <GeneralExpenseEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "money_movement")
     return <GeneralMoneyMovementEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "customer_credit_apply" || props.proposal.payload.action === "customer_allocation_release")
