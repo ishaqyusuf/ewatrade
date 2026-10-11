@@ -1,3 +1,4 @@
+import { verifyBulkFulfillmentComposition } from "./general-bulk-fulfillment.integration-check"
 import { verifyFulfillmentComposition } from "./general-fulfillment.integration-check"
 import { verifyOrderAmendmentProposals } from "./general-order-amendment.integration-check"
 import { verifyOrderReplacementPreview } from "./general-order-replacement.integration-check"
@@ -309,6 +310,10 @@ if (enabled) {
             return typeof value === "function" ? value.bind(target) : value
           },
         }) as PrismaClient
+        if (process.env.RUN_GENERAL_BULK_FULFILLMENT === "1") {
+          await verifyBulkFulfillmentComposition(ctx, failingDb, conversation.id)
+          return
+        }
         if (process.env.RUN_GENERAL_FULFILLMENT === "1") {
           await verifyFulfillmentComposition(ctx, failingDb, conversation.id)
           return
@@ -842,6 +847,7 @@ if (enabled) {
               await tx.stockReservation.deleteMany({
                 where: { tenantId: owned.id },
               })
+              await tx.commercialOrderFulfillmentCommand.deleteMany({ where: { tenantId: owned.id } })
               await tx.commercialOrderAmendment.deleteMany({ where: { tenantId: owned.id } })
               await tx.commercialOrder.deleteMany({
                 where: { tenantId: owned.id },
