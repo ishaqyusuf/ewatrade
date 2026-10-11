@@ -27,6 +27,9 @@ const proposalTests = [
  * bumping `version`; IDs are permanent. Server executors live in the API.
  */
 export const capabilityManifest = [
+  {id:"customers.account.read",version:1,mode:"read",title:"Read customer funds and matching Book",domain:"finance",tool:"readCustomerAccount",policy:{roles:["OWNER","ADMIN"]},scope:"tenant",clients:["dashboard"],rollout:"planned",procedures:["customerLedger.accountDetail"],examples:["Read customer funds and matching Book"],tests:["apps/api/src/assistant/general-customer-funds.test.ts"],brain},
+  {id:"customers.sources.read",version:1,mode:"read",title:"Read current customer ledger sources",domain:"finance",tool:"readCustomerLedgerSources",policy:{roles:["OWNER","ADMIN"]},scope:"tenant",clients:["dashboard"],rollout:"planned",procedures:["customerLedger.sources"],examples:["Read current customer ledger sources"],tests:["apps/api/src/assistant/general-customer-funds.test.ts"],brain},
+  {id:"customers.statement.read",version:1,mode:"read",title:"Read a pinned customer statement",domain:"finance",tool:"readCustomerStatement",policy:{roles:["OWNER","ADMIN"]},scope:"tenant",clients:["dashboard"],rollout:"planned",procedures:["customerLedger.statement"],examples:["Read a pinned customer statement"],tests:["apps/api/src/assistant/general-customer-funds.test.ts"],brain},
   {id:"customers.credit.refund",version:1,mode:"write",action:"held_credit_refund",schema:actionSchema("held_credit_refund"),effect:"book",receipt:"customer",title:"Record returned unused customer funds",domain:"finance",tool:"draftAction",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["customerLedger.refundUnusedCredit"],examples:["Record the unused deposit I already returned to this customer"],tests:["packages/assistant/src/general/held-credit-refund.test.ts","packages/db/src/queries/customer-ledger/refund-review.test.ts"],brain},
   {id:"sales.product.return",version:1,mode:"write",action:"product_line_return",schema:actionSchema("product_line_return"),effect:"record",receipt:"order",title:"Return a fulfilled product line",domain:"sales",tool:"draftAction",policy:{roles:everyone},scope:"store",clients:["dashboard"],rollout:"planned",procedures:["orders.returnProductLine"],examples:["Return one item to stock without issuing a refund"],tests:["packages/assistant/src/general/product-return.test.ts","packages/db/src/queries/commercial-product-return-review-guard.test.ts"],brain},
   {id:"sales.products.fulfill",version:1,mode:"write",action:"product_batch_fulfill",schema:actionSchema("product_batch_fulfill"),effect:"record",receipt:"order",title:"Fulfil remaining product and catalog-free lines",domain:"sales",tool:"draftAction",policy:{roles:everyone},scope:"store",clients:["dashboard"],rollout:"source",procedures:["orders.fulfillProducts"],examples:["Fulfil the remaining items in this order"],tests:["packages/assistant/src/general/product-fulfillment.test.ts","packages/db/src/queries/product-batch-impact.test.ts","packages/db/src/queries/commercial-product-batch-review.test.ts","apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts"],brain},
@@ -226,7 +229,7 @@ export const capabilityManifest = [
   },
   {
     id: "customers.accounts.read",
-    version: 1,
+    version: 2,
     mode: "read",
     title: "Read customer ledger accounts",
     domain: "customers",

@@ -7,16 +7,19 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 534 (393 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 63
-- Merchant planned: 165
+- Merchant supported by a capability: 66
+- Merchant planned: 162
 - Merchant form-only: 120
 - Merchant excluded: 45
-- Capabilities: 59 (29 read, 30 write)
+- Capabilities: 62 (32 read, 30 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `customers.account.read` | 1 | read | `readCustomerAccount` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.accountDetail` |
+| `customers.sources.read` | 1 | read | `readCustomerLedgerSources` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.sources` |
+| `customers.statement.read` | 1 | read | `readCustomerStatement` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.statement` |
 | `customers.credit.refund` | 1 | write (`held_credit_refund`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.refundUnusedCredit` |
 | `sales.product.return` | 1 | write (`product_line_return`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | planned | `orders.returnProductLine` |
 | `sales.products.fulfill` | 1 | write (`product_batch_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProducts` |
@@ -37,7 +40,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.get` |
 | `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `services.queuePage` |
 | `customers.receivables.read` | 1 | read | `readReceivables` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `customerLedger.receivables` |
-| `customers.accounts.read` | 1 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `customerLedger.accounts` |
+| `customers.accounts.read` | 2 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `customerLedger.accounts` |
 | `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `customers.getById` |
 | `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.create` |
 | `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.createSimpleItem` |
@@ -90,6 +93,9 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `customers.account.read` | Read customer funds and matching Book | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
+| `customers.sources.read` | Read current customer ledger sources | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
+| `customers.statement.read` | Read a pinned customer statement | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
 | `customers.credit.refund` | Record the unused deposit I already returned to this customer | [packages/assistant/src/general/held-credit-refund.test.ts](../../../../packages/assistant/src/general/held-credit-refund.test.ts)<br>[packages/db/src/queries/customer-ledger/refund-review.test.ts](../../../../packages/db/src/queries/customer-ledger/refund-review.test.ts) |
 | `sales.product.return` | Return one item to stock without issuing a refund | [packages/assistant/src/general/product-return.test.ts](../../../../packages/assistant/src/general/product-return.test.ts)<br>[packages/db/src/queries/commercial-product-return-review-guard.test.ts](../../../../packages/db/src/queries/commercial-product-return-review-guard.test.ts) |
 | `sales.products.fulfill` | Fulfil the remaining items in this order | [packages/assistant/src/general/product-fulfillment.test.ts](../../../../packages/assistant/src/general/product-fulfillment.test.ts)<br>[packages/db/src/queries/product-batch-impact.test.ts](../../../../packages/db/src/queries/product-batch-impact.test.ts)<br>[packages/db/src/queries/commercial-product-batch-review.test.ts](../../../../packages/db/src/queries/commercial-product-batch-review.test.ts)<br>[apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts](../../../../apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts) |
@@ -161,7 +167,7 @@ track conversational evaluation separately from these source test links.
 | D04 | 3 |
 | D05 | 11 |
 | E01 | 6 |
-| E02 | 11 |
+| E02 | 8 |
 | E03 | 3 |
 | E04 | 7 |
 | E05 | 18 |
@@ -215,7 +221,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.updateProductDetails` | mutation | catalog | catalog | supported | catalog.details.update |
 | `catalog.updateProductIdentifiers` | mutation | catalog | catalog | supported | catalog.identifiers.update |
 | `catalog.updateUnitConfigurationDraft` | mutation | catalog | catalog | supported | catalog.units.draft |
-| `customerLedger.accountDetail` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.accountDetail` | query | Owner/Admin only | finance | supported | customers.account.read |
 | `customerLedger.accounts` | query | Owner/Admin only | customers | supported | customers.accounts.read |
 | `customerLedger.allocationHistory` | query | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.applyCredit` | mutation | Owner/Admin only | customers | planned | E02 |
@@ -228,8 +234,8 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.refundUnusedCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.refund |
 | `customerLedger.releaseAllocation` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
-| `customerLedger.sources` | query | Owner/Admin only | customers | planned | E02 |
-| `customerLedger.statement` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.sources` | query | Owner/Admin only | finance | supported | customers.sources.read |
+| `customerLedger.statement` | query | Owner/Admin only | finance | supported | customers.statement.read |
 | `customers.count` | query | Owner/Admin only | customers | supported | customers.count |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |

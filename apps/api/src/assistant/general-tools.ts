@@ -1,3 +1,5 @@
+import { generalCustomerAccountsInput, generalCustomerSourcesInput, generalCustomerStatementInput, generalCustomerAccountAnswer, generalCustomerSourcesAnswers, generalCustomerStatementAnswer } from "./general-customer-funds"
+import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
 import {
   capabilityManifest,
   writeCapabilities,
@@ -842,22 +844,41 @@ export function createGeneralTools(
     }),
     readCustomerAccounts: tool({
       description:
-        "Read authoritative customer ledger accounts. Unpaid orders and ledger debt are distinct; missing accounts are not zero debt.",
-      inputSchema: z
-        .object({
-          customerId: id,
-          currencyCode: z
-            .string()
-            .regex(/^[A-Z]{3}$/)
-            .optional(),
-        })
-        .strict(),
+        "Read up to 10 authoritative customer ledger accounts. Continue with nextCursor as afterCurrency, preserving customer and currency filter. Unpaid orders and ledger debt are distinct; missing accounts are not zero debt.",
+      inputSchema: generalCustomerAccountsInput,
       execute: (input) =>
         wrap("readCustomerAccounts", (fresh) =>
           customerLedgerRouter
             .createCaller(fresh)
             .accounts({ ...input, limit: 10 }),
         ),
+    }),
+    readCustomerAccount: tool({
+      description: "Read one verified customer ledger account, matching Book, exact debt and credit, revision and snapshot. Posted entries only; available credit is not proof of refundable cash.",
+      inputSchema: customerLedgerAccountDetailSchema,
+      execute: input => wrap("readCustomerAccount", async fresh => {
+        const account = await customerLedgerRouter.createCaller(fresh).accountDetail(input)
+        onAnswer(generalCustomerAccountAnswer(account))
+        return account
+      }),
+    }),
+    readCustomerLedgerSources: tool({
+      description: "Read at most 10 current credit/debit sources for an exact account. Continue with nextCursor as afterSequence, preserving account, side and currentRevision as expectedRevision. Sources are advisory; refund requires original held-credit provenance validation.",
+      inputSchema: generalCustomerSourcesInput,
+      execute: input => wrap("readCustomerLedgerSources", async fresh => {
+        const page = await customerLedgerRouter.createCaller(fresh).sources({ ...input, limit: 10 })
+        for (const answer of generalCustomerSourcesAnswers(page)) onAnswer(answer)
+        return page
+      }),
+    }),
+    readCustomerStatement: tool({
+      description: "Read at most 10 statement entries and complete ledger balances pinned to snapshotSequence. Continue with nextCursor as afterSequence and preserve the original snapshot. This excludes unintegrated orders and is not a cash-collection report.",
+      inputSchema: generalCustomerStatementInput,
+      execute: input => wrap("readCustomerStatement", async fresh => {
+        const page = await customerLedgerRouter.createCaller(fresh).statement({ ...input, limit: 10 })
+        onAnswer(generalCustomerStatementAnswer(page))
+        return page
+      }),
     }),
     draftAction: tool({
       description:
