@@ -1,5 +1,6 @@
 import { expect, setDefaultTimeout, test } from "bun:test"
 import { randomUUID } from "node:crypto"
+import { withPerformanceTrace } from "../../performance-tracing"
 import { getCommercialProductLineReview } from "../commercial-product-line-review"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
 import {
@@ -24,6 +25,11 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
     const checkpoint = (stage: string) => console.info(JSON.stringify({
       suite: "product-issue-cogs", runId, stage, elapsedMs: Date.now() - startedAt,
     }))
+    const trace = <T>(stage: string, work: () => Promise<T>) => withPerformanceTrace(
+      "job", work, measurement => console.info(JSON.stringify({
+        suite: "product-issue-cogs", runId, stage, ...measurement,
+      })),
+    )
     checkpoint("started")
     const tenantIds: string[] = []
     const storeIds: string[] = []
@@ -335,10 +341,12 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
         where: { id: book.id },
         data: { closedThrough: new Date(Date.now() + 60_000) },
       })
+      checkpoint("closed-period-issue-started")
       await expect(
-        fulfillCommercialOrderProductLine(db, fulfillmentInput),
+        trace("closed-period-issue", () => fulfillCommercialOrderProductLine(db, fulfillmentInput)),
       ).rejects.toMatchObject({ code: "CLOSED_PERIOD" })
       expect(await beforeIssue()).toEqual(beforeClosedIssue)
+      checkpoint("closed-period-rollback-verified")
       await db.financeBook.update({
         where: { id: book.id },
         data: { closedThrough: null },
@@ -360,10 +368,11 @@ describeWithServiceCommerceDatabase("Product issue COGS acceptance", () => {
       expect(reviewedIssue.cost).toMatchObject({
         valueBeforeMinor: "1001", valueDeltaMinor: "-250", valueAfterMinor: "751",
       })
-      const firstFulfillment = await fulfillCommercialOrderProductLine(
+      checkpoint("reviewed-first-issue-started")
+      const firstFulfillment = await trace("reviewed-first-issue", () => fulfillCommercialOrderProductLine(
         db,
         { ...fulfillmentInput, storeId: store.id, expectedReviewRevision: reviewedIssue.revision },
-      )
+      ))
       const firstIssue =
         await db.financeInventoryValuationEvent.findFirstOrThrow({
           where: {
