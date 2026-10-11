@@ -537,3 +537,27 @@ test("source reuse refuses forged tokens and cross-transaction evidence", async 
   expect(() => consumeProductReturnSource(nextToken, tx, { ...fixture.productReturn, clientReturnId: "other-command" })).toThrow()
   expect(fixture.state.header).toBeNull()
 })
+
+test("reused prior history cannot hide an invalid newly created restock movement", async () => {
+  const { consumeProductReturnSource, lockProductReturnSource } = await import("./product-return-source-snapshot")
+  const { lockCommerceFinancialOrder } = await import("../customer-ledger/commerce-locks")
+  const fixture = baseFixture({ disposition: "RESTOCK" })
+  const tx = {
+    ...fixture.tx,
+    commercialOrder: { findFirst: async () => fixture.productReturn.order },
+    $queryRaw: async () => [{ id: "book-1" }],
+    productReturn: { findFirst: async () => {
+      const { order: _order, orderLine: _line, ...current } = fixture.productReturn
+      return { ...current, stockOperation: { ...current.stockOperation,
+        movements: current.stockOperation.movements.map(movement => ({ ...movement, enteredInventoryUnitId: "foreign-unit" })),
+      } }
+    } },
+  } as unknown as Prisma.TransactionClient
+  const scope = { clientReturnId: "command", tenantId: "tenant-1", storeId: "store-1", orderId: fixture.productReturn.order.id, orderLineId: fixture.productReturn.orderLine.id, quantity: fixture.productReturn.quantity.toFixed() }
+  const held = await lockCommerceFinancialOrder(tx, scope)
+  const preview = await previewProductReturnOriginalCost(tx, scope)
+  const token = lockProductReturnSource(preview, tx, held!, scope)!
+  await expect(recordProductReturnValuationInTransaction(tx, { tenantId: scope.tenantId, productReturnId: fixture.productReturn.id, costSourceToken: token })).rejects.toMatchObject({ code: "CONFLICT" })
+  expect(fixture.state.event).toBeNull()
+  expect(() => consumeProductReturnSource(token, tx, fixture.productReturn)).toThrow()
+})

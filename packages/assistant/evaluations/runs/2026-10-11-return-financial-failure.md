@@ -49,3 +49,28 @@ and each return command separately. The local runner enables existing pool/SQL
 instrumentation so those stage traces can distinguish transaction acquisition from
 query work. Syntax bundle and diff check pass; instrumentation has not been rerun.
 No timeout change or production workaround was made.
+
+## Stage-traced reviewed return attempt
+
+Run `3e3a6d40-3d79-412a-a39d-26058f8b3225`, source `36f6f7eb`.
+Result: **fail**, 0 passed / 1 failed / 16 assertions, 179.63 seconds.
+Fixture Order creation succeeded in 12.674 seconds (52 SQL calls; pool wait
+0.826 ms). The reviewed return reached journal source resolution and expired at
+`inventory-return-posting-source.ts` FinanceBook lookup after 33,744 ms against
+the unchanged 30,000 ms limit. Command trace: 33.756 seconds, 131 SQL calls,
+0.129 ms pool wait, four locking SQL calls totaling 956.510 ms. Aggregate SQL
+phase timings overlap and must not be interpreted as wall-clock duration.
+
+Cleanup was verified; session 73475 exited 1. Log:
+`artifacts/assistant-operations-web/d03-return-financial-stage-traced.log`.
+No database suite remains from this run. This shows execution reached the journal
+stage; it does not prove committed cost or journal effects. Next investigate the
+repeated current-return and original gross-cost graphs in journal resolution,
+retaining provenance, prior-return ceilings, account and closed-period checks.
+Do not rerun the unchanged acceptance suite or increase its transaction timeout.
+
+Additional focused regression: a foreign entered unit on the newly created stock
+movement is rejected even when prior source history is reused. The one-use token
+is consumed on failure and no valuation event is written. Valuation suite:
+15 tests passed / 51 assertions. This is deterministic unit evidence, not financial
+DB acceptance, live-model evaluation or browser acceptance.
