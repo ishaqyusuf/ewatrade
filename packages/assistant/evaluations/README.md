@@ -19,6 +19,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Customer receipt dashboard acceptance, 11 October 2026](runs/2026-10-11-customer-receipt-web.md): normal edit/review/confirm, customer overlay, exact saved effects and cleanup passed with screenshots; provider-free.
+
 - [Customer receipt database acceptance, 11 October 2026](runs/2026-10-11-customer-receipt-database.md): 32 assertions passed, atomic rollback/replay, one balanced journal and unchanged opening debt; owned cleanup verified.
 
 - [Customer receipt editor component check, 11 October 2026](runs/2026-10-11-customer-receipt-editor.md): acknowledgment, exact amount, method/reference, cancel and fresh-open checks passed with screenshot.
