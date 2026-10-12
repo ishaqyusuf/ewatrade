@@ -76,6 +76,7 @@ Screen changes and content motion follow T3 Code's mobile app (`pingdotgg/t3code
   - `modal`: `presentation: "modal"`, sliding up from the bottom on Android; iOS keeps its native modal sheet.
   - `gate`: cross-fade for entry, auth and shell routes reached by `Redirect`, `router.replace` or a `Stack.Protected` guard flip (index, login, sign-up, verify-email, onboarding, staff onboarding, no-access, dashboard, admin tabs, customer shell, sales-rep home).
 - Admin bottom tabs cross-fade (180ms ease-out) and switch instantly when Reduce Motion is on.
+- The bottom dock (Glide, chosen 12 October 2026 from `artifacts/mobile-bottom-dock-workshop/`): a soft highlight springs to the pressed tab, and on scroll down the dock sinks, shrinks slightly and fades. It returns only on scroll up, never on reaching the bottom. Motion lives in `src/lib/dock-motion.ts`; Reduce Motion places both instantly.
 - Content motion lives in `src/components/ui/motion.tsx` with timing in `src/lib/content-motion.ts`:
   - `RevealItem` + `useFirstReveal(ready)`: a list's first page drifts up and fades in with a capped stagger. Rows mounted later by scrolling or pagination appear without motion.
   - `MotionView`: fades in content that replaces a loading state. Pass `animate={false}` when the data was already cached as the screen opened, so it rides the native push without an extra fade.
