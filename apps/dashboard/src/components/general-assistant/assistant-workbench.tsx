@@ -17,7 +17,7 @@ import {
   PlusSignIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useSearchParams } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { AssistantLinks } from "./assistant-links"
 import {
@@ -44,33 +44,75 @@ const COLUMN = "mx-auto w-full max-w-[720px]"
  * The bottom-right widget is the quick version of the same chat.
  */
 export function AssistantWorkbench() {
-  const vm = useGeneralAssistant()
+  const routeId = useParams<{ id?: string }>().id ?? null
+  // `?chat=` is the older widget handover link.
+  const legacy = useSearchParams().get("chat")
+  const routeTarget = routeId ?? legacy
+  const vm = useGeneralAssistant({
+    initialConversationId: routeTarget,
+    blankStart: true,
+  })
+  const router = useRouter()
   const { enabled, disabled } = generalChatFlags(vm)
   const pending = useGeneralPendingReviews(vm)
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
   const [historyOpen, setHistoryOpen] = useState(false)
   const review = (row: GeneralPendingReview) => focus.review(row)
+  // A new chat is /assistant; its first message creates the conversation.
   const newChat = () => {
     setHistoryOpen(false)
-    void vm.newThread()
+    router.push("/assistant", { scroll: false })
   }
 
-  // `?chat=` opens a chat handed over from the widget.
-  const requested = useSearchParams().get("chat")
-  const handled = useRef(false)
-  const known = vm.conversations.data?.some((row) => row.id === requested)
+  // The URL names the open chat: /assistant is a blank new chat and
+  // /assistant/c/<id> a saved one. Opening a chat moves the URL; Back/Forward
+  // or a pasted link opens the chat it names.
+  const shown = useRef<string | null>(routeId)
   useEffect(() => {
-    if (handled.current || !requested || !known) return
-    handled.current = true
-    if (vm.conversationId !== requested) vm.choose(requested)
-  }, [requested, known, vm.conversationId, vm.choose])
+    const id = vm.conversationId
+    if (id === shown.current) return
+    shown.current = id
+    if (!id || id === routeId) return
+    const href = `/assistant/c/${encodeURIComponent(id)}`
+    // A blank chat's first message (or a ?chat= link) takes over its URL.
+    if (!routeId && (id === vm.startedConversationId || legacy))
+      router.replace(href, { scroll: false })
+    else router.push(href, { scroll: false })
+  }, [vm.conversationId, vm.startedConversationId, routeId, legacy, router])
+  const routeSeen = useRef<string | null | undefined>(undefined)
+  const routeWanted = useRef<{ id: string | null } | null>(null)
+  useEffect(() => {
+    if (routeTarget !== routeSeen.current) {
+      routeSeen.current = routeTarget
+      routeWanted.current = { id: routeTarget }
+    }
+    const wanted = routeWanted.current
+    if (!wanted) return
+    if (wanted.id === vm.conversationId) {
+      routeWanted.current = null
+      return
+    }
+    // A reply in progress keeps its chat; the URL's chat opens after it.
+    if (vm.busy || vm.runId || vm.pending) return
+    routeWanted.current = null
+    shown.current = wanted.id
+    if (wanted.id) vm.choose(wanted.id)
+    else vm.clearThread()
+  }, [
+    routeTarget,
+    vm.conversationId,
+    vm.busy,
+    vm.runId,
+    vm.pending,
+    vm.choose,
+    vm.clearThread,
+  ])
 
   // A loaded chat with nothing in it yet opens on the welcome, composer first.
   const fresh =
     enabled &&
-    !!vm.conversationId &&
-    !!vm.data &&
+    (vm.blank || (!!vm.conversationId && !!vm.data)) &&
     !vm.chat.messages.length &&
     !vm.busy
   const links = <AssistantLinks pending={pending} onReview={review} />

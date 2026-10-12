@@ -454,7 +454,11 @@ export function GeneralComposer({
   footer?: ReactNode
 }) {
   const { enabled, disabled, exhausted } = generalChatFlags(vm)
-  const off = !enabled || !vm.conversationId || exhausted || vm.state.isError
+  const off =
+    !enabled ||
+    (!vm.conversationId && !vm.blank) ||
+    exhausted ||
+    vm.state.isError
   const props = {
     hasAttachments: vm.readyAttachments.length > 0,
     value: vm.draft,
@@ -694,7 +698,7 @@ export function GeneralChatSwitcher({
                 <Link
                   href={
                     vm.conversationId
-                      ? `/assistant?chat=${encodeURIComponent(vm.conversationId)}`
+                      ? `/assistant/c/${encodeURIComponent(vm.conversationId)}`
                       : "/assistant"
                   }
                 />

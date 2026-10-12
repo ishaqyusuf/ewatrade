@@ -33,7 +33,9 @@ export function QuickAssistant() {
   useQuickAssistantRequests(open)
   const pageFab = usePageFabSlotMode()
   // The assistant page is the full version of this chat.
-  const onAssistantPage = usePathname() === "/assistant"
+  const pathname = usePathname()
+  const onAssistantPage =
+    pathname === "/assistant" || pathname.startsWith("/assistant/")
   if (onAssistantPage) return null
 
   return (

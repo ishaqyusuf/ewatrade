@@ -32,7 +32,18 @@ const errorMessage = (error: unknown) =>
  */
 export function useGeneralAssistant({
   autoStart = false,
-}: { autoStart?: boolean } = {}) {
+  initialConversationId = null,
+  blankStart = false,
+}: {
+  autoStart?: boolean
+  /** A chat named by the URL; opened first instead of the latest one. */
+  initialConversationId?: string | null
+  /**
+   * Open on a blank chat instead of the latest saved one. The first message
+   * creates the conversation (the assistant page's /assistant).
+   */
+  blankStart?: boolean
+} = {}) {
   const workflow = useDashboardWorkflow()
   const typed = useRef(false)
   const messageSettled = useRef(true)
@@ -53,7 +64,19 @@ export function useGeneralAssistant({
   const appliedAt = useRef(0)
   const attemptedText = useRef<string | null>(null)
   const autoStartAttempted = useRef(false)
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  /** The conversation a blank chat's first message created. */
+  const [startedConversationId, setStartedConversationId] = useState<
+    string | null
+  >(null)
+  /** The first message of a blank chat, sent once its conversation exists. */
+  const firstMessage = useRef<{
+    conversationId: string
+    text: string
+    files: GeneralReadyAttachment[]
+  } | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(
+    initialConversationId,
+  )
   const [draft, setDraft] = useState("")
   const draftRef = useRef(draft)
   draftRef.current = draft
@@ -98,9 +121,9 @@ export function useGeneralAssistant({
     }
   }, [])
   useEffect(() => {
-    if (!conversationId && conversations.data?.[0])
+    if (!blankStart && !conversationId && conversations.data?.[0])
       setConversationId(conversations.data[0].id)
-  }, [conversationId, conversations.data])
+  }, [blankStart, conversationId, conversations.data])
   const refresh = useCallback(async () => {
     if (mounted.current && conversationId)
       return state.refetch({ throwOnError: true })
@@ -352,18 +375,8 @@ export function useGeneralAssistant({
     conversationId,
     newThread,
   ])
-  const send = async () => {
-    const text = draft.trim()
-    const files = readyAttachments
-    if (
-      (!text && !files.length) ||
-      busy ||
-      runId ||
-      pending ||
-      !conversationId ||
-      state.isError
-    )
-      return
+  /** Streams one message into the open conversation. */
+  const deliver = async (text: string, files: GeneralReadyAttachment[]) => {
     typed.current = false
     messageSettled.current = false
     workflow.track("assistant_message", "started", {
@@ -371,10 +384,6 @@ export function useGeneralAssistant({
       assistant_mode: "general",
     })
     attemptedText.current = text
-    setDraft("")
-    setNotice(null)
-    setReadyAttachments([])
-    setAttachmentTrayKey((key) => key + 1)
     try {
       await chat.sendMessage({
         parts: [
@@ -396,6 +405,55 @@ export function useGeneralAssistant({
         setDraft((current) => current || text)
         setNotice(errorMessage(error))
       }
+    }
+  }
+  // Runs in the render where the new conversation is open, so the message
+  // goes through that conversation's chat and transport.
+  useEffect(() => {
+    const queued = firstMessage.current
+    if (!queued || queued.conversationId !== conversationId) return
+    firstMessage.current = null
+    // A brand-new chat has no history that could replace this reply.
+    appliedAt.current = Date.now()
+    void deliver(queued.text, queued.files)
+  })
+  const send = async () => {
+    const text = draft.trim()
+    const files = readyAttachments
+    const blank = blankStart && !conversationId
+    if (
+      (!text && !files.length) ||
+      busy ||
+      runId ||
+      pending ||
+      (!conversationId && !blank) ||
+      state.isError ||
+      actionLock.current
+    )
+      return
+    setDraft("")
+    setNotice(null)
+    setReadyAttachments([])
+    setAttachmentTrayKey((key) => key + 1)
+    if (!blank) return deliver(text, files)
+    actionLock.current = true
+    setPending(true)
+    try {
+      const created = await start.mutateAsync()
+      if (!mounted.current) return
+      firstMessage.current = { conversationId: created.id, text, files }
+      setStartedConversationId(created.id)
+      chat.setMessages([])
+      setConversationId(created.id)
+      void conversations.refetch()
+    } catch (error) {
+      if (mounted.current) {
+        setDraft((current) => current || text)
+        setNotice(errorMessage(error))
+      }
+    } finally {
+      actionLock.current = false
+      if (mounted.current) setPending(false)
     }
   }
   const confirm = (proposal: GeneralProposal) =>
@@ -426,6 +484,15 @@ export function useGeneralAssistant({
         payload,
       }),
     )
+  /** Back to a blank chat; the first message creates its conversation. */
+  const clearThread = () => {
+    if (busy || runId || pending) return
+    typed.current = false
+    chat.setMessages([])
+    setConversationId(null)
+    setDraft("")
+    setNotice(null)
+  }
   const choose = (id: string) => {
     if (busy || runId || pending) return
     typed.current = false
@@ -459,9 +526,13 @@ export function useGeneralAssistant({
     pending,
     runId,
     conversationId,
+    /** A blank chat on the assistant page, waiting for its first message. */
+    blank: blankStart && !conversationId,
+    startedConversationId,
     refresh,
     recover,
     newThread,
+    clearThread,
     send,
     confirm,
     cancel,
