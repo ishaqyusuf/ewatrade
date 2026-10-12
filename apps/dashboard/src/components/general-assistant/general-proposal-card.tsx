@@ -286,10 +286,13 @@ export function GeneralOutcomeList({
   proposals,
   currencyCode,
   onOpenReceipt,
+  heading = true,
 }: {
   proposals: GeneralProposal[]
   currencyCode: string
   onOpenReceipt: (proposal: GeneralProposal) => void
+  /** The "In this chat" header with counts; off under a single reply. */
+  heading?: boolean
 }) {
   const [shown, setShown] = useState<ReadonlySet<string>>(new Set())
   const saved = proposals.filter(
@@ -310,18 +313,20 @@ export function GeneralOutcomeList({
       aria-label="Results in this chat"
       className="min-w-0 overflow-hidden rounded-lg border [overflow-wrap:anywhere]"
     >
-      <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
-        <span>In this chat</span>
-        <span>
-          {[
-            saved ? `${saved} saved` : null,
-            cancelled ? `${cancelled} cancelled` : null,
-            failed ? `${failed} failed` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>
-      </div>
+      {heading ? (
+        <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+          <span>In this chat</span>
+          <span>
+            {[
+              saved ? `${saved} saved` : null,
+              cancelled ? `${cancelled} cancelled` : null,
+              failed ? `${failed} failed` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </div>
+      ) : null}
       <ul className="divide-y">
         {proposals.map((proposal) => {
           const { receipt } = proposal

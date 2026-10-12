@@ -56,6 +56,7 @@ export function generalProposalForApp(
     payload,
     status: row.status === "PENDING" && !pending ? "EXPIRED" : row.status,
     expiresAt: row.expiresAt.toISOString(),
+    ...(row.createdAt ? { createdAt: row.createdAt.toISOString() } : {}),
     receipt: row.executedResult
       ? currentGeneralReceipt(generalReceiptSchema.parse(row.executedResult))
       : null,

@@ -36,7 +36,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { type ReactNode, useEffect, useState } from "react"
+import { Fragment, type ReactNode, useEffect, useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
@@ -50,6 +50,7 @@ import {
 } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { GeneralUnavailableProposals } from "./general-unavailable-proposals"
+import { placeProposals } from "./proposal-placement"
 import { useGeneralAssistant } from "./use-general-assistant"
 import { useQuickChatUrl } from "./use-quick-chat-url"
 
@@ -184,9 +185,60 @@ export function GeneralThread({
   const [highlight, setHighlight] = useState<string | null>(null)
   const { enabled, disabled, exhausted, currencyCode } = generalChatFlags(vm)
   const last = vm.chat.messages.at(-1)
-  const outcomes = vm.data?.proposals.filter(isGeneralOutcome) ?? []
-  const drafts =
-    vm.data?.proposals.filter((proposal) => !isGeneralOutcome(proposal)) ?? []
+  // Cards show under the reply that drafted them; see placeProposals.
+  const times = new Map(
+    (vm.data?.messages ?? []).flatMap((message) =>
+      message.createdAt
+        ? [[message.id, new Date(message.createdAt).getTime()] as const]
+        : [],
+    ),
+  )
+  const placed = placeProposals(
+    vm.chat.messages,
+    times,
+    vm.data?.proposals ?? [],
+  )
+  const proposalGroup = (
+    proposals: GeneralProposal[] | undefined,
+    heading = false,
+  ) => {
+    if (!proposals?.length) return null
+    const outcomes = proposals.filter(isGeneralOutcome)
+    const drafts = proposals.filter((proposal) => !isGeneralOutcome(proposal))
+    return (
+      <div className={cn("flex flex-col gap-3", !compact && "pl-10")}>
+        {outcomes.length ? (
+          <GeneralOutcomeList
+            heading={heading}
+            proposals={outcomes}
+            currencyCode={currencyCode}
+            onOpenReceipt={(proposal) =>
+              proposal.receipt && openReceipt(proposal.receipt)
+            }
+          />
+        ) : null}
+        {drafts.map((proposal) => (
+          <div
+            key={proposal.id}
+            id={`general-proposal-${proposal.id}`}
+            className={cn(
+              "rounded-lg transition-shadow duration-700",
+              highlight === proposal.id && "ring-4 ring-primary/30",
+            )}
+          >
+            <GeneralProposalCard
+              proposal={proposal}
+              currencyCode={currencyCode}
+              disabled={disabled}
+              onConfirm={() => void vm.confirm(proposal)}
+              onCancel={() => void vm.cancel(proposal)}
+              onEdit={() => setEditing(proposal)}
+            />
+          </div>
+        ))}
+      </div>
+    )
+  }
   const focused = vm.data?.proposals.some((p) => p.id === focusId)
   useEffect(() => {
     if (!focusId || !focused) return
@@ -314,45 +366,48 @@ export function GeneralThread({
                 part.type === "data-setup-attachment" ? [part.data] : [],
               )
               return (
-                <div
-                  key={message.id}
-                  className="flex flex-col items-end gap-1.5"
-                >
-                  {files.map((file) => (
-                    <GeneralSentFile key={file.attachmentId} file={file} />
-                  ))}
-                  {text ? (
-                    <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-                      {text}
-                    </p>
-                  ) : null}
-                </div>
+                <Fragment key={message.id}>
+                  <div className="flex flex-col items-end gap-1.5">
+                    {files.map((file) => (
+                      <GeneralSentFile key={file.attachmentId} file={file} />
+                    ))}
+                    {text ? (
+                      <p className="min-w-0 max-w-[85%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+                        {text}
+                      </p>
+                    ) : null}
+                  </div>
+                  {proposalGroup(placed.after.get(message.id))}
+                </Fragment>
               )
             }
             const answers = generalAnswers(message.parts)
             return (
-              <div key={message.id} className="flex gap-3">
-                <span
-                  aria-hidden
-                  className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
-                >
-                  <HugeiconsIcon icon={SparklesIcon} className="size-3.5" />
-                </span>
-                <div className="flex min-w-0 max-w-[85%] flex-col gap-2 text-foreground/85">
-                  {text ? (
-                    <Streamdown
-                      className="space-y-2"
-                      components={markdownComponents}
-                      isAnimating={vm.busy && message.id === last?.id}
-                    >
-                      {text}
-                    </Streamdown>
-                  ) : null}
-                  {answers.map((answer) => (
-                    <GeneralAnswerCard key={answer.id} answer={answer} />
-                  ))}
+              <Fragment key={message.id}>
+                <div className="flex gap-3">
+                  <span
+                    aria-hidden
+                    className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+                  >
+                    <HugeiconsIcon icon={SparklesIcon} className="size-3.5" />
+                  </span>
+                  <div className="flex min-w-0 max-w-[85%] flex-col gap-2 text-foreground/85">
+                    {text ? (
+                      <Streamdown
+                        className="space-y-2"
+                        components={markdownComponents}
+                        isAnimating={vm.busy && message.id === last?.id}
+                      >
+                        {text}
+                      </Streamdown>
+                    ) : null}
+                    {answers.map((answer) => (
+                      <GeneralAnswerCard key={answer.id} answer={answer} />
+                    ))}
+                  </div>
                 </div>
-              </div>
+                {proposalGroup(placed.after.get(message.id))}
+              </Fragment>
             )
           })}
           {vm.chat.status === "submitted" ? (
@@ -365,38 +420,7 @@ export function GeneralThread({
               rows={vm.state.data.unavailableProposals}
             />
           ) : null}
-          {vm.data?.proposals.length ? (
-            <div className={cn("flex flex-col gap-3", !compact && "pl-10")}>
-              {outcomes.length ? (
-                <GeneralOutcomeList
-                  proposals={outcomes}
-                  currencyCode={currencyCode}
-                  onOpenReceipt={(proposal) =>
-                    proposal.receipt && openReceipt(proposal.receipt)
-                  }
-                />
-              ) : null}
-              {drafts.map((proposal) => (
-                <div
-                  key={proposal.id}
-                  id={`general-proposal-${proposal.id}`}
-                  className={cn(
-                    "rounded-lg transition-shadow duration-700",
-                    highlight === proposal.id && "ring-4 ring-primary/30",
-                  )}
-                >
-                  <GeneralProposalCard
-                    proposal={proposal}
-                    currencyCode={currencyCode}
-                    disabled={disabled}
-                    onConfirm={() => void vm.confirm(proposal)}
-                    onCancel={() => void vm.cancel(proposal)}
-                    onEdit={() => setEditing(proposal)}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
+          {proposalGroup(placed.rest, true)}
           {vm.notice || vm.chat.error ? (
             <p role="alert" className="text-sm text-destructive">
               {vm.notice ??

@@ -476,6 +476,8 @@ export const generalProposalSchema = z
       "FAILED",
     ]),
     expiresAt: z.string().datetime(),
+    /** When it was drafted; places the card under the reply that made it. */
+    createdAt: z.string().datetime().optional(),
     receipt: generalReceiptSchema.nullable(),
     review: z.array(z.string()).optional(),
     /**
