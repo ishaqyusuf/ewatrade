@@ -26,7 +26,6 @@ const contracts = [
       "activeBusinessOfflineCommands",
       "CustomerOverviewContent",
       "orderLinked={Boolean(initialOrderId)}",
-      "CommerceCustomerRow",
       "commercialOrderHref",
       "getCustomerBookPresentation",
       "Add first customer",

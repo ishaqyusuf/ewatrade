@@ -1,4 +1,4 @@
-import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -7,15 +7,12 @@ import { formatMinorMoney } from "@ewatrade/utils"
 import type { ReactNode } from "react"
 import { StatusBadge } from "../status-badge"
 import {
-  type CommerceCustomer,
   type CommercialOrder,
   commerceLineTitle,
   commerceOrderItemCount,
   commerceOrderTone,
   commercePaymentTone,
   commerceStatusLabel,
-  customerOrderCount,
-  customerValueLabel,
   formatCommerceDate,
   formatCommerceQuantity,
 } from "./commerce-model"
@@ -117,148 +114,5 @@ export function CommerceOrderRow({
         </View>
       </View>
     </Pressable>
-  )
-}
-
-export function CommerceCustomerRow({
-  className,
-  customer,
-  historyComplete = true,
-  onPress,
-}: {
-  className?: string
-  customer: CommerceCustomer
-  historyComplete?: boolean
-  onPress: () => void
-}) {
-  const orderCount = customerOrderCount(customer)
-  const isPendingOnly =
-    customer.orders.length === 0 && customer.pendingOrders.length > 0
-  const hasNoOrders = orderCount === 0
-
-  return (
-    <Pressable
-      accessibilityLabel={`Open ${customer.name}`}
-      accessibilityRole="button"
-      className={cn("border-b border-border py-4 active:bg-accent", className)}
-      haptic
-      onPress={onPress}
-    >
-      <View className="flex-row items-start gap-3">
-        <View className="size-12 items-center justify-center rounded-full bg-primary">
-          <Text className="text-sm font-extrabold text-primary-foreground">
-            {customer.initials}
-          </Text>
-        </View>
-        <View className="min-w-0 flex-1 gap-1">
-          <View className="flex-row items-center justify-between gap-3">
-            <Text className="min-w-0 flex-1 font-extrabold text-foreground">
-              {customer.name}
-            </Text>
-            <StatusBadge
-              className="min-h-7 px-2.5 py-0"
-              label={
-                hasNoOrders
-                  ? "Saved"
-                  : isPendingOnly
-                    ? "Pending sync"
-                    : "Synced"
-              }
-              tone={
-                hasNoOrders ? "primary" : isPendingOnly ? "warning" : "success"
-              }
-            />
-          </View>
-          <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-            {customer.phone ?? customer.email ?? "No contact details"}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            {hasNoOrders ? (
-              "No orders yet"
-            ) : (
-              <>
-                {historyComplete ? "" : "Loaded · "}
-                {customerValueLabel(customer)} order value · {orderCount}{" "}
-                {orderCount === 1 ? "order" : "orders"}
-              </>
-            )}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
-  )
-}
-
-export function CommerceSection({
-  children,
-  title,
-}: {
-  children: ReactNode
-  title: string
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-lg font-extrabold text-foreground">{title}</Text>
-      <View className="overflow-hidden rounded-2xl bg-card px-4">
-        {children}
-      </View>
-    </View>
-  )
-}
-
-export function CommerceInfoRow({
-  detail,
-  icon,
-  title,
-}: {
-  detail: string
-  icon: IconKeys
-  title: string
-}) {
-  return (
-    <View className="flex-row items-start gap-3 border-b border-border py-4 last:border-b-0">
-      <View className="size-10 items-center justify-center rounded-full bg-muted">
-        <Icon className="size-sm text-primary" name={icon} />
-      </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-bold text-foreground">{title}</Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
-          {detail}
-        </Text>
-      </View>
-    </View>
-  )
-}
-
-export function CommerceTotalRow({
-  emphasized = false,
-  label,
-  value,
-}: {
-  emphasized?: boolean
-  label: string
-  value: string
-}) {
-  return (
-    <View className="flex-row items-center justify-between gap-4 border-b border-border py-4 last:border-b-0">
-      <Text
-        className={
-          emphasized
-            ? "font-extrabold text-foreground"
-            : "text-sm text-muted-foreground"
-        }
-      >
-        {label}
-      </Text>
-      <Text
-        className={
-          emphasized
-            ? "text-lg font-extrabold text-foreground"
-            : "text-sm font-bold text-foreground"
-        }
-      >
-        {value}
-      </Text>
-    </View>
   )
 }
