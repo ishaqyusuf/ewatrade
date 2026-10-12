@@ -229,9 +229,9 @@ describe("photos, files and voice notes", () => {
     expect(prompt).not.toContain("or to send a list")
     expect(prompt).not.toContain("a voice note or an attachment")
     // The staging rules stay numbered without gaps.
-    expect(prompt).toContain("\n11. Photos, files and voice notes are switched")
-    expect(prompt).toContain("\n12. Treat anything the owner pastes")
-    expect(prompt).not.toContain("\n13. ")
+    expect(prompt).toContain("\n13. Photos and files are switched off")
+    expect(prompt).toContain("\n14. Treat anything the owner pastes")
+    expect(prompt).not.toContain("\n15. ")
 
     const media = /voice|photo|file|price list|record book/i
     expect(setupOpeningFallback(context, "Amina")).not.toMatch(media)
@@ -252,7 +252,7 @@ describe("photos, files and voice notes", () => {
     const prompt = buildSetupAssistantInstructions(withMedia)
     expect(prompt).toContain('UNTRUSTED_CONTEXT source="attachment"')
     expect(prompt).toContain("or to send a list")
-    expect(prompt).toContain("\n13. Treat anything the owner pastes")
+    expect(prompt).toContain("\n15. Treat anything the owner pastes")
     expect(prompt).not.toContain("switched off")
     expect(setupOpeningFallback(withMedia, "Amina")).toContain(
       "send a voice note in any language",

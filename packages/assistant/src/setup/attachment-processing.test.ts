@@ -113,18 +113,24 @@ describe("setup attachment processing", () => {
     })
   })
 
-  test("a falsely short voice note is still charged by its size", async () => {
+  test("a voice note without a measured duration is refused before any charge", async () => {
+    // Upload admission measures the duration from the bytes; none means the
+    // recording never passed admission.
     const { deps, log } = harness(
       attachment({
         kind: "AUDIO",
         contentType: "audio/webm",
-        durationMs: 1_000,
+        durationMs: null,
         sizeBytes: 6_400_000,
       }),
       new Uint8Array([1]),
     )
-    await processSetupAttachment("att_1", deps)
-    expect(log.reserved).toEqual([{ audioSeconds: 100 }])
+    expect(await processSetupAttachment("att_1", deps)).toEqual({
+      status: "failed",
+      errorCode: "INVALID_AUDIO",
+      retryable: false,
+    })
+    expect(log.reserved).toEqual([])
   })
 
   test("photos are prepared, read and charged one image", async () => {
@@ -193,7 +199,11 @@ describe("setup attachment processing", () => {
     })
 
     const outage = harness(
-      attachment({ kind: "AUDIO", contentType: "audio/webm" }),
+      attachment({
+        kind: "AUDIO",
+        contentType: "audio/webm",
+        durationMs: 5_000,
+      }),
       new Uint8Array([1]),
       {
         media: async () => ({

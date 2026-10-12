@@ -56,7 +56,7 @@ describe("setup follow-up", () => {
 
   test("a single record keeps its own question and long lists are shortened", () => {
     expect(summarizeSetupFollowUp([product("Turkey", {})]).questions).toEqual([
-      "What is your selling price for one piece of Turkey?",
+      "What is your selling price for Turkey per piece?",
     ])
     const many = ["A", "B", "C", "D", "E", "F"].map((name) => product(name, {}))
     expect(summarizeSetupFollowUp(many).questions[0]).toBe(
@@ -89,7 +89,7 @@ describe("setup follow-up", () => {
     )
     expect(summary).toContain("Let's finish the rest of your list.")
     expect(summary).toContain(
-      "What is your selling price for one piece of Turkey?",
+      "What is your selling price for Turkey per piece?",
     )
     expect(summary).toContain("1 record is ready in your setup list.")
     expect(summary).not.toContain("anything else")
