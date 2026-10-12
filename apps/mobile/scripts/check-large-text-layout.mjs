@@ -223,7 +223,7 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/catalog-setup-helper-picker.tsx",
+    file: "components/mobile/catalog-setup/catalog-helper-picker.tsx",
     markers: [
       "useLargeTextLayout",
       'largeTextLayout\n          ? "min-h-20 flex-row items-start',
@@ -233,7 +233,7 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/catalog-variant-manager.tsx",
+    file: "components/mobile/catalog-setup/catalog-variant-manager.tsx",
     markers: [
       "useLargeTextLayout",
       '"-mx-2 flex-row items-start gap-1 border-b border-border"',
