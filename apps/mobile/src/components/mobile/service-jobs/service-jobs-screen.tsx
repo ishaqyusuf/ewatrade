@@ -19,7 +19,6 @@ import {
   type ServiceChromeHeader,
 } from "./service-chrome-context"
 import { ServiceCommandReview } from "./service-command-review"
-import { ServiceEvidenceSheet } from "./service-evidence-sheet"
 import { ServiceHistorySheet } from "./service-history-sheet"
 import { ServiceIntakeForm } from "./service-intake-form"
 import { ServiceJobWorkspace } from "./service-job-workspace"
@@ -209,7 +208,6 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
               Boolean(model.statusEditor.draft) ||
               Boolean(model.paymentEditor.draft) ||
               Boolean(model.textEditor.draft) ||
-              Boolean(model.evidenceChooser.job) ||
               Boolean(model.history.kind)
             }
             importantForAccessibility={
@@ -217,7 +215,6 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
               model.statusEditor.draft ||
               model.paymentEditor.draft ||
               model.textEditor.draft ||
-              model.evidenceChooser.job ||
               model.history.kind
                 ? "no-hide-descendants"
                 : "auto"
@@ -359,11 +356,6 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           allowed={model.command.canAct(
             model.textEditor.draft?.kind === "message",
           )}
-          scopeChanged={model.scopeChanged}
-        />
-        <ServiceEvidenceSheet
-          chooser={model.evidenceChooser}
-          allowed={model.command.canAct()}
           scopeChanged={model.scopeChanged}
         />
         <ServiceHistorySheet model={model} />

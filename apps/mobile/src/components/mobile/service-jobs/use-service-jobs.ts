@@ -22,7 +22,6 @@ import {
   discardRetainedEvidence,
   retainEvidenceAsset,
 } from "./service-evidence-files"
-import { useServiceEvidenceChooser } from "./service-evidence-sheet"
 import {
   type ServiceHistoryKind,
   useServiceHistory,
@@ -202,8 +201,7 @@ export function useServiceJobs() {
       history.kind ||
       statusEditor.draft ||
       paymentEditor.draft ||
-      textEditor.draft ||
-      evidenceChooser.job
+      textEditor.draft
     )
       return
     if (kind === "pending" ? !creating : !selectedJob) return
@@ -226,25 +224,6 @@ export function useServiceJobs() {
       current.filter((entry) => entry.clientEvidenceId !== id),
     )
   }
-  const evidenceChooser = useServiceEvidenceChooser((job, media) => {
-    if (job.id !== selectedJob?.id) {
-      setError("The selected job changed. Open evidence capture again.")
-      return
-    }
-    void captureEvidence(job, media)
-  })
-  function openEvidenceChooser(job: WorkJob) {
-    if (history.kind) return
-    if (
-      !requireJob(job) ||
-      statusEditor.draft ||
-      paymentEditor.draft ||
-      textEditor.draft ||
-      evidenceChooser.job
-    )
-      return
-    evidenceChooser.open(job)
-  }
   const textEditor = useServiceTextEditor((draft) => {
     if (draft.job.id !== selectedJob?.id) {
       setError(
@@ -262,8 +241,7 @@ export function useServiceJobs() {
       !requireJob(job) ||
       statusEditor.draft ||
       paymentEditor.draft ||
-      textEditor.draft ||
-      evidenceChooser.job
+      textEditor.draft
     )
       return
     textEditor.open(job, kind, {
@@ -289,8 +267,7 @@ export function useServiceJobs() {
       !requireJob(job) ||
       statusEditor.draft ||
       paymentEditor.draft ||
-      textEditor.draft ||
-      evidenceChooser.job
+      textEditor.draft
     )
       return
     paymentEditor.open(job, kind)
@@ -316,7 +293,6 @@ export function useServiceJobs() {
       !requireJob(selectedJob) ||
       paymentEditor.draft ||
       textEditor.draft ||
-      evidenceChooser.job ||
       statusEditor.draft
     )
       return
@@ -442,8 +418,7 @@ export function useServiceJobs() {
       attachmentBusy.current ||
       statusEditor.draft ||
       paymentEditor.draft ||
-      textEditor.draft ||
-      evidenceChooser.job
+      textEditor.draft
     )
       return
     setSelectedJobId(id)
@@ -727,8 +702,6 @@ export function useServiceJobs() {
     history,
     openHistory,
     removePendingEvidence,
-    evidenceChooser,
-    openEvidenceChooser,
     textEditor,
     openTextEditor,
     paymentEditor,
@@ -752,7 +725,6 @@ export function useServiceJobs() {
       Boolean(statusEditor.draft) ||
       Boolean(paymentEditor.draft) ||
       Boolean(textEditor.draft) ||
-      Boolean(evidenceChooser.job) ||
       Boolean(history.kind) ||
       captureBusy ||
       attachmentPosting,
