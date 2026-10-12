@@ -105,7 +105,7 @@ Canonical procedure checklist within E05 (the parent remains partial):
 - [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
 - [x] `finance.reversePurchasePayment` — exact original-payment correction, signed rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-purchase-payment-reversal-web.md).
 - [x] `finance.reversePurchaseRecognition` — signed invoice/ownership completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload, exact saved original/correction history and concurrent completed recovery verified. Physical receipt correction remains refused. [Evidence](runs/2026-10-12-purchase-fact-reversal-web.md).
-- [ ] `finance.reverseSupplierEntry` — supplier entry reversal.
+- [ ] `finance.reverseSupplierEntry` — strict original-entry assistant source, shared canonical review, all three supported source kinds' rollback/replay and dashboard editor verified; signed assistant and saved chat confirmation/recovery pending. [Evidence](runs/2026-10-12-supplier-entry-reversal-source.md).
 
 The three pending procedures require assistant review/confirmation, owning receipts and relevant refusal,
 rollback/recovery and web evidence. Existing registered-purchase flows do not accept

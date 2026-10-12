@@ -1,3 +1,4 @@
+import { supplierEntryReversalDraftInstructions } from "./supplier-entry-reversal"
 import { z } from "zod"
 const id = z.string().trim().min(1).max(128)
 const amount = z
@@ -54,4 +55,5 @@ const purchasePaymentReversalDraftInstructions =
 export const supplierSettlementDraftInstructions =
   supplierSettlementBaseInstructions +
   supplierAllocationReleaseDraftInstructions +
-  purchasePaymentReversalDraftInstructions
+  purchasePaymentReversalDraftInstructions +
+  supplierEntryReversalDraftInstructions

@@ -71,6 +71,10 @@ export {
   recordFinanceSupplierAdvanceInTransaction,
   type FinanceSupplierAdvanceInput,
   reverseFinanceSupplierEntry,
+  reverseFinanceSupplierEntryInTransaction,
+  getFinanceSupplierEntryReversalReview,
+  prepareReviewedFinanceSupplierEntryReversalInTransaction,
+  type FinanceSupplierEntryReversalInput,
 } from "./supplier-writes"
 export { getFinanceSupplierAdvanceReview } from "./supplier-advance-review"
 export { getFinanceSupplierCreationReview } from "./supplier-create-review"

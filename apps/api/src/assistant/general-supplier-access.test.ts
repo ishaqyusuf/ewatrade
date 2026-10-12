@@ -111,3 +111,25 @@ test("purchase fact reversal retains finance authority when source-visible", () 
   } as GeneralContext["tenantContext"]["staffAccess"]
   expect(canUseCapability(suspended, source)).toBe(false)
 })
+
+test("supplier entry reversal stays planned and keeps original finance authority", () => {
+  const capability = capabilityManifest.find(
+    (c) => c.id === "finance.supplier.entry.reverse",
+  )
+  if (!capability) throw Error("Supplier entry reversal capability required")
+  expect(capability.rollout).toBe("planned")
+  expect(canUseCapability(actor("OWNER"), capability)).toBe(false)
+  const source = { ...capability, rollout: "source" as const }
+  for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"])
+    expect(canUseCapability(actor(role), source)).toBe(
+      role === "OWNER" || role === "ADMIN",
+    )
+  expect(canUseCapability(actor("OWNER", "free"), source)).toBe(false)
+  expect(canUseCapability(actor("MANAGER", "pro", true), source)).toBe(false)
+  const suspended = actor("OWNER")
+  suspended.tenantContext.staffAccess = {
+    ...suspended.tenantContext.staffAccess,
+    status: "SUSPENDED",
+  } as GeneralContext["tenantContext"]["staffAccess"]
+  expect(canUseCapability(suspended, source)).toBe(false)
+})

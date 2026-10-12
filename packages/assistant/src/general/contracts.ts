@@ -1,3 +1,4 @@
+import { supplierEntryReverseAction } from "./supplier-entry-reversal"
 import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
 import { supplierAllocationReleaseAction } from "./supplier-allocation-release"
@@ -267,6 +268,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   purchaseRecognitionAction,
   supplierCreateAction,
   purchaseRecognitionReverseAction,
+  supplierEntryReverseAction,
   purchasePaymentReverseAction,
   supplierAllocationReleaseAction,
   supplierAdvanceAction,
@@ -449,6 +451,7 @@ export function generalActionSummary(
     case "purchase_recognize":
       return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
     case "purchase_register": return `Register purchase agreement · ${action.description}`
+    case "supplier_entry_reverse": return `Reverse original supplier entry · ${action.reason}`
     case "purchase_recognition_reverse":
       return `Reverse original purchase fact · ${action.reason}`
     case "purchase_payment_reverse":

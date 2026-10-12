@@ -25,6 +25,7 @@ type Action = Extract<
       | "bill_payment_reverse"
       | "purchase_payment_reverse"
       | "purchase_recognition_reverse"
+      | "supplier_entry_reverse"
   }
 >
 const schema = z.object({
@@ -88,7 +89,9 @@ export function GeneralBillCorrectionEditor({
           ? "Void the reviewed unpaid expense"
           : initial.action === "purchase_recognition_reverse"
             ? "Reverse the reviewed purchase fact"
-            : "Reverse the reviewed payment record"}
+            : initial.action === "supplier_entry_reverse"
+              ? "Reverse the reviewed supplier entry"
+              : "Reverse the reviewed payment record"}
         . Original records remain in history. This does not refund, recover or
         transfer money.
       </p>

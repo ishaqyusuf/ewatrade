@@ -77,7 +77,8 @@ export function GeneralProposalEditor(props: {
     props.proposal.payload.action === "expense_void" ||
     props.proposal.payload.action === "bill_payment_reverse" ||
     props.proposal.payload.action === "purchase_payment_reverse" ||
-    props.proposal.payload.action === "purchase_recognition_reverse"
+    props.proposal.payload.action === "purchase_recognition_reverse" ||
+    props.proposal.payload.action === "supplier_entry_reverse"
   )
     return (
       <GeneralBillCorrectionEditor

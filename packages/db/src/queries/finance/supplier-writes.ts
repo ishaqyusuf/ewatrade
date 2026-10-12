@@ -1,9 +1,17 @@
 import { randomUUID } from "node:crypto"
-import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
-import type { FinanceActor } from "./access"
+import type {
+  FinanceBook,
+  Prisma,
+  PrismaClient,
+} from "../../../generated/prisma/client"
+import {
+  assertFinanceManager,
+  lockFinanceBook,
+  type FinanceActor,
+} from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
-import { FinanceError, financeAmount } from "./rules"
+import { FinanceError, financeAmount, assertFinancePostingDate } from "./rules"
 import { assertFinanceSupplierCodeAvailable } from "./supplier-create-source"
 import {
   assertOriginalSupplierPosting,
@@ -366,9 +374,179 @@ export async function recordFinanceSupplierAdvance(
   )
 }
 
-export async function reverseFinanceSupplierEntryInTransaction(
+async function resolveSupplierEntryReversalSource(
+  tx: Prisma.TransactionClient,
+  input: Omit<FinanceSupplierEntryReversalInput, "clientCommandId">,
+  book: FinanceBook,
+) {
+  assertFinancePostingDate({
+    effectiveAt: input.effectiveAt,
+    startsAt: book.startsAt,
+    closedThrough: book.closedThrough,
+    now: new Date(),
+  })
+  const original = await tx.financeSupplierEntry.findFirst({
+    where: { id: input.entryId, bookId: book.id },
+    include: {
+      journalEntry: {
+        include: {
+          lines: { include: { account: true } },
+          reversal: { select: { id: true } },
+        },
+      },
+      supplier: true,
+      reversalOf: { select: { id: true } },
+      reversals: { select: { id: true } },
+    },
+  })
+  if (!original)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Supplier entry not found in this financial book.",
+    )
+  if (
+    original.kind !== "OPENING_PAYABLE" &&
+    original.kind !== "OPENING_ADVANCE" &&
+    original.kind !== "ADVANCE"
+  ) {
+    throw new FinanceError(
+      "CONFLICT",
+      "Purchase bills, payments and allocations must be corrected through their source commands.",
+    )
+  }
+  if (
+    original.reversalOfId ||
+    original.reversals.length ||
+    original.journalEntry.reversal
+  ) {
+    throw new FinanceError(
+      "CONFLICT",
+      "This supplier entry is already reversed or is itself a reversal.",
+    )
+  }
+  if (input.effectiveAt < original.effectiveAt) {
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "A reversal cannot precede its supplier entry.",
+    )
+  }
+  let settlement: {
+    allocatedMinor: string
+    releasedMinor: string
+    latestAt: string | null
+  } | null = null
+  const advance =
+    original.kind === "OPENING_ADVANCE" || original.kind === "ADVANCE"
+      ? await getControlAccount(
+          tx,
+          book.id,
+          "1250",
+          "ASSET",
+          "SUPPLIER_ADVANCE",
+        )
+      : null
+  const payable =
+    original.kind === "OPENING_PAYABLE"
+      ? await getControlAccount(tx, book.id, "2000", "LIABILITY", "PAYABLE")
+      : null
+  const equity =
+    original.kind !== "ADVANCE"
+      ? await getControlAccount(tx, book.id, "3900", "EQUITY", "OPENING_EQUITY")
+      : null
+  assertOriginalSupplierPosting({
+    kind: original.kind,
+    side: original.side,
+    amountMinor: original.amountMinor,
+    moneyAccountId: original.moneyAccountId,
+    entryId: original.id,
+    supplierId: original.supplierId,
+    supplierActorUserId: original.actorUserId,
+    supplierEffectiveAt: original.effectiveAt,
+    supplierDescription: original.description,
+    bookStartsAt: book.startsAt,
+    journal: original.journalEntry,
+    advanceAccountId: advance?.id ?? "",
+    payableAccountId: payable?.id ?? "",
+    openingEquityAccountId: equity?.id ?? "",
+  })
+  if (original.kind === "OPENING_ADVANCE" || original.kind === "ADVANCE") {
+    const [allocated, released] = await Promise.all([
+      tx.financeSupplierAllocation.aggregate({
+        where: { bookId: book.id, advanceEntryId: original.id },
+        _sum: { amountMinor: true },
+        _max: { effectiveAt: true },
+      }),
+      tx.financeSupplierAllocationRelease.aggregate({
+        where: {
+          bookId: book.id,
+          allocation: { advanceEntryId: original.id },
+        },
+        _sum: { amountMinor: true },
+        _max: { effectiveAt: true },
+      }),
+    ])
+    if (
+      (allocated._sum.amountMinor ?? BigInt(0)) >
+      (released._sum.amountMinor ?? BigInt(0))
+    ) {
+      throw new FinanceError(
+        "CONFLICT",
+        "Release every consumed portion of this advance before reversing it.",
+      )
+    }
+    const latestSettlementAt =
+      allocated._max.effectiveAt && released._max.effectiveAt
+        ? allocated._max.effectiveAt > released._max.effectiveAt
+          ? allocated._max.effectiveAt
+          : released._max.effectiveAt
+        : (allocated._max.effectiveAt ?? released._max.effectiveAt)
+    settlement = {
+      allocatedMinor: (allocated._sum.amountMinor ?? 0n).toString(),
+      releasedMinor: (released._sum.amountMinor ?? 0n).toString(),
+      latestAt: latestSettlementAt?.toISOString() ?? null,
+    }
+    if (latestSettlementAt && input.effectiveAt < latestSettlementAt)
+      throw new FinanceError(
+        "INVALID_JOURNAL",
+        "An advance reversal cannot precede its latest allocation or release.",
+      )
+  }
+  if (original.kind === "ADVANCE") {
+    const moneyAccount = await tx.financeAccount.findFirst({
+      where: { id: original.moneyAccountId ?? "", bookId: book.id },
+      select: { id: true, kind: true, purpose: true },
+    })
+    if (
+      !moneyAccount ||
+      moneyAccount.kind !== "ASSET" ||
+      !["CASH", "BANK", "CLEARING"].includes(moneyAccount.purpose)
+    ) {
+      throw new FinanceError(
+        "CONFLICT",
+        "The original advance account no longer matches its financial purpose.",
+      )
+    }
+  }
+  if (
+    original.supplier.bookId !== book.id ||
+    original.journalEntry.bookId !== book.id ||
+    original.journalEntry.lines.some(
+      (l) => l.account.bookId !== book.id || l.account.archivedAt !== null,
+    )
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The original supplier or posting accounts are unavailable in this Book.",
+    )
+  return { original, settlement }
+}
+
+async function executeSupplierEntryReversal(
   tx: Prisma.TransactionClient,
   input: FinanceSupplierEntryReversalInput,
+  preparedSource?: Awaited<
+    ReturnType<typeof resolveSupplierEntryReversalSource>
+  >,
 ) {
   const reason = input.reason.trim()
   requireEffectiveDate(input.effectiveAt)
@@ -385,140 +563,9 @@ export async function reverseFinanceSupplierEntryInTransaction(
     "REVERSE_SUPPLIER_ENTRY",
     { ...payload, reason },
     async (book) => {
-      const original = await tx.financeSupplierEntry.findFirst({
-        where: { id: input.entryId, bookId: book.id },
-        include: {
-          journalEntry: {
-            include: { lines: true, reversal: { select: { id: true } } },
-          },
-          reversalOf: { select: { id: true } },
-          reversals: { select: { id: true } },
-        },
-      })
-      if (!original)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Supplier entry not found in this financial book.",
-        )
-      if (
-        original.kind !== "OPENING_PAYABLE" &&
-        original.kind !== "OPENING_ADVANCE" &&
-        original.kind !== "ADVANCE"
-      ) {
-        throw new FinanceError(
-          "CONFLICT",
-          "Purchase bills, payments and allocations must be corrected through their source commands.",
-        )
-      }
-      if (
-        original.reversalOfId ||
-        original.reversals.length ||
-        original.journalEntry.reversal
-      ) {
-        throw new FinanceError(
-          "CONFLICT",
-          "This supplier entry is already reversed or is itself a reversal.",
-        )
-      }
-      if (input.effectiveAt < original.effectiveAt) {
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "A reversal cannot precede its supplier entry.",
-        )
-      }
-      const advance =
-        original.kind === "OPENING_ADVANCE" || original.kind === "ADVANCE"
-          ? await getControlAccount(
-              tx,
-              book.id,
-              "1250",
-              "ASSET",
-              "SUPPLIER_ADVANCE",
-            )
-          : null
-      const payable =
-        original.kind === "OPENING_PAYABLE"
-          ? await getControlAccount(tx, book.id, "2000", "LIABILITY", "PAYABLE")
-          : null
-      const equity =
-        original.kind !== "ADVANCE"
-          ? await getControlAccount(
-              tx,
-              book.id,
-              "3900",
-              "EQUITY",
-              "OPENING_EQUITY",
-            )
-          : null
-      assertOriginalSupplierPosting({
-        kind: original.kind,
-        side: original.side,
-        amountMinor: original.amountMinor,
-        moneyAccountId: original.moneyAccountId,
-        entryId: original.id,
-        supplierId: original.supplierId,
-        supplierActorUserId: original.actorUserId,
-        supplierEffectiveAt: original.effectiveAt,
-        supplierDescription: original.description,
-        bookStartsAt: book.startsAt,
-        journal: original.journalEntry,
-        advanceAccountId: advance?.id ?? "",
-        payableAccountId: payable?.id ?? "",
-        openingEquityAccountId: equity?.id ?? "",
-      })
-      if (original.kind === "OPENING_ADVANCE" || original.kind === "ADVANCE") {
-        const [allocated, released] = await Promise.all([
-          tx.financeSupplierAllocation.aggregate({
-            where: { bookId: book.id, advanceEntryId: original.id },
-            _sum: { amountMinor: true },
-            _max: { effectiveAt: true },
-          }),
-          tx.financeSupplierAllocationRelease.aggregate({
-            where: {
-              bookId: book.id,
-              allocation: { advanceEntryId: original.id },
-            },
-            _sum: { amountMinor: true },
-            _max: { effectiveAt: true },
-          }),
-        ])
-        if (
-          (allocated._sum.amountMinor ?? BigInt(0)) >
-          (released._sum.amountMinor ?? BigInt(0))
-        ) {
-          throw new FinanceError(
-            "CONFLICT",
-            "Release every consumed portion of this advance before reversing it.",
-          )
-        }
-        const latestSettlementAt =
-          allocated._max.effectiveAt && released._max.effectiveAt
-            ? allocated._max.effectiveAt > released._max.effectiveAt
-              ? allocated._max.effectiveAt
-              : released._max.effectiveAt
-            : (allocated._max.effectiveAt ?? released._max.effectiveAt)
-        if (latestSettlementAt && input.effectiveAt < latestSettlementAt)
-          throw new FinanceError(
-            "INVALID_JOURNAL",
-            "An advance reversal cannot precede its latest allocation or release.",
-          )
-      }
-      if (original.kind === "ADVANCE") {
-        const moneyAccount = await tx.financeAccount.findFirst({
-          where: { id: original.moneyAccountId ?? "", bookId: book.id },
-          select: { id: true, kind: true, purpose: true },
-        })
-        if (
-          !moneyAccount ||
-          moneyAccount.kind !== "ASSET" ||
-          !["CASH", "BANK", "CLEARING"].includes(moneyAccount.purpose)
-        ) {
-          throw new FinanceError(
-            "CONFLICT",
-            "The original advance account no longer matches its financial purpose.",
-          )
-        }
-      }
+      const { original } =
+        preparedSource ??
+        (await resolveSupplierEntryReversalSource(tx, input, book))
       const reversalDescription = `Reversal: ${reason}`
       const journalResult = await postFinanceJournalInTransaction(tx, {
         ...input,
@@ -575,4 +622,127 @@ export async function reverseFinanceSupplierEntry(
       timeout: 30_000,
     },
   )
+}
+
+async function loadSupplierEntryReversalReview(
+  tx: Prisma.TransactionClient,
+  input: Omit<FinanceSupplierEntryReversalInput, "clientCommandId">,
+  locked = false,
+) {
+  const reason = input.reason.trim()
+  requireEffectiveDate(input.effectiveAt)
+  if (!reason || reason.length > 400)
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "Give a reversal reason of 1–400 characters.",
+    )
+  let book: FinanceBook
+  if (locked) book = await lockFinanceBook(tx, input)
+  else {
+    await assertFinanceManager(tx, input)
+    const found = await tx.financeBook.findFirst({
+      where: { id: input.bookId, tenantId: input.tenantId },
+    })
+    if (!found) throw new FinanceError("NOT_FOUND", "Financial book not found.")
+    book = found
+  }
+  const source = await resolveSupplierEntryReversalSource(tx, input, book)
+  const { original, settlement } = source
+  return {
+    source,
+    review: {
+      bookId: book.id,
+      currencyCode: book.currencyCode,
+      startsAt: book.startsAt.toISOString(),
+      closedThrough: book.closedThrough?.toISOString() ?? null,
+      entryId: original.id,
+      kind: original.kind,
+      side: original.side,
+      amountMinor: original.amountMinor.toString(),
+      supplierId: original.supplier.id,
+      supplierName: original.supplier.name,
+      supplierCode: original.supplier.code,
+      originalDescription: original.description,
+      originalEffectiveAt: original.effectiveAt.toISOString(),
+      originalActorUserId: original.actorUserId,
+      originalJournalId: original.journalEntryId,
+      originalSequence: original.journalEntry.sequence.toString(),
+      moneyAccountId: original.moneyAccountId,
+      settlement,
+      effectiveAt: input.effectiveAt.toISOString(),
+      reason,
+      payableDecreaseMinor:
+        original.kind === "OPENING_PAYABLE"
+          ? original.amountMinor.toString()
+          : "0",
+      unallocatedAdvanceDecreaseMinor:
+        original.kind === "OPENING_PAYABLE"
+          ? "0"
+          : original.amountMinor.toString(),
+      recordedMoneyIncreaseMinor:
+        original.kind === "ADVANCE" ? original.amountMinor.toString() : "0",
+      lines: original.journalEntry.lines
+        .map((l) => ({
+          accountId: l.account.id,
+          accountName: l.account.name,
+          code: l.account.code,
+          kind: l.account.kind,
+          purpose: l.account.purpose,
+          debitMinor: l.creditMinor.toString(),
+          creditMinor: l.debitMinor.toString(),
+        }))
+        .sort((a, b) => a.accountId.localeCompare(b.accountId)),
+      stockEffect: "NONE" as const,
+      moneyTransfer: "NOT_PERFORMED" as const,
+    },
+  }
+}
+export async function getFinanceSupplierEntryReversalReview(
+  tx: Prisma.TransactionClient,
+  input: Omit<FinanceSupplierEntryReversalInput, "clientCommandId">,
+) {
+  return (await loadSupplierEntryReversalReview(tx, input)).review
+}
+export async function reverseFinanceSupplierEntryInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceSupplierEntryReversalInput,
+) {
+  return executeSupplierEntryReversal(tx, input)
+}
+/** Fresh original proof stays private to the Book-locked transaction and one command. */
+export async function prepareReviewedFinanceSupplierEntryReversalInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Omit<FinanceSupplierEntryReversalInput, "clientCommandId">,
+) {
+  const owned = {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    bookId: input.bookId,
+    entryId: input.entryId,
+    reason: input.reason,
+    effectiveAt: new Date(input.effectiveAt),
+  }
+  const { review, source } = await loadSupplierEntryReversalReview(
+    tx,
+    owned,
+    true,
+  )
+  let commandId: string | undefined
+  let execution: ReturnType<typeof executeSupplierEntryReversal> | undefined
+  return {
+    review,
+    execute: (clientCommandId: string) => {
+      if (commandId !== undefined && commandId !== clientCommandId)
+        throw new FinanceError(
+          "CONFLICT",
+          "Prepared supplier correction is bound to one command.",
+        )
+      commandId = clientCommandId
+      return (execution ??= executeSupplierEntryReversal(
+        tx,
+        { ...owned, clientCommandId },
+        source,
+      ))
+    },
+  }
 }
