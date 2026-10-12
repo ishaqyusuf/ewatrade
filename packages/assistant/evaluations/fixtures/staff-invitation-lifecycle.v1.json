@@ -18,7 +18,11 @@
     "Real signed confirmation to COMPLETED with original reviewed grants and queued encrypted outbox, forced rollback",
     "Changed approval token and real Store-label stale-source refusal preserve saved facts",
     "Legacy missing original review remains explicit; exact command/member discovery returns no custody",
-    "Global receipt and local Edit form validate grants, preserve original review and retain assistant/chat on Close"
+    "Global receipt and local Edit form validate grants, preserve original review and retain assistant/chat on Close",
+    "Default-off delivery gate prevents outbox discovery, claims and queue submission; incomplete live transport/custody configuration leaves work pending",
+    "Existing QA email policy and exactly one routed destination precede final send fence; stable provider identity survives routing",
+    "Console, capture and missing provider acceptance receipts cannot certify SENT; transport errors remain OUTCOME_UNKNOWN",
+    "Periodic discovery shares the existing minute cadence, queues only Tenant/notification IDs and reports partial enqueue failure without private error details"
   ],
   "sourceChecks": [
     "packages/db/src/staff-invitation-custody.test.ts",
@@ -29,11 +33,14 @@
     "packages/assistant/src/general/staff-invitation.test.ts",
     "packages/db/src/queries/staff-invitation-command-receipt.test.ts",
     "apps/api/src/assistant/general-staff-invitation.test.ts",
-    "apps/api/src/assistant/general-staff-invitation.integration-check.ts"
+    "apps/api/src/assistant/general-staff-invitation.integration-check.ts",
+    "packages/jobs/src/handlers/staff-invitation-email.test.ts",
+    "packages/jobs/src/handlers/staff-invitation-notification-schedule.test.ts",
+    "packages/jobs/src/tasks/scheduled-cadences.test.ts"
   ],
   "remaining": [
     "Full saved draft/Edit/re-review/Confirm, signed resend/revoke and completed recovery",
-    "Registered guarded email transport, periodic ID-only discovery and receipt reconciliation",
+    "Trusted provider receipt reconciliation and actual controlled email/queue acceptance; guarded dispatch/discovery source is implemented but disabled",
     "Saved global receipt, chat continuity, full web acceptance and screenshots",
     "Concurrency and complete stale/authority/quota refusal evidence",
     "Privacy retention/deletion inventory and expired/unknown ciphertext reconciliation policy"

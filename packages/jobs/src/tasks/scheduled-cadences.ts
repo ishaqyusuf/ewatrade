@@ -15,6 +15,7 @@ import { productAnalyticsRecovery } from "./product-analytics"
 import { serviceCommerceBookingReminderSchedule } from "./service-commerce-booking-reminder-schedule"
 import { serviceCommerceCustomerNotificationSchedule } from "./service-commerce-customer-notification-schedule"
 import { serviceNotificationSchedule } from "./service-notification-dispatch"
+import { staffInvitationNotificationSchedule } from "./staff-invitation-notification-schedule"
 import { storeConversationCredentialExpiry } from "./store-conversation-credential-expiry"
 import { storeConversationEscalations } from "./store-conversation-escalations"
 import { storeConversationMediaSafetyRecovery } from "./store-conversation-media-safety-recovery"
@@ -44,6 +45,7 @@ export const SCHEDULED_CADENCES = {
       assistantAttachmentProcessRecovery,
       catalogPhotoReviewRecovery,
       productAnalyticsRecovery,
+      staffInvitationNotificationSchedule,
       storeConversationEscalations,
       storeConversationNotificationSchedule,
       storeConversationWhatsAppBridgeSchedule,

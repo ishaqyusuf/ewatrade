@@ -42,6 +42,7 @@ describe("scheduled cadences", () => {
       "service-commerce.booking-reminder-schedule": "*/5 * * * *",
       "service-commerce.customer-notification-schedule": "*/5 * * * *",
       "services.notification.schedule": "*/5 * * * *",
+      "staff.invitation.notification-schedule": "* * * * *",
       "store-billing.play-refund-review-alert": "*/15 * * * *",
       "store-conversation.credential-expiry": "0 * * * *",
       "store-conversation.notification-schedule": "* * * * *",
