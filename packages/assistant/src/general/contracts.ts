@@ -1,3 +1,4 @@
+import { supplierAllocationReleaseAction } from "./supplier-allocation-release"
 import { supplierAdvanceAction, supplierAdvanceAllocateAction, purchasePaymentAction } from "./supplier-settlement"
 export { supplierSettlementDraftInstructions } from "./supplier-settlement"
 import { purchaseRecognitionAction } from "./purchase-recognition"
@@ -263,6 +264,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   purchaseRegistrationAction,
   purchaseRecognitionAction,
   supplierCreateAction,
+  supplierAllocationReleaseAction,
   supplierAdvanceAction,
   supplierAdvanceAllocateAction,
   purchasePaymentAction,
@@ -443,6 +445,8 @@ export function generalActionSummary(
     case "purchase_recognize":
       return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
     case "purchase_register": return `Register purchase agreement · ${action.description}`
+    case "supplier_allocation_release":
+      return `Release supplier allocation · ${action.reason}`
     case "supplier_advance":
       return `Record supplier advance · ${action.description}`
     case "supplier_advance_allocate":

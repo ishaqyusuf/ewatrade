@@ -723,6 +723,113 @@ export async function allocateFinanceSupplierAdvanceInTransaction(
   )
 }
 
+async function reviewSupplierAllocationReleaseSource(
+  tx: Transaction,
+  input: Omit<ReleaseFinanceSupplierAllocationInput, "clientCommandId">,
+  bookId: string,
+) {
+  const amount = financeAmount(input.amountMinor)
+  const allocation = await tx.financeSupplierAllocation.findFirst({
+    where: { id: input.allocationId, bookId: bookId },
+    include: {
+      supplierEntry: {
+        include: {
+          journalEntry: {
+            include: { lines: true, reversal: { select: { id: true } } },
+          },
+        },
+      },
+    },
+  })
+  if (!allocation)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Supplier advance allocation not found in this financial book.",
+    )
+  const { bill, payable } = await verifyPurchaseBill(
+    tx,
+    bookId,
+    allocation.billId,
+  )
+  const { entry: advanceEntry, advance } = await verifyAdvance(
+    tx,
+    bookId,
+    allocation.advanceEntryId,
+  )
+  if (
+    advanceEntry.supplierId !== allocation.supplierId ||
+    bill.supplierId !== allocation.supplierId
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The allocation source supplier no longer matches.",
+    )
+  if (input.effectiveAt < allocation.effectiveAt)
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "A release cannot precede its allocation.",
+    )
+  const [latestBillEntryAt, latestAdvanceSettlementAt] = await Promise.all([
+    getLatestBillSupplierEntryAt(tx, bookId, bill.id),
+    getLatestAdvanceSettlementAt(tx, bookId, advanceEntry.id),
+  ])
+  requireNotBeforeLatest(input.effectiveAt, latestBillEntryAt)
+  requireNotBeforeLatest(input.effectiveAt, latestAdvanceSettlementAt)
+  const [released, sourcePosting] = await Promise.all([
+    tx.financeSupplierAllocationRelease.aggregate({
+      where: { bookId: bookId, allocationId: allocation.id },
+      _sum: { amountMinor: true },
+    }),
+    Promise.resolve(allocation.supplierEntry),
+  ])
+  const unreleased =
+    allocation.amountMinor - (released._sum.amountMinor ?? BigInt(0))
+  if (amount > unreleased || bill.paidMinor < amount)
+    throw new FinanceError(
+      "CONFLICT",
+      "Release exceeds unreleased allocation or amount currently applied to the bill.",
+    )
+  assertPostingHeader({
+    journal: sourcePosting.journalEntry,
+    sourceKind: "SUPPLIER_ADVANCE_ALLOCATION",
+    sourceId: allocation.id,
+    actorUserId: allocation.actorUserId,
+    effectiveAt: allocation.effectiveAt,
+  })
+  if (
+    sourcePosting.kind !== "ADVANCE_ALLOCATION" ||
+    sourcePosting.side !== "DEBIT" ||
+    sourcePosting.billId !== bill.id ||
+    sourcePosting.paymentId !== null ||
+    sourcePosting.moneyAccountId !== null ||
+    sourcePosting.supplierId !== bill.supplierId ||
+    sourcePosting.amountMinor !== allocation.amountMinor ||
+    sourcePosting.actorUserId !== allocation.actorUserId ||
+    sourcePosting.effectiveAt.getTime() !== allocation.effectiveAt.getTime() ||
+    sourcePosting.description !== sourcePosting.journalEntry.description ||
+    sourcePosting.journalEntry.reversal !== null ||
+    sourcePosting.journalEntry.storeId !== bill.storeId ||
+    sourcePosting.journalEntry.lines.length !== 2 ||
+    !sourcePosting.journalEntry.lines.some(
+      (line) =>
+        line.accountId === payable.id &&
+        line.debitMinor === allocation.amountMinor &&
+        line.creditMinor === BigInt(0),
+    ) ||
+    !sourcePosting.journalEntry.lines.some(
+      (line) =>
+        line.accountId === advance.id &&
+        line.creditMinor === allocation.amountMinor &&
+        line.debitMinor === BigInt(0),
+    )
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The allocation does not match its original journal.",
+    )
+  return { allocation, bill, payable, advanceEntry, advance, unreleased }
+}
+
 export async function releaseFinanceSupplierAllocationInTransaction(
   tx: Transaction,
   input: ReleaseFinanceSupplierAllocationInput,
@@ -737,105 +844,8 @@ export async function releaseFinanceSupplierAllocationInTransaction(
     "RELEASE_SUPPLIER_ALLOCATION",
     { ...payload, reason },
     async (book) => {
-      const allocation = await tx.financeSupplierAllocation.findFirst({
-        where: { id: input.allocationId, bookId: book.id },
-        include: {
-          supplierEntry: {
-            include: {
-              journalEntry: {
-                include: { lines: true, reversal: { select: { id: true } } },
-              },
-            },
-          },
-        },
-      })
-      if (!allocation)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Supplier advance allocation not found in this financial book.",
-        )
-      const {
-        bill,
-        supplierEntry: billEntry,
-        payable,
-      } = await verifyPurchaseBill(tx, book.id, allocation.billId)
-      const { entry: advanceEntry, advance } = await verifyAdvance(
-        tx,
-        book.id,
-        allocation.advanceEntryId,
-      )
-      if (
-        advanceEntry.supplierId !== allocation.supplierId ||
-        bill.supplierId !== allocation.supplierId
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "The allocation source supplier no longer matches.",
-        )
-      if (input.effectiveAt < allocation.effectiveAt)
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "A release cannot precede its allocation.",
-        )
-      const [latestBillEntryAt, latestAdvanceSettlementAt] = await Promise.all([
-        getLatestBillSupplierEntryAt(tx, book.id, bill.id),
-        getLatestAdvanceSettlementAt(tx, book.id, advanceEntry.id),
-      ])
-      requireNotBeforeLatest(input.effectiveAt, latestBillEntryAt)
-      requireNotBeforeLatest(input.effectiveAt, latestAdvanceSettlementAt)
-      const [released, sourcePosting] = await Promise.all([
-        tx.financeSupplierAllocationRelease.aggregate({
-          where: { bookId: book.id, allocationId: allocation.id },
-          _sum: { amountMinor: true },
-        }),
-        Promise.resolve(allocation.supplierEntry),
-      ])
-      const unreleased =
-        allocation.amountMinor - (released._sum.amountMinor ?? BigInt(0))
-      if (amount > unreleased || bill.paidMinor < amount)
-        throw new FinanceError(
-          "CONFLICT",
-          "Release exceeds unreleased allocation or amount currently applied to the bill.",
-        )
-      assertPostingHeader({
-        journal: sourcePosting.journalEntry,
-        sourceKind: "SUPPLIER_ADVANCE_ALLOCATION",
-        sourceId: allocation.id,
-        actorUserId: allocation.actorUserId,
-        effectiveAt: allocation.effectiveAt,
-      })
-      if (
-        sourcePosting.kind !== "ADVANCE_ALLOCATION" ||
-        sourcePosting.side !== "DEBIT" ||
-        sourcePosting.billId !== bill.id ||
-        sourcePosting.paymentId !== null ||
-        sourcePosting.moneyAccountId !== null ||
-        sourcePosting.supplierId !== bill.supplierId ||
-        sourcePosting.amountMinor !== allocation.amountMinor ||
-        sourcePosting.actorUserId !== allocation.actorUserId ||
-        sourcePosting.effectiveAt.getTime() !==
-          allocation.effectiveAt.getTime() ||
-        sourcePosting.description !== sourcePosting.journalEntry.description ||
-        sourcePosting.journalEntry.reversal !== null ||
-        sourcePosting.journalEntry.storeId !== bill.storeId ||
-        sourcePosting.journalEntry.lines.length !== 2 ||
-        !sourcePosting.journalEntry.lines.some(
-          (line) =>
-            line.accountId === payable.id &&
-            line.debitMinor === allocation.amountMinor &&
-            line.creditMinor === BigInt(0),
-        ) ||
-        !sourcePosting.journalEntry.lines.some(
-          (line) =>
-            line.accountId === advance.id &&
-            line.creditMinor === allocation.amountMinor &&
-            line.debitMinor === BigInt(0),
-        )
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "The allocation does not match its original journal.",
-        )
+      const { allocation, bill, payable, advance } =
+        await reviewSupplierAllocationReleaseSource(tx, input, book.id)
       const releaseId = randomUUID()
       const posted = await postFinanceJournalInTransaction(tx, {
         ...input,
@@ -891,8 +901,6 @@ export async function releaseFinanceSupplierAllocationInTransaction(
         where: { id: bill.id },
         data: { paidMinor: { decrement: amount } },
       })
-      void billEntry
-      void advanceEntry
       return { id: release.id }
     },
   )
@@ -1184,6 +1192,79 @@ export async function getFinanceSupplierAllocationReview(
     effectiveAt: input.effectiveAt.toISOString(),
     description,
     effect: "APPLY_EXISTING_SUPPLIER_ADVANCE" as const,
+    moneyTransfer: "NOT_PERFORMED" as const,
+  }
+}
+
+export async function getFinanceSupplierAllocationReleaseReview(
+  tx: Transaction,
+  input: Omit<ReleaseFinanceSupplierAllocationInput, "clientCommandId">,
+  lockBook = false,
+) {
+  const amount = financeAmount(input.amountMinor)
+  const reason = text(input.reason, "release reason")
+  const book = await settlementReviewBook(tx, input, lockBook)
+  const { allocation, bill, payable, advanceEntry, advance, unreleased } =
+    await reviewSupplierAllocationReleaseSource(tx, input, book.id)
+  const [supplier, allocated, released] = await Promise.all([
+    tx.financeSupplierAccount.findFirstOrThrow({
+      where: { id: allocation.supplierId, bookId: book.id },
+      select: { id: true, name: true, code: true },
+    }),
+    tx.financeSupplierAllocation.aggregate({
+      where: { bookId: book.id, advanceEntryId: advanceEntry.id },
+      _sum: { amountMinor: true },
+    }),
+    tx.financeSupplierAllocationRelease.aggregate({
+      where: {
+        bookId: book.id,
+        allocation: { advanceEntryId: advanceEntry.id },
+      },
+      _sum: { amountMinor: true },
+    }),
+  ])
+  const advanceBefore =
+    advanceEntry.amountMinor -
+    (allocated._sum.amountMinor ?? 0n) +
+    (released._sum.amountMinor ?? 0n)
+  return {
+    bookId: book.id,
+    currencyCode: book.currencyCode,
+    startsAt: book.startsAt.toISOString(),
+    closedThrough: book.closedThrough?.toISOString() ?? null,
+    allocationId: allocation.id,
+    allocationEffectiveAt: allocation.effectiveAt.toISOString(),
+    allocationOriginalMinor: allocation.amountMinor.toString(),
+    allocationRemainingBeforeMinor: unreleased.toString(),
+    allocationRemainingAfterMinor: (unreleased - amount).toString(),
+    allocationJournalId: allocation.supplierEntry.journalEntryId,
+    billId: bill.id,
+    billDescription: bill.description,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    supplierCode: supplier.code,
+    totalMinor: bill.totalMinor.toString(),
+    paidBeforeMinor: bill.paidMinor.toString(),
+    paidAfterMinor: (bill.paidMinor - amount).toString(),
+    outstandingBeforeMinor: (bill.totalMinor - bill.paidMinor).toString(),
+    outstandingAfterMinor: (
+      bill.totalMinor -
+      bill.paidMinor +
+      amount
+    ).toString(),
+    advanceEntryId: advanceEntry.id,
+    advanceEffectiveAt: advanceEntry.effectiveAt.toISOString(),
+    advanceOriginalMinor: advanceEntry.amountMinor.toString(),
+    advanceBeforeMinor: advanceBefore.toString(),
+    advanceAfterMinor: (advanceBefore + amount).toString(),
+    payableAccountId: payable.id,
+    payableAccountName: payable.name,
+    advanceAccountId: advance.id,
+    advanceAccountName: advance.name,
+    amountMinor: amount.toString(),
+    effectiveAt: input.effectiveAt.toISOString(),
+    reason,
+    effect: "RELEASE_EXISTING_SUPPLIER_ALLOCATION" as const,
     moneyTransfer: "NOT_PERFORMED" as const,
   }
 }

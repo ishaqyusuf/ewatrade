@@ -99,7 +99,7 @@ E05's remaining canonical procedures have **no accepted assistant milestone**:
 
 - [ ] `finance.recordPurchase` — direct purchase recording.
 - [ ] `finance.recordSupplierOpening` — supplier opening balances.
-- [ ] `finance.releaseSupplierAllocation` — allocation release; next implementation.
+- [ ] `finance.releaseSupplierAllocation` — source, canonical rollback/replay and web editor verified; full signed proposal/chat acceptance next. [Evidence](runs/2026-10-12-allocation-release-source.md).
 - [ ] `finance.reversePurchasePayment` — purchase payment reversal.
 - [ ] `finance.reversePurchaseRecognition` — purchase fact reversal.
 - [ ] `finance.reverseSupplierEntry` — supplier entry reversal.

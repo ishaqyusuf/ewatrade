@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Supplier allocation release | [1](fixtures/supplier-allocation-release.v1.md) | Exact original allocation, partial release, no-cash boundary, stale/chronology/rollback/replay and owning invoice | None yet |
 | Supplier settlement | [1](fixtures/supplier-settlement.v1.md) | Paid advances, exact-source allocation, partial payment, stale/chronology/rollback/replay and owning receipt | None yet |
 | Purchase recognition | [1](fixtures/purchase-recognition.v1.md) | Independent invoice/ownership, exact posting review, rollback/replay and physical receipt boundaries | None yet |
 | Purchase registration | [1](fixtures/purchase-registration.v1.md) | Agreement-only draft, exact goods, scope/stale guards, rollback/recovery | None yet |
@@ -33,6 +34,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Supplier allocation release source, 12 October 2026](runs/2026-10-12-allocation-release-source.md): strict proposal, shared canonical original-proof review and web editor;10 tests/445 assertions/scoped types pass. Exact QA review, command/journal/paid readback and replay roll back with facts unchanged. Component screenshot retained; full signed proposal/chat acceptance pending, capability planned, E05 partial.
 
 - [Supplier acceptance audit and signed receipt guards, 12 October 2026](runs/2026-10-12-supplier-acceptance-audit.md): nine real signed refusal probes preserve saved facts; focused role/plan/security/legal tests pass. Six distinct canonical procedures still need assistant implementation and acceptance. E05 remains partial and unbookmarked.
 

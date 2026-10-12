@@ -93,6 +93,8 @@ export {
   reverseFinancePurchasePayment,
   allocateFinanceSupplierAdvance,
   releaseFinanceSupplierAllocation,
+  releaseFinanceSupplierAllocationInTransaction,
+  getFinanceSupplierAllocationReleaseReview,
 } from "./purchase-settlements"
 
 export {

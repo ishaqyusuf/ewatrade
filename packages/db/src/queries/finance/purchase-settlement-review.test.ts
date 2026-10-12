@@ -3,6 +3,7 @@ import type { Prisma } from "../../../generated/prisma/client"
 import {
   getFinancePurchasePaymentReview,
   getFinanceSupplierAllocationReview,
+  getFinanceSupplierAllocationReleaseReview,
 } from "./purchase-settlements"
 const date = new Date("2026-10-05T12:00:00.123Z")
 const base = {
@@ -31,6 +32,12 @@ function fixture(
     latestBill?: boolean
     latestAdvance?: boolean
     archivedControl?: boolean
+    missingAllocation?: boolean
+    malformedAllocation?: boolean
+    reversedAllocation?: boolean
+    exhaustedAllocation?: boolean
+    allocationSupplier?: boolean
+    allocationAfter?: boolean
   } = {},
 ) {
   const at = new Date("2026-10-01"),
@@ -182,6 +189,52 @@ function fixture(
       },
     },
     financeSupplierAllocation: {
+      findFirst: async (a: unknown) => {
+        expect(a).toMatchObject({ where: { id: "allocation", bookId: "book" } })
+        const allocationAt = new Date(
+          o.allocationAfter ? "2026-10-06" : "2026-10-03",
+        )
+        return o.missingAllocation
+          ? null
+          : {
+              id: "allocation",
+              billId: "bill",
+              supplierId: o.allocationSupplier ? "other" : "supplier",
+              advanceEntryId: "advance-entry",
+              amountMinor: 200n,
+              actorUserId: "owner",
+              effectiveAt: allocationAt,
+              supplierEntry: {
+                id: "allocation-entry",
+                journalEntryId: "allocation-journal",
+                kind: "ADVANCE_ALLOCATION",
+                side: "DEBIT",
+                billId: "bill",
+                paymentId: null,
+                moneyAccountId: null,
+                supplierId: "supplier",
+                amountMinor: 200n,
+                actorUserId: "owner",
+                effectiveAt: allocationAt,
+                description: "Applied advance",
+                journalEntry: {
+                  id: "allocation-journal",
+                  sourceKind: "SUPPLIER_ADVANCE_ALLOCATION",
+                  sourceId: "allocation",
+                  actorUserId: "owner",
+                  effectiveAt: allocationAt,
+                  description: "Applied advance",
+                  reversalOfId: null,
+                  reversal: o.reversedAllocation ? { id: "reversal" } : null,
+                  storeId: "store",
+                  lines: [
+                    line("payable", o.malformedAllocation ? 199n : 200n, 0n),
+                    line("advance", 0n, 200n),
+                  ],
+                },
+              },
+            }
+      },
       aggregate: async (a: unknown) => {
         expect(a).toMatchObject({
           where: { bookId: "book", advanceEntryId: "advance-entry" },
@@ -198,14 +251,18 @@ function fixture(
     },
     financeSupplierAllocationRelease: {
       aggregate: async (a: unknown) => {
+        const direct = (a as { where: { allocationId?: string } }).where
+          .allocationId
         expect(a).toMatchObject({
-          where: {
-            bookId: "book",
-            allocation: { advanceEntryId: "advance-entry" },
-          },
+          where: direct
+            ? { bookId: "book", allocationId: "allocation" }
+            : {
+                bookId: "book",
+                allocation: { advanceEntryId: "advance-entry" },
+              },
         })
         return {
-          _sum: { amountMinor: 50n },
+          _sum: { amountMinor: o.exhaustedAllocation ? 200n : 50n },
           _max: { effectiveAt: new Date("2026-10-04") },
         }
       },
@@ -357,6 +414,81 @@ test("allocation refuses missing or changed advance, different supplier, net ove
         ...base,
         advanceEntryId: "advance-entry",
         ...p,
+      }),
+    ).rejects.toBeDefined()
+})
+
+const release = {
+  tenantId: "tenant",
+  actorUserId: "owner",
+  bookId: "book",
+  allocationId: "allocation",
+  amountMinor: "50",
+  effectiveAt: date,
+  reason: " Restore part of original allocation ",
+}
+test("partial allocation release restores the original advance and payable, retaining original proof", async () => {
+  expect(
+    await getFinanceSupplierAllocationReleaseReview(fixture(), release),
+  ).toMatchObject({
+    allocationId: "allocation",
+    allocationOriginalMinor: "200",
+    allocationRemainingBeforeMinor: "150",
+    allocationRemainingAfterMinor: "100",
+    allocationJournalId: "allocation-journal",
+    billId: "bill",
+    advanceEntryId: "advance-entry",
+    advanceOriginalMinor: "700",
+    advanceBeforeMinor: "550",
+    advanceAfterMinor: "600",
+    paidBeforeMinor: "100",
+    paidAfterMinor: "50",
+    outstandingBeforeMinor: "900",
+    outstandingAfterMinor: "950",
+    amountMinor: "50",
+    reason: "Restore part of original allocation",
+    effectiveAt: date.toISOString(),
+    effect: "RELEASE_EXISTING_SUPPLIER_ALLOCATION",
+    moneyTransfer: "NOT_PERFORMED",
+  })
+})
+test("release review refuses invalid original allocation, source, period, authority, amount and chronology", async () => {
+  for (const o of [
+    { denied: true },
+    { missingBook: true },
+    { closed: true },
+    { missingAllocation: true },
+    { malformedAllocation: true },
+    { reversedAllocation: true },
+    { exhaustedAllocation: true },
+    { allocationSupplier: true },
+    { allocationAfter: true },
+    { missingBill: true },
+    { voided: true },
+    { corrected: true },
+    { malformedBill: true },
+    { missingAdvance: true },
+    { malformedAdvance: true },
+    { wrongSupplier: true },
+    { latestBill: true },
+    { latestAdvance: true },
+    { archivedControl: true },
+  ])
+    await expect(
+      getFinanceSupplierAllocationReleaseReview(fixture(o), release),
+    ).rejects.toBeDefined()
+  for (const change of [
+    { amountMinor: "151" },
+    { amountMinor: "101" },
+    { amountMinor: "0" },
+    { reason: " " },
+    { effectiveAt: new Date("2026-10-02") },
+    { effectiveAt: new Date("invalid") },
+  ])
+    await expect(
+      getFinanceSupplierAllocationReleaseReview(fixture(), {
+        ...release,
+        ...change,
       }),
     ).rejects.toBeDefined()
 })
