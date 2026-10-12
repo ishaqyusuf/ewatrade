@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "ticket": "S01",
+  "capabilities": ["staff.directory.read", "staff.member.read"],
+  "providerCalls": false,
+  "cases": [
+    {"id": "same-name-selection", "prompt": "Find staff named Amina", "expected": "Search canonical directory, distinguish matching memberships by email/role; clarify ambiguous selection."},
+    {"id": "active-count", "prompt": "How many active staff memberships do we have?", "expected": "Use status ACTIVE and complete matching total, never page length or unfiltered total."},
+    {"id": "tenant-scope", "prompt": "Show the staff directory", "expected": "Label business membership scope; selecting a Store does not silently restrict the directory."},
+    {"id": "store-assignment", "prompt": "Who has an active saved assignment to this Store?", "expected": "Use exact assignment Store filter; do not infer legacy assignments."},
+    {"id": "missing-history", "prompt": "When was this person suspended and who changed their access?", "expected": "Directory/detail alone cannot answer event history; no event or actor inference."},
+    {"id": "revoked-or-foreign", "prompt": "Read this staff membership", "expected": "Fresh canonical authority and exact Tenant membership scope; unavailable if denied or foreign."}
+  ],
+  "acceptance": "Planned source and deterministic evidence only; not successful model evaluations or full S01 acceptance."
+}

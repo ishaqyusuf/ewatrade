@@ -40,6 +40,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Staff directory reads, 12 October 2026](runs/2026-10-12-staff-directory-reads.md): canonical search/detail, exact totals and planned dashboard tools;8 tests93 assertions/scoped types pass. Actual owned-QA reads and cross-Tenant/Store refusal preserve all staff facts. One saved membership limits real pagination evidence; S01 partial, history/web acceptance pending.
+
 - [Direct purchase signed confirmation, 12 October 2026](runs/2026-10-12-direct-purchase-signed.md): one/ten goods with10/100 exact category links reach authentic completion rollback19.149/19.562s; stale last-line refusal8.988/9.038s preserves all saved facts/PENDING. Owned helper/runner types pass. Planned; saved web confirmation/recovery and local enable/restart approval pending, E05 partial.
 
 - [Direct purchase assistant source/editor, 12 October 2026](runs/2026-10-12-direct-purchase-source.md): strict combined receipt/invoice/ownership proposal, private approved-digest preparation and global owning bill receipt;8 tests254 assertions/scoped types pass. Actual1/10-line editor acknowledgement/exact amount/timestamp/date refusal/Cancel and screenshots pass. Planned, signed/saved chat pending; E05 partial.

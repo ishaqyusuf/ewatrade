@@ -27,6 +27,20 @@ const proposalTests = [
  * bumping `version`; IDs are permanent. Server executors live in the API.
  */
 export const capabilityManifest = [
+  {
+    id: "staff.directory.read", version: 1, mode: "read", title: "Search staff directory",
+    domain: "staff", tool: "readStaffDirectory", policy: { roles: managers }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffDirectoryPage"],
+    examples: ["Find staff named Amina", "How many active staff memberships do we have?"],
+    tests: ["packages/db/src/queries/staff-directory.test.ts", "apps/api/src/assistant/general-staff-reads.test.ts"], brain,
+  },
+  {
+    id: "staff.member.read", version: 1, mode: "read", title: "Read exact staff membership",
+    domain: "staff", tool: "readStaffMember", policy: { roles: managers }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffDirectoryMember"],
+    examples: ["Show the staff membership we selected"],
+    tests: ["packages/db/src/queries/staff-directory.test.ts", "apps/api/src/assistant/general-staff-reads.test.ts"], brain,
+  },
   {id:"finance.purchase.record",version:1,mode:"write",action:"purchase_record",schema:actionSchema("purchase_record"),effect:"book",receipt:"finance_purchase_bill",title:"Record received supplier purchase",domain:"finance",tool:"draftAction",policy:{roles:["OWNER","ADMIN"]},scope:"store",clients:["dashboard"],rollout:"planned",procedures:["finance.recordPurchase"],examples:["Record the supplier invoice for goods we received and own"],tests:["packages/assistant/src/general/purchase-recording.test.ts","packages/db/src/queries/finance/purchase-recording-review.test.ts"],brain},
   {id:"finance.supplier.opening",version:1,mode:"write",action:"supplier_opening",schema:actionSchema("supplier_opening"),effect:"book",receipt:"finance_supplier",title:"Record supplier opening balance",domain:"finance",tool:"draftAction",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.recordSupplierOpening"],examples:["Record the payable or advance that existed at the bookkeeping start"],tests:["packages/assistant/src/general/supplier-opening.test.ts","packages/db/src/queries/finance/supplier-opening-review.test.ts"],brain},
   {id:"finance.supplier.entry.reverse",version:1,mode:"write",action:"supplier_entry_reverse",schema:actionSchema("supplier_entry_reverse"),effect:"book",receipt:"finance_supplier",title:"Reverse original supplier entry",domain:"finance",tool:"draftAction",policy:{roles:["OWNER","ADMIN"]},scope:"book",clients:["dashboard"],rollout:"planned",procedures:["finance.reverseSupplierEntry"],examples:["Correct this original supplier opening or paid advance entry"],tests:["packages/assistant/src/general/supplier-entry-reversal.test.ts","packages/db/src/queries/finance/supplier-entry-reversal-review.test.ts"],brain},

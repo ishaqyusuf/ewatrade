@@ -49,7 +49,7 @@ export function StaffDirectoryHeader({
     <PageHeader
       eyebrow={storeName}
       title="Staff management"
-      description="Manage staff access and invitations for this store."
+      description="Manage staff access and invitations across your business."
     >
       <PageToolbar
         actions={

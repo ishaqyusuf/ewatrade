@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 11 are partial, 20 are pending implementation, and
+Of the 32 not yet accepted: 12 are partial, 19 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -39,7 +39,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | E03 | Internal transfers and owner funds | ◐ Partial | Pending |
 | E04 | Expenses and bills | ◐ Partial | Pending |
 | E05 | Suppliers and purchasing | ◐ Partial | Pending |
-| S01 | Staff directory and history | ○ Pending | Pending |
+| S01 | Staff directory and history | ◐ Partial | Pending |
 | S02 | Staff invitations and lifecycle | ○ Pending | Pending |
 | S03 | Suspend/reactivate staff | ○ Pending | Pending |
 | S04 | Roles, Store assignments and handover | ○ Pending | Pending |
@@ -119,3 +119,5 @@ establish acceptance of the whole ticket.
 Canonical definition/evidence: `.brain/plans/2026-10-09-assistant-business-operations.md`.
 Detailed run reports: [evaluation catalog](README.md). Implementation completion,
 acceptance, runtime availability and deployment are separate states.
+
+S01 directory milestone: canonical membership search/detail, exact request-snapshot totals, filter-bound keyset pagination and two planned dashboard read tools implemented. Eight focused tests/93 assertions and scoped types pass. Real owned QA router/tool reads, empty results and cross-Tenant/Store refusal pass with staff facts unchanged. QA currently has one membership, so real multi-page and same-name checks remain open. Lifecycle/access history and dashboard acceptance remain open; S01 is partial and unbookmarked. [Evidence](runs/2026-10-12-staff-directory-reads.md).

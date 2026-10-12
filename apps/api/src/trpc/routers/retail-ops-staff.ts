@@ -11,6 +11,9 @@ import {
   completeRetailOpsStaffOnboarding,
   inviteRetailOpsStaff,
   listRetailOpsStaff,
+  listStaffDirectoryPage,
+  getStaffDirectoryMember,
+  StaffDirectoryError,
   resolveRetailOpsStaffInviteToken,
   updateRetailOpsStaffStatus,
 } from "@ewatrade/db/queries"
@@ -31,6 +34,20 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "../init"
+import {
+  retailOpsStaffDirectoryPageSchema,
+  retailOpsStaffDirectoryMemberSchema,
+} from "../../schemas/retail-ops-staff-reads"
+
+async function staffRead<T>(operation: () => Promise<T>) {
+  try {
+    return await operation()
+  } catch (error) {
+    if (error instanceof StaffDirectoryError)
+      throw new TRPCError({ code: error.code, message: error.message })
+    throw error
+  }
+}
 
 function getStaffErrorCode(
   error: RetailOpsStaffError,
@@ -149,6 +166,28 @@ function resolveStore(
 }
 
 export const retailOpsStaffRouter = createTRPCRouter({
+  staffDirectoryPage: protectedProcedure
+    .input(retailOpsStaffDirectoryPageSchema)
+    .query(({ ctx, input }) =>
+      staffRead(() =>
+        listStaffDirectoryPage(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  staffDirectoryMember: protectedProcedure
+    .input(retailOpsStaffDirectoryMemberSchema)
+    .query(({ ctx, input }) =>
+      staffRead(() =>
+        getStaffDirectoryMember(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
   completeStaffOnboarding: authenticatedProcedure
     .input(retailOpsCompleteStaffOnboardingSchema)
     .mutation(async ({ ctx, input }) => {
