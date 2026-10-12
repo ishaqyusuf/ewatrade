@@ -5,9 +5,10 @@ and mobile. Existing accepted bookmarks record web acceptance; mobile parity is
 not certified by those bookmarks.
 
 **Accepted for web: 13/45 (28.9%). Pending web acceptance: 32/45 (71.1%).**
-Of those32:23 are partial and9 have not started implementation. A04 now has
-native implementation packets under review; H02's impact-gate packet needs the
-recorded review repairs. S05 source is also underway. These tickets have no
+Of those 32: 24 are partial and 8 have not started implementation. A04 has
+native packets under review; H02's two source repairs are independently
+revalidated, with CI acceptance pending. S05 and F01 source packets require
+the recorded review repairs. These tickets have no
 accepted bookmark. No ticket is deferred
 by the former web-only restriction. Mobile acceptance is recorded separately.
 No native acceptance or hosted rollout is newly certified by this scope change.
@@ -48,8 +49,8 @@ accepted milestone is recorded; it does not assert that no related source exists
 | S02 | Staff invitations and lifecycle | ◐ Partial | Pending |
 | S03 | Suspend/reactivate staff | ◐ Partial | Pending |
 | S04 | Roles, Store assignments and handover | ◐ Partial | Pending |
-| S05 | Daily staff activity history | ◐ Partial — implementation source underway; review and acceptance pending | Pending |
-| F01 | Collection source contract | ○ Pending | Pending |
+| S05 | Daily staff activity history | ◐ Partial — packet 1 reviewed; display repairs and remaining canonical scope pending | Pending |
+| F01 | Collection source contract | ◐ Partial — audit and pure contract reviewed; repairs and persisted integration pending | Pending |
 | F02 | Payment link and settlement | ○ Pending | Pending |
 | F03 | Payout feasibility and domain | ○ Pending | Pending |
 | F04 | Payout approval and dispatch | ○ Pending | Pending |
@@ -60,7 +61,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | G04 | Advanced inventory and catalog | ○ Pending | Pending |
 | G05 | Settings and communications | ○ Pending | Pending |
 | H01 | Coverage CI gate | ◐ Partial | Pending |
-| H02 | Brain and feature change gate | ◐ Partial — source gate under review; two reproduced gaps require repair | Pending |
+| H02 | Brain and feature change gate | ◐ Partial — two source repairs revalidated; final handoff and CI acceptance pending | Pending |
 | H03 | Evaluation and observability | ◐ Partial | Pending |
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |

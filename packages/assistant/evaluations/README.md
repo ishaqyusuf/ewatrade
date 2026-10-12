@@ -2,11 +2,15 @@
 
 [Quick-chat object continuity](runs/2026-10-12-quick-chat-object-continuity.md): actual saved chat and original object retain the unsent draft through Close and Minimize/Reopen; screenshots captured. No additional ticket acceptance.
 
-[Native payment-route review](runs/2026-10-12-native-payment-route-review.md): a schema-valid payment without an Order link wrongly falls back to its payment ID as an Order ID; A04 repair required before exact-object acceptance.
+[Native payment-route review](runs/2026-10-12-native-payment-route-review.md): the payment-without-Order fallback is repaired and the original probe is revalidated; native exact-object acceptance remains open.
 
-[Staff Job handoff review](runs/2026-10-12-staff-job-handoff-review.md): seven focused checks pass; revoked-access return repair pending. Actual saved purchase-object screenshots show same-chat and unsent-draft continuity, separately from the unaccepted S04 flow.
+[Staff Job handoff review](runs/2026-10-12-staff-job-handoff-review.md): revoked-access return repair, focused regressions and scoped compilation pass; source committed on main. Actual saved purchase-object screenshots show same-chat and unsent-draft continuity, separately from the unaccepted S04 flow.
 
-[H02 coordinator review](runs/2026-10-12-h02-coordinator-review.md): two reproduced impact-gate gaps require implementation repairs before acceptance. Earlier passing evidence is reused.
+[H02 coordinator review](runs/2026-10-12-h02-coordinator-review.md): both source repairs independently revalidated; final handoff and hosted CI acceptance remain open. Earlier passing evidence is reused.
+
+[S05 coordinator review](runs/2026-10-12-s05-coordinator-review.md): display-count, truncation and unknown-actor copy failures reproduced; finance, original-object links and exact adjustment filtering remain required.
+
+[F01 coordinator review](runs/2026-10-12-f01-coordinator-review.md): exact-source, amount and expiry failures reproduced in the new pure contract; persisted canonical integration remains open.
 
 [Quotation decision integration review](runs/2026-10-12-quotation-decision-integration-review.md): nine new logical cases, scoped compilation and structural coverage pass; authenticated synthetic screenshots; signed/runtime/native acceptance remains open.
 

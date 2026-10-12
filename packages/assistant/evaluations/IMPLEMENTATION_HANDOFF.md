@@ -9,26 +9,26 @@ acceptance bookmarks and serialized commits to `main`.
 
 This handoff originally covered twelve pending tickets. A04 and H02 now have
 implementation packets under coordinator review; their implementation owner
-continues those repairs. S05 source is also underway with that owner. Nine tickets
+continues those repairs. S05 and F01 source packets are also with that owner. Eight tickets
 remain unstarted. Avoid duplicate ownership.
 
 | ID | Deliverable |
 |---|---|
 | A04 | Started, owner retained: native inventory and six catalog/order editors under review. Continue missing native review/editor/receipt-object flows and review repairs. Preserve Setup/product workflows; prepare keyboard, large text, loading, expiry, offline, reload, business-switch and role journeys for acceptance. |
 | S05 | Started, owner retained: daily staff operational history from actual actor-attributed order, payment, stock, service and authorized finance sources. Show canonical record, outcome, time and Store; separate performed/assigned/approved work. Preserve unknown historical attribution and exact full-result counts. |
-| F01 | Canonical collection intent/source contract: allowed source, amount, currency, expiry, provider reference and actor scope; prevent duplicate manual/online receipt posting. Audit existing checkout reuse first. |
+| F01 | Started, owner retained: checkout audit and pure collection contract under review. Repair exact source binding, amount and expiry validation; complete persisted canonical intent commands and atomic manual/online receipt protection. |
 | F02 | Reviewed payment link and separately confirmed sharing; signed settlement/reconciliation, expiry and duplicate/out-of-order/partial outcomes. Build deterministic provider support before any authorized sandbox run. |
 | F03 | Payout feasibility using current official provider documentation, then beneficiary/payout/reconciliation domain design. Record supported country/currency/funding/verification/fees/limits/account requirements and unresolved decisions. Existing checkout credentials do not establish transfer authority. |
 | F04 | Reviewed payout intent with verified payee/account suffix, debit account, amount, fees and total; agreed step-up policy, durable outbox, stable idempotency, limits and kill switch. No invented policy or live dispatch. |
 | F05 | Authoritative payout/refund settlement and recovery for pending/unknown/succeeded/failed/reversed outcomes. Timeouts must not create duplicate payouts; preserve late success and auditable corrections. |
 | G04 | Bounded custody, reservations, packing transforms, archive and bulk catalog changes using canonical commands, impact review and per-record outcomes. Uncertain imports need review; unsupported deletion/large batches stay form-only. |
 | G05 | Authorized Store/settings reads and selected reviewed configuration changes; reviewed recipient/content, channel consent and delivery recovery for communications. Staff administration remains owned by S01–S05. |
-| H02 | Started, owner retained: source impact gate needs coordinator review repairs. Reconcile actual capability change/rollout and cover merchant/domain and feature behavior changes. Respect ignored Brain files and CI limits; use reviewed versioned records. |
+| H02 | Started, owner retained: both source review repairs revalidated. Align PR/template and handoff descriptions, then provide the final packet for independent CI acceptance. Respect ignored Brain files and CI limits; use reviewed versioned records. |
 | H04 | Reuse the existing voice/file workstream with typed proposals, source citations, uncertain-field review and bounded multi-step plans/receipts. Keep transcription confidence separate from authority; offline execution remains unavailable without approved canonical support. |
 | H05 | Implement readiness/rollout documentation and controls: explicit capability/version/exclusion inventory, canary and rollback readiness, preserved saved receipts. Actual acceptance, enabling, canary execution and deployment belong to the acceptance coordinator and applicable approval gates. |
 
-The current owner continues A04/H02/S05 and their review repairs. For unclaimed
-work, start with F01's canonical source audit or independent F03 provider research.
+The current owner continues A04/H02/S05/F01 and their review repairs. For unclaimed
+work, start with independent F03 provider research or another ready dependency.
 Record missing mobile support for the existing web
 capabilities and deliver the native implementations in reviewable packets rather
 than assuming web support implies parity. Then work through canonical
