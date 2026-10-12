@@ -1,7 +1,12 @@
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 export function StaffHistorySheetHeader({
   filters,
-}: { filters: NonNullable<GeneralAnswer["target"]>["filters"] }) {
+}: {
+  filters: Extract<
+    NonNullable<GeneralAnswer["target"]>,
+    { kind: "staff_history" }
+  >["filters"]
+}) {
   return (
     <div className="grid gap-1 text-xs text-muted-foreground">
       <p>

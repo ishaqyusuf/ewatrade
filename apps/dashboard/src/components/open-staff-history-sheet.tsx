@@ -5,7 +5,12 @@ import { Button } from "@ewatrade/ui"
 
 export function OpenStaffHistorySheet({
   target,
-}: { target: NonNullable<GeneralAnswer["target"]> }) {
+}: {
+  target: Extract<
+    NonNullable<GeneralAnswer["target"]>,
+    { kind: "staff_history" }
+  >
+}) {
   const { open } = useStaffHistoryParams()
   return (
     <Button variant="outline" size="sm" onClick={() => void open(target)}>

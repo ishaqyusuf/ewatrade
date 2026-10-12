@@ -4,7 +4,7 @@ import { parseAsString, useQueryStates } from "nuqs"
 
 export function useStaffHistoryParams() {
   const [{ staffHistory }, setParams] = useQueryStates(
-    { staffHistory: parseAsString },
+    { staffHistory: parseAsString, staffMember: parseAsString },
     { history: "push" },
   )
   let target: ReturnType<typeof staffHistoryTargetSchema.parse> | null = null
@@ -19,6 +19,7 @@ export function useStaffHistoryParams() {
     open: (value: ReturnType<typeof staffHistoryTargetSchema.parse>) =>
       setParams({
         staffHistory: JSON.stringify(staffHistoryTargetSchema.parse(value)),
+        staffMember: null,
       }),
     close: () => setParams({ staffHistory: null }),
   }

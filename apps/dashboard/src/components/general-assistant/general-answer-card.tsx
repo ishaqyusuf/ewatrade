@@ -1,6 +1,7 @@
 "use client"
 
 import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
+import { OpenStaffMemberSheet } from "@/components/open-staff-member-sheet"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { useSyncExternalStore } from "react"
 
@@ -28,7 +29,11 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
       <p className="mt-2 text-sm">{answer.detail}</p>
       {answer.target ? (
         <div className="mt-3">
-          <OpenStaffHistorySheet target={answer.target} />
+          {answer.target.kind === "staff_history" ? (
+            <OpenStaffHistorySheet target={answer.target} />
+          ) : (
+            <OpenStaffMemberSheet membershipId={answer.target.membershipId} />
+          )}
         </div>
       ) : null}
     </div>

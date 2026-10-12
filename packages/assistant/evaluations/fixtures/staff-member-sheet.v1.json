@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "ticket": "S01",
+  "capabilities": [
+    "staff.directory.read",
+    "staff.member.read",
+    "staff.history.read"
+  ],
+  "providerCalls": false,
+  "cases": [
+    {
+      "id": "exact-member-target",
+      "prompt": "Open this staff member",
+      "expected": "Navigate exact membership ID in the global sheet over current page; server owns Tenant/actor and freshly validates access."
+    },
+    {
+      "id": "same-name-pages",
+      "prompt": "Find all staff with this name",
+      "expected": "Distinct memberships/emails across keyset pages, exact matching totals and role filtering; contradictory profile snapshots cannot replace current role/status."
+    },
+    {
+      "id": "member-original-dates",
+      "prompt": "When did this person accept the invitation?",
+      "expected": "Show only original invited/accepted dates. Null is not recorded; no delivery/history/access inference."
+    },
+    {
+      "id": "bounded-preview",
+      "prompt": "Show ten staff with very long names",
+      "expected": "Saved answer title/detail stay bounded with labelled preview; full canonical identities remain in tool data/member object."
+    },
+    {
+      "id": "member-to-history",
+      "prompt": "Show this person\u2019s history",
+      "expected": "One staff sheet at a time; atomic URL transition retains exact subject ID and unrelated assistant/chat keys. History only for Owner/Admin."
+    },
+    {
+      "id": "unavailable-close",
+      "prompt": "Open unavailable staff details",
+      "expected": "Protected native unavailable/retry state; Close preserves current assistant route and selected chat parameter."
+    },
+    {
+      "id": "malformed-and-authority",
+      "prompt": "Open malformed or foreign staff link",
+      "expected": "Strict navigation DTO rejects authority/URL injection; malformed link is closable, foreign membership/Store and revoked authority refused by canonical query."
+    }
+  ],
+  "acceptance": "Source/deterministic rollback and desktop rendering evidence only. Live protected sheet success and saved chat continuity remain unverified; all S01 capabilities planned."
+}

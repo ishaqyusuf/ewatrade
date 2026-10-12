@@ -1,0 +1,15 @@
+import { z } from "zod"
+import { staffHistoryTargetSchema } from "./staff-history-target"
+
+/** Navigation identity only; the native query derives Tenant/actor and checks access. */
+export const staffMemberTargetSchema = z
+  .object({
+    kind: z.literal("staff_member"),
+    membershipId: z.string().trim().min(1).max(160),
+  })
+  .strict()
+
+export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
+  staffHistoryTargetSchema,
+  staffMemberTargetSchema,
+])

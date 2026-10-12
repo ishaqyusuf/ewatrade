@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 
 import { StaffHistorySheet } from "./staff-history-sheet"
+import { StaffMemberSheet } from "./staff-member-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
@@ -29,6 +30,7 @@ export type GlobalSheetAccess = {
   /** Website & domain launch gate and role; the sheet mounts only when true. */
   domains?: boolean
   staffHistory?: boolean
+  staffDirectory?: boolean
   sales: boolean
   /** The Orders list and full order pages. */
   ordersPage?: boolean
@@ -101,6 +103,9 @@ export function GlobalSheets({
         </>
       ) : null}
       {access.staffHistory ? <StaffHistorySheet /> : null}
+      {access.staffDirectory ? (
+        <StaffMemberSheet historyAllowed={Boolean(access.staffHistory)} />
+      ) : null}
       <StockTransferDetailsSheet storeId={store.id} />
       <InventoryOperationDetailsSheet storeId={store.id} />
       <ReceiptSheet storeId={store.id} />

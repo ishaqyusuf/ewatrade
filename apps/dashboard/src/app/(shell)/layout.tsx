@@ -95,6 +95,10 @@ export default async function ShellLayout({
         <GlobalSheetsProvider
           access={{
             staffHistory: ["OWNER", "ADMIN"].includes(ctx.membership.role),
+            staffDirectory:
+              ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
+              (ctx.membership.role === "MANAGER" &&
+                ctx.membership.staffAccessMode === "LEGACY"),
             sales: canUseSalesOperations(ctx.membership.role),
             ordersPage: canAccessDashboardPath(
               "/sales",
