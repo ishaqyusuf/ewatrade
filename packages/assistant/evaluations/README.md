@@ -370,3 +370,5 @@ fingerprints; no change in this window is not historical resolution, so remainin
 [Backward source evidence](runs/2026-10-12-g02-cash-history-backward-source-v1.md).
 
 S04 source integration and labeled web preview: [staff access checkpoint](runs/2026-10-12-staff-access-source-web.md). Source proof does not accept the ticket.
+
+[D05/G03 first source packets](runs/2026-10-12-service-work-quote-source-packets.md): focused checks pass; integration/acceptance pending.

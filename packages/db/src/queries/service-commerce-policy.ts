@@ -259,6 +259,24 @@ export async function evaluateServiceCommercePolicyBatchInTransaction(
     tenantId: string
   },
 ): Promise<ServiceCommercePolicyEvaluation[]> {
+  return evaluatePolicyBatch(tx, input, true)
+}
+
+async function evaluatePolicyBatch(
+  tx: PolicyTx,
+  input: {
+    actorUserId: string
+    preloaded?: {
+      countryCode: string | null
+      decisions: ServiceCommercePolicyDecisionForEvaluation[]
+    }
+    purpose: string
+    scopes: Array<Pick<EvaluatePolicyInput, "channel" | "subject" | "vertical">>
+    storeId: string
+    tenantId: string
+  },
+  recordAudit: boolean,
+): Promise<ServiceCommercePolicyEvaluation[]> {
   const store = input.preloaded
     ? { countryCode: input.preloaded.countryCode }
     : await tx.store.findFirst({
@@ -302,7 +320,7 @@ export async function evaluateServiceCommercePolicyBatchInTransaction(
     )
     return { evaluation, exactDecision, scope }
   })
-  if (evaluated.length > 0) {
+  if (recordAudit && evaluated.length > 0) {
     await tx.serviceCommercePolicyAuditEvent.createMany({
       data: evaluated.map(({ evaluation, exactDecision, scope }) => ({
         actorUserId: input.actorUserId,
@@ -321,6 +339,31 @@ export async function evaluateServiceCommercePolicyBatchInTransaction(
     })
   }
   return evaluated.map(({ evaluation }) => evaluation)
+}
+
+/** Same current policy and launch gates, without creating a READ audit row. */
+export async function assertServiceCommercePolicyAllowedReadOnlyInTransaction(
+  tx: PolicyTx,
+  input: EvaluatePolicyInput,
+) {
+  const [evaluation] = await evaluatePolicyBatch(
+    tx,
+    {
+      actorUserId: input.actorUserId,
+      purpose: input.purpose,
+      scopes: [input],
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+    false,
+  )
+  if (!evaluation || evaluation.outcome !== "allowed") {
+    throw new ServiceCommercePolicyError(
+      "POLICY_BLOCKED",
+      "This Service Commerce operation is unavailable under current policy.",
+    )
+  }
+  return evaluation
 }
 
 export async function evaluateServiceCommercePolicy(

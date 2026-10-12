@@ -1079,121 +1079,156 @@ async function lockServiceLineMutation(
     )
 }
 
-export async function transitionServiceJobLine(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientCommandId: string
-    effectiveAt?: Date
-    expectedRevision: number
-    lineId: string
-    reason?: string
-    schemaVersion: number
-    source: string
-    tenantId: string
-    toStatus:
-      | "blocked"
-      | "cancelled"
-      | "completed"
-      | "in_progress"
-      | "queued"
-      | "ready_for_handoff"
+/** Captures the original history identity inside the caller's receipt transaction. */
+export type ServiceWorkEventReceipt = {
+  id: string
+  type: ServiceWorkEventType
+  createdAt: Date
+  effectiveAt: Date
+}
+export type ServiceWorkEventReceiptObserver = (
+  event: ServiceWorkEventReceipt,
+) => void
+
+export type TransitionServiceJobLineInput = {
+  actorUserId: string
+  clientCommandId: string
+  effectiveAt?: Date
+  expectedRevision: number
+  lineId: string
+  reason?: string
+  schemaVersion: number
+  source: string
+  tenantId: string
+  toStatus:
+    | "blocked"
+    | "cancelled"
+    | "completed"
+    | "in_progress"
+    | "queued"
+    | "ready_for_handoff"
+}
+
+export function prepareServiceJobLineTransition(
+  line: {
+    status: ServiceJobLineStatus
+    authorizationStatus: WorkAuthorizationStatus
   },
+  toStatus: TransitionServiceJobLineInput["toStatus"],
+) {
+  const next = lineStatus(toStatus)
+  if (!allowedTransitions.get(line.status)?.includes(next)) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "This Service Job Line transition is not allowed.",
+    )
+  }
+  if (
+    next !== ServiceJobLineStatus.CANCELLED &&
+    line.authorizationStatus !== WorkAuthorizationStatus.AUTHORIZED
+  ) {
+    throw new CatalogError(
+      "SERVICE_WORK_NOT_AUTHORIZED",
+      "Tracked work must be authorized before progress can change.",
+    )
+  }
+  return next
+}
+
+export async function transitionServiceJobLineInTransaction(
+  tx: Prisma.TransactionClient,
+  input: TransitionServiceJobLineInput,
+  onEvent?: ServiceWorkEventReceiptObserver,
 ) {
   assertSchemaVersion(input.schemaVersion)
-  return db.$transaction(async (tx) => {
-    const previous = await tx.serviceWorkEvent.findUnique({
-      where: {
-        tenantId_clientCommandId: {
-          clientCommandId: input.clientCommandId,
-          tenantId: input.tenantId,
-        },
-      },
-    })
-    if (previous) {
-      return serializeJob(
-        await loadJob(tx, {
-          jobId: previous.serviceJobId,
-          tenantId: input.tenantId,
-        }),
-      )
-    }
-    await lockServiceLineMutation(tx, input)
-    const line = await tx.serviceJobLine.findFirst({
-      include: { serviceJob: true },
-      where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
-    })
-    if (!line) {
-      throw new CatalogError(
-        "SERVICE_JOB_NOT_FOUND",
-        "Service Job Line not found.",
-      )
-    }
-    if (line.revision !== input.expectedRevision) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "Service Job Line changed before this transition.",
-      )
-    }
-    const next = lineStatus(input.toStatus)
-    if (!allowedTransitions.get(line.status)?.includes(next)) {
-      throw new CatalogError(
-        "INVALID_SERVICE_TRANSITION",
-        "This Service Job Line transition is not allowed.",
-      )
-    }
-    if (
-      next !== ServiceJobLineStatus.CANCELLED &&
-      line.authorizationStatus !== WorkAuthorizationStatus.AUTHORIZED
-    ) {
-      throw new CatalogError(
-        "SERVICE_WORK_NOT_AUTHORIZED",
-        "Tracked work must be authorized before progress can change.",
-      )
-    }
-    const update = await tx.serviceJobLine.updateMany({
-      data: {
-        cancelledAt:
-          next === ServiceJobLineStatus.CANCELLED ? new Date() : undefined,
-        completedAt:
-          next === ServiceJobLineStatus.COMPLETED ? new Date() : undefined,
-        revision: { increment: 1 },
-        status: next,
-      },
-      where: { id: line.id, revision: line.revision },
-    })
-    if (update.count !== 1) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "Service Job Line changed while applying this transition.",
-      )
-    }
-    await tx.serviceWorkEvent.create({
-      data: {
-        actorUserId: input.actorUserId,
+  const previous = await tx.serviceWorkEvent.findUnique({
+    where: {
+      tenantId_clientCommandId: {
         clientCommandId: input.clientCommandId,
-        effectiveAt: input.effectiveAt,
-        fromStatus: line.status,
-        reason: input.reason?.trim() || null,
-        serviceJobId: line.serviceJobId,
-        serviceJobLineId: line.id,
-        source: input.source,
         tenantId: input.tenantId,
-        toStatus: next,
-        type: ServiceWorkEventType.STATUS_CHANGED,
       },
-    })
-    await tx.serviceJob.update({
-      data: { revision: { increment: 1 } },
-      where: { id: line.serviceJobId },
-    })
+    },
+  })
+  if (previous) {
+    onEvent?.(previous)
     return serializeJob(
       await loadJob(tx, {
-        jobId: line.serviceJobId,
+        jobId: previous.serviceJobId,
         tenantId: input.tenantId,
       }),
     )
+  }
+  await lockServiceLineMutation(tx, input)
+  const line = await tx.serviceJobLine.findFirst({
+    include: { serviceJob: true },
+    where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
   })
+  if (!line) {
+    throw new CatalogError(
+      "SERVICE_JOB_NOT_FOUND",
+      "Service Job Line not found.",
+    )
+  }
+  if (line.revision !== input.expectedRevision) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Service Job Line changed before this transition.",
+    )
+  }
+  const next = prepareServiceJobLineTransition(line, input.toStatus)
+  const update = await tx.serviceJobLine.updateMany({
+    data: {
+      cancelledAt:
+        next === ServiceJobLineStatus.CANCELLED ? new Date() : undefined,
+      completedAt:
+        next === ServiceJobLineStatus.COMPLETED ? new Date() : undefined,
+      revision: { increment: 1 },
+      status: next,
+    },
+    where: { id: line.id, revision: line.revision },
+  })
+  if (update.count !== 1) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Service Job Line changed while applying this transition.",
+    )
+  }
+  const event = await tx.serviceWorkEvent.create({
+    data: {
+      actorUserId: input.actorUserId,
+      clientCommandId: input.clientCommandId,
+      effectiveAt: input.effectiveAt,
+      fromStatus: line.status,
+      reason: input.reason?.trim() || null,
+      serviceJobId: line.serviceJobId,
+      serviceJobLineId: line.id,
+      source: input.source,
+      tenantId: input.tenantId,
+      toStatus: next,
+      type: ServiceWorkEventType.STATUS_CHANGED,
+    },
+  })
+  onEvent?.(event)
+  await tx.serviceJob.update({
+    data: { revision: { increment: 1 } },
+    where: { id: line.serviceJobId },
+  })
+  return serializeJob(
+    await loadJob(tx, {
+      jobId: line.serviceJobId,
+      tenantId: input.tenantId,
+    }),
+  )
+}
+
+export async function transitionServiceJobLine(
+  db: PrismaClient,
+  input: TransitionServiceJobLineInput,
+) {
+  assertSchemaVersion(input.schemaVersion)
+  return runInOwnTransaction(db, (tx) =>
+    transitionServiceJobLineInTransaction(tx, input),
+  )
 }
 
 export async function authorizeServiceJobLine(
@@ -1382,146 +1417,168 @@ export async function splitServiceJobLine(
   })
 }
 
+export type AssignServiceJobInput = {
+  actorUserId: string
+  assigneeUserId: string
+  expectedRevision: number
+  jobId: string
+  reason?: string
+  tenantId: string
+}
+
+export async function assignServiceJobInTransaction(
+  tx: Prisma.TransactionClient,
+  input: AssignServiceJobInput,
+  onEvent?: ServiceWorkEventReceiptObserver,
+) {
+  const job = await tx.serviceJob.findFirst({
+    where: { id: input.jobId, tenantId: input.tenantId },
+  })
+  if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
+  if (job.revision !== input.expectedRevision) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Job changed before assignment.",
+    )
+  }
+  await assertActiveAssignee(tx, {
+    tenantId: input.tenantId,
+    userId: input.assigneeUserId,
+  })
+  await tx.serviceWorkAssignment.updateMany({
+    data: { endedAt: new Date() },
+    where: { endedAt: null, serviceJobId: job.id },
+  })
+  await tx.serviceWorkAssignment.create({
+    data: {
+      assignedByUserId: input.actorUserId,
+      assignedUserId: input.assigneeUserId,
+      previousUserId: job.currentAssigneeUserId,
+      reason: input.reason?.trim() || null,
+      serviceJobId: job.id,
+    },
+  })
+  await tx.serviceJob.update({
+    data: {
+      currentAssigneeUserId: input.assigneeUserId,
+      revision: { increment: 1 },
+    },
+    where: { id: job.id },
+  })
+  const event = await tx.serviceWorkEvent.create({
+    data: {
+      actorUserId: input.actorUserId,
+      payload: json({ assigneeUserId: input.assigneeUserId }),
+      reason: input.reason?.trim() || null,
+      serviceJobId: job.id,
+      source: "service_work",
+      tenantId: input.tenantId,
+      type: job.currentAssigneeUserId
+        ? ServiceWorkEventType.REASSIGNED
+        : ServiceWorkEventType.ASSIGNED,
+    },
+  })
+  onEvent?.(event)
+  return serializeJob(
+    await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
+  )
+}
+
 export async function assignServiceJob(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    assigneeUserId: string
-    expectedRevision: number
-    jobId: string
-    reason?: string
-    tenantId: string
-  },
+  input: AssignServiceJobInput,
 ) {
-  return db.$transaction(async (tx) => {
-    const job = await tx.serviceJob.findFirst({
-      where: { id: input.jobId, tenantId: input.tenantId },
-    })
-    if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
-    if (job.revision !== input.expectedRevision) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "Job changed before assignment.",
-      )
-    }
-    await assertActiveAssignee(tx, {
-      tenantId: input.tenantId,
-      userId: input.assigneeUserId,
-    })
-    await tx.serviceWorkAssignment.updateMany({
-      data: { endedAt: new Date() },
-      where: { endedAt: null, serviceJobId: job.id },
-    })
-    await tx.serviceWorkAssignment.create({
-      data: {
-        assignedByUserId: input.actorUserId,
-        assignedUserId: input.assigneeUserId,
-        previousUserId: job.currentAssigneeUserId,
-        reason: input.reason?.trim() || null,
-        serviceJobId: job.id,
-      },
-    })
-    await tx.serviceJob.update({
-      data: {
-        currentAssigneeUserId: input.assigneeUserId,
-        revision: { increment: 1 },
-      },
-      where: { id: job.id },
-    })
-    await tx.serviceWorkEvent.create({
-      data: {
-        actorUserId: input.actorUserId,
-        payload: json({ assigneeUserId: input.assigneeUserId }),
-        reason: input.reason?.trim() || null,
-        serviceJobId: job.id,
-        source: "service_work",
-        tenantId: input.tenantId,
-        type: job.currentAssigneeUserId
-          ? ServiceWorkEventType.REASSIGNED
-          : ServiceWorkEventType.ASSIGNED,
-      },
-    })
-    return serializeJob(
-      await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
-    )
+  return runInOwnTransaction(db, (tx) =>
+    assignServiceJobInTransaction(tx, input),
+  )
+}
+
+export type RescheduleServiceJobInput = {
+  actorUserId: string
+  expectedRevision: number
+  jobId: string
+  promisedAt: Date
+  reason: string
+  tenantId: string
+}
+
+export async function rescheduleServiceJobInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RescheduleServiceJobInput,
+  onEvent?: ServiceWorkEventReceiptObserver,
+) {
+  const job = await loadJob(tx, {
+    jobId: input.jobId,
+    tenantId: input.tenantId,
   })
+  if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
+  if (job.revision !== input.expectedRevision) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Job changed before rescheduling.",
+    )
+  }
+  const previous = [...job.dueCommitments]
+    .reverse()
+    .find((commitment) => !commitment.supersededAt)
+  if (previous) {
+    await tx.serviceDueCommitment.update({
+      data: { supersededAt: new Date() },
+      where: { id: previous.id },
+    })
+  }
+  await tx.serviceDueCommitment.create({
+    data: {
+      createdByUserId: input.actorUserId,
+      previousPromisedAt: previous?.promisedAt,
+      promisedAt: input.promisedAt,
+      reason: input.reason.trim(),
+      serviceJobId: job.id,
+    },
+  })
+  await tx.serviceJob.update({
+    data: { revision: { increment: 1 } },
+    where: { id: job.id },
+  })
+  const event = await tx.serviceWorkEvent.create({
+    data: {
+      actorUserId: input.actorUserId,
+      payload: json({
+        previousPromisedAt: previous?.promisedAt ?? null,
+        promisedAt: input.promisedAt,
+      }),
+      reason: input.reason.trim(),
+      serviceJobId: job.id,
+      source: "service_work",
+      tenantId: input.tenantId,
+      type: previous
+        ? ServiceWorkEventType.DUE_COMMITMENT_REVISED
+        : ServiceWorkEventType.DUE_COMMITMENT_CREATED,
+    },
+  })
+  onEvent?.(event)
+  await replaceDueReminder(tx, {
+    actorUserId: input.actorUserId,
+    channel: job.intake?.notificationChannel ?? null,
+    customerPhone: job.commercialOrder.customerPhone,
+    orderNumber: job.commercialOrder.orderNumber,
+    promisedAt: input.promisedAt,
+    serviceJobId: job.id,
+    storeId: job.storeId,
+    tenantId: input.tenantId,
+  })
+  return serializeJob(
+    await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
+  )
 }
 
 export async function rescheduleServiceJob(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    expectedRevision: number
-    jobId: string
-    promisedAt: Date
-    reason: string
-    tenantId: string
-  },
+  input: RescheduleServiceJobInput,
 ) {
-  return db.$transaction(async (tx) => {
-    const job = await loadJob(tx, {
-      jobId: input.jobId,
-      tenantId: input.tenantId,
-    })
-    if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
-    if (job.revision !== input.expectedRevision) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "Job changed before rescheduling.",
-      )
-    }
-    const previous = [...job.dueCommitments]
-      .reverse()
-      .find((commitment) => !commitment.supersededAt)
-    if (previous) {
-      await tx.serviceDueCommitment.update({
-        data: { supersededAt: new Date() },
-        where: { id: previous.id },
-      })
-    }
-    await tx.serviceDueCommitment.create({
-      data: {
-        createdByUserId: input.actorUserId,
-        previousPromisedAt: previous?.promisedAt,
-        promisedAt: input.promisedAt,
-        reason: input.reason.trim(),
-        serviceJobId: job.id,
-      },
-    })
-    await tx.serviceJob.update({
-      data: { revision: { increment: 1 } },
-      where: { id: job.id },
-    })
-    await tx.serviceWorkEvent.create({
-      data: {
-        actorUserId: input.actorUserId,
-        payload: json({
-          previousPromisedAt: previous?.promisedAt ?? null,
-          promisedAt: input.promisedAt,
-        }),
-        reason: input.reason.trim(),
-        serviceJobId: job.id,
-        source: "service_work",
-        tenantId: input.tenantId,
-        type: previous
-          ? ServiceWorkEventType.DUE_COMMITMENT_REVISED
-          : ServiceWorkEventType.DUE_COMMITMENT_CREATED,
-      },
-    })
-    await replaceDueReminder(tx, {
-      actorUserId: input.actorUserId,
-      channel: job.intake?.notificationChannel ?? null,
-      customerPhone: job.commercialOrder.customerPhone,
-      orderNumber: job.commercialOrder.orderNumber,
-      promisedAt: input.promisedAt,
-      serviceJobId: job.id,
-      storeId: job.storeId,
-      tenantId: input.tenantId,
-    })
-    return serializeJob(
-      await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
-    )
-  })
+  return runInOwnTransaction(db, (tx) =>
+    rescheduleServiceJobInTransaction(tx, input),
+  )
 }
 
 export async function addServiceInternalNote(

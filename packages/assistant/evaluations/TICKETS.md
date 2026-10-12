@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 18 are partial, 13 are pending implementation, and
+Of the 32 not yet accepted: 20 are partial, 11 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -33,7 +33,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | D02 | Fulfilment and status | ◐ Partial | Pending |
 | D03 | Returns and payment corrections | ◐ Partial | Pending |
 | D04 | Simple service work order | ◐ Partial | Pending |
-| D05 | Work lifecycle | ○ Pending | Pending |
+| D05 | Work lifecycle | ◐ Partial | Pending |
 | E01 | Accounts and money reads | ◐ Partial | Pending |
 | E02 | Customer funds | ◐ Partial | Pending |
 | E03 | Internal transfers and owner funds | ◐ Partial | Pending |
@@ -51,7 +51,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | F05 | Settlement and recovery | ○ Pending | Pending |
 | G01 | Business reporting | ◐ Partial | Pending |
 | G02 | Cash count and close day | ◐ Partial | Pending |
-| G03 | Quotes, bookings and delivery | ○ Pending | Pending |
+| G03 | Quotes, bookings and delivery | ◐ Partial | Pending |
 | G04 | Advanced inventory and catalog | ○ Pending | Pending |
 | G05 | Settings and communications | ○ Pending | Pending |
 | H01 | Coverage CI gate | ◐ Partial | Pending |
@@ -225,3 +225,7 @@ sheet. New focused tests and labeled source-preview screenshots are recorded in
 [the S04 checkpoint](runs/2026-10-12-staff-access-source-web.md). Signed and saved
 acceptance, business-role mutation and service handover remain open. No bookmark
 or accepted-percentage change.
+
+D05 lifecycle and G03 pure quotation-read first source packets passed focused
+checks; central tool/editor/global integration and signed/saved acceptance remain
+open. [Source checkpoint](runs/2026-10-12-service-work-quote-source-packets.md).
