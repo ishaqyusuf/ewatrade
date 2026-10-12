@@ -1,5 +1,6 @@
 "use client"
 import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
+import { GeneralServiceWorkEditor } from "./general-service-work-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -66,8 +67,31 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (
+    props.proposal.payload.action === "service_job_assign" ||
+    props.proposal.payload.action === "service_job_reschedule" ||
+    props.proposal.payload.action === "service_job_line_transition" ||
+    props.proposal.payload.action === "service_work_note" ||
+    props.proposal.payload.action === "service_work_exception"
+  )
+    return (
+      <GeneralServiceWorkEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "staff_access")
-    return <GeneralStaffAccessEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralStaffAccessEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "staff_status")
     return (
       <GeneralStaffStatusEditor
@@ -77,7 +101,16 @@ export function GeneralProposalEditor(props: {
         onCancel={props.onCancel}
       />
     )
-  if (props.proposal.payload.action === "service_intake") return <GeneralServiceIntakeEditor initial={props.proposal.payload} currencyCode={props.currencyCode} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+  if (props.proposal.payload.action === "service_intake")
+    return (
+      <GeneralServiceIntakeEditor
+        initial={props.proposal.payload}
+        currencyCode={props.currencyCode}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "staff_invitation")
     return (
       <GeneralStaffInvitationEditor

@@ -134,7 +134,7 @@ export const tenantRouter = createTRPCRouter({
   }),
 
   current: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.tenantContext
+    return { ...ctx.tenantContext, actorUserId: ctx.session.user.id }
   }),
 
   storeContext: protectedProcedure

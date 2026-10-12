@@ -6,17 +6,31 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 564 (423 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 125
-- Merchant planned: 132
+- Router procedures: 572 (431 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 138
+- Merchant planned: 127
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 118 (63 read, 55 write)
+- Capabilities: 132 (71 read, 61 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `services.work.original.read` | 1 | read | `readOriginalServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard | planned | `serviceAssistantWork.original` |
+| `services.work.assign` | 1 | write (`service_job_assign`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.assignJob` |
+| `services.work.reschedule` | 1 | write (`service_job_reschedule`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.rescheduleJob` |
+| `services.work.transition` | 1 | write (`service_job_line_transition`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.transitionLine` |
+| `services.work.note` | 1 | write (`service_work_note`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.addNote` |
+| `services.work.exception` | 1 | write (`service_work_exception`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.recordException` |
+| `services.work.context.read` | 1 | read | `readServiceWorkContext` | OWNER, ADMIN, MANAGER | read | dashboard | planned | `serviceAssistantWork.editorContext` |
+| `services.work.review` | 1 | read | `reviewServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard | planned | `serviceAssistantWork.review` |
+| `services.quote_approval.read` | 1 | read | `readQuoteApproval` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantQuoteApprovalDetail` |
+| `services.quote_approvals.read` | 1 | read | `readPendingQuoteApprovals` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantPendingQuoteApprovals` |
+| `services.booking.read` | 1 | read | `readBooking` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantBookingDetail` |
+| `staff.access.change` | 1 | write (`staff_access`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStoreAccessReview` |
+| `staff.access.review` | 1 | read | `reviewStaffAccess` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStoreAccessReview` |
+| `staff.access.receipt.read` | 1 | read | `readStaffAccessReceipt` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffAccessReceipt` |
 | `staff.status.change` | 1 | write (`staff_status`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.updateStaffStatus` |
 | `staff.status.review` | 1 | read | `reviewStaffStatus` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStatusReview` |
 | `staff.status.receipt.read` | 1 | read | `readStaffStatusReceipt` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStatusReceipt` |
@@ -149,6 +163,20 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `services.work.original.read` | Open the original saved work event, private note or exception | [packages/db/src/queries/service-work-original.test.ts](../../../../packages/db/src/queries/service-work-original.test.ts)<br>[packages/assistant/src/general/service-work-original.test.ts](../../../../packages/assistant/src/general/service-work-original.test.ts)<br>[apps/dashboard/src/components/service-work-original-state.test.ts](../../../../apps/dashboard/src/components/service-work-original-state.test.ts) |
+| `services.work.assign` | Assign Amina's saved work to Bola | [packages/assistant/src/general/service-work.test.ts](../../../../packages/assistant/src/general/service-work.test.ts)<br>[packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts) |
+| `services.work.reschedule` | Move Amina's pickup promise to Thursday morning | [packages/assistant/src/general/service-work.test.ts](../../../../packages/assistant/src/general/service-work.test.ts)<br>[packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts) |
+| `services.work.transition` | Start the exact washing line in Amina's saved job | [packages/assistant/src/general/service-work.test.ts](../../../../packages/assistant/src/general/service-work.test.ts)<br>[packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts) |
+| `services.work.note` | Add a private care note to Amina's saved job | [packages/assistant/src/general/service-work-records.test.ts](../../../../packages/assistant/src/general/service-work-records.test.ts)<br>[packages/db/src/queries/service-work-record-review.test.ts](../../../../packages/db/src/queries/service-work-record-review.test.ts) |
+| `services.work.exception` | Record the stated delay on Amina's exact washing line | [packages/assistant/src/general/service-work-records.test.ts](../../../../packages/assistant/src/general/service-work-records.test.ts)<br>[packages/db/src/queries/service-work-record-review.test.ts](../../../../packages/db/src/queries/service-work-record-review.test.ts) |
+| `services.work.context.read` | Show the current washing line and eligible staff for Amina's saved job | [packages/db/src/queries/service-work-editor-context.test.ts](../../../../packages/db/src/queries/service-work-editor-context.test.ts) |
+| `services.work.review` | Review the stated promised-time change before preparing its card | [packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts)<br>[packages/db/src/queries/service-work-record-review.test.ts](../../../../packages/db/src/queries/service-work-record-review.test.ts) |
+| `services.quote_approval.read` | Open this saved quotation version and its review status | [packages/db/src/queries/commerce-quote-reads.test.ts](../../../../packages/db/src/queries/commerce-quote-reads.test.ts)<br>[packages/assistant/src/general/quote-reads.test.ts](../../../../packages/assistant/src/general/quote-reads.test.ts)<br>[packages/assistant/src/general/service-read-answer-target.test.ts](../../../../packages/assistant/src/general/service-read-answer-target.test.ts)<br>[apps/dashboard/src/components/assistant-quote-approval-state.test.ts](../../../../apps/dashboard/src/components/assistant-quote-approval-state.test.ts) |
+| `services.quote_approvals.read` | Show quotations waiting for review in this Store | [packages/db/src/queries/commerce-quote-reads.test.ts](../../../../packages/db/src/queries/commerce-quote-reads.test.ts)<br>[packages/assistant/src/general/quote-reads.test.ts](../../../../packages/assistant/src/general/quote-reads.test.ts) |
+| `services.booking.read` | Open this saved service booking and its payment policy | [packages/db/src/queries/service-booking-read.test.ts](../../../../packages/db/src/queries/service-booking-read.test.ts)<br>[packages/assistant/src/general/booking-read.test.ts](../../../../packages/assistant/src/general/booking-read.test.ts)<br>[packages/assistant/src/general/service-read-answer-target.test.ts](../../../../packages/assistant/src/general/service-read-answer-target.test.ts)<br>[apps/dashboard/src/components/assistant-booking-state.test.ts](../../../../apps/dashboard/src/components/assistant-booking-state.test.ts) |
+| `staff.access.change` | Make Amina a cashier at the Bakery Store and remove her Warehouse access | [packages/db/src/queries/staff-access-update.test.ts](../../../../packages/db/src/queries/staff-access-update.test.ts)<br>[packages/assistant/src/general/staff-access.test.ts](../../../../packages/assistant/src/general/staff-access.test.ts) |
+| `staff.access.review` | Review Amina's Store permissions before changing them | [packages/db/src/queries/staff-access-update.test.ts](../../../../packages/db/src/queries/staff-access-update.test.ts) |
+| `staff.access.receipt.read` | Open the original saved Store access change | [packages/db/src/queries/staff-access-update.test.ts](../../../../packages/db/src/queries/staff-access-update.test.ts) |
 | `staff.status.change` | Suspend Amina's business access because she is on leave | [apps/api/src/assistant/general-staff-status.test.ts](../../../../apps/api/src/assistant/general-staff-status.test.ts)<br>[packages/assistant/src/general/staff-status.test.ts](../../../../packages/assistant/src/general/staff-status.test.ts)<br>[packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
 | `staff.status.review` | Review reactivating Amina using her current access | [packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
 | `staff.status.receipt.read` | Open the original saved staff suspension | [packages/db/src/queries/staff-status-receipt.test.ts](../../../../packages/db/src/queries/staff-status-receipt.test.ts) |
@@ -280,7 +308,7 @@ track conversational evaluation separately from these source test links.
 | D02 | 1 |
 | D03 | 3 |
 | D04 | 3 |
-| D05 | 10 |
+| D05 | 5 |
 | E01 | 6 |
 | E02 | 3 |
 | E03 | 3 |
@@ -567,6 +595,7 @@ track conversational evaluation separately from these source test links.
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |
 | `retailOps.staff` | query | Owner/Admin only | staff | planned | S01 |
+| `retailOps.staffAccessReceipt` | query | Owner/Admin only | staff | supported | staff.access.receipt.read |
 | `retailOps.staffDirectoryMember` | query | Owner/Admin only | staff | supported | staff.member.read |
 | `retailOps.staffDirectoryPage` | query | Owner/Admin only | staff | supported | staff.directory.read |
 | `retailOps.staffHistoryPage` | query | Owner/Admin only | staff | supported | staff.history.read |
@@ -577,6 +606,7 @@ track conversational evaluation separately from these source test links.
 | `retailOps.staffInvitations` | query | Owner/Admin only | staff | supported | staff.invitations.read |
 | `retailOps.staffStatusReceipt` | query | Owner/Admin only | staff | supported | staff.status.receipt.read |
 | `retailOps.staffStatusReview` | query | Owner/Admin only | staff | supported | staff.status.review |
+| `retailOps.staffStoreAccessReview` | query | Owner/Admin only | staff | supported | staff.access.change, staff.access.review |
 | `retailOps.subscription` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | supported | staff.status.change |
 | `search.global` | query | read | search | supported | search.records |
@@ -589,9 +619,15 @@ track conversational evaluation separately from these source test links.
 | `serviceAccess.updateRequest` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAssistantIntake.options` | query | Owner/Admin only | services | supported | services.intake.options.read |
 | `serviceAssistantIntake.receipt` | query | read | services | planned | D04 |
+| `serviceAssistantWork.editorContext` | query | read | services | supported | services.work.context.read |
+| `serviceAssistantWork.original` | query | read | services | supported | services.work.original.read |
+| `serviceAssistantWork.review` | query | read | services | supported | services.work.review |
 | `serviceCommerce.acknowledgeStoreConversationStaffRead` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
 | `serviceCommerce.approveQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.assignChannelAttendant` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
+| `serviceCommerce.assistantBookingDetail` | query | read | services | supported | services.booking.read |
+| `serviceCommerce.assistantPendingQuoteApprovals` | query | read | services | supported | services.quote_approvals.read |
+| `serviceCommerce.assistantQuoteApprovalDetail` | query | read | services | supported | services.quote_approval.read |
 | `serviceCommerce.attestCatalogAvailability` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.bookingConfiguration` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommerce.catalogGraduationReadiness` | query | Owner/Admin only | commerce | planned | G03 |
@@ -670,9 +706,9 @@ track conversational evaluation separately from these source test links.
 | `serviceCommunications.recordManualShare` | mutation | Owner/Admin only | commerce | planned | G05 |
 | `serviceReporting.auditExport` | query | Owner/Admin only | inventory | form_only | Bulk file export; download it from the page. |
 | `serviceReporting.summary` | query | Owner/Admin only | finance | planned | G01 |
-| `services.addNote` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.addNote` | mutation | Owner/Admin only | services | supported | services.work.note |
 | `services.assignees` | query | read | services | supported | services.intake.options.read |
-| `services.assignJob` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.assignJob` | mutation | Owner/Admin only | services | supported | services.work.assign |
 | `services.authorizeLine` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.batchUpdate` | mutation | Owner/Admin only | services | form_only | Bulk queue updates stay in the queue view. |
 | `services.captureEvidence` | mutation | Owner/Admin only | services | planned | H04 |
@@ -686,11 +722,11 @@ track conversational evaluation separately from these source test links.
 | `services.publishEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.queue` | query | Owner/Admin only | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
 | `services.queuePage` | query | Owner/Admin only | services | supported | services.queue.read |
-| `services.recordException` | mutation | Owner/Admin only | services | planned | D05 |
-| `services.rescheduleJob` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.recordException` | mutation | Owner/Admin only | services | supported | services.work.exception |
+| `services.rescheduleJob` | mutation | Owner/Admin only | services | supported | services.work.reschedule |
 | `services.revokeEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.splitLine` | mutation | Owner/Admin only | services | planned | D05 |
-| `services.transitionLine` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.transitionLine` | mutation | Owner/Admin only | services | supported | services.work.transition |
 | `services.updateEvidenceUpload` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.updateSettings` | mutation | Owner/Admin only | services | planned | G05 |
 | `setupAssistant.attachments.createIntent` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |

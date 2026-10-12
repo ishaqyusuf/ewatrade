@@ -1,4 +1,7 @@
 import { z } from "zod"
+import { serviceBookingTargetSchema } from "./booking-read"
+import { quoteApprovalTargetSchema } from "./quote-reads"
+import { serviceWorkOriginalTargetSchema } from "./service-work-original"
 import { businessReportTargetSchema } from "./business-report-target"
 import {
   cashCountTargetSchema,
@@ -25,6 +28,9 @@ export const staffInvitationTargetSchema = z
   .strict()
 
 export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
+  quoteApprovalTargetSchema,
+  serviceBookingTargetSchema,
+  ...serviceWorkOriginalTargetSchema.options,
   businessReportTargetSchema,
   cashCountTargetSchema,
   dayCloseTargetSchema,

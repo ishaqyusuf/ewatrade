@@ -41,7 +41,12 @@ function fixture() {
     paymentStatus: "UNPAID",
     customerName: "Amina",
     customerPhone: "+2348000000000",
-    _count: { payments: 0 },
+    acceptedCommerceQuoteVersion: null as {
+      quote: { sourceType: string }
+    } | null,
+    prescriptionPickupFulfillment: null as { id: string } | null,
+    prescriptionDeliveryAddress: null as { id: string } | null,
+    _count: { payments: 0, prescriptionPaymentIntents: 0 },
     payments: [],
   }
   const line = {
@@ -431,4 +436,28 @@ test("root facades use fresh bounded options; stale native revisions and receipt
       expectedRevision: f.job.revision,
     }),
   ).rejects.toThrow("Original receipt failed")
+})
+
+test("clinical source, pickup, delivery and payment markers refuse before commercial preparation", async () => {
+  for (const marker of ["source", "pickup", "delivery", "payment"]) {
+    const f = fixture()
+    const order = f.job.commercialOrder
+    if (marker === "source")
+      order.acceptedCommerceQuoteVersion = {
+        quote: { sourceType: "PRESCRIPTION_REQUEST" },
+      }
+    if (marker === "pickup")
+      order.prescriptionPickupFulfillment = { id: "clinical-pickup" }
+    if (marker === "delivery")
+      order.prescriptionDeliveryAddress = { id: "clinical-address" }
+    if (marker === "payment") order._count.prescriptionPaymentIntents = 1
+    await expect(
+      prepareReviewedServiceWorkInTransaction(f.tx, {
+        ...scope,
+        operation: "assign" as const,
+        jobId: "job",
+        assigneeUserId: "staff",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
+  }
 })

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import type { Prisma } from "../../generated/prisma/client"
+import { Prisma } from "../../generated/prisma/client"
 import {
   prepareReviewedStaffAccessUpdateInTransaction,
   reviewStaffAccessUpdateInTransaction,
@@ -30,6 +30,8 @@ function fixture(
     availableCount?: number
     auditError?: Error
     foreignCurrent?: boolean
+    workCount?: number
+    workAsOf?: Date
   } = {},
 ) {
   const calls: Array<{ kind: string; input: unknown }> = []
@@ -61,9 +63,29 @@ function fixture(
     $transaction: () => {
       throw new Error("nested transaction")
     },
-    $queryRaw: async (sql: TemplateStringsArray, ...values: unknown[]) => {
-      const text = sql.join("?")
+    $queryRaw: async (
+      sql: TemplateStringsArray | Prisma.Sql,
+      ...values: unknown[]
+    ) => {
+      const text = Array.isArray(sql) ? sql.join("?") : (sql as Prisma.Sql).sql
       calls.push({ kind: "lock", input: { text, values } })
+      if (text.includes("WITH matching")) {
+        const count = options.workCount ?? 0
+        const asOf = options.workAsOf ?? new Date("2026-10-12T10:00:00Z")
+        return count
+          ? Array.from({ length: Math.min(count, 11) }, (_, i) => ({
+              totalCount: BigInt(count),
+              asOf,
+              jobId: `job-${i}`,
+              revision: 1,
+              createdAt: new Date("2026-10-01T10:00:00Z"),
+              priority: "NORMAL",
+              storeId: "farm",
+              storeName: "Farm",
+              storeStatus: "ACTIVE",
+            }))
+          : [{ totalCount: 0n, asOf, jobId: null }]
+      }
       if (text.includes('JOIN "Tenant"'))
         return [
           {
@@ -77,7 +99,12 @@ function fixture(
           { id: "farm", name: "Farm", status: "ACTIVE" },
           { id: "shop", name: "Shop", status: options.storeStatus ?? "ACTIVE" },
         ]
-      return [{ id: text.includes('FROM "Tenant"') ? "business" : "member" }]
+      return [
+        {
+          id: text.includes('FROM "Tenant"') ? "business" : "member",
+          userId: "staff",
+        },
+      ]
     },
     membership: {
       findFirstOrThrow: async () => member,
@@ -138,8 +165,9 @@ test("review pins canonical current grants, complete picker and privilege differ
   expect(review.availableStoresCoverage).toBe("complete")
   expect(review.availableStores).toHaveLength(2)
   expect(review.outstandingServiceWork).toMatchObject({
-    coverage: "unavailable",
-    count: null,
+    coverage: "available",
+    count: 0,
+    countCoverage: "complete",
   })
   expect(f.calls.every((call) => call.kind === "lock")).toBe(true)
   expect((f.calls[0]?.input as { text: string }).text).toContain("FOR UPDATE")
@@ -226,4 +254,29 @@ test("audit failure escapes the prepared command", async () => {
     input,
   )
   await expect(prepared.execute()).rejects.toBe(error)
+})
+
+test("access review exposes complete workload count and binds work changes but not read time", async () => {
+  const a = await reviewStaffAccessUpdateInTransaction(
+    fixture({ workCount: 13 }).tx,
+    input,
+  )
+  const b = await reviewStaffAccessUpdateInTransaction(
+    fixture({ workCount: 13, workAsOf: new Date("2026-10-13T10:00:00Z") }).tx,
+    input,
+  )
+  const c = await reviewStaffAccessUpdateInTransaction(
+    fixture({ workCount: 14 }).tx,
+    input,
+  )
+  expect(a.outstandingServiceWork).toMatchObject({
+    count: 13,
+    shown: 10,
+    countCoverage: "complete",
+    detailsCoverage: "limited",
+    handover: "not_performed",
+  })
+  expect(a.outstandingServiceWork.jobs).toHaveLength(10)
+  expect(a.reviewHash).toBe(b.reviewHash)
+  expect(a.reviewHash).not.toBe(c.reviewHash)
 })

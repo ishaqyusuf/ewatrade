@@ -1,8 +1,12 @@
 "use client"
 import type { GeneralReceipt } from "@ewatrade/assistant/general/contracts"
+import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
 import { parseAsString, useQueryStates } from "nuqs"
 
 export const assistantObjectParams = {
+  assistantWorkOriginal: parseAsString,
+  assistantQuoteApproval: parseAsString,
+  assistantBooking: parseAsString,
   staffAccessEvent: parseAsString,
   staffStatusEvent: parseAsString,
   businessReport: parseAsString,
@@ -39,6 +43,9 @@ export const assistantObjectParams = {
 }
 
 export const closedAssistantObjectParams = {
+  assistantWorkOriginal: null,
+  assistantQuoteApproval: null,
+  assistantBooking: null,
   staffAccessEvent: null,
   staffStatusEvent: null,
   businessReport: null,
@@ -83,6 +90,29 @@ export function useAssistantReceipt() {
   return (receipt: GeneralReceipt) => {
     const closed = closedAssistantObjectParams
     switch (receipt.kind) {
+      case "service_work":
+      case "service_work_note":
+      case "service_work_exception": {
+        // Legacy generic receipts cannot manufacture an original event identity.
+        const original = serviceWorkOriginalTargetSchema.safeParse(
+          receipt.kind === "service_work"
+            ? {
+                kind: receipt.kind,
+                jobId: receipt.recordId,
+                eventId: "eventId" in receipt ? receipt.eventId : undefined,
+              }
+            : {
+                kind: receipt.kind,
+                jobId: "jobId" in receipt ? receipt.jobId : undefined,
+                recordId: receipt.recordId,
+              },
+        )
+        if (!original.success) return
+        return setParams({
+          ...closed,
+          assistantWorkOriginal: JSON.stringify(original.data),
+        })
+      }
       case "staff_access":
         return setParams({ ...closed, staffAccessEvent: receipt.recordId })
       case "staff_status":

@@ -232,7 +232,29 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertServiceManager(tenant.membership.role),
   "services.intake.create": (tenant) =>
     assertServiceManager(tenant.membership.role),
+  "services.work.assign": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.reschedule": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.transition": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.note": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.exception": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.context.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.review": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.original.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
   "services.queue.read": (tenant) =>
+    assertServiceOperator(tenant.membership.role),
+  "services.quote_approval.read": (tenant) =>
+    assertServiceOperator(tenant.membership.role),
+  "services.quote_approvals.read": (tenant) =>
+    assertServiceOperator(tenant.membership.role),
+  "services.booking.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
   "customers.receivables.read": (tenant) => assertFinanceAccess(tenant),
   "customers.accounts.read": (tenant) => assertFinanceAccess(tenant),

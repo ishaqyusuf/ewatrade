@@ -35,7 +35,8 @@
     "./general/quote-reads": "./src/general/quote-reads.ts",
     "./general/service-work": "./src/general/service-work.ts",
     "./general/service-work-records": "./src/general/service-work-records.ts",
-    "./general/booking-read": "./src/general/booking-read.ts"
+    "./general/booking-read": "./src/general/booking-read.ts",
+    "./general/service-work-original": "./src/general/service-work-original.ts"
   },
   "scripts": {
     "lint": "biome check .",

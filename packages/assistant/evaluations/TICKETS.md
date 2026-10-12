@@ -62,6 +62,8 @@ accepted milestone is recorded; it does not assert that no related source exists
 
 Current implementation focus: coordinated D05 service work, S04 Store access and G03 quote reads; root owns testing, integration and web review. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending.
 
+Latest source checkpoint: [integrated work editors, original global objects and exact assigned workload](runs/2026-10-12-service-work-dashboard-integration.md). Focused checks and affected-source compilation pass; authenticated web/signed acceptance remains pending. No additional ticket accepted.
+
 E05 purchase fact reversal now passes signed rollback/stale refusal,
 full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;
 three canonical procedures remain. [Latest evidence](runs/2026-10-12-purchase-fact-reversal-web.md).

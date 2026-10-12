@@ -1,6 +1,9 @@
 "use client"
 
 import { OpenAssistantFinanceReview } from "@/components/open-assistant-finance-review"
+import { OpenAssistantQuoteApprovalSheet } from "@/components/open-assistant-quote-approval-sheet"
+import { OpenAssistantBookingSheet } from "@/components/open-assistant-booking-sheet"
+import { OpenServiceWorkOriginalSheet } from "@/components/open-service-work-original-sheet"
 import { OpenBusinessReportSheet } from "@/components/open-business-report-sheet"
 import { OpenStaffDirectorySheet } from "@/components/open-staff-directory-sheet"
 import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
@@ -35,7 +38,15 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
       <p className="mt-2 text-sm">{answer.detail}</p>
       {answer.target ? (
         <div className="mt-3">
-          {answer.target.kind === "staff_access" ? (
+          {answer.target.kind === "commerce_quote_approval" ? (
+            <OpenAssistantQuoteApprovalSheet target={answer.target} />
+          ) : answer.target.kind === "service_booking" ? (
+            <OpenAssistantBookingSheet target={answer.target} />
+          ) : answer.target.kind === "service_work" ||
+            answer.target.kind === "service_work_note" ||
+            answer.target.kind === "service_work_exception" ? (
+            <OpenServiceWorkOriginalSheet target={answer.target} />
+          ) : answer.target.kind === "staff_access" ? (
             <OpenStaffAccessSheet eventId={answer.target.eventId} />
           ) : answer.target.kind === "staff_status" ? (
             <OpenStaffStatusSheet eventId={answer.target.eventId} />

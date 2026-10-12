@@ -42,6 +42,12 @@ function fixture() {
       storeId: "store",
       orderNumber: "ORD-1",
       customerName: "Amina",
+      acceptedCommerceQuoteVersion: null as {
+        quote: { sourceType: string }
+      } | null,
+      prescriptionPickupFulfillment: null as { id: string } | null,
+      prescriptionDeliveryAddress: null as { id: string } | null,
+      _count: { prescriptionPaymentIntents: 0 },
     },
   }
   const line = {
@@ -348,4 +354,27 @@ test("native persistence failures propagate unchanged from either caller-owned s
     }),
   ).rejects.toBe(f.fault)
   expect(f.state.nested).toBe(0)
+})
+
+test("clinical source, pickup, delivery and payment markers refuse before commercial preparation", async () => {
+  for (const marker of ["source", "pickup", "delivery", "payment"]) {
+    const f = fixture()
+    const order = f.job.commercialOrder
+    if (marker === "source")
+      order.acceptedCommerceQuoteVersion = {
+        quote: { sourceType: "PRESCRIPTION_REQUEST" },
+      }
+    if (marker === "pickup")
+      order.prescriptionPickupFulfillment = { id: "clinical-pickup" }
+    if (marker === "delivery")
+      order.prescriptionDeliveryAddress = { id: "clinical-address" }
+    if (marker === "payment") order._count.prescriptionPaymentIntents = 1
+    await expect(
+      prepareReviewedServiceWorkRecordInTransaction(f.tx, {
+        ...scope,
+        operation: "note" as const,
+        body: "Private note",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" })
+  }
 })

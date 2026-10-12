@@ -1,5 +1,6 @@
 import type { Prisma } from "../../generated/prisma/client"
 import { effectiveCommercialAmountPaid } from "./commercial-payments"
+import { assertNonClinicalServiceWorkOrder } from "./service-work-order-scope"
 import {
   ServiceIntakeReviewError,
   assertAssistantServiceIntakeAuthority,
@@ -83,7 +84,14 @@ export async function prepareReviewedServiceWorkInTransaction(
           paymentStatus: true,
           customerName: true,
           customerPhone: true,
-          _count: { select: { payments: true } },
+          acceptedCommerceQuoteVersion: {
+            select: { quote: { select: { sourceType: true } } },
+          },
+          prescriptionPickupFulfillment: { select: { id: true } },
+          prescriptionDeliveryAddress: { select: { id: true } },
+          _count: {
+            select: { payments: true, prescriptionPaymentIntents: true },
+          },
         },
       },
       intake: { select: { customerPhone: true, notificationChannel: true } },
@@ -118,6 +126,7 @@ export async function prepareReviewedServiceWorkInTransaction(
     job.commercialOrder.storeId !== input.storeId
   )
     unavailable("This Service Job has an invalid Order linkage.")
+  assertNonClinicalServiceWorkOrder(job.commercialOrder)
   if (job.dueCommitments.length > 1)
     unavailable(
       "This Job has conflicting current promises. Resolve them in Service work.",

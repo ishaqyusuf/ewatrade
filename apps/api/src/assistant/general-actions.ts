@@ -78,6 +78,8 @@ import { purchaseRecord } from "./general-purchase-recording"
 import { purchaseRegister } from "./general-purchase-registration"
 import { serviceLineAction } from "./general-service-fulfillment"
 import { serviceIntake } from "./general-service-intake"
+import { serviceWorkLifecycle } from "./general-service-work"
+import { serviceWorkRecords } from "./general-service-work-records"
 import { staffInvitation } from "./general-staff-invitation"
 import { staffStatus } from "./general-staff-status"
 import { staffAccess } from "./general-staff-store-access"
@@ -679,6 +681,11 @@ const adapters: {
   staff_status: staffStatus,
   staff_access: staffAccess,
   service_intake: serviceIntake,
+  service_job_assign: serviceWorkLifecycle,
+  service_job_reschedule: serviceWorkLifecycle,
+  service_job_line_transition: serviceWorkLifecycle,
+  service_work_note: serviceWorkRecords,
+  service_work_exception: serviceWorkRecords,
   supplier_entry_reverse: supplierEntryReverse,
   supplier_opening: supplierOpening,
   purchase_payment_reverse: purchasePaymentReverse,

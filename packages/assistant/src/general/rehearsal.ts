@@ -22,66 +22,196 @@ export function respondGeneralRehearsal(
           .map((p) => p.text ?? "")
           .join("\n") ?? "")
   const command = text.trim()
+  // These intentions first resolve actual saved work; rehearsal never fabricates
+  // Job, Line or assignee identities from human names or internal-ID commands.
+  if (
+    /^(?:show|find|list) (?:service )?work(?: matching (.{1,160}))?$/i.test(
+      command,
+    )
+  ) {
+    const query = / matching (.{1,160})$/i.exec(command)?.[1]
+    return {
+      kind: "tool",
+      toolName: "readServices",
+      input: query ? { query } : {},
+    }
+  }
+  if (
+    /^(?:assign|reschedule|start|block|cancel|queue|ready|note|record (?:an? )?exception) (?:this|the) (?:service )?(?:job|work|line)\b/i.test(
+      command,
+    )
+  )
+    return { kind: "tool", toolName: "readServices", input: {} }
   const minor = (value: string) => Math.round(Number(value) * 100)
   // Receipt flows: owner text outside attachment blocks, plus the sent file id.
   const attachmentId = /attachmentId="([^"]{1,128})"/.exec(text)?.[1]
   const ownerText = text
     .replace(/<UNTRUSTED_CONTEXT[\s\S]*?<\/UNTRUSTED_CONTEXT>/g, "")
     .trim()
-  const attachToOrder = /^attach (?:this|receipt|file) to order (\S{1,128})$/i.exec(ownerText)
+  const attachToOrder =
+    /^attach (?:this|receipt|file) to order (\S{1,128})$/i.exec(ownerText)
   if (attachToOrder?.[1])
     return attachmentId
-      ? { kind: "tool", toolName: "draftAction", input: { action: "order_attachment_add", orderId: attachToOrder[1], attachmentId } }
-      : { kind: "text", text: "Send the receipt photo or PDF with your message, then ask again." }
-  const typedSale = /^record sale (.{1,200}?) for (\d+(?:\.\d{1,2})?)(?: paid (cash|card|pos|bank_transfer|other))?$/i.exec(ownerText)
+      ? {
+          kind: "tool",
+          toolName: "draftAction",
+          input: {
+            action: "order_attachment_add",
+            orderId: attachToOrder[1],
+            attachmentId,
+          },
+        }
+      : {
+          kind: "text",
+          text: "Send the receipt photo or PDF with your message, then ask again.",
+        }
+  const typedSale =
+    /^record sale (.{1,200}?) for (\d+(?:\.\d{1,2})?)(?: paid (cash|card|pos|bank_transfer|other))?$/i.exec(
+      ownerText,
+    )
   if (typedSale?.[1] && typedSale[2])
     return {
       kind: "tool",
       toolName: "draftAction",
       input: {
         action: "order_create",
-        lines: [{ custom: "quick_sale", amountMinor: minor(typedSale[2]), description: typedSale[1] }],
-        ...(typedSale[3] ? { initialPayment: { amountMinor: minor(typedSale[2]), method: typedSale[3].toLowerCase() } } : {}),
+        lines: [
+          {
+            custom: "quick_sale",
+            amountMinor: minor(typedSale[2]),
+            description: typedSale[1],
+          },
+        ],
+        ...(typedSale[3]
+          ? {
+              initialPayment: {
+                amountMinor: minor(typedSale[2]),
+                method: typedSale[3].toLowerCase(),
+              },
+            }
+          : {}),
       },
     }
-  if (/^read stock operations$/i.test(command)) return { kind: "tool", toolName: "readStockOperations", input: {} }
+  if (/^read stock operations$/i.test(command))
+    return { kind: "tool", toolName: "readStockOperations", input: {} }
   const operationRead = /^read stock operation (\S{1,128})$/i.exec(command)
-  if (operationRead?.[1]) return { kind: "tool", toolName: "readStockOperation", input: { operationId: operationRead[1] } }
-  const orderAmendment = /^(cancel|amend|replace) order (\{[\s\S]+\})$/i.exec(command)
-  if(orderAmendment?.[1] && orderAmendment[2]) {
-    try { return {kind:"tool",toolName:"draftAction",input:generalActionSchema.parse({...JSON.parse(orderAmendment[2]),action:orderAmendment[1].toLowerCase()==="cancel"?"order_cancel":orderAmendment[1].toLowerCase()==="amend"?"order_metadata_update":"order_replace"})} }
-    catch {return {kind:"text",text:"Supply the exact order, requested changes and a reason. Paid or fulfilled orders need their return or correction workflow."}}
+  if (operationRead?.[1])
+    return {
+      kind: "tool",
+      toolName: "readStockOperation",
+      input: { operationId: operationRead[1] },
+    }
+  const orderAmendment = /^(cancel|amend|replace) order (\{[\s\S]+\})$/i.exec(
+    command,
+  )
+  if (orderAmendment?.[1] && orderAmendment[2]) {
+    try {
+      return {
+        kind: "tool",
+        toolName: "draftAction",
+        input: generalActionSchema.parse({
+          ...JSON.parse(orderAmendment[2]),
+          action:
+            orderAmendment[1].toLowerCase() === "cancel"
+              ? "order_cancel"
+              : orderAmendment[1].toLowerCase() === "amend"
+                ? "order_metadata_update"
+                : "order_replace",
+        }),
+      }
+    } catch {
+      return {
+        kind: "text",
+        text: "Supply the exact order, requested changes and a reason. Paid or fulfilled orders need their return or correction workflow.",
+      }
+    }
   }
   const closeoutCreate = /^create closeout (\{[\s\S]+\})$/i.exec(command)
   if (closeoutCreate?.[1]) {
     try {
-      return { kind: "tool", toolName: "draftAction", input: generalActionSchema.parse({ ...JSON.parse(closeoutCreate[1]), action: "inventory_closeout_create" }) }
+      return {
+        kind: "tool",
+        toolName: "draftAction",
+        input: generalActionSchema.parse({
+          ...JSON.parse(closeoutCreate[1]),
+          action: "inventory_closeout_create",
+        }),
+      }
     } catch {
-      return { kind: "text", text: "Supply the custody identity, exact source declarations and a reason. Zero is valid; saving observations does not finalize stock." }
+      return {
+        kind: "text",
+        text: "Supply the custody identity, exact source declarations and a reason. Zero is valid; saving observations does not finalize stock.",
+      }
     }
   }
-  const closeoutFinalize = /^finalize closeout (\S{1,128}) because (.{1,500})$/i.exec(command)
-  if (closeoutFinalize?.[1] && closeoutFinalize[2]) return { kind: "tool", toolName: "draftAction", input: generalActionSchema.parse({ action: "inventory_closeout_finalize", closeoutId: closeoutFinalize[1], reason: closeoutFinalize[2] }) }
-  if (/^read closeouts$/i.test(command)) return { kind: "tool", toolName: "readInventoryCloseouts", input: {} }
+  const closeoutFinalize =
+    /^finalize closeout (\S{1,128}) because (.{1,500})$/i.exec(command)
+  if (closeoutFinalize?.[1] && closeoutFinalize[2])
+    return {
+      kind: "tool",
+      toolName: "draftAction",
+      input: generalActionSchema.parse({
+        action: "inventory_closeout_finalize",
+        closeoutId: closeoutFinalize[1],
+        reason: closeoutFinalize[2],
+      }),
+    }
+  if (/^read closeouts$/i.test(command))
+    return { kind: "tool", toolName: "readInventoryCloseouts", input: {} }
   const closeoutRead = /^read closeout (\S{1,128})$/i.exec(command)
-  if (closeoutRead?.[1]) return { kind: "tool", toolName: "readInventoryCloseout", input: { closeoutId: closeoutRead[1] } }
-  if (/^read transfers$/i.test(command)) return { kind: "tool", toolName: "readStockTransfers", input: {} }
+  if (closeoutRead?.[1])
+    return {
+      kind: "tool",
+      toolName: "readInventoryCloseout",
+      input: { closeoutId: closeoutRead[1] },
+    }
+  if (/^read transfers$/i.test(command))
+    return { kind: "tool", toolName: "readStockTransfers", input: {} }
   const transferRead = /^read transfer (\S{1,128})$/i.exec(command)
-  if (transferRead?.[1]) return { kind: "tool", toolName: "readStockTransfer", input: { transferId: transferRead[1] } }
-  const transferChange = /^(dispatch|receive|cancel) transfer (\{[\s\S]+\})$/i.exec(command)
+  if (transferRead?.[1])
+    return {
+      kind: "tool",
+      toolName: "readStockTransfer",
+      input: { transferId: transferRead[1] },
+    }
+  const transferChange =
+    /^(dispatch|receive|cancel) transfer (\{[\s\S]+\})$/i.exec(command)
   if (transferChange?.[1] && transferChange[2]) {
     try {
-      return { kind: "tool", toolName: "draftAction", input: generalActionSchema.parse({ ...JSON.parse(transferChange[2]), action: `stock_transfer_${transferChange[1].toLowerCase()}` }) }
+      return {
+        kind: "tool",
+        toolName: "draftAction",
+        input: generalActionSchema.parse({
+          ...JSON.parse(transferChange[2]),
+          action: `stock_transfer_${transferChange[1].toLowerCase()}`,
+        }),
+      }
     } catch {
-      return { kind: "text", text: "Supply the exact transfer or stock source, a quantity for dispatch or receipt, and a reason. Cancellation returns all remaining transit stock." }
+      return {
+        kind: "text",
+        text: "Supply the exact transfer or stock source, a quantity for dispatch or receipt, and a reason. Cancellation returns all remaining transit stock.",
+      }
     }
   }
   const stockChange = /^(adjust|correct) stock (\{[\s\S]+\})$/i.exec(command)
   if (stockChange?.[1] && stockChange[2]) {
     try {
-      return { kind: "tool", toolName: "draftAction", input: generalActionSchema.parse({ ...JSON.parse(stockChange[2]), action: stockChange[1].toLowerCase() === "adjust" ? "stock_adjust" : "stock_correct" }) }
+      return {
+        kind: "tool",
+        toolName: "draftAction",
+        input: generalActionSchema.parse({
+          ...JSON.parse(stockChange[2]),
+          action:
+            stockChange[1].toLowerCase() === "adjust"
+              ? "stock_adjust"
+              : "stock_correct",
+        }),
+      }
     } catch {
-      return { kind: "text", text: "Supply exact stock identities, quantities and a reason. Corrections require the original operation and every movement." }
+      return {
+        kind: "text",
+        text: "Supply exact stock identities, quantities and a reason. Corrections require the original operation and every movement.",
+      }
     }
   }
   const countCreate = /^create count (\{[\s\S]+\})$/i.exec(command)

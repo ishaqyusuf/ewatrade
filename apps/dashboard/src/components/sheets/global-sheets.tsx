@@ -8,8 +8,11 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { ServiceIntakeReceiptSheet } from "./service-intake-receipt-sheet"
 import { ServiceJobSheet } from "./service-job-sheet"
+import { ServiceWorkOriginalSheet } from "./service-work-original-sheet"
 
 import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
+import { AssistantQuoteApprovalSheet } from "./assistant-quote-approval-sheet"
+import { AssistantBookingSheet } from "./assistant-booking-sheet"
 import { AssistantDayCloseSheet } from "./assistant-day-close-sheet"
 import { BusinessReportSheet } from "./business-report-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
@@ -122,6 +125,20 @@ export function GlobalSheets({
       {access.serviceIntake && pathname !== "/services" ? (
         <ServiceJobSheet canManage storeId={store.id} />
       ) : null}
+      {/* Exact original reads authorize independently of the intake-editor role. */}
+      <AssistantQuoteApprovalSheet
+        key={`quotation:${objectScope}`}
+        scopeKey={objectScope}
+      />
+      <AssistantBookingSheet
+        key={`booking:${objectScope}`}
+        scopeKey={objectScope}
+      />
+      <ServiceWorkOriginalSheet
+        key={`service-work-original:${objectScope}`}
+        scopeKey={objectScope}
+        timeZone={timeZone}
+      />
       {access.sales ? (
         <BusinessReportSheet key={`business-report:${objectScope}`} />
       ) : null}

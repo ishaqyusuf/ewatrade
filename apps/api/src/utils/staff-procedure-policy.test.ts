@@ -1,6 +1,20 @@
 import { expect, test } from "bun:test"
 import { staffProcedureAction } from "./staff-procedure-policy"
 
+test("service work editor and original record routes remain query-only", () => {
+  for (const path of [
+    "serviceAssistantWork.editorContext",
+    "serviceAssistantWork.review",
+    "serviceAssistantWork.original",
+  ]) {
+    expect(staffProcedureAction(path, "query")).toBe("read")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+  }
+  expect(
+    staffProcedureAction("serviceAssistantWork.execute", "mutation"),
+  ).toBeNull()
+})
+
 test("assistant booking detail admits only the exact protected query", () => {
   expect(
     staffProcedureAction("serviceCommerce.assistantBookingDetail", "query"),

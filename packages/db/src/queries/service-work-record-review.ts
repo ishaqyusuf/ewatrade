@@ -1,4 +1,5 @@
 import type { Prisma } from "../../generated/prisma/client"
+import { assertNonClinicalServiceWorkOrder } from "./service-work-order-scope"
 import {
   ServiceIntakeReviewError,
   assertAssistantServiceIntakeAuthority,
@@ -60,6 +61,12 @@ export async function prepareReviewedServiceWorkRecordInTransaction(
           storeId: true,
           orderNumber: true,
           customerName: true,
+          acceptedCommerceQuoteVersion: {
+            select: { quote: { select: { sourceType: true } } },
+          },
+          prescriptionPickupFulfillment: { select: { id: true } },
+          prescriptionDeliveryAddress: { select: { id: true } },
+          _count: { select: { prescriptionPaymentIntents: true } },
         },
       },
     },
@@ -71,6 +78,7 @@ export async function prepareReviewedServiceWorkRecordInTransaction(
     job.commercialOrder.storeId !== input.storeId
   )
     conflict("This Service Job has an invalid Order linkage.")
+  assertNonClinicalServiceWorkOrder(job.commercialOrder)
   const line = input.lineId
     ? await tx.serviceJobLine.findFirst({
         where: { id: input.lineId, serviceJobId: job.id },

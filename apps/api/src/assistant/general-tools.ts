@@ -3,6 +3,11 @@ import {
   writeCapabilities,
 } from "@ewatrade/assistant/capabilities/manifest"
 import type { Capability } from "@ewatrade/assistant/capabilities/types"
+import { generalBookingReadInput } from "@ewatrade/assistant/general/booking-read"
+import {
+  generalPendingQuoteApprovalsInput,
+  generalQuoteApprovalReadInput,
+} from "@ewatrade/assistant/general/quote-reads"
 import {
   cashCountDraftInstructions,
   generalCashCountHistoryInput,
@@ -24,8 +29,11 @@ import {
   staffAccessDraftInstructions,
   staffAccessReadInput,
   staffAccessReviewInput,
+  serviceWorkLifecycleDraftInstructions,
+  serviceWorkRecordDraftInstructions,
 } from "@ewatrade/assistant/general/contracts"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
+import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
@@ -59,6 +67,7 @@ import { ordersRouter } from "../trpc/routers/orders"
 import { retailOpsRouter } from "../trpc/routers/retail-ops"
 import { searchRouter } from "../trpc/routers/search"
 import { servicesRouter } from "../trpc/routers/services"
+import { serviceAssistantWorkRouter } from "../trpc/routers/service-assistant-work"
 import { tenantRouter } from "../trpc/routers/tenant"
 import {
   generalBillData,
@@ -67,6 +76,15 @@ import {
   generalBillsInput,
 } from "./general-bill-reads"
 import { generalBusinessReportAnswer } from "./general-business-reporting"
+import {
+  generalBookingAnswer,
+  readGeneralBooking,
+} from "./general-booking-read"
+import {
+  generalQuoteApprovalAnswer,
+  readGeneralPendingQuoteApprovals,
+  readGeneralQuoteApproval,
+} from "./general-quote-reads"
 import {
   generalCatalogHistoryInput,
   readGeneralCatalogHistory,
@@ -120,6 +138,11 @@ import { generalOperationalAnswers } from "./general-operational-answers"
 import { generalOrderAnswer } from "./general-order-answer"
 import { generalOrderContactCountAnswer } from "./general-order-contact-count-answer"
 import { draftGeneralProposal } from "./general-proposals"
+import {
+  readGeneralServiceWorkOriginal,
+  serviceWorkEditorContextInput,
+  serviceWorkReviewInput,
+} from "./general-service-work-queries"
 import {
   generalPurchaseData,
   generalPurchaseInput,
@@ -255,9 +278,77 @@ export function createGeneralTools(
       }
     }
   }
-  const allowedActions = writeCapabilities
-    .filter((capability) => canUseCapability(ctx, capability))
-    .map((capability) => capability.schema)
+  const availableWriteCapabilities = writeCapabilities.filter((capability) =>
+    canUseCapability(ctx, capability),
+  )
+  const allowedActions = availableWriteCapabilities.map(
+    (capability) => capability.schema,
+  )
+  const availableWriteActions = new Set<string>(
+    availableWriteCapabilities.map((capability) => capability.action),
+  )
+  const serviceWorkActionAvailable = [
+    "service_job_assign",
+    "service_job_reschedule",
+    "service_job_line_transition",
+    "service_work_note",
+    "service_work_exception",
+  ].some((action) => availableWriteActions.has(action))
+  const workContextCapability = readCapabilities.get("readServiceWorkContext")
+  const workReviewCapability = readCapabilities.get("reviewServiceWork")
+  const serviceWorkInstructions = [
+    ...(serviceWorkActionAvailable &&
+    workContextCapability &&
+    canUseCapability(ctx, workContextCapability)
+      ? [
+          "Use readServiceWorkContext for fresh original Job/Line labels, current lifecycle and real eligible assignees before a Service work draft. Missing, ambiguous or incomplete choices remain unresolved; never ask for internal IDs/JSON.",
+        ]
+      : []),
+    ...(serviceWorkActionAvailable &&
+    workReviewCapability &&
+    canUseCapability(ctx, workReviewCapability)
+      ? [
+          "Use reviewServiceWork to pure-review the exact stated Service intention before draftAction. A successful read/review changes no work and is not confirmation; wait for the separate proposal card confirmation in the app.",
+        ]
+      : []),
+    ...([
+      "service_job_assign",
+      "service_job_reschedule",
+      "service_job_line_transition",
+    ].every((action) => availableWriteActions.has(action))
+      ? [serviceWorkLifecycleDraftInstructions]
+      : []),
+    ...(["service_work_note", "service_work_exception"].every((action) =>
+      availableWriteActions.has(action),
+    )
+      ? [serviceWorkRecordDraftInstructions]
+      : []),
+    ...(availableWriteActions.has("service_job_assign")
+      ? [
+          "For an available Service assignment, resolve the exact saved job and real current Store-eligible staff from available protected reads or saved native context. Clarify matching names and refuse incomplete assignee choices. Never invent a person or request internal identifiers.",
+        ]
+      : []),
+    ...(availableWriteActions.has("service_job_reschedule")
+      ? [
+          "For an available Service promised-time change, use the exact saved job, the merchant's explicit promised instant and reason. Resolve natural time in the Store timezone; preserve the reviewed offset and precision.",
+        ]
+      : []),
+    ...(availableWriteActions.has("service_job_line_transition")
+      ? [
+          "For available Service progress recording, use the exact saved job and line, reviewed current authorization/state and explicitly requested milestone. Explain blocked/cancelled reasons. Ready is not handoff or payment; refuse transitions whose missing reminder/customer-update orchestration is unavailable.",
+        ]
+      : []),
+    ...(availableWriteActions.has("service_work_note")
+      ? [
+          "For an available private Service work note, keep the complete stated text and exact saved job/optional line. Record only that note, without lifecycle or customer notification effects.",
+        ]
+      : []),
+    ...(availableWriteActions.has("service_work_exception")
+      ? [
+          "For an available Service work exception, retain the complete stated description, category and exact saved job/optional line. Draft a new open record, never resolution, rework, handoff or payment.",
+        ]
+      : []),
+  ]
   const [firstAction, ...otherActions] = allowedActions
   const actionSchema = firstAction
     ? z.discriminatedUnion("action", [firstAction, ...otherActions])
@@ -1243,6 +1334,52 @@ export function createGeneralTools(
           return order
         }),
     }),
+    readOriginalServiceWork: tool({
+      description:
+        "Pure-read an exact original saved ServiceWorkEvent, internal note or exception using its original three-kind target from a completed receipt or saved native context. Keep Job plus original event/owning-record identity; never substitute latest history/current Job or ask for internal IDs/JSON. Stored text/times differ from current Job/Line/exception outcome. Exception creation outcome was not immutably recorded. This read never reconciles, mutates, notifies or creates a capability.",
+      inputSchema: serviceWorkOriginalTargetSchema,
+      execute: (input) =>
+        wrap("readOriginalServiceWork", async (fresh) => {
+          const target = serviceWorkOriginalTargetSchema.parse(input)
+          const record = await readGeneralServiceWorkOriginal(fresh, target)
+          onAnswer({
+            id: `service_work_original_${crypto.randomUUID()}`,
+            title:
+              record.kind === "service_work"
+                ? "Original Service work event"
+                : record.kind === "service_work_note"
+                  ? "Original internal work note"
+                  : "Original work exception occurrence",
+            value:
+              record.kind === "service_work_note"
+                ? "Saved private note"
+                : record.original.type.toLowerCase().replaceAll("_", " "),
+            scope: fresh.tenantContext.activeStore?.name ?? "Store",
+            asOf: record.asOf,
+            detail: `Original record saved ${record.original.createdAt}. Open the original to review its stored text and times. Current Job and Line facts are separate.${record.kind === "service_work_exception" ? " Creation outcome was not immutably recorded; current exception outcome does not prove its original state." : ""} This read changes no work or history.`,
+            target,
+          })
+          return record
+        }),
+    }),
+    readServiceWorkContext: tool({
+      description:
+        "Read current context for an exact saved Service job/optional line resolved from readServices or existing saved native context. Resolve real assignee names here, never guessed IDs or merchant JSON. assigneesComplete=false is incomplete discovery: do not invent or select an omitted assignee. Current scope, lifecycle and authorization are fresh; unavailable or clinical-linked work must remain unavailable. This protected read creates no work or event.",
+      inputSchema: serviceWorkEditorContextInput,
+      execute: (input) =>
+        wrap("readServiceWorkContext", (fresh) =>
+          serviceAssistantWorkRouter.createCaller(fresh).editorContext(input),
+        ),
+    }),
+    reviewServiceWork: tool({
+      description:
+        "Pure-review a strict assignment, promised-time change, line-progress, private note or open exception intention for an exact saved Service job/line before drafting. Discover the job with readServices and current labels/eligible staff with readServiceWorkContext. Ask only natural questions about ambiguity, times, reasons or stated text. Preserve fresh returned target/context; failure never permits a guessed proposal. This read does not execute, approve, notify, handoff, settle payment or create history. App confirmation remains separate.",
+      inputSchema: serviceWorkReviewInput,
+      execute: (input) =>
+        wrap("reviewServiceWork", (fresh) =>
+          serviceAssistantWorkRouter.createCaller(fresh).review(input),
+        ),
+    }),
     readServiceIntakeOptions: tool({
       description:
         "Resolve fixed-price services, variants, work policies, Store service settings and real assignee names. Narrow query when truncated; never merge same-name offerings or ask merchants for internal IDs. This read creates no work or payment.",
@@ -1251,6 +1388,59 @@ export function createGeneralTools(
         wrap("readServiceIntakeOptions", (fresh) =>
           readGeneralServiceIntakeOptions(fresh, input),
         ),
+    }),
+    readPendingQuoteApprovals: tool({
+      description:
+        "Discover existing pending quotation identities in the active Store without asking the merchant for internal IDs. Scan at most ten candidates; returned visible rows are not a complete queue or total. Continue nextCursor unchanged, including when rows is empty. A filtered-empty page never proves no pending records. Each row supplies the original approvalId/quoteId/quoteVersionId for readQuoteApproval. This pure read changes no decision, policy, stock or release.",
+      inputSchema: generalPendingQuoteApprovalsInput,
+      execute: (input) =>
+        wrap("readPendingQuoteApprovals", async (fresh) => {
+          const page = await readGeneralPendingQuoteApprovals(fresh, input)
+          const storeName = fresh.tenantContext.activeStore?.name ?? "Store"
+          onAnswer({
+            id: `quote_approval_page_${crypto.randomUUID()}`,
+            title: "Pending quotation review page",
+            value: `${page.rows.length} visible on this page`,
+            scope: storeName,
+            asOf: new Date().toISOString(),
+            detail: `Checked ${page.scannedCount} candidates using your current access. ${page.nextCursor ? "More candidates remain; continue with the returned cursor even if this page has no visible rows." : "This scan reached its last candidate page."} This is a bounded page, not a queue total. Inaccessible records are omitted; an empty page does not prove that no pending quotations exist. Stored decisions remain unchanged.`,
+          })
+          for (const row of page.rows)
+            onAnswer(generalQuoteApprovalAnswer(row, storeName))
+          return page
+        }),
+    }),
+    readQuoteApproval: tool({
+      description:
+        "Read one exact original quotation approval/version tuple returned by readPendingQuoteApprovals or existing saved native context. Retain all three identities; never guess replacements or ask the merchant for internal IDs/JSON. Stored decision and prices are separate from current review eligibility. Use its saved card to open the original read-only record. Never approve, reject, release or reconcile stale decisions through this read.",
+      inputSchema: generalQuoteApprovalReadInput,
+      execute: (input) =>
+        wrap("readQuoteApproval", async (fresh) => {
+          const detail = await readGeneralQuoteApproval(fresh, input)
+          onAnswer(
+            generalQuoteApprovalAnswer(
+              detail,
+              fresh.tenantContext.activeStore?.name ?? "Store",
+            ),
+          )
+          return detail
+        }),
+    }),
+    readBooking: tool({
+      description:
+        "Read the exact bookingId/sourceId/offeringId tuple from existing saved native booking context. Preserve the original tuple; do not invent IDs or ask the merchant for internal IDs/JSON. If no original tuple is available, say this saved booking cannot yet be resolved. Stored booking/payment policy facts differ from current linked Order payment facts. This pure read checks neither available capacity nor provider settlement and never creates capabilities/tokens or changes slots, lifecycle, payments or refunds.",
+      inputSchema: generalBookingReadInput,
+      execute: (input) =>
+        wrap("readBooking", async (fresh) => {
+          const booking = await readGeneralBooking(fresh, input)
+          onAnswer(
+            generalBookingAnswer(
+              booking,
+              fresh.tenantContext.activeStore?.name ?? "Store",
+            ),
+          )
+          return booking
+        }),
     }),
     readServices: tool({
       description:
@@ -1570,6 +1760,7 @@ export function createGeneralTools(
         staffStatusDraftInstructions,
         staffAccessDraftInstructions,
         serviceIntakeDraftInstructions,
+        ...serviceWorkInstructions,
       ].join("\n\n"),
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>

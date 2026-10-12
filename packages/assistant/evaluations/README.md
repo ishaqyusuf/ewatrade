@@ -372,3 +372,5 @@ fingerprints; no change in this window is not historical resolution, so remainin
 S04 source integration and labeled web preview: [staff access checkpoint](runs/2026-10-12-staff-access-source-web.md). Source proof does not accept the ticket.
 
 [D05/G03 first source packets](runs/2026-10-12-service-work-quote-source-packets.md): focused checks pass; integration/acceptance pending.
+
+[D05/S04/G03 dashboard integration](runs/2026-10-12-service-work-dashboard-integration.md): original global objects, reviewed work editors and exact workload source integrated; affected checks pass. Authenticated screenshot and saved-chat acceptance wait on QA sign-in. Ticket acceptance remains 13/45.

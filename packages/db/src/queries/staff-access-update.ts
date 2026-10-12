@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
+import { getStaffAssignedServiceWorkInTransaction } from "./staff-assigned-service-work"
 import {
   assertStaffStoreAccessAuthority,
   StaffStoreAccessError,
@@ -241,12 +242,12 @@ async function prepareStaffAccessUpdateInTransaction(
         after: after.defaultStoreId,
       },
     },
-    outstandingServiceWork: {
-      coverage: "unavailable" as const,
-      count: null,
-      detail:
-        "The canonical service queue reader requires a root client; no complete transaction-safe assignee read is available in this slice. Review work separately before reassignment.",
-    },
+    outstandingServiceWork: await getStaffAssignedServiceWorkInTransaction(tx, {
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      membershipId: membership.id,
+      limit: 10,
+    }),
     provenance: {
       reason: "not_recorded" as const,
       handover: "not_recorded" as const,
@@ -259,7 +260,15 @@ async function prepareStaffAccessUpdateInTransaction(
     review: {
       ...review,
       reviewHash: createHash("sha256")
-        .update(JSON.stringify(review))
+        .update(
+          JSON.stringify({
+            ...review,
+            outstandingServiceWork: {
+              ...review.outstandingServiceWork,
+              asOf: undefined,
+            },
+          }),
+        )
         .digest("hex"),
     },
     command: {

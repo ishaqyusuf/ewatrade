@@ -1,7 +1,27 @@
+import { serviceWorkEditorActionSchema } from "./service-work-editor"
+import { serviceWorkLifecycleReceipt } from "./service-work"
+import { serviceWorkRecordReceipt } from "./service-work-records"
+export {
+  serviceWorkEditorActionSchema,
+  serviceWorkEditorInput,
+  serviceWorkEditorContextSchema,
+} from "./service-work-editor"
+export type {
+  ServiceWorkEditorAction,
+  ServiceWorkEditorContext,
+} from "./service-work-editor"
+export { serviceWorkLifecycleDraftInstructions } from "./service-work"
+export { serviceWorkRecordDraftInstructions } from "./service-work-records"
 import { serviceIntakeAction } from "./service-intake"
 import { staffStatusAction } from "./staff-status"
 import { staffAccessAction } from "./staff-access"
-export { staffAccessAction, staffAccessDraftInstructions, staffAccessReviewInput, staffAccessReadInput, staffAccessTargetSchema } from "./staff-access"
+export {
+  staffAccessAction,
+  staffAccessDraftInstructions,
+  staffAccessReviewInput,
+  staffAccessReadInput,
+  staffAccessTargetSchema,
+} from "./staff-access"
 export type { GeneralStaffAccessAction } from "./staff-access"
 export {
   staffStatusAction,
@@ -366,13 +386,14 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   staffInvitationAction,
   staffStatusAction,
   serviceIntakeAction,
+  ...serviceWorkEditorActionSchema.options,
   staffAccessAction,
   cashCountAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
 export type GeneralActionName = GeneralAction["action"]
-export const generalReceiptSchema = z
+const generalRecordReceiptSchema = z
   .object({
     kind: z.enum([
       "finance_purchase_bill",
@@ -424,6 +445,11 @@ export const generalReceiptSchema = z
       path: ["orderId"],
     },
   )
+export const generalReceiptSchema = z.union([
+  generalRecordReceiptSchema,
+  serviceWorkLifecycleReceipt,
+  serviceWorkRecordReceipt,
+])
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
 export const generalProposalSchema = z
   .object({
@@ -556,6 +582,16 @@ export function generalActionSummary(
       return `Update staff Store access · ${action.assignments.length} Store assignment(s)`
     case "staff_status":
       return `${action.status === "suspended" ? "Suspend" : "Reactivate"} staff membership`
+    case "service_job_assign":
+      return "Assign saved Service work"
+    case "service_job_reschedule":
+      return `Revise Service promise · ${action.promisedAt} · ${action.reason}`
+    case "service_job_line_transition":
+      return `Update saved work · ${action.toStatus.replaceAll("_", " ")}${action.reason ? ` · ${action.reason}` : ""}`
+    case "service_work_note":
+      return "Add internal Service work note"
+    case "service_work_exception":
+      return `Record open Service exception · ${action.type.replaceAll("_", " ")}`
     case "service_intake":
       return `Service intake · ${action.lines.length} service line(s)`
     case "staff_invitation":
