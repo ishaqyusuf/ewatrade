@@ -73,7 +73,6 @@ export function ClassicSaleItems({
     selectedLines,
     selectedRows,
     selectedCustomer,
-    setFocusedQuantityId,
     totalMinor,
     currencyCode,
     updateQuantity,
@@ -262,13 +261,7 @@ export function ClassicSaleItems({
             <ClassicSelectedOrderLine
               disabled={model.actionsLocked}
               offering={entry.offering}
-              onQuantityBlur={() =>
-                setFocusedQuantityId((current) =>
-                  current === entry.lineId ? null : current,
-                )
-              }
               onQuantityChange={(value) => updateQuantity(entry.lineId, value)}
-              onQuantityFocus={() => setFocusedQuantityId(entry.lineId)}
               onRemove={() => removeOffering(entry.lineId)}
               position={{ first: entry.first, last: entry.last }}
               quantity={entry.quantity}

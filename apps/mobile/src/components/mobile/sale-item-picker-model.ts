@@ -1,7 +1,3 @@
-export const SALE_ITEM_PICKER_COMPACT_LIMIT = 5
-
-export type SaleItemPickerPresentation = "screen" | "sheet"
-
 export function getSaleOfferingStockLabel(input: {
   availableQuantity?: string
   kind: "product_unit" | "service"
@@ -29,16 +25,6 @@ export function addSaleItemPickerLine<T>({
   offering: T
 }) {
   return [...lines, { id: lineId, offering, quantity: "1" }]
-}
-
-export function getSaleItemPickerLineCounts<T extends { id: string }>(
-  lines: SaleItemPickerLine<T>[],
-) {
-  const counts = new Map<string, number>()
-  for (const line of lines) {
-    counts.set(line.offering.id, (counts.get(line.offering.id) ?? 0) + 1)
-  }
-  return counts
 }
 
 export function removeSaleItemPickerLine<T>(
@@ -89,72 +75,4 @@ export function getSelectableSaleItemChoices<
   T extends { disabledReason?: string },
 >(choices: T[]) {
   return choices.filter((choice) => !choice.disabledReason)
-}
-
-export function openSaleItemPicker<T>({
-  choices,
-  hasUnloadedChoices,
-  onOpenScreen,
-  onOpenSheet,
-}: {
-  choices: T[]
-  hasUnloadedChoices: boolean
-  onOpenScreen: () => void
-  onOpenSheet: (choices: T[]) => void
-}): SaleItemPickerPresentation {
-  const presentation = getSaleItemPickerPresentation({
-    choiceCount: choices.length,
-    hasUnloadedChoices,
-  })
-
-  if (presentation === "screen") {
-    onOpenScreen()
-  } else {
-    onOpenSheet(choices)
-  }
-
-  return presentation
-}
-
-export function getSaleItemPickerPresentation({
-  choiceCount,
-  hasUnloadedChoices,
-}: {
-  choiceCount: number
-  hasUnloadedChoices: boolean
-}): SaleItemPickerPresentation {
-  return hasUnloadedChoices || choiceCount > SALE_ITEM_PICKER_COMPACT_LIMIT
-    ? "screen"
-    : "sheet"
-}
-
-/**
- * The picker's floating sale summary: lines, units and the total. The total
- * is null unless every line has a fixed price in one currency, so the
- * summary never shows a partial figure as the sale total.
- */
-export function getSaleItemPickerSummary<
-  T extends { currencyCode: string; fixedPriceMinor: number | null },
->(lines: SaleItemPickerLine<T>[]) {
-  let unitCount = 0
-  let totalMinor = 0
-  let complete = lines.length > 0
-  const currencyCode = lines[0]?.offering.currencyCode ?? null
-  for (const line of lines) {
-    const parsed = Number(line.quantity)
-    const quantity = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
-    unitCount += quantity
-    if (
-      line.offering.fixedPriceMinor === null ||
-      line.offering.currencyCode !== currencyCode
-    )
-      complete = false
-    else totalMinor += Math.round(line.offering.fixedPriceMinor * quantity)
-  }
-  return {
-    currencyCode,
-    itemCount: lines.length,
-    totalMinor: complete ? totalMinor : null,
-    unitCount: Math.round(unitCount * 1000) / 1000,
-  }
 }

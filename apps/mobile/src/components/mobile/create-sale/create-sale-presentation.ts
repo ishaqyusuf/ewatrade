@@ -13,8 +13,6 @@ export type SelectedOrderLineProps = {
   disabled?: boolean
   offering: OfferingRow
   onQuantityChange: (value: string) => void
-  onQuantityBlur: () => void
-  onQuantityFocus: () => void
   onRemove: () => void
   /** Classic draws the cart as one card; rows round its first and last edge. */
   position?: { first: boolean; last: boolean }

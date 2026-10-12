@@ -1,35 +1,15 @@
 import { describe, expect, test } from "bun:test"
 
 import {
-  SALE_ITEM_PICKER_COMPACT_LIMIT,
   addSaleItemPickerLine,
-  getSaleItemPickerPresentation,
-  getSaleItemPickerSummary,
   getSaleOfferingStockLabel,
   getSelectableSaleItemChoices,
-  openSaleItemPicker,
   removeSaleItemPickerLine,
   selectInitialCatalogItemLine,
   updateSaleItemPickerLineQuantity,
 } from "./sale-item-picker-model"
 
-describe("sale item picker presentation", () => {
-  test("uses the floating sheet through five complete choices and the full screen at six", () => {
-    expect(SALE_ITEM_PICKER_COMPACT_LIMIT).toBe(5)
-    expect(
-      getSaleItemPickerPresentation({
-        choiceCount: 5,
-        hasUnloadedChoices: false,
-      }),
-    ).toBe("sheet")
-    expect(
-      getSaleItemPickerPresentation({
-        choiceCount: 6,
-        hasUnloadedChoices: false,
-      }),
-    ).toBe("screen")
-  })
-
+describe("sale item choices", () => {
   test("counts only selectable choices", () => {
     expect(
       getSelectableSaleItemChoices([
@@ -53,32 +33,6 @@ describe("sale item picker presentation", () => {
         unitName: "Visit",
       }),
     ).toBeNull()
-  })
-
-  test("opens from loaded choices immediately and leaves unloaded pages to the picker", () => {
-    const choices = [{ id: "loaded" }]
-    const opened: string[] = []
-
-    expect(
-      openSaleItemPicker({
-        choices,
-        hasUnloadedChoices: true,
-        onOpenScreen: () => opened.push("screen"),
-        onOpenSheet: () => opened.push("sheet"),
-      }),
-    ).toBe("screen")
-    expect(opened).toEqual(["screen"])
-
-    expect(
-      openSaleItemPicker({
-        choices,
-        hasUnloadedChoices: false,
-        onOpenScreen: () => opened.push("screen"),
-        onOpenSheet: (loadedChoices) =>
-          opened.push(`sheet:${loadedChoices.length}`),
-      }),
-    ).toBe("sheet")
-    expect(opened).toEqual(["screen", "sheet:1"])
   })
 })
 
@@ -165,52 +119,5 @@ describe("sale item picker lines", () => {
         lines: selected,
       }),
     ).toBe(selected)
-  })
-})
-
-describe("sale item picker summary", () => {
-  const offering = (fixedPriceMinor: number | null, currencyCode = "NGN") => ({
-    currencyCode,
-    fixedPriceMinor,
-  })
-
-  test("counts lines and units and totals priced lines", () => {
-    expect(
-      getSaleItemPickerSummary([
-        { id: "a", offering: offering(650_000), quantity: "4" },
-        { id: "b", offering: offering(1_400_000), quantity: "1" },
-        { id: "c", offering: offering(450_000), quantity: "2" },
-      ]),
-    ).toEqual({
-      currencyCode: "NGN",
-      itemCount: 3,
-      totalMinor: 4_900_000,
-      unitCount: 7,
-    })
-  })
-
-  test("keeps decimal quantities and ignores blank ones", () => {
-    const summary = getSaleItemPickerSummary([
-      { id: "a", offering: offering(200_000), quantity: "1.5" },
-      { id: "b", offering: offering(100_000), quantity: "" },
-    ])
-    expect(summary.unitCount).toBe(1.5)
-    expect(summary.totalMinor).toBe(300_000)
-  })
-
-  test("shows no total for an unpriced line, mixed currencies or no lines", () => {
-    expect(
-      getSaleItemPickerSummary([
-        { id: "a", offering: offering(650_000), quantity: "1" },
-        { id: "b", offering: offering(null), quantity: "1" },
-      ]).totalMinor,
-    ).toBeNull()
-    expect(
-      getSaleItemPickerSummary([
-        { id: "a", offering: offering(650_000), quantity: "1" },
-        { id: "b", offering: offering(100, "USD"), quantity: "1" },
-      ]).totalMinor,
-    ).toBeNull()
-    expect(getSaleItemPickerSummary([]).totalMinor).toBeNull()
   })
 })

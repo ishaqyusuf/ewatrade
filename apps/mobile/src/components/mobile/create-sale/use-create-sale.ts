@@ -8,9 +8,7 @@ import {
 import {
   type SaleItemPickerLine,
   addSaleItemPickerLine,
-  getSaleItemPickerLineCounts,
   getSelectableSaleItemChoices,
-  openSaleItemPicker,
   removeSaleItemPickerLine,
   selectInitialCatalogItemLine,
   updateSaleItemPickerLineQuantity,
@@ -140,15 +138,6 @@ export function useCreateSale({
   >(null)
   const [fulfillNowRequested, setFulfillNowRequested] = useState(false)
   const [productSearch, setProductSearch] = useState("")
-  const [pickerChoiceCount, setPickerChoiceCount] = useState(0)
-  const [compactPickerChoices, setCompactPickerChoices] = useState<
-    OfferingRow[]
-  >([])
-  const [compactPickerVisible, setCompactPickerVisible] = useState(false)
-  const [pickerDraft, setPickerDraft] = useState<
-    SaleItemPickerLine<OfferingRow>[]
-  >([])
-  const [pickerVisible, setPickerVisible] = useState(false)
   const deferredCustomerSearch = useDeferredValue(customerSearch)
   const deferredProductSearch = useDeferredValue(productSearch)
   const [selectedLines, setSelectedLines] = useState<
@@ -158,9 +147,6 @@ export function useCreateSale({
   const [catalogFreeLines, setCatalogFreeLines] = useState<
     CatalogFreeLineDraft[]
   >([])
-  const [focusedQuantityId, setFocusedQuantityId] = useState<string | null>(
-    null,
-  )
   const [selectedCustomer, setSelectedCustomer] =
     useState<SelectedCustomer | null>(initialCustomer ?? null)
   const [step, setStep] = useState<SaleStep>("items")
@@ -334,9 +320,6 @@ export function useCreateSale({
       }),
     [selectedLines],
   )
-  const lineCountsByOfferingId = useMemo(() => {
-    return getSaleItemPickerLineCounts(selectedLines)
-  }, [selectedLines])
   const totalMinor =
     selectedRows.reduce((total, line) => total + (line.totalMinor ?? 0), 0) +
     catalogFreeLinesTotalMinor(catalogFreeLines)
@@ -410,19 +393,6 @@ export function useCreateSale({
     if (isOffline) return
     void recentOrders.refetch()
     if (!scopedStaff) void customerDirectory.refetch()
-  }
-
-  function addPickerChoice(offering: OfferingRow) {
-    if (submissionPending.current || submitted.current) return
-    const lineId = Crypto.randomUUID()
-    setPickerDraft((lines) =>
-      addSaleItemPickerLine({ lineId, lines, offering }),
-    )
-  }
-
-  function removePickerLine(lineId: string) {
-    if (submissionPending.current || submitted.current) return
-    setPickerDraft((lines) => removeSaleItemPickerLine(lines, lineId))
   }
 
   function fetchNextChoices() {
@@ -519,51 +489,6 @@ export function useCreateSale({
     setCatalogFreeLines((lines) => lines.filter((line) => line.id !== lineId))
   }
 
-  function openItemPicker() {
-    if (submissionPending.current || submitted.current) return
-    Keyboard.dismiss()
-    setError(null)
-    const pages = catalog.data?.pages ?? []
-    const choices = flattenSaleOfferings(
-      pages.flatMap((page) => page.items),
-      availability.data?.storeId,
-      itemKind,
-    )
-    setPickerChoiceCount(Math.max(choices.length, pages[0]?.totalCount ?? 0))
-
-    if (choicesLoading || choicesError || !availability.data?.storeId) {
-      setPickerDraft([...selectedLines])
-      setPickerVisible(true)
-      return
-    }
-
-    openSaleItemPicker({
-      choices,
-      hasUnloadedChoices: Boolean(catalog.hasNextPage),
-      onOpenScreen: () => {
-        setPickerDraft([...selectedLines])
-        setPickerVisible(true)
-      },
-      onOpenSheet: (loadedChoices) => {
-        setCompactPickerChoices(loadedChoices)
-        setCompactPickerVisible(true)
-      },
-    })
-  }
-
-  function closeFullScreenPicker() {
-    setPickerVisible(false)
-    setPickerDraft([])
-    setProductSearch("")
-  }
-
-  function commitFullScreenPicker() {
-    if (submissionPending.current || submitted.current) return
-    setSelectedLines([...pickerDraft])
-    setError(null)
-    closeFullScreenPicker()
-  }
-
   function proceedToCustomer() {
     if (submissionPending.current || submitted.current) return
     if (!hasSaleLines) {
@@ -590,7 +515,6 @@ export function useCreateSale({
       return
     }
     setError(null)
-    setFocusedQuantityId(null)
     Keyboard.dismiss()
     setStep("customer")
   }
@@ -926,8 +850,6 @@ export function useCreateSale({
     selectedCustomer,
     step,
     setStep: guardEdit(setStep),
-    focusedQuantityId,
-    setFocusedQuantityId,
     totalMinor,
     currencyCode,
     paymentSummary,
@@ -936,8 +858,6 @@ export function useCreateSale({
     choicesLoading,
     choicesError,
     retryChoices,
-    addPickerChoice,
-    removePickerLine,
     fetchNextChoices,
     customers,
     customersLoading,
@@ -952,21 +872,11 @@ export function useCreateSale({
     setCustomerDraftError,
     isSavingCustomer,
     customerModal,
-    compactPickerChoices,
-    compactPickerVisible,
-    setCompactPickerVisible,
-    lineCountsByOfferingId,
-    pickerDraft,
-    pickerVisible,
     productSearch,
     setProductSearch: guardEdit(setProductSearch),
-    pickerChoiceCount,
     updateQuantity,
     removeOffering,
-    openItemPicker,
     addOffering,
-    closeFullScreenPicker,
-    commitFullScreenPicker,
     proceedToCustomer,
     selectCustomer,
     presentCustomerSheet,

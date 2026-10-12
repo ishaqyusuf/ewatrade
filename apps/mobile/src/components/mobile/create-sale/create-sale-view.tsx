@@ -5,7 +5,6 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import { useState } from "react"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { CreateSaleCustomerStep } from "./create-sale-customer"
 import { CreateSaleItems } from "./create-sale-items"
 import type { CreateSaleViewModel } from "./create-sale-presentation"
@@ -15,7 +14,6 @@ import { CreateSaleSheets } from "./create-sale-sheets"
 export function CreateSaleView({ model }: { model: CreateSaleViewModel }) {
   const router = useRouter()
   const { profile } = useAuthContext()
-  const insets = useSafeAreaInsets()
   const [actionsHeight, setActionsHeight] = useState(96)
   const props = {
     model,
@@ -31,9 +29,6 @@ export function CreateSaleView({ model }: { model: CreateSaleViewModel }) {
             ? actionsHeight + 24
             : 24,
         "--sale-actions-bottom": actionsHeight + 24,
-        "--sale-fab-bottom": model.hasSaleLines
-          ? actionsHeight + 16
-          : Math.max(insets.bottom, 16),
       }}
     >
       <View

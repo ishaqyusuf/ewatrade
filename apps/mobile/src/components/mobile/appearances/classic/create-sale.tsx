@@ -77,8 +77,6 @@ export function ClassicSelectedOrderLine({
   disabled = false,
   offering,
   onQuantityChange,
-  onQuantityBlur,
-  onQuantityFocus,
   onRemove,
   position = { first: true, last: true },
   quantity,
@@ -206,9 +204,7 @@ export function ClassicSelectedOrderLine({
             editable={!disabled}
             keyboardType="decimal-pad"
             maxFontSizeMultiplier={1.3}
-            onBlur={onQuantityBlur}
             onChangeText={onQuantityChange}
-            onFocus={onQuantityFocus}
             selectTextOnFocus
             selectionColor={colors.primary}
             style={{

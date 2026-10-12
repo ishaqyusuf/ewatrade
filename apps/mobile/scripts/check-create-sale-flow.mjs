@@ -133,23 +133,13 @@ const contracts = [
       "of 3",
       "FlatList",
       "BottomSearchFooter",
-      "CompactSaleItemPicker",
-      "setCompactPickerVisible(true)",
-      "visible={compactPickerVisible}",
-      "hasUnloadedChoices: Boolean(catalog.hasNextPage)",
-      "FullScreenSaleItemPicker",
-      "SALE_ITEM_PICKER_COMPACT_LIMIT = 5",
-      "getSaleItemPickerPresentation",
-      "openSaleItemPicker",
       "addSaleItemPickerLine",
       "removeSaleItemPickerLine",
-      "Search product or service",
+      'itemKind === "service" ? "Search services" : "Search items"',
       "alwaysShowSearch",
-      "focusedQuantityId",
-      "lineCountsByOfferingId",
-      "Add another",
-      "onRemove(line.id)",
-      "onPress={() => onAdd(item)}",
+      "onAdd={() => addOffering(entry.offering)}",
+      "accessibilityLabel={`Add ${offering.displayName}`}",
+      "onRemove={() => removeOffering(entry.lineId)}",
       "onEndReachedThreshold={0.35}",
       "catalog.fetchNextPage()",
       "!isOffline &&",
@@ -183,34 +173,6 @@ const failures = contracts.flatMap((contract) => {
     ? [`missing ${missing.join(", ")} (${contract.reason})`]
     : []
 })
-
-const compactPickerStart = pickerSource.indexOf(
-  "export function CompactSaleItemPicker",
-)
-const fullScreenPickerStart = pickerSource.indexOf(
-  "export function FullScreenSaleItemPicker",
-)
-const compactPickerSource = pickerSource.slice(
-  compactPickerStart,
-  fullScreenPickerStart,
-)
-for (const marker of [
-  "<Modal",
-  "onDismiss={onClose}",
-  "enableDynamicSizing",
-  "if (visible) sheet.present()",
-]) {
-  if (!compactPickerSource.includes(marker)) {
-    failures.push(
-      `compact item picker is missing compact-sheet marker ${marker}`,
-    )
-  }
-}
-if (compactPickerSource.includes("BottomSheetModal")) {
-  failures.push(
-    "compact item picker must not use a root-portaled bottom sheet inside the native order route",
-  )
-}
 
 const legacyMarkers = [
   "compactItemModal.present",
