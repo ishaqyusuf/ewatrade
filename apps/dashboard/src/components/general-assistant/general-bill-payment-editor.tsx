@@ -1,4 +1,5 @@
 "use client"
+import { preserveReviewedTimestamp } from "./posting-date"
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type GeneralAction,
@@ -72,10 +73,7 @@ export function GeneralBillPaymentEditor({
           ...initial,
           amountMinor: parseFinanceMoney(values.amount),
           reference: values.reference || undefined,
-          effectiveAt:
-            values.date === originalDate
-              ? initial.effectiveAt
-              : date.toISOString(),
+          effectiveAt: preserveReviewedTimestamp(date, initial.effectiveAt),
           paymentAlreadyMade: true,
         })
         if (!parsed.success) {

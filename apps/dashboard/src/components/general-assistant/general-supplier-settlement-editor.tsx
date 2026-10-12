@@ -1,4 +1,5 @@
 "use client"
+import { preserveReviewedTimestamp } from "./posting-date"
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type GeneralAction,
@@ -90,10 +91,7 @@ export function GeneralSupplierSettlementEditor({
           ...(initial.action === "purchase_payment"
             ? { reference: values.reference || undefined }
             : {}),
-          effectiveAt:
-            values.date === originalDate
-              ? initial.effectiveAt
-              : date.toISOString(),
+          effectiveAt: preserveReviewedTimestamp(date, initial.effectiveAt),
           ...(initial.action === "supplier_advance_allocate"
             ? { allocationConfirmed: true }
             : { paymentAlreadyMade: true }),

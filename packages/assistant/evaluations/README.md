@@ -36,6 +36,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Purchase payment reversal saved web acceptance, 12 October 2026](runs/2026-10-12-purchase-payment-reversal-web.md): actual Edit/re-review/Confirm/Open/Close/reload, original payment/journal/date/reason, exact payable/advance/stock readback and concurrent completed recovery pass. Browser-found timestamp normalization fixed across seven editors; source-available, E05 partial with four canonical procedures pending.
+
 - [Purchase payment reversal source and signed rollback, 12 October 2026](runs/2026-10-12-purchase-payment-reversal-source.md): strict review/editor, private locked original proof, canonical reversal/replay16.998s and actual signed completion rollback17.988s/stale refusal preserve facts;12 tests678 assertions/scoped types and component browser checks pass. Full saved chat confirmation/recovery pending, capability planned, E05 partial.
 
 - [Supplier allocation release full proposal and web, 12 October 2026](runs/2026-10-12-allocation-release-web.md): private locked preparation removes duplicate proof reads; signed completion rollback19.90s and stale refusal preserve facts. Actual Edit/re-review/Confirm/Open/Close/reload, exact original allocation/release/journal/payable/advance and concurrent recovery pass. Source-available; E05 partial, five other canonical procedures pending.

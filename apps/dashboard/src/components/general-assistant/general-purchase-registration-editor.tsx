@@ -1,4 +1,5 @@
 "use client"
+import { preserveReviewedTimestamp } from "./posting-date"
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type GeneralAction,
@@ -92,10 +93,10 @@ export function GeneralPurchaseRegistrationEditor({
         const result = generalActionSchema.safeParse({
           ...initial,
           description: values.description,
-          agreedAt:
-            values.date === originalDate
-              ? initial.agreedAt
-              : new Date(`${values.date}Z`).toISOString(),
+          agreedAt: preserveReviewedTimestamp(
+            new Date(`${values.date}Z`),
+            initial.agreedAt,
+          ),
           agreementOnly: true,
           lines: initial.lines.map((line, i) => ({
             ...line,

@@ -1,4 +1,5 @@
 "use client"
+import { preserveReviewedTimestamp } from "./posting-date"
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type GeneralAction,
@@ -72,10 +73,7 @@ export function GeneralMoneyMovementEditor({
           ...initial,
           amountMinor: parseFinanceMoney(values.amount),
           description: values.description,
-          effectiveAt:
-            values.date === originalDate
-              ? initial.effectiveAt
-              : date.toISOString(),
+          effectiveAt: preserveReviewedTimestamp(date, initial.effectiveAt),
           movementAlreadyCompleted: true,
         })
         if (!parsed.success) {

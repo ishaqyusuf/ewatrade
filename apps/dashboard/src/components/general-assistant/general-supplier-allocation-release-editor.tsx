@@ -1,4 +1,5 @@
 "use client"
+import { preserveReviewedTimestamp } from "./posting-date"
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type GeneralAction,
@@ -76,10 +77,7 @@ export function GeneralSupplierAllocationReleaseEditor({
           ...initial,
           amountMinor: parseFinanceMoney(values.amount),
           reason: values.reason,
-          effectiveAt:
-            values.date === originalDate
-              ? initial.effectiveAt
-              : date.toISOString(),
+          effectiveAt: preserveReviewedTimestamp(date, initial.effectiveAt),
           releaseConfirmed: true,
         })
         if (!parsed.success) {

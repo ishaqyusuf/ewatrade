@@ -60,7 +60,9 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current implementation focus: E05. Supplier creation and purchase registration
+Current implementation focus: E05. Purchase payment reversal now passes full saved
+web confirmation/receipt/reload and concurrent recovery; four canonical procedures
+remain. [Latest evidence](runs/2026-10-12-purchase-payment-reversal-web.md). Supplier creation and purchase registration
 have focused database and saved receipt Open/Close evidence. Invoice, ownership and
 physical receipt now pass actual dashboard Edit/re-review/Confirm and global receipt
 Open/Close, with exact saved posting/stock/valuation readback. Full two-line assistant
@@ -100,11 +102,11 @@ Canonical procedure checklist within E05 (the parent remains partial):
 - [ ] `finance.recordPurchase` — direct purchase recording.
 - [ ] `finance.recordSupplierOpening` — supplier opening balances.
 - [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
-- [ ] `finance.reversePurchasePayment` — purchase payment reversal; source/signed rollback/editor verified, full saved chat confirmation/recovery next. [Evidence](runs/2026-10-12-purchase-payment-reversal-source.md).
-- [ ] `finance.reversePurchaseRecognition` — purchase fact reversal.
+- [x] `finance.reversePurchasePayment` — exact original-payment correction, signed rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-purchase-payment-reversal-web.md).
+- [ ] `finance.reversePurchaseRecognition` — purchase fact reversal; next implementation.
 - [ ] `finance.reverseSupplierEntry` — supplier entry reversal.
 
-The five pending procedures require assistant review/confirmation, owning receipts and relevant refusal,
+The four pending procedures require assistant review/confirmation, owning receipts and relevant refusal,
 rollback/recovery and web evidence. Existing registered-purchase flows do not accept
 these separate procedures. E05 keeps its ◐ mark and has no 🔖 bookmark.
 

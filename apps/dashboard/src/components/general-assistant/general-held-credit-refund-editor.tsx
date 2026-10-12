@@ -1,4 +1,5 @@
 "use client"
+import { preserveReviewedTimestamp } from "./posting-date"
 import { useZodForm } from "@/hooks/use-zod-form"
 import {
   type GeneralAction,
@@ -82,10 +83,7 @@ export function GeneralHeldCreditRefundEditor({
           ...initial,
           amountMinor: parseFinanceMoney(values.amount),
           method: values.method,
-          effectiveAt:
-            values.date === originalDate
-              ? initial.effectiveAt
-              : date.toISOString(),
+          effectiveAt: preserveReviewedTimestamp(date, initial.effectiveAt),
           reason: values.reason,
           reference: values.reference || undefined,
           moneyAlreadyReturned: true,

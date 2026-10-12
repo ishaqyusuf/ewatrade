@@ -67,6 +67,12 @@ export function PurchaseBillDetails({
                 {new Date(p.effectiveAt).toISOString()} (UTC)
                 {p.reference ? ` · ${p.reference}` : ""}
               </p>
+              {p.reversedAt ? (
+                <p className="mt-1 text-muted-foreground">
+                  Reversal{p.reversalEffectiveAt ? ` ${new Date(p.reversalEffectiveAt).toISOString()} (UTC)` : ""}
+                  {p.reversalReason ? ` · ${p.reversalReason}` : ""}
+                </p>
+              ) : null}
             </div>
           ))
         ) : (

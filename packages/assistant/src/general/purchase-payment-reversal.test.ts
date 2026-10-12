@@ -33,7 +33,7 @@ test("purchase payment reversal binds the whole original payment without caller 
   expect(generalActionSummary(payload, "NGN")).toContain(payload.reason)
   expect(capabilityForAction(payload.action)).toMatchObject({
     id: "finance.purchase.payment.reverse",
-    rollout: "planned",
+    rollout: "source",
     scope: "book",
     clients: ["dashboard"],
     policy: { roles: ["OWNER", "ADMIN"] },
