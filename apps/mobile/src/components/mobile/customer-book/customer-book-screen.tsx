@@ -30,6 +30,8 @@ import {
 } from "../appearances/classic/customer-book-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { ListCreateFab } from "../list-create-fab"
+import { getListCreateFabFooterOffset } from "../list-create-fab-model"
+import { SearchFold, useSearchFold } from "../search-fold"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { CustomerOpenOrders } from "./customer-open-orders"
 import { type CustomerBookProps, useCustomerBook } from "./use-customer-book"
@@ -105,6 +107,7 @@ export function CustomerBookContent(
   const reveal = useFirstReveal(!isLoading)
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const searchFold = useSearchFold(search)
   const insets = useSafeAreaInsets()
   const filterCounts = useMemo(
     () => ({
@@ -283,16 +286,18 @@ export function CustomerBookContent(
           ListHeaderComponent={
             <View className="gap-4 pb-3">
               {feedback}
-              <ClassicCustomerBookHeader
-                loadedCount={customers.length}
-                pendingCount={filterCounts.pending}
-                noOrdersCount={filterCounts.none}
-                hasMore={hasMoreCustomers}
-                isLoading={isLoading}
-                hasError={hasError}
-                isOffline={isOffline}
-                search={search}
-              />
+              <SearchFold folded={searchFold.folded}>
+                <ClassicCustomerBookHeader
+                  loadedCount={customers.length}
+                  pendingCount={filterCounts.pending}
+                  noOrdersCount={filterCounts.none}
+                  hasMore={hasMoreCustomers}
+                  isLoading={isLoading}
+                  hasError={hasError}
+                  isOffline={isOffline}
+                  search={search}
+                />
+              </SearchFold>
               {isOffline ? (
                 <StatusBanner
                   icon="Wind"
@@ -390,10 +395,10 @@ export function CustomerBookContent(
           bottomOffset={
             scrollHide.hidden && !search
               ? 0
-              : Math.max(
-                  0,
-                  footerHeight + 14 - Math.max(insets.bottom + 16, 24),
-                )
+              : getListCreateFabFooterOffset({
+                  bottomInset: insets.bottom,
+                  footerHeight,
+                })
           }
           disabled={isOffline || creation.locked}
           icon="UserPlus"
@@ -406,6 +411,7 @@ export function CustomerBookContent(
           hidden={scrollHide.hidden}
           localSearch={isOffline}
           maxLength={160}
+          onFocusChange={searchFold.onFocusChange}
           onHeightChange={setFooterHeight}
           accessibilityLabel="Search customers"
           onChangeText={setSearch}
