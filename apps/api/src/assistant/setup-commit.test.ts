@@ -304,7 +304,9 @@ describe("setup options become catalog variants", () => {
         },
         scope,
       ),
-    ).toThrow(`49 option combinations. Keep it to ${MAX_SETUP_VARIANTS}`)
+    ).toThrow(
+      `too many option combinations. Keep it to ${MAX_SETUP_VARIANTS} or fewer.`,
+    )
     // The owner sees the stock conflict before confirming.
     expect(
       deriveSetupEntityState({ ...fabric, openingStock: "40" }, []).state,
