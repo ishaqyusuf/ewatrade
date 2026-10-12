@@ -22,13 +22,8 @@ const tooling = [
   "DEBUG_PERF", // local performance debugging
   "ASSISTANT_LIVE_SMOKE", // opt-in live model tests, never set on a deployment
   "ASSISTANT_LIVE_MEASURE", // opt-in live setup measurement, tests only
-  // Opt-in assistant integration checks, tests only; never set on a deployment.
-  "RUN_GENERAL_FULFILLMENT",
-  "RUN_GENERAL_ORDER_AMENDMENT",
-  "RUN_GENERAL_ORDER_AMENDMENT_REPLACEMENT_ONLY",
-  "RUN_GENERAL_ORDER_CANCELLATION",
-  "RUN_GENERAL_ORDER_METADATA",
-  "RUN_GENERAL_ORDER_REPLACEMENT",
+  "RUN_*", // opt-in integration checks, tests only; never set on a deployment
+  "*_QA_*", // QA fixture ids and switches (D05_QA_…, S03_QA_…)
 ]
 const optional = [
   "LOGLY_COLLECTOR_URL", // Logly logging stays off without these
@@ -42,6 +37,17 @@ const optional = [
   "STORE_CONVERSATION_TEXT_SAFETY_OPENAI_API_KEY", // falls back to OPENAI_API_KEY
 ]
 const notNeeded = [...featuresOff, ...tooling, ...optional]
+// Read only by the API (and wapi); the web apps see them through shared packages.
+const apiOnly = [
+  "ASSISTANT_APPROVAL_SIGNING_KEY",
+  "ASSISTANT_VOICE_PUBLISH_SECRET",
+  "BLOB_READ_WRITE_TOKEN",
+]
+// Each app's Logly project; the others never send to it.
+const loglyMarketing = [
+  "LOGLY_MARKETING_PROJECT_KEY",
+  "NEXT_PUBLIC_LOGLY_MARKETING_ENABLED",
+]
 // Hosted Preview runs without these test-feature flags, real email sending and
 // the full URL set from .env.preview (owner decision, 6 Oct 2026). Production
 // still checks every name here.
@@ -80,6 +86,9 @@ export default {
   // Vercel team shared variables are EWATRADE_-prefixed; apps map them back to
   // plain names at start-up (packages/utils/src/shared-env.ts).
   sharedEnvPrefix: "EWATRADE_",
+  // A busy checkout releases from a clean copy of HEAD; its Prisma client is
+  // git-ignored generated code.
+  cleanCheckout: { prepare: ["bun run db:generate"] },
   components: [
     {
       // Runs first, before any new code goes live. Production asks for confirmation.
@@ -100,6 +109,8 @@ export default {
       env: {
         ignore: [
           ...notNeeded,
+          ...apiOnly,
+          ...loglyMarketing,
           "VERCEL_STOREFRONT_PROJECT_ID", // used by a Trigger job, not the dashboard
           "VERCEL_API_TOKEN", // opt-in: lets signup create tenant domains on Vercel
         ],
@@ -113,6 +124,9 @@ export default {
       env: {
         ignore: [
           ...notNeeded,
+          ...apiOnly,
+          "LOGLY_DASHBOARD_PROJECT_KEY",
+          "BLOB_STORE_ID", // catalog photos are read by the API and dashboard
           "ALLOWED_API_ORIGINS", // extra API/auth origins; same-origin pages don't need them
           "BETTER_AUTH_TRUSTED_ORIGINS",
           "NEXT_PUBLIC_PLATFORM_DOMAIN",
@@ -134,6 +148,7 @@ export default {
       env: {
         ignore: [
           ...notNeeded,
+          ...loglyMarketing,
           "MARKETING_INBOX_EMAILS", // team notifications fall back to EMAIL_REPLY_TO
         ],
         ignoreIn: { preview: previewOnly },
