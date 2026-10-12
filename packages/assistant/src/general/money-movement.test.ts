@@ -42,7 +42,7 @@ test("money proposals require distinct transfer accounts and completed movement 
     )
   }
 })
-test("movement receipt retains Book identity; capability remains planned dashboard finance", () => {
+test("movement receipt retains Book identity; capability is enabled dashboard finance", () => {
   expect(
     generalReceiptSchema.parse({
       kind: "finance_movement",
@@ -61,7 +61,7 @@ test("movement receipt retains Book identity; capability remains planned dashboa
     }).success,
   ).toBe(false)
   expect(capabilityForAction("money_movement")).toMatchObject({
-    rollout: "planned",
+    rollout: "enabled",
     clients: ["dashboard"],
     policy: { roles: ["OWNER", "ADMIN"] },
     effect: "book",

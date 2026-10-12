@@ -7,6 +7,7 @@ import { z } from "zod"
 const commercialOrderPaymentInputSchema = z
   .object({
     amountMinor: z.number().int().positive().max(100_000_000),
+    moneyAccountId: z.string().trim().min(1).max(128).optional(),
     clientPaymentId: z.string().trim().min(8).max(160),
     method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
     note: z.string().trim().max(500).optional(),

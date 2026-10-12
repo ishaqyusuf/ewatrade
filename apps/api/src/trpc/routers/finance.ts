@@ -8,6 +8,7 @@ import {
   createFinanceBook,
   createFinanceExpenseCategory,
   createFinanceMoneyAccount,
+  updateFinanceMoneyAccountPayments,
   createFinanceSupplier,
   getFinanceAccountBalances,
   getFinanceBill,
@@ -57,6 +58,7 @@ import {
   financeMoneyAccountsSchema,
   financeAccountActivitySchema,
   financeAccountSchema,
+  financeMoneyAccountPaymentsSchema,
   financeBillPaymentSchema,
   financeBillSchema,
   financeBillsSchema,
@@ -361,6 +363,14 @@ export const financeRouter = createTRPCRouter({
     .input(financeAccountSchema)
     .mutation(({ ctx, input }) =>
       createFinanceMoneyAccount(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  updateMoneyAccountPayments: financeProcedure
+    .input(financeMoneyAccountPaymentsSchema)
+    .mutation(({ ctx, input }) =>
+      updateFinanceMoneyAccountPayments(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
     ),
   balances: financeProcedure
     .input(financeBookSchema)

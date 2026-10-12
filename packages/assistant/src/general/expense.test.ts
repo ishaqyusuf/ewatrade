@@ -54,7 +54,7 @@ test("expense supports unpaid, partial business and owner-funded recording with 
     }).success,
   ).toBe(false)
 })
-test("expense receipt requires Book; capability stays planned dashboard finance", () => {
+test("expense receipt requires Book; capability is enabled dashboard finance", () => {
   const receipt = {
     kind: "finance_bill",
     recordId: "bill",
@@ -66,7 +66,7 @@ test("expense receipt requires Book; capability stays planned dashboard finance"
     generalReceiptSchema.safeParse({ ...receipt, bookId: "book" }).success,
   ).toBe(true)
   expect(capabilityForAction("expense_record")).toMatchObject({
-    rollout: "planned",
+    rollout: "enabled",
     clients: ["dashboard"],
     policy: { roles: ["OWNER", "ADMIN"] },
     procedures: ["finance.recordExpense"],

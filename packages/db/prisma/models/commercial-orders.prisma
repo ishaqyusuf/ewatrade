@@ -132,6 +132,8 @@ model CommercialOrderPayment {
   clientPaymentId             String
   type                        CommercialPaymentType            @default(PAYMENT)
   method                      CommercialPaymentMethod
+  moneyAccountId              String?
+  moneyAccount                FinanceAccount?                  @relation(fields: [moneyAccountId], references: [id], onDelete: Restrict)
   amountMinor                 Int
   reference                   String?
   note                        String?

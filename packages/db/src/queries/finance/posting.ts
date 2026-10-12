@@ -6,6 +6,7 @@ import type {
 import { recordCommerceCustomerLedgerInTransaction } from "../customer-ledger/commerce-sources"
 import { type FinanceActor, lockFinanceBook } from "./access"
 import { resolveCommerceFinancePosting } from "./commerce-posting-source"
+import { resolveOrderCollectionPosting } from "./order-collection-source"
 import { prepareInventoryCloseoutFinanceInTransaction } from "./inventory-closeout-posting-source"
 import { resolveCommerceInventoryCostPosting } from "./inventory-cost-posting-source"
 import { resolveInventoryCountPostings } from "./inventory-count-posting-source"
@@ -225,6 +226,20 @@ export async function postCommerceFinanceJournalInTransaction(
   return posting
 }
 
+/** Called only by an authorized commerce payment command in its transaction. */
+export async function postOrderCollectionInTransaction(
+  tx: Prisma.TransactionClient,
+  source: { tenantId: string; orderId: string; paymentId: string },
+) {
+  const resolved = await resolveOrderCollectionPosting(tx, source)
+  if (resolved.billed)
+    return postCommerceFinanceJournalInTransaction(tx, {
+      ...source,
+      event: "PAYMENT",
+    })
+  return postJournalWithLockedBook(tx, resolved.input, resolved.book)
+}
+
 async function postEarnedInventoryCostInTransaction(
   tx: Prisma.TransactionClient,
   source: { tenantId: string; orderId: string },
@@ -254,7 +269,12 @@ async function postEarnedInventoryCostInTransaction(
 /** Private supported-source composition; callers already hold Book/Order locks. */
 export async function postProductReturnFinanceJournalInTransaction(
   tx: Prisma.TransactionClient,
-  source: { tenantId: string; productReturnId: string; recordedValuation?: object; journalReviewToken?: object },
+  source: {
+    tenantId: string
+    productReturnId: string
+    recordedValuation?: object
+    journalReviewToken?: object
+  },
 ) {
   const cost = await resolveCommerceInventoryReturnPosting(tx, source)
   if (!cost) return null

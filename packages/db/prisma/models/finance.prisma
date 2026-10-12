@@ -64,6 +64,7 @@ model FinanceBook {
 }
 
 model FinanceAccount {
+  commercialPayments CommercialOrderPayment[]
   bankAccountStates FinanceBankAccountState[]
   fiscalCalendars FinanceFiscalCalendar[]
   fiscalCloseEvents FinanceFiscalCloseEvent[]
@@ -81,14 +82,33 @@ model FinanceAccount {
   kind                        FinanceAccountKind
   purpose                     FinanceAccountPurpose                @default(OTHER)
   archivedAt                  DateTime?
+  /// Order payment methods a money account takes. Empty means its type's defaults.
+  paymentMethods              CommercialPaymentMethod[]            @default([])
+  /// Closed to new order payments; balance, history and refunds are unaffected.
+  paymentsPausedAt            DateTime?
   createdAt                   DateTime                             @default(now())
   book                        FinanceBook                          @relation(fields: [bookId], references: [id], onDelete: Restrict)
   lines                       FinanceJournalLine[]
   reconciliations             FinanceReconciliation[]
+  paymentSettingEvents        FinanceMoneyAccountPaymentEvent[]
 
   @@unique([bookId, code])
   @@unique([bookId, id])
   @@index([bookId, purpose])
+}
+
+/// Who changed the payment methods a money account takes, or paused it.
+model FinanceMoneyAccountPaymentEvent {
+  id             String                    @id @default(cuid())
+  bookId         String
+  accountId      String
+  actorUserId    String
+  paymentMethods CommercialPaymentMethod[]
+  paused         Boolean
+  createdAt      DateTime                  @default(now())
+  account        FinanceAccount            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
 }
 
 model FinanceJournalEntry {

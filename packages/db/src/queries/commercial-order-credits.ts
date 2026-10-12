@@ -16,7 +16,11 @@ import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import { runInOwnTransaction } from "./own-transaction"
 
 type Scope = { tenantId: string; storeId: string; orderId: string }
-type Money = { method: CommercialPaymentMethodValue; reference?: string }
+type Money = {
+  method: CommercialPaymentMethodValue
+  reference?: string
+  moneyAccountId?: string
+}
 
 function assertCommand(input: {
   actorUserId: string
@@ -212,6 +216,7 @@ export async function refundCommercialOrderInTransaction(
     amountMinor: input.amountMinor,
     clientPaymentId: `${input.clientOperationId}:refund`,
     method: input.method,
+    moneyAccountId: input.moneyAccountId,
     note: input.reason,
     orderId: input.orderId,
     reference: input.reference,
@@ -361,6 +366,7 @@ export async function returnCommercialOrderItemsInTransaction(
       amountMinor: refundMinor,
       clientPaymentId: `${input.clientOperationId}:refund`,
       method: input.money.method,
+      moneyAccountId: input.money.moneyAccountId,
       note: input.reason,
       orderId: input.orderId,
       reference: input.money.reference,

@@ -1,3 +1,7 @@
+import {
+  type MoneyAccountPurpose,
+  moneyAccountPaymentMethods,
+} from "@ewatrade/utils/finance-payment-methods"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
 import { FinanceError } from "./rules"
@@ -41,11 +45,27 @@ export async function listFinanceMoneyAccounts(
             ? {}
             : { code: { gt: input.afterCode } }),
         },
-        select: { id: true, code: true, name: true, purpose: true },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          purpose: true,
+          paymentMethods: true,
+          paymentsPausedAt: true,
+        },
         orderBy: { code: "asc" },
         take: limit + 1,
       })
-      const accounts = rows.slice(0, limit)
+      const accounts = rows
+        .slice(0, limit)
+        .map(({ paymentMethods, paymentsPausedAt, ...account }) => ({
+          ...account,
+          paymentMethods: moneyAccountPaymentMethods({
+            purpose: account.purpose as MoneyAccountPurpose,
+            paymentMethods,
+          }),
+          availableForPayments: paymentsPausedAt === null,
+        }))
       return {
         book,
         accounts,

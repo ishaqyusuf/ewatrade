@@ -9,7 +9,12 @@ export {
   createFinanceBook,
   createFinanceMoneyAccount,
   getFinanceBook,
+  updateFinanceMoneyAccountPayments,
 } from "./accounts"
+export {
+  assertOrderPaymentAccountInTransaction,
+  listOrderPaymentAccounts,
+} from "./order-payment-accounts"
 export {
   recordFinanceMoneyMovement,
   recordFinanceMoneyMovementInTransaction,

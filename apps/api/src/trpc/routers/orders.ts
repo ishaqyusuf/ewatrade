@@ -8,6 +8,7 @@ import {
   FinanceError,
   RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID,
   assertRetailOpsPlanIdFeature,
+  listOrderPaymentAccounts,
 } from "@ewatrade/db/queries"
 import {
   CatalogError,
@@ -197,6 +198,16 @@ const reminderProcedure = protectedProcedure.use(({ ctx, next }) => {
 })
 
 export const ordersRouter = createTRPCRouter({
+  /** Where order money can be received, for anyone who takes payments. */
+  paymentAccounts: protectedProcedure.query(({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return listOrderPaymentAccounts(ctx.db, {
+      tenantId: ctx.tenantContext.tenant.id,
+      currencyCode:
+        ctx.tenantContext.activeStore?.currencyCode ??
+        ctx.tenantContext.tenant.currencyCode,
+    })
+  }),
   ...orderAmendmentProcedures,
   ...orderTimelineProcedures,
   ...orderMoneyProcedures,

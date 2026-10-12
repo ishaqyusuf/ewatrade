@@ -1,5 +1,12 @@
+import {
+  type MoneyAccountPurpose,
+  type OrderPaymentMethod,
+  moneyAccountPaymentMethods,
+  moneyAccountPaymentMethodsProblem,
+} from "@ewatrade/utils/finance-payment-methods"
 import type { PrismaClient } from "../../../generated/prisma/client"
 import type {
+  CommercialPaymentMethod,
   FinanceAccountKind,
   FinanceAccountPurpose,
 } from "../../../generated/prisma/enums"
@@ -198,13 +205,26 @@ export async function getFinanceBook(db: PrismaClient, input: FinanceActor) {
   )
 }
 
+const storedPaymentMethod = (method: OrderPaymentMethod) =>
+  method.toUpperCase() as CommercialPaymentMethod
+
+function assertPaymentMethods(
+  purpose: MoneyAccountPurpose,
+  methods: readonly string[],
+) {
+  const problem = moneyAccountPaymentMethodsProblem(purpose, methods)
+  if (problem) throw new FinanceError("INVALID_JOURNAL", problem)
+}
+
 export async function createFinanceMoneyAccount(
   db: PrismaClient,
   input: FinanceActor & {
     bookId: string
     code: string
     name: string
-    purpose: "CASH" | "BANK" | "CLEARING"
+    purpose: MoneyAccountPurpose
+    /** Omitted: the account takes its type's default methods. */
+    paymentMethods?: OrderPaymentMethod[]
   },
 ) {
   if (
@@ -218,6 +238,14 @@ export async function createFinanceMoneyAccount(
       "Enter an account code, name and money account type.",
     )
   }
+  if (input.paymentMethods)
+    assertPaymentMethods(input.purpose, input.paymentMethods)
+  const paymentMethods = input.paymentMethods
+    ? moneyAccountPaymentMethods({
+        purpose: input.purpose,
+        paymentMethods: input.paymentMethods,
+      }).map(storedPaymentMethod)
+    : []
   return db.$transaction(
     async (tx) => {
       await lockFinanceBook(tx, input)
@@ -228,7 +256,8 @@ export async function createFinanceMoneyAccount(
         if (
           previous.name !== input.name.trim() ||
           previous.purpose !== input.purpose ||
-          previous.archivedAt
+          previous.archivedAt ||
+          previous.paymentMethods.join() !== paymentMethods.join()
         ) {
           throw new FinanceError(
             "CONFLICT",
@@ -244,8 +273,73 @@ export async function createFinanceMoneyAccount(
           name: input.name.trim(),
           kind: "ASSET",
           purpose: input.purpose,
+          paymentMethods,
         },
       })
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  )
+}
+
+/**
+ * Sets which payment methods a money account takes and whether it's open to
+ * new payments. Takes the book lock that order payments hold while checking
+ * their account, so a change can't race a payment.
+ */
+export async function updateFinanceMoneyAccountPayments(
+  db: PrismaClient,
+  input: FinanceActor & {
+    bookId: string
+    accountId: string
+    paymentMethods: OrderPaymentMethod[]
+    availableForPayments: boolean
+  },
+) {
+  return db.$transaction(
+    async (tx) => {
+      await lockFinanceBook(tx, input)
+      const account = await tx.financeAccount.findFirst({
+        where: {
+          id: input.accountId,
+          bookId: input.bookId,
+          archivedAt: null,
+          kind: "ASSET",
+          purpose: { in: ["CASH", "BANK", "CLEARING"] },
+        },
+      })
+      if (!account)
+        throw new FinanceError("NOT_FOUND", "Money account not found.")
+      const purpose = account.purpose as MoneyAccountPurpose
+      assertPaymentMethods(purpose, input.paymentMethods)
+      const paymentMethods = moneyAccountPaymentMethods({
+        purpose,
+        paymentMethods: input.paymentMethods,
+      }).map(storedPaymentMethod)
+      const paused = !input.availableForPayments
+      if (
+        account.paymentMethods.join() === paymentMethods.join() &&
+        (account.paymentsPausedAt !== null) === paused
+      )
+        return account
+      const updated = await tx.financeAccount.update({
+        where: { id: account.id },
+        data: {
+          paymentMethods,
+          paymentsPausedAt: paused
+            ? (account.paymentsPausedAt ?? new Date())
+            : null,
+        },
+      })
+      await tx.financeMoneyAccountPaymentEvent.create({
+        data: {
+          bookId: input.bookId,
+          accountId: account.id,
+          actorUserId: input.actorUserId,
+          paymentMethods,
+          paused,
+        },
+      })
+      return updated
     },
     { maxWait: 10_000, timeout: 30_000 },
   )

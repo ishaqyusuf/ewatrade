@@ -18,17 +18,38 @@ import { expenseVoidAction, billPaymentReverseAction } from "./bill-correction"
 import { billPaymentAction } from "./bill-payment"
 import { expenseAction } from "./expense"
 import { moneyMovementAction } from "./money-movement"
-import { customerCreditApplyAction, customerAllocationReleaseAction } from "./customer-credit"
+import {
+  customerCreditApplyAction,
+  customerAllocationReleaseAction,
+} from "./customer-credit"
 import { customerReceiptAction } from "./customer-receipt"
 import { heldCreditRefundAction } from "./held-credit-refund"
 import { productLineReturnAction } from "./product-return"
-import { productLineFulfillAction, productBatchFulfillAction } from "./product-fulfillment"
-import { serviceAuthorizeAction, serviceFulfillAction } from "./service-fulfillment"
-import { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
+import {
+  productLineFulfillAction,
+  productBatchFulfillAction,
+} from "./product-fulfillment"
+import {
+  serviceAuthorizeAction,
+  serviceFulfillAction,
+} from "./service-fulfillment"
+import {
+  orderCancelAction,
+  orderMetadataAction,
+  orderReplaceAction,
+} from "./order-amendment"
 import { orderAttachmentAddAction } from "./order-attachment"
-export { orderCancelAction, orderMetadataAction, orderReplaceAction } from "./order-amendment"
+export {
+  orderCancelAction,
+  orderMetadataAction,
+  orderReplaceAction,
+} from "./order-amendment"
 import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
-import { stockTransferDispatchAction, stockTransferReceiveAction, stockTransferCancelAction } from "./stock-transfer"
+import {
+  stockTransferDispatchAction,
+  stockTransferReceiveAction,
+  stockTransferCancelAction,
+} from "./stock-transfer"
 import { z } from "zod"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
@@ -36,7 +57,10 @@ import {
   unitConfigurationDraftAction,
   unitConfigurationPublishAction,
 } from "./unit-configuration"
-import { stockAdjustmentAction, stockCorrectionAction } from "./stock-adjustment"
+import {
+  stockAdjustmentAction,
+  stockCorrectionAction,
+} from "./stock-adjustment"
 import { productCreateAction, productCreateSummary } from "./product-create"
 const id = z.string().trim().min(1).max(128)
 const name = z.string().trim().min(1).max(160)
@@ -72,6 +96,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
             (value) => value > 0,
             "Payment must be positive",
           ),
+          moneyAccountId: id.optional(),
           method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
           note: z.string().trim().max(500).optional(),
         })
@@ -112,6 +137,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
       action: z.literal("payment_record"),
       orderId: id,
       amountMinor: money.refine((v) => v > 0),
+      moneyAccountId: id.optional(),
       method: z.enum(["bank_transfer", "card", "cash", "other", "pos"]),
       note: z.string().trim().max(500).optional(),
     })
@@ -327,7 +353,20 @@ export const generalReceiptSchema = z
     detail: z.string(),
   })
   .strict()
-  .refine(value => !["finance_movement", "finance_bill", "finance_supplier", "finance_purchase_bill", "finance_purchase_registration"].includes(value.kind) || Boolean(value.bookId), {message:"A finance receipt requires its Finance Book.",path:["bookId"]})
+  .refine(
+    (value) =>
+      ![
+        "finance_movement",
+        "finance_bill",
+        "finance_supplier",
+        "finance_purchase_bill",
+        "finance_purchase_registration",
+      ].includes(value.kind) || Boolean(value.bookId),
+    {
+      message: "A finance receipt requires its Finance Book.",
+      path: ["bookId"],
+    },
+  )
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
 export const generalProposalSchema = z
   .object({
@@ -456,11 +495,13 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
-    case "product_batch_fulfill": return `Fulfil remaining order lines · ${action.reason}`
+    case "product_batch_fulfill":
+      return `Fulfil remaining order lines · ${action.reason}`
     case "purchase_recognize":
       return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
     case "purchase_record": return `Record received purchase · ${action.description}`
-    case "purchase_register": return `Register purchase agreement · ${action.description}`
+    case "purchase_register":
+      return `Register purchase agreement · ${action.description}`
     case "supplier_entry_reverse": return `Reverse original supplier entry · ${action.reason}`
     case "purchase_recognition_reverse":
       return `Reverse original purchase fact · ${action.reason}`
@@ -475,23 +516,40 @@ export function generalActionSummary(
       return `Apply existing supplier advance · ${action.description}`
     case "purchase_payment":
       return `Record purchase invoice payment · ${action.description}`
-    case "supplier_create": return `Create supplier · ${action.name} (${action.code})`
-    case "expense_void": return `Void unpaid expense · ${action.reason}`
-    case "bill_payment_reverse": return `Reverse recorded bill payment · ${action.reason}`
-    case "bill_payment": return "Record payment against existing expense bill"
-    case "expense_record": return `Record expense · ${action.payeeName} · ${action.description}`
-    case "money_movement": return `Record ${action.kind.toLowerCase().replaceAll("_", " ")} · ${action.description}`
-    case "customer_credit_apply": return "Apply existing customer credit"
-    case "customer_allocation_release": return `Release customer credit allocation · ${action.reason}`
-    case "customer_receipt": return `Record received customer funds · ${action.description}`
-    case "held_credit_refund": return `Record returned customer funds · ${action.reason}`
-    case "product_line_return": return `Return ${action.quantity} · ${action.disposition.replaceAll("_", " ")} · ${action.reason}`
-    case "product_line_fulfill": return `Fulfil reserved product line · ${action.reason}`
-    case "service_line_authorize": return `Authorize service line · ${action.reason}`
-    case "service_line_fulfill": return `Record service performance · ${action.reason}`
-    case "order_cancel": return `Cancel order ${action.orderId} · ${action.reason}`
-    case "order_metadata_update": return `Update order details · ${action.reason}`
-    case "order_replace": return `Replace order with ${action.changes.length} line change(s) · ${action.reason}`
+    case "supplier_create":
+      return `Create supplier · ${action.name} (${action.code})`
+    case "expense_void":
+      return `Void unpaid expense · ${action.reason}`
+    case "bill_payment_reverse":
+      return `Reverse recorded bill payment · ${action.reason}`
+    case "bill_payment":
+      return "Record payment against existing expense bill"
+    case "expense_record":
+      return `Record expense · ${action.payeeName} · ${action.description}`
+    case "money_movement":
+      return `Record ${action.kind.toLowerCase().replaceAll("_", " ")} · ${action.description}`
+    case "customer_credit_apply":
+      return "Apply existing customer credit"
+    case "customer_allocation_release":
+      return `Release customer credit allocation · ${action.reason}`
+    case "customer_receipt":
+      return `Record received customer funds · ${action.description}`
+    case "held_credit_refund":
+      return `Record returned customer funds · ${action.reason}`
+    case "product_line_return":
+      return `Return ${action.quantity} · ${action.disposition.replaceAll("_", " ")} · ${action.reason}`
+    case "product_line_fulfill":
+      return `Fulfil reserved product line · ${action.reason}`
+    case "service_line_authorize":
+      return `Authorize service line · ${action.reason}`
+    case "service_line_fulfill":
+      return `Record service performance · ${action.reason}`
+    case "order_cancel":
+      return `Cancel order ${action.orderId} · ${action.reason}`
+    case "order_metadata_update":
+      return `Update order details · ${action.reason}`
+    case "order_replace":
+      return `Replace order with ${action.changes.length} line change(s) · ${action.reason}`
     case "stock_transfer_dispatch":
       return `Dispatch ${action.quantity} to Store ${action.targetStoreId} · ${action.reason}`
     case "stock_transfer_receive":

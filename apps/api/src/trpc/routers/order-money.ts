@@ -26,6 +26,7 @@ export const orderRefundSchema = z
   .object({
     ...command,
     amountMinor: z.number().int().positive().max(100_000_000),
+    moneyAccountId: z.string().trim().min(1).max(128).optional(),
     method,
     reference: z.string().trim().max(160).optional(),
     /** Overcharged: the order total drops by the refund too. */
@@ -55,7 +56,11 @@ export const orderReturnItemsSchema = z
       .max(50),
     /** Credit the returned value and give back what was overpaid. */
     money: z
-      .object({ method, reference: z.string().trim().max(160).optional() })
+      .object({
+        moneyAccountId: z.string().trim().min(1).max(128).optional(),
+        method,
+        reference: z.string().trim().max(160).optional(),
+      })
       .strict()
       .nullable()
       .optional(),

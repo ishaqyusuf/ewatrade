@@ -115,6 +115,7 @@ export type CreateCommercialOrderInput = {
   fulfillNow?: boolean
   initialPayment?: {
     amountMinor: number
+    moneyAccountId?: string
     clientPaymentId: string
     method: CommercialPaymentMethodValue
     note?: string
@@ -321,6 +322,7 @@ function serializeOrder(order: OrderGraph) {
       amountMinor: payment.amountMinor,
       id: payment.id,
       method: payment.method,
+      moneyAccountId: payment.moneyAccountId,
       note: payment.note,
       recordedAt: payment.recordedAt,
       recordedByUserId: payment.recordedByUserId,

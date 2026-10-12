@@ -23,11 +23,16 @@ import {
   createCustomerInTransaction,
   createSimpleCatalogItemInTransaction,
   customerRevision,
+  listOrderPaymentAccounts,
   recordCommercialOrderPaymentInTransaction,
   resolveOrderScope,
   updateCustomerInTransaction,
 } from "@ewatrade/db/queries"
 import type { Prisma } from "@ewatrade/db/types"
+import {
+  ORDER_PAYMENT_METHOD_LABELS,
+  type OrderPaymentMethod,
+} from "@ewatrade/utils/finance-payment-methods"
 import { TRPCError } from "@trpc/server"
 import { catalogCreateSimpleItemSchema } from "../schemas/catalog"
 import { customerCreateSchema } from "../schemas/customers"
@@ -141,11 +146,62 @@ const currency = (ctx: GeneralTransactionContext) =>
   ctx.tenantContext.activeStore?.currencyCode ??
   ctx.tenantContext.tenant.currencyCode
 
+/**
+ * With Finance set up, every drafted payment names an available account that
+ * takes its method, so the money shows up in that account's balance.
+ */
+async function paymentAccountName(
+  ctx: GeneralTransactionContext,
+  payment: { moneyAccountId?: string; method: OrderPaymentMethod },
+) {
+  const { book, accounts } = await listOrderPaymentAccounts(ctx.db, {
+    tenantId: requireGeneralScope(ctx).tenantId,
+    currencyCode: currency(ctx),
+  })
+  if (!book) {
+    if (payment.moneyAccountId)
+      throw conflict("Set up Finance before choosing a receiving account.")
+    return null
+  }
+  const method = ORDER_PAYMENT_METHOD_LABELS[payment.method]
+  if (!payment.moneyAccountId) {
+    const eligible = accounts.filter(
+      (account) =>
+        !account.paused && account.paymentMethods.includes(payment.method),
+    )
+    const [only] = eligible
+    if (eligible.length === 1 && only)
+      throw conflict(
+        `Include moneyAccountId ${only.id}: ${only.name} is the only available account that takes ${method} payments. Tell the user it goes into ${only.name}.`,
+      )
+    if (eligible.length)
+      throw conflict(
+        `Ask which account received this ${method} payment (${eligible.map((account) => account.name).join(", ")}), then include it.`,
+      )
+    throw conflict(
+      `No available account takes ${method} payments. An owner or admin can set one up in Finance.`,
+    )
+  }
+  const account = accounts.find((row) => row.id === payment.moneyAccountId)
+  if (!account)
+    throw conflict("Choose an active receiving account from this business.")
+  if (!account.paymentMethods.includes(payment.method))
+    throw conflict(
+      `${account.name} doesn't take ${method} payments. Choose another account.`,
+    )
+  if (account.paused)
+    throw conflict(
+      `${account.name} is paused for new payments. Choose another account.`,
+    )
+  return account.name
+}
+
 async function paymentTarget(
   ctx: GeneralTransactionContext,
   action: Action<"payment_record">,
   lock: boolean,
 ) {
+  await paymentAccountName(ctx, action)
   const scope = requireGeneralScope(ctx)
   if (lock)
     await lockGeneralPaymentOrder(ctx.db, {
@@ -432,6 +488,7 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     )
     if (payload.initialPayment) {
       assertGeneralAction(ctx, "payment_record")
+      await paymentAccountName(ctx, payload.initialPayment)
       if (payload.initialPayment.amountMinor > review.totalMinor)
         throw conflict("Initial payment exceeds the order total.")
     }
@@ -465,6 +522,7 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     )
     if (payload.initialPayment) {
       assertGeneralAction(ctx, "payment_record")
+      await paymentAccountName(ctx, payload.initialPayment)
       if (payload.initialPayment.amountMinor > review.totalMinor)
         throw conflict("Initial payment exceeds the order total.")
     }
@@ -483,6 +541,11 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         ...(payload.initialPayment
           ? [
               `Record received: ${generalMoney(payload.initialPayment.amountMinor, currency(ctx))} · ${payload.initialPayment.method.replaceAll("_", " ")}`,
+              ...(payload.initialPayment.moneyAccountId
+                ? [
+                    `Received into: ${await paymentAccountName(ctx, payload.initialPayment)}`,
+                  ]
+                : []),
               `Remaining balance: ${generalMoney(review.totalMinor - payload.initialPayment.amountMinor, currency(ctx))}`,
               ...(payload.initialPayment.note
                 ? [`Payment note: ${payload.initialPayment.note}`]
@@ -558,6 +621,11 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
       lines: [
         `${target.review.customerName || "Walk-in customer"} · ${target.review.orderNumber}`,
         `${generalMoney(payload.amountMinor, currency(ctx))} · ${payload.method.replaceAll("_", " ")}`,
+        ...(payload.moneyAccountId
+          ? [
+              `Received into: ${await paymentAccountName(ctx, payload)}`,
+            ]
+          : []),
         `Balance after: ${generalMoney(target.review.balanceDueMinor - payload.amountMinor, currency(ctx))}`,
         ...(payload.note ? [payload.note] : []),
       ],

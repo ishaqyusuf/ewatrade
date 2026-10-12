@@ -1,3 +1,4 @@
+import { ORDER_PAYMENT_METHODS } from "@ewatrade/utils/finance-payment-methods"
 import { z } from "zod"
 
 const id = z.string().trim().min(1).max(128)
@@ -50,11 +51,23 @@ export const financePeriodCloseChecklistSchema = financeBookSchema
 export const financeSetupSchema = z
   .object({ startsAt: z.coerce.date() })
   .strict()
+const paymentMethods = z
+  .array(z.enum(ORDER_PAYMENT_METHODS))
+  .min(1, "Choose at least one payment method.")
+  .max(ORDER_PAYMENT_METHODS.length)
 export const financeAccountSchema = financeBookSchema
   .extend({
     code: z.string().regex(/^[A-Z0-9_-]{1,32}$/i),
     name: z.string().trim().min(1).max(100),
     purpose: z.enum(["CASH", "BANK", "CLEARING"]),
+    paymentMethods: paymentMethods.optional(),
+  })
+  .strict()
+export const financeMoneyAccountPaymentsSchema = financeBookSchema
+  .extend({
+    accountId: id,
+    paymentMethods,
+    availableForPayments: z.boolean(),
   })
   .strict()
 const money = financeBookSchema.extend({
@@ -185,6 +198,7 @@ export const financeBillsSchema = financeBookSchema
   .strict()
 export const financeCategorySchema = financeAccountSchema.omit({
   purpose: true,
+  paymentMethods: true,
 })
 export const financeCashCountSchema = financeCommandSchema
   .extend({

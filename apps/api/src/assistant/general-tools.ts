@@ -6,14 +6,48 @@ import {
   generalStaffDirectoryAnswer, generalStaffMemberAnswer,
 } from "./general-staff-reads"
 import { supplierSettlementDraftInstructions, purchaseRecognitionDraftInstructions } from "@ewatrade/assistant/general/contracts"
-import { generalPurchaseRegistrationsInput, generalPurchaseRecognitionInput, generalPurchaseRegistrationsAnswer } from "./general-purchase-recognition-reads"
-import { generalPurchasesInput, generalPurchaseInput, generalPurchasesAnswer, generalPurchaseData } from "./general-purchase-reads"
-import { generalSuppliersInput, generalSupplierStatementInput, generalSuppliersAnswer, generalSupplierStatementAnswer } from "./general-supplier-reads"
-import { generalBillsInput, generalBillInput, generalBillsAnswer, generalBillData } from "./general-bill-reads"
-import { generalCustomerEntryInput, generalCustomerAllocationHistoryInput, generalCustomerEntryAnswer, generalCustomerAllocationHistoryAnswer } from "./general-customer-allocations"
+import {
+  generalPurchaseRegistrationsInput,
+  generalPurchaseRecognitionInput,
+  generalPurchaseRegistrationsAnswer,
+} from "./general-purchase-recognition-reads"
+import {
+  generalPurchasesInput,
+  generalPurchaseInput,
+  generalPurchasesAnswer,
+  generalPurchaseData,
+} from "./general-purchase-reads"
+import {
+  generalSuppliersInput,
+  generalSupplierStatementInput,
+  generalSuppliersAnswer,
+  generalSupplierStatementAnswer,
+} from "./general-supplier-reads"
+import {
+  generalBillsInput,
+  generalBillInput,
+  generalBillsAnswer,
+  generalBillData,
+} from "./general-bill-reads"
+import {
+  generalCustomerEntryInput,
+  generalCustomerAllocationHistoryInput,
+  generalCustomerEntryAnswer,
+  generalCustomerAllocationHistoryAnswer,
+} from "./general-customer-allocations"
 import { financeRouter } from "../trpc/routers/finance"
-import { financeMoneyAccountsSchema, financeExpenseCategoriesSchema } from "../schemas/finance"
-import { generalCustomerAccountsInput, generalCustomerSourcesInput, generalCustomerStatementInput, generalCustomerAccountAnswer, generalCustomerSourcesAnswers, generalCustomerStatementAnswer } from "./general-customer-funds"
+import {
+  financeMoneyAccountsSchema,
+  financeExpenseCategoriesSchema,
+} from "../schemas/finance"
+import {
+  generalCustomerAccountsInput,
+  generalCustomerSourcesInput,
+  generalCustomerStatementInput,
+  generalCustomerAccountAnswer,
+  generalCustomerSourcesAnswers,
+  generalCustomerStatementAnswer,
+} from "./general-customer-funds"
 import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
 import {
   capabilityManifest,
@@ -905,32 +939,50 @@ export function createGeneralTools(
         ),
     }),
     readPurchaseRegistrations: tool({
-      description: "Find up to 10 original purchase agreements for an exact Finance Book and supplier, including pre-invoice registrations. Continue preserving Book/supplier with nextCursor. Amount is agreed cost, not payable, paid or received. Registration does not post money or stock. Inspect recognition events before claiming invoice, ownership or receipt status.",
+      description:
+        "Find up to 10 original purchase agreements for an exact Finance Book and supplier, including pre-invoice registrations. Continue preserving Book/supplier with nextCursor. Amount is agreed cost, not payable, paid or received. Registration does not post money or stock. Inspect recognition events before claiming invoice, ownership or receipt status.",
       inputSchema: generalPurchaseRegistrationsInput,
-      execute: input => wrap("readPurchaseRegistrations", async fresh => {
-        const page = await financeRouter.createCaller(fresh).purchaseRecognitions({...input, limit: 10})
-        onAnswer(generalPurchaseRegistrationsAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readPurchaseRegistrations", async (fresh) => {
+          const page = await financeRouter
+            .createCaller(fresh)
+            .purchaseRecognitions({ ...input, limit: 10 })
+          onAnswer(generalPurchaseRegistrationsAnswer(page))
+          return page
+        }),
     }),
     readPurchaseRecognition: tool({
-      description: "Inspect an exact registered purchase's agreement, lines and original/correction events. Report INVOICE, OWNERSHIP and RECEIPT separately. An original event with reversalId is corrected; preserve reversalOfId and reasons, never count it as an active stage. invoiceBillId or a historical receipt alone is not current payable/stock evidence. For settlement readPurchaseBill with the exact invoice bill ID. Respect whole-document matching and supplier-return-source requirement for receipt correction; never promise unsupported partial recognition or receipt reversal.",
+      description:
+        "Inspect an exact registered purchase's agreement, lines and original/correction events. Report INVOICE, OWNERSHIP and RECEIPT separately. An original event with reversalId is corrected; preserve reversalOfId and reasons, never count it as an active stage. invoiceBillId or a historical receipt alone is not current payable/stock evidence. For settlement readPurchaseBill with the exact invoice bill ID. Respect whole-document matching and supplier-return-source requirement for receipt correction; never promise unsupported partial recognition or receipt reversal.",
       inputSchema: generalPurchaseRecognitionInput,
-      execute: input => wrap("readPurchaseRecognition", fresh => financeRouter.createCaller(fresh).purchaseRecognition(input)),
+      execute: (input) =>
+        wrap("readPurchaseRecognition", (fresh) =>
+          financeRouter.createCaller(fresh).purchaseRecognition(input),
+        ),
     }),
     readPurchaseBills: tool({
-      description: "Read up to 10 recognized purchase bills in an exact Finance Book across Stores, optionally filtered by supplier/status. Preserve filters with nextCursor. Summary covers all matching bills, not this page. Settled totals include advances; not all cash paid. Registrations without bills are excluded. Never infer physical receipt or ownership.",
+      description:
+        "Read up to 10 recognized purchase bills in an exact Finance Book across Stores, optionally filtered by supplier/status. Preserve filters with nextCursor. Summary covers all matching bills, not this page. Settled totals include advances; not all cash paid. Registrations without bills are excluded. Never infer physical receipt or ownership.",
       inputSchema: generalPurchasesInput,
-      execute: input => wrap("readPurchaseBills", async fresh => {
-        const page = await financeRouter.createCaller(fresh).purchases({...input, limit: 10})
-        onAnswer(generalPurchasesAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readPurchaseBills", async (fresh) => {
+          const page = await financeRouter
+            .createCaller(fresh)
+            .purchases({ ...input, limit: 10 })
+          onAnswer(generalPurchasesAnswer(page))
+          return page
+        }),
     }),
     readPurchaseBill: tool({
-      description: "Read an exact purchase bill, separating cash paid, active advances applied, released allocations and outstanding balance. Preserve canonical receipt/valuation coverage and recognitionId: separate recognition sources cannot prove physical receipt from this bill. History is limited to 10 of each kind; HasMore flags mean incomplete history. Never guess omitted payment/allocation targets or claim a bank transfer occurred.",
+      description:
+        "Read an exact purchase bill, separating cash paid, active advances applied, released allocations and outstanding balance. Preserve canonical receipt/valuation coverage and recognitionId: separate recognition sources cannot prove physical receipt from this bill. History is limited to 10 of each kind; HasMore flags mean incomplete history. Never guess omitted payment/allocation targets or claim a bank transfer occurred.",
       inputSchema: generalPurchaseInput,
-      execute: input => wrap("readPurchaseBill", async fresh => generalPurchaseData(await financeRouter.createCaller(fresh).purchase(input))),
+      execute: (input) =>
+        wrap("readPurchaseBill", async (fresh) =>
+          generalPurchaseData(
+            await financeRouter.createCaller(fresh).purchase(input),
+          ),
+        ),
     }),
     readSuppliers: tool({
       description:
@@ -947,95 +999,159 @@ export function createGeneralTools(
         }),
     }),
     readSupplierStatement: tool({
-      description: "Read an exact supplier's recorded payable and advance balances separately, plus up to 10 statement entries. Continuations must preserve bookId, supplierId and snapshotSequence and use nextCursor. Complete snapshot balances are not page sums. Do not infer money transfer, physical receipt, invoice recognition or ownership from settlement entries.",
+      description:
+        "Read an exact supplier's recorded payable and advance balances separately, plus up to 10 statement entries. Continuations must preserve bookId, supplierId and snapshotSequence and use nextCursor. Complete snapshot balances are not page sums. Do not infer money transfer, physical receipt, invoice recognition or ownership from settlement entries.",
       inputSchema: generalSupplierStatementInput,
-      execute: input => wrap("readSupplierStatement", async fresh => {
-        const statement = await financeRouter.createCaller(fresh).supplierStatement({...input, limit: 10})
-        onAnswer(generalSupplierStatementAnswer(statement))
-        return statement
-      }),
+      execute: (input) =>
+        wrap("readSupplierStatement", async (fresh) => {
+          const statement = await financeRouter
+            .createCaller(fresh)
+            .supplierStatement({ ...input, limit: 10 })
+          onAnswer(generalSupplierStatementAnswer(statement))
+          return statement
+        }),
     }),
     readExpenseBills: tool({
-      description: "Search up to 10 recorded expense bills across Stores in an exact Finance Book by payee, description or reference. Optional status UNPAID/PARTIAL/PAID/VOID. Continue with nextCursor as cursor preserving filters. Currency and complete filtered totals accompany this page. Ask which bill if ambiguous; never create another expense to record payment.",
+      description:
+        "Search up to 10 recorded expense bills across Stores in an exact Finance Book by payee, description or reference. Optional status UNPAID/PARTIAL/PAID/VOID. Continue with nextCursor as cursor preserving filters. Currency and complete filtered totals accompany this page. Ask which bill if ambiguous; never create another expense to record payment.",
       inputSchema: generalBillsInput,
-      execute: input => wrap("readExpenseBills", async fresh => {
-        const page = await financeRouter.createCaller(fresh).bills({...input, limit: 10})
-        onAnswer(generalBillsAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readExpenseBills", async (fresh) => {
+          const page = await financeRouter
+            .createCaller(fresh)
+            .bills({ ...input, limit: 10 })
+          onAnswer(generalBillsAnswer(page))
+          return page
+        }),
     }),
     readExpenseBill: tool({
-      description: "Inspect an exact expense bill selected from readExpenseBills. Returns complete minor-unit totals and lines, plus at most 10 recent payments with paymentHistoryComplete/paymentCount. Use the Book currency returned by the list. Voided bills cannot be paid. No bank settlement is verified; confirmation refreshes bill balance and authority.",
+      description:
+        "Inspect an exact expense bill selected from readExpenseBills. Returns complete minor-unit totals and lines, plus at most 10 recent payments with paymentHistoryComplete/paymentCount. Use the Book currency returned by the list. Voided bills cannot be paid. No bank settlement is verified; confirmation refreshes bill balance and authority.",
       inputSchema: generalBillInput,
-      execute: input => wrap("readExpenseBill", async fresh => generalBillData(await financeRouter.createCaller(fresh).bill(input))),
+      execute: (input) =>
+        wrap("readExpenseBill", async (fresh) =>
+          generalBillData(await financeRouter.createCaller(fresh).bill(input)),
+        ),
     }),
     readExpenseCategories: tool({
-      description: "Find up to 10 active operating expense category identities in the exact Finance Book. Continue with nextCursor as afterCode in the same Book. These are categories, not expenses already recorded. Ask which category if ambiguous; do not invent IDs or silently create categories.",
-      inputSchema: financeExpenseCategoriesSchema.omit({ limit: true }),
-      execute: input => wrap("readExpenseCategories", async fresh => {
-        const page = await financeRouter.createCaller(fresh).expenseCategories({ ...input, limit: 10 })
-        onAnswer({ id: `expense_categories_${crypto.randomUUID()}`, title: "Expense categories", value: `${page.accounts.length} on this page`, scope: `Finance Book · ${page.book.currencyCode}`, asOf: new Date().toISOString(), detail: `${page.accounts.map(account => account.name).join("; ") || "No active expense categories on this page."} ${page.nextCursor ? "More categories available." : "End of this list."} Category identities only; no spending total is implied.` })
-        return page
-      }),
+      description:
+        "Find up to 10 active operating expense category identities. Omit bookId to discover the current business Finance Book. Continue with nextCursor as afterCode in the same Book. These are categories, not expenses already recorded. Ask which category if ambiguous; do not invent IDs or silently create categories.",
+      inputSchema: financeExpenseCategoriesSchema
+        .omit({ limit: true })
+        .extend({ bookId: id.optional() }),
+      execute: (input) =>
+        wrap("readExpenseCategories", async (fresh) => {
+          const caller = financeRouter.createCaller(fresh)
+          const bookId = input.bookId ?? (await caller.book())?.id
+          if (!bookId) throw Error("Set up Finance first.")
+          const page = await caller.expenseCategories({
+            ...input,
+            bookId,
+            limit: 10,
+          })
+          onAnswer({
+            id: `expense_categories_${crypto.randomUUID()}`,
+            title: "Expense categories",
+            value: `${page.accounts.length} on this page`,
+            scope: `Finance Book · ${page.book.currencyCode}`,
+            asOf: new Date().toISOString(),
+            detail: `${page.accounts.map((account) => account.name).join("; ") || "No active expense categories on this page."} ${page.nextCursor ? "More categories available." : "End of this list."} Category identities only; no spending total is implied.`,
+          })
+          return page
+        }),
     }),
     readMoneyAccounts: tool({
-      description: "Find up to 10 active cash, bank or clearing account identities in an exact Finance Book. Continue with nextCursor as afterCode in the same Book. This is not a balance, provider settlement or proof of payout. Ask which account when ambiguous.",
-      inputSchema: financeMoneyAccountsSchema.omit({ limit: true }),
-      execute: input => wrap("readMoneyAccounts", async fresh => {
-        const page = await financeRouter.createCaller(fresh).moneyAccounts({ ...input, limit: 10 })
-        onAnswer({
-          id: `money_accounts_${crypto.randomUUID()}`, title: "Cash and bank accounts",
-          value: `${page.accounts.length} on this page`, scope: `Finance Book · ${page.book.currencyCode}`,
-          asOf: new Date().toISOString(),
-          detail: `${page.accounts.map(account => `${account.name} (${account.purpose})`).join("; ") || "No active money accounts on this page."} ${page.nextCursor ? "More accounts available." : "End of this list."} Account identities only; no balance or provider payout has been verified.`,
-        })
-        return page
-      }),
+      description:
+        "Find up to 10 active cash, bank or clearing account identities. Omit bookId to discover the current business Finance Book. Continue with nextCursor as afterCode in the same Book. Each account lists the paymentMethods it takes and availableForPayments; an order payment needs an available account that takes its method, and a refund an account that takes its method. This is not a balance, provider settlement or proof of payout. Ask which account when ambiguous.",
+      inputSchema: financeMoneyAccountsSchema
+        .omit({ limit: true })
+        .extend({ bookId: id.optional() }),
+      execute: (input) =>
+        wrap("readMoneyAccounts", async (fresh) => {
+          const caller = financeRouter.createCaller(fresh)
+          const bookId = input.bookId ?? (await caller.book())?.id
+          if (!bookId) throw Error("Set up Finance first.")
+          const page = await caller.moneyAccounts({
+            ...input,
+            bookId,
+            limit: 10,
+          })
+          onAnswer({
+            id: `money_accounts_${crypto.randomUUID()}`,
+            title: "Cash and bank accounts",
+            value: `${page.accounts.length} on this page`,
+            scope: `Finance Book · ${page.book.currencyCode}`,
+            asOf: new Date().toISOString(),
+            detail: `${page.accounts.map((account) => `${account.name} (${account.purpose}; takes ${account.paymentMethods.join(", ")}${account.availableForPayments ? "" : "; paused for new payments"})`).join("; ") || "No active money accounts on this page."} ${page.nextCursor ? "More accounts available." : "End of this list."} Account identities only; no balance or provider payout has been verified.`,
+          })
+          return page
+        }),
     }),
     readCustomerAccount: tool({
-      description: "Read one verified customer ledger account, matching Book, exact debt and credit, revision and snapshot. Posted entries only; available credit is not proof of refundable cash.",
+      description:
+        "Read one verified customer ledger account, matching Book, exact debt and credit, revision and snapshot. Posted entries only; available credit is not proof of refundable cash.",
       inputSchema: customerLedgerAccountDetailSchema,
-      execute: input => wrap("readCustomerAccount", async fresh => {
-        const account = await customerLedgerRouter.createCaller(fresh).accountDetail(input)
-        onAnswer(generalCustomerAccountAnswer(account))
-        return account
-      }),
+      execute: (input) =>
+        wrap("readCustomerAccount", async (fresh) => {
+          const account = await customerLedgerRouter
+            .createCaller(fresh)
+            .accountDetail(input)
+          onAnswer(generalCustomerAccountAnswer(account))
+          return account
+        }),
     }),
     readCustomerLedgerSources: tool({
-      description: "Read at most 10 current credit/debit sources for an exact account. Continue with nextCursor as afterSequence, preserving account, side and currentRevision as expectedRevision. Sources are advisory; refund requires original held-credit provenance validation.",
+      description:
+        "Read at most 10 current credit/debit sources for an exact account. Continue with nextCursor as afterSequence, preserving account, side and currentRevision as expectedRevision. Sources are advisory; refund requires original held-credit provenance validation.",
       inputSchema: generalCustomerSourcesInput,
-      execute: input => wrap("readCustomerLedgerSources", async fresh => {
-        const page = await customerLedgerRouter.createCaller(fresh).sources({ ...input, limit: 10 })
-        for (const answer of generalCustomerSourcesAnswers(page)) onAnswer(answer)
-        return page
-      }),
+      execute: (input) =>
+        wrap("readCustomerLedgerSources", async (fresh) => {
+          const page = await customerLedgerRouter
+            .createCaller(fresh)
+            .sources({ ...input, limit: 10 })
+          for (const answer of generalCustomerSourcesAnswers(page))
+            onAnswer(answer)
+          return page
+        }),
     }),
     readCustomerEntry: tool({
-      description: "Read an exact posted ledger entry and up to 10 allocations. Resolve entryId from a statement or current sources. Continue nextCursor as afterAllocationId with currentRevision as expectedRevision. Fully used sources may only appear in the statement. Never infer cash refund eligibility from these totals.",
+      description:
+        "Read an exact posted ledger entry and up to 10 allocations. Resolve entryId from a statement or current sources. Continue nextCursor as afterAllocationId with currentRevision as expectedRevision. Fully used sources may only appear in the statement. Never infer cash refund eligibility from these totals.",
       inputSchema: generalCustomerEntryInput,
-      execute: input => wrap("readCustomerEntry", async fresh => {
-        const page = await customerLedgerRouter.createCaller(fresh).entryDetail({...input, limit: 10})
-        onAnswer(generalCustomerEntryAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readCustomerEntry", async (fresh) => {
+          const page = await customerLedgerRouter
+            .createCaller(fresh)
+            .entryDetail({ ...input, limit: 10 })
+          onAnswer(generalCustomerEntryAnswer(page))
+          return page
+        }),
     }),
     readCustomerAllocationHistory: tool({
-      description: "Read an exact allocation resolved from readCustomerEntry, including remaining amount and at most 10 release records. Requires current account revision. Continue nextCursor as afterSequence preserving revision. Refresh entry on conflict. Release restores credit/debt, never refunds cash.",
+      description:
+        "Read an exact allocation resolved from readCustomerEntry, including remaining amount and at most 10 release records. Requires current account revision. Continue nextCursor as afterSequence preserving revision. Refresh entry on conflict. Release restores credit/debt, never refunds cash.",
       inputSchema: generalCustomerAllocationHistoryInput,
-      execute: input => wrap("readCustomerAllocationHistory", async fresh => {
-        const page = await customerLedgerRouter.createCaller(fresh).allocationHistory({...input, limit: 10})
-        onAnswer(generalCustomerAllocationHistoryAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readCustomerAllocationHistory", async (fresh) => {
+          const page = await customerLedgerRouter
+            .createCaller(fresh)
+            .allocationHistory({ ...input, limit: 10 })
+          onAnswer(generalCustomerAllocationHistoryAnswer(page))
+          return page
+        }),
     }),
     readCustomerStatement: tool({
-      description: "Read at most 10 statement entries and complete ledger balances pinned to snapshotSequence. Continue with nextCursor as afterSequence and preserve the original snapshot. This excludes unintegrated orders and is not a cash-collection report.",
+      description:
+        "Read at most 10 statement entries and complete ledger balances pinned to snapshotSequence. Continue with nextCursor as afterSequence and preserve the original snapshot. This excludes unintegrated orders and is not a cash-collection report.",
       inputSchema: generalCustomerStatementInput,
-      execute: input => wrap("readCustomerStatement", async fresh => {
-        const page = await customerLedgerRouter.createCaller(fresh).statement({ ...input, limit: 10 })
-        onAnswer(generalCustomerStatementAnswer(page))
-        return page
-      }),
+      execute: (input) =>
+        wrap("readCustomerStatement", async (fresh) => {
+          const page = await customerLedgerRouter
+            .createCaller(fresh)
+            .statement({ ...input, limit: 10 })
+          onAnswer(generalCustomerStatementAnswer(page))
+          return page
+        }),
     }),
     draftAction: tool({
       description:

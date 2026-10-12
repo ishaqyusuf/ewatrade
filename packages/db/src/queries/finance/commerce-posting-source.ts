@@ -65,6 +65,25 @@ export async function resolveCommerceFinancePosting(
     )
   if (order.taxMinor < 0 || order.taxMinor > order.totalMinor)
     throw new FinanceError("INVALID_AMOUNT", "Order tax exceeds its total.")
+  const collections = await tx.financeJournalEntry.count({
+    where: {
+      bookId: book.id,
+      sourceKind: "COMMERCIAL_ORDER_COLLECTION",
+      sourceId: {
+        in: (
+          await tx.commercialOrderPayment.findMany({
+            where: { orderId: order.id },
+            select: { id: true },
+          })
+        ).map((row) => row.id),
+      },
+    },
+  })
+  if (collections)
+    throw new FinanceError(
+      "CONFLICT",
+      "Reconcile the Order's collected money before posting billing or receivable activity.",
+    )
   if (source.event !== "BILLED") {
     const billing = await tx.financeJournalEntry.findUnique({
       where: {
@@ -162,12 +181,26 @@ export async function resolveCommerceFinancePosting(
     )
   } else if (payment) {
     const isRefund = payment.type === "REFUND"
+    const selectedMoney = payment.moneyAccountId
+      ? accounts.find(
+          (row) =>
+            row.id === payment.moneyAccountId &&
+            row.kind === "ASSET" &&
+            ["CASH", "BANK", "CLEARING"].includes(row.purpose),
+        )
+      : null
+    if (payment.moneyAccountId && !selectedMoney)
+      throw new FinanceError(
+        "CONFLICT",
+        "Payment account is unavailable in this financial book.",
+      )
     const moneyId =
-      payment.method === "CASH"
+      selectedMoney?.id ??
+      (payment.method === "CASH"
         ? account("1000", "CASH", "ASSET")
         : payment.method === "BANK_TRANSFER"
           ? account("1100", "BANK", "ASSET")
-          : account("1150", "CLEARING", "ASSET")
+          : account("1150", "CLEARING", "ASSET"))
     lines.push(
       {
         accountId: moneyId,

@@ -1,3 +1,7 @@
+import {
+  type MoneyAccountPurpose,
+  moneyAccountPaymentMethods,
+} from "@ewatrade/utils/finance-payment-methods"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   CommercialPaymentMethod,
@@ -11,6 +15,9 @@ import { CatalogError } from "./catalog"
 import { lockCustomerLedgerAccount } from "./customer-ledger/accounts"
 import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import { lockFinanceBook } from "./finance/access"
+import { assertOrderPaymentAccountInTransaction } from "./finance/order-payment-accounts"
+import { postOrderCollectionInTransaction } from "./finance/posting"
+import { FinanceError } from "./finance/rules"
 import { reconcileServiceCommerceBookingPaymentInTransaction } from "./service-commerce-bookings"
 import { loadTenantActors } from "./tenant-actors"
 
@@ -81,11 +88,56 @@ export function effectiveCommercialAmountPaid(input: {
   return input.amountPaidMinor
 }
 
+/**
+ * For clients that don't send a refund account yet: when every payment on the
+ * order went into one account that takes the refund's method, the money came
+ * back out of it. Several destinations need an explicit choice.
+ */
+async function originalPaymentAccount(
+  tx: Prisma.TransactionClient,
+  input: {
+    bookId: string
+    method: CommercialPaymentMethodValue
+    orderId: string
+    tenantId: string
+  },
+) {
+  const payments = await tx.commercialOrderPayment.findMany({
+    where: {
+      orderId: input.orderId,
+      tenantId: input.tenantId,
+      type: CommercialPaymentType.PAYMENT,
+      method: { not: CommercialPaymentMethod.CUSTOMER_CREDIT },
+    },
+    select: { moneyAccountId: true },
+  })
+  const ids = [...new Set(payments.map((row) => row.moneyAccountId))]
+  if (ids.length > 1 && !ids.includes(null))
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Choose the account the refund was paid from.",
+    )
+  const [only] = ids
+  if (ids.length !== 1 || !only) return undefined
+  const account = await tx.financeAccount.findFirst({
+    where: { id: only, bookId: input.bookId, archivedAt: null },
+    select: { purpose: true, paymentMethods: true },
+  })
+  return account &&
+    moneyAccountPaymentMethods({
+      purpose: account.purpose as MoneyAccountPurpose,
+      paymentMethods: account.paymentMethods,
+    }).includes(input.method)
+    ? only
+    : undefined
+}
+
 async function recordCommercialOrderPaymentCore(
   tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
     amountMinor: number
+    moneyAccountId?: string
     clientPaymentId: string
     method: CommercialPaymentMethodValue
     note?: string
@@ -104,6 +156,22 @@ async function recordCommercialOrderPaymentCore(
   const expectedMethod = creditSource
     ? CommercialPaymentMethod.CUSTOMER_CREDIT
     : paymentMethod(input.method)
+  if (input.moneyAccountId && creditSource)
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Customer credit cannot be collected into a money account.",
+    )
+  const bookId = financialOrder.context?.bookId
+  if (input.moneyAccountId && !bookId)
+    throw new FinanceError(
+      "CONFLICT",
+      "Set up Finance before choosing a receiving account.",
+    )
+  const moneyAccountId =
+    input.moneyAccountId ??
+    (input.type === "refund" && !creditSource && bookId
+      ? await originalPaymentAccount(tx, { ...input, bookId })
+      : undefined)
   const expectedNote = input.note?.trim() || null
   const expectedReference = input.reference?.trim() || null
   const expectedType =
@@ -120,6 +188,7 @@ async function recordCommercialOrderPaymentCore(
       previous.orderId !== input.orderId ||
       previous.amountMinor !== input.amountMinor ||
       previous.method !== expectedMethod ||
+      previous.moneyAccountId !== (moneyAccountId ?? null) ||
       previous.reference !== expectedReference ||
       previous.note !== expectedNote ||
       previous.type !== expectedType ||
@@ -172,6 +241,15 @@ async function recordCommercialOrderPaymentCore(
   if (concurrentPrevious) {
     return serializePrevious(concurrentPrevious)
   }
+  // Checked only for new payments: an exact retry still succeeds after the
+  // account is paused or its methods change.
+  if (moneyAccountId && bookId)
+    await assertOrderPaymentAccountInTransaction(tx, {
+      bookId,
+      accountId: moneyAccountId,
+      method: input.method,
+      refund: input.type === "refund",
+    })
 
   const order = await tx.commercialOrder.findFirst({
     include: {
@@ -245,6 +323,7 @@ async function recordCommercialOrderPaymentCore(
       amountMinor: input.amountMinor,
       clientPaymentId: input.clientPaymentId,
       method: expectedMethod,
+      moneyAccountId,
       note: expectedNote,
       orderId: order.id,
       recordedByUserId: input.actorUserId,
@@ -256,6 +335,13 @@ async function recordCommercialOrderPaymentCore(
       customerAllocationReleaseId: creditSource?.releaseId,
     },
   })
+  if (moneyAccountId) {
+    await postOrderCollectionInTransaction(tx, {
+      tenantId: input.tenantId,
+      orderId: order.id,
+      paymentId: payment.id,
+    })
+  }
   await tx.commercialOrder.update({
     data: {
       amountPaidMinor: nextPaid,
@@ -406,8 +492,9 @@ export async function recordCommercialOrderPayment(
   db: PrismaClient,
   input: Parameters<typeof recordCommercialOrderPaymentInTransaction>[1],
 ) {
-  return db.$transaction((tx) =>
-    recordCommercialOrderPaymentInTransaction(tx, input),
+  return db.$transaction(
+    (tx) => recordCommercialOrderPaymentInTransaction(tx, input),
+    { maxWait: 10_000, timeout: 30_000 },
   )
 }
 

@@ -29,8 +29,22 @@ function fixture(options: { denied?: boolean; missingBook?: boolean } = {}) {
       findMany: async (args: unknown) => {
         calls.push(args)
         return [
-          { id: "bank", code: "1001", name: "Bank", purpose: "BANK" },
-          { id: "cash", code: "1002", name: "Cash", purpose: "CASH" },
+          {
+            id: "bank",
+            code: "1001",
+            name: "Bank",
+            purpose: "BANK",
+            paymentMethods: ["POS"],
+            paymentsPausedAt: new Date(),
+          },
+          {
+            id: "cash",
+            code: "1002",
+            name: "Cash",
+            purpose: "CASH",
+            paymentMethods: [],
+            paymentsPausedAt: null,
+          },
         ]
       },
     },
@@ -67,7 +81,16 @@ test("money identity lookup scopes the Book and excludes archived/non-money acco
     orderBy: { code: "asc" },
     take: 2,
   })
-  expect(page.accounts).toHaveLength(1)
+  expect(page.accounts).toEqual([
+    {
+      id: "bank",
+      code: "1001",
+      name: "Bank",
+      purpose: "BANK",
+      paymentMethods: ["pos"],
+      availableForPayments: false,
+    },
+  ])
   expect(page.nextCursor).toBe("1001")
   expect(page.book.currencyCode).toBe("USD")
   expect(page.coverage).toBe("ACTIVE_MONEY_ACCOUNT_IDENTITIES")
