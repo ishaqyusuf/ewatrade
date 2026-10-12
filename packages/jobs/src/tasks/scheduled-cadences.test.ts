@@ -20,36 +20,71 @@ describe("scheduled cadences", () => {
     )
   })
 
-  test("every periodic task keeps its timing and runs on exactly one cadence", () => {
-    const byTask = new Map<string, string>()
+  test("no cadence ticks more often than every five minutes", () => {
     for (const cadence of Object.values(SCHEDULED_CADENCES))
-      for (const task of cadence.tasks) {
-        expect(byTask.has(task.id)).toBe(false)
-        byTask.set(task.id, cadence.cron)
+      expect(cadence.cron).not.toBe("* * * * *")
+  })
+
+  test("every periodic step keeps its timing, mode and runs on exactly one cadence", () => {
+    const bySteps = new Map<string, string>()
+    for (const cadence of Object.values(SCHEDULED_CADENCES))
+      for (const step of cadence.steps) {
+        expect(bySteps.has(step.id)).toBe(false)
+        bySteps.set(step.id, `${cadence.cron} ${step.kind}`)
       }
-    expect(Object.fromEntries([...byTask].sort())).toEqual({
-      "account-privacy.retention": "15 2 * * *",
-      "account-privacy.notice-alert": "*/15 * * * *",
-      "account-privacy.verification-expiry": "0 * * * *",
-      "analytics.dashboard.recovery": "* * * * *",
-      "assistant.attachment.process-recovery": "* * * * *",
-      "assistant.maintenance": "0 * * * *",
-      "catalog.photo.cleanup": "*/5 * * * *",
-      "catalog.photo.review-recovery": "* * * * *",
-      "domains.reconcile": "*/15 * * * *",
-      "orders.fulfillment-reminders": "0 * * * *",
-      "prescriptions.retention": "15 2 * * *",
-      "service-commerce.booking-reminder-schedule": "*/5 * * * *",
-      "service-commerce.customer-notification-schedule": "*/5 * * * *",
-      "services.notification.schedule": "*/5 * * * *",
-      "staff.invitation.notification-schedule": "* * * * *",
-      "store-billing.play-refund-review-alert": "*/15 * * * *",
-      "store-conversation.credential-expiry": "0 * * * *",
-      "store-conversation.notification-schedule": "* * * * *",
-      "store-conversation.whatsapp-bridge-schedule": "* * * * *",
-      "store-conversation.whatsapp-recovery-schedule": "* * * * *",
-      "store-conversations.escalations": "* * * * *",
-      "store-conversations.media-safety-recovery": "*/5 * * * *",
+    expect(Object.fromEntries([...bySteps].sort())).toEqual({
+      "account-privacy.notice-alert": "0 * * * * task",
+      "account-privacy.retention": "15 2 * * * task",
+      "account-privacy.verification-expiry": "15 2 * * * sweep",
+      "analytics.dashboard.recovery": "*/15 * * * * task",
+      "assistant.attachment.process-recovery": "*/5 * * * * task",
+      "assistant.maintenance": "0 * * * * task",
+      "catalog.photo.cleanup": "0 * * * * task",
+      "catalog.photo.review-recovery": "*/15 * * * * task",
+      "domains.reconcile": "0 * * * * task",
+      "orders.fulfillment-reminders": "0 * * * * task",
+      "prescriptions.retention": "15 2 * * * task",
+      "service-commerce.booking-reminder-schedule": "*/5 * * * * sweep",
+      "service-commerce.customer-notification-schedule": "*/5 * * * * sweep",
+      "services.notification.schedule": "*/5 * * * * sweep",
+      "staff.invitation.notification-schedule": "*/5 * * * * sweep",
+      "store-billing.play-refund-review-alert": "0 * * * * task",
+      "store-conversation.credential-expiry": "0 * * * * sweep",
+      "store-conversation.notification-schedule": "*/5 * * * * sweep",
+      "store-conversation.whatsapp-bridge-schedule": "*/5 * * * * sweep",
+      "store-conversation.whatsapp-recovery-schedule": "*/5 * * * * sweep",
+      "store-conversations.escalations": "*/15 * * * * sweep",
+      "store-conversations.media-safety-recovery": "*/5 * * * * sweep",
+    })
+  })
+
+  test("disabled features and idle queues start no task runs", async () => {
+    const { runCadenceSteps } = await import("./scheduled-cadences")
+    const triggered: string[] = []
+    const fakeTask = (id: string) => ({
+      id,
+      trigger: async () => {
+        triggered.push(id)
+      },
+    })
+    // A failed work check fails open so the task can report its own error.
+    const outcome = await runCadenceSteps([
+      { hasWork: () => false, id: "off", kind: "task", task: fakeTask("off") },
+      {
+        hasWork: async () => {
+          throw new Error("db down")
+        },
+        id: "probe-fails",
+        kind: "task",
+        task: fakeTask("probe-fails"),
+      },
+      { id: "sweep", kind: "sweep", run: async () => ({ queued: 0 }) },
+    ])
+    expect(triggered).toEqual(["probe-fails"])
+    expect(outcome).toEqual({
+      off: "idle",
+      "probe-fails": "started",
+      sweep: "swept",
     })
   })
 })

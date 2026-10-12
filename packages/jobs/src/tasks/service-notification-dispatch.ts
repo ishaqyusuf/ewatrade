@@ -16,18 +16,21 @@ export const serviceNotificationDispatch = task({
   },
 })
 
+export async function runServiceNotificationSchedule() {
+  const intentIds = await listDueServiceNotificationIntentIds(prisma, {
+    limit: 200,
+  })
+  for (const intentId of intentIds) {
+    await serviceNotificationDispatch.trigger({ intentId })
+  }
+  return { queued: intentIds.length }
+}
+
 export const serviceNotificationSchedule = task({
   id: "services.notification.schedule",
   maxDuration: 120,
   run: async () => {
-    const intentIds = await listDueServiceNotificationIntentIds(prisma, {
-      limit: 200,
-    })
-    for (const intentId of intentIds) {
-      await serviceNotificationDispatch.trigger({ intentId })
-    }
-    logger.info("Queued due Service notifications", {
-      count: intentIds.length,
-    })
+    const result = await runServiceNotificationSchedule()
+    logger.info("Queued due Service notifications", { count: result.queued })
   },
 })

@@ -55,7 +55,7 @@ function notificationMatchesBookingState(input: {
 
 export async function listServiceCommerceBookingReminderScopes(
   db: PrismaClient,
-  input: { afterProfileId?: string; limit?: number } = {},
+  input: { afterProfileId?: string; dueBy?: Date; limit?: number } = {},
 ) {
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 250)
   const profiles = await db.serviceCommerceStoreProfile.findMany({
@@ -87,6 +87,17 @@ export async function listServiceCommerceBookingReminderScopes(
       bookingEnabled: true,
       id: input.afterProfileId ? { gt: input.afterProfileId } : undefined,
       status: ServiceCommerceProfileStatus.ACTIVE,
+      // With dueBy, skip Stores that have nothing to send yet.
+      store: input.dueBy
+        ? {
+            serviceBookingNotificationIntents: {
+              some: {
+                scheduledFor: { lte: input.dueBy },
+                status: ServiceBookingNotificationStatus.PENDING,
+              },
+            },
+          }
+        : undefined,
     },
   })
   const page = profiles.slice(0, limit)

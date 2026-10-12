@@ -6,38 +6,43 @@ describe("Service Commerce booking reminder schedule", () => {
   test("pages repository-scoped work and enqueues only identifier-only Store scopes", async () => {
     const listCalls: unknown[] = []
     const queued: unknown[] = []
-    const result = await runServiceCommerceBookingReminderSchedule({
-      enqueue: async (scope) => queued.push(scope),
-      list: async (input) => {
-        listCalls.push(input)
-        return input.afterProfileId
-          ? {
-              nextProfileId: null,
-              scopes: [
-                {
-                  actorUserId: "worker_2",
-                  storeId: "store_2",
-                  tenantId: "tenant_2",
-                },
-              ],
-            }
-          : {
-              nextProfileId: "profile_1",
-              scopes: [
-                {
-                  actorUserId: "worker_1",
-                  storeId: "store_1",
-                  tenantId: "tenant_1",
-                },
-              ],
-            }
+    const now = new Date("2026-10-12T09:00:00.000Z")
+    const result = await runServiceCommerceBookingReminderSchedule(
+      {
+        enqueue: async (scope) => queued.push(scope),
+        list: async (input) => {
+          listCalls.push(input)
+          return input.afterProfileId
+            ? {
+                nextProfileId: null,
+                scopes: [
+                  {
+                    actorUserId: "worker_2",
+                    storeId: "store_2",
+                    tenantId: "tenant_2",
+                  },
+                ],
+              }
+            : {
+                nextProfileId: "profile_1",
+                scopes: [
+                  {
+                    actorUserId: "worker_1",
+                    storeId: "store_1",
+                    tenantId: "tenant_1",
+                  },
+                ],
+              }
+        },
       },
-    })
+      {},
+      now,
+    )
 
     expect(result).toEqual({ nextProfileId: null, pages: 2, queued: 2 })
     expect(listCalls).toEqual([
-      { afterProfileId: undefined, limit: 50 },
-      { afterProfileId: "profile_1", limit: 50 },
+      { afterProfileId: undefined, dueBy: now, limit: 50 },
+      { afterProfileId: "profile_1", dueBy: now, limit: 50 },
     ])
     expect(queued).toEqual([
       { actorUserId: "worker_1", storeId: "store_1", tenantId: "tenant_1" },

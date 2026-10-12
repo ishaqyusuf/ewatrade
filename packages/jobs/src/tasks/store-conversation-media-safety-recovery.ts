@@ -145,11 +145,19 @@ export const storeConversationMediaSafetyRecoveryWorker = task({
   },
 })
 
+/** Scans the first pages inline; a worker run only continues long backlogs. */
+export async function runStoreConversationMediaSafetySweep() {
+  const result = await runStoreConversationMediaSafetyRecovery()
+  if (result.nextCursor) {
+    await storeConversationMediaSafetyRecoveryWorker.trigger({
+      cursor: result.nextCursor,
+    })
+  }
+  return result
+}
+
 export const storeConversationMediaSafetyRecovery = task({
   id: "store-conversations.media-safety-recovery",
-  maxDuration: 60,
-  run: async () => {
-    await storeConversationMediaSafetyRecoveryWorker.trigger({})
-    return { queuedWorker: true }
-  },
+  maxDuration: 120,
+  run: runStoreConversationMediaSafetySweep,
 })

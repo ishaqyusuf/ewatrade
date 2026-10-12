@@ -17,6 +17,7 @@ type Dependencies = {
   enqueue(scope: ReminderScope): Promise<unknown>
   list(input: {
     afterProfileId?: string
+    dueBy: Date
     limit: number
   }): Promise<{ nextProfileId: string | null; scopes: ReminderScope[] }>
 }
@@ -37,6 +38,7 @@ function defaultDependencies(): Dependencies {
 export async function runServiceCommerceBookingReminderSchedule(
   dependencies: Dependencies = defaultDependencies(),
   cursor: ScheduleCursor = {},
+  now = new Date(),
 ) {
   let afterProfileId = cursor.afterProfileId
   let nextProfileId: string | null = null
@@ -44,7 +46,12 @@ export async function runServiceCommerceBookingReminderSchedule(
   let queued = 0
 
   while (pages < MAX_PAGES_PER_RUN) {
-    const page = await dependencies.list({ afterProfileId, limit: PAGE_SIZE })
+    // Only Stores with a due intent get a scoped child run.
+    const page = await dependencies.list({
+      afterProfileId,
+      dueBy: now,
+      limit: PAGE_SIZE,
+    })
     pages += 1
     await Promise.all(page.scopes.map((scope) => dependencies.enqueue(scope)))
     queued += page.scopes.length
@@ -56,7 +63,9 @@ export async function runServiceCommerceBookingReminderSchedule(
   return { nextProfileId, pages, queued }
 }
 
-async function runPageChain(cursor: ScheduleCursor = {}) {
+export async function runServiceCommerceBookingReminderPageChain(
+  cursor: ScheduleCursor = {},
+) {
   const result = await runServiceCommerceBookingReminderSchedule(
     defaultDependencies(),
     cursor,
@@ -75,7 +84,7 @@ export const serviceCommerceBookingReminderScheduleContinuation = task({
   queue: { concurrencyLimit: 1 },
   retry: { maxAttempts: 3 },
   run: async (cursor: ScheduleCursor) => {
-    const result = await runPageChain(cursor)
+    const result = await runServiceCommerceBookingReminderPageChain(cursor)
     logger.info(
       "Continued scoped Service Commerce booking reminder work",
       result,
@@ -87,7 +96,7 @@ export const serviceCommerceBookingReminderSchedule = task({
   id: "service-commerce.booking-reminder-schedule",
   maxDuration: 120,
   run: async () => {
-    const result = await runPageChain()
+    const result = await runServiceCommerceBookingReminderPageChain()
     logger.info("Queued scoped Service Commerce booking reminder work", result)
   },
 })
