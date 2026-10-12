@@ -1,4 +1,4 @@
-import { STAFF_STORE_ACCESS_ROLLOUT_READY } from "@ewatrade/db/staff-store-access"
+import { STAFF_STORE_ACCESS_ROLLOUT_READY, StaffStoreAccessError } from "@ewatrade/db/staff-store-access"
 
 import {
   type EwaTradeRole,
@@ -7,6 +7,8 @@ import {
 } from "@ewatrade/auth/roles"
 import {
   RetailOpsStaffError,
+  reviewStaffInvitation,
+  staffInvitationReviewInput,
   RetailOpsSubscriptionError,
   completeRetailOpsStaffOnboarding,
   inviteRetailOpsStaff,
@@ -168,6 +170,18 @@ function resolveStore(
 }
 
 export const retailOpsStaffRouter = createTRPCRouter({
+  staffInvitationReview: protectedProcedure
+    .input(staffInvitationReviewInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await reviewStaffInvitation(ctx.db, { ...input, tenantId: ctx.tenantContext.tenant.id, actorUserId: ctx.session.user.id })
+      } catch (error) {
+        if (error instanceof StaffStoreAccessError)
+          throw new TRPCError({ code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code, message: error.message })
+        throw error
+      }
+    }),
+
   staffHistoryPage: protectedProcedure
     .input(retailOpsStaffHistoryPageSchema)
     .query(({ ctx, input }) =>
@@ -331,6 +345,8 @@ export const retailOpsStaffRouter = createTRPCRouter({
 
         return hideStaffInviteAcceptanceToken(invitedStaff)
       } catch (error) {
+        if (error instanceof StaffStoreAccessError)
+          throw new TRPCError({ code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code, message: error.message })
         if (error instanceof RetailOpsStaffError) {
           throw new TRPCError({
             code: getStaffErrorCode(error),

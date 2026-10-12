@@ -16,6 +16,8 @@ import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import {
   type StaffStoreAccessInput,
   setStaffStoreAccess,
+  StaffStoreAccessError,
+  assertStaffStoreAccessAuthority,
 } from "./staff-store-access"
 import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
 
@@ -417,7 +419,18 @@ function matchesStaffSearch(
     .includes(normalizedSearch)
 }
 
-function isCountedStaffMembership(input: {
+export function getRetailOpsStaffInviteRecipientProblem(
+  membership: { role: MembershipRole; status: MembershipStatus } | null,
+) {
+  if (!membership) return null
+  if (!isMutableStaffRole(membership.role))
+    return { code: "STAFF_PROTECTED_ROLE" as const, message: "This membership cannot be changed through a staff invitation." }
+  if (membership.status === "ACTIVE")
+    return { code: "STAFF_ALREADY_ACTIVE" as const, message: "This person is already active in the business." }
+  return null
+}
+
+export function isCountedStaffMembership(input: {
   role: MembershipRole
   status: MembershipStatus
 }) {
@@ -1049,52 +1062,85 @@ export async function inviteRetailOpsStaff(
   db: PrismaClient,
   input: InviteRetailOpsStaffInput,
 ): Promise<InvitedRetailOpsStaff> {
+  return db.$transaction(tx => inviteRetailOpsStaffInTransaction(tx, input), {
+    maxWait: 10_000, timeout: 30_000,
+  })
+}
+
+export async function inviteRetailOpsStaffInTransaction(
+  tx: Prisma.TransactionClient,
+  input: InviteRetailOpsStaffInput,
+): Promise<InvitedRetailOpsStaff> {
   const email = normalizeEmail(input.email)
   const externalId = normalizeExternalId(input.externalId)
   const name = normalizeName(input.name)
   const role = mapStaffRole(input.role)
   const invitedAt = new Date()
 
-  return db.$transaction(async (tx) => {
-    const tenant = await tx.tenant.findFirst({
-      where: {
-        id: input.tenantId,
-        stores: {
-          some: {
-            id: input.storeId,
-            status: { not: "ARCHIVED" },
-          },
+  await assertStaffStoreAccessAuthority(tx, input)
+  const tenant = await tx.tenant.findFirst({
+    where: {
+      id: input.tenantId,
+      stores: {
+        some: {
+          id: input.storeId,
+          status: { not: "ARCHIVED" },
         },
       },
-      select: {
-        id: true,
-        metadata: true,
-      },
-    })
+    },
+    select: {
+      id: true,
+      metadata: true,
+    },
+  })
 
-    if (!tenant) {
-      throw new RetailOpsStaffError(
-        "TENANT_NOT_FOUND",
-        "Business not found for this store.",
-      )
-    }
+  if (!tenant) {
+    throw new RetailOpsStaffError(
+      "TENANT_NOT_FOUND",
+      "Business not found for this store.",
+    )
+  }
 
-    await assertQaTenantIdentity(tx, {
+  await assertQaTenantIdentity(tx, {
+    email,
+    tenantId: input.tenantId,
+  })
+
+  const replayedInvite = externalId
+    ? findStaffInviteReplay(tenant.metadata, externalId)
+    : null
+
+  if (replayedInvite) {
+    return replayedInvite
+  }
+
+  const existingUser = await tx.user.findUnique({
+    where: {
       email,
-      tenantId: input.tenantId,
-    })
+    },
+    select: {
+      displayName: true,
+      email: true,
+      id: true,
+      name: true,
+    },
+  })
 
-    const replayedInvite = externalId
-      ? findStaffInviteReplay(tenant.metadata, externalId)
-      : null
-
-    if (replayedInvite) {
-      return replayedInvite
-    }
-
-    const existingUser = await tx.user.findUnique({
-      where: {
+  const user =
+    existingUser ??
+    (await tx.user.create({
+      data: {
         email,
+        metadata: {
+          retailOps: {
+            ...(externalId ? { staffInviteExternalId: externalId } : {}),
+            invitedByUserId: input.actorUserId,
+            source: "retail_ops_staff_invite",
+            tenantId: input.tenantId,
+          },
+        },
+        name: name ?? getFallbackName(email),
+        ...(name ? { displayName: name } : {}),
       },
       select: {
         displayName: true,
@@ -1102,179 +1148,155 @@ export async function inviteRetailOpsStaff(
         id: true,
         name: true,
       },
-    })
+    }))
 
-    const user =
-      existingUser ??
-      (await tx.user.create({
+  await tx.$queryRaw`SELECT "id" FROM "Membership" WHERE "tenantId" = ${input.tenantId} AND "userId" = ${user.id} FOR UPDATE`
+
+  const existingMembership = await tx.membership.findUnique({
+    where: {
+      tenantId_userId: {
+        tenantId: input.tenantId,
+        userId: user.id,
+      },
+    },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+    },
+  })
+
+  const recipientProblem = getRetailOpsStaffInviteRecipientProblem(existingMembership)
+  if (recipientProblem?.code === "STAFF_PROTECTED_ROLE")
+    throw new StaffStoreAccessError("FORBIDDEN", recipientProblem.message)
+  if (recipientProblem?.code === "STAFF_ALREADY_ACTIVE")
+    throw new RetailOpsStaffError(recipientProblem.code, recipientProblem.message)
+
+  if (!existingMembership || !isCountedStaffMembership(existingMembership)) {
+    await assertRetailOpsEntitlementAvailable(tx, {
+      key: "staff",
+      tenantId: input.tenantId,
+    })
+  }
+
+  const membership = existingMembership
+    ? await tx.membership.update({
+        where: {
+          id: existingMembership.id,
+        },
         data: {
-          email,
-          metadata: {
-            retailOps: {
-              ...(externalId ? { staffInviteExternalId: externalId } : {}),
-              invitedByUserId: input.actorUserId,
-              source: "retail_ops_staff_invite",
-              tenantId: input.tenantId,
-            },
-          },
-          name: name ?? getFallbackName(email),
-          ...(name ? { displayName: name } : {}),
+          acceptedAt: null,
+          invitedAt,
+          invitedById: input.actorUserId,
+          role,
+          status: "INVITED",
         },
         select: {
-          displayName: true,
-          email: true,
           id: true,
-          name: true,
+          invitedAt: true,
+          invitedById: true,
+          role: true,
+          status: true,
         },
-      }))
-
-    const existingMembership = await tx.membership.findUnique({
-      where: {
-        tenantId_userId: {
+      })
+    : await tx.membership.create({
+        data: {
+          invitedAt,
+          invitedById: input.actorUserId,
+          role,
+          status: "INVITED",
           tenantId: input.tenantId,
           userId: user.id,
         },
-      },
-      select: {
-        id: true,
-        role: true,
-        status: true,
-      },
-    })
-
-    if (existingMembership?.status === "ACTIVE") {
-      throw new RetailOpsStaffError(
-        "STAFF_ALREADY_ACTIVE",
-        "This person is already active in the business.",
-      )
-    }
-
-    if (!existingMembership || !isCountedStaffMembership(existingMembership)) {
-      await assertRetailOpsEntitlementAvailable(tx, {
-        key: "staff",
-        tenantId: input.tenantId,
-      })
-    }
-
-    const membership = existingMembership
-      ? await tx.membership.update({
-          where: {
-            id: existingMembership.id,
-          },
-          data: {
-            acceptedAt: null,
-            invitedAt,
-            invitedById: input.actorUserId,
-            role,
-            status: "INVITED",
-          },
-          select: {
-            id: true,
-            invitedAt: true,
-            invitedById: true,
-            role: true,
-            status: true,
-          },
-        })
-      : await tx.membership.create({
-          data: {
-            invitedAt,
-            invitedById: input.actorUserId,
-            role,
-            status: "INVITED",
-            tenantId: input.tenantId,
-            userId: user.id,
-          },
-          select: {
-            id: true,
-            invitedAt: true,
-            invitedById: true,
-            role: true,
-            status: true,
-          },
-        })
-
-    const acceptanceToken = await writeDurableRetailOpsStaffInvite(tx, {
-      email,
-      externalId,
-      invitedAt: membership.invitedAt ?? invitedAt,
-      invitedByUserId: input.actorUserId,
-      invitedUserId: user.id,
-      membershipId: membership.id,
-      previousRole: existingMembership?.role ?? null,
-      previousStatus: existingMembership?.status ?? null,
-      role: membership.role,
-      staffDisplayName: getDisplayName(user),
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    })
-
-    {
-      const current = await tx.membership.findUniqueOrThrow({
-        where: { id: membership.id },
-        select: { staffAccessRevision: true },
-      })
-      await setStaffStoreAccess(tx, {
-        ...(input.storeAccess ?? {
-          assignments: [
-            {
-              storeId: input.storeId,
-              role:
-                input.role === "manager"
-                  ? "MANAGER"
-                  : input.role === "operator"
-                    ? "OPERATOR"
-                    : "CASHIER",
-            },
-          ],
-          catalogEditor: false,
-          defaultStoreId: input.storeId,
-        }),
-        actorUserId: input.actorUserId,
-        tenantId: input.tenantId,
-        membershipId: membership.id,
-        expectedRevision: current.staffAccessRevision,
-      })
-    }
-
-    const invitedStaff = {
-      invite: {
-        acceptanceToken,
-        id: membership.id,
-        invitedAt: membership.invitedAt,
-        invitedByUserId: membership.invitedById,
-        role: membership.role,
-        status: membership.status,
-      },
-      staff: {
-        displayName: user.displayName,
-        email: user.email,
-        id: user.id,
-        name: user.name,
-      },
-      notification: {
-        shouldSend: true,
-      },
-      storeId: input.storeId,
-      tenantId: input.tenantId,
-    }
-
-    if (externalId) {
-      await tx.tenant.update({
-        where: {
-          id: tenant.id,
-        },
-        data: {
-          metadata: withStaffInvite(tenant.metadata, {
-            externalId,
-            result: serializeInvitedStaffResult(invitedStaff),
-          }),
+        select: {
+          id: true,
+          invitedAt: true,
+          invitedById: true,
+          role: true,
+          status: true,
         },
       })
-    }
 
-    return invitedStaff
+  const acceptanceToken = await writeDurableRetailOpsStaffInvite(tx, {
+    email,
+    externalId,
+    invitedAt: membership.invitedAt ?? invitedAt,
+    invitedByUserId: input.actorUserId,
+    invitedUserId: user.id,
+    membershipId: membership.id,
+    previousRole: existingMembership?.role ?? null,
+    previousStatus: existingMembership?.status ?? null,
+    role: membership.role,
+    staffDisplayName: getDisplayName(user),
+    storeId: input.storeId,
+    tenantId: input.tenantId,
   })
+
+  {
+    const current = await tx.membership.findUniqueOrThrow({
+      where: { id: membership.id },
+      select: { staffAccessRevision: true },
+    })
+    await setStaffStoreAccess(tx, {
+      ...(input.storeAccess ?? {
+        assignments: [
+          {
+            storeId: input.storeId,
+            role:
+              input.role === "manager"
+                ? "MANAGER"
+                : input.role === "operator"
+                  ? "OPERATOR"
+                  : "CASHIER",
+          },
+        ],
+        catalogEditor: false,
+        defaultStoreId: input.storeId,
+      }),
+      actorUserId: input.actorUserId,
+      tenantId: input.tenantId,
+      membershipId: membership.id,
+      expectedRevision: current.staffAccessRevision,
+    })
+  }
+
+  const invitedStaff = {
+    invite: {
+      acceptanceToken,
+      id: membership.id,
+      invitedAt: membership.invitedAt,
+      invitedByUserId: membership.invitedById,
+      role: membership.role,
+      status: membership.status,
+    },
+    staff: {
+      displayName: user.displayName,
+      email: user.email,
+      id: user.id,
+      name: user.name,
+    },
+    notification: {
+      shouldSend: true,
+    },
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  }
+
+  if (externalId) {
+    await tx.tenant.update({
+      where: {
+        id: tenant.id,
+      },
+      data: {
+        metadata: withStaffInvite(tenant.metadata, {
+          externalId,
+          result: serializeInvitedStaffResult(invitedStaff),
+        }),
+      },
+    })
+  }
+
+  return invitedStaff
 }
 
 export async function updateRetailOpsStaffStatus(

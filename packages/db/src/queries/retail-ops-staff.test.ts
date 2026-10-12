@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
-import type { PrismaClient } from "../../generated/prisma/client"
+import type { MembershipRole, MembershipStatus, PrismaClient } from "../../generated/prisma/client"
 import {
   completeRetailOpsStaffOnboarding,
   inviteRetailOpsStaff,
@@ -51,7 +51,7 @@ function hashInviteToken(token: string) {
   return createHash("sha256").update(token.trim()).digest("hex")
 }
 
-function createMockStaffInviteDb() {
+function createMockStaffInviteDb(existing?: { role: MembershipRole; status: MembershipStatus }) {
   const calls: StaffCall[] = []
   const invitedUser = createInvitedUser()
   const membership = createInvitedMembership()
@@ -81,7 +81,7 @@ function createMockStaffInviteDb() {
       findUnique: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "membership.findUnique", where })
 
-        return null
+        return existing ? { ...membership, ...existing } : null
       },
       update: async ({ data, where }: { data: unknown; where: unknown }) => {
         calls.push({ data, kind: "membership.update", where })
@@ -214,7 +214,7 @@ function createMockStaffInviteDb() {
       findUnique: async ({ where }: { where: unknown }) => {
         calls.push({ kind: "user.findUnique", where })
 
-        return null
+        return existing ? invitedUser : null
       },
     },
   }
@@ -718,4 +718,18 @@ test("acceptance refuses a pending invitation after all Store assignments are re
     }),
   ).rejects.toMatchObject({ code: "STAFF_INVITE_INVALID" })
   expect(db.calls.some((call) => call.kind === "membership.update")).toBe(false)
+})
+
+
+describe("staff invitation protected memberships", () => {
+  for (const role of ["OWNER", "ADMIN", "SUPPORT", "MEMBER"] as const) {
+    test(`cannot replace a suspended ${role} through invitation refresh`, async () => {
+      const db = createMockStaffInviteDb({ role, status: "SUSPENDED" })
+      await expect(inviteRetailOpsStaff(db.client, {
+        actorUserId: "user_owner", email: "attendant@example.com", role: "cashier",
+        storeId: "store_123", tenantId: "tenant_123",
+      })).rejects.toMatchObject({ code: "FORBIDDEN" })
+      expect(db.calls.filter(call => /\.(create|update|upsert)/.test(call.kind))).toEqual([])
+    })
+  }
 })

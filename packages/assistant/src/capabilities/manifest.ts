@@ -28,6 +28,13 @@ const proposalTests = [
  */
 export const capabilityManifest = [
   {
+    id: "staff.invitation.review", version: 1, mode: "read", title: "Review staff invitation",
+    domain: "staff", tool: "reviewStaffInvitation", policy: { roles: ["OWNER", "ADMIN"] }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffInvitationReview"],
+    examples: ["Review inviting Amina as Cashier in this Store"],
+    tests: ["packages/db/src/queries/staff-invitation-review.test.ts", "apps/api/src/assistant/general-staff-invitation-review.test.ts"], brain,
+  },
+  {
     id: "staff.history.read", version: 1, mode: "read", title: "Read recorded staff history",
     domain: "staff", tool: "readStaffHistory", policy: { roles: ["OWNER", "ADMIN"] }, scope: "tenant",
     clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffHistoryPage"],

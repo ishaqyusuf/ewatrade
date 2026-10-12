@@ -58,33 +58,11 @@ export class StaffStoreAccessError extends Error {
   }
 }
 
-/** Validate and write authority inside the caller's transaction, before sending an invite. */
-export async function setStaffStoreAccess(
-  tx: Prisma.TransactionClient,
-  input: StaffStoreAccessInput & {
-    tenantId: string
-    membershipId: string
-    actorUserId: string
-    expectedRevision: number
-  },
+/** Shared preview/write validation; this performs no access mutation. */
+export async function validateStaffStoreAccess(
+  db: DbClient,
+  input: StaffStoreAccessInput & { tenantId: string },
 ) {
-  const [actor] = await tx.$queryRaw<
-    Array<{ id: string; status: string; role: string }>
-  >`
-    SELECT "id", "status", "role" FROM "Membership"
-    WHERE "tenantId" = ${input.tenantId} AND "userId" = ${input.actorUserId}
-    FOR SHARE
-  `
-  if (
-    !actor ||
-    actor.status !== "ACTIVE" ||
-    !["OWNER", "ADMIN"].includes(actor.role)
-  ) {
-    throw new StaffStoreAccessError(
-      "FORBIDDEN",
-      "Only Owner/Admin can assign Store access.",
-    )
-  }
   const ids = input.assignments.map((row) => row.storeId)
   if (
     ids.length > 100 ||
@@ -103,7 +81,7 @@ export async function setStaffStoreAccess(
       "Choose distinct Stores, a role for each, and a default from those Stores. Catalog editing requires Manager access.",
     )
   }
-  const stores = await tx.store.count({
+  const stores = await db.store.count({
     where: { id: { in: ids }, tenantId: input.tenantId, status: "ACTIVE" },
   })
   if (stores !== ids.length)
@@ -111,6 +89,46 @@ export async function setStaffStoreAccess(
       "INVALID_INPUT",
       "A selected Store is unavailable for this business.",
     )
+}
+
+/** Hold current administrative authority until the invitation/access transaction ends. */
+export async function assertStaffStoreAccessAuthority(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; actorUserId: string },
+) {
+  const [actor] = await tx.$queryRaw<
+    Array<{ id: string; status: string; role: string }>
+  >`
+    SELECT m."id", m."status", m."role" FROM "Membership" m
+    JOIN "Tenant" t ON t."id" = m."tenantId" AND t."isActive" = true
+    WHERE m."tenantId" = ${input.tenantId} AND m."userId" = ${input.actorUserId}
+    FOR SHARE OF m
+  `
+  if (
+    !actor ||
+    actor.status !== "ACTIVE" ||
+    !["OWNER", "ADMIN"].includes(actor.role)
+  ) {
+    throw new StaffStoreAccessError(
+      "FORBIDDEN",
+      "Only Owner/Admin can assign Store access.",
+    )
+  }
+}
+
+/** Validate and write authority inside the caller's transaction, before sending an invite. */
+export async function setStaffStoreAccess(
+  tx: Prisma.TransactionClient,
+  input: StaffStoreAccessInput & {
+    tenantId: string
+    membershipId: string
+    actorUserId: string
+    expectedRevision: number
+  },
+) {
+  await assertStaffStoreAccessAuthority(tx, input)
+  await validateStaffStoreAccess(tx, input)
+  const ids = input.assignments.map((row) => row.storeId)
   await tx.$queryRaw`SELECT "id" FROM "Membership" WHERE "id" = ${input.membershipId} AND "tenantId" = ${input.tenantId} FOR UPDATE`
   const membership = await tx.membership.findFirst({
     where: { id: input.membershipId, tenantId: input.tenantId },

@@ -85,6 +85,10 @@ export function requireGeneralScope(
  * transaction commands directly, so these must stay in step with the routers.
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
+  "staff.invitation.review": tenant => {
+    if (!["OWNER", "ADMIN"].includes(tenant.membership.role))
+      throw new TRPCError({ code: "FORBIDDEN", message: "Owner/Admin access is required for staff invitations." })
+  },
   "staff.history.read": tenant => {
     if (!["OWNER", "ADMIN"].includes(tenant.membership.role))
       throw new TRPCError({ code: "FORBIDDEN", message: "Owner/Admin access is required for staff history." })

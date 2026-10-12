@@ -35,12 +35,16 @@ it is not an executed result, enabled capability, or deployment claim.
 | `customers.credit.refund` v1 | [1](fixtures/held-credit-refund.v1.md) | Completed payout, ambiguity, unused-credit limits, stale review, authority, injection, retry, provenance, receipt | None yet |
 | `sales.product.return` v1 | [1](fixtures/product-return.v1.md) | Partial restock, ambiguity, dispositions, over-return, stale evidence, authority, injection, replay/recovery | None yet |
 | `sales.products.fulfill` v1 | [1](fixtures/bulk-fulfillment.v1.md) | Success, ambiguity, denial, stale target, injection, replay, outage | None yet |
+| Staff invitation review | [1](fixtures/staff-invitation-review.v1.json) | Normalized recipient, email side effect, native authority/Store/seat rules, protected roles, rollout, privacy and recovery boundary | Source checks only |
+
 
 Other capabilities do not yet have versioned conversation fixtures here. H03 is
 incomplete. Existing unit/integration tests and local web acceptance records remain
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Staff invitation review and native guards, 12 October 2026](runs/2026-10-12-staff-invitation-review-source.md):31tests130assertions/scoped types; actual protected QA reads and canonical refusal rollback15.405s preserve staff/auth/chat facts. Desktop original review data/side-effect/blockers screenshot; planned, S02partial, confirmation/outbox/resend/revoke pending.
 
 - [Saved proposal history compatibility, 12 October 2026](runs/2026-10-12-chat-history-compatibility.md): incompatible records become safe read-only notices;3 tests11 assertions/scoped types pass. Current protected native read loads one saved message/three valid proposals with saved chat facts unchanged8.435s; synthetic notice component screenshot verified. Stable API/browser recovery remains unverified; no restart or activation.
 

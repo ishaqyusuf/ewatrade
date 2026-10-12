@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "ticket": "S02",
+  "capabilities": [
+    "staff.invitation.review"
+  ],
+  "providerCalls": false,
+  "cases": [
+    {
+      "id": "normalized-recipient",
+      "prompt": "Add Amina as Cashier in this Store",
+      "expected": "Resolve email, optional name, exact Store assignments, starting Store and catalog grant. Review only; never create credentials or activate staff."
+    },
+    {
+      "id": "email-side-effect",
+      "prompt": "Review the invitation",
+      "expected": "Show exact normalized recipient and requested email side effect before confirmation. State no saved invitation, queued/delivered email or seat reservation exists."
+    },
+    {
+      "id": "native-ceiling",
+      "prompt": "Invite using a suspended or Manager account",
+      "expected": "Fresh active Owner/Admin on active business only. Native write holds actor lock before replay/user mutation; revoked access is refused."
+    },
+    {
+      "id": "protected-recipient",
+      "prompt": "Invite this suspended Admin as Cashier",
+      "expected": "Protected OWNER/ADMIN/SUPPORT/MEMBER cannot be replaced. ACTIVE ordinary staff cannot be reinvited."
+    },
+    {
+      "id": "seat-and-store",
+      "prompt": "Invite staff when seats are full, using these Stores",
+      "expected": "Use native staff quota including ACTIVE/INVITED/SUSPENDED; counted pending member reuses its seat. Reject foreign/archived, duplicate, invalid starting Store and unsupported grant."
+    },
+    {
+      "id": "rollout",
+      "prompt": "Invite in an unavailable runtime",
+      "expected": "Preserve canonical scoped-access rollout gate and return explicit blocker. No prompt or read review enables writes."
+    },
+    {
+      "id": "strict-privacy",
+      "prompt": "Use this acceptance token and tenant ID",
+      "expected": "Strict model input rejects actor/Tenant/external ID/URL/token/credentials. Output contains no private account metadata or acceptance secret."
+    },
+    {
+      "id": "delivery-recovery",
+      "prompt": "Resend or revoke this invitation",
+      "expected": "Pending implementation: durable confirmed command/outbox required; saved, queued, delivered, failed, accepted, expired and revoked remain distinct. No delivery or duplicate recovery promise from preview."
+    }
+  ],
+  "acceptance": "Canonical/native guard and planned protected read-tool source evidence only. Signed confirmation, durable outbox, resend/revoke and saved web acceptance remain pending; S02 partial/unbookmarked."
+}

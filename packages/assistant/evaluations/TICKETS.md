@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 12 are partial, 19 are pending implementation, and
+Of the 32 not yet accepted: 13 are partial, 18 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -40,7 +40,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | E04 | Expenses and bills | ◐ Partial | Pending |
 | E05 | Suppliers and purchasing | ◐ Partial | Pending |
 | S01 | Staff directory and history | ◐ Partial | Pending |
-| S02 | Staff invitations and lifecycle | ○ Pending | Pending |
+| S02 | Staff invitations and lifecycle | ◐ Partial | Pending |
 | S03 | Suspend/reactivate staff | ○ Pending | Pending |
 | S04 | Roles, Store assignments and handover | ○ Pending | Pending |
 | S05 | Daily staff activity history | ○ Pending | Pending |
@@ -60,7 +60,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current implementation focus: S01 directory/history while E05 local activation/API restart approval is pending.
+Current implementation focus: S02 invitation review/confirmation/recovery; S01 saved web acceptance and E05 activation/API restart approval remain pending.
 
 E05 purchase fact reversal now passes signed rollback/stale refusal,
 full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;
@@ -133,3 +133,5 @@ GENERAL history compatibility source milestone: unknown/retired payload or recei
 S01 exact member sheet source: strict staff_member Open target, shell-owned protected query/content/URL object, bounded previews and atomic member/history transition. Real three-page same-name directory rollback with saved staff/auth unchanged closes the synthetic database pagination gap; durable saved fixtures and full web acceptance remain open.13tests138assertions/scoped types, desktop original-facts/unavailable/Close/malformed-link evidence and screenshots pass. Saved assistant route/chat selection preserved, chat content still unavailable. S01 stays partial/unbookmarked, all reads planned. [Evidence](runs/2026-10-12-staff-member-sheet-source.md).
 
 S01 global directory source: strict original search/role/status/assignment Store/cursor Open target, protected shell-owned ten-row object, filter controls/first-next/refresh/exact counts/full identities and exact member handoff. Directory/member/history opens atomically replace sibling targets.7tests74assertions/scoped types and two actual protected tool reads7.435s preserve targets and all saved staff/chat/budget facts. Desktop original rollback pages and actual global unavailable/filter/cursor-reset/Close/invalid-link verified with screenshots; saved chat still fails. S01partial/unbookmarked/all reads planned. [Evidence](runs/2026-10-12-staff-directory-sheet-source.md).
+
+S02 invitation review source: strict normalized recipient/Store/grant intent, native seat/QA/rollout validation, safe protected Owner/Admin preview and planned GENERAL read. Native early locked actor/recipient guards prevent protected-role replacement and revoked invitations; caller-owned transaction seam added.31tests130assertions/scoped types and actual protected QA reads/canonical refusal rollback15.405s preserve all saved staff/auth/chat facts. Desktop original review DTOs show email side effect and blockers; screenshots retained. Signed confirmation/durable command/outbox/resend/revoke/delivery/recovery/saved web acceptance pending. S02partial/unbookmarked. [Evidence](runs/2026-10-12-staff-invitation-review-source.md).
