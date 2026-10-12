@@ -20,6 +20,7 @@ import {
   generalDateRange,
 } from "@ewatrade/assistant/general/contracts"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
+import { TRPCError } from "@trpc/server"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
 import { z } from "zod"
 import { catalogCountSchema } from "../schemas/catalog"
@@ -201,7 +202,19 @@ export function createGeneralTools(
         asOf: new Date().toISOString(),
         data: await operation(fresh),
       }
-    } catch {
+    } catch (error) {
+      // A draft the business rules refuse says why, so the model can fix it
+      // or ask the user (for example which account received a payment).
+      if (
+        toolName === "draftAction" &&
+        error instanceof TRPCError &&
+        (error.code === "CONFLICT" || error.code === "BAD_REQUEST")
+      )
+        return {
+          status: "needs_changes",
+          storeId: scope.storeId,
+          reason: error.message,
+        }
       const capability = readCapabilities.get(toolName)
       if (capability)
         onAnswer({
