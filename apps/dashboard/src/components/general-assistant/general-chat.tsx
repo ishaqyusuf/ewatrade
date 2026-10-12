@@ -1,5 +1,6 @@
 "use client"
 import { useAssistantReceipt } from "@/hooks/use-assistant-receipt"
+import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { useTRPC } from "@/trpc/client"
 import type { GeneralProposal } from "@ewatrade/assistant/general/contracts"
 import {
@@ -46,6 +47,7 @@ import {
 import { GeneralProposalEditor } from "./general-proposal-editor"
 import { GeneralUnavailableProposals } from "./general-unavailable-proposals"
 import { useGeneralAssistant } from "./use-general-assistant"
+import { useQuickChatUrl } from "./use-quick-chat-url"
 
 export type GeneralAssistantVM = ReturnType<typeof useGeneralAssistant>
 
@@ -746,8 +748,16 @@ export function GeneralReviewStrip({
 }
 
 /** Quick chat in the bottom-right widget: the same chats as the assistant page. */
-export function GeneralChat({ actions }: { actions?: ReactNode }) {
-  const vm = useGeneralAssistant({ autoStart: true })
+export function GeneralChat({
+  actions,
+  active = true,
+}: { actions?: ReactNode; active?: boolean }) {
+  const [chatId] = useQuickChatParam()
+  const vm = useGeneralAssistant({
+    autoStart: true,
+    initialConversationId: chatId,
+  })
+  useQuickChatUrl(vm, active)
   const { disabled } = generalChatFlags(vm)
   const pending = useGeneralPendingReviews(vm)
   const pendingChats = new Set(pending.map((row) => row.conversationId))

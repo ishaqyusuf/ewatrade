@@ -4,12 +4,13 @@ import {
   usePageFabSlotMode,
   useQuickAssistantRequests,
 } from "@/components/page-fab/fab-slot"
+import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { Button, cn } from "@ewatrade/ui"
 import { BubbleChatIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import dynamic from "next/dynamic"
 import { usePathname } from "next/navigation"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 const QuickAssistantPanel = dynamic(
   () =>
@@ -22,10 +23,13 @@ export function QuickAssistant() {
   const [opened, setOpened] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const [chatId, setChatId] = useQuickChatParam()
   const minimize = useCallback(() => {
     setOpened(false)
+    // The open chat leaves the URL; reopening puts it back.
+    void setChatId(null)
     requestAnimationFrame(() => triggerRef.current?.focus())
-  }, [])
+  }, [setChatId])
   const open = useCallback(() => {
     setInitialized(true)
     setOpened(true)
@@ -36,6 +40,13 @@ export function QuickAssistant() {
   const pathname = usePathname()
   const onAssistantPage =
     pathname === "/assistant" || pathname.startsWith("/assistant/")
+  // A link with ?chatId= opens the widget on that chat.
+  const lastChatId = useRef<string | null>(null)
+  useEffect(() => {
+    if (chatId === lastChatId.current) return
+    lastChatId.current = chatId
+    if (chatId && !onAssistantPage) open()
+  }, [chatId, onAssistantPage, open])
   if (onAssistantPage) return null
 
   return (

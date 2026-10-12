@@ -45,8 +45,9 @@ const COLUMN = "mx-auto w-full max-w-[720px]"
  */
 export function AssistantWorkbench() {
   const routeId = useParams<{ id?: string }>().id ?? null
-  // `?chat=` is the older widget handover link.
-  const legacy = useSearchParams().get("chat")
+  // `?chatId=` (the widget's chat) or the older `?chat=` handover link.
+  const search = useSearchParams()
+  const legacy = search.get("chatId") ?? search.get("chat")
   const routeTarget = routeId ?? legacy
   const vm = useGeneralAssistant({
     initialConversationId: routeTarget,
