@@ -79,14 +79,34 @@ test("a pending draft reads as labelled values with a total and its actions", ()
   expect(html).toContain("Create a sale")
   expect(html).toContain("Needs your review")
   expect(html).toContain(
-    '<dd class="col-span-2 font-medium mb-0.5 border-b border-dashed pb-1.5">Quail Eggs',
+    "<li>Quail Eggs · Tray · 2 × ₦2,400.00 = ₦4,800.00</li>",
   )
-  expect(html).toMatch(/<dt class="[^"]*font-semibold[^"]*">Total<\/dt>/)
-  expect(html).toMatch(/<dd class="[^"]*text-right[^"]*">₦4,800.00<\/dd>/)
+  expect(html).toMatch(
+    /<span class="[^"]*font-semibold[^"]*"><span class="min-w-0">Total<\/span><span class="[^"]*text-right[^"]*">₦4,800.00<\/span>/,
+  )
   expect(html).toContain("Bola Okafor (QA)")
   expect(html).toContain(">Confirm<")
   expect(html).toContain(">Cancel draft<")
   expect(html).toContain("Nothing changes until you confirm · expires")
+})
+
+test("long review copy stays one wrapping line instead of a squeezed column", () => {
+  const label =
+    "Record supplier invoice, ownership and receipt for QA Web Supplier at Sweet Crumbs Bakery"
+  const value =
+    "2026-10-12T00:00:00.123Z (UTC). Due: 2026-10-20T00:00:00.456Z (UTC)."
+  const html = card(
+    proposal("long", "order_create", {
+      review: [`${label}: QA purchase.`, `Bill date: ${value}`, "Total: ₦1.00"],
+    }),
+  )
+  expect(html).toContain(
+    `<li><span class="text-muted-foreground">${label}:</span> QA purchase.</li>`,
+  )
+  expect(html).toContain(
+    `<li><span class="text-muted-foreground">Bill date:</span> ${value}</li>`,
+  )
+  expect(html).not.toContain("grid-cols")
 })
 
 test("a lapsed draft offers a fresh review instead of Confirm", () => {

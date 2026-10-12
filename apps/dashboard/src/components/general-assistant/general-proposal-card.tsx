@@ -13,7 +13,7 @@ import {
   Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Fragment, useState } from "react"
+import { useState } from "react"
 import { GeneralChatPhotoThumb } from "./general-chat-photo"
 import { GeneralProductPicture } from "./general-product-picture"
 
@@ -54,6 +54,11 @@ function reviewPair(line: string) {
   return at > 0 ? [line.slice(0, at), line.slice(at + 2)] : null
 }
 
+// Short pairs read as a label/value row; longer review copy (purchase and
+// stock explanations) stays one wrapping line so nothing is squeezed.
+const PAIR_LABEL_MAX = 40
+const PAIR_VALUE_MAX = 40
+
 /** A file going onto an order shows as the photo itself. */
 function filedAttachment(proposal: GeneralProposal) {
   return proposal.payload.action === "order_attachment_add"
@@ -63,49 +68,43 @@ function filedAttachment(proposal: GeneralProposal) {
 
 function ReviewLines({ lines }: { lines: string[] }) {
   return (
-    <dl className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
+    <ul className="min-w-0 flex-1 space-y-1 text-sm">
       {lines.map((line, index) => {
         const pair = reviewPair(line)
-        if (!pair)
-          return (
-            <dd
-              // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
-              key={index}
-              className={cn(
-                "col-span-2 font-medium",
-                lines[index + 1] &&
-                  reviewPair(lines[index + 1] as string) &&
-                  "mb-0.5 border-b border-dashed pb-1.5",
-              )}
-            >
-              {line}
-            </dd>
-          )
-        const [label, value] = pair
-        const total = /^total\b/i.test(label as string)
+        const [label = "", value = ""] = pair ?? []
+        const total = !!pair && /^total\b/i.test(label)
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
-          <Fragment key={index}>
-            <dt
-              className={cn(
-                "text-muted-foreground",
-                total && "font-semibold text-foreground",
-              )}
-            >
-              {label}
-            </dt>
-            <dd
-              className={cn(
-                "text-right tabular-nums",
-                total && "font-semibold",
-              )}
-            >
-              {value}
-            </dd>
-          </Fragment>
+          <li key={index}>
+            {pair &&
+            label.length <= PAIR_LABEL_MAX &&
+            value.length <= PAIR_VALUE_MAX ? (
+              <span
+                className={cn(
+                  "flex justify-between gap-4",
+                  total && "font-semibold",
+                )}
+              >
+                <span
+                  className={cn("min-w-0", !total && "text-muted-foreground")}
+                >
+                  {label}
+                </span>
+                <span className="max-w-[60%] text-right tabular-nums">
+                  {value}
+                </span>
+              </span>
+            ) : pair ? (
+              <>
+                <span className="text-muted-foreground">{label}:</span> {value}
+              </>
+            ) : (
+              line
+            )}
+          </li>
         )
       })}
-    </dl>
+    </ul>
   )
 }
 
