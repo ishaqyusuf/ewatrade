@@ -20,6 +20,10 @@ import {
   conflict,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import {
+  closeoutCreatePresentation,
+  closeoutFinalizePresentation,
+} from "./review-presentations"
 import { proposalDigest } from "./proposal-security"
 
 type Create = Extract<GeneralAction, { action: "inventory_closeout_create" }>
@@ -111,6 +115,7 @@ export const closeoutCreate: GeneralActionAdapter<Create> = {
     const { target, lines } = await creation(ctx, payload)
     return {
       target,
+      presentation: closeoutCreatePresentation(lines, payload),
       lines: [
         `Save ${payload.custodyType} custody declarations for ${payload.custodyReferenceId}. Stock stays unchanged.`,
         ...lines.map(
@@ -192,6 +197,7 @@ export const closeoutFinalize: GeneralActionAdapter<Finalize> = {
     const { closeout, target } = await finalization(ctx, payload)
     return {
       target,
+      presentation: closeoutFinalizePresentation(closeout, payload),
       lines: [
         `Finalize saved ${closeout.custodyType.toLowerCase()} custody closeout ${closeout.id}.`,
         ...closeout.lines.map(

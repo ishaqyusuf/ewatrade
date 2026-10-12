@@ -191,6 +191,14 @@ export async function readGeneralOrderReview(
     "@ewatrade/utils/catalog-free-lines"
   )
   const lines: string[] = []
+  /** The same lines as data, for the structured review card. */
+  const rows: Array<{
+    title: string
+    detail?: string
+    quantity?: string
+    unitPriceMinor?: number | null
+    totalMinor: number
+  }> = []
   let totalMinor = 0
   for (const line of input) {
     if ("custom" in line) {
@@ -199,6 +207,11 @@ export async function readGeneralOrderReview(
         kind: line.custom,
       })
       totalMinor += line.amountMinor
+      rows.push({
+        title: display.title,
+        detail: display.detail ?? "typed price",
+        totalMinor: line.amountMinor,
+      })
       lines.push(
         [
           display.title,
@@ -252,6 +265,13 @@ export async function readGeneralOrderReview(
       fixedPriceMinor: offering.fixedPriceMinor,
     })
     totalMinor += price.totalMinor
+    rows.push({
+      title: offering.catalogItem.name,
+      detail: offering.name,
+      quantity: line.quantity,
+      unitPriceMinor: price.unitPriceMinor,
+      totalMinor: price.totalMinor,
+    })
     lines.push(
       price.unitPriceMinor === null
         ? `${offering.catalogItem.name} · ${offering.name} · quantity ${line.quantity} · entered item total ${money(price.totalMinor)}`
@@ -260,7 +280,7 @@ export async function readGeneralOrderReview(
   }
   if (!Number.isSafeInteger(totalMinor) || totalMinor > 100_000_000)
     throw new Error("Order exceeds supported amount")
-  return { lines, totalMinor }
+  return { lines, rows, totalMinor }
 }
 
 /** Preserve the existing Finance-book/customer-account-before-Order lock order. */

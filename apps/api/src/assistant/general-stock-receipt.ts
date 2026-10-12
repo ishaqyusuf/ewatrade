@@ -11,6 +11,7 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import { stockReceivePresentation } from "./review-presentations"
 import { proposalDigest } from "./proposal-security"
 
 type Action = Extract<GeneralAction, { action: "stock_receive" }>
@@ -45,6 +46,7 @@ export const stockReceive: GeneralActionAdapter<Action> = {
     const { preview: p, target } = await receiptTarget(ctx, payload)
     return {
       target,
+      presentation: stockReceivePresentation(p, payload),
       lines: [
         `${p.productName} · ${p.variantName}`,
         `Receive ${p.enteredQuantity} ${p.enteredUnitName} · factor ${p.factor} · canonical increase ${p.canonicalQuantity}`,

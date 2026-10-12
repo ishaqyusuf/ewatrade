@@ -50,6 +50,7 @@ import {
 import { customerAllocationRelease } from "./general-customer-allocation-release"
 import { customerCreditApply } from "./general-customer-credit-apply"
 import { customerReceipt } from "./general-customer-receipt"
+import { saleReviewPresentation } from "./review-presentations"
 import { expenseRecord } from "./general-expense"
 import { heldCreditRefund } from "./general-held-credit-refund"
 import { moneyMovement } from "./general-money-movement"
@@ -551,8 +552,26 @@ const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
           select: { name: true },
         })
       : null
+    const accountName = payload.initialPayment?.moneyAccountId
+      ? await paymentAccountName(ctx, payload.initialPayment)
+      : undefined
     return {
       target: null,
+      presentation: saleReviewPresentation({
+        rows: review.rows,
+        totalMinor: review.totalMinor,
+        currencyCode: currency(ctx),
+        customerName: customer?.name ?? "Walk-in",
+        notes: payload.notes,
+        payment: payload.initialPayment
+          ? {
+              amountMinor: payload.initialPayment.amountMinor,
+              method: payload.initialPayment.method,
+              accountName,
+              note: payload.initialPayment.note,
+            }
+          : undefined,
+      }),
       lines: [
         ...review.lines,
         `Total: ${generalMoney(review.totalMinor, currency(ctx))}`,

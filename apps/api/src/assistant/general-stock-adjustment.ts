@@ -18,12 +18,24 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import {
+  stockAdjustPresentation,
+  stockCorrectPresentation,
+} from "./review-presentations"
 import { proposalDigest } from "./proposal-security"
-function costReview(cost: { status: string; currencyCode: string; valueBeforeMinor: string | null; valueAfterMinor: string | null; valueDeltaMinor: string | null }) {
-  if (cost.valueAfterMinor === null) return cost.status === "NO_FINANCE_BOOK"
-    ? "Cost unavailable: this Store has no finance book."
-    : cost.status === "SOURCE_OWNED" ? "Cost impact follows the original source workflow."
-    : "Cost unknown: the recorded valuation history does not establish a cost."
+function costReview(cost: {
+  status: string
+  currencyCode: string
+  valueBeforeMinor: string | null
+  valueAfterMinor: string | null
+  valueDeltaMinor: string | null
+}) {
+  if (cost.valueAfterMinor === null)
+    return cost.status === "NO_FINANCE_BOOK"
+      ? "Cost unavailable: this Store has no finance book."
+      : cost.status === "SOURCE_OWNED"
+        ? "Cost impact follows the original source workflow."
+        : "Cost unknown: the recorded valuation history does not establish a cost."
   const amount = (value: string | null) =>
     value === null ? "unknown" : generalMoney(value, cost.currencyCode)
   return `Inventory value: ${amount(cost.valueBeforeMinor)} → ${amount(cost.valueAfterMinor)}; change ${amount(cost.valueDeltaMinor)}`
@@ -73,6 +85,7 @@ export const stockAdjust: GeneralActionAdapter<Adjust> = {
     const { preview: p, target } = await adjustment(ctx, payload)
     return {
       target,
+      presentation: stockAdjustPresentation(p, payload),
       lines: [
         `${p.productName} · ${p.variantName}`,
         `${payload.purpose} · ${payload.direction} ${p.enteredQuantity} ${p.enteredUnitName} · factor ${p.factor} · ${p.canonicalQuantity} canonical units`,
@@ -157,6 +170,7 @@ export const stockCorrect: GeneralActionAdapter<Correct> = {
     const { preview: p, target } = await correction(ctx, payload)
     return {
       target,
+      presentation: stockCorrectPresentation(p, payload),
       lines: [
         `Original operation: ${p.targetOperationId} · ${p.originalType} · ${p.originalReason}`,
         ...p.lines.flatMap((line) => [

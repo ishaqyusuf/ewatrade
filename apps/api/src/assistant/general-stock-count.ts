@@ -16,6 +16,10 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import {
+  stockCountCreatePresentation,
+  stockCountFinalizePresentation,
+} from "./review-presentations"
 import { proposalDigest } from "./proposal-security"
 
 type Create = Extract<GeneralAction, { action: "stock_count_create" }>
@@ -45,6 +49,7 @@ export const stockCountCreate: GeneralActionAdapter<Create> = {
     const { lines, target } = await creation(ctx, payload)
     return {
       target,
+      presentation: stockCountCreatePresentation(lines, payload),
       lines: [
         "Save observations only. Stock does not change until a separate finalization is reviewed and confirmed.",
         ...lines.flatMap((line) => [
@@ -129,6 +134,7 @@ export const stockCountFinalize: GeneralActionAdapter<Finalize> = {
     const { count, target } = await finalization(ctx, payload)
     return {
       target,
+      presentation: stockCountFinalizePresentation(count, payload),
       lines: [
         "Finalize the saved count and apply its signed stock adjustment.",
         ...count.lines.map(
