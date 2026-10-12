@@ -20,7 +20,7 @@
 
 [F03 research review](runs/2026-10-12-f03-coordinator-review.md): current official documentation corrects the retry-reference claim and missing approval-URL statuses; merchant/policy/domain acceptance remains open.
 
-[H05 readiness review](runs/2026-10-12-h05-coordinator-review.md): eight isolated actual decision-path cases/29 assertions pass for replay, cancellation and fresh access refusals; connected/UI/canary/release evidence remains open. Run the [production-path fixture](fixtures/rollback-recovery.production-path.fixture.ts) explicitly and alone using the command in that review; its workspace/age module mocks must not leak into other suites.
+[H05 readiness review](runs/2026-10-12-h05-coordinator-review.md): eight isolated actual decision-path cases/29 assertions pass for replay, cancellation and fresh access refusals. The existing saved dashboard receipt opens its original agreement/recognition history over the chat; Close preserves an unsent draft, with paired screenshots. Actual rollback UI, connected/device/canary/release evidence remains open. Reuse the unchanged isolated result; run the [production-path fixture](fixtures/rollback-recovery.production-path.fixture.ts) explicitly and alone only when affected source changes require it, because its workspace/age module mocks must not leak into other suites.
 
 [Quotation decision integration review](runs/2026-10-12-quotation-decision-integration-review.md): nine new logical cases, scoped compilation and structural coverage pass; authenticated synthetic screenshots; signed/runtime/native acceptance remains open.
 

@@ -52,8 +52,10 @@ document the missing decision, then continue an independent ticket.
 - The coordinator owns targeted mobile/device/emulator acceptance, screenshots
   and necessary build verification. A responsive desktop viewport alone does not
   prove native behavior. No redundant broad mobile checks or unrelated store release.
-- The existing D05, S04 and G03 workers are finishing their current packets and
-  will then be archived. Do not take their tickets or overwrite their paths.
+- The former D05, S04 and G03 workers have finished their bounded source packets
+  and are archived. Reviewed source is preserved on main (`dfd156cd`, `155f0eda`
+  and `67dfe5e5`, respectively). They have no continuing implementation assignment.
+  Their parent tickets still need acceptance; preserve their integrated source.
 - Before each packet, inspect `git status` and declare exact ticket/path ownership
   in a handoff manifest. Shared contract, manifest, router, global-sheet and editor
   paths may still be owned by those workers. Coordinate ownership with the
