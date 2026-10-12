@@ -151,3 +151,18 @@ test("finished drafts list as saved rows and collapsed cancelled rows", () => {
   expect(html).not.toContain("Bola Okafor (QA)")
   expect(html).toContain('aria-expanded="false"')
 })
+
+test("a long draft opens on its first lines with the rest one click away", () => {
+  const review = Array.from({ length: 12 }, (_, index) => `Line ${index + 1}`)
+  const html = card(
+    proposal("big", "order_create", { review, approvalToken: "t" }),
+  )
+  expect(html).toContain('<li class="line-clamp-2">Line 6</li>')
+  expect(html).not.toContain("<li>Line 7</li>")
+  expect(html).toContain("Show all 12 lines")
+  expect(html).toContain('aria-expanded="false"')
+  // Actions stay visible while the review is folded.
+  expect(html).toContain(">Confirm<")
+  const short = card(proposal("small", "order_create", { review: sale }))
+  expect(short).not.toContain("Show all")
+})

@@ -7,6 +7,7 @@ import {
 import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
 import { Badge, Button, cn } from "@ewatrade/ui"
 import {
+  ArrowDown01Icon,
   ArrowRight01Icon,
   Cancel01Icon,
   Clock01Icon,
@@ -58,6 +59,10 @@ function reviewPair(line: string) {
 // stock explanations) stays one wrapping line so nothing is squeezed.
 const PAIR_LABEL_MAX = 40
 const PAIR_VALUE_MAX = 40
+// Long drafts (e.g. a ten-line purchase receipt) open on their first lines;
+// the rest is one click away, and Edit shows everything.
+const COLLAPSE_AFTER = 8
+const PREVIEW_LINES = 6
 
 /** A file going onto an order shows as the photo itself. */
 function filedAttachment(proposal: GeneralProposal) {
@@ -66,19 +71,31 @@ function filedAttachment(proposal: GeneralProposal) {
     : null
 }
 
-function ReviewLines({ lines }: { lines: string[] }) {
+function ReviewLines({
+  lines,
+  folded = false,
+}: {
+  lines: string[]
+  /** Folded previews clip each long line to two rows. */
+  folded?: boolean
+}) {
   return (
     <ul className="min-w-0 flex-1 space-y-1 text-sm">
       {lines.map((line, index) => {
         const pair = reviewPair(line)
         const [label = "", value = ""] = pair ?? []
         const total = !!pair && /^total\b/i.test(label)
+        const row =
+          !!pair &&
+          label.length <= PAIR_LABEL_MAX &&
+          value.length <= PAIR_VALUE_MAX
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
-          <li key={index}>
-            {pair &&
-            label.length <= PAIR_LABEL_MAX &&
-            value.length <= PAIR_VALUE_MAX ? (
+          <li
+            key={index}
+            className={folded && !row ? "line-clamp-2" : undefined}
+          >
+            {row ? (
               <span
                 className={cn(
                   "flex justify-between gap-4",
@@ -129,6 +146,8 @@ export function GeneralProposalCard({
   const product =
     proposal.payload.action === "product_create" ? proposal.payload : null
   const lines = reviewLines(proposal, currencyCode)
+  const [showAll, setShowAll] = useState(false)
+  const long = lines.length > COLLAPSE_AFTER
   const lapsed = new Date(proposal.expiresAt).getTime() <= Date.now()
   const pending = proposal.status === "PENDING" && !lapsed
   // Expired drafts stay editable; saving issues a fresh approval.
@@ -167,8 +186,29 @@ export function GeneralProposalCard({
         ) : filed ? (
           <GeneralChatPhotoThumb attachmentId={filed} />
         ) : null}
-        <ReviewLines lines={lines} />
+        <ReviewLines
+          lines={long && !showAll ? lines.slice(0, PREVIEW_LINES) : lines}
+          folded={long && !showAll}
+        />
       </div>
+      {long ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="-mt-1 self-start px-2"
+          aria-expanded={showAll}
+          onClick={() => setShowAll((value) => !value)}
+        >
+          {showAll ? "Show fewer lines" : `Show all ${lines.length} lines`}
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            className={cn(
+              "size-3.5 transition-transform",
+              showAll && "rotate-180",
+            )}
+          />
+        </Button>
+      ) : null}
       {pending || renewable ? (
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex flex-wrap gap-2">
