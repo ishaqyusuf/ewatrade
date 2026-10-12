@@ -60,9 +60,10 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current implementation focus: E05. Purchase payment reversal now passes full saved
-web confirmation/receipt/reload and concurrent recovery; four canonical procedures
-remain. [Latest evidence](runs/2026-10-12-purchase-payment-reversal-web.md). Supplier creation and purchase registration
+Current implementation focus: E05. Purchase fact reversal now passes signed rollback/stale refusal,
+full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;
+three canonical procedures remain. [Latest evidence](runs/2026-10-12-purchase-fact-reversal-web.md).
+[Payment reversal evidence](runs/2026-10-12-purchase-payment-reversal-web.md). Supplier creation and purchase registration
 have focused database and saved receipt Open/Close evidence. Invoice, ownership and
 physical receipt now pass actual dashboard Edit/re-review/Confirm and global receipt
 Open/Close, with exact saved posting/stock/valuation readback. Full two-line assistant
@@ -103,10 +104,10 @@ Canonical procedure checklist within E05 (the parent remains partial):
 - [ ] `finance.recordSupplierOpening` — supplier opening balances.
 - [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
 - [x] `finance.reversePurchasePayment` — exact original-payment correction, signed rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-purchase-payment-reversal-web.md).
-- [ ] `finance.reversePurchaseRecognition` — strict assistant source, shared canonical review, invoice/ownership rollback/replay and dashboard editor verified; signed assistant and saved chat confirmation/recovery pending. [Evidence](runs/2026-10-12-purchase-fact-reversal-source.md).
+- [x] `finance.reversePurchaseRecognition` — signed invoice/ownership completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload, exact saved original/correction history and concurrent completed recovery verified. Physical receipt correction remains refused. [Evidence](runs/2026-10-12-purchase-fact-reversal-web.md).
 - [ ] `finance.reverseSupplierEntry` — supplier entry reversal.
 
-The four pending procedures require assistant review/confirmation, owning receipts and relevant refusal,
+The three pending procedures require assistant review/confirmation, owning receipts and relevant refusal,
 rollback/recovery and web evidence. Existing registered-purchase flows do not accept
 these separate procedures. E05 keeps its ◐ mark and has no 🔖 bookmark.
 

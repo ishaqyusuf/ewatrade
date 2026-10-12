@@ -36,7 +36,7 @@ test("purchase fact correction binds original event without caller replacement f
   expect(generalActionSummary(payload, "NGN")).toContain(payload.reason)
   expect(capabilityForAction(payload.action)).toMatchObject({
     id: "finance.purchase.fact.reverse",
-    rollout: "planned",
+    rollout: "source",
     scope: "book",
     clients: ["dashboard"],
     policy: { roles: ["OWNER", "ADMIN"] },

@@ -90,13 +90,13 @@ test("supplier/purchase finance access disappears on Free plan, revoked access o
     }
 })
 
-test("purchase fact reversal stays planned and retains finance authority when source-visible", () => {
+test("purchase fact reversal retains finance authority when source-visible", () => {
   const capability = capabilityManifest.find(
     (c) => c.id === "finance.purchase.fact.reverse",
   )
   if (!capability) throw Error("Purchase fact reversal capability required")
-  expect(capability.rollout).toBe("planned")
-  expect(canUseCapability(actor("OWNER"), capability)).toBe(false)
+  expect(capability.rollout).toBe("source")
+  expect(canUseCapability(actor("OWNER"), capability)).toBe(true)
   const source = { ...capability, rollout: "source" as const }
   for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"])
     expect(canUseCapability(actor(role), source)).toBe(

@@ -37,6 +37,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Purchase fact reversal saved web acceptance, 12 October 2026](runs/2026-10-12-purchase-fact-reversal-web.md): real signed ownership13.653s/invoice15.093s completion rollback and stale refusal preserve facts; actual dashboard Edit/re-review/Confirm/Open/Close/reload, exact original journals/history, invoice void/payable1300→0, unchanged goods/stock and concurrent completed recovery pass. Source-available; E05 partial with three canonical procedures pending.
+
 - [Purchase fact reversal source, canonical rollback and editor, 12 October 2026](runs/2026-10-12-purchase-fact-reversal-source.md): 7 tests/351 assertions and scoped types pass; invoice14.179s and ownership12.395s canonical reversal/replay roll back with saved facts unchanged. Real dependency/physical receipt refusal and exact-target/timestamp dashboard editor pass. Signed assistant/full saved web acceptance pending; planned, E05 partial/unbookmarked.
 
 - [Purchase payment reversal saved web acceptance, 12 October 2026](runs/2026-10-12-purchase-payment-reversal-web.md): actual Edit/re-review/Confirm/Open/Close/reload, original payment/journal/date/reason, exact payable/advance/stock readback and concurrent completed recovery pass. Browser-found timestamp normalization fixed across seven editors; source-available, E05 partial with four canonical procedures pending.

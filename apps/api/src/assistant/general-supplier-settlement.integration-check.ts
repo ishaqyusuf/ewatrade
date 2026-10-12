@@ -35,7 +35,8 @@ export async function verifySupplierSettlementProposalRollback(
     app.payload.action !== "supplier_advance_allocate" &&
     app.payload.action !== "purchase_payment" &&
     app.payload.action !== "supplier_allocation_release" &&
-    app.payload.action !== "purchase_payment_reverse"
+    app.payload.action !== "purchase_payment_reverse" &&
+    app.payload.action !== "purchase_recognition_reverse"
   )
     throw Error("An exact pending supplier settlement proposal is required")
   const bookId = app.payload.bookId
@@ -62,7 +63,18 @@ export async function verifySupplierSettlementProposalRollback(
                 select: { billId: true },
               })
             ).billId
-          : null
+          : app.payload.action === "purchase_recognition_reverse"
+            ? (
+                await db.financePurchaseRecognitionEvent.findFirstOrThrow({
+                  where: {
+                    id: app.payload.eventId,
+                    bookId,
+                    recognitionId: app.payload.recognitionId,
+                  },
+                  select: { invoiceBillId: true },
+                })
+              ).invoiceBillId
+            : null
   await db.financeBook.findFirstOrThrow({
     where: { id: bookId, tenantId },
     select: { id: true },
@@ -108,7 +120,15 @@ export async function verifySupplierSettlementProposalRollback(
     purchaseBills: (
       await db.financeBill.findMany({
         where: { bookId, kind: "PURCHASE" },
-        select: { id: true, totalMinor: true, paidMinor: true },
+        select: {
+          id: true,
+          totalMinor: true,
+          paidMinor: true,
+          voidedAt: true,
+          voidEffectiveAt: true,
+          voidedById: true,
+          voidReason: true,
+        },
         orderBy: { id: "asc" },
       })
     ).map((bill) => ({
@@ -122,6 +142,24 @@ export async function verifySupplierSettlementProposalRollback(
         select: { lastSequence: true },
       })
     ).lastSequence.toString(),
+    purchaseFacts: await db.financePurchaseRecognitionEvent.findMany({
+      where: { bookId },
+      select: {
+        id: true,
+        recognitionId: true,
+        stage: true,
+        reversalOfId: true,
+        journalEntryId: true,
+        effectiveAt: true,
+        reason: true,
+      },
+      orderBy: { id: "asc" },
+    }),
+    storeLabels: await db.store.findMany({
+      where: { tenantId, id: row.storeId ?? undefined },
+      select: { id: true, name: true },
+      orderBy: { id: "asc" },
+    }),
     stock: (
       await db.stockBalanceSource.findMany({
         where: { tenantId, storeId: row.storeId ?? undefined },
@@ -179,11 +217,17 @@ export async function verifySupplierSettlementProposalRollback(
                       kind:
                         app.payload.action === "supplier_advance"
                           ? "finance_supplier"
-                          : "finance_purchase_bill",
+                          : app.payload.action ===
+                              "purchase_recognition_reverse"
+                            ? "finance_purchase_registration"
+                            : "finance_purchase_bill",
                       recordId:
                         app.payload.action === "supplier_advance"
                           ? app.payload.supplierId
-                          : billId,
+                          : app.payload.action ===
+                              "purchase_recognition_reverse"
+                            ? app.payload.recognitionId
+                            : billId,
                       bookId,
                     })
                     throw Error("SUPPLIER_PROPOSAL_ROLLBACK")
@@ -264,6 +308,57 @@ export async function verifySupplierSettlementProposalRollback(
               expect(changed.count).toBe(1)
               await run(tx)
               throw Error("STALE_SETTLEMENT_DID_NOT_REFUSE")
+            }, options)
+        const value = Reflect.get(target, key)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+    })
+    const staleStarted = performance.now()
+    let staleFailure: unknown
+    try {
+      await decideGeneralProposal(
+        { ...ctx, db: changedDb },
+        {
+          proposalId,
+          revision: app.revision,
+          decision: "confirm",
+          approvalToken: app.approvalToken,
+        },
+      )
+    } catch (error) {
+      staleFailure = error
+    }
+    expect(staleFailure).toMatchObject({ code: "CONFLICT" })
+    expect(
+      staleFailure instanceof Error
+        ? staleFailure.message
+        : String(staleFailure),
+    ).toContain("Review again")
+    expect(await facts()).toEqual(before)
+    staleProof = {
+      elapsedMs: performance.now() - staleStarted,
+      savedFactsUnchanged: true,
+    }
+  }
+  if (app.payload.action === "purchase_recognition_reverse") {
+    if (!row.storeId) throw Error("Exact owning Store required")
+    const changedDb = new Proxy(db, {
+      get(target, key) {
+        if (key === "$transaction")
+          return <T>(
+            run: (tx: Prisma.TransactionClient) => Promise<T>,
+            options?: Parameters<typeof db.$transaction>[1],
+          ) =>
+            target.$transaction(async (tx) => {
+              const store = await tx.store.findFirstOrThrow({
+                where: { id: row.storeId!, tenantId },
+              })
+              await tx.store.update({
+                where: { id: store.id },
+                data: { name: store.name + " QA stale review" },
+              })
+              await run(tx)
+              throw Error("STALE_PURCHASE_FACT_DID_NOT_REFUSE")
             }, options)
         const value = Reflect.get(target, key)
         return typeof value === "function" ? value.bind(target) : value
