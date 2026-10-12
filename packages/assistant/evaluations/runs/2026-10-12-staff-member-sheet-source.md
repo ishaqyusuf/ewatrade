@@ -2,7 +2,7 @@
 
 Ticket S01 remains partial/unbookmarked. Roadmap13/45 accepted28.9%;32awaiting71.1%:12partial19pending1deferredA04. Dashboard only; no provider/model/mobile/release.
 
-Fixture: staff-member-sheet.v1.json. Code base0a941083 plus this owned source milestone (commit recorded below). Environment: existing Portless dashboard HMR, exact guarded ewatrade_qa_v1 actor/Tenant/Store aliases; no API restart or persistent capability activation.
+Fixture: staff-member-sheet.v1.json. Code source milestone `e74061f0`, based on `0a941083`. Environment: existing Portless dashboard HMR, exact guarded ewatrade_qa_v1 actor/Tenant/Store aliases; no API restart or persistent capability activation.
 
 ## Source and focused evidence
 
