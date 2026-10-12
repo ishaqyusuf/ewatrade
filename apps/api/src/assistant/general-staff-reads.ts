@@ -19,6 +19,7 @@ function preview(value: string, limit: number) {
 
 export function generalStaffDirectoryAnswer(
   page: Awaited<ReturnType<typeof listStaffDirectoryPage>>,
+  filters: ReturnType<typeof generalStaffDirectoryInput.parse> = {},
 ): GeneralAnswer {
   return {
     id: `staff_directory_${crypto.randomUUID()}`,
@@ -30,6 +31,7 @@ export function generalStaffDirectoryAnswer(
         : "Business · membership directory",
     asOf: page.asOf,
     detail: `${page.data.length ? `Name/email preview: ${preview(page.data.map((member) => `${preview(member.name, 80)} (${preview(member.email, 80)}) · ${member.role} · ${member.status}`).join("; "), 400)}. Full identities are in the directory results.` : "No memberships match."} ${page.data.length} on this page. ${page.nextCursor ? "More results; continue with the original filters and cursor." : "End of this list."} Total is exact for this request, including only matching statuses. ${page.coverage.profile === "partial" ? "Some durable profiles are unavailable; membership identity is shown." : "Durable profiles available for this page."} History has not been read. Store filters require saved active assignments; legacy Store access is not inferred.`,
+    target: { kind: "staff_directory", filters },
   }
 }
 

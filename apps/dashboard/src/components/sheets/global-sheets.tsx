@@ -9,6 +9,7 @@ import { useState } from "react"
 
 import { StaffHistorySheet } from "./staff-history-sheet"
 import { StaffMemberSheet } from "./staff-member-sheet"
+import { StaffDirectorySheet } from "./staff-directory-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
@@ -104,7 +105,10 @@ export function GlobalSheets({
       ) : null}
       {access.staffHistory ? <StaffHistorySheet /> : null}
       {access.staffDirectory ? (
-        <StaffMemberSheet historyAllowed={Boolean(access.staffHistory)} />
+        <>
+          <StaffDirectorySheet />
+          <StaffMemberSheet historyAllowed={Boolean(access.staffHistory)} />
+        </>
       ) : null}
       <StockTransferDetailsSheet storeId={store.id} />
       <InventoryOperationDetailsSheet storeId={store.id} />

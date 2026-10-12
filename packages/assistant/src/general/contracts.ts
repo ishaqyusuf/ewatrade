@@ -1,5 +1,6 @@
 import { generalAnswerTargetSchema } from "./answer-target"
 export { generalAnswerTargetSchema, staffMemberTargetSchema } from "./answer-target"
+export { staffDirectoryTargetSchema } from "./staff-directory-target"
 export { staffHistoryTargetSchema } from "./staff-history-target"
 import { purchaseRecordAction } from "./purchase-recording"
 import { supplierOpeningAction } from "./supplier-opening"

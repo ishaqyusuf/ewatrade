@@ -10,7 +10,7 @@ it is not an executed result, enabled capability, or deployment claim.
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
 | Saved history compatibility | [1](fixtures/chat-history-compatibility.v1.json) | Unknown/retired action and receipt notices, preserved valid history, no approval and propagated authority failure | None yet |
-| Staff directory/history | [Directory 1](fixtures/staff-directory.v1.json), [History 1](fixtures/staff-history.v1.json), [Member sheet 1](fixtures/staff-member-sheet.v1.json) | Exact identities, current membership vs recorded events, filters/continuation, partial legacy coverage and fresh access | None yet |
+| Staff directory/history | [Directory 1](fixtures/staff-directory.v1.json), [History 1](fixtures/staff-history.v1.json), [Member sheet 1](fixtures/staff-member-sheet.v1.json), [Directory sheet 1](fixtures/staff-directory-sheet.v1.json) | Exact identities, current membership vs recorded events, filters/continuation, partial legacy coverage and fresh access | None yet |
 | Direct purchase recording | [1](fixtures/purchase-recording.v1.md) | Combined invoice/received goods, full1–10 sources, exact stock/value/payable, stale/rollback/replay and owning bill | None yet |
 | Supplier opening | [1](fixtures/supplier-opening.v1.md) | Pre-existing payable/advance, server start, exact controls, duplicate/cutoff/scope, review/editor/rollback/recovery | None yet |
 | Supplier entry reversal | [1](fixtures/supplier-entry-reversal.v1.md) | Original opening/paid advance sources, whole journal correction, consumption/source refusal, stale/rollback/replay and owning supplier | None yet |
@@ -266,3 +266,5 @@ and browser assertions. Mobile evaluations are excluded from the current work.
 - [Maximum ten-line draft and receipt web acceptance, 12 October 2026](runs/2026-10-12-ten-line-receipt-web.md): read-only draft batches, full GENERAL Edit review11.56s, actual Edit/re-review/Confirm/Open/Close/reload, exact ten saved movements/values/100 categories and concurrent completed recovery; E05 parent audit pending.
 
 - [Exact staff member sheet and same-name directory rollback, 12 October 2026](runs/2026-10-12-staff-member-sheet-source.md): 13tests138assertions/scoped types; real three-page same-name INVITED-only rollback9.753s, saved staff/auth unchanged. Actual original-facts rendering/global unavailable/Close/history handoff/invalid-link desktop checks and screenshots. Native sheet success/saved chat recovery unverified; planned S01partial.
+
+- [Global staff directory sheet source, 12 October 2026](runs/2026-10-12-staff-directory-sheet-source.md):7tests74assertions/scoped types and two actual protected read-tool targets7.435s, saved staff/chat/budget unchanged. Original rollback page content/pagination/member handoff and actual global unavailable/filters/cursor-reset/Close/invalid-link desktop screenshots. Live directory/saved chat success unverified; S01partial/planned.

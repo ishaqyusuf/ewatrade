@@ -7,7 +7,11 @@ import { parseAsString, useQueryStates } from "nuqs"
 
 export function useStaffMemberParams() {
   const [{ staffMember }, setParams] = useQueryStates(
-    { staffMember: parseAsString, staffHistory: parseAsString },
+    {
+      staffMember: parseAsString,
+      staffHistory: parseAsString,
+      staffDirectory: parseAsString,
+    },
     { history: "push" },
   )
   const parsed = staffMemberTargetSchema.safeParse({
@@ -24,11 +28,13 @@ export function useStaffMemberParams() {
           membershipId,
         }).membershipId,
         staffHistory: null,
+        staffDirectory: null,
       }),
     close: () => setParams({ staffMember: null }),
     openHistory: (membershipId: string) =>
       setParams({
         staffMember: null,
+        staffDirectory: null,
         staffHistory: JSON.stringify(
           staffHistoryTargetSchema.parse({
             kind: "staff_history",

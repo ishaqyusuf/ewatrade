@@ -181,7 +181,7 @@ export function createGeneralTools(
       inputSchema: generalStaffDirectoryInput,
       execute: input => wrap("readStaffDirectory", async fresh => {
         const page = await retailOpsRouter.createCaller(fresh).staffDirectoryPage({ ...input, limit: 10 })
-        onAnswer(generalStaffDirectoryAnswer(page))
+        onAnswer(generalStaffDirectoryAnswer(page, input))
         return page
       }),
     }),

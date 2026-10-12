@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "ticket": "S01",
+  "capabilities": [
+    "staff.directory.read"
+  ],
+  "providerCalls": false,
+  "cases": [
+    {
+      "id": "original-target",
+      "prompt": "Open this staff search",
+      "expected": "Open global directory with exact original search/role/status/assignment Store/cursor; server owns authority."
+    },
+    {
+      "id": "same-name-pages",
+      "prompt": "Show all staff with this name",
+      "expected": "Exact complete matching total remains distinct from page length; identities/emails and exact membership IDs stay distinct on native keyset pages."
+    },
+    {
+      "id": "filter-reset",
+      "prompt": "Change staff search or status",
+      "expected": "Apply URL filters, preserve explicit assignment Store, clear old cursor; Clear all removes all filters. All canonical roles/statuses supported."
+    },
+    {
+      "id": "member-handoff",
+      "prompt": "Open this exact member",
+      "expected": "Directory/member/history are one navigation family. Atomic sibling replacement retains assistant/chat and opens selected membership, not first same-name match."
+    },
+    {
+      "id": "empty-continuation",
+      "prompt": "Continue this staff search",
+      "expected": "No rows after cursor is explicit; show exact current matching total and page count, live-request warning and first/refresh controls when available."
+    },
+    {
+      "id": "legacy-and-profile",
+      "prompt": "Show staff for this Store",
+      "expected": "Only explicit ACTIVE assignments filter; no legacy inference. Missing profile/history disclosed; default business directory not silently Store-filtered."
+    },
+    {
+      "id": "unavailable-invalid-close",
+      "prompt": "Open staff directory",
+      "expected": "Invalid/unavailable/retry states cannot fabricate staff facts; Close clears only own target and preserves assistant/chat. Cached identities hidden while fresh authorization pending."
+    }
+  ],
+  "acceptance": "Source/deterministic protected tool reads and desktop component/URL evidence only. Successful live HTTP directory pagination and saved-chat continuity unverified; S01 remains partial/planned."
+}
