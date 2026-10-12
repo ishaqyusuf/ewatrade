@@ -5,23 +5,6 @@ listed below. You own implementation and repairs. The acceptance coordinator own
 independent review, necessary web and mobile acceptance tests and screenshots,
 acceptance bookmarks and serialized commits to `main`.
 
-## Read before editing
-
-Follow repository `AGENTS.md`, including Thread Status and the Brain protocol.
-Read `.brain/BRAIN.md`, `.brain/SYSTEM_OVERVIEW.md`, `.brain/system/overview.md`,
-`.brain/system/architecture.md`, `.brain/engineering/ai-rules.md`,
-`.brain/engineering/coding-standards.md` and `.brain/tasks/in-progress.md`.
-Then read the relevant feature/API/database/ADR files and the full ticket definitions
-in `.brain/plans/2026-10-09-assistant-business-operations.md`.
-Use `packages/assistant/evaluations/TICKETS.md` and `README.md` for current status
-and existing evidence. These summaries do not replace the canonical definitions.
-
-Latest owner instruction on 12 October 2026 explicitly includes mobile and
-supersedes the earlier web-only restriction. Snapshot: 45 tickets; 13 accepted
-for web, 20 partial and 12 pending implementation, including reopened A04.
-Existing web bookmarks do not certify mobile acceptance. Pending does not prove
-no related source exists. Inspect and reuse canonical code before building anything new.
-
 ## Your backlog: the twelve pending implementation tickets
 
 | ID | Deliverable |
