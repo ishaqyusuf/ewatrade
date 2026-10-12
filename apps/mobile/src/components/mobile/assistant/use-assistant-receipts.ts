@@ -34,6 +34,43 @@ const refusal: Record<string, string> = {
   UPLOADS_UNAVAILABLE: "Files can't be sent right now.",
 }
 
+/** Longest edge sent to the assistant; the photo reader downsizes past this. */
+const PHOTO_EDGE = 2048
+
+/**
+ * Shrinks a camera photo before it is sent: full-size photos can pass the
+ * API's ~4.5 MB request cap on Vercel, and the reader gains nothing from them.
+ * Loaded on demand so older dev builds without the module still work.
+ */
+async function shrinkPhoto(asset: ImagePicker.ImagePickerAsset) {
+  try {
+    const { ImageManipulator, SaveFormat } = await import(
+      "expo-image-manipulator"
+    )
+    const longest = Math.max(asset.width, asset.height)
+    const context = ImageManipulator.manipulate(asset.uri)
+    if (longest > PHOTO_EDGE)
+      context.resize(
+        asset.width >= asset.height
+          ? { width: PHOTO_EDGE }
+          : { height: PHOTO_EDGE },
+      )
+    const image = await context.renderAsync()
+    const saved = await image.saveAsync({
+      compress: 0.8,
+      format: SaveFormat.JPEG,
+    })
+    return {
+      fileName: `${(asset.fileName ?? "receipt").replace(/\.[^.]+$/, "")}.jpg`,
+      mimeType: "image/jpeg",
+      sizeBytes: new File(saved.uri).size,
+      uri: saved.uri,
+    }
+  } catch {
+    return null
+  }
+}
+
 async function uploadBytes(path: string, buffer: ArrayBuffer, type: string) {
   const session = getSession()
   if (!session?.token || !session.profile.businessSlug)
@@ -227,13 +264,15 @@ export function useAssistantReceipts(
         ? await ImagePicker.launchCameraAsync(options)
         : await ImagePicker.launchImageLibraryAsync(options)
     const asset = result.canceled ? undefined : result.assets[0]
-    if (asset?.mimeType)
-      await add({
+    if (!asset?.mimeType) return
+    await add(
+      (await shrinkPhoto(asset)) ?? {
         fileName: asset.fileName ?? `receipt.${asset.mimeType.split("/")[1]}`,
         mimeType: asset.mimeType,
         sizeBytes: asset.fileSize ?? new File(asset.uri).size,
         uri: asset.uri,
-      })
+      },
+    )
   }
 
   function discard(localId: string) {

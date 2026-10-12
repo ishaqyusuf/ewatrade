@@ -51,6 +51,46 @@ function refusalCopy(reason: string, kind: SetupAttachmentKind | null) {
   }
 }
 
+/** Photos above this are shrunk before upload. */
+const SHRINK_ABOVE_BYTES = 3 * 1024 * 1024
+/** Longest edge sent; the photo reader downsizes past this anyway. */
+const PHOTO_EDGE = 2048
+
+/**
+ * Shrinks a large photo before upload: the API takes at most about 4.5 MB a
+ * request on Vercel. HEIC can't be decoded here, so it is sent as it is.
+ */
+async function shrinkPhoto(file: File) {
+  if (
+    file.size <= SHRINK_ABOVE_BYTES ||
+    !/^image\/(jpeg|png|webp)$/.test(file.type)
+  )
+    return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(
+      1,
+      PHOTO_EDGE / Math.max(bitmap.width, bitmap.height),
+    )
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    canvas
+      .getContext("2d")
+      ?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85),
+    )
+    if (!blob || blob.size >= file.size) return file
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.jpg`, {
+      type: "image/jpeg",
+    })
+  } catch {
+    return file
+  }
+}
+
 async function sha256Hex(file: Blob) {
   const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer())
   return Array.from(new Uint8Array(digest), (byte) =>
@@ -209,8 +249,9 @@ export function useSetupAttachments(input: {
   }, [])
 
   const add = useCallback(
-    async (file: File, options: { durationMs?: number } = {}) => {
+    async (picked: File, options: { durationMs?: number } = {}) => {
       const localId = crypto.randomUUID()
+      const file = await shrinkPhoto(picked)
       const contentType = setupAttachmentContentTypeFor(file)
       const checked = contentType
         ? validateSetupAttachmentIntent({
