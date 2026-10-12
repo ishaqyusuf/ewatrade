@@ -1,4 +1,3 @@
-import { assertCanAmendOrders } from "../trpc/routers/order-amendments"
 import {
   type CapabilityId,
   capabilityForAction,
@@ -23,6 +22,7 @@ import {
 } from "../trpc/routers/catalog"
 import { assertCanUseCustomers } from "../trpc/routers/customers"
 import { assertCanManageInventory } from "../trpc/routers/inventory"
+import { assertCanAmendOrders } from "../trpc/routers/order-amendments"
 import {
   assertCanManageSalesOperations,
   assertCanOperateOrders,
@@ -88,6 +88,12 @@ export function requireGeneralScope(
  * transaction commands directly, so these must stay in step with the routers.
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
+  "finance.cash_count.record": (tenant) => assertFinanceAccess(tenant),
+  "finance.cash_accounts.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.cash_counts.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.cash_count.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.day_close.read": (tenant) => assertFinanceAccess(tenant),
+
   "staff.invitation.manage": assertStaffInvitationAccess,
   "staff.invitations.read": assertStaffInvitationAccess,
   "staff.invitation.command.read": assertStaffInvitationAccess,

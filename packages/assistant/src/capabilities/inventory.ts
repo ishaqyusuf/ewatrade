@@ -171,7 +171,6 @@ planned("finance", "E05", [
   "finance.purchase*",
 ])
 planned("finance", "G01", [
-  "finance.reports",
   "finance.journal",
   "finance.supplierPayableAging",
   "serviceReporting.summary",
@@ -182,7 +181,6 @@ planned("finance", "G02", [
   "finance.cashCount*",
   "finance.reverseCashAdjustment",
   "finance.periods",
-  "finance.periodCloseChecklist",
   "finance.periodAudit",
 ])
 formOnly(
@@ -283,3 +281,12 @@ formOnly(
   "Regulated pharmacy workflow with its own role gates and compliance audit.",
   ["prescriptions.*"],
 )
+
+// Newly exposed native Order reads/corrections still await assistant acceptance.
+planned("sales", "D01", ["orders.changeOptions"])
+planned("sales", "D02", ["orders.timeline"])
+planned("sales", "D03", [
+  "orders.paymentAccounts",
+  "orders.refund",
+  "orders.returnItems",
+])

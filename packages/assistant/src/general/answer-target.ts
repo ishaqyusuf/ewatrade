@@ -1,6 +1,10 @@
 import { z } from "zod"
-import { staffHistoryTargetSchema } from "./staff-history-target"
+import {
+  cashCountTargetSchema,
+  dayCloseTargetSchema,
+} from "./cash-count-target"
 import { staffDirectoryTargetSchema } from "./staff-directory-target"
+import { staffHistoryTargetSchema } from "./staff-history-target"
 
 /** Navigation identity only; the native query derives Tenant/actor and checks access. */
 export const staffMemberTargetSchema = z
@@ -18,6 +22,8 @@ export const staffInvitationTargetSchema = z
   .strict()
 
 export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
+  cashCountTargetSchema,
+  dayCloseTargetSchema,
   staffInvitationTargetSchema,
   staffHistoryTargetSchema,
   staffMemberTargetSchema,

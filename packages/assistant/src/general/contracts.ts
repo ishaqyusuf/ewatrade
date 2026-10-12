@@ -1,3 +1,18 @@
+import { cashCountAction } from "./cash-count"
+export {
+  cashCountAction,
+  cashCountDraftInstructions,
+  generalCashCountLookupInput,
+  generalCashCountReadInput,
+  generalCashCountHistoryInput,
+  generalDayCloseInput,
+} from "./cash-count"
+export type { GeneralCashCountAction } from "./cash-count"
+export {
+  cashCountTargetSchema,
+  dayCloseTargetSchema,
+} from "./cash-count-target"
+export type { CashCountTarget, DayCloseTarget } from "./cash-count-target"
 import { generalAnswerTargetSchema } from "./answer-target"
 import { staffInvitationAction } from "./staff-invitation"
 export { staffInvitationDraftInstructions } from "./staff-invitation"
@@ -8,70 +23,70 @@ export {
 } from "./answer-target"
 export { staffDirectoryTargetSchema } from "./staff-directory-target"
 export { staffHistoryTargetSchema } from "./staff-history-target"
-import { purchaseRecordAction } from "./purchase-recording"
-import { supplierOpeningAction } from "./supplier-opening"
-import { supplierEntryReverseAction } from "./supplier-entry-reversal"
-import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
+import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
+import { purchaseRecordAction } from "./purchase-recording"
 import { supplierAllocationReleaseAction } from "./supplier-allocation-release"
+import { supplierEntryReverseAction } from "./supplier-entry-reversal"
+import { supplierOpeningAction } from "./supplier-opening"
 import {
+  purchasePaymentAction,
   supplierAdvanceAction,
   supplierAdvanceAllocateAction,
-  purchasePaymentAction,
 } from "./supplier-settlement"
 export { supplierSettlementDraftInstructions } from "./supplier-settlement"
 import { purchaseRecognitionAction } from "./purchase-recognition"
 export { purchaseRecognitionDraftInstructions } from "./purchase-recognition"
-import { purchaseRegistrationAction } from "./purchase-registration"
-import { supplierCreateAction } from "./supplier-create"
-import { expenseVoidAction, billPaymentReverseAction } from "./bill-correction"
+import { billPaymentReverseAction, expenseVoidAction } from "./bill-correction"
 import { billPaymentAction } from "./bill-payment"
-import { expenseAction } from "./expense"
-import { moneyMovementAction } from "./money-movement"
 import {
-  customerCreditApplyAction,
   customerAllocationReleaseAction,
+  customerCreditApplyAction,
 } from "./customer-credit"
 import { customerReceiptAction } from "./customer-receipt"
+import { expenseAction } from "./expense"
 import { heldCreditRefundAction } from "./held-credit-refund"
-import { productLineReturnAction } from "./product-return"
-import {
-  productLineFulfillAction,
-  productBatchFulfillAction,
-} from "./product-fulfillment"
-import {
-  serviceAuthorizeAction,
-  serviceFulfillAction,
-} from "./service-fulfillment"
+import { moneyMovementAction } from "./money-movement"
 import {
   orderCancelAction,
   orderMetadataAction,
   orderReplaceAction,
 } from "./order-amendment"
 import { orderAttachmentAddAction } from "./order-attachment"
+import {
+  productBatchFulfillAction,
+  productLineFulfillAction,
+} from "./product-fulfillment"
+import { productLineReturnAction } from "./product-return"
+import { purchaseRegistrationAction } from "./purchase-registration"
+import {
+  serviceAuthorizeAction,
+  serviceFulfillAction,
+} from "./service-fulfillment"
+import { supplierCreateAction } from "./supplier-create"
 export {
   orderCancelAction,
   orderMetadataAction,
   orderReplaceAction,
 } from "./order-amendment"
-import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
-import {
-  stockTransferDispatchAction,
-  stockTransferReceiveAction,
-  stockTransferCancelAction,
-} from "./stock-transfer"
-import { z } from "zod"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
-import {
-  unitConfigurationDraftAction,
-  unitConfigurationPublishAction,
-} from "./unit-configuration"
+import { z } from "zod"
+import { closeoutCreateAction, closeoutFinalizeAction } from "./closeout"
+import { productCreateAction, productCreateSummary } from "./product-create"
 import {
   stockAdjustmentAction,
   stockCorrectionAction,
 } from "./stock-adjustment"
-import { productCreateAction, productCreateSummary } from "./product-create"
+import {
+  stockTransferCancelAction,
+  stockTransferDispatchAction,
+  stockTransferReceiveAction,
+} from "./stock-transfer"
+import {
+  unitConfigurationDraftAction,
+  unitConfigurationPublishAction,
+} from "./unit-configuration"
 const id = z.string().trim().min(1).max(128)
 const name = z.string().trim().min(1).max(160)
 const money = z.number().int().min(0).max(100_000_000)
@@ -335,6 +350,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   closeoutCreateAction,
   closeoutFinalizeAction,
   staffInvitationAction,
+  cashCountAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
@@ -348,6 +364,7 @@ export const generalReceiptSchema = z
       "finance_supplier",
       "finance_bill",
       "finance_movement",
+      "finance_cash_count",
       "customer",
       "product",
       "order",
@@ -369,6 +386,7 @@ export const generalReceiptSchema = z
     (value) =>
       ![
         "finance_movement",
+        "finance_cash_count",
         "finance_bill",
         "finance_supplier",
         "finance_purchase_bill",
@@ -543,6 +561,8 @@ export function generalActionSummary(
       return `Reverse recorded bill payment · ${action.reason}`
     case "bill_payment":
       return "Record payment against existing expense bill"
+    case "cash_count_record":
+      return `Record physical cash count · ${action.asOf} · ${action.reference}`
     case "expense_record":
       return `Record expense · ${action.payeeName} · ${action.description}`
     case "money_movement":

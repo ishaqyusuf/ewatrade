@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "ticket": "G02",
+  "client": "dashboard",
+  "acceptance": "pending",
+  "scenarios": [
+    {
+      "id": "physical-zero",
+      "prompt": "I physically counted zero in the front till yesterday at closing.",
+      "expected": "Resolve canonical Book/account, exact time/reference and physical acknowledgement; stage strict observation, fresh signed review."
+    },
+    {
+      "id": "original-recovery",
+      "expected": "Original count/replay preserve physical amount, original ledger basis and variance; later postings/adjustments are current status."
+    },
+    {
+      "id": "scope-freshness",
+      "expected": "Refuse foreign Book/Store, unavailable Store, revoked Owner/Admin; suppress cached current review during auth refetch/failure."
+    },
+    {
+      "id": "exact-cutoff",
+      "expected": "Preserve completed UTC millisecond cutoff; original object Open/Close retains chat and clears sibling overlays."
+    },
+    {
+      "id": "signed-atomicity",
+      "expected": "Signed original receipt atomic with canonical count; completion fault rolls back, completed replay adds no effects. Pending connected acceptance."
+    },
+    {
+      "id": "unresolved-close",
+      "prompt": "Close the day.",
+      "expected": "Read canonical operational summary/checklist, show unresolved coverage; do not imply date lock, stock closeout or fiscal close. Privileged close/reopen remains unavailable until canonical completeness resolves."
+    }
+  ],
+  "recordedModelRuns": []
+}

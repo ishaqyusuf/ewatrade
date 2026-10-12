@@ -24,6 +24,10 @@ export { getFinanceMoneyMovement } from "./money-reads"
 export { reverseFinanceMoney } from "./money-reversals"
 export {
   recordFinanceCashCount,
+  recordFinanceCashCountInTransaction,
+  getFinanceCashCountReviewInTransaction,
+  getFinanceCashCountInTransaction,
+  type FinanceCashCountInput,
   getFinanceCashCount,
   listFinanceCashCounts,
 } from "./cash-counts"
@@ -55,11 +59,15 @@ export {
   voidFinanceExpense,
 } from "./bill-corrections"
 
-export { getFinanceReports } from "./reports"
+export { getFinanceReports, getFinanceReportsInTransaction } from "./reports"
 
 export { changeFinancePeriod, getFinancePeriods } from "./periods"
 export { listFinancePeriodAudit } from "./period-audit"
-export { getFinancePeriodCloseChecklist } from "./period-close-checklist"
+export {
+  getFinancePeriodCloseChecklist,
+  getFinancePeriodCloseChecklistInTransaction,
+} from "./period-close-checklist"
+export { listAssistantCashAccountsInTransaction } from "./assistant-cash-count-reads"
 export { getFinanceYearEndPreview } from "./year-end-preview"
 export {
   configureFinanceFiscalCalendar,

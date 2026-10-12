@@ -1,7 +1,3 @@
-import { purchaseRecord } from "./general-purchase-recording"
-import { staffInvitation } from "./general-staff-invitation"
-import { supplierOpening } from "./general-supplier-opening"
-import { supplierEntryReverse } from "./general-supplier-entry-reversal"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
@@ -41,19 +37,9 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
-import { purchaseRecognitionReverse } from "./general-purchase-recognition-reversal"
-import { purchasePaymentReverse } from "./general-purchase-payment-reversal"
-import { supplierAllocationRelease } from "./general-supplier-allocation-release"
-import {
-  supplierAdvance,
-  supplierAdvanceAllocate,
-  purchasePayment,
-} from "./general-supplier-settlement"
-import { purchaseRecognize } from "./general-purchase-recognition"
-import { purchaseRegister } from "./general-purchase-registration"
-import { supplierCreate } from "./general-supplier-create"
 import { billCorrection } from "./general-bill-correction"
 import { billPayment } from "./general-bill-payment"
+import { cashCountRecord } from "./general-cash-count"
 import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import {
   type GeneralContext,
@@ -85,7 +71,13 @@ import {
   productUnitConfigurationDraft,
   productUnitConfigurationPublish,
 } from "./general-product-units"
+import { purchasePaymentReverse } from "./general-purchase-payment-reversal"
+import { purchaseRecognize } from "./general-purchase-recognition"
+import { purchaseRecognitionReverse } from "./general-purchase-recognition-reversal"
+import { purchaseRecord } from "./general-purchase-recording"
+import { purchaseRegister } from "./general-purchase-registration"
 import { serviceLineAction } from "./general-service-fulfillment"
+import { staffInvitation } from "./general-staff-invitation"
 import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
 import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
 import { stockReceive } from "./general-stock-receipt"
@@ -94,6 +86,15 @@ import {
   stockTransferDispatch,
   stockTransferReceive,
 } from "./general-stock-transfer"
+import { supplierAllocationRelease } from "./general-supplier-allocation-release"
+import { supplierCreate } from "./general-supplier-create"
+import { supplierEntryReverse } from "./general-supplier-entry-reversal"
+import { supplierOpening } from "./general-supplier-opening"
+import {
+  purchasePayment,
+  supplierAdvance,
+  supplierAdvanceAllocate,
+} from "./general-supplier-settlement"
 import { proposalDigest } from "./proposal-security"
 import { catalogCommandForSetupEntity } from "./setup-commit"
 
@@ -663,6 +664,7 @@ const adapters: {
 } = {
   customer_receipt: customerReceipt,
   money_movement: moneyMovement,
+  cash_count_record: cashCountRecord,
   expense_record: expenseRecord,
   bill_payment: billPayment,
   purchase_record: purchaseRecord,

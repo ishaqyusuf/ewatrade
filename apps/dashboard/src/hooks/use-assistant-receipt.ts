@@ -2,63 +2,81 @@
 import type { GeneralReceipt } from "@ewatrade/assistant/general/contracts"
 import { parseAsString, useQueryStates } from "nuqs"
 
+export const assistantObjectParams = {
+  assistantCashCount: parseAsString,
+  assistantCashBook: parseAsString,
+  assistantDayCloseBook: parseAsString,
+  assistantDayCloseThrough: parseAsString,
+  financeSheet: parseAsString,
+  billId: parseAsString,
+  supplierId: parseAsString,
+  purchaseBill: parseAsString,
+  purchaseBillBook: parseAsString,
+  purchaseRegistration: parseAsString,
+  purchaseRegistrationBook: parseAsString,
+  financeMovement: parseAsString,
+  financeMovementBook: parseAsString,
+  customerDetail: parseAsString,
+  catalogDetail: parseAsString,
+  catalogDetailTab: parseAsString,
+  catalogActivity: parseAsString,
+  orderSheet: parseAsString,
+  orderId: parseAsString,
+  inventoryCount: parseAsString,
+  inventoryCloseout: parseAsString,
+  stockTransfer: parseAsString,
+  inventoryOperation: parseAsString,
+  staffInvitation: parseAsString,
+  staffMember: parseAsString,
+  staffHistory: parseAsString,
+  staffDirectory: parseAsString,
+}
+
+export const closedAssistantObjectParams = {
+  assistantCashCount: null,
+  assistantCashBook: null,
+  assistantDayCloseBook: null,
+  assistantDayCloseThrough: null,
+  financeSheet: null,
+  billId: null,
+  supplierId: null,
+  purchaseBill: null,
+  purchaseBillBook: null,
+  purchaseRegistration: null,
+  purchaseRegistrationBook: null,
+  financeMovement: null,
+  financeMovementBook: null,
+  customerDetail: null,
+  catalogDetail: null,
+  catalogDetailTab: null,
+  catalogActivity: null,
+  orderSheet: null,
+  orderId: null,
+  inventoryCount: null,
+  inventoryCloseout: null,
+  stockTransfer: null,
+  inventoryOperation: null,
+  staffInvitation: null,
+  staffMember: null,
+  staffHistory: null,
+  staffDirectory: null,
+}
+
 /** Open registered record overlays without leaving the current workspace/chat. */
 export function useAssistantReceipt() {
-  const [, setParams] = useQueryStates(
-    {
-      financeSheet: parseAsString,
-      billId: parseAsString,
-      supplierId: parseAsString,
-      purchaseBill: parseAsString,
-      purchaseBillBook: parseAsString,
-      purchaseRegistration: parseAsString,
-      purchaseRegistrationBook: parseAsString,
-      financeMovement: parseAsString,
-      financeMovementBook: parseAsString,
-      customerDetail: parseAsString,
-      catalogDetail: parseAsString,
-      catalogDetailTab: parseAsString,
-      catalogActivity: parseAsString,
-      orderSheet: parseAsString,
-      orderId: parseAsString,
-      inventoryCount: parseAsString,
-      inventoryCloseout: parseAsString,
-      stockTransfer: parseAsString,
-      inventoryOperation: parseAsString,
-      staffInvitation: parseAsString,
-      staffMember: parseAsString,
-      staffHistory: parseAsString,
-      staffDirectory: parseAsString,
-    },
-    { history: "push", shallow: true },
-  )
+  const [, setParams] = useQueryStates(assistantObjectParams, {
+    history: "push",
+    shallow: true,
+  })
   return (receipt: GeneralReceipt) => {
-    const closed = {
-      financeSheet: null,
-      billId: null,
-      supplierId: null,
-      purchaseBill: null,
-      purchaseBillBook: null,
-      purchaseRegistration: null,
-      purchaseRegistrationBook: null,
-      financeMovement: null,
-      financeMovementBook: null,
-      customerDetail: null,
-      catalogDetail: null,
-      catalogDetailTab: null,
-      catalogActivity: null,
-      orderSheet: null,
-      orderId: null,
-      inventoryCount: null,
-      inventoryCloseout: null,
-      stockTransfer: null,
-      inventoryOperation: null,
-      staffInvitation: null,
-      staffMember: null,
-      staffHistory: null,
-      staffDirectory: null,
-    }
+    const closed = closedAssistantObjectParams
     switch (receipt.kind) {
+      case "finance_cash_count":
+        return setParams({
+          ...closed,
+          assistantCashCount: receipt.recordId,
+          assistantCashBook: receipt.bookId ?? null,
+        })
       case "staff_invitation":
         return setParams({ ...closed, staffInvitation: receipt.recordId })
       case "finance_purchase_bill":

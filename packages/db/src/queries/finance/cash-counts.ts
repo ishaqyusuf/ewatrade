@@ -1,5 +1,9 @@
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
-import { type FinanceActor, assertFinanceManager } from "./access"
+import {
+  type FinanceActor,
+  assertFinanceManager,
+  lockFinanceBook,
+} from "./access"
 import { financeDocumentCommand } from "./commands"
 import { FinanceError } from "./rules"
 
@@ -25,90 +29,136 @@ export type FinanceCashCountInput = FinanceActor & {
   reference: string
 }
 
-export async function recordFinanceCashCountInTransaction(
-  tx: Prisma.TransactionClient,
-  input: FinanceCashCountInput,
-) {
+function normalizeCount(input: Omit<FinanceCashCountInput, "clientCommandId">) {
   const observedBalanceMinor = cashCountAmount(input.observedBalanceMinor)
   const reference = input.reference.trim()
   if (
     !reference ||
     reference.length > 200 ||
     !Number.isFinite(input.asOf.getTime())
-  ) {
+  )
     throw new FinanceError(
       "INVALID_JOURNAL",
       "A valid count date and reference are required.",
     )
+  return {
+    accountId: input.accountId,
+    asOf: input.asOf,
+    observedBalanceMinor,
+    reference,
   }
+}
+
+async function readCountBasis(
+  tx: Prisma.TransactionClient,
+  book: { id: string; startsAt: Date; lastSequence: bigint },
+  input: Omit<FinanceCashCountInput, "clientCommandId">,
+) {
+  const normalized = normalizeCount(input)
+  if (input.asOf < book.startsAt || input.asOf > new Date())
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "The count date must be between the bookkeeping start and now.",
+    )
+  const account = await tx.financeAccount.findFirst({
+    where: {
+      id: input.accountId,
+      bookId: book.id,
+      purpose: "CASH",
+      archivedAt: null,
+    },
+    select: { id: true, name: true, code: true, kind: true },
+  })
+  if (!account)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Choose an active cash account in this book.",
+    )
+  const totals = await tx.financeJournalLine.aggregate({
+    where: {
+      bookId: book.id,
+      accountId: account.id,
+      entry: {
+        sequence: { lte: book.lastSequence },
+        effectiveAt: { lte: input.asOf },
+      },
+    },
+    _sum: { debitMinor: true, creditMinor: true },
+  })
+  const expectedBalanceMinor =
+    (totals._sum.debitMinor ?? 0n) - (totals._sum.creditMinor ?? 0n)
+  if (
+    expectedBalanceMinor > 9223372036854775807n ||
+    expectedBalanceMinor < -9223372036854775808n
+  )
+    throw new FinanceError(
+      "INVALID_AMOUNT",
+      "The recorded balance exceeds the cash-count storage limit.",
+    )
+  return { normalized, account, expectedBalanceMinor }
+}
+
+/** Current canonical basis under the same Book lock held through confirmation. */
+export async function getFinanceCashCountReviewInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Omit<FinanceCashCountInput, "clientCommandId">,
+) {
+  const book = await lockFinanceBook(tx, input)
+  const { normalized, account, expectedBalanceMinor } = await readCountBasis(
+    tx,
+    book,
+    input,
+  )
+  return {
+    bookId: book.id,
+    currencyCode: book.currencyCode,
+    startsAt: book.startsAt.toISOString(),
+    closedThrough: book.closedThrough?.toISOString() ?? null,
+    snapshotSequence: book.lastSequence.toString(),
+    accountId: account.id,
+    accountName: account.name,
+    accountCode: account.code,
+    accountKind: account.kind,
+    asOf: input.asOf.toISOString(),
+    reference: normalized.reference,
+    expectedBalanceMinor: expectedBalanceMinor.toString(),
+    observedBalanceMinor: normalized.observedBalanceMinor.toString(),
+    differenceMinor: (
+      normalized.observedBalanceMinor - expectedBalanceMinor
+    ).toString(),
+    journalEffect: "NONE" as const,
+  }
+}
+
+export async function recordFinanceCashCountInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceCashCountInput,
+) {
+  const normalized = normalizeCount(input)
   return financeDocumentCommand(
     tx,
     input,
     "CASH_COUNT",
-    {
-      accountId: input.accountId,
-      asOf: input.asOf,
-      observedBalanceMinor,
-      reference,
-    },
+    normalized,
     async (book) => {
-      if (input.asOf < book.startsAt || input.asOf > new Date()) {
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "The count date must be between the bookkeeping start and now.",
-        )
-      }
-      const account = await tx.financeAccount.findFirst({
-        where: {
-          id: input.accountId,
-          bookId: book.id,
-          purpose: "CASH",
-          archivedAt: null,
-        },
-        select: { id: true },
-      })
-      if (!account)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Choose an active cash account in this book.",
-        )
-      const totals = await tx.financeJournalLine.aggregate({
-        where: {
-          bookId: book.id,
-          accountId: account.id,
-          entry: {
-            sequence: { lte: book.lastSequence },
-            effectiveAt: { lte: input.asOf },
-          },
-        },
-        _sum: { debitMinor: true, creditMinor: true },
-      })
-      const expectedBalanceMinor =
-        (totals._sum.debitMinor ?? BigInt(0)) -
-        (totals._sum.creditMinor ?? BigInt(0))
-      if (
-        expectedBalanceMinor > BigInt("9223372036854775807") ||
-        expectedBalanceMinor < BigInt("-9223372036854775808")
-      ) {
-        throw new FinanceError(
-          "INVALID_AMOUNT",
-          "The recorded balance exceeds the cash-count storage limit.",
-        )
-      }
-      const count = await tx.financeReconciliation.create({
+      const { account, expectedBalanceMinor } = await readCountBasis(
+        tx,
+        book,
+        input,
+      )
+      return tx.financeReconciliation.create({
         data: {
           bookId: book.id,
           accountId: account.id,
           asOf: input.asOf,
           snapshotSequence: book.lastSequence,
           expectedBalanceMinor,
-          observedBalanceMinor,
-          reference,
+          observedBalanceMinor: normalized.observedBalanceMinor,
+          reference: normalized.reference,
           actorUserId: input.actorUserId,
         },
         select: { id: true },
       })
-      return count
     },
   )
 }
@@ -123,96 +173,100 @@ export async function recordFinanceCashCount(
   )
 }
 
+export async function getFinanceCashCountInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & { bookId: string; countId: string },
+) {
+  await assertFinanceManager(tx, input)
+  const count = await tx.financeReconciliation.findFirst({
+    where: {
+      id: input.countId,
+      bookId: input.bookId,
+      book: { tenantId: input.tenantId },
+      account: { purpose: "CASH" },
+    },
+    include: {
+      account: { select: { name: true } },
+      book: { select: { currencyCode: true, lastSequence: true } },
+    },
+  })
+  if (!count)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Cash count not found in this business.",
+    )
+  const adjustment = await tx.financeJournalEntry.findUnique({
+    where: {
+      bookId_sourceKind_sourceId: {
+        bookId: count.bookId,
+        sourceKind: "CASH_COUNT_ADJUSTMENT",
+        sourceId: count.id,
+      },
+    },
+    select: {
+      id: true,
+      description: true,
+      recordedAt: true,
+      reversal: { select: { id: true, recordedAt: true } },
+    },
+  })
+  const excludedEntryIds = adjustment
+    ? [adjustment.id, ...(adjustment.reversal ? [adjustment.reversal.id] : [])]
+    : []
+  const changed = await tx.financeJournalLine.findFirst({
+    where: {
+      bookId: count.bookId,
+      accountId: count.accountId,
+      entry: {
+        effectiveAt: { lte: count.asOf },
+        sequence: { gt: count.snapshotSequence },
+        ...(excludedEntryIds.length > 0
+          ? { id: { notIn: excludedEntryIds } }
+          : {}),
+      },
+    },
+    select: { id: true },
+  })
+  return {
+    id: count.id,
+    bookId: count.bookId,
+    adjustment,
+    currentSnapshotSequence: count.book.lastSequence.toString(),
+    accountId: count.accountId,
+    accountName: count.account.name,
+    asOf: count.asOf,
+    recordedAt: count.createdAt,
+    actorUserId: count.actorUserId,
+    reference: count.reference,
+    currencyCode: count.book.currencyCode,
+    snapshotSequence: count.snapshotSequence.toString(),
+    expectedBalanceMinor: count.expectedBalanceMinor.toString(),
+    observedBalanceMinor: count.observedBalanceMinor.toString(),
+    differenceMinor: (
+      count.observedBalanceMinor - count.expectedBalanceMinor
+    ).toString(),
+    reviewRequired: Boolean(changed),
+    status: changed
+      ? ("REVIEW_REQUIRED" as const)
+      : adjustment?.reversal
+        ? ("ADJUSTMENT_REVERSED" as const)
+        : adjustment
+          ? ("ADJUSTED" as const)
+          : count.expectedBalanceMinor === count.observedBalanceMinor
+            ? ("MATCHED" as const)
+            : ("DIFFERENCE" as const),
+  }
+}
+
 export async function getFinanceCashCount(
   db: PrismaClient,
   input: FinanceActor & { bookId: string; countId: string },
 ) {
-  return db.$transaction(
-    async (tx) => {
-      await assertFinanceManager(tx, input)
-      const count = await tx.financeReconciliation.findFirst({
-        where: {
-          id: input.countId,
-          bookId: input.bookId,
-          book: { tenantId: input.tenantId },
-          account: { purpose: "CASH" },
-        },
-        include: {
-          account: { select: { name: true } },
-          book: { select: { currencyCode: true, lastSequence: true } },
-        },
-      })
-      if (!count)
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Cash count not found in this business.",
-        )
-      const adjustment = await tx.financeJournalEntry.findUnique({
-        where: {
-          bookId_sourceKind_sourceId: {
-            bookId: count.bookId,
-            sourceKind: "CASH_COUNT_ADJUSTMENT",
-            sourceId: count.id,
-          },
-        },
-        select: {
-          id: true,
-          description: true,
-          recordedAt: true,
-          reversal: { select: { id: true, recordedAt: true } },
-        },
-      })
-      const excludedEntryIds = adjustment
-        ? [
-            adjustment.id,
-            ...(adjustment.reversal ? [adjustment.reversal.id] : []),
-          ]
-        : []
-      const changed = await tx.financeJournalLine.findFirst({
-        where: {
-          bookId: count.bookId,
-          accountId: count.accountId,
-          entry: {
-            effectiveAt: { lte: count.asOf },
-            sequence: { gt: count.snapshotSequence },
-            ...(excludedEntryIds.length > 0
-              ? { id: { notIn: excludedEntryIds } }
-              : {}),
-          },
-        },
-        select: { id: true },
-      })
-      return {
-        id: count.id,
-        adjustment,
-        currentSnapshotSequence: count.book.lastSequence.toString(),
-        accountId: count.accountId,
-        accountName: count.account.name,
-        asOf: count.asOf,
-        recordedAt: count.createdAt,
-        actorUserId: count.actorUserId,
-        reference: count.reference,
-        currencyCode: count.book.currencyCode,
-        snapshotSequence: count.snapshotSequence.toString(),
-        expectedBalanceMinor: count.expectedBalanceMinor.toString(),
-        observedBalanceMinor: count.observedBalanceMinor.toString(),
-        differenceMinor: (
-          count.observedBalanceMinor - count.expectedBalanceMinor
-        ).toString(),
-        reviewRequired: Boolean(changed),
-        status: changed
-          ? ("REVIEW_REQUIRED" as const)
-          : adjustment?.reversal
-            ? ("ADJUSTMENT_REVERSED" as const)
-            : adjustment
-              ? ("ADJUSTED" as const)
-              : count.expectedBalanceMinor === count.observedBalanceMinor
-                ? ("MATCHED" as const)
-                : ("DIFFERENCE" as const),
-      }
-    },
-    { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
-  )
+  return db.$transaction((tx) => getFinanceCashCountInTransaction(tx, input), {
+    maxWait: 10_000,
+    timeout: 30_000,
+    isolationLevel: "RepeatableRead",
+  })
 }
 
 export async function listFinanceCashCounts(

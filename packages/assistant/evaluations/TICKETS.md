@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 14 are partial, 17 are pending implementation, and
+Of the 32 not yet accepted: 15 are partial, 16 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -50,7 +50,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | F04 | Payout approval and dispatch | ○ Pending | Pending |
 | F05 | Settlement and recovery | ○ Pending | Pending |
 | G01 | Business reporting | ○ Pending | Pending |
-| G02 | Cash count and close day | ○ Pending | Pending |
+| G02 | Cash count and close day | ◐ Partial | Pending |
 | G03 | Quotes, bookings and delivery | ○ Pending | Pending |
 | G04 | Advanced inventory and catalog | ○ Pending | Pending |
 | G05 | Settings and communications | ○ Pending | Pending |
@@ -149,3 +149,5 @@ S02 verified reconciliation source: default-off raw signed callback, original de
 S02 privacy inventory source: new durable command/outbox/attempt families included in count-only original subject/contact review; profile/completion refuse unhandled records.146focused tests408assertions/scoped types/Biome and exact-QA15.619s rollback preserve saved facts; source object screenshots captured. Positive-data retention/disposal and full saved web/provider acceptance remain open. S02partial/planned/unbookmarked;13/45accepted. [Evidence](runs/2026-10-12-staff-invitation-privacy-inventory.md).
 
 S03 canonical foundation: locked fresh status authority preserves native LEGACY Manager policy; unaccepted reactivation refused, current grants/plan revalidated, revision increment and reason/original durable event required.18focused tests83assertions/scoped types and exact-QA13.826s suspend/refusal forced rollback preserve all saved staff/auth/chat/budget facts. Assistant signed/global receipt/web acceptance pending; S03partial/planned/unbookmarked. [Evidence](runs/2026-10-12-staff-status-foundation.md).
+
+G02 source checkpoint: strict physical cash count, canonical original basis/read/replay, planned read/write registrations, global original count/day-close objects and freshness/invalid-target handling integrated. 27 tests176assertions and one exact-owned canonical rollback pass; synthetic desktop screenshots recorded. Signed confirmation/recovery and saved web remain open; privileged complete financial closing remains unavailable. G02 partial/unbookmarked;13/45accepted28.9%,32awaiting71.1%(15partial16pending1mobiledeferred). [Evidence](runs/2026-10-12-g02-cash-count-day-close-v1.md).

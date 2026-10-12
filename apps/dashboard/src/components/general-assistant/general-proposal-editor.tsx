@@ -1,5 +1,4 @@
 "use client"
-import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -22,15 +21,9 @@ import {
   OrderPaymentAccount,
   useOrderPaymentAccountChoice,
 } from "../orders/order-payment-account"
-import { GeneralSupplierAllocationReleaseEditor } from "./general-supplier-allocation-release-editor"
-import { GeneralPurchaseRecordingEditor } from "./general-purchase-recording-editor"
-import { GeneralSupplierOpeningEditor } from "./general-supplier-opening-editor"
-import { GeneralSupplierSettlementEditor } from "./general-supplier-settlement-editor"
-import { GeneralPurchaseRecognitionEditor } from "./general-purchase-recognition-editor"
-import { GeneralPurchaseRegistrationEditor } from "./general-purchase-registration-editor"
-import { GeneralSupplierEditor } from "./general-supplier-editor"
 import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import { GeneralBillPaymentEditor } from "./general-bill-payment-editor"
+import { GeneralCashCountEditor } from "./general-cash-count-editor"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralCustomerCreditEditor } from "./general-customer-credit-editor"
 import { GeneralCustomerReceiptEditor } from "./general-customer-receipt-editor"
@@ -40,11 +33,19 @@ import { GeneralMoneyMovementEditor } from "./general-money-movement-editor"
 import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
 import { GeneralProductCreateEditor } from "./general-product-create-editor"
 import { GeneralProductReturnEditor } from "./general-product-return-editor"
+import { GeneralPurchaseRecognitionEditor } from "./general-purchase-recognition-editor"
+import { GeneralPurchaseRecordingEditor } from "./general-purchase-recording-editor"
+import { GeneralPurchaseRegistrationEditor } from "./general-purchase-registration-editor"
 import { GeneralSaleCustomer } from "./general-sale-customer"
+import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
 import { GeneralStockCountEditor } from "./general-stock-count-editor"
 import { GeneralStockReceiptEditor } from "./general-stock-receipt-editor"
 import { GeneralStockTransferEditor } from "./general-stock-transfer-editor"
+import { GeneralSupplierAllocationReleaseEditor } from "./general-supplier-allocation-release-editor"
+import { GeneralSupplierEditor } from "./general-supplier-editor"
+import { GeneralSupplierOpeningEditor } from "./general-supplier-opening-editor"
+import { GeneralSupplierSettlementEditor } from "./general-supplier-settlement-editor"
 import { GeneralUnitEditor } from "./general-unit-editor"
 
 const methods = [
@@ -63,11 +64,36 @@ export function GeneralProposalEditor(props: {
   onCancel: () => void
 }) {
   if (props.proposal.payload.action === "staff_invitation")
-    return <GeneralStaffInvitationEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralStaffInvitationEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "supplier_allocation_release")
-    return <GeneralSupplierAllocationReleaseEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
-  if (props.proposal.payload.action === "supplier_advance" || props.proposal.payload.action === "supplier_advance_allocate" || props.proposal.payload.action === "purchase_payment")
-    return <GeneralSupplierSettlementEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralSupplierAllocationReleaseEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "supplier_advance" ||
+    props.proposal.payload.action === "supplier_advance_allocate" ||
+    props.proposal.payload.action === "purchase_payment"
+  )
+    return (
+      <GeneralSupplierSettlementEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "purchase_recognize")
     return (
       <GeneralPurchaseRecognitionEditor
@@ -79,7 +105,15 @@ export function GeneralProposalEditor(props: {
       />
     )
   if (props.proposal.payload.action === "purchase_record")
-    return <GeneralPurchaseRecordingEditor initial={props.proposal.payload} currencyCode={props.currencyCode} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralPurchaseRecordingEditor
+        initial={props.proposal.payload}
+        currencyCode={props.currencyCode}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "purchase_register")
     return (
       <GeneralPurchaseRegistrationEditor
@@ -90,7 +124,14 @@ export function GeneralProposalEditor(props: {
       />
     )
   if (props.proposal.payload.action === "supplier_opening")
-    return <GeneralSupplierOpeningEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+    return (
+      <GeneralSupplierOpeningEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "supplier_create")
     return (
       <GeneralSupplierEditor
@@ -118,6 +159,15 @@ export function GeneralProposalEditor(props: {
   if (props.proposal.payload.action === "bill_payment")
     return (
       <GeneralBillPaymentEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "cash_count_record")
+    return (
+      <GeneralCashCountEditor
         initial={props.proposal.payload}
         disabled={props.disabled}
         onSave={props.onSave}

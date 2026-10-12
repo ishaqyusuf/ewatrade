@@ -7,10 +7,8 @@ import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
-import { StaffHistorySheet } from "./staff-history-sheet"
-import { StaffInvitationSheet } from "./staff-invitation-sheet"
-import { StaffMemberSheet } from "./staff-member-sheet"
-import { StaffDirectorySheet } from "./staff-directory-sheet"
+import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
+import { AssistantDayCloseSheet } from "./assistant-day-close-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
@@ -24,6 +22,10 @@ import { PurchaseBillDetailsSheet } from "./purchase-bill-details-sheet"
 import { PurchaseRegistrationDetailsSheet } from "./purchase-registration-details-sheet"
 import { ReceiptSheet } from "./receipt-sheet"
 import { ServiceCommerceSheet } from "./service-commerce-sheet"
+import { StaffDirectorySheet } from "./staff-directory-sheet"
+import { StaffHistorySheet } from "./staff-history-sheet"
+import { StaffInvitationSheet } from "./staff-invitation-sheet"
+import { StaffMemberSheet } from "./staff-member-sheet"
 import { StockCountSheet } from "./stock-count-sheet"
 import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
 import { StoreConversationSheet } from "./store-conversation-sheet"
@@ -120,6 +122,8 @@ export function GlobalSheets({
       {access.finance ? (
         <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
       ) : null}
+      {access.finance ? <AssistantCashCountSheet /> : null}
+      {access.finance ? <AssistantDayCloseSheet /> : null}
       {access.finance ? <FinanceMovementDetailsSheet /> : null}
       {access.finance ? <PurchaseRegistrationDetailsSheet /> : null}
       {access.finance ? <PurchaseBillDetailsSheet /> : null}

@@ -1,71 +1,20 @@
 import {
-  generalStaffInvitationReviewInput,
-  generalStaffInvitationReviewAnswer,
-} from "./general-staff-invitation-review"
-import {
-  generalStaffHistoryInput,
-  generalStaffHistoryAnswer,
-} from "./general-staff-history"
-import { retailOpsRouter } from "../trpc/routers/retail-ops"
-import {
-  generalStaffDirectoryInput,
-  generalStaffMemberInput,
-  generalStaffDirectoryAnswer,
-  generalStaffMemberAnswer,
-} from "./general-staff-reads"
-import {
-  staffInvitationDraftInstructions,
-  supplierSettlementDraftInstructions,
-  purchaseRecognitionDraftInstructions,
-} from "@ewatrade/assistant/general/contracts"
-import {
-  generalPurchaseRegistrationsInput,
-  generalPurchaseRecognitionInput,
-  generalPurchaseRegistrationsAnswer,
-} from "./general-purchase-recognition-reads"
-import {
-  generalPurchasesInput,
-  generalPurchaseInput,
-  generalPurchasesAnswer,
-  generalPurchaseData,
-} from "./general-purchase-reads"
-import {
-  generalSuppliersInput,
-  generalSupplierStatementInput,
-  generalSuppliersAnswer,
-  generalSupplierStatementAnswer,
-} from "./general-supplier-reads"
-import {
-  generalBillsInput,
-  generalBillInput,
-  generalBillsAnswer,
-  generalBillData,
-} from "./general-bill-reads"
-import {
-  generalCustomerEntryInput,
-  generalCustomerAllocationHistoryInput,
-  generalCustomerEntryAnswer,
-  generalCustomerAllocationHistoryAnswer,
-} from "./general-customer-allocations"
-import { financeRouter } from "../trpc/routers/finance"
-import {
-  financeMoneyAccountsSchema,
-  financeExpenseCategoriesSchema,
-} from "../schemas/finance"
-import {
-  generalCustomerAccountsInput,
-  generalCustomerSourcesInput,
-  generalCustomerStatementInput,
-  generalCustomerAccountAnswer,
-  generalCustomerSourcesAnswers,
-  generalCustomerStatementAnswer,
-} from "./general-customer-funds"
-import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
-import {
   capabilityManifest,
   writeCapabilities,
 } from "@ewatrade/assistant/capabilities/manifest"
 import type { Capability } from "@ewatrade/assistant/capabilities/types"
+import {
+  cashCountDraftInstructions,
+  generalCashCountHistoryInput,
+  generalCashCountLookupInput,
+  generalCashCountReadInput,
+  generalDayCloseInput,
+} from "@ewatrade/assistant/general/contracts"
+import {
+  purchaseRecognitionDraftInstructions,
+  staffInvitationDraftInstructions,
+  supplierSettlementDraftInstructions,
+} from "@ewatrade/assistant/general/contracts"
 import {
   type GeneralAnswer,
   generalDateRange,
@@ -74,7 +23,12 @@ import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
 import { z } from "zod"
 import { catalogCountSchema } from "../schemas/catalog"
+import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
 import { customerCountSchema } from "../schemas/customers"
+import {
+  financeExpenseCategoriesSchema,
+  financeMoneyAccountsSchema,
+} from "../schemas/finance"
 import { inventoryLowStockPageSchema } from "../schemas/inventory"
 import { commercialOrderStatusSchema } from "../schemas/orders"
 import { resolveProtectedTenantContext } from "../trpc/init"
@@ -82,11 +36,19 @@ import { orderScope } from "../trpc/order-scope"
 import { catalogRouter } from "../trpc/routers/catalog"
 import { customerLedgerRouter } from "../trpc/routers/customer-ledger"
 import { customersRouter } from "../trpc/routers/customers"
+import { financeRouter } from "../trpc/routers/finance"
 import { inventoryRouter } from "../trpc/routers/inventory"
 import { ordersRouter } from "../trpc/routers/orders"
+import { retailOpsRouter } from "../trpc/routers/retail-ops"
 import { searchRouter } from "../trpc/routers/search"
 import { servicesRouter } from "../trpc/routers/services"
 import { tenantRouter } from "../trpc/routers/tenant"
+import {
+  generalBillData,
+  generalBillInput,
+  generalBillsAnswer,
+  generalBillsInput,
+} from "./general-bill-reads"
 import {
   generalCatalogHistoryInput,
   readGeneralCatalogHistory,
@@ -99,6 +61,28 @@ import {
   requireGeneralScope,
 } from "./general-context"
 import { generalCountAnswer } from "./general-count-answer"
+import {
+  generalCustomerAllocationHistoryAnswer,
+  generalCustomerAllocationHistoryInput,
+  generalCustomerEntryAnswer,
+  generalCustomerEntryInput,
+} from "./general-customer-allocations"
+import {
+  generalCustomerAccountAnswer,
+  generalCustomerAccountsInput,
+  generalCustomerSourcesAnswers,
+  generalCustomerSourcesInput,
+  generalCustomerStatementAnswer,
+  generalCustomerStatementInput,
+} from "./general-customer-funds"
+import {
+  generalCashCountAnswer,
+  generalDayCloseAnswer,
+  readGeneralCashAccounts,
+  readGeneralCashCount,
+  readGeneralCashCountHistory,
+  readGeneralDayClose,
+} from "./general-day-close"
 import {
   generalInventoryBalanceAnswers,
   generalInventoryBalancesInput,
@@ -119,10 +103,41 @@ import { generalOrderAnswer } from "./general-order-answer"
 import { generalOrderContactCountAnswer } from "./general-order-contact-count-answer"
 import { draftGeneralProposal } from "./general-proposals"
 import {
+  generalPurchaseData,
+  generalPurchaseInput,
+  generalPurchasesAnswer,
+  generalPurchasesInput,
+} from "./general-purchase-reads"
+import {
+  generalPurchaseRecognitionInput,
+  generalPurchaseRegistrationsAnswer,
+  generalPurchaseRegistrationsInput,
+} from "./general-purchase-recognition-reads"
+import {
   generalReceivablesAnswers,
   generalReceivablesInput,
 } from "./general-receivables"
 import { generalSalesAnswer } from "./general-sales-answer"
+import {
+  generalStaffHistoryAnswer,
+  generalStaffHistoryInput,
+} from "./general-staff-history"
+import {
+  generalStaffInvitationReviewAnswer,
+  generalStaffInvitationReviewInput,
+} from "./general-staff-invitation-review"
+import {
+  generalStaffDirectoryAnswer,
+  generalStaffDirectoryInput,
+  generalStaffMemberAnswer,
+  generalStaffMemberInput,
+} from "./general-staff-reads"
+import {
+  generalSupplierStatementAnswer,
+  generalSupplierStatementInput,
+  generalSuppliersAnswer,
+  generalSuppliersInput,
+} from "./general-supplier-reads"
 const id = z.string().min(1).max(128)
 const query = z.string().trim().min(2).max(160)
 /** Model-visible registry: read/draft only; no decision or command capability. */
@@ -214,6 +229,94 @@ export function createGeneralTools(
     ? z.discriminatedUnion("action", [firstAction, ...otherActions])
     : z.never()
   const tools: Record<string, Tool> = {
+    readCashAccounts: tool({
+      description:
+        "Resolve active CASH account identities by literal name/code. Omit bookId initially to discover the current native Finance Book; retain it and search for continuation. Cash identity is not a balance or physical count. Clarify ambiguous matches.",
+      inputSchema: generalCashCountLookupInput
+        .extend({ bookId: id.optional() })
+        .refine(
+          (value) =>
+            value.afterCode === undefined || value.bookId !== undefined,
+          "Keep the original Book for continuation.",
+        ),
+      execute: (input) =>
+        wrap("readCashAccounts", async (fresh) => {
+          const bookId =
+            input.bookId ?? (await financeRouter.createCaller(fresh).book())?.id
+          if (!bookId) throw Error("Set up Finance first.")
+          const page = await readGeneralCashAccounts(fresh, {
+            ...input,
+            bookId,
+          })
+          onAnswer({
+            id: `cash_accounts_${crypto.randomUUID()}`,
+            title: "Cash accounts",
+            value: `${page.accounts.length} on this page`,
+            scope: `Tenant Finance Book · ${page.book.currencyCode}`,
+            asOf: new Date().toISOString(),
+            detail: `${
+              page.accounts
+                .map((a) => `${a.name} (${a.code})`)
+                .join("; ")
+                .slice(0, 750) || "No cash accounts match this page."
+            } ${page.nextCursor ? "More accounts available; keep the original Book and search." : "End of this list."} Identities only; no physical observation inferred.`,
+          })
+          return page
+        }),
+    }),
+    readCashCounts: tool({
+      description:
+        "Find newest ten original physical cash observations in an explicit Book, optionally for an exact cash account resolved by name/code. Choose the original count by reference and time; clarify ambiguous records. Follow nextCursor with unchanged Book/account. Original expected/observed/difference remain original facts, not current reconciliation status.",
+      inputSchema: generalCashCountHistoryInput,
+      execute: (input) =>
+        wrap("readCashCounts", async (fresh) => {
+          const page = await readGeneralCashCountHistory(fresh, input)
+          onAnswer({
+            id: `cash_counts_${crypto.randomUUID()}`,
+            title: "Original cash counts",
+            value: `${page.items.length} on this page`,
+            scope: `Tenant Finance Book · ${page.currencyCode}`,
+            asOf: new Date().toISOString(),
+            detail: `Recent observations only. ${page.items
+              .map(
+                (c) =>
+                  `${c.accountName}: ${c.reference} at ${new Date(c.asOf).toISOString()}`,
+              )
+              .join("; ")
+              .slice(
+                0,
+                750,
+              )} ${page.nextCursor ? "More history available; continue with the same Book/account." : "End of this history."} Open the exact count for later review status.`,
+          })
+          return page
+        }),
+    }),
+    readCashCount: tool({
+      description:
+        "Read one original cash count selected from native count history. Preserve original observation, expected basis, variance and snapshot; report changed-history/adjustment status separately. Never replace this record or automatically balance its difference.",
+      inputSchema: generalCashCountReadInput,
+      execute: (input) =>
+        wrap("readCashCount", async (fresh) => {
+          const count = await readGeneralCashCount(fresh, input)
+          onAnswer(generalCashCountAnswer(count))
+          return count
+        }),
+    }),
+    readDayCloseReview: tool({
+      description:
+        "Read canonical next-open-period closing checklist and posted day summary at one Book snapshot. Ask for an exact completed UTC day cutoff ending 23:59:59.999Z. Omit bookId initially to discover the current Book. Includes unresolved source/cash checks, original count evidence and incomplete coverage. Posted day facts are Book-wide and may begin after midnight at bookkeeping/open-period start. Never certify complete operations or draft a close/reopen, date lock, adjustment or stock closeout from this read.",
+      inputSchema: generalDayCloseInput.extend({ bookId: id.optional() }),
+      execute: (input) =>
+        wrap("readDayCloseReview", async (fresh) => {
+          const bookId =
+            input.bookId ?? (await financeRouter.createCaller(fresh).book())?.id
+          if (!bookId) throw Error("Set up Finance first.")
+          const result = await readGeneralDayClose(fresh, { ...input, bookId })
+          onAnswer(generalDayCloseAnswer(result.checklist, result.day))
+          return result
+        }),
+    }),
+
     readStaffInvitations: tool({
       description:
         "Read the newest ten saved invitations for an exact staff membership selected from directory/email search. Total is exact in the request snapshot; limited history is explicit. Return original token-record identity/state/expiry and recorded outbox state, never raw links, hashes, credentials or delivery inference from sentAt. Clarify multiple ACTIVE pending records before drafting resend/revoke; do not invent invitation IDs.",
@@ -1231,11 +1334,13 @@ export function createGeneralTools(
         }),
     }),
     draftAction: tool({
-      description:
-        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens. When purchase_register or supplier_create is available, start with readSuppliers using a supplier name or code; omit bookId on the first read if unknown and preserve the returned Book even when no supplier matches. Never ask the merchant for internal IDs or schema flags. When purchase_register is available, resolve the supplier and existing registrations first to avoid duplicate agreements. Find goods with searchRecords and readInventoryBalances filtered by the exact catalogItemId; use their original source, inventory unit and current configuration IDs in the active Store. Ask about ambiguous goods or units and do not invent an unconfigured source. Require explicit agreed quantities, total cost per line, date and agreementOnly=true. Do not infer invoice, ownership, stock receipt or payment; those are separate operations. Never replace an existing registration by creating another. When supplier_create is available, search existing suppliers first, clarify ambiguous names and ask for the supplier code rather than inventing one. Creating a supplier only adds its identity; it does not record opening balances, purchases, payments, ownership or received stock. When expense_void or bill_payment_reverse is available, inspect the exact bill and original payment first, require a correction date/reason and bookkeepingOnly=true. A payment reversal restores payable and never sends or recovers cash. Void requires no active payments; do not silently reverse payments to permit voiding. Refuse to guess an older payment omitted from bounded history. When bill_payment is available, resolve the existing bill with readExpenseBills and inspect it with readExpenseBill; ask about ambiguity and require paymentAlreadyMade=true. Use readMoneyAccounts for business funding, or explicit owner funding. Never substitute expense_record for paying an existing bill. When expense_record is available, resolve categories with readExpenseCategories and business payment accounts with readMoneyAccounts. Require an already-incurred expense and explicit confirmation for any payment already made. Omit payment for unpaid bills; use OWNER_CAPITAL only when the owner personally paid, never for business cash. Ask about ambiguous category, funding, dates or amounts before drafting. This records bookkeeping and never sends money." +
-        purchaseRecognitionDraftInstructions +
-        supplierSettlementDraftInstructions +
+      description: [
+        "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens. When purchase_register or supplier_create is available, start with readSuppliers using a supplier name or code; omit bookId on the first read if unknown and preserve the returned Book even when no supplier matches. Never ask the merchant for internal IDs or schema flags. When purchase_register is available, resolve the supplier and existing registrations first to avoid duplicate agreements. Find goods with searchRecords and readInventoryBalances filtered by the exact catalogItemId; use their original source, inventory unit and current configuration IDs in the active Store. Ask about ambiguous goods or units and do not invent an unconfigured source. Require explicit agreed quantities, total cost per line, date and agreementOnly=true. Do not infer invoice, ownership, stock receipt or payment; those are separate operations. Never replace an existing registration by creating another. When supplier_create is available, search existing suppliers first, clarify ambiguous names and ask for the supplier code rather than inventing one. Creating a supplier only adds its identity; it does not record opening balances, purchases, payments, ownership or received stock. When expense_void or bill_payment_reverse is available, inspect the exact bill and original payment first, require a correction date/reason and bookkeepingOnly=true. A payment reversal restores payable and never sends or recovers cash. Void requires no active payments; do not silently reverse payments to permit voiding. Refuse to guess an older payment omitted from bounded history. When bill_payment is available, resolve the existing bill with readExpenseBills and inspect it with readExpenseBill; ask about ambiguity and require paymentAlreadyMade=true. Use readMoneyAccounts for business funding, or explicit owner funding. Never substitute expense_record for paying an existing bill. When expense_record is available, resolve categories with readExpenseCategories and business payment accounts with readMoneyAccounts. Require an already-incurred expense and explicit confirmation for any payment already made. Omit payment for unpaid bills; use OWNER_CAPITAL only when the owner personally paid, never for business cash. Ask about ambiguous category, funding, dates or amounts before drafting. This records bookkeeping and never sends money.",
+        purchaseRecognitionDraftInstructions,
+        cashCountDraftInstructions,
+        supplierSettlementDraftInstructions,
         staffInvitationDraftInstructions,
+      ].join("\n\n"),
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {
