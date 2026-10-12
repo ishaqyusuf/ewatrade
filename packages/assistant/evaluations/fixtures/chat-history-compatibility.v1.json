@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "tickets": [
+    "A03",
+    "H03"
+  ],
+  "providerCalls": false,
+  "cases": [
+    {
+      "id": "mixed-history",
+      "scenario": "A saved chat contains valid proposals before and after an action format unavailable to this API.",
+      "expected": "Return valid proposals in order and a read-only unavailable notice; do not abort messages or disclose raw unsupported payload."
+    },
+    {
+      "id": "retired-version",
+      "scenario": "Stored action identity or version differs from its known capability.",
+      "expected": "No approval projection, editor or confirmation control; keep saved record unchanged."
+    },
+    {
+      "id": "unsupported-receipt",
+      "scenario": "A completed action has an unavailable receipt format.",
+      "expected": "Read-only notice, not whole-chat failure or fabricated receipt."
+    },
+    {
+      "id": "authority-failure",
+      "scenario": "A valid supported projection encounters a fresh authority or database failure.",
+      "expected": "Propagate legitimate failure; compatibility handling cannot bypass access or hide database errors."
+    }
+  ],
+  "acceptance": "Source/guarded native read and synthetic component evidence; live HTTP recovery not yet verified."
+}

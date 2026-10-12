@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Saved history compatibility | [1](fixtures/chat-history-compatibility.v1.json) | Unknown/retired action and receipt notices, preserved valid history, no approval and propagated authority failure | None yet |
 | Staff directory/history | [Directory 1](fixtures/staff-directory.v1.json), [History 1](fixtures/staff-history.v1.json) | Exact identities, current membership vs recorded events, filters/continuation, partial legacy coverage and fresh access | None yet |
 | Direct purchase recording | [1](fixtures/purchase-recording.v1.md) | Combined invoice/received goods, full1–10 sources, exact stock/value/payable, stale/rollback/replay and owning bill | None yet |
 | Supplier opening | [1](fixtures/supplier-opening.v1.md) | Pre-existing payable/advance, server start, exact controls, duplicate/cutoff/scope, review/editor/rollback/recovery | None yet |
@@ -40,6 +41,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Saved proposal history compatibility, 12 October 2026](runs/2026-10-12-chat-history-compatibility.md): incompatible records become safe read-only notices;3 tests11 assertions/scoped types pass. Current protected native read loads one saved message/three valid proposals with saved chat facts unchanged8.435s; synthetic notice component screenshot verified. Stable API/browser recovery remains unverified; no restart or activation.
 
 - [Global staff history sheet source, 12 October 2026](runs/2026-10-12-staff-history-sheet-source.md): strict optional answer target, shell-owned native query sheet, original before/after and pagination controls;3 tests23 assertions/scoped types pass. Actual source Open/unavailable/Close and invalid-link Close preserve route/selected chat; rollback-data content renders with screenshots. Runtime read and saved chat acceptance remain unverified; S01 partial.
 

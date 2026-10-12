@@ -36,6 +36,7 @@ import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
 import { GeneralAttachComposer } from "./general-attachment-tray"
+import { GeneralUnavailableProposals } from "./general-unavailable-proposals"
 import { GeneralAnswerCard } from "./general-answer-card"
 import { GeneralSentFile } from "./general-chat-photo"
 import { GeneralProposalCard } from "./general-proposal-card"
@@ -267,7 +268,7 @@ export function GeneralThread({
           ) : null}
           {vm.state.isError ? (
             <div role="alert" className="flex items-center gap-3 text-sm">
-              <p>This chat could not load in your current Store.</p>
+              <p>This chat could not load. Try again or open another saved chat.</p>
               <Button
                 size="sm"
                 variant="outline"
@@ -341,6 +342,9 @@ export function GeneralThread({
             <p className="animate-pulse pl-10 text-xs text-muted-foreground">
               Thinking…
             </p>
+          ) : null}
+          {vm.state.data?.unavailableProposals?.length ? (
+            <GeneralUnavailableProposals rows={vm.state.data.unavailableProposals} />
           ) : null}
           {vm.data?.proposals.length ? (
             <div className="flex flex-col gap-3 pl-10">
