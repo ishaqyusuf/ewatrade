@@ -41,6 +41,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Global staff history sheet source, 12 October 2026](runs/2026-10-12-staff-history-sheet-source.md): strict optional answer target, shell-owned native query sheet, original before/after and pagination controls;3 tests23 assertions/scoped types pass. Actual source Open/unavailable/Close and invalid-link Close preserve route/selected chat; rollback-data content renders with screenshots. Runtime read and saved chat acceptance remain unverified; S01 partial.
+
 - [Staff history reads, 12 October 2026](runs/2026-10-12-staff-history-reads.md): strict recorded lifecycle/access projection, planned GENERAL tool;9 tests78 assertions/scoped types pass. Five synthetic audit rows verify rollback pagination/redaction; actual zero-event and foreign-filter tool reads preserve staff facts. Actual answer rendering and timestamp hydration repair verified with screenshot. Saved chat/global history object acceptance pending; S01 partial.
 
 - [Staff directory reads, 12 October 2026](runs/2026-10-12-staff-directory-reads.md): canonical search/detail, exact totals and planned dashboard tools;8 tests93 assertions/scoped types pass. Actual owned-QA reads and cross-Tenant/Store refusal preserve all staff facts. One saved membership limits real pagination evidence; S01 partial, history/web acceptance pending.

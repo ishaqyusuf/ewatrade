@@ -60,7 +60,9 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current implementation focus: E05. Purchase fact reversal now passes signed rollback/stale refusal,
+Current implementation focus: S01 directory/history while E05 local activation/API restart approval is pending.
+
+E05 purchase fact reversal now passes signed rollback/stale refusal,
 full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;
 three canonical procedures remain. [Latest evidence](runs/2026-10-12-purchase-fact-reversal-web.md).
 [Payment reversal evidence](runs/2026-10-12-purchase-payment-reversal-web.md). Supplier creation and purchase registration
@@ -123,3 +125,5 @@ acceptance, runtime availability and deployment are separate states.
 S01 directory milestone: canonical membership search/detail, exact request-snapshot totals, filter-bound keyset pagination and two planned dashboard read tools implemented. Eight focused tests/93 assertions and scoped types pass. Real owned QA router/tool reads, empty results and cross-Tenant/Store refusal pass with staff facts unchanged. QA currently has one membership, so real multi-page and same-name checks remain open. Recorded lifecycle/access history source now implemented; saved dashboard acceptance remains open. S01 is partial and unbookmarked. [Evidence](runs/2026-10-12-staff-directory-reads.md).
 
 S01 history milestone: original lifecycle/access streams, subject/actor/Store/event/date filters, exact recorded counts and filter-bound pagination, redacted before/after and explicit legacy/missing-stream gaps implemented. Nine focused tests/78 assertions and scoped types pass; synthetic rollback projection and actual fresh protected GENERAL reads preserve all staff facts. Actual answer rendering/timestamp hydration repair and screenshot verified; saved chat/global history object acceptance pending. Planned capability; no acceptance bookmark. [Evidence](runs/2026-10-12-staff-history-reads.md).
+
+S01 global history sheet source: strict optional answer Open target, shell-owned URL/query sheet, original before/after/source/actor/time and first/next/refresh controls implemented. Three focused tests23 assertions/scoped types and actual rollback-projection content/source Open/unavailable/Close/malformed-link checks pass. Close retains assistant/selected chat; saved chat currently fails to load and successful native sheet read is unverified. S01 remains partial/unbookmarked. [Evidence](runs/2026-10-12-staff-history-sheet-source.md).

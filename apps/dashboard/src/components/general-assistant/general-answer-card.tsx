@@ -1,5 +1,6 @@
 "use client"
 
+import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { useSyncExternalStore } from "react"
 
@@ -8,7 +9,11 @@ const clientSnapshot = () => true
 const serverSnapshot = () => false
 
 export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
-  const hydrated = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot)
+  const hydrated = useSyncExternalStore(
+    subscribe,
+    clientSnapshot,
+    serverSnapshot,
+  )
   const asOf = new Date(answer.asOf)
   return (
     <div className="rounded-lg border px-4 py-3">
@@ -21,6 +26,11 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
         </time>
       </p>
       <p className="mt-2 text-sm">{answer.detail}</p>
+      {answer.target ? (
+        <div className="mt-3">
+          <OpenStaffHistorySheet target={answer.target} />
+        </div>
+      ) : null}
     </div>
   )
 }

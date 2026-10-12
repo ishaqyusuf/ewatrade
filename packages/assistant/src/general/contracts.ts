@@ -1,3 +1,5 @@
+import { staffHistoryTargetSchema } from "./staff-history-target"
+export { staffHistoryTargetSchema } from "./staff-history-target"
 import { purchaseRecordAction } from "./purchase-recording"
 import { supplierOpeningAction } from "./supplier-opening"
 import { supplierEntryReverseAction } from "./supplier-entry-reversal"
@@ -353,6 +355,7 @@ export const generalAnswerSchema = z
     scope: z.string().max(500),
     asOf: z.string().datetime(),
     detail: z.string().max(1000),
+    target: staffHistoryTargetSchema.optional(),
   })
   .strict()
 export type GeneralAnswer = z.infer<typeof generalAnswerSchema>

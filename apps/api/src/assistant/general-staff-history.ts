@@ -6,8 +6,13 @@ export const generalStaffHistoryInput = retailOpsStaffHistoryFiltersSchema
 
 export function generalStaffHistoryAnswer(
   page: Awaited<ReturnType<typeof listStaffHistoryPage>>,
+  filters: Parameters<typeof generalStaffHistoryInput.parse>[0] = {},
 ): GeneralAnswer {
   return {
+    target: {
+      kind: "staff_history",
+      filters: generalStaffHistoryInput.parse(filters),
+    },
     id: `staff_history_${crypto.randomUUID()}`,
     title: "Staff history",
     value:
@@ -19,6 +24,6 @@ export function generalStaffHistoryAnswer(
         ? "Business · recorded Store access changes"
         : "Business · staff lifecycle and access history",
     asOf: page.asOf,
-    detail: `${page.data.map((event) => `${event.at} · ${event.subject.name ?? "Subject unavailable"} · ${event.eventType} · ${event.actor.name ? `by ${event.actor.name}` : "actor unavailable"} · ${event.source}`).join("; ") || "No matching events in the available recorded streams."} ${page.data.length} on this page. ${page.nextCursor ? "More recorded events; continue with the original filters/cursor." : "End of available recorded results."} ${page.total === null ? "A requested history stream is unavailable; the full matching total is unknown." : "Total counts recorded events, not people or reconstructed employment history."} ${page.coverage.detail}`,
+    detail: `${page.data.length} recorded events on this page. ${page.nextCursor ? "More recorded events; continue with the original filters/cursor." : "End of available recorded results."} ${page.total === null ? "A requested history stream is unavailable; the full matching total is unknown." : "Total counts recorded events, not people or reconstructed employment history."} ${page.coverage.detail} Open history for original before/after, actor, timestamp and source.`,
   }
 }

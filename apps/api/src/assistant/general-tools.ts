@@ -172,7 +172,7 @@ export function createGeneralTools(
       inputSchema: generalStaffHistoryInput,
       execute: input => wrap("readStaffHistory", async fresh => {
         const page = await retailOpsRouter.createCaller(fresh).staffHistoryPage({ ...input, limit: 10 })
-        onAnswer(generalStaffHistoryAnswer(page))
+        onAnswer(generalStaffHistoryAnswer(page, input))
         return page
       }),
     }),

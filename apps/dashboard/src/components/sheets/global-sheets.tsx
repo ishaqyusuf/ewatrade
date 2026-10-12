@@ -7,6 +7,7 @@ import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
+import { StaffHistorySheet } from "./staff-history-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
@@ -27,6 +28,7 @@ import { StoreConversationSheet } from "./store-conversation-sheet"
 export type GlobalSheetAccess = {
   /** Website & domain launch gate and role; the sheet mounts only when true. */
   domains?: boolean
+  staffHistory?: boolean
   sales: boolean
   /** The Orders list and full order pages. */
   ordersPage?: boolean
@@ -98,6 +100,7 @@ export function GlobalSheets({
           <CustomerDetailsSheet />
         </>
       ) : null}
+      {access.staffHistory ? <StaffHistorySheet /> : null}
       <StockTransferDetailsSheet storeId={store.id} />
       <InventoryOperationDetailsSheet storeId={store.id} />
       <ReceiptSheet storeId={store.id} />
