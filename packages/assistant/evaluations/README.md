@@ -359,3 +359,12 @@ Accepted-reactivation, persisted/concurrent recovery and saved confirmation rema
 open;13/45accepted unchanged. D04 diagnostics/remaining-case selector committed
 `9e393bec`, preserving every full134 assertion and existing edit-confirm evidence.
 [Signed staff evidence](runs/2026-10-12-staff-status-signed-rollback.md).
+
+
+G02 cash-history backward paging corrected in `1272051a`: nearer newer asOf/id
+seek, descending display and backward continuation; scoped cursor and forward
+behavior preserved. One new actual-reader regression23assertions/scopedtypes pass,
+no connected suite repeated. D04 one read-only20s-gap observation preserves134
+fingerprints; no change in this window is not historical resolution, so remaining
+12signed cases stay unscheduled. No accepted count/bookmark change.
+[Backward source evidence](runs/2026-10-12-g02-cash-history-backward-source-v1.md).
