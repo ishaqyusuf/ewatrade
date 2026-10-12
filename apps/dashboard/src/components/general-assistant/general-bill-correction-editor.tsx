@@ -19,7 +19,13 @@ import { useState } from "react"
 import { z } from "zod"
 type Action = Extract<
   GeneralAction,
-  { action: "expense_void" | "bill_payment_reverse" | "purchase_payment_reverse" }
+  {
+    action:
+      | "expense_void"
+      | "bill_payment_reverse"
+      | "purchase_payment_reverse"
+      | "purchase_recognition_reverse"
+  }
 >
 const schema = z.object({
   date: z.string().min(1),
@@ -80,7 +86,9 @@ export function GeneralBillCorrectionEditor({
       <p className="text-sm text-muted-foreground">
         {initial.action === "expense_void"
           ? "Void the reviewed unpaid expense"
-          : "Reverse the reviewed payment record"}
+          : initial.action === "purchase_recognition_reverse"
+            ? "Reverse the reviewed purchase fact"
+            : "Reverse the reviewed payment record"}
         . Original records remain in history. This does not refund, recover or
         transfer money.
       </p>
@@ -124,8 +132,8 @@ export function GeneralBillCorrectionEditor({
         />
       </FieldGroup>
       <p className="text-sm text-muted-foreground">
-        The reviewed bill or payment stays selected. Ask for a new draft to
-        change the target.
+        The reviewed record stays selected. Ask for a new draft to change the
+        target.
       </p>
       {error ? (
         <p role="alert" className="text-sm text-destructive">

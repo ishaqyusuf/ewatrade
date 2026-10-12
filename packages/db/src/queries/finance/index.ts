@@ -110,7 +110,12 @@ export {
   prepareReviewedFinancePurchaseReceiptInTransaction,
   purchaseReceiptReviewDigest,
 } from "./purchase-recognition"
-export { reverseFinancePurchaseRecognition } from "./purchase-recognition-reversals"
+export {
+  reverseFinancePurchaseRecognition,
+  reverseFinancePurchaseRecognitionInTransaction,
+  getFinancePurchaseRecognitionReversalReview,
+  prepareReviewedFinancePurchaseRecognitionReversalInTransaction,
+} from "./purchase-recognition-reversals"
 export { getFinancePurchaseRecognition } from "./purchase-recognition-reads"
 export { listFinancePurchaseRecognitions } from "./purchase-recognition-list"
 

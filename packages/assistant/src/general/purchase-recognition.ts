@@ -1,3 +1,4 @@
+import { purchaseRecognitionReversalDraftInstructions } from "./purchase-recognition-reversal"
 import { z } from "zod"
 
 const id = z.string().trim().min(1).max(128)
@@ -37,5 +38,8 @@ export const purchaseRecognitionAction = z
     "The invoice due date cannot precede its recognition date.",
   )
 
-export const purchaseRecognitionDraftInstructions =
+const purchaseRecognitionBaseDraftInstructions =
   " When purchase_recognize is available, inspect the exact existing agreement with readPurchaseRecognition. Invoice, ownership and physical receipt are separate facts: require the user's explicit confirmation of the chosen fact, its date and source reference, and factConfirmed=true. For INVOICE require the stated invoice amount to match all immutable agreed goods costs; clarify differences rather than changing the agreement. OWNERSHIP and RECEIPT have no invoice amount or due date. For RECEIPT require explicit confirmation that all original agreed goods physically arrived at their original Store and are owned. Review uses all original goods, exact current stock revisions and original allocated costs; never supply replacement lines, costs or stock revisions. Never infer ownership from an invoice or shipping; do not infer physical receipt from ownership or an invoice. This action does not record split deliveries, changed costs, supplier settlement or send money; use their separate supported workflows. Do not replace an existing agreement or repeat an existing stage."
+
+export const purchaseRecognitionDraftInstructions =
+  purchaseRecognitionBaseDraftInstructions + purchaseRecognitionReversalDraftInstructions
