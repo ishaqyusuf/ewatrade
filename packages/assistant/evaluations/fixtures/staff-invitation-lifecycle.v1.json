@@ -22,7 +22,12 @@
     "Default-off delivery gate prevents outbox discovery, claims and queue submission; incomplete live transport/custody configuration leaves work pending",
     "Existing QA email policy and exactly one routed destination precede final send fence; stable provider identity survives routing",
     "Console, capture and missing provider acceptance receipts cannot certify SENT; transport errors remain OUTCOME_UNKNOWN",
-    "Periodic discovery shares the existing minute cadence, queues only Tenant/notification IDs and reports partial enqueue failure without private error details"
+    "Periodic discovery shares the existing minute cadence, queues only Tenant/notification IDs and reports partial enqueue failure without private error details",
+    "Real signed RESEND and REVOKE complete with original reason/grants; same signed completed replay changes no transactional facts",
+    "Changed token, changed access revision and already accepted invitation each refuse both lifecycle commands with every transaction-local fact unchanged",
+    "Signed RESEND revokes the original link, cancels/erases original unsent custody and queues exactly one new encrypted invitation without changing membership access",
+    "Signed REVOKE records one INVITE_REVOKED event, cancels/erases original unsent custody and queues no new email; staff remains INVITED",
+    "Native lifecycle receipt source previews distinguish queued replacement from no email requested by revocation; blank reason refuses and local edit retains exact target"
   ],
   "sourceChecks": [
     "packages/db/src/staff-invitation-custody.test.ts",
@@ -36,10 +41,11 @@
     "apps/api/src/assistant/general-staff-invitation.integration-check.ts",
     "packages/jobs/src/handlers/staff-invitation-email.test.ts",
     "packages/jobs/src/handlers/staff-invitation-notification-schedule.test.ts",
-    "packages/jobs/src/tasks/scheduled-cadences.test.ts"
+    "packages/jobs/src/tasks/scheduled-cadences.test.ts",
+    "apps/api/src/assistant/general-staff-invitation-lifecycle.integration-check.ts"
   ],
   "remaining": [
-    "Full saved draft/Edit/re-review/Confirm, signed resend/revoke and completed recovery",
+    "Full saved draft/Edit/re-review/Confirm and durable saved/concurrent recovery; transaction-local signed resend/revoke/replay now verified",
     "Trusted provider receipt reconciliation and actual controlled email/queue acceptance; guarded dispatch/discovery source is implemented but disabled",
     "Saved global receipt, chat continuity, full web acceptance and screenshots",
     "Concurrency and complete stale/authority/quota refusal evidence",

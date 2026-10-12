@@ -287,3 +287,5 @@ unchanged, and there is no new model-run evidence yet.
 S02 signed/global receipt source:8tests66assertions; actual signed completion22.808s, changed token3.925s and real Store-label stale refusal7.672s all roll back. Original native receipt/discovery and desktop local editor/receipt/Close evidence pass; saved HTTP/chat/email acceptance remains pending. [Run](runs/2026-10-12-staff-invitation-assistant-source.md).
 
 - [Guarded invitation delivery source, 12 October 2026](runs/2026-10-12-staff-invitation-delivery-source.md): default-off ID-only dispatch/discovery on existing cadence, QA routing/transport/custody guards;19tests103assertions/scoped types/Biome pass. No real provider/queue/DB/UI acceptance. S02partial.
+
+S02 signed lifecycle milestone:8real signed resend/revoke completion/replay and changed-token/access/accepted-link refusal cases pass with full saved and refusal-stage facts unchanged. Native receipt source previews/blank reason/exact target editing/screenshots verified. Source capabilities planned, parentpartial/unbookmarked;13/45accepted28.9%,32awaiting71.1%. [Evidence](runs/2026-10-12-staff-invitation-lifecycle-signed.md).

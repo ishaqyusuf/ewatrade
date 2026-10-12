@@ -286,7 +286,13 @@ function GeneralInvitationReasonEditor({
   initial: Action & { intent: Exclude<Action["intent"], { kind: "INVITE" }> }
 }) {
   const form = useZodForm<{ reason: string }>(
-    z.object({ reason: z.string().trim().min(1).max(500) }),
+    z.object({
+      reason: z
+        .string()
+        .trim()
+        .min(1, "Enter a reason.")
+        .max(500, "Use 500 characters or fewer."),
+    }),
     { defaultValues: { reason: initial.intent.reason } },
   )
   return (

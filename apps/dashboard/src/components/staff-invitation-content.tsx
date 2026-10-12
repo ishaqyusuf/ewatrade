@@ -123,7 +123,9 @@ export function StaffInvitationContent({
               "Email",
               notification
                 ? notificationLabels[notification.status]
-                : "No notification recorded",
+                : receipt.kind === "REVOKE"
+                  ? "Not requested by this revocation"
+                  : "No notification recorded",
             ],
             ["Send attempts", String(notification?.attemptCount ?? 0)],
             ["Expires at (UTC)", utc(invitation.expiresAt)],
