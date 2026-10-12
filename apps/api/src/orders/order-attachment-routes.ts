@@ -10,6 +10,10 @@ import {
   createOrderAttachmentStorage,
 } from "@ewatrade/private-media/order-attachments"
 import {
+  createOrderVideoStorage,
+  parseVideoRange,
+} from "@ewatrade/private-media/order-videos"
+import {
   VerifiedUploadError,
   readVerifiedUpload,
 } from "@ewatrade/private-media/verified-upload"
@@ -80,6 +84,16 @@ function mapError(context: Context, error: unknown) {
       "UPLOADS_UNAVAILABLE",
       "File uploads are unavailable for this business.",
     )
+  if (
+    error instanceof PrivateObjectStorageError &&
+    error.code === "INTEGRITY_MISMATCH"
+  )
+    return refuse(
+      context,
+      400,
+      "UPLOAD_REFUSED",
+      "The file must match the upload you started.",
+    )
   if (error instanceof PrivateObjectStorageError)
     return refuse(
       context,
@@ -126,6 +140,12 @@ export function registerOrderAttachmentRoutes(
           "UPLOAD_EXPIRED",
           "This upload expired. Attach the file again.",
         )
+      if (row.kind === "VIDEO")
+        return await uploadVideo(context, row, {
+          db,
+          tenantId,
+          dataClassification,
+        })
       const bytes = await readVerifiedUpload(context.req.raw, row, {
         maxBytes: ORDER_ATTACHMENT_MAX_BYTES,
         accepts: acceptsOrderAttachmentBytes,
@@ -177,6 +197,8 @@ export function registerOrderAttachmentRoutes(
           "NOT_READY",
           "This file is still uploading.",
         )
+      if (row.kind === "VIDEO")
+        return await streamVideo(context, row, dataClassification)
       const bytes = await createOrderAttachmentStorage(dataClassification).read(
         { target: target(row) },
       )
@@ -193,5 +215,103 @@ export function registerOrderAttachmentRoutes(
     } catch (error) {
       return mapError(context, error)
     }
+  })
+}
+
+type AttachmentRow = Awaited<ReturnType<typeof readCommercialOrderAttachment>>
+
+/**
+ * QA videos stream through the API into the local test store. Live videos
+ * upload straight to storage (orders.activity.uploadTarget), so they are
+ * refused here: Vercel would cut the body off anyway.
+ */
+async function uploadVideo(
+  context: Context,
+  row: AttachmentRow,
+  {
+    db,
+    tenantId,
+    dataClassification,
+  }: Pick<
+    Awaited<ReturnType<typeof admit>>,
+    "db" | "tenantId" | "dataClassification"
+  >,
+) {
+  const storage = createOrderVideoStorage(dataClassification)
+  const body = context.req.raw.body
+  const length = context.req.header("content-length")
+  if (storage.mode !== "api")
+    return refuse(
+      context,
+      409,
+      "UPLOAD_DIRECT",
+      "Upload this video with the app's direct upload.",
+    )
+  if (
+    !body ||
+    context.req.header("content-type") !== row.contentType ||
+    (length !== undefined && Number(length) !== row.sizeBytes)
+  )
+    return refuse(
+      context,
+      400,
+      "UPLOAD_REFUSED",
+      "The file must match the upload you started.",
+    )
+  const { storagePath } = await storage.write(
+    target(row),
+    body,
+    context.req.raw.signal,
+  )
+  const saved = await markCommercialOrderAttachmentUploaded(db, {
+    attachmentId: row.id,
+    storagePath,
+    storageProvider: storage.provider,
+    storageStoreId: storage.storeId,
+    tenantId,
+  })
+  if (!saved)
+    return refuse(
+      context,
+      409,
+      "UPLOAD_EXPIRED",
+      "This upload expired. Attach the video again.",
+    )
+  return context.json({ attachmentId: row.id, status: "READY" })
+}
+
+/** Streams a video with Range support, so players can seek. */
+async function streamVideo(
+  context: Context,
+  row: AttachmentRow,
+  dataClassification: "LIVE" | "QA",
+) {
+  const range = parseVideoRange(
+    context.req.header("range") ?? null,
+    row.sizeBytes,
+  )
+  const headers = {
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "private, no-store",
+    "Content-Type": row.contentType,
+    "X-Content-Type-Options": "nosniff",
+  }
+  if (range === "unsatisfiable")
+    return new Response(null, {
+      status: 416,
+      headers: { ...headers, "Content-Range": `bytes */${row.sizeBytes}` },
+    })
+  const video = await createOrderVideoStorage(dataClassification).open(
+    target(row),
+    range,
+    context.req.raw.signal,
+  )
+  return new Response(video.body, {
+    status: video.status,
+    headers: {
+      ...headers,
+      "Content-Length": String(video.contentLength),
+      ...(video.contentRange ? { "Content-Range": video.contentRange } : {}),
+    },
   })
 }

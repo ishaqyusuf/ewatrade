@@ -10,6 +10,25 @@ import {
 export const LOCAL_TEST_OBJECT_STORE_ID = "store_localtest"
 
 /**
+ * One fixed place for every dev process: os.tmpdir() follows TMPDIR, which
+ * differs between processes (the dev router drops it), so files written by
+ * one process were unreadable by another.
+ */
+export function localTestObjectRoot(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+  rootDir?: string,
+) {
+  return resolve(
+    rootDir ??
+      environment.LOCAL_PRIVATE_OBJECTS_DIR ??
+      join(
+        process.platform === "win32" ? tmpdir() : "/tmp",
+        "ewatrade-local-private-objects",
+      ),
+  )
+}
+
+/**
  * Registered test adapter for QA data outside production: private objects are
  * files under a local directory, so QA uploads never reach a live provider.
  */
@@ -25,17 +44,7 @@ export function createLocalTestPrivateObjectPort<ContentType extends string>(
 } {
   assertPrivateObjectServer()
   const environment = input.environment ?? process.env
-  // One fixed place for every dev process: os.tmpdir() follows TMPDIR, which
-  // differs between processes (the dev router drops it), so files written by
-  // one process were unreadable by another.
-  const root = resolve(
-    input.rootDir ??
-      environment.LOCAL_PRIVATE_OBJECTS_DIR ??
-      join(
-        process.platform === "win32" ? tmpdir() : "/tmp",
-        "ewatrade-local-private-objects",
-      ),
-  )
+  const root = localTestObjectRoot(environment, input.rootDir)
   const allowed = () => environment.APP_ENV !== "production"
   const locate = (path: string) => {
     if (!allowed()) throw new PrivateObjectStorageError("STORAGE_UNAVAILABLE")

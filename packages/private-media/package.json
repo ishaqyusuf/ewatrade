@@ -11,6 +11,7 @@
     "./expense-receipt-download-token": "./src/expense-receipt-download-token.ts",
     "./assistant-attachments": "./src/assistant-attachments.ts",
     "./order-attachments": "./src/order-attachments.ts",
+    "./order-videos": "./src/order-videos.ts",
     "./local-test-object-port": "./src/local-test-object-port.ts",
     "./verified-upload": "./src/verified-upload.ts"
   },

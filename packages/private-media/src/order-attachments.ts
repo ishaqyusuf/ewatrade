@@ -8,8 +8,10 @@ import {
 } from "./object-storage"
 import { createVercelPrivateObjectPort } from "./vercel-blob"
 
-/** Photos and documents on Order activity. Video needs direct uploads (later). */
+/** Photos and documents on Order activity. */
 export const ORDER_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
+/** About a minute of phone video; uploaded straight to storage on live data. */
+export const ORDER_VIDEO_MAX_BYTES = 100 * 1024 * 1024
 
 export const ORDER_ATTACHMENT_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -18,13 +20,31 @@ export const ORDER_ATTACHMENT_EXTENSIONS: Record<string, string> = {
   "image/heic": "heic",
   "image/heif": "heif",
   "application/pdf": "pdf",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
 }
 
 export function orderAttachmentKind(contentType: string) {
   if (!Object.hasOwn(ORDER_ATTACHMENT_EXTENSIONS, contentType)) return null
   return contentType === "application/pdf"
     ? ("DOCUMENT" as const)
-    : ("IMAGE" as const)
+    : contentType.startsWith("video/")
+      ? ("VIDEO" as const)
+      : ("IMAGE" as const)
+}
+
+export function orderAttachmentMaxBytes(contentType: string) {
+  return orderAttachmentKind(contentType) === "VIDEO"
+    ? ORDER_VIDEO_MAX_BYTES
+    : ORDER_ATTACHMENT_MAX_BYTES
+}
+
+/** MP4 and QuickTime both open with an ISO-BMFF "ftyp" box. */
+function isIsoMediaFile(bytes: Uint8Array) {
+  return (
+    bytes.byteLength >= 12 &&
+    String.fromCharCode(...bytes.subarray(4, 8)) === "ftyp"
+  )
 }
 
 /** The declared type must match the file's signature. */
@@ -32,7 +52,9 @@ export function acceptsOrderAttachmentBytes(
   bytes: Uint8Array,
   contentType: string,
 ) {
-  if (!orderAttachmentKind(contentType) || bytes.byteLength < 1) return false
+  const kind = orderAttachmentKind(contentType)
+  if (!kind || bytes.byteLength < 1) return false
+  if (kind === "VIDEO") return isIsoMediaFile(bytes)
   const detected = detectServiceCommerceMediaMimeType(bytes)
   return (
     detected === contentType ||
