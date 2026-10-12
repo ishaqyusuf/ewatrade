@@ -1,5 +1,6 @@
 import { serviceWorkEditorActionSchema } from "./service-work-editor"
 import { serviceWorkLifecycleReceipt } from "./service-work"
+import { serviceWorkCompletionReceipt } from "./service-work-completion"
 import { serviceWorkRecordReceipt } from "./service-work-records"
 export {
   serviceWorkEditorActionSchema,
@@ -12,6 +13,7 @@ export type {
 } from "./service-work-editor"
 export { serviceWorkLifecycleDraftInstructions } from "./service-work"
 export { serviceWorkRecordDraftInstructions } from "./service-work-records"
+export { serviceWorkCompletionDraftInstructions } from "./service-work-completion"
 import { serviceIntakeAction } from "./service-intake"
 import { staffStatusAction } from "./staff-status"
 import { staffAccessAction } from "./staff-access"
@@ -448,6 +450,7 @@ const generalRecordReceiptSchema = z
 export const generalReceiptSchema = z.union([
   generalRecordReceiptSchema,
   serviceWorkLifecycleReceipt,
+  serviceWorkCompletionReceipt,
   serviceWorkRecordReceipt,
 ])
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
@@ -588,6 +591,10 @@ export function generalActionSummary(
       return `Revise Service promise · ${action.promisedAt} · ${action.reason}`
     case "service_job_line_transition":
       return `Update saved work · ${action.toStatus.replaceAll("_", " ")}${action.reason ? ` · ${action.reason}` : ""}`
+    case "service_work_rework":
+      return `Create linked rework · ${action.quantity} · ${action.reason}`
+    case "service_work_handoff":
+      return "Record customer handoff of settled Service work"
     case "service_work_note":
       return "Add internal Service work note"
     case "service_work_exception":

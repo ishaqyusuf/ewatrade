@@ -299,6 +299,40 @@ export function GeneralServiceWorkEditorView({
                 ) : null}
               </>
             ) : null}
+            {draft.action === "service_work_rework" ? (
+              <ControlField
+                label="Rework quantity"
+                error={fieldError("quantity")}
+              >
+                <Input
+                  value={draft.quantity}
+                  inputMode="decimal"
+                  disabled={disabled}
+                  onChange={(event) =>
+                    form.setValue("quantity", event.target.value, {
+                      shouldValidate: true,
+                    })
+                  }
+                />
+              </ControlField>
+            ) : null}
+            {draft.action === "service_work_handoff" ? (
+              <ControlField
+                label="Collection note (optional)"
+                error={fieldError("note")}
+              >
+                <Textarea
+                  value={draft.note ?? ""}
+                  maxLength={500}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    form.setValue("note", event.target.value, {
+                      shouldValidate: true,
+                    })
+                  }
+                />
+              </ControlField>
+            ) : null}
             {draft.action === "service_job_reschedule" ? (
               <ControlField
                 label="Promised date and time (UTC)"
@@ -362,6 +396,7 @@ export function GeneralServiceWorkEditorView({
               <ControlField
                 label={
                   draft.action === "service_job_reschedule" ||
+                  draft.action === "service_work_rework" ||
                   (draft.action === "service_job_line_transition" &&
                     ["blocked", "cancelled"].includes(draft.toStatus))
                     ? "Reason"
@@ -446,9 +481,13 @@ export function GeneralServiceWorkEditorView({
             {draft.action === "service_work_note" ||
             draft.action === "service_work_exception"
               ? "Private work records preserve work, payment and handoff state. Exceptions start open."
-              : draft.action === "service_job_reschedule"
-                ? "Review shows the exact replacement or cancellation of due reminders. Provider delivery remains separate."
-                : "Ready is a work milestone. Payment and handoff are separate actions."}
+              : draft.action === "service_work_rework"
+                ? "Creates new queued linked work. Completed original work and any prior handoff stay recorded; no new sale or payment."
+                : draft.action === "service_work_handoff"
+                  ? "Review requires authorized ready work and a settled balance. Outstanding due reminders are cancelled; no payment or customer update is created."
+                  : draft.action === "service_job_reschedule"
+                    ? "Review shows the exact replacement or cancellation of due reminders. Provider delivery remains separate."
+                    : "Ready is a work milestone. Payment and handoff are separate actions."}
           </p>
           {error || form.formState.errors.root?.message ? (
             <p role="alert" className="text-sm text-destructive">

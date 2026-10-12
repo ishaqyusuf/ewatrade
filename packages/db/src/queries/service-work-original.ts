@@ -1,4 +1,8 @@
-import { CommerceQuoteSourceType } from "../../generated/prisma/enums"
+import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
+import {
+  PaymentStatus,
+  CommerceQuoteSourceType,
+} from "../../generated/prisma/enums"
 import { z } from "zod"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
@@ -47,6 +51,34 @@ function eventDetails(type: string, payload: Prisma.JsonValue | null) {
       .safeParse(payload)
     return parsed.success
       ? { coverage: "recorded" as const, promise: parsed.data }
+      : { coverage: "unavailable" as const }
+  }
+  if (type === "REWORK") {
+    const parsed = z
+      .object({
+        sourceLineId: id,
+        quantity: z.string().superRefine((value, ctx) => {
+          try {
+            parseExactDecimal(value, { allowZero: false, maxScale: 6 })
+          } catch {
+            ctx.addIssue({
+              code: "custom",
+              message: "Invalid original rework quantity",
+            })
+          }
+        }),
+      })
+      .safeParse(payload)
+    return parsed.success
+      ? { coverage: "recorded" as const, rework: parsed.data }
+      : { coverage: "unavailable" as const }
+  }
+  if (type === "REMOTE_HANDOFF") {
+    const parsed = z
+      .object({ paymentStatus: z.enum(PaymentStatus) })
+      .safeParse(payload)
+    return parsed.success
+      ? { coverage: "recorded" as const, handoff: parsed.data }
       : { coverage: "unavailable" as const }
   }
   return { coverage: "not_projected" as const }

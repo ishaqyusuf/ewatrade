@@ -72,7 +72,9 @@ export function GeneralProposalEditor(props: {
     props.proposal.payload.action === "service_job_reschedule" ||
     props.proposal.payload.action === "service_job_line_transition" ||
     props.proposal.payload.action === "service_work_note" ||
-    props.proposal.payload.action === "service_work_exception"
+    props.proposal.payload.action === "service_work_exception" ||
+    props.proposal.payload.action === "service_work_rework" ||
+    props.proposal.payload.action === "service_work_handoff"
   )
     return (
       <GeneralServiceWorkEditor

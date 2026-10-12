@@ -65,7 +65,7 @@ function fixture(
     toStatus: "IN_PROGRESS",
     createdAt,
     effectiveAt,
-    payload: { privateCustomer: "must-not-leak" },
+    payload: { privateCustomer: "must-not-leak" } as Prisma.JsonValue,
   }
   const note = {
     id: "old-note",
@@ -197,9 +197,10 @@ test("exact original event retains recorded actor/status/times while current Job
 test("assignment payload projects only canonical recorded references, never arbitrary JSON", async () => {
   const f = fixture()
   f.event.type = "ASSIGNED"
-  f.event.payload = Object.assign(f.event.payload, {
+  f.event.payload = {
+    privateCustomer: "must-not-leak",
     assigneeUserId: "original-assignee",
-  })
+  }
   const record = await getServiceWorkOriginalInTransaction(f.tx, {
     ...scope,
     kind: "service_work",
@@ -332,4 +333,49 @@ test("native root reader uses exactly one bounded snapshot; pure reader never ne
     recordId: "old-note",
   })
   expect(count).toBe(1)
+})
+
+test("original rework and handoff payloads expose bounded recorded facts only", async () => {
+  for (const [type, payload, expected] of [
+    [
+      "REWORK",
+      {
+        sourceLineId: "source-line",
+        quantity: "1.25",
+        privateCustomer: "must-not-leak",
+      },
+      {
+        coverage: "recorded",
+        rework: { sourceLineId: "source-line", quantity: "1.25" },
+      },
+    ],
+    [
+      "REMOTE_HANDOFF",
+      { paymentStatus: "PAID", privateCustomer: "must-not-leak" },
+      { coverage: "recorded", handoff: { paymentStatus: "PAID" } },
+    ],
+    [
+      "REWORK",
+      { sourceLineId: "source-line", quantity: "-1" },
+      { coverage: "unavailable" },
+    ],
+    [
+      "REMOTE_HANDOFF",
+      { paymentStatus: "invented" },
+      { coverage: "unavailable" },
+    ],
+  ] as const) {
+    const f = fixture()
+    f.event.type = type
+    f.event.payload = { ...payload }
+    const record = await getServiceWorkOriginalInTransaction(f.tx, {
+      ...scope,
+      kind: "service_work",
+      eventId: "old-event",
+    })
+    expect(record.kind).toBe("service_work")
+    if (record.kind === "service_work")
+      expect(record.original.details).toEqual(expected)
+    expect(JSON.stringify(record)).not.toContain("must-not-leak")
+  }
 })

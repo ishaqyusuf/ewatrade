@@ -36,7 +36,8 @@
     "./general/service-work": "./src/general/service-work.ts",
     "./general/service-work-records": "./src/general/service-work-records.ts",
     "./general/booking-read": "./src/general/booking-read.ts",
-    "./general/service-work-original": "./src/general/service-work-original.ts"
+    "./general/service-work-original": "./src/general/service-work-original.ts",
+    "./general/service-work-completion": "./src/general/service-work-completion.ts"
   },
   "scripts": {
     "lint": "biome check .",

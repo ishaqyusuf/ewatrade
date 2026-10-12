@@ -31,6 +31,7 @@ import {
   staffAccessReviewInput,
   serviceWorkLifecycleDraftInstructions,
   serviceWorkRecordDraftInstructions,
+  serviceWorkCompletionDraftInstructions,
 } from "@ewatrade/assistant/general/contracts"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
@@ -293,6 +294,8 @@ export function createGeneralTools(
     "service_job_line_transition",
     "service_work_note",
     "service_work_exception",
+    "service_work_rework",
+    "service_work_handoff",
   ].some((action) => availableWriteActions.has(action))
   const workContextCapability = readCapabilities.get("readServiceWorkContext")
   const workReviewCapability = readCapabilities.get("reviewServiceWork")
@@ -322,6 +325,11 @@ export function createGeneralTools(
       availableWriteActions.has(action),
     )
       ? [serviceWorkRecordDraftInstructions]
+      : []),
+    ...(["service_work_rework", "service_work_handoff"].some((action) =>
+      availableWriteActions.has(action),
+    )
+      ? [serviceWorkCompletionDraftInstructions]
       : []),
     ...(availableWriteActions.has("service_job_assign")
       ? [
@@ -443,26 +451,38 @@ export function createGeneralTools(
     }),
 
     reviewStaffAccess: tool({
-      description: "Read the current Store grant change for an exact member resolved from the staff directory. Resolve Store names from current same-business Stores; never invent IDs or revisions. Show changed roles, removed Stores, starting Store, separate catalog grant and business-wide legacy impact. This review changes nothing. Explicit legacy acknowledgment and signed app confirmation are required to apply it. No membership status, business role or service handover changes.",
+      description:
+        "Read the current Store grant change for an exact member resolved from the staff directory. Resolve Store names from current same-business Stores; never invent IDs or revisions. Show changed roles, removed Stores, starting Store, separate catalog grant and business-wide legacy impact. This review changes nothing. Explicit legacy acknowledgment and signed app confirmation are required to apply it. No membership status, business role or service handover changes.",
       inputSchema: staffAccessReviewInput,
-      execute: (input) => wrap("reviewStaffAccess", async (fresh) => retailOpsRouter.createCaller(fresh).staffStoreAccessReview(input)),
+      execute: (input) =>
+        wrap("reviewStaffAccess", async (fresh) =>
+          retailOpsRouter.createCaller(fresh).staffStoreAccessReview(input),
+        ),
     }),
     readStaffAccessReceipt: tool({
-      description: "Read the exact original saved StaffAccessAuditEvent selected from a completed receipt or staff history. Original grant snapshots, access revision and actor reference are separate from current names and membership. Reason and service handover were not recorded. Never infer their contents or restored access.",
+      description:
+        "Read the exact original saved StaffAccessAuditEvent selected from a completed receipt or staff history. Original grant snapshots, access revision and actor reference are separate from current names and membership. Reason and service handover were not recorded. Never infer their contents or restored access.",
       inputSchema: staffAccessReadInput,
-      execute: (input) => wrap("readStaffAccessReceipt", async (fresh) => {
-        const receipt = await retailOpsRouter.createCaller(fresh).staffAccessReceipt(input)
-        onAnswer({
-          id: `staff-access_${crypto.randomUUID()}`,
-          title: "Original staff Store access",
-          value: `Access revision ${receipt.revision}`,
-          scope: "Current business · original Store access event",
-          asOf: receipt.asOf,
-          detail: `Recorded ${receipt.happenedAt}. Current directory name: ${receipt.subject.name ?? "Unavailable"}. ${receipt.detail}`.slice(0, 1000),
-          target: { kind: "staff_access", eventId: receipt.eventId },
-        })
-        return receipt
-      }),
+      execute: (input) =>
+        wrap("readStaffAccessReceipt", async (fresh) => {
+          const receipt = await retailOpsRouter
+            .createCaller(fresh)
+            .staffAccessReceipt(input)
+          onAnswer({
+            id: `staff-access_${crypto.randomUUID()}`,
+            title: "Original staff Store access",
+            value: `Access revision ${receipt.revision}`,
+            scope: "Current business · original Store access event",
+            asOf: receipt.asOf,
+            detail:
+              `Recorded ${receipt.happenedAt}. Current directory name: ${receipt.subject.name ?? "Unavailable"}. ${receipt.detail}`.slice(
+                0,
+                1000,
+              ),
+            target: { kind: "staff_access", eventId: receipt.eventId },
+          })
+          return receipt
+        }),
     }),
     reviewStaffStatus: tool({
       description:

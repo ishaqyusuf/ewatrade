@@ -247,6 +247,26 @@ test("all intention controls preserve saved target and expose no raw identity or
       label: "Next work state",
       line: true,
     },
+    {
+      action: {
+        action: "service_work_rework",
+        jobId: "job",
+        lineId: "line",
+        quantity: "1.25",
+        reason: "Redo stated source",
+      },
+      label: "Rework quantity",
+      line: true,
+    },
+    {
+      action: {
+        action: "service_work_handoff",
+        jobId: "job",
+        note: "Collected",
+      },
+      label: "Collection note (optional)",
+      line: false,
+    },
     { action: initial, label: "Internal work note", line: true },
     {
       action: {

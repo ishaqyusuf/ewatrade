@@ -232,6 +232,10 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertServiceManager(tenant.membership.role),
   "services.intake.create": (tenant) =>
     assertServiceManager(tenant.membership.role),
+  "services.work.rework": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.work.handoff": (tenant) =>
+    assertServiceOperator(tenant.membership.role),
   "services.work.assign": (tenant) =>
     assertServiceManager(tenant.membership.role),
   "services.work.reschedule": (tenant) =>

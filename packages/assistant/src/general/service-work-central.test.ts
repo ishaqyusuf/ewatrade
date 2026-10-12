@@ -11,8 +11,16 @@ import {
   serviceWorkEditorInput,
 } from "./service-work-editor"
 
-test("all five strict intentions join GENERAL without accepting execution or scope controls", () => {
+test("all seven strict intentions join GENERAL without accepting execution or scope controls", () => {
   const actions: ServiceWorkEditorAction[] = [
+    {
+      action: "service_work_rework",
+      jobId: "job",
+      lineId: "line",
+      quantity: "1.25",
+      reason: "Redo completed work",
+    },
+    { action: "service_work_handoff", jobId: "job", note: "Collected" },
     { action: "service_job_assign", jobId: "job", assigneeUserId: "staff" },
     {
       action: "service_job_reschedule",
@@ -141,6 +149,8 @@ test("new receipt branches retain Finance Book and original Intake Order require
 })
 test("provider-free rehearsal resolves saved work before drafting an intention", () => {
   for (const content of [
+    "rework this service line",
+    "handoff this job",
     "assign this service job to Amina",
     "reschedule this job",
     "start this line",
@@ -161,4 +171,40 @@ test("provider-free rehearsal resolves saved work before drafting an intention",
     toolName: "readServices",
     input: { query: "Amina" },
   })
+})
+
+test("GENERAL completion receipts retain owning event and original source links", () => {
+  const receipt = {
+    kind: "service_work",
+    recordId: "new-job",
+    eventId: "original-event",
+    eventType: "REWORK",
+    sourceJobId: "source-job",
+    sourceLineId: "source-line",
+    recordedAt: "2026-10-12T12:00:00.123Z",
+    effectiveAt: "2026-10-11T12:00:00.456Z",
+    title: "Rework",
+    detail: "Original retained",
+  } satisfies GeneralReceipt
+  expect(generalReceiptSchema.parse(receipt)).toEqual(receipt)
+  expect(
+    generalReceiptSchema.safeParse({ ...receipt, sourceLineId: null }).success,
+  ).toBe(false)
+  expect(
+    generalReceiptSchema.safeParse({
+      ...receipt,
+      recordId: receipt.sourceJobId,
+    }).success,
+  ).toBe(false)
+  const handoff = {
+    ...receipt,
+    recordId: receipt.sourceJobId,
+    eventType: "REMOTE_HANDOFF",
+    sourceLineId: null,
+  } satisfies GeneralReceipt
+  expect(generalReceiptSchema.parse(handoff)).toEqual(handoff)
+  expect(
+    generalReceiptSchema.safeParse({ ...handoff, sourceLineId: "fake" })
+      .success,
+  ).toBe(false)
 })

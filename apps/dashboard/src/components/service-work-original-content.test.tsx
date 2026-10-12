@@ -121,3 +121,44 @@ test("later exception resolution does not become original outcome proof", () => 
   expect(current).toContain("later-resolver")
   expect(markup).not.toContain("Original outcome</dt>")
 })
+
+test("completion originals show source quantity and recorded payment separately from current facts", () => {
+  const base = {
+    ...common,
+    kind: "service_work" as const,
+    source: "ServiceWorkEvent" as const,
+    original: {
+      ...original,
+      eventId: "completion-event",
+      type: "REWORK" as const,
+      source: "service_work",
+      reason: "Redo completed work",
+      beforeStatus: null,
+      afterStatus: null,
+      effectiveAt: "2026-10-01T09:00:00.456Z",
+      details: {
+        coverage: "recorded" as const,
+        rework: { sourceLineId: "completed-source", quantity: "1.25" },
+      },
+    },
+  } satisfies ServiceWorkOriginalRecord
+  const html = render(base)
+  expect(html).toContain("Completed source Line reference")
+  expect(html).toContain("completed-source")
+  expect(html).toContain("Recorded rework quantity")
+  expect(html).toContain("1.25")
+  const handoff = {
+    ...base,
+    original: {
+      ...base.original,
+      type: "REMOTE_HANDOFF" as const,
+      details: {
+        coverage: "recorded" as const,
+        handoff: { paymentStatus: "PAID" as const },
+      },
+    },
+  } satisfies ServiceWorkOriginalRecord
+  const collected = render(handoff)
+  expect(collected).toContain("Payment state recorded at handoff")
+  expect(collected).toContain("Current payment facts are separate")
+})

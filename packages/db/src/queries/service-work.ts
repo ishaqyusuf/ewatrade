@@ -1674,83 +1674,103 @@ export async function recordServiceException(
   )
 }
 
+export type CreateServiceReworkInput = {
+  actorUserId: string
+  clientCommandId: string
+  lineId: string
+  quantity: string
+  reason: string
+  tenantId: string
+}
+
+/** Canonical completed-allocation and exact quantity gate shared with review. */
+export function prepareServiceReworkQuantity(
+  source: {
+    status: ServiceJobLineStatus
+    allocatedQuantity: { toString(): string }
+  },
+  requestedQuantity: string,
+) {
+  if (source.status !== ServiceJobLineStatus.COMPLETED) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Post-completion rework requires a completed source allocation.",
+    )
+  }
+  const quantity = parseExactDecimal(requestedQuantity, {
+    allowZero: false,
+    maxScale: 6,
+  })
+  if (compareExactDecimals(quantity, source.allocatedQuantity.toString()) > 0) {
+    throw new CatalogError(
+      "SERVICE_ALLOCATION_CONFLICT",
+      "Rework quantity cannot exceed the completed source allocation.",
+    )
+  }
+  return quantity
+}
+
+export async function createServiceReworkInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateServiceReworkInput,
+  onEvent?: ServiceWorkEventReceiptObserver,
+) {
+  const source = await tx.serviceJobLine.findFirst({
+    include: { serviceJob: true },
+    where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
+  })
+  if (!source)
+    throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
+  const quantity = prepareServiceReworkQuantity(source, input.quantity)
+  const job = await tx.serviceJob.create({
+    data: {
+      clientJobId: `${source.serviceJob.clientJobId}:rework:${randomUUID()}`,
+      commercialOrderId: source.serviceJob.commercialOrderId,
+      createdByUserId: input.actorUserId,
+      priority: source.serviceJob.priority,
+      reworkOfJobId: source.serviceJobId,
+      storeId: source.serviceJob.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  const line = await tx.serviceJobLine.create({
+    data: {
+      allocatedQuantity: quantity,
+      allocationSnapshot: source.allocationSnapshot as Prisma.InputJsonValue,
+      authorizationPolicy: source.authorizationPolicy,
+      authorizationSource: "rework",
+      authorizationStatus: WorkAuthorizationStatus.AUTHORIZED,
+      authorizedAt: new Date(),
+      commercialOrderLineId: source.commercialOrderLineId,
+      reworkOfLineId: source.id,
+      serviceJobId: job.id,
+    },
+  })
+  const event = await tx.serviceWorkEvent.create({
+    data: {
+      actorUserId: input.actorUserId,
+      clientCommandId: input.clientCommandId,
+      payload: json({ quantity, sourceLineId: source.id }),
+      reason: input.reason.trim(),
+      serviceJobId: job.id,
+      serviceJobLineId: line.id,
+      source: "service_work",
+      tenantId: input.tenantId,
+      type: ServiceWorkEventType.REWORK,
+    },
+  })
+  onEvent?.(event)
+  return serializeJob(
+    await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
+  )
+}
 export async function createServiceRework(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientCommandId: string
-    lineId: string
-    quantity: string
-    reason: string
-    tenantId: string
-  },
+  input: CreateServiceReworkInput,
 ) {
-  return db.$transaction(async (tx) => {
-    const source = await tx.serviceJobLine.findFirst({
-      include: { serviceJob: true },
-      where: { id: input.lineId, serviceJob: { tenantId: input.tenantId } },
-    })
-    if (!source)
-      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job Line not found.")
-    if (source.status !== ServiceJobLineStatus.COMPLETED) {
-      throw new CatalogError(
-        "INVALID_SERVICE_TRANSITION",
-        "Post-completion rework requires a completed source allocation.",
-      )
-    }
-    const quantity = parseExactDecimal(input.quantity, {
-      allowZero: false,
-      maxScale: 6,
-    })
-    if (
-      compareExactDecimals(quantity, source.allocatedQuantity.toString()) > 0
-    ) {
-      throw new CatalogError(
-        "SERVICE_ALLOCATION_CONFLICT",
-        "Rework quantity cannot exceed the completed source allocation.",
-      )
-    }
-    const job = await tx.serviceJob.create({
-      data: {
-        clientJobId: `${source.serviceJob.clientJobId}:rework:${randomUUID()}`,
-        commercialOrderId: source.serviceJob.commercialOrderId,
-        createdByUserId: input.actorUserId,
-        priority: source.serviceJob.priority,
-        reworkOfJobId: source.serviceJobId,
-        storeId: source.serviceJob.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    const line = await tx.serviceJobLine.create({
-      data: {
-        allocatedQuantity: quantity,
-        allocationSnapshot: source.allocationSnapshot as Prisma.InputJsonValue,
-        authorizationPolicy: source.authorizationPolicy,
-        authorizationSource: "rework",
-        authorizationStatus: WorkAuthorizationStatus.AUTHORIZED,
-        authorizedAt: new Date(),
-        commercialOrderLineId: source.commercialOrderLineId,
-        reworkOfLineId: source.id,
-        serviceJobId: job.id,
-      },
-    })
-    await tx.serviceWorkEvent.create({
-      data: {
-        actorUserId: input.actorUserId,
-        clientCommandId: input.clientCommandId,
-        payload: json({ quantity, sourceLineId: source.id }),
-        reason: input.reason.trim(),
-        serviceJobId: job.id,
-        serviceJobLineId: line.id,
-        source: "service_work",
-        tenantId: input.tenantId,
-        type: ServiceWorkEventType.REWORK,
-      },
-    })
-    return serializeJob(
-      await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
-    )
-  })
+  return runInOwnTransaction(db, (tx) =>
+    createServiceReworkInTransaction(tx, input),
+  )
 }
 
 function evidencePurpose(value: string) {
@@ -2359,193 +2379,219 @@ export async function createAutomaticReadyNotificationIntent(
   })
 }
 
-export async function recordServiceHandoff(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientCommandId: string
-    expectedRevision: number
-    jobId: string
-    note?: string
-    payment?: {
-      amountMinor: number
-      method: CommercialPaymentMethodValue
-      reference?: string
-    }
-    tenantId: string
-  },
+export type RecordServiceHandoffInput = {
+  actorUserId: string
+  clientCommandId: string
+  expectedRevision: number
+  jobId: string
+  note?: string
+  payment?: {
+    amountMinor: number
+    method: CommercialPaymentMethodValue
+    reference?: string
+  }
+  tenantId: string
+}
+
+/** Canonical handoff line gate; cancelled allocations never authorize empty work. */
+export function assertServiceHandoffReady(
+  lines: Array<{
+    status: ServiceJobLineStatus
+    authorizationStatus: WorkAuthorizationStatus
+  }>,
 ) {
-  return db.$transaction(async (tx) => {
-    const discoveredJob = await tx.serviceJob.findFirst({
-      select: { commercialOrderId: true, id: true, storeId: true },
-      where: { id: input.jobId, tenantId: input.tenantId },
-    })
-    if (!discoveredJob) {
-      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
-    }
-    const financialOrder = await lockCommerceFinancialOrder(tx, {
-      orderId: discoveredJob.commercialOrderId,
-      tenantId: input.tenantId,
-    })
-    if (!financialOrder) {
-      throw new CatalogError("INVALID_ORDER", "Commercial Order not found.")
-    }
-    if (financialOrder.order.storeId !== discoveredJob.storeId) {
-      throw new CatalogError("INVALID_ORDER", "Commercial Order not found.")
-    }
-    await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id"
-      FROM "ServiceBooking"
-      WHERE "commercialOrderId" = ${discoveredJob.commercialOrderId}
-        AND "tenantId" = ${input.tenantId}
-        AND "storeId" = ${financialOrder.order.storeId}
-      ORDER BY "id"
-      FOR UPDATE
-    `
-    const lockedJobs = await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id"
-      FROM "ServiceJob"
-      WHERE "id" = ${input.jobId}
-        AND "tenantId" = ${input.tenantId}
-        AND "storeId" = ${discoveredJob.storeId}
-      FOR UPDATE
-    `
-    if (lockedJobs.length !== 1) {
-      throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
-    }
-    const job = await loadJob(tx, {
-      jobId: input.jobId,
-      tenantId: input.tenantId,
-    })
-    if (job.commercialOrderId !== discoveredJob.commercialOrderId) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "Service Job Order linkage changed. Reload the Service Job before retrying.",
-      )
-    }
-    if (job.handedOffAt) return serializeJob(job)
-    if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "This Order cannot be handed over in its current state.",
-      )
-    if (job.revision !== input.expectedRevision) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "Service Job changed before customer collection.",
-      )
-    }
-    const activeLines = job.lines.filter(
-      (line) => line.status !== ServiceJobLineStatus.CANCELLED,
+  const activeLines = lines.filter(
+    (line) => line.status !== ServiceJobLineStatus.CANCELLED,
+  )
+  const canHandoff =
+    activeLines.length > 0 &&
+    activeLines.every(
+      (line) =>
+        line.authorizationStatus === WorkAuthorizationStatus.AUTHORIZED &&
+        (line.status === ServiceJobLineStatus.READY_FOR_HANDOFF ||
+          line.status === ServiceJobLineStatus.COMPLETED),
     )
-    const canHandoff =
-      activeLines.length > 0 &&
-      activeLines.every(
-        (line) =>
-          line.authorizationStatus === WorkAuthorizationStatus.AUTHORIZED &&
-          (line.status === ServiceJobLineStatus.READY_FOR_HANDOFF ||
-            line.status === ServiceJobLineStatus.COMPLETED),
-      )
-    if (!canHandoff) {
-      throw new CatalogError(
-        "INVALID_SERVICE_TRANSITION",
-        "All active Service lines must be ready before customer collection.",
-      )
-    }
-    if (input.payment) {
-      await recordCommercialOrderPaymentInTransaction(tx, {
-        actorUserId: input.actorUserId,
-        amountMinor: input.payment.amountMinor,
-        clientPaymentId: `${input.clientCommandId}:collection-payment`,
-        method: input.payment.method,
-        orderId: job.commercialOrderId,
-        reference: input.payment.reference,
-        tenantId: input.tenantId,
-      })
-    }
-    const settledOrder = await tx.commercialOrder.findUniqueOrThrow({
-      include: { payments: { select: { id: true } } },
-      where: { id: job.commercialOrderId },
+  if (!canHandoff) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "All active Service lines must be ready before customer collection.",
+    )
+  }
+}
+
+export async function recordServiceHandoffInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RecordServiceHandoffInput,
+  onEvent?: ServiceWorkEventReceiptObserver,
+) {
+  const discoveredJob = await tx.serviceJob.findFirst({
+    select: { commercialOrderId: true, id: true, storeId: true },
+    where: { id: input.jobId, tenantId: input.tenantId },
+  })
+  if (!discoveredJob) {
+    throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
+  }
+  const financialOrder = await lockCommerceFinancialOrder(tx, {
+    orderId: discoveredJob.commercialOrderId,
+    tenantId: input.tenantId,
+  })
+  if (!financialOrder) {
+    throw new CatalogError("INVALID_ORDER", "Commercial Order not found.")
+  }
+  if (financialOrder.order.storeId !== discoveredJob.storeId) {
+    throw new CatalogError("INVALID_ORDER", "Commercial Order not found.")
+  }
+  await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "ServiceBooking"
+    WHERE "commercialOrderId" = ${discoveredJob.commercialOrderId}
+      AND "tenantId" = ${input.tenantId}
+      AND "storeId" = ${financialOrder.order.storeId}
+    ORDER BY "id"
+    FOR UPDATE
+  `
+  const lockedJobs = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "ServiceJob"
+    WHERE "id" = ${input.jobId}
+      AND "tenantId" = ${input.tenantId}
+      AND "storeId" = ${discoveredJob.storeId}
+    FOR UPDATE
+  `
+  if (lockedJobs.length !== 1) {
+    throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
+  }
+  const job = await loadJob(tx, {
+    jobId: input.jobId,
+    tenantId: input.tenantId,
+  })
+  if (job.commercialOrderId !== discoveredJob.commercialOrderId) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Service Job Order linkage changed. Reload the Service Job before retrying.",
+    )
+  }
+  if (job.handedOffAt) {
+    const original = job.events.filter(
+      (event) => event.type === ServiceWorkEventType.REMOTE_HANDOFF,
+    )
+    if (original.length === 1) onEvent?.(original[0]!)
+    return serializeJob(job)
+  }
+  if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "This Order cannot be handed over in its current state.",
+    )
+  if (job.revision !== input.expectedRevision) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Service Job changed before customer collection.",
+    )
+  }
+  assertServiceHandoffReady(job.lines)
+  if (input.payment) {
+    await recordCommercialOrderPaymentInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      amountMinor: input.payment.amountMinor,
+      clientPaymentId: `${input.clientCommandId}:collection-payment`,
+      method: input.payment.method,
+      orderId: job.commercialOrderId,
+      reference: input.payment.reference,
+      tenantId: input.tenantId,
     })
-    const settledAmountPaidMinor = effectiveCommercialAmountPaid({
-      amountPaidMinor: settledOrder.amountPaidMinor,
-      paymentCount: settledOrder.payments.length,
-      paymentStatus: settledOrder.paymentStatus,
-      totalMinor: settledOrder.totalMinor,
+  }
+  const settledOrder = await tx.commercialOrder.findUniqueOrThrow({
+    include: { payments: { select: { id: true } } },
+    where: { id: job.commercialOrderId },
+  })
+  const settledAmountPaidMinor = effectiveCommercialAmountPaid({
+    amountPaidMinor: settledOrder.amountPaidMinor,
+    paymentCount: settledOrder.payments.length,
+    paymentStatus: settledOrder.paymentStatus,
+    totalMinor: settledOrder.totalMinor,
+  })
+  if (settledAmountPaidMinor < settledOrder.totalMinor) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Collect the outstanding balance before handing over this order.",
+    )
+  }
+  const handedOffAt = new Date()
+  for (const line of job.lines) {
+    if (line.status !== ServiceJobLineStatus.READY_FOR_HANDOFF) continue
+    await tx.serviceJobLine.update({
+      data: {
+        completedAt: handedOffAt,
+        revision: { increment: 1 },
+        status: ServiceJobLineStatus.COMPLETED,
+      },
+      where: { id: line.id },
     })
-    if (settledAmountPaidMinor < settledOrder.totalMinor) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Collect the outstanding balance before handing over this order.",
-      )
-    }
-    const handedOffAt = new Date()
-    for (const line of job.lines) {
-      if (line.status !== ServiceJobLineStatus.READY_FOR_HANDOFF) continue
-      await tx.serviceJobLine.update({
-        data: {
-          completedAt: handedOffAt,
-          revision: { increment: 1 },
-          status: ServiceJobLineStatus.COMPLETED,
-        },
-        where: { id: line.id },
-      })
-      await tx.serviceWorkEvent.create({
-        data: {
-          actorUserId: input.actorUserId,
-          clientCommandId: `${input.clientCommandId}:line:${line.id}`,
-          fromStatus: line.status,
-          reason: input.note?.trim() || "Collected by customer",
-          serviceJobId: job.id,
-          serviceJobLineId: line.id,
-          source: "customer_handoff",
-          tenantId: input.tenantId,
-          toStatus: ServiceJobLineStatus.COMPLETED,
-          type: ServiceWorkEventType.STATUS_CHANGED,
-        },
-      })
-    }
     await tx.serviceWorkEvent.create({
       data: {
         actorUserId: input.actorUserId,
-        clientCommandId: input.clientCommandId,
-        payload: json({ paymentStatus: settledOrder.paymentStatus }),
+        clientCommandId: `${input.clientCommandId}:line:${line.id}`,
+        fromStatus: line.status,
         reason: input.note?.trim() || "Collected by customer",
         serviceJobId: job.id,
+        serviceJobLineId: line.id,
         source: "customer_handoff",
         tenantId: input.tenantId,
-        type: ServiceWorkEventType.REMOTE_HANDOFF,
+        toStatus: ServiceJobLineStatus.COMPLETED,
+        type: ServiceWorkEventType.STATUS_CHANGED,
       },
     })
-    await tx.serviceJob.update({
-      data: {
-        completedAt: handedOffAt,
-        handedOffAt,
-        handedOffByUserId: input.actorUserId,
-        handoffNote: input.note?.trim() || null,
-        revision: { increment: 1 },
-      },
-      where: { id: job.id },
-    })
-    const orderComplete = await readCommercialOrderLinesComplete(tx, {
-      orderId: job.commercialOrderId,
-      storeId: job.storeId,
+  }
+  const event = await tx.serviceWorkEvent.create({
+    data: {
+      actorUserId: input.actorUserId,
+      clientCommandId: input.clientCommandId,
+      payload: json({ paymentStatus: settledOrder.paymentStatus }),
+      reason: input.note?.trim() || "Collected by customer",
+      serviceJobId: job.id,
+      source: "customer_handoff",
       tenantId: input.tenantId,
-    })
-    await tx.commercialOrder.update({
-      data: {
-        completedAt: orderComplete
-          ? (financialOrder.order.completedAt ?? handedOffAt)
-          : undefined,
-        status: orderComplete ? OrderStatus.COMPLETED : OrderStatus.FULFILLING,
-      },
-      where: { id: job.commercialOrderId },
-    })
-    await cancelOutstandingDueReminders(tx, job.id)
-    return serializeJob(
-      await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
-    )
+      type: ServiceWorkEventType.REMOTE_HANDOFF,
+    },
   })
+  onEvent?.(event)
+  await tx.serviceJob.update({
+    data: {
+      completedAt: handedOffAt,
+      handedOffAt,
+      handedOffByUserId: input.actorUserId,
+      handoffNote: input.note?.trim() || null,
+      revision: { increment: 1 },
+    },
+    where: { id: job.id },
+  })
+  const orderComplete = await readCommercialOrderLinesComplete(tx, {
+    orderId: job.commercialOrderId,
+    storeId: job.storeId,
+    tenantId: input.tenantId,
+  })
+  await tx.commercialOrder.update({
+    data: {
+      completedAt: orderComplete
+        ? (financialOrder.order.completedAt ?? handedOffAt)
+        : undefined,
+      status: orderComplete ? OrderStatus.COMPLETED : OrderStatus.FULFILLING,
+    },
+    where: { id: job.commercialOrderId },
+  })
+  await cancelOutstandingDueReminders(tx, job.id)
+  return serializeJob(
+    await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
+  )
+}
+export async function recordServiceHandoff(
+  db: PrismaClient,
+  input: RecordServiceHandoffInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    recordServiceHandoffInTransaction(tx, input),
+  )
 }
 
 export async function batchUpdateServiceJobs(

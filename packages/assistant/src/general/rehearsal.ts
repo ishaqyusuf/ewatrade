@@ -37,7 +37,7 @@ export function respondGeneralRehearsal(
     }
   }
   if (
-    /^(?:assign|reschedule|start|block|cancel|queue|ready|note|record (?:an? )?exception) (?:this|the) (?:service )?(?:job|work|line)\b/i.test(
+    /^(?:assign|reschedule|start|block|cancel|queue|ready|note|rework|handoff|record (?:an? )?exception) (?:this|the) (?:service )?(?:job|work|line)\b/i.test(
       command,
     )
   )

@@ -50,6 +50,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Linked rework and settled handoff source, 12 October 2026](runs/2026-10-12-service-work-completion-source.md): strict GENERAL confirmation/editor/original-event integration, focused native/schema/render checks and corrected affected compilation pass; authenticated synthetic component screenshots. Planned source; signed/runtime/saved-chat acceptance remains pending.
+
 - [Staff assigned-work review and restored QA dashboard, 12 October 2026](runs/2026-10-12-staff-workload-dashboard-source.md): nine focused cases have passing evidence across initial run and one corrected-assertion rerun; authenticated synthetic component screenshots and inline draft continuity verified. Actual QA login/saved chat restored; full global Job handoff and signed acceptance remain pending. S04 partial.
 
 - [Staff invitation review and native guards, 12 October 2026](runs/2026-10-12-staff-invitation-review-source.md):31tests130assertions/scoped types; actual protected QA reads and canonical refusal rollback15.405s preserve staff/auth/chat facts. Desktop original review data/side-effect/blockers screenshot; planned, S02partial, confirmation/outbox/resend/revoke pending.

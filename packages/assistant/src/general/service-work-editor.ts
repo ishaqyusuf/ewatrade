@@ -1,11 +1,13 @@
 import { z } from "zod"
 import { serviceWorkLifecycleAction } from "./service-work"
 import { serviceWorkRecordAction } from "./service-work-records"
+import { serviceWorkCompletionAction } from "./service-work-completion"
 
 const id = z.string().trim().min(1).max(128)
 export const serviceWorkEditorActionSchema = z.discriminatedUnion("action", [
   ...serviceWorkLifecycleAction.options,
   ...serviceWorkRecordAction.options,
+  ...serviceWorkCompletionAction.options,
 ])
 export type ServiceWorkEditorAction = z.infer<
   typeof serviceWorkEditorActionSchema

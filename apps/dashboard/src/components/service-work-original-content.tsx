@@ -124,6 +124,23 @@ export function ServiceWorkOriginalContent({
                 </Fact>
               </dl>
             ) : null}
+            {"rework" in r.original.details && r.original.details.rework ? (
+              <dl className="grid grid-cols-2 gap-2">
+                <Fact name="Completed source Line reference">
+                  {r.original.details.rework.sourceLineId}
+                </Fact>
+                <Fact name="Recorded rework quantity">
+                  {r.original.details.rework.quantity}
+                </Fact>
+              </dl>
+            ) : null}
+            {"handoff" in r.original.details && r.original.details.handoff ? (
+              <p>
+                Payment state recorded at handoff:{" "}
+                {label(r.original.details.handoff.paymentStatus)}. Current
+                payment facts are separate.
+              </p>
+            ) : null}
             {r.original.details.coverage !== "recorded" ? (
               <p className="text-xs text-muted-foreground">
                 {r.original.details.coverage === "unavailable"

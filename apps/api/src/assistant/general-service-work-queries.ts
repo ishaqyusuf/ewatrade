@@ -1,5 +1,7 @@
 import { serviceWorkLifecycleAction } from "@ewatrade/assistant/general/service-work"
 import { serviceWorkRecordAction } from "@ewatrade/assistant/general/service-work-records"
+import { serviceWorkCompletionAction } from "@ewatrade/assistant/general/service-work-completion"
+import { serviceWorkCompletion } from "./general-service-work-completion"
 import { readServiceWorkEditorContextInTransaction } from "@ewatrade/db/service-work-editor-context"
 import {
   getServiceWorkOriginalInTransaction,
@@ -20,6 +22,7 @@ export const serviceWorkEditorContextInput = z
 export const serviceWorkReviewInput = z.union([
   serviceWorkLifecycleAction,
   serviceWorkRecordAction,
+  serviceWorkCompletionAction,
 ])
 
 async function operation<T>(run: () => Promise<T>) {
@@ -78,7 +81,10 @@ export function reviewGeneralServiceWork(ctx: GeneralContext, raw: unknown) {
         input.action === "service_work_note" ||
         input.action === "service_work_exception"
           ? await serviceWorkRecords.review(fresh, input)
-          : await serviceWorkLifecycle.review(fresh, input)
+          : input.action === "service_work_rework" ||
+              input.action === "service_work_handoff"
+            ? await serviceWorkCompletion.review(fresh, input)
+            : await serviceWorkLifecycle.review(fresh, input)
       return {
         tenantId: scope.tenantId,
         storeId: scope.storeId,

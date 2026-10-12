@@ -7,17 +7,19 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 ## Summary
 
 - Router procedures: 572 (431 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 138
-- Merchant planned: 127
+- Merchant supported by a capability: 140
+- Merchant planned: 125
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 132 (71 read, 61 write)
+- Capabilities: 134 (71 read, 63 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
 | `services.work.original.read` | 1 | read | `readOriginalServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard | planned | `serviceAssistantWork.original` |
+| `services.work.rework` | 1 | write (`service_work_rework`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.createRework` |
+| `services.work.handoff` | 1 | write (`service_work_handoff`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.handoff` |
 | `services.work.assign` | 1 | write (`service_job_assign`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.assignJob` |
 | `services.work.reschedule` | 1 | write (`service_job_reschedule`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.rescheduleJob` |
 | `services.work.transition` | 1 | write (`service_job_line_transition`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.transitionLine` |
@@ -164,6 +166,8 @@ track conversational evaluation separately from these source test links.
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
 | `services.work.original.read` | Open the original saved work event, private note or exception | [packages/db/src/queries/service-work-original.test.ts](../../../../packages/db/src/queries/service-work-original.test.ts)<br>[packages/assistant/src/general/service-work-original.test.ts](../../../../packages/assistant/src/general/service-work-original.test.ts)<br>[apps/dashboard/src/components/service-work-original-state.test.ts](../../../../apps/dashboard/src/components/service-work-original-state.test.ts) |
+| `services.work.rework` | Redo the completed washing line in Amina's saved job | [packages/assistant/src/general/service-work-completion.test.ts](../../../../packages/assistant/src/general/service-work-completion.test.ts)<br>[packages/db/src/queries/service-work-completion-review.test.ts](../../../../packages/db/src/queries/service-work-completion-review.test.ts) |
+| `services.work.handoff` | Record Amina collecting her ready work after payment | [packages/assistant/src/general/service-work-completion.test.ts](../../../../packages/assistant/src/general/service-work-completion.test.ts)<br>[packages/db/src/queries/service-work-completion-review.test.ts](../../../../packages/db/src/queries/service-work-completion-review.test.ts) |
 | `services.work.assign` | Assign Amina's saved work to Bola | [packages/assistant/src/general/service-work.test.ts](../../../../packages/assistant/src/general/service-work.test.ts)<br>[packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts) |
 | `services.work.reschedule` | Move Amina's pickup promise to Thursday morning | [packages/assistant/src/general/service-work.test.ts](../../../../packages/assistant/src/general/service-work.test.ts)<br>[packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts) |
 | `services.work.transition` | Start the exact washing line in Amina's saved job | [packages/assistant/src/general/service-work.test.ts](../../../../packages/assistant/src/general/service-work.test.ts)<br>[packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts) |
@@ -308,7 +312,7 @@ track conversational evaluation separately from these source test links.
 | D02 | 1 |
 | D03 | 3 |
 | D04 | 3 |
-| D05 | 5 |
+| D05 | 3 |
 | E01 | 6 |
 | E02 | 3 |
 | E03 | 3 |
@@ -715,10 +719,10 @@ track conversational evaluation separately from these source test links.
 | `services.confirmIntake` | mutation | Owner/Admin only | services | planned | D04 |
 | `services.createAndConfirmIntake` | mutation | Owner/Admin only | services | supported | services.intake.create |
 | `services.createIntakeDraft` | mutation | Owner/Admin only | services | planned | D04 |
-| `services.createRework` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.createRework` | mutation | Owner/Admin only | services | supported | services.work.rework |
 | `services.getJob` | query | Owner/Admin only | services | planned | D05 |
 | `services.getSettings` | query | read | services | supported | services.intake.options.read |
-| `services.handoff` | mutation | Owner/Admin only | services | planned | D05 |
+| `services.handoff` | mutation | Owner/Admin only | services | supported | services.work.handoff |
 | `services.publishEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.queue` | query | Owner/Admin only | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
 | `services.queuePage` | query | Owner/Admin only | services | supported | services.queue.read |

@@ -3,12 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "files": [
-    "src",
-    "generated",
-    "prisma",
-    "prisma.config.ts"
-  ],
+  "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
     "./performance-tracing": "./src/performance-tracing.ts",
     "./onboarding-continuation": "./src/queries/onboarding-continuation.ts",
@@ -58,7 +53,8 @@
     "./service-booking-read": "./src/queries/service-booking-read.ts",
     "./service-work-editor-context": "./src/queries/service-work-editor-context.ts",
     "./service-work-original": "./src/queries/service-work-original.ts",
-    "./staff-assigned-service-work": "./src/queries/staff-assigned-service-work.ts"
+    "./staff-assigned-service-work": "./src/queries/staff-assigned-service-work.ts",
+    "./service-work-completion-review": "./src/queries/service-work-completion-review.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",
