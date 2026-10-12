@@ -5,7 +5,9 @@ import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { cn } from "@/lib/utils"
-import { View } from "react-native"
+import { useEffect, useRef } from "react"
+import { type TextInput, View } from "react-native"
+import { KeyboardEvents } from "react-native-keyboard-controller"
 
 type FloatingSearchFieldProps = {
   accessibilityLabel: string
@@ -91,6 +93,18 @@ export function FloatingSearchField({
   const surface = useFloatingSurface(focused)
   const dark = colorScheme === "dark"
 
+  const inputRef = useRef<TextInput>(null)
+
+  // Android's back gesture closes the keyboard but leaves the field focused.
+  // Blur with it, so an empty search lets the folded top card open again.
+  useEffect(() => {
+    if (!focused) return
+    const subscription = KeyboardEvents.addListener("keyboardDidHide", () =>
+      inputRef.current?.blur(),
+    )
+    return () => subscription.remove()
+  }, [focused])
+
   return (
     <View
       style={{
@@ -124,6 +138,7 @@ export function FloatingSearchField({
         onChangeText={onChangeText}
         onFocus={onFocus}
         placeholder={placeholder}
+        ref={inputRef}
         returnKeyType="search"
         unstyled
         value={value}
