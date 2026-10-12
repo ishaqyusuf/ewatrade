@@ -227,6 +227,9 @@ export function commercialOrderDigestSections(input: {
     "same_day",
     "day_before",
   ]
+  // Naming the Store only helps when the email spans more than one.
+  const multiStore =
+    new Set(input.entries.map((entry) => entry.order.storeId)).size > 1
   return timings.flatMap((timing) => {
     const orders = input.entries
       .filter((entry) => entry.timing === timing)
@@ -237,7 +240,7 @@ export function commercialOrderDigestSections(input: {
         orderUrl: input.dashboardUrl
           ? `${input.dashboardUrl}/sales/orders/${encodeURIComponent(order.id)}`
           : null,
-        storeName: order.storeName,
+        storeName: multiStore ? order.storeName : null,
       }))
     return orders.length ? [{ orders, timing }] : []
   })

@@ -14,7 +14,7 @@ export type CommercialOrderReminderDigestOrder = {
   dueLabel: string
   orderNumber: string
   orderUrl: string | null
-  storeName: string
+  storeName: string | null
 }
 
 export type CommercialOrderReminderDigestEmailInput = {
@@ -104,7 +104,7 @@ function getContent(input: CommercialOrderReminderDigestEmailInput) {
 }
 
 function orderMeta(order: CommercialOrderReminderDigestOrder) {
-  return [order.storeName, order.dueLabel].join(" · ")
+  return [order.storeName, order.dueLabel].filter(Boolean).join(" · ")
 }
 
 export function CommercialOrderReminderDigestEmail({

@@ -7,7 +7,7 @@ const digestOrderSchema = z.object({
   dueLabel: z.string().trim().min(1),
   orderNumber: z.string().trim().min(1),
   orderUrl: z.string().url().nullable(),
-  storeName: z.string().trim().min(1),
+  storeName: z.string().trim().min(1).nullable(),
 })
 
 export const commercialOrderReminderDigestPayloadSchema = z.object({

@@ -231,5 +231,26 @@ describe("commercial Order reminder digest planning", () => {
     )
     expect(sections[1]?.orders[0]?.dueLabel).toStartWith("Today, ")
     expect(sections[0]?.orders[0]?.dueLabel).toStartWith("Was due ")
+    expect(sections[1]?.orders[0]?.storeName).toBe("Yaba Store")
+  })
+
+  test("omits the Store name when every Order is from one Store", () => {
+    const [digest] = planCommercialOrderReminderDigests({
+      coveredKeys: new Set(),
+      now,
+      orders: orders.filter((entry) => entry.storeId === "store_a"),
+      recipients: [recipient("owner@example.com")],
+      timeZone,
+    })
+    const sections = commercialOrderDigestSections({
+      dashboardUrl: null,
+      entries: digest?.entries ?? [],
+      timeZone,
+    })
+    for (const section of sections)
+      for (const order of section.orders) {
+        expect(order.storeName).toBeNull()
+        expect(order.orderUrl).toBeNull()
+      }
   })
 })
