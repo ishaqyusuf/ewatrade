@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { createHash } from "node:crypto"
 import type { EmailDeliveryReceipt, EmailMessage } from "@ewatrade/email"
 import {
   createStaffInvitationEmailAdapter,
@@ -19,6 +20,10 @@ const message: EmailMessage = {
   html: "<p>Ephemeral test invitation</p>",
   text: "Ephemeral test invitation",
   idempotencyKey: "staff-invitation:notification",
+  tags: [
+    { name: "category", value: "staff_invitation" },
+    { name: "destination_digest", value: "old" },
+  ],
 }
 
 function fixture(
@@ -94,6 +99,15 @@ describe("staff invitation guarded email adapter", () => {
       qaRouted: true,
       qaOriginalRecipient: message.to,
       idempotencyKey: message.idempotencyKey,
+      tags: [
+        { name: "category", value: "staff_invitation" },
+        {
+          name: "destination_digest",
+          value: createHash("sha256")
+            .update("tester@example.com")
+            .digest("hex"),
+        },
+      ],
     })
   })
   test("unmatched QA domains and multi-recipient test routing refuse before sending", async () => {

@@ -12,6 +12,12 @@ const notificationLabels = {
   OUTCOME_UNKNOWN: "Sending outcome unknown",
   CANCELLED: "Cancelled",
 }
+const deliveryFailureLabels: Record<string, string> = {
+  PROVIDER_BOUNCED: "Delivery bounced",
+  PROVIDER_FAILED: "Delivery failed",
+  PROVIDER_SUPPRESSED: "Delivery suppressed",
+  PROVIDER_COMPLAINED: "Reported as spam",
+}
 function utc(value: Date | null) {
   return value ? new Date(value).toISOString() : "Not recorded"
 }
@@ -126,6 +132,13 @@ export function StaffInvitationContent({
                 : receipt.kind === "REVOKE"
                   ? "Not requested by this revocation"
                   : "No notification recorded",
+            ],
+            [
+              "Delivery issue",
+              notification?.failureCode
+                ? (deliveryFailureLabels[notification.failureCode] ??
+                  "Not recorded")
+                : "Not recorded",
             ],
             ["Send attempts", String(notification?.attemptCount ?? 0)],
             ["Expires at (UTC)", utc(invitation.expiresAt)],

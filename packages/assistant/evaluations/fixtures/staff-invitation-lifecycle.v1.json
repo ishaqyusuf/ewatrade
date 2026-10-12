@@ -27,7 +27,12 @@
     "Changed token, changed access revision and already accepted invitation each refuse both lifecycle commands with every transaction-local fact unchanged",
     "Signed RESEND revokes the original link, cancels/erases original unsent custody and queues exactly one new encrypted invitation without changing membership access",
     "Signed REVOKE records one INVITE_REVOKED event, cancels/erases original unsent custody and queues no new email; staff remains INVITED",
-    "Native lifecycle receipt source previews distinguish queued replacement from no email requested by revocation; blank reason refuses and local edit retains exact target"
+    "Native lifecycle receipt source previews distinguish queued replacement from no email requested by revocation; blank reason refuses and local edit retains exact target",
+    "Real Resend SDK verifies raw signed invitation callbacks; stale/tampered/wrong-secret/missing signatures refuse before DB",
+    "Original server tags and actual routed destination digest bind six provider event types to exact notification/hash/current send fence",
+    "Unknown send resolves only with verified provider receipt; earlier provider delivery timestamps survive later worker completion",
+    "Post-acceptance delivery failure/complaint/suppression never creates retryable FAILED; late sent never downgrades delivery or clears an issue",
+    "Real signed HTTP-to-canonical rollback proves exact refusal/replay and saved staff/auth/chat/budget facts unchanged"
   ],
   "sourceChecks": [
     "packages/db/src/staff-invitation-custody.test.ts",
@@ -42,11 +47,14 @@
     "packages/jobs/src/handlers/staff-invitation-email.test.ts",
     "packages/jobs/src/handlers/staff-invitation-notification-schedule.test.ts",
     "packages/jobs/src/tasks/scheduled-cadences.test.ts",
-    "apps/api/src/assistant/general-staff-invitation-lifecycle.integration-check.ts"
+    "apps/api/src/assistant/general-staff-invitation-lifecycle.integration-check.ts",
+    "apps/api/src/staff/resend-webhook.test.ts",
+    "packages/db/src/queries/staff-invitation-provider-events.test.ts",
+    "apps/api/src/staff/resend-webhook.integration-check.ts"
   ],
   "remaining": [
     "Full saved draft/Edit/re-review/Confirm and durable saved/concurrent recovery; transaction-local signed resend/revoke/replay now verified",
-    "Trusted provider receipt reconciliation and actual controlled email/queue acceptance; guarded dispatch/discovery source is implemented but disabled",
+    "Actual controlled provider/email/queue acceptance and operator reconciliation; default-off verified callback source and signed canonical rollback now implemented",
     "Saved global receipt, chat continuity, full web acceptance and screenshots",
     "Concurrency and complete stale/authority/quota refusal evidence",
     "Privacy retention/deletion inventory and expired/unknown ciphertext reconciliation policy"

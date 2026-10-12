@@ -5,9 +5,9 @@ import {
   staffInvitationPayloadHash,
 } from "@ewatrade/db/staff-invitation-custody"
 import {
-  runStaffInvitationNotificationDispatch,
-  StaffInvitationProviderRejected,
   type StaffInvitationDispatchDependencies,
+  StaffInvitationProviderRejected,
+  runStaffInvitationNotificationDispatch,
 } from "./staff-invitation-notification-dispatch"
 
 const input = { tenantId: "tenant", notificationId: "notification" }
@@ -93,6 +93,12 @@ describe("staff invitation ID-only notification dispatch", () => {
     expect(f.calls[3]?.[1]).toMatchObject({
       to: payload.inviteeEmail,
       idempotencyKey: claim.providerIdempotencyKey,
+      tags: [
+        { name: "category", value: "staff_invitation" },
+        { name: "tenant_id", value: claim.tenantId },
+        { name: "notification_id", value: claim.notificationId },
+        { name: "payload_hash", value: claim.payloadHash },
+      ],
     })
     expect(f.calls[4]?.[1]).toMatchObject({
       ...input,

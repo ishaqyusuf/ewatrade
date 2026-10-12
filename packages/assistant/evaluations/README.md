@@ -289,3 +289,5 @@ S02 signed/global receipt source:8tests66assertions; actual signed completion22.
 - [Guarded invitation delivery source, 12 October 2026](runs/2026-10-12-staff-invitation-delivery-source.md): default-off ID-only dispatch/discovery on existing cadence, QA routing/transport/custody guards;19tests103assertions/scoped types/Biome pass. No real provider/queue/DB/UI acceptance. S02partial.
 
 S02 signed lifecycle milestone:8real signed resend/revoke completion/replay and changed-token/access/accepted-link refusal cases pass with full saved and refusal-stage facts unchanged. Native receipt source previews/blank reason/exact target editing/screenshots verified. Source capabilities planned, parentpartial/unbookmarked;13/45accepted28.9%,32awaiting71.1%. [Evidence](runs/2026-10-12-staff-invitation-lifecycle-signed.md).
+
+- [S02 verified invitation provider reconciliation](runs/2026-10-12-staff-invitation-reconciliation.md) — real signed HTTP/canonical rollback, replay/refusal,31tests216assertions and receipt source screenshots; parent partial/planned, no actual provider.

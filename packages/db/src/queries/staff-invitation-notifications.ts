@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 
+import {
+  type StaffInvitationNotificationRow as Row,
+  lockStaffInvitationNotification as locked,
+} from "./staff-invitation-notification-lock"
+
 type Tx = Prisma.TransactionClient
 export type StaffInvitationNotificationIdentifier = {
   tenantId: string
@@ -9,50 +14,6 @@ export type StaffInvitationNotificationIdentifier = {
 const MAX_ATTEMPTS = 3
 const LEASE_MS = 5 * 60_000
 
-async function locked(tx: Tx, input: StaffInvitationNotificationIdentifier) {
-  // Commands acquire this business lock first; preserve that ordering in workers.
-  await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} FOR SHARE`
-  await tx.$queryRaw`SELECT n."id" FROM "StaffInvitationNotification" n
-    JOIN "Membership" m ON m."id"=n."membershipId" AND m."tenantId"=n."tenantId"
-    JOIN "RetailOpsStaffInviteToken" i ON i."id"=n."invitationId" AND i."tenantId"=n."tenantId"
-    WHERE n."id"=${input.notificationId} AND n."tenantId"=${input.tenantId}
-    FOR UPDATE OF n FOR SHARE OF m, i`
-  return tx.staffInvitationNotification.findFirst({
-    where: { id: input.notificationId, tenantId: input.tenantId },
-    include: {
-      command: { select: { actorUserId: true } },
-      invitation: {
-        select: {
-          status: true,
-          role: true,
-          email: true,
-          expiresAt: true,
-          tokenHash: true,
-          invitedUserId: true,
-        },
-      },
-      membership: {
-        select: {
-          status: true,
-          role: true,
-          userId: true,
-          staffAccessRevision: true,
-          user: { select: { email: true } },
-          retailOpsStaffProfile: { select: { defaultStoreId: true } },
-          staffStoreAssignments: {
-            where: {
-              tenantId: input.tenantId,
-              status: "ACTIVE",
-              store: { tenantId: input.tenantId, status: "ACTIVE" },
-            },
-            select: { storeId: true },
-          },
-        },
-      },
-    },
-  })
-}
-type Row = NonNullable<Awaited<ReturnType<typeof locked>>>
 async function authorized(tx: Tx, row: Row, now: Date) {
   const [actor] = await tx.$queryRaw<
     Array<{ id: string }>
@@ -136,8 +97,8 @@ export async function listDueStaffInvitationNotifications(
   db: PrismaClient,
   input: { limit?: number; now?: Date } = {},
 ) {
-  const now = input.now ?? new Date(),
-    limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
+  const now = input.now ?? new Date()
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
   return db.staffInvitationNotification.findMany({
     where: {
       OR: [
@@ -162,8 +123,8 @@ export async function claimStaffInvitationNotificationInTransaction(
   tx: Tx,
   input: StaffInvitationNotificationIdentifier & { now?: Date },
 ) {
-  const now = input.now ?? new Date(),
-    row = await locked(tx, input)
+  const now = input.now ?? new Date()
+  const row = await locked(tx, input)
   if (!row) return null
   if (
     row.status === "SENDING" &&
@@ -219,8 +180,8 @@ export async function claimStaffInvitationNotificationInTransaction(
         completedAt: now,
       },
     })
-  const claimId = randomUUID(),
-    number = row.attemptCount + 1
+  const claimId = randomUUID()
+  const number = row.attemptCount + 1
   await tx.staffInvitationNotification.update({
     where: { id: row.id },
     data: {
@@ -274,8 +235,8 @@ export async function startStaffInvitationNotificationInTransaction(
     now?: Date
   },
 ) {
-  const now = input.now ?? new Date(),
-    row = await locked(tx, input)
+  const now = input.now ?? new Date()
+  const row = await locked(tx, input)
   if (
     !row ||
     row.status !== "CLAIMED" ||
@@ -346,8 +307,8 @@ export async function finishStaffInvitationNotificationInTransaction(
   tx: Tx,
   input: Completion,
 ) {
-  const now = input.now ?? new Date(),
-    row = await locked(tx, input)
+  const now = input.now ?? new Date()
+  const row = await locked(tx, input)
   if (
     !row ||
     row.claimId !== input.claimId ||

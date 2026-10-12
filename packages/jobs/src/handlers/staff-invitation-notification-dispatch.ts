@@ -1,15 +1,15 @@
 import { createHash } from "node:crypto"
 import type {
+  StaffInvitationNotificationIdentifier,
   claimStaffInvitationNotification,
   finishStaffInvitationNotification,
   startStaffInvitationNotification,
-  StaffInvitationNotificationIdentifier,
 } from "@ewatrade/db/queries"
 import { openStaffInvitationPayload } from "@ewatrade/db/staff-invitation-custody"
 import {
+  type EmailMessage,
   createRetailOpsStaffInviteEmail,
   defaultRetailOpsStaffInviteSubject,
-  type EmailMessage,
 } from "@ewatrade/email"
 
 type Claim = NonNullable<
@@ -102,6 +102,12 @@ export async function runStaffInvitationNotificationDispatch(
     }),
   })
   message.idempotencyKey = claim.providerIdempotencyKey
+  message.tags = [
+    { name: "category", value: "staff_invitation" },
+    { name: "tenant_id", value: claim.tenantId },
+    { name: "notification_id", value: claim.notificationId },
+    { name: "payload_hash", value: claim.payloadHash },
+  ]
   try {
     await dependencies.assertProviderAllowed({
       tenantId: input.tenantId,

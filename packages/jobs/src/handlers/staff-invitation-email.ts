@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { assertStaffInvitationCustodyConfigured } from "@ewatrade/db/staff-invitation-custody"
 import {
   type EmailMessage,
@@ -67,7 +68,20 @@ export function createStaffInvitationEmailAdapter(
       const routed = messages[0]
       if (!routed)
         throw Error("Staff invitation delivery destination is missing.")
-      const receipt = await transport.send(routed)
+      const receipt = await transport.send({
+        ...routed,
+        tags: [
+          ...(routed.tags ?? []).filter(
+            (tag) => tag.name !== "destination_digest",
+          ),
+          {
+            name: "destination_digest",
+            value: createHash("sha256")
+              .update(routed.to.trim().toLowerCase())
+              .digest("hex"),
+          },
+        ],
+      })
       if (receipt?.provider !== "resend" || !receipt.providerMessageId?.trim())
         throw Error("Staff invitation provider acceptance is unconfirmed.")
       return {

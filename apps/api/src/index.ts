@@ -18,6 +18,7 @@ import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
+import { registerStaffInvitationResendWebhook } from "./staff/resend-webhook"
 import { registerAssistantAttachmentRoutes } from "./assistant/attachment-upload"
 import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
@@ -185,6 +186,7 @@ app.get("/api/health", healthHandler)
 registerAppUpdateRoutes(app, appUpdateDependencies)
 registerBillingProviderEventRoutes(app)
 registerAccountPrivacyResendWebhook(app)
+registerStaffInvitationResendWebhook(app)
 registerStoreNotificationRoutes(app)
 registerCatalogPhotoUploadRoutes(app)
 registerCatalogPhotoPreviewRoutes(app)
