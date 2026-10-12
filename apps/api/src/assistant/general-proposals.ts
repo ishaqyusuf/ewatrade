@@ -359,17 +359,32 @@ export async function generalProposalWithReview(
   if (["CANCELLED", "EXPIRED", "FAILED"].includes(proposal.status)) {
     // Settled drafts still read by name, never by record id; no approval.
     try {
-      const { lines } = await adapter.review(ctx, proposal.payload)
-      return { ...proposal, approvalToken: undefined, review: lines }
+      const { lines, presentation } = await adapter.review(
+        ctx,
+        proposal.payload,
+      )
+      return {
+        ...proposal,
+        approvalToken: undefined,
+        review: lines,
+        ...(presentation ? { presentation } : {}),
+      }
     } catch {
       return proposal
     }
   }
   if (proposal.status !== "PENDING") return proposal
   try {
-    const { lines, target } = await adapter.review(ctx, proposal.payload)
+    const { lines, target, presentation } = await adapter.review(
+      ctx,
+      proposal.payload,
+    )
     return sameTarget(target, row)
-      ? { ...proposal, review: lines }
+      ? {
+          ...proposal,
+          review: lines,
+          ...(presentation ? { presentation } : {}),
+        }
       : { ...proposal, approvalToken: undefined, review: [adapter.stale] }
   } catch {
     return {

@@ -166,3 +166,58 @@ test("a long draft opens on its first lines with the rest one click away", () =>
   const short = card(proposal("small", "order_create", { review: sale }))
   expect(short).not.toContain("Show all")
 })
+
+test("a draft with a structured review reads as an invoice summary", () => {
+  const html = card(
+    proposal("purchase", "purchase_record", {
+      approvalToken: "t",
+      review: ["Fallback sentence that must not show."],
+      presentation: {
+        summary: {
+          party: "Lagos Flour Mills (LFM-01)",
+          context: "Weekly baking stock",
+          amount: "₦441,500.00",
+          amountLabel: "payable",
+        },
+        facts: [
+          { label: "Due", value: "20 Oct 2026" },
+          { value: "10 goods received" },
+        ],
+        table: {
+          columns: [
+            { label: "Goods" },
+            { label: "Received", align: "end" },
+            { label: "Cost", align: "end" },
+          ],
+          rows: Array.from({ length: 10 }, (_, n) => ({
+            cells: [`Item ${n + 1}`, "2 bag", "₦1.00"],
+            detail: "50kg bag",
+          })),
+          total: { label: "Total", value: "₦441,500.00" },
+          preview: 4,
+        },
+        sections: [
+          {
+            title: "Accounting",
+            summary: "Inventory Dr · Payables Cr",
+            rows: [{ label: "1300 Inventory", value: "Dr ₦441,500.00" }],
+          },
+        ],
+      },
+    }),
+  )
+  expect(html).toContain("Record received supplier purchase")
+  expect(html).toContain("Lagos Flour Mills (LFM-01) · Weekly baking stock")
+  expect(html).toContain("₦441,500.00")
+  expect(html).toContain(">payable<")
+  expect(html).toContain("20 Oct 2026")
+  expect(html).toContain("Item 4")
+  expect(html).not.toContain("Item 5")
+  expect(html).toContain("+ 6 more")
+  // Sections start folded, with their summary in the header.
+  expect(html).toContain("Accounting")
+  expect(html).toContain("Inventory Dr · Payables Cr")
+  expect(html).not.toContain("1300 Inventory")
+  expect(html).not.toContain("Fallback sentence")
+  expect(html).toContain(">Confirm<")
+})

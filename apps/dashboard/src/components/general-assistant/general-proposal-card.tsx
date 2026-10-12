@@ -17,6 +17,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 import { GeneralChatPhotoThumb } from "./general-chat-photo"
 import { GeneralProductPicture } from "./general-product-picture"
+import { GeneralReviewPresentationBody } from "./general-review-presentation"
 
 const statusLabel: Record<GeneralProposal["status"], string> = {
   PENDING: "Needs your review",
@@ -90,8 +91,8 @@ function ReviewLines({
           label.length <= PAIR_LABEL_MAX &&
           value.length <= PAIR_VALUE_MAX
         return (
-          // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
           <li
+            // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
             key={index}
             className={folded && !row ? "line-clamp-2" : undefined}
           >
@@ -177,38 +178,44 @@ export function GeneralProposalCard({
           </Badge>
         )}
       </div>
-      <div className="flex min-w-0 gap-3">
-        {product ? (
-          <GeneralProductPicture
-            payload={product}
-            onAdd={pending || renewable ? onEdit : undefined}
-          />
-        ) : filed ? (
-          <GeneralChatPhotoThumb attachmentId={filed} />
-        ) : null}
-        <ReviewLines
-          lines={long && !showAll ? lines.slice(0, PREVIEW_LINES) : lines}
-          folded={long && !showAll}
-        />
-      </div>
-      {long ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="-mt-1 self-start px-2"
-          aria-expanded={showAll}
-          onClick={() => setShowAll((value) => !value)}
-        >
-          {showAll ? "Show fewer lines" : `Show all ${lines.length} lines`}
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            className={cn(
-              "size-3.5 transition-transform",
-              showAll && "rotate-180",
-            )}
-          />
-        </Button>
-      ) : null}
+      {proposal.presentation ? (
+        <GeneralReviewPresentationBody presentation={proposal.presentation} />
+      ) : (
+        <>
+          <div className="flex min-w-0 gap-3">
+            {product ? (
+              <GeneralProductPicture
+                payload={product}
+                onAdd={pending || renewable ? onEdit : undefined}
+              />
+            ) : filed ? (
+              <GeneralChatPhotoThumb attachmentId={filed} />
+            ) : null}
+            <ReviewLines
+              lines={long && !showAll ? lines.slice(0, PREVIEW_LINES) : lines}
+              folded={long && !showAll}
+            />
+          </div>
+          {long ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="-mt-1 self-start px-2"
+              aria-expanded={showAll}
+              onClick={() => setShowAll((value) => !value)}
+            >
+              {showAll ? "Show fewer lines" : `Show all ${lines.length} lines`}
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                className={cn(
+                  "size-3.5 transition-transform",
+                  showAll && "rotate-180",
+                )}
+              />
+            </Button>
+          ) : null}
+        </>
+      )}
       {pending || renewable ? (
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex flex-wrap gap-2">

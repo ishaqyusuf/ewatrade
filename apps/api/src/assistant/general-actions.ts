@@ -1,6 +1,7 @@
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
+  GeneralReviewPresentation,
   GeneralActionName,
   GeneralReceipt,
 } from "@ewatrade/assistant/general/contracts"
@@ -132,7 +133,12 @@ export type GeneralActionAdapter<A extends GeneralAction> = {
   review?(
     ctx: GeneralTransactionContext,
     payload: A,
-  ): Promise<{ lines: string[]; target: ProposalTarget | null }>
+  ): Promise<{
+    lines: string[]
+    target: ProposalTarget | null
+    /** Structured card review; drafts without one show `lines`. */
+    presentation?: GeneralReviewPresentation
+  }>
   /** A locked review and its transaction-local command; never retained across confirmations. */
   prepareExecution?(
     ctx: GeneralTransactionContext,

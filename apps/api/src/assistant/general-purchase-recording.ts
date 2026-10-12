@@ -13,6 +13,7 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import { purchaseRecordingPresentation } from "./purchase-recording-presentation"
 type Action = Extract<GeneralAction, { action: "purchase_record" }>
 type Review = Awaited<ReturnType<typeof getFinancePurchaseRecordingReview>>
 function inputFor(ctx: GeneralTransactionContext, p: Action) {
@@ -64,7 +65,11 @@ export const purchaseRecord = {
   },
   async review(ctx, p) {
     const r = await getFinancePurchaseRecordingReview(ctx.db, inputFor(ctx, p))
-    return { target: target(r), lines: purchaseRecordingReviewLines(r) }
+    return {
+      target: target(r),
+      lines: purchaseRecordingReviewLines(r),
+      presentation: purchaseRecordingPresentation(r),
+    }
   },
   async prepareExecution(ctx, p, command) {
     const v = await prepareReviewedFinancePurchaseRecordingInTransaction(

@@ -63,6 +63,11 @@ export { staffHistoryTargetSchema } from "./staff-history-target"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
 import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchaseRecordAction } from "./purchase-recording"
+import { generalReviewPresentationSchema } from "./review-presentation"
+export {
+  type GeneralReviewPresentation,
+  generalReviewPresentationSchema,
+} from "./review-presentation"
 import { supplierAllocationReleaseAction } from "./supplier-allocation-release"
 import { supplierEntryReverseAction } from "./supplier-entry-reversal"
 import { supplierOpeningAction } from "./supplier-opening"
@@ -473,6 +478,11 @@ export const generalProposalSchema = z
     expiresAt: z.string().datetime(),
     receipt: generalReceiptSchema.nullable(),
     review: z.array(z.string()).optional(),
+    /**
+     * Structured review for the card; clients fall back to `review`. Display
+     * data only: an invalid one is dropped instead of failing the whole chat.
+     */
+    presentation: generalReviewPresentationSchema.optional().catch(undefined),
     approvalToken: z.string().optional(),
   })
   .strict()
