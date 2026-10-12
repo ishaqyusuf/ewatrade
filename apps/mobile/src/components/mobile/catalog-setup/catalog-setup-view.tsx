@@ -46,6 +46,10 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const [categorySearchFocused, setCategorySearchFocused] = useState(false)
   const [illustrationsOpen, setIllustrationsOpen] = useState(false)
   const [editors, setEditors] = useState<Array<{ key: CatalogEditorKey }>>([])
+  // Editor Done bars ride above the keyboard, so focused fields clear them.
+  const [editorFooterHeights, setEditorFooterHeights] = useState<
+    Partial<Record<CatalogEditorKey, number>>
+  >({})
   const {
     isOffline,
     variantComposerInputRef,
@@ -103,6 +107,19 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     setEditors((current) => current.slice(0, -1))
   }
   const activeFooterHeight = variantComposerMode ? composerHeight : footerHeight
+  const trackEditorFooter = (key: CatalogEditorKey) => (height: number) =>
+    setEditorFooterHeights((current) =>
+      current[key] === height ? current : { ...current, [key]: height },
+    )
+  const activeEditor = editors[editors.length - 1]
+  const activeEditorFooterHeight = activeEditor
+    ? editorFooterHeights[activeEditor.key]
+    : undefined
+  const editorBottomOffset = variantComposerMode
+    ? composerHeight + 12
+    : activeEditorFooterHeight === undefined
+      ? 24
+      : activeEditorFooterHeight + 12
   const enabledChoices = model.combinations.filter(
     (combination) =>
       (model.variantDrafts[combination.key] ?? model.makeDefaultVariantDraft())
@@ -445,6 +462,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                 entry.key === "options" && kind === "product" ? (
                   <BottomSearchFooter
                     accessibilityLabel="Customer choices actions"
+                    onHeightChange={trackEditorFooter(entry.key)}
                     onChangeText={() => undefined}
                     placeholder=""
                     searchVisible={false}
@@ -467,6 +485,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                     localSearch
                     onChangeText={setCategoryQuery}
                     onFocusChange={setCategorySearchFocused}
+                    onHeightChange={trackEditorFooter(entry.key)}
                     placeholder="Search all categories"
                     totalCount={0}
                     value={categoryQuery}
@@ -477,6 +496,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                   <BottomSearchFooter
                     accessibilityLabel={`${CATALOG_EDITOR_TITLES[entry.key]} actions`}
                     onChangeText={() => undefined}
+                    onHeightChange={trackEditorFooter(entry.key)}
                     placeholder=""
                     searchVisible={false}
                     totalCount={0}
@@ -493,6 +513,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                     totalCount={0}
                     value=""
                     onChangeText={() => undefined}
+                    onHeightChange={trackEditorFooter(entry.key)}
                     placeholder=""
                     accessibilityLabel={
                       entry.key === "images"
@@ -531,7 +552,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                 ),
             }))}
             onBack={backEditor}
-            bottomOffset={variantComposerMode ? composerHeight + 12 : 24}
+            bottomOffset={editorBottomOffset}
             obscured={!!unitEditorDraft}
             onScrollTouch={hideVariantComposer}
           >
