@@ -74,7 +74,21 @@ export const serviceIntakeSignedFactTables = [
   "AssistantConversation",
   "AssistantMessage",
 ] as const
-export type ServiceIntakeSignedFacts = G02RollbackFacts
+export type ServiceIntakeSignedAuthorizationFact = {
+  id: string
+  hash: string
+  stableFieldsHash: string
+  lastValidatedAt: string
+  updatedAt: string
+  status: string
+  revokedAt: string | null
+  expiresAt: string
+}
+export type ServiceIntakeSignedFacts = Array<
+  G02RollbackFacts[number] & {
+    authorizationRows?: ServiceIntakeSignedAuthorizationFact[] | null
+  }
+>
 export function assertServiceIntakeSignedNativeCreation(
   before: ServiceIntakeSignedFacts,
   after: ServiceIntakeSignedFacts,
@@ -104,15 +118,32 @@ export async function serviceIntakeSignedRollbackFacts(
   tenantId: string,
 ) {
   const shared = await g02RollbackFacts(db, tenantId)
-  const queries = serviceIntakeSignedFactTables.map(
-    (table) => Prisma.sql`
+  const queries = serviceIntakeSignedFactTables.map((table) => {
+    // Safe row metadata shares the aggregate's SQL snapshot. Full-row hashes
+    // retain every column; credentials and client/grant identifiers never leave SQL.
+    const authorizationRows =
+      table === "QaClientAuthorization"
+        ? Prisma.sql`COALESCE(jsonb_agg(jsonb_build_object(
+          'id', r."id", 'hash', md5(to_jsonb(r)::text),
+          'stableFieldsHash', md5((to_jsonb(r) - 'lastValidatedAt' - 'updatedAt')::text),
+          'lastValidatedAt', r."lastValidatedAt", 'updatedAt', r."updatedAt",
+          'status', r."status", 'revokedAt', r."revokedAt", 'expiresAt', r."expiresAt"
+        ) ORDER BY r."id"), '[]'::jsonb)`
+        : Prisma.sql`NULL::jsonb`
+    return Prisma.sql`
     SELECT ${`D04:${table}`}::text AS "table", count(*)::text AS rows,
-      md5(COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), '[]'::jsonb)::text) AS hash
-    FROM ${Prisma.raw(`"${table}"`)} r`,
-  )
+      md5(COALESCE(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text), '[]'::jsonb)::text) AS hash,
+      ${authorizationRows} AS "authorizationRows"
+    FROM ${Prisma.raw(`"${table}"`)} r`
+  })
   const domain = await db.$queryRaw<ServiceIntakeSignedFacts>(Prisma.sql`
     SELECT * FROM (${Prisma.join(queries, " UNION ALL ")}) fingerprints ORDER BY "table"`)
-  return [...shared, ...domain].sort((a, b) => a.table.localeCompare(b.table))
+  return [
+    ...shared,
+    ...domain.map(({ authorizationRows, ...fact }) =>
+      authorizationRows ? { ...fact, authorizationRows } : fact,
+    ),
+  ].sort((a, b) => a.table.localeCompare(b.table))
 }
 
 export {

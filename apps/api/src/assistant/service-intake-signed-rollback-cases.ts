@@ -24,6 +24,18 @@ export const serviceIntakeSignedCases = [
   "receipt-recovery-replay",
 ] as const
 export type ServiceIntakeSignedCase = (typeof serviceIntakeSignedCases)[number]
+export type ServiceIntakeSignedCaseSelection = "full" | "remaining"
+export function selectedServiceIntakeSignedCases(
+  selection: ServiceIntakeSignedCaseSelection = "full",
+) {
+  check(
+    selection === "full" || selection === "remaining",
+    "Explicit full or remaining signed case selection required",
+  )
+  return selection === "remaining"
+    ? serviceIntakeSignedCases.slice(1)
+    : serviceIntakeSignedCases
+}
 type Evidence = {
   case: ServiceIntakeSignedCase
   before: ServiceIntakeSignedFacts
@@ -44,6 +56,7 @@ export class ServiceIntakeSignedRollbackFailure extends Error {
 }
 
 export async function runServiceIntakeSignedCases<Tx, Report>(input: {
+  selection?: ServiceIntakeSignedCaseSelection
   facts: () => Promise<ServiceIntakeSignedFacts>
   transaction: (
     run: (tx: Tx) => Promise<never>,
@@ -55,7 +68,7 @@ export async function runServiceIntakeSignedCases<Tx, Report>(input: {
   >
 }) {
   const completed: Array<Evidence & { report: Report }> = []
-  for (const name of serviceIntakeSignedCases) {
+  for (const name of selectedServiceIntakeSignedCases(input.selection)) {
     const started = performance.now()
     const rollback = Error(`D04_SIGNED_ROLLBACK:${name}`)
     const checks: string[] = []

@@ -4,6 +4,7 @@ import {
   type ServiceIntakeSignedCase,
   ServiceIntakeSignedRollbackFailure,
   runServiceIntakeSignedCases,
+  selectedServiceIntakeSignedCases,
   serviceIntakeSignedCases,
 } from "./service-intake-signed-rollback-cases"
 import {
@@ -163,6 +164,73 @@ test("every required signed case is sequential, bounded, identity-rolled-back an
         row.changedTables.length === 0,
     ),
   ).toBe(true)
+})
+
+test("remaining selection reuses only edit-confirm and keeps every other ordered case and bound", async () => {
+  const state = setup()
+  const result = await runServiceIntakeSignedCases({
+    ...state.input,
+    selection: "remaining",
+  })
+  expect(result.map((row) => row.case)).toEqual(
+    serviceIntakeSignedCases.slice(1),
+  )
+  expect(state.opened).toHaveLength(12)
+  expect(state.options).toEqual(Array.from({ length: 12 }, () => limits))
+  expect(state.factReads()).toBe(24)
+  expect(() =>
+    Reflect.apply(selectedServiceIntakeSignedCases, null, ["cancel-replay"]),
+  ).toThrow()
+})
+
+test("authorization timestamp diagnostics survive failure without weakening the full-row hash assertion", async () => {
+  const state = setup()
+  let reads = 0
+  state.input.facts = async () => {
+    const after = ++reads === 2
+    return [
+      {
+        table: "D04:QaClientAuthorization",
+        rows: "1",
+        hash: after ? "changed" : "original",
+        authorizationRows: [
+          {
+            id: "safe-row-id",
+            hash: after ? "changed" : "original",
+            stableFieldsHash: "all-other-columns-unchanged",
+            status: "ACTIVE",
+            lastValidatedAt: after
+              ? "2026-10-12T10:00:01Z"
+              : "2026-10-12T10:00:00Z",
+            updatedAt: after ? "2026-10-12T10:00:01Z" : "2026-10-12T10:00:00Z",
+            revokedAt: null,
+            expiresAt: "2026-10-19T00:00:00Z",
+          },
+        ],
+      },
+    ]
+  }
+  await expect(runServiceIntakeSignedCases(state.input)).rejects.toMatchObject({
+    evidence: {
+      rolledBack: true,
+      savedStatePreserved: false,
+      changedTables: ["D04:QaClientAuthorization"],
+      before: [
+        {
+          authorizationRows: [
+            { id: "safe-row-id", lastValidatedAt: "2026-10-12T10:00:00Z" },
+          ],
+        },
+      ],
+      after: [
+        {
+          authorizationRows: [
+            { id: "safe-row-id", lastValidatedAt: "2026-10-12T10:00:01Z" },
+          ],
+        },
+      ],
+    },
+  })
 })
 
 test("timeout preserves partial checks and completed-case evidence and always rereads state", async () => {

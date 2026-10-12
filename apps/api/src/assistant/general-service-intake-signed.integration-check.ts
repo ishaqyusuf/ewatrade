@@ -18,6 +18,7 @@ import { proposalApprovalToken, proposalDigest } from "./proposal-security"
 import { seedServiceIntakeRollbackFixture } from "./service-intake-rollback-fixture"
 import {
   type ServiceIntakeSignedCase,
+  type ServiceIntakeSignedCaseSelection,
   runServiceIntakeSignedCases,
   serviceIntakeSignedCases,
 } from "./service-intake-signed-rollback-cases"
@@ -74,6 +75,7 @@ async function refused(run: () => Promise<unknown>, code: TRPCError["code"]) {
 export async function verifyServiceIntakeSignedRollback(
   ctx: GeneralContext,
   conversationId: string,
+  selection: ServiceIntakeSignedCaseSelection = "full",
 ) {
   assertServiceIntakeSignedEnvironment(process.env)
   const db = ctx.db
@@ -556,12 +558,14 @@ export async function verifyServiceIntakeSignedRollback(
     (tx: Prisma.TransactionClient, checks: string[]) => Promise<CaseReport>
   >
   const results = await runServiceIntakeSignedCases({
+    selection,
     facts,
     transaction: (run, options) => db.$transaction(run, options),
     cases,
   })
   return {
-    version: 2,
+    version: 3,
+    selection,
     startedAt,
     results,
     savedStatePreserved: true,
