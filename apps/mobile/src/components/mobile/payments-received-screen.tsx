@@ -24,6 +24,7 @@ import {
   PAYMENTS_RECEIVED_COPY,
   buildPaymentsReceivedPresentation,
 } from "./payments-received-presentation"
+import { SearchFold, useSearchFold } from "./search-fold"
 
 function paymentTime(value: Date | string) {
   return new Date(value).toLocaleTimeString("en-GB", {
@@ -64,6 +65,7 @@ export function PaymentsReceivedScreen() {
   const [query, setQuery] = useState("")
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const searchFold = useSearchFold(query)
   const deferredQuery = useDeferredValue(query.trim())
   const payments = useInfiniteQuery(
     trpc.orders.payments.infiniteQueryOptions(
@@ -171,39 +173,41 @@ export function PaymentsReceivedScreen() {
                 tone="destructive"
               />
             ) : null}
-            {payments.isPending && !offline ? (
-              <Skeleton className="h-48 rounded-[22px]" />
-            ) : (
-              <HeroCard
-                label={
-                  deferredQuery
-                    ? "Matching payments · all time"
-                    : "Received · all time"
-                }
-                amount={payments.data ? presentation.amountLabel : "—"}
-                pill={
-                  offline
-                    ? { label: "Offline", tone: "offline" }
-                    : payments.data
-                      ? {
-                          label: `${totalCount} payment${totalCount === 1 ? "" : "s"}`,
-                          tone: "synced",
-                        }
-                      : undefined
-                }
-                sub={
-                  !payments.data
-                    ? "Received total unavailable"
-                    : presentation.currencyAmountRows.length
-                      ? presentation.currencyAmountRows.join(" · ")
-                      : deferredQuery
-                        ? `${totalCount} matching payment${totalCount === 1 ? "" : "s"}`
-                        : todayRows.length
-                          ? `${loadedPaymentTotals(todayRows).join(" · ")} received today · ${todayRows.length} payment${todayRows.length === 1 ? "" : "s"}`
-                          : "Nothing received today yet"
-                }
-              />
-            )}
+            <SearchFold folded={searchFold.folded}>
+              {payments.isPending && !offline ? (
+                <Skeleton className="h-48 rounded-[22px]" />
+              ) : (
+                <HeroCard
+                  label={
+                    deferredQuery
+                      ? "Matching payments · all time"
+                      : "Received · all time"
+                  }
+                  amount={payments.data ? presentation.amountLabel : "—"}
+                  pill={
+                    offline
+                      ? { label: "Offline", tone: "offline" }
+                      : payments.data
+                        ? {
+                            label: `${totalCount} payment${totalCount === 1 ? "" : "s"}`,
+                            tone: "synced",
+                          }
+                        : undefined
+                  }
+                  sub={
+                    !payments.data
+                      ? "Received total unavailable"
+                      : presentation.currencyAmountRows.length
+                        ? presentation.currencyAmountRows.join(" · ")
+                        : deferredQuery
+                          ? `${totalCount} matching payment${totalCount === 1 ? "" : "s"}`
+                          : todayRows.length
+                            ? `${loadedPaymentTotals(todayRows).join(" · ")} received today · ${todayRows.length} payment${todayRows.length === 1 ? "" : "s"}`
+                            : "Nothing received today yet"
+                  }
+                />
+              )}
+            </SearchFold>
           </View>
         }
         onEndReached={() => {
@@ -290,6 +294,7 @@ export function PaymentsReceivedScreen() {
           hidden={scrollHide.hidden}
           maxLength={160}
           onChangeText={setQuery}
+          onFocusChange={searchFold.onFocusChange}
           onHeightChange={setFooterHeight}
           placeholder={
             offline
@@ -299,7 +304,6 @@ export function PaymentsReceivedScreen() {
           showDisabledOfflineSearch
           totalCount={totalCount}
           value={query}
-          variant="action-bar"
         />
       ) : null}
     </View>
