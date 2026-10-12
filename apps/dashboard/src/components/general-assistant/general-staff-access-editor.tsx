@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { Controller, useFieldArray } from "react-hook-form"
 import type { z } from "zod"
+import { StaffAccessWorkloadView } from "./staff-access-workload-view"
 
 type Review = RouterOutputs["retailOps"]["staffStoreAccessReview"]
 type Fields = z.infer<typeof staffAccessReviewInput>
@@ -196,7 +197,11 @@ export function GeneralStaffAccessEditorView({
             Current catalog editing:{" "}
             {review.before.catalogEditor ? "allowed" : "not allowed"}.
           </p>
-          <p>{review.outstandingServiceWork.detail}</p>
+          <StaffAccessWorkloadView
+            workload={review.outstandingServiceWork}
+            membershipId={initial.membershipId}
+            disabled={blocked}
+          />
         </div>
       )}
       {review ? (
