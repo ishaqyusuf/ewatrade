@@ -556,7 +556,7 @@ async function writeDurableRetailOpsStaffLifecycleEvent(
   })
 }
 
-async function writeDurableRetailOpsStaffInvite(
+export async function writeDurableRetailOpsStaffInvite(
   db: PrismaClient | Prisma.TransactionClient,
   input: {
     email: string
@@ -1077,6 +1077,7 @@ export async function inviteRetailOpsStaffInTransaction(
   const role = mapStaffRole(input.role)
   const invitedAt = new Date()
 
+  await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} AND "isActive"=true FOR UPDATE`
   await assertStaffStoreAccessAuthority(tx, input)
   const tenant = await tx.tenant.findFirst({
     where: {

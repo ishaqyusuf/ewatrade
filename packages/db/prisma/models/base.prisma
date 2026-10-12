@@ -41,6 +41,8 @@ model Tenant {
   retailOpsStaffProfiles                            RetailOpsStaffProfile[]
   retailOpsStaffInviteTokens                        RetailOpsStaffInviteToken[]
   retailOpsStaffLifecycleEvents                     RetailOpsStaffLifecycleEvent[]
+  staffInvitationCommands                          StaffInvitationCommand[]
+  staffInvitationNotifications                     StaffInvitationNotification[]
   offlineDevices                                    OfflineDevice[]
   offlineDeviceRevocations                          OfflineDeviceRevocation[]
   serviceIntakes                                    ServiceIntake[]
@@ -476,6 +478,8 @@ model Membership {
   retailOpsStaffProfile                     RetailOpsStaffProfile?
   retailOpsStaffInviteTokens                RetailOpsStaffInviteToken[]
   retailOpsStaffLifecycleEvents             RetailOpsStaffLifecycleEvent[]
+  staffInvitationCommands                  StaffInvitationCommand[]
+  staffInvitationNotifications             StaffInvitationNotification[]
   serviceCommerceStoreTeamAssignments       ServiceCommerceStoreTeamAssignment[]
   requestedServiceCommerceQuoteApprovals    ServiceCommerceQuoteApproval[]             @relation("QuoteApprovalRequester")
   decidedServiceCommerceQuoteApprovals      ServiceCommerceQuoteApproval[]             @relation("QuoteApprovalDecider")

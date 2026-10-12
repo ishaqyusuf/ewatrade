@@ -39,7 +39,8 @@
     "./assistant-general": "./src/queries/assistant-general.ts",
     "./oversight": "./src/queries/oversight.ts",
     "./oversight-client": "./src/oversight-client.ts",
-    "./assistant-voice": "./src/queries/assistant-voice.ts"
+    "./assistant-voice": "./src/queries/assistant-voice.ts",
+    "./staff-invitation-custody": "./src/staff-invitation-custody.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

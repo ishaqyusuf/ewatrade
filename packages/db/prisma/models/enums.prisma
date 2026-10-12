@@ -68,6 +68,7 @@ enum RetailOpsStaffInviteTokenStatus {
 }
 
 enum RetailOpsStaffLifecycleEventType {
+  INVITE_REVOKED
   INVITED
   INVITE_REFRESHED
   ONBOARDING_COMPLETED

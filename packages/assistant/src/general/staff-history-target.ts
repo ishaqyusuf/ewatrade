@@ -14,6 +14,7 @@ export const staffHistoryTargetSchema = z
           .enum([
             "INVITED",
             "INVITE_REFRESHED",
+            "INVITE_REVOKED",
             "ONBOARDING_COMPLETED",
             "SUSPENDED",
             "REACTIVATED",

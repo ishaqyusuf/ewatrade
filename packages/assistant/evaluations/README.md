@@ -35,6 +35,7 @@ it is not an executed result, enabled capability, or deployment claim.
 | `customers.credit.refund` v1 | [1](fixtures/held-credit-refund.v1.md) | Completed payout, ambiguity, unused-credit limits, stale review, authority, injection, retry, provenance, receipt | None yet |
 | `sales.product.return` v1 | [1](fixtures/product-return.v1.md) | Partial restock, ambiguity, dispositions, over-return, stale evidence, authority, injection, replay/recovery | None yet |
 | `sales.products.fulfill` v1 | [1](fixtures/bulk-fulfillment.v1.md) | Success, ambiguity, denial, stale target, injection, replay, outage | None yet |
+| Staff invitation lifecycle | [1](fixtures/staff-invitation-lifecycle.v1.json) | Durable invite/resend/revoke, scope-bound custody, fenced claims, unknown send and trusted receipt recovery | Source checks only |
 | Staff invitation review | [1](fixtures/staff-invitation-review.v1.json) | Normalized recipient, email side effect, native authority/Store/seat rules, protected roles, rollout, privacy and recovery boundary | Source checks only |
 
 
@@ -272,3 +273,5 @@ and browser assertions. Mobile evaluations are excluded from the current work.
 - [Exact staff member sheet and same-name directory rollback, 12 October 2026](runs/2026-10-12-staff-member-sheet-source.md): 13tests138assertions/scoped types; real three-page same-name INVITED-only rollback9.753s, saved staff/auth unchanged. Actual original-facts rendering/global unavailable/Close/history handoff/invalid-link desktop checks and screenshots. Native sheet success/saved chat recovery unverified; planned S01partial.
 
 - [Global staff directory sheet source, 12 October 2026](runs/2026-10-12-staff-directory-sheet-source.md):7tests74assertions/scoped types and two actual protected read-tool targets7.435s, saved staff/chat/budget unchanged. Original rollback page content/pagination/member handoff and actual global unavailable/filters/cursor-reset/Close/invalid-link desktop screenshots. Live directory/saved chat success unverified; S01partial/planned.
+
+- [Durable invitation source, 12 October 2026](runs/2026-10-12-staff-invitation-durable-source.md):40focused tests191assertions/scoped types; four real QA rollback command/outbox cases preserve saved facts. Additive migration/root push pass. No provider or new web acceptance; S02partial.

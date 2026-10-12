@@ -6,6 +6,7 @@ const id = z.string().trim().min(1).max(160)
 export const lifecycleTypes = [
   "INVITED",
   "INVITE_REFRESHED",
+  "INVITE_REVOKED",
   "ONBOARDING_COMPLETED",
   "SUSPENDED",
   "REACTIVATED",

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "ticket": "S02",
+  "scope": "web/dashboard",
+  "status": "source milestone; parent unaccepted",
+  "modelRuns": [],
+  "scenarios": [
+    "Strict invite/resend/revoke intent rejects authority, token, URL, delivery and malformed hash fields",
+    "Exact durable command replay returns original safe receipt; changed intent or revoked actor refuses recovery",
+    "Resend replaces exact pending token, cancels unsent work and preserves member role/Store grants",
+    "Revoke records INVITE_REVOKED and invalidates link while membership remains INVITED and seat remains consumed",
+    "Versioned AES-256-GCM custody binds Tenant/member/invitation/notification/payload and supports explicit retired keys",
+    "Current creator, recipient, Store, token, role and access revision checked before the first provider attempt",
+    "Claim leases reclaim only unsent work; expired SENDING becomes OUTCOME_UNKNOWN, never automatic resend",
+    "Known provider acceptance is SENT; only trusted matching provider evidence can mark DELIVERED",
+    "At most three claims; terminal cancellation/sent/exhausted failure erases acceptance payload",
+    "Provider acceptance persistence failure propagates without a duplicate send or rejection relabel"
+  ],
+  "sourceChecks": [
+    "packages/db/src/staff-invitation-custody.test.ts",
+    "packages/db/src/queries/staff-invitation-commands.test.ts",
+    "packages/db/src/queries/staff-invitation-notifications.test.ts",
+    "packages/jobs/src/handlers/staff-invitation-notification-dispatch.test.ts",
+    "packages/db/src/queries/staff-invitation-commands.integration-check.ts"
+  ],
+  "remaining": [
+    "Signed assistant Edit/re-review/Confirm and original grant preview",
+    "Registered guarded email transport, periodic ID-only discovery and receipt reconciliation",
+    "Saved global receipt, chat continuity, full web acceptance and screenshots",
+    "Concurrency and complete stale/authority/quota refusal evidence",
+    "Privacy retention/deletion inventory and expired/unknown ciphertext reconciliation policy"
+  ]
+}

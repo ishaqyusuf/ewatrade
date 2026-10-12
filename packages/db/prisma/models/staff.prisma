@@ -52,6 +52,10 @@ model RetailOpsStaffInviteToken {
   tenant           Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   membership       Membership?                     @relation(fields: [membershipId], references: [id], onDelete: SetNull)
 
+  notifications    StaffInvitationNotification[]
+  commands         StaffInvitationCommand[]
+
+  @@unique([id, tenantId])
   @@unique([tenantId, email, role, externalId])
   @@index([tenantId, status, expiresAt])
   @@index([membershipId, createdAt])

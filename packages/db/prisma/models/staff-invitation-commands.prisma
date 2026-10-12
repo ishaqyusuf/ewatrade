@@ -1,0 +1,90 @@
+enum StaffInvitationCommandKind {
+  INVITE
+  RESEND
+  REVOKE
+}
+
+enum StaffInvitationNotificationStatus {
+  PENDING
+  CLAIMED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  OUTCOME_UNKNOWN
+  CANCELLED
+}
+
+model StaffInvitationCommand {
+  id              String                     @id @default(cuid())
+  tenantId        String
+  clientCommandId String
+  kind            StaffInvitationCommandKind
+  payloadHash     String
+  actorUserId     String
+  membershipId    String
+  invitationId    String
+  result          Json
+  createdAt       DateTime                   @default(now())
+  tenant          Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership      Membership                 @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  invitation      RetailOpsStaffInviteToken   @relation(fields: [invitationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  notification    StaffInvitationNotification?
+
+  @@unique([tenantId, clientCommandId])
+  @@unique([id, tenantId])
+  @@index([tenantId, membershipId, createdAt])
+}
+
+model StaffInvitationNotification {
+  id                  String                            @id @default(cuid())
+  tenantId            String
+  commandId           String                            @unique
+  membershipId        String
+  invitationId        String
+  payloadHash         String
+  payloadCiphertext   String?
+  encryptionKeyId     String
+  status              StaffInvitationNotificationStatus @default(PENDING)
+  attemptCount        Int                               @default(0)
+  claimId             String?
+  claimExpiresAt      DateTime?
+  sendStartedAt       DateTime?
+  nextAttemptAt       DateTime                          @default(now())
+  providerKey         String?
+  providerMessageId   String?
+  failureCode         String?
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+  tenant              Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  command             StaffInvitationCommand            @relation(fields: [commandId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  membership          Membership                        @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  invitation          RetailOpsStaffInviteToken          @relation(fields: [invitationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  attempts            StaffInvitationNotificationAttempt[]
+
+  @@unique([id, tenantId])
+  @@unique([commandId, tenantId])
+  @@index([status, nextAttemptAt])
+  @@index([tenantId, membershipId, createdAt])
+  @@index([invitationId, status])
+}
+
+model StaffInvitationNotificationAttempt {
+  id                  String                            @id @default(cuid())
+  tenantId            String
+  notificationId      String
+  number              Int
+  status              StaffInvitationNotificationStatus
+  providerKey         String?
+  providerMessageId   String?
+  failureCode         String?
+  startedAt           DateTime                          @default(now())
+  completedAt         DateTime?
+  notification        StaffInvitationNotification       @relation(fields: [notificationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([notificationId, number])
+  @@index([tenantId, notificationId, startedAt])
+}
