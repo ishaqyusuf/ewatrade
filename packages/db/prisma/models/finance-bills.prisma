@@ -5,6 +5,7 @@ enum FinanceBillKind {
 }
 
 model FinanceBill {
+  payoutIntents PayoutIntent[]
   expenseReceiptAssets FinanceExpenseReceiptAsset[]
   costRecognition     FinancePurchaseRecognition? @relation("PurchaseRecognitionCosts")
   recognitionEvent    FinancePurchaseRecognitionEvent? @relation("PurchaseRecognitionInvoice")

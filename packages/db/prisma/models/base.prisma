@@ -1,4 +1,8 @@
 model Tenant {
+  collectionIntents CollectionIntent[]
+  payoutBeneficiaries PayoutBeneficiary[]
+  payoutIntents PayoutIntent[]
+  payoutSetting BusinessPayoutSetting?
   productAnalyticsEvents ProductAnalyticsEvent[]
   staffStoreAssignments StaffStoreAssignment[]
   staffAccessAuditEvents StaffAccessAuditEvent[]

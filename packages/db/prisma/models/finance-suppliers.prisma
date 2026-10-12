@@ -15,6 +15,7 @@ enum FinanceSupplierSide {
 }
 
 model FinanceSupplierAccount {
+  payoutBeneficiaries PayoutBeneficiary[]
   purchaseRecognitions FinancePurchaseRecognition[]
   id                 String                             @id @default(cuid())
   bookId             String

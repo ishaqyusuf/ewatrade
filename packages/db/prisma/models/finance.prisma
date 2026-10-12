@@ -26,6 +26,8 @@ enum FinanceAccountPurpose {
 }
 
 model FinanceBook {
+  payoutBeneficiaries PayoutBeneficiary[]
+  payoutIntents PayoutIntent[]
   bankAccountStates FinanceBankAccountState[]
   fiscalCalendar FinanceFiscalCalendar?
   fiscalYears FinanceFiscalYear[]
@@ -64,6 +66,7 @@ model FinanceBook {
 }
 
 model FinanceAccount {
+  payoutIntents PayoutIntent[]
   commercialPayments CommercialOrderPayment[]
   bankAccountStates FinanceBankAccountState[]
   fiscalCalendars FinanceFiscalCalendar[]
@@ -112,6 +115,8 @@ model FinanceMoneyAccountPaymentEvent {
 }
 
 model FinanceJournalEntry {
+  settledPayout PayoutIntent? @relation("PayoutSettlement")
+  correctedPayout PayoutIntent? @relation("PayoutCorrection")
   fiscalCloseJournal FinanceFiscalCloseJournal?
   purchaseRecognitionEvent           FinancePurchaseRecognitionEvent?
   inventoryCostReviewOriginalEvidence FinanceInventoryCostReviewEvidence[] @relation("InventoryCostReviewOriginalJournal")

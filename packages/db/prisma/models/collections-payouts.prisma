@@ -1,0 +1,181 @@
+// F01/F04 persistence foundation. Canonical commands, privacy inventory and rollout remain gated.
+enum CollectionProviderEventOutcome {
+  RECEIVED
+  APPLIED
+  HELD
+  IGNORED
+  REJECTED
+}
+
+model CollectionIntent {
+  id                String              @id @default(cuid())
+  tenantId          String
+  storeId           String
+  sourceKind        String              // "commercial_order" (v1)
+  orderId           String
+  clientIntentId    String
+  provider          String
+  providerReference String              @unique
+  amountMinor       Int                 // partial allowed: 0 < amount <= balance at opening
+  currencyCode      String
+  status            HostedPaymentStatus @default(CREATED)
+  checkoutUrl       String?
+  expiresAt         DateTime            // 10 min – 72 h after createdAt
+  createdByUserId   String?             // null for a customer-initiated link
+  cancelledAt       DateTime?
+  cancelledByUserId String?
+  paidAt            DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store             Store               @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Restrict)
+  order             CommercialOrder     @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  events            CollectionProviderEvent[]
+  holds             CollectionHold[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, orderId, id])
+  @@unique([tenantId, clientIntentId])
+  @@index([orderId, status, expiresAt])
+  @@index([tenantId, storeId, status, createdAt])
+}
+
+model CollectionProviderEvent {
+  id              String                      @id @default(cuid())
+  intentId        String?                     // null when no intent matched the reference
+  provider        String
+  providerEventId String
+  payloadHash     String
+  eventType       String                      // paid | failed
+  amountMinor     Int
+  currencyCode    String?                     // never defaulted
+  outcome         CollectionProviderEventOutcome @default(RECEIVED)
+  holdReason      String?                     // decideProviderSettlement reason when held
+  receivedAt      DateTime                    @default(now())
+  processedAt     DateTime?
+  intent          CollectionIntent?           @relation(fields: [intentId], references: [id], onDelete: Restrict)
+  hold            CollectionHold?
+
+  @@unique([intentId, id])
+  @@unique([provider, providerEventId])
+  @@index([intentId, receivedAt])
+  @@index([provider, outcome, receivedAt])
+}
+
+model CollectionHold {
+  id                 String                  @id @default(cuid())
+  tenantId           String
+  intentId           String
+  orderId            String
+  eventId            String                  @unique
+  amountMinor        Int
+  currencyCode       String
+  reason             String                  // source_mismatch | amount_mismatch | currency_mismatch | source_already_settled | source_unavailable | provider_mismatch
+  resolution         String?                 // provider_refund | customer_credit
+  resolvedAt         DateTime?
+  resolvedByUserId   String?
+  refundCommandId    String?                 @unique // provider refund outbox row
+  customerLedgerEntryId String?              @unique // credit entry when kept as credit
+  createdAt          DateTime                @default(now())
+  intent             CollectionIntent        @relation(fields: [tenantId, orderId, intentId], references: [tenantId, orderId, id], onDelete: Restrict)
+  event              CollectionProviderEvent @relation(fields: [intentId, eventId], references: [intentId, id], onDelete: Restrict)
+
+  @@unique([intentId, eventId])
+  @@index([tenantId, resolvedAt, createdAt])
+}
+
+model PayoutBeneficiary {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  bookId                String
+  supplierId            String                // v1 purpose: supplier bills
+  version               Int
+  country               String
+  currencyCode          String
+  bankCode              String
+  bankName              String
+  accountName           String                // provider-resolved, person-confirmed
+  accountSuffix         String                // last 4 only
+  providerRecipientCode String                // e.g. RCP_…; full account number is never stored
+  status                String                // UNVERIFIED | VERIFIED | DISABLED
+  verifiedAt            DateTime?
+  verifiedByUserId      String?
+  createdByUserId       String
+  createdAt             DateTime  @default(now())
+  tenant                Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  book                  FinanceBook @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  supplier              FinanceSupplierAccount @relation(fields: [bookId, supplierId], references: [bookId, id], onDelete: Restrict)
+  payouts               PayoutIntent[]
+
+  @@unique([bookId, supplierId, id])
+  @@unique([bookId, supplierId, version])
+  @@index([tenantId, supplierId, status])
+}
+
+model PayoutIntent {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  bookId             String
+  supplierId         String
+  billId             String            // supplier bill being paid (v1)
+  beneficiaryId      String            // a specific beneficiary version
+  debitAccountId     String
+  amountMinor        BigInt
+  feeMinor           BigInt            // business pays; posted to "Bank & transfer charges"
+  totalDebitMinor    BigInt
+  currencyCode       String
+  reviewDigest       String
+  provider           String
+  providerReference  String            @unique // po_<hash>, fixed at approval
+  providerTransferCode String?
+  status             String            // APPROVED | SUBMITTING | RECEIVED | PENDING | UNKNOWN | SUCCEEDED | FAILED | REVERSED | ABANDONED | BLOCKED | REJECTED
+  submissionCount    Int               @default(0)
+  submissionClaimedAt DateTime?        // outbox claim; one worker at a time
+  draftedByUserId    String            // Owner/Admin/Manager
+  approvedByUserId   String            // Owner/Admin only
+  stepUpVerifiedAt   DateTime          // in-app step-up bound to reviewDigest
+  approvedAt         DateTime          @default(now())
+  settledAt          DateTime?
+  postedJournalEntryId String?         @unique // only after authoritative SUCCEEDED
+  correctionJournalEntryId String?     @unique // after REVERSED following success
+  tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  book               FinanceBook @relation(fields: [tenantId, bookId], references: [tenantId, id], onDelete: Restrict)
+  bill               FinanceBill @relation(fields: [bookId, supplierId, billId], references: [bookId, supplierId, id], onDelete: Restrict)
+  debitAccount       FinanceAccount @relation(fields: [bookId, debitAccountId], references: [bookId, id], onDelete: Restrict)
+  beneficiary        PayoutBeneficiary @relation(fields: [bookId, supplierId, beneficiaryId], references: [bookId, supplierId, id], onDelete: Restrict)
+  postedJournalEntry FinanceJournalEntry? @relation("PayoutSettlement", fields: [bookId, postedJournalEntryId], references: [bookId, id], onDelete: Restrict)
+  correctionJournalEntry FinanceJournalEntry? @relation("PayoutCorrection", fields: [bookId, correctionJournalEntryId], references: [bookId, id], onDelete: Restrict)
+  events             PayoutProviderEvent[]
+
+  @@unique([bookId, postedJournalEntryId])
+  @@unique([bookId, correctionJournalEntryId])
+  @@index([tenantId, status, approvedAt])
+  @@index([billId])
+}
+
+model PayoutProviderEvent {
+  id              String        @id @default(cuid())
+  payoutId        String?
+  provider        String
+  providerEventId String
+  payloadHash     String
+  status          String        // provider status as received
+  outcome         CollectionProviderEventOutcome @default(RECEIVED)
+  receivedAt      DateTime      @default(now())
+  processedAt     DateTime?
+  payout          PayoutIntent? @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerEventId])
+  @@index([payoutId, receivedAt])
+}
+
+model BusinessPayoutSetting {
+  tenantId          String    @id
+  payoutsStopped    Boolean   @default(false)
+  stoppedAt         DateTime?
+  stoppedByUserId   String?   // Owner only
+  stopReason        String?
+  updatedAt         DateTime  @updatedAt
+  tenant            Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+}

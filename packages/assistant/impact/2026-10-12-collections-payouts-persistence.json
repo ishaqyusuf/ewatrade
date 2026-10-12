@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "2026-10-12-collections-payouts-persistence",
+  "tickets": ["F01", "F02", "F04", "F05"],
+  "summary": "Development persistence foundation for collection intents/events/holds and versioned supplier-bill payout intents/events/business stop. Composite foreign keys preserve Tenant, Book, supplier and original source bindings; provider replay identities and payout references are unique. Canonical commands, privacy integration and web/native acceptance remain open.",
+  "noAssistantImpact": "Schema foundation only; no tool, command, provider dispatch or rollout is enabled. Existing F01/F04 contracts remain unwired; payment links and payouts stay unavailable until canonical integration and acceptance.",
+  "docs": [
+    {"topic": "feature", "path": ".brain/features/assistant-business-operations.md", "status": "local_only"},
+    {"topic": "schema", "path": ".brain/database/schema.md", "status": "local_only"},
+    {"topic": "schema", "path": ".brain/database/relationships.md", "status": "local_only"},
+    {"topic": "schema", "path": ".brain/database/migrations.md", "status": "local_only"},
+    {"topic": "schema", "path": ".brain/decisions/2026-10-12-collection-payout-persistence.md", "status": "local_only"}
+  ],
+  "evidence": [
+    {"kind": "review", "path": "packages/assistant/evaluations/runs/2026-10-12-collections-payouts-coordinator.md", "executed": true, "result": "Development generate/migrate/push pass; rollback FK/replay checks pass; no parent acceptance."},
+    {"kind": "test", "path": "packages/db/scripts/qa-collections-payouts-schema.ts", "executed": true, "result": "Migration checksum verified; all seven families exercise persistence inside rollback; wrong bindings/replays refuse; counts unchanged."}
+  ]
+}

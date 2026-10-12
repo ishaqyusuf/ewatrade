@@ -1,4 +1,5 @@
 model Store {
+  collectionIntents CollectionIntent[]
   staffStoreAssignments StaffStoreAssignment[]
   assistantConversations AssistantConversation[]
   catalogItemIllustrations                          CatalogItemIllustration[]
