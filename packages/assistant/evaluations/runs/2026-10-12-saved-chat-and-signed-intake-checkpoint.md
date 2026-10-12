@@ -15,8 +15,7 @@ three earlier passing Finance reads are reused. No provider calls or writes.
 Evidence: ignored `artifacts/assistant-operations-parallel/G02/`
 `saved-http-conversation-only-result-v1.json` and terminal-v1 file. The original
 failed all-scope attempt remains preserved. Empty original cash-count data still
-does not prove positive receipts or pagination. Actual dashboard continuity is
-separately scheduled.
+does not prove positive receipts or pagination. Actual dashboard continuity was subsequently exercised as described below.
 
 ## D04: signed service intake attempt
 
@@ -51,3 +50,28 @@ completed replay, cancellation/replay, changed token and stale revision. Scoped
 source compilation and formatting passed. Execution is not yet assigned/proven;
 INVITED fixtures never receive ACTIVE membership. Accepted reactivation and
 persisted/concurrent recovery remain separate requirements.
+
+
+## G02: actual saved dashboard continuity
+
+Existing authenticated QA Owner, business, Store, saved GENERAL chat, pinned
+session and current linked QA authorization/grant were verified. The real day-close
+sheet displayed the completed 11 October UTC day, snapshot16 and seven unresolved
+reviews. Close retained the saved chat. An unsent composer draft survived reopening
+the sheet through its actual browser history entry and closing it again; the
+original empty composer was restored afterward. This proves the URL/history/global
+object flow, not a saved model-answer Open click. No message was sent or confirmed.
+
+Before134 fingerprint entries were read with terminal13326 exit0; after95524
+exit1. Both bounded read clients disconnected, and the QA tab closed. The only
+changed entry was `D04:QaClientAuthorization`;133others matched exactly. Current
+session/authorization/grant validity and expiry remained valid. Covered saved-state
+preservation FAILED; the cause is unproven and no exclusion or retry was used.
+This cannot retrospectively explain the D04 failure. G02 remains partial.
+
+Actual screenshots (ignored local artifacts, inspected by coordinator):
+- `artifacts/assistant-operations-parallel/G02/saved-browser-history-open-v1.png`
+- `artifacts/assistant-operations-parallel/G02/saved-browser-unsent-after-close-v1.png`
+
+Evidence: G02 `saved-browser-before-v1.json`, `saved-browser-after-v1.json`,
+`saved-browser-preservation-v1.json`, and `saved-browser-ui-result-v1.json`.

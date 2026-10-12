@@ -345,5 +345,8 @@ exact saved ID/all72 fingerprints matched; earlier Finance GETs reused. D04 sign
 source committed `2ec07d31`; one13-case attempt passed edit-confirm then stopped
 after completion/replay rollback on an unexplained QaClientAuthorization hash
 change (64rows unchanged);11cases unrun, no retry or acceptance. S03 four-case
-signed verifier source committed `5b1b90f7`, compiled but not executed.
+signed verifier source committed `5b1b90f7`, compiled but not executed. Actual G02
+day-close history-entry Open/Close preserves saved chat and unsent draft; full134
+post-check fails only on QaClientAuthorization,133others match. No saved answer
+Open or full preservation/acceptance claimed; actual screenshots are recorded.
 [Evidence](runs/2026-10-12-saved-chat-and-signed-intake-checkpoint.md).
