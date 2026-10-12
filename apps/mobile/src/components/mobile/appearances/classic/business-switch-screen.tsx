@@ -15,7 +15,7 @@ export function ClassicWorkspaceHeader({
   return (
     <SettingsScreen
       title={currentName}
-      sub={`${count} available businesses · choose where to work`}
+      sub={`${count} available ${count === 1 ? "business" : "businesses"} · choose where to work`}
     />
   )
 }
