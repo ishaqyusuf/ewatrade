@@ -5,9 +5,10 @@ and mobile. Existing accepted bookmarks record web acceptance; mobile parity is
 not certified by those bookmarks.
 
 **Accepted for web: 13/45 (28.9%). Pending web acceptance: 32/45 (71.1%).**
-Of those32:22 are partial and10 have not started implementation. A04 now has
+Of those32:23 are partial and9 have not started implementation. A04 now has
 native implementation packets under review; H02's impact-gate packet needs the
-recorded review repairs. Neither has an accepted bookmark. No ticket is deferred
+recorded review repairs. S05 source is also underway. These tickets have no
+accepted bookmark. No ticket is deferred
 by the former web-only restriction. Mobile acceptance is recorded separately.
 No native acceptance or hosted rollout is newly certified by this scope change.
 
@@ -47,7 +48,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | S02 | Staff invitations and lifecycle | ◐ Partial | Pending |
 | S03 | Suspend/reactivate staff | ◐ Partial | Pending |
 | S04 | Roles, Store assignments and handover | ◐ Partial | Pending |
-| S05 | Daily staff activity history | ○ Pending | Pending |
+| S05 | Daily staff activity history | ◐ Partial — implementation source underway; review and acceptance pending | Pending |
 | F01 | Collection source contract | ○ Pending | Pending |
 | F02 | Payment link and settlement | ○ Pending | Pending |
 | F03 | Payout feasibility and domain | ○ Pending | Pending |

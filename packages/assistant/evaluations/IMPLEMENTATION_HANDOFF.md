@@ -9,12 +9,13 @@ acceptance bookmarks and serialized commits to `main`.
 
 This handoff originally covered twelve pending tickets. A04 and H02 now have
 implementation packets under coordinator review; their implementation owner
-continues those repairs. Ten tickets remain unstarted. Avoid duplicate ownership.
+continues those repairs. S05 source is also underway with that owner. Nine tickets
+remain unstarted. Avoid duplicate ownership.
 
 | ID | Deliverable |
 |---|---|
 | A04 | Started, owner retained: native inventory and six catalog/order editors under review. Continue missing native review/editor/receipt-object flows and review repairs. Preserve Setup/product workflows; prepare keyboard, large text, loading, expiry, offline, reload, business-switch and role journeys for acceptance. |
-| S05 | Daily staff operational history from actual actor-attributed order, payment, stock, service and authorized finance sources. Show canonical record, outcome, time and Store; separate performed/assigned/approved work. Preserve unknown historical attribution and exact full-result counts. |
+| S05 | Started, owner retained: daily staff operational history from actual actor-attributed order, payment, stock, service and authorized finance sources. Show canonical record, outcome, time and Store; separate performed/assigned/approved work. Preserve unknown historical attribution and exact full-result counts. |
 | F01 | Canonical collection intent/source contract: allowed source, amount, currency, expiry, provider reference and actor scope; prevent duplicate manual/online receipt posting. Audit existing checkout reuse first. |
 | F02 | Reviewed payment link and separately confirmed sharing; signed settlement/reconciliation, expiry and duplicate/out-of-order/partial outcomes. Build deterministic provider support before any authorized sandbox run. |
 | F03 | Payout feasibility using current official provider documentation, then beneficiary/payout/reconciliation domain design. Record supported country/currency/funding/verification/fees/limits/account requirements and unresolved decisions. Existing checkout credentials do not establish transfer authority. |
@@ -26,8 +27,9 @@ continues those repairs. Ten tickets remain unstarted. Avoid duplicate ownership
 | H04 | Reuse the existing voice/file workstream with typed proposals, source citations, uncertain-field review and bounded multi-step plans/receipts. Keep transcription confidence separate from authority; offline execution remains unavailable without approved canonical support. |
 | H05 | Implement readiness/rollout documentation and controls: explicit capability/version/exclusion inventory, canary and rollback readiness, preserved saved receipts. Actual acceptance, enabling, canary execution and deployment belong to the acceptance coordinator and applicable approval gates. |
 
-The current owner continues A04/H02 and their review repairs. For unclaimed work,
-start with S05 as a small independent packet. Record missing mobile support for the existing web
+The current owner continues A04/H02/S05 and their review repairs. For unclaimed
+work, start with F01's canonical source audit or independent F03 provider research.
+Record missing mobile support for the existing web
 capabilities and deliver the native implementations in reviewable packets rather
 than assuming web support implies parity. Then work through canonical
 dependencies. F01 precedes F02; F03 feasibility and agreed policy precede F04;
