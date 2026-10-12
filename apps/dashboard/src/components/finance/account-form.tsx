@@ -55,11 +55,16 @@ export function FinanceAccountForm({
   const purpose = form.watch("purpose")
   // A new type starts from that type's usual payment methods.
   useEffect(() => {
+    // The select re-reports its value (for example on submit); only an actual
+    // type change may replace the owner's method choices.
+    let previous = form.getValues("purpose")
     const watching = form.watch((values, { name }) => {
-      if (name === "purpose" && values.purpose)
-        form.setValue("paymentMethods", [
-          ...DEFAULT_MONEY_ACCOUNT_PAYMENT_METHODS[values.purpose],
-        ])
+      if (name !== "purpose" || !values.purpose || values.purpose === previous)
+        return
+      previous = values.purpose
+      form.setValue("paymentMethods", [
+        ...DEFAULT_MONEY_ACCOUNT_PAYMENT_METHODS[values.purpose],
+      ])
     })
     return () => watching.unsubscribe()
   }, [form])
