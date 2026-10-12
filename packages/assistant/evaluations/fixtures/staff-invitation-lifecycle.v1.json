@@ -32,7 +32,11 @@
     "Original server tags and actual routed destination digest bind six provider event types to exact notification/hash/current send fence",
     "Unknown send resolves only with verified provider receipt; earlier provider delivery timestamps survive later worker completion",
     "Post-acceptance delivery failure/complaint/suppression never creates retryable FAILED; late sent never downgrades delivery or clears an issue",
-    "Real signed HTTP-to-canonical rollback proves exact refusal/replay and saved staff/auth/chat/budget facts unchanged"
+    "Real signed HTTP-to-canonical rollback proves exact refusal/replay and saved staff/auth/chat/budget facts unchanged",
+    "Count-only privacy inventory scopes original creator, recipient and verified original contact candidates across queued/unknown/removed/revoked histories",
+    "Invitation command, custody, notification, attempt or provider identifier residuals block profile processing and deletion completion despite older approved ledger outcomes",
+    "Platform-admin review exposes nullable seven counts; unverified/mismatched principal and unverified contact never acquire ownership scope",
+    "One real exact-QA inventory rollback preserves full saved staff/auth/chat/budget facts; no privacy command/deletion/provider is executed"
   ],
   "sourceChecks": [
     "packages/db/src/staff-invitation-custody.test.ts",
@@ -50,13 +54,17 @@
     "apps/api/src/assistant/general-staff-invitation-lifecycle.integration-check.ts",
     "apps/api/src/staff/resend-webhook.test.ts",
     "packages/db/src/queries/staff-invitation-provider-events.test.ts",
-    "apps/api/src/staff/resend-webhook.integration-check.ts"
+    "apps/api/src/staff/resend-webhook.integration-check.ts",
+    "packages/db/src/queries/account-privacy-staff-invitation-inventory.test.ts",
+    "packages/db/src/queries/account-privacy-profile.test.ts",
+    "packages/db/src/queries/account-privacy-completion.test.ts",
+    "apps/api/src/staff/invitation-privacy.integration-check.ts"
   ],
   "remaining": [
     "Full saved draft/Edit/re-review/Confirm and durable saved/concurrent recovery; transaction-local signed resend/revoke/replay now verified",
     "Actual controlled provider/email/queue acceptance and operator reconciliation; default-off verified callback source and signed canonical rollback now implemented",
     "Saved global receipt, chat continuity, full web acceptance and screenshots",
     "Concurrency and complete stale/authority/quota refusal evidence",
-    "Privacy retention/deletion inventory and expired/unknown ciphertext reconciliation policy"
+    "Positive-data privacy disposition/retention and expired/unknown ciphertext policy; read-only inventory/refusal source now verified"
   ]
 }

@@ -11,6 +11,7 @@ import {
   accountPrivacyPseudonymousEmail,
   getApprovedAccountPrivacyProfilePolicy,
 } from "./account-privacy-profile-policy"
+import { staffInvitationPrivacyInventoryFixture } from "./account-privacy-staff-invitation-inventory.fixture"
 
 const now = new Date("2026-09-25T00:00:00.000Z")
 const digest = "a".repeat(64)
@@ -189,6 +190,9 @@ function fixture(
     ...overrides,
   }
   const db = {
+    $queryRaw: async () => [
+      staffInvitationPrivacyInventoryFixture(live.additional),
+    ],
     ...Object.fromEntries(
       [
         "assistantConversation",
@@ -1633,6 +1637,13 @@ test.each([
   "message",
   "automationEvent",
   "productAnalyticsEvent",
+  "staffInvitationCommands",
+  "staffInvitationNotifications",
+  "staffInvitationAttempts",
+  "staffInvitationEncryptedPayloads",
+  "staffInvitationQueuedNotifications",
+  "staffInvitationUncertainNotifications",
+  "staffInvitationProviderIdentifiers",
 ])(
   "completion refuses unhandled %s records despite a complete ledger",
   async (model) => {

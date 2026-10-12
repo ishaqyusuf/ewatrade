@@ -6,6 +6,7 @@ import {
   accountPrivacyPseudonymousEmail,
   getApprovedAccountPrivacyProfilePolicy,
 } from "./account-privacy-profile-policy"
+import { staffInvitationPrivacyInventoryFixture } from "./account-privacy-staff-invitation-inventory.fixture"
 
 const now = new Date("2026-10-07T12:00:00.000Z")
 const command = { requestId: "request-1", operatorUserId: "operator-1", now }
@@ -103,6 +104,9 @@ function fixture(
   let transactionOptions: unknown
   const queries: Record<string, unknown> = {}
   const db = {
+    $queryRaw: async () => [
+      staffInvitationPrivacyInventoryFixture(options.additional),
+    ],
     ...Object.fromEntries(
       [
         "assistantConversation",
@@ -290,6 +294,13 @@ test.each([
   { additional: "message" },
   { additional: "automationEvent" },
   { additional: "productAnalyticsEvent" },
+  { additional: "staffInvitationCommands" },
+  { additional: "staffInvitationNotifications" },
+  { additional: "staffInvitationAttempts" },
+  { additional: "staffInvitationEncryptedPayloads" },
+  { additional: "staffInvitationQueuedNotifications" },
+  { additional: "staffInvitationUncertainNotifications" },
+  { additional: "staffInvitationProviderIdentifiers" },
 ])(
   "denies unready or unauthorized profile processing %j before writes",
   async (options) => {

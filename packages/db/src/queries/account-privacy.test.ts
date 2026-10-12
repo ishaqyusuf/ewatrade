@@ -12,6 +12,7 @@ import {
   requestAccountDeletion,
   submitExternalDeletionRequest,
 } from "./account-privacy"
+import { staffInvitationPrivacyInventoryFixture } from "./account-privacy-staff-invitation-inventory.fixture"
 
 type ChallengeStub = {
   id: string
@@ -518,6 +519,7 @@ test("operator review identifies an unmatched email and a sole owner without exp
   let emailVerified = true
   let verifiedSubjectUserId = "user-1"
   const db = {
+    $queryRaw: async () => [staffInvitationPrivacyInventoryFixture()],
     accountPrivacyAccessRevocation: {
       findUnique: async (query: unknown) => {
         accessStageQuery = query
@@ -766,6 +768,9 @@ test("operator review identifies an unmatched email and a sole owner without exp
     ),
   } as unknown as PrismaClient
   const review = await getAccountPrivacyReview(db, "request-1")
+  expect(review?.staffInvitationReviewInventory).toEqual(
+    staffInvitationPrivacyInventoryFixture(),
+  )
   expect(review?.domainOutcomes[0]).not.toHaveProperty("userId")
   expect(review?.domainOutcomes[0]).not.toHaveProperty("evidenceDigest")
   expect(review).toMatchObject({
@@ -1045,6 +1050,7 @@ test("operator review identifies an unmatched email and a sole owner without exp
   expect(mismatched?.conversationReviewInventory).toBeNull()
   expect(mismatched?.prescriptionReviewInventory).toBeNull()
   expect(mismatched?.profileReviewInventory).toBeNull()
+  expect(mismatched?.staffInvitationReviewInventory).toBeNull()
   expect(mismatched?.profilePrerequisites).toBeNull()
   expect(commercialQueries).toHaveLength(commercialQueryCount)
   expect(directConversationQueries).toHaveLength(directConversationQueryCount)
@@ -1075,6 +1081,7 @@ test("operator review identifies an unmatched email and a sole owner without exp
     conversationReviewInventory: null,
     prescriptionReviewInventory: null,
     profileReviewInventory: null,
+    staffInvitationReviewInventory: null,
     profilePrerequisites: null,
     activeMemberships: [],
     ownerHandoverRequired: [],
@@ -1091,6 +1098,7 @@ test("commercial and clinical review use the verified subject after User removal
     return 1
   }
   const db = {
+    $queryRaw: async () => [staffInvitationPrivacyInventoryFixture()],
     accountPrivacyRequest: {
       findUnique: async () => ({
         id: "request-1",
@@ -1176,6 +1184,9 @@ test("commercial and clinical review use the verified subject after User removal
     sensitiveAccessEvents: 1,
     customerEmailMatches: 1,
   })
+  expect(removed?.staffInvitationReviewInventory).toEqual(
+    staffInvitationPrivacyInventoryFixture(),
+  )
   expect(removed?.profileReviewInventory).toEqual({
     userExists: false,
     originalEmailRemains: false,

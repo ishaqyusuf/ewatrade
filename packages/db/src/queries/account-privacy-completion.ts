@@ -109,6 +109,7 @@ export async function assessAccountPrivacyCompletion(
     | "message"
     | "automationEvent"
     | "productAnalyticsEvent"
+    | "$queryRaw"
     | "user"
     | "membership"
     | "session"
@@ -261,9 +262,6 @@ export async function assessAccountPrivacyCompletion(
   const now = input.now ?? new Date()
   if (request.verifiedSubjectUserId) {
     const subjectId = request.verifiedSubjectUserId
-    const additional = await getAccountPrivacyAdditionalInventory(db, subjectId)
-    if (Object.values(additional).some((count) => count > 0))
-      blockers.push("ADDITIONAL_PERSONAL_DATA_REVIEW_REQUIRED")
     const profileOutcome = request.domainOutcomes.find(
       (outcome) => outcome.domain === "ACCOUNT_PROFILE",
     )
@@ -329,6 +327,13 @@ export async function assessAccountPrivacyCompletion(
         : !request.user && request.userId === null
           ? matchedRequestContact
           : null
+    const additional = await getAccountPrivacyAdditionalInventory(
+      db,
+      subjectId,
+      verifiedEmail,
+    )
+    if (Object.values(additional).some((count) => count > 0))
+      blockers.push("ADDITIONAL_PERSONAL_DATA_REVIEW_REQUIRED")
     if (
       (!verifiedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(verifiedEmail)) &&
       !blockers.includes("EMAIL_INVITATION_REVIEW_REQUIRED")

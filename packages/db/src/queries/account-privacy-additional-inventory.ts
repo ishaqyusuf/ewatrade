@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../../generated/prisma/client"
+import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-staff-invitation-inventory"
 
 export type AccountPrivacyAdditionalInventoryClient = Pick<
   PrismaClient,
@@ -9,12 +10,14 @@ export type AccountPrivacyAdditionalInventoryClient = Pick<
   | "message"
   | "automationEvent"
   | "productAnalyticsEvent"
+  | "$queryRaw"
 >
 
 /** Unhandled direct attribution must not disappear behind an older domain ledger. */
 export async function getAccountPrivacyAdditionalInventory(
   db: AccountPrivacyAdditionalInventoryClient,
   subjectId: string,
+  verifiedContactEmail?: string | null,
 ) {
   // Sequential for the bounded single-connection processing transaction.
   const assistantConversations = await db.assistantConversation.count({
@@ -39,6 +42,11 @@ export async function getAccountPrivacyAdditionalInventory(
   const analyticsEvents = await db.productAnalyticsEvent.count({
     where: { userId: subjectId },
   })
+  const staffInvitations = await getAccountPrivacyStaffInvitationInventory(
+    db,
+    subjectId,
+    verifiedContactEmail,
+  )
   return {
     assistantConversations,
     assistantRuns,
@@ -47,5 +55,6 @@ export async function getAccountPrivacyAdditionalInventory(
     legacyMessages,
     automationEvents,
     analyticsEvents,
+    ...staffInvitations,
   }
 }

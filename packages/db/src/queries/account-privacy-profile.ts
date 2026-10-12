@@ -92,7 +92,11 @@ export async function processAccountPrivacyProfile(
     const existing = request.domainOutcomes.find(
       (row) => row.domain === "ACCOUNT_PROFILE",
     )
-    const additional = await getAccountPrivacyAdditionalInventory(tx, subjectId)
+    const additional = await getAccountPrivacyAdditionalInventory(
+      tx,
+      subjectId,
+      email,
+    )
     if (Object.values(additional).some((count) => count > 0))
       throw new AccountPrivacyProfileError(
         existing ? "CLAIM_CONFLICT" : "NOT_READY",

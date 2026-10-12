@@ -16,6 +16,7 @@ import {
   isAccountPrivacyProfileMinimizationConfirmed,
 } from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
+import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-staff-invitation-inventory"
 import type { DbClient } from "./types"
 
 const requestProjection = {
@@ -721,6 +722,13 @@ export async function getAccountPrivacyReview(
           commercialVerifiedEmail,
         )
       : null
+  const staffInvitationReviewInventory = reviewSubjectId
+    ? await getAccountPrivacyStaffInvitationInventory(
+        db,
+        reviewSubjectId,
+        prescriptionVerifiedEmail,
+      )
+    : null
   const accessRevocation = await db.accountPrivacyAccessRevocation.findUnique({
     where: { requestId: request.id },
     select: {
@@ -810,6 +818,7 @@ export async function getAccountPrivacyReview(
     conversationReviewInventory,
     prescriptionReviewInventory,
     profileReviewInventory,
+    staffInvitationReviewInventory,
     profilePrerequisites,
     accessRevocation: accessRevocation
       ? (({ userId: _userId, ...safe }) => safe)(accessRevocation)
