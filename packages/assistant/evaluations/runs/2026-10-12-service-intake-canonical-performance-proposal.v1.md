@@ -183,3 +183,10 @@ Remaining acceptance gates are unchanged: initial-payment Finance support,
 automatic reminders or accepted scope exclusions, signed rollback, actual saved
 web chat/object navigation and explicit ticket acceptance. Source checkpoint and
 performance proposal do not change13/45 (28.9%) accepted progress.
+
+## Authorized initial implementation
+
+Parent authorized proposal1 and proposal3 only; source implementation and focused
+semantic evidence are in canonical-performance-source.v1. Proposal2 remains on
+hold. Current foreign schema/generated client now enable relationJoins; preserve
+that unrelated work and qualify any future timing comparison. No connected rerun.

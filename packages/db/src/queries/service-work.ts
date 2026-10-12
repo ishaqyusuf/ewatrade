@@ -57,6 +57,10 @@ import {
   buildScopedListPageWhere,
 } from "./list-sort"
 import { runInOwnTransaction } from "./own-transaction"
+import {
+  cancelOutstandingDueReminders,
+  replaceDueReminder,
+} from "./service-due-reminders"
 import { calculateServiceChargeMinor } from "./service-settings"
 import {
   DEFAULT_SERVICE_WORK_QUEUE_ID_DIRECTION,
@@ -347,105 +351,6 @@ async function loadJob(
     throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
   }
   return job
-}
-
-async function cancelOutstandingDueReminders(
-  db: Prisma.TransactionClient | PrismaClient,
-  serviceJobId: string,
-) {
-  await db.serviceNotificationIntent.updateMany({
-    data: { status: ServiceNotificationIntentStatus.CANCELLED },
-    where: {
-      serviceJobId,
-      status: {
-        in: [
-          ServiceNotificationIntentStatus.PENDING,
-          ServiceNotificationIntentStatus.READY,
-        ],
-      },
-      templatePurpose: "due_reminder",
-    },
-  })
-}
-
-async function replaceDueReminder(
-  db: Prisma.TransactionClient,
-  input: {
-    actorUserId: string
-    channel: ServiceNotificationChannel | null
-    customerPhone: string | null
-    orderNumber: string
-    promisedAt: Date
-    serviceJobId: string
-    storeId: string
-    tenantId: string
-  },
-) {
-  await cancelOutstandingDueReminders(db, input.serviceJobId)
-  const [settings, tenant] = await Promise.all([
-    db.serviceStoreSettings.findUnique({
-      where: { storeId: input.storeId },
-    }),
-    db.tenant.findUnique({
-      select: { timezone: true },
-      where: { id: input.tenantId },
-    }),
-  ])
-  const channel = input.channel ?? settings?.defaultNotificationChannel
-  if (
-    !settings?.autoNotifyReminder ||
-    !input.customerPhone ||
-    (channel !== ServiceNotificationChannel.SMS &&
-      channel !== ServiceNotificationChannel.WHATSAPP)
-  ) {
-    return null
-  }
-  const scheduledFor = new Date(
-    input.promisedAt.getTime() - settings.reminderLeadMinutes * 60_000,
-  )
-  const renderedMessage = `Reminder: order ${input.orderNumber} is expected to be ready by ${input.promisedAt.toLocaleString(
-    "en-NG",
-    {
-      timeZone: tenant?.timezone ?? "Africa/Lagos",
-    },
-  )}.`
-  return db.serviceNotificationIntent.upsert({
-    create: {
-      audienceKey: input.orderNumber,
-      businessEventKey: `${input.serviceJobId}:due-reminder:${input.promisedAt.toISOString()}`,
-      channel,
-      createdByUserId: input.actorUserId,
-      customerPhone: input.customerPhone,
-      renderedMessage,
-      scheduledFor,
-      serviceJobId: input.serviceJobId,
-      status:
-        scheduledFor.getTime() <= Date.now()
-          ? ServiceNotificationIntentStatus.READY
-          : ServiceNotificationIntentStatus.PENDING,
-      storeId: input.storeId,
-      templatePurpose: "due_reminder",
-      tenantId: input.tenantId,
-    },
-    update: {
-      channel,
-      customerPhone: input.customerPhone,
-      renderedMessage,
-      scheduledFor,
-      status:
-        scheduledFor.getTime() <= Date.now()
-          ? ServiceNotificationIntentStatus.READY
-          : ServiceNotificationIntentStatus.PENDING,
-    },
-    where: {
-      tenantId_businessEventKey_audienceKey_templatePurpose: {
-        audienceKey: input.orderNumber,
-        businessEventKey: `${input.serviceJobId}:due-reminder:${input.promisedAt.toISOString()}`,
-        templatePurpose: "due_reminder",
-        tenantId: input.tenantId,
-      },
-    },
-  })
 }
 
 async function assertActiveAssignee(
@@ -769,23 +674,41 @@ export async function createServiceIntakeDraftInTransaction(
   })
 }
 
+type ConfirmServiceIntakeInput = {
+  actorUserId: string
+  intakeId: string
+  customerId?: string
+  schemaVersion: number
+  tenantId: string
+}
+type PersistedServiceIntake = Prisma.ServiceIntakeGetPayload<{
+  include: { lines: true }
+}>
+
 export async function confirmServiceIntakeInTransaction(
   tx: Prisma.TransactionClient,
-  input: {
-    actorUserId: string
-    intakeId: string
-    customerId?: string
-    schemaVersion: number
-    tenantId: string
-  },
+  input: ConfirmServiceIntakeInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
-
   const intake = await tx.serviceIntake.findFirst({
     include: { lines: true },
     where: { id: input.intakeId, tenantId: input.tenantId },
   })
-  if (!intake) {
+  return confirmPersistedServiceIntakeInTransaction(tx, input, intake)
+}
+
+/** Only canonical draft/lookup results from this transaction enter this private body. */
+async function confirmPersistedServiceIntakeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: ConfirmServiceIntakeInput,
+  intake: PersistedServiceIntake | null,
+) {
+  assertSchemaVersion(input.schemaVersion)
+  if (
+    !intake ||
+    intake.id !== input.intakeId ||
+    intake.tenantId !== input.tenantId
+  ) {
     throw new CatalogError(
       "SERVICE_INTAKE_NOT_FOUND",
       "Service Intake not found.",
@@ -861,7 +784,6 @@ export async function confirmServiceIntakeInTransaction(
   }
   const trackedOrderLines = await tx.commercialOrderLine.findMany({
     include: {
-      offering: { include: { serviceOffering: true } },
       snapshot: true,
     },
     where: {
@@ -1024,13 +946,17 @@ export async function createAndConfirmServiceIntakeInTransaction(
   input: CreateServiceIntakeInput,
 ) {
   const draft = await createServiceIntakeDraftInTransaction(tx, input)
-  return confirmServiceIntakeInTransaction(tx, {
-    actorUserId: input.actorUserId,
-    intakeId: draft.id,
-    customerId: input.customerId,
-    schemaVersion: input.schemaVersion,
-    tenantId: input.tenantId,
-  })
+  return confirmPersistedServiceIntakeInTransaction(
+    tx,
+    {
+      actorUserId: input.actorUserId,
+      intakeId: draft.id,
+      customerId: input.customerId,
+      schemaVersion: input.schemaVersion,
+      tenantId: input.tenantId,
+    },
+    draft,
+  )
 }
 export function createAndConfirmServiceIntake(
   db: PrismaClient,

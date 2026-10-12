@@ -311,6 +311,10 @@ describe("canonical Service intake review", () => {
     const digest = createHash("sha256").update(stable(base)).digest("hex")
     tx.serviceIntake.findUnique = (async () => ({
       id: "original-intake",
+      tenantId: "tenant",
+      status: "CONFIRMED",
+      commercialOrderId: "original-order",
+      lines: [],
       payloadHash: digest,
     })) as typeof tx.serviceIntake.findUnique
     const result = await createAndConfirmServiceIntakeInTransaction(tx, base)

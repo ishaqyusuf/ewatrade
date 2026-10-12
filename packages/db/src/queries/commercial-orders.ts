@@ -56,6 +56,7 @@ import {
   readCommercialOrderLinesComplete,
 } from "./commercial-order-completion"
 import { allocateCommercialOrderNumber } from "./commercial-order-number"
+import { commercialOrderOfferingResolver } from "./commercial-order-offering-resolution"
 import {
   type CommercialPaymentMethodValue,
   effectiveCommercialAmountPaid,
@@ -81,10 +82,7 @@ import {
   openOrderWhere,
 } from "./order-visibility"
 import { runInOwnTransaction } from "./own-transaction"
-import {
-  assertSaleProductUsage,
-  saleEligibleCatalogItem,
-} from "./product-usage"
+import { assertSaleProductUsage } from "./product-usage"
 import { assertRetailOpsOrderAllowance } from "./retail-ops-subscriptions"
 import { loadTenantActors } from "./tenant-actors"
 
@@ -718,13 +716,15 @@ export async function createCommercialOrderGraphInTransaction(
     string,
     (typeof resolvedLines)[number]["offering"]
   >()
-  // Repeated lines use one catalog snapshot within this command. Eligibility
-  // mode is part of the key: a progressive DRAFT must never satisfy an ordinary
-  // sale. Price, quantity, attestation and reservation checks remain per line.
-  const catalogOfferings = new Map<
-    string,
-    (typeof resolvedLines)[number]["offering"]
-  >()
+  // Resolve each eligibility mode only when its first line is processed.
+  // Custom line handling and every per-line validation retain their order.
+  const resolveOffering = commercialOrderOfferingResolver(tx, {
+    tenantId: input.tenantId,
+    storeId: store.id,
+    lines: input.lines.flatMap((line) =>
+      isCustomOrderLineInput(line) ? [] : [line],
+    ),
+  })
   for (const lineInput of input.lines) {
     if (isCustomOrderLineInput(lineInput)) {
       const custom = normalizeCatalogFreeLine(lineInput)
@@ -773,40 +773,13 @@ export async function createCommercialOrderGraphInTransaction(
     const progressiveManual = Boolean(
       lineInput.progressiveAvailabilityAttestationId,
     )
-    const offeringKey = JSON.stringify([
-      lineInput.offeringId,
-      progressiveManual,
-    ])
-    const offering =
-      catalogOfferings.get(offeringKey) ??
-      (await tx.sellableOffering.findFirst({
-        include: {
-          catalogItem: { select: { id: true, name: true } },
-          productUnitOffering: { include: { inventoryUnit: true } },
-          serviceOffering: true,
-          storeAvailability: { where: { storeId: store.id } },
-          variant: {
-            include: {
-              selections: { include: { group: true, value: true } },
-            },
-          },
-        },
-        where: {
-          id: lineInput.offeringId,
-          catalogItem: saleEligibleCatalogItem,
-          status: progressiveManual
-            ? { in: [CatalogRecordStatus.ACTIVE, CatalogRecordStatus.DRAFT] }
-            : CatalogRecordStatus.ACTIVE,
-          tenantId: input.tenantId,
-        },
-      }))
+    const offering = await resolveOffering(lineInput)
     if (!offering) {
       throw new CatalogError(
         "OFFERING_UNAVAILABLE",
         "An Order line selected an unavailable Offering.",
       )
     }
-    catalogOfferings.set(offeringKey, offering)
     if (
       offering.kind === SellableOfferingKind.SERVICE &&
       !offering.serviceOffering
