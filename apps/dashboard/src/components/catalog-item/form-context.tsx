@@ -64,11 +64,24 @@ export const catalogItemFormSchema = z.object({
 export function CatalogItemFormProvider({
   children,
   initialKind = null,
-}: { children: ReactNode; initialKind?: SimpleCatalogItemKind | null }) {
+  initialName = "",
+  initialPrice = "",
+}: {
+  children: ReactNode
+  initialKind?: SimpleCatalogItemKind | null
+  initialName?: string
+  /** Major-unit text, as the price field holds it. */
+  initialPrice?: string
+}) {
   const methods = useZodForm<SimpleCatalogItemFormState>(
     catalogItemFormSchema,
     {
-      defaultValues: { ...initialForm, kind: initialKind },
+      defaultValues: {
+        ...initialForm,
+        kind: initialKind,
+        name: initialName,
+        price: initialPrice,
+      },
     },
   )
   const watched = useWatch({ control: methods.control })

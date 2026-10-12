@@ -1,10 +1,12 @@
 "use client"
 
+import { useCanCreateCatalogItems } from "@/components/catalog-item/catalog-create-access"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
   requestQuickAssistant,
   useQuickAssistantLauncher,
 } from "@/components/page-fab/fab-slot"
+import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useReceiptParams } from "@/hooks/use-receipt-params"
 import { useTRPC } from "@/trpc/client"
 import {
@@ -18,6 +20,7 @@ import {
   DropdownMenuTrigger,
   cn,
 } from "@ewatrade/ui"
+import { catalogFreeLineCatalogDraft } from "@ewatrade/utils/catalog-free-lines"
 import {
   ArrowDown01Icon,
   ArrowRight01Icon,
@@ -140,6 +143,8 @@ export function OrderOverview({
   const router = useRouter()
   const refresh = useOrderRefresh(orderId)
   const { setParams: setReceipt } = useReceiptParams()
+  const { setParams: setCatalogParams } = useCatalogItemParams()
+  const canSaveToCatalog = useCanCreateCatalogItems()
   const [dialog, setDialog] = useState<OpenDialog | null>(null)
   const query = useQuery(
     trpc.orders.get.queryOptions({ orderId }, { retry: false }),
@@ -318,6 +323,13 @@ export function OrderOverview({
             const canReturn =
               options?.returnLine.allowed &&
               returnable.some((row) => row.orderLineId === line.id)
+            const catalogDraft =
+              canSaveToCatalog && line.customLine
+                ? catalogFreeLineCatalogDraft(
+                    line.customLine,
+                    line.unitPriceMinor,
+                  )
+                : null
             return (
               <li
                 key={line.id}
@@ -339,6 +351,28 @@ export function OrderOverview({
                     <p className="mt-1 whitespace-pre-wrap break-words text-xs">
                       {line.note}
                     </p>
+                  ) : null}
+                  {catalogDraft ? (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="mt-1 h-auto px-0 text-xs"
+                      onClick={() =>
+                        void leaveThen(() =>
+                          setCatalogParams({
+                            catalogCreateKind: catalogDraft.kind,
+                            catalogCreateName: catalogDraft.name,
+                            catalogCreatePrice:
+                              catalogDraft.priceMinor === null
+                                ? null
+                                : String(catalogDraft.priceMinor),
+                            catalogItem: "create",
+                          }),
+                        )
+                      }
+                    >
+                      Save to catalog
+                    </Button>
                   ) : null}
                 </div>
                 <span className="hidden text-right text-sm tabular-nums @xl:block">

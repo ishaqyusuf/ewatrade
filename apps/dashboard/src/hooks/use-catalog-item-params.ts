@@ -13,6 +13,8 @@ export function useCatalogItemParams() {
     catalogItem: parseAsStringEnum(["create"]),
     catalogCreateKind: parseAsStringEnum([...CATALOG_KINDS]),
     catalogCreateMode: parseAsStringEnum(["form", "chat"]),
+    catalogCreateName: parseAsString,
+    catalogCreatePrice: parseAsString,
     catalogConversation: parseAsString,
     ...catalogFilterParams,
     productUnits: parseAsString,
@@ -22,6 +24,9 @@ export function useCatalogItemParams() {
       catalogItem?: "create" | null
       catalogCreateKind?: (typeof CATALOG_KINDS)[number] | null
       catalogCreateMode?: "form" | "chat" | null
+      catalogCreateName?: string | null
+      /** Starting price in minor units. */
+      catalogCreatePrice?: string | null
       catalogConversation?: string | null
       catalogKind?: (typeof CATALOG_KINDS)[number] | null
       catalogStatus?: (typeof CATALOG_STATUSES)[number] | null
@@ -34,6 +39,8 @@ export function useCatalogItemParams() {
         catalogItem: null,
         catalogCreateKind: null,
         catalogCreateMode: null,
+        catalogCreateName: null,
+        catalogCreatePrice: null,
         catalogConversation: null,
         productUnits: null,
       },
@@ -45,6 +52,8 @@ export function useCatalogItemParams() {
     catalogStatus: params.catalogStatus,
     catalogCreateKind: params.catalogCreateKind,
     catalogCreateMode: params.catalogCreateMode,
+    catalogCreateName: params.catalogCreateName,
+    catalogCreatePrice: params.catalogCreatePrice,
     catalogConversation: params.catalogConversation,
     catalogItemMode: params.catalogItem,
     catalogQuery: params.catalogQuery ?? "",
@@ -64,6 +73,8 @@ export function useCatalogItemParams() {
           ? {
               catalogCreateKind: null,
               catalogCreateMode: null,
+              catalogCreateName: null,
+              catalogCreatePrice: null,
               catalogConversation: null,
             }
           : {}),

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  catalogFreeLineCatalogDraft,
   catalogFreeLineDisplay,
   catalogFreeLinesError,
   catalogFreeLinesTotalMinor,
@@ -52,4 +53,25 @@ test("asks for an amount on empty or zero lines", () => {
     "Enter an amount for each Additional cost.",
   )
   expect(catalogFreeLinesTotalMinor([line("quick_sale", "abc")])).toBe(0)
+})
+
+test("drafts a Catalog item from a described typed-price line", () => {
+  expect(
+    catalogFreeLineCatalogDraft(
+      { description: " Rice ", kind: "quick_sale" },
+      450000,
+    ),
+  ).toEqual({ kind: "product", name: "Rice", priceMinor: 450000 })
+  expect(
+    catalogFreeLineCatalogDraft(
+      { description: "Delivery", kind: "additional_cost" },
+      null,
+    ),
+  ).toEqual({ kind: "service", name: "Delivery", priceMinor: null })
+  expect(
+    catalogFreeLineCatalogDraft({ description: "  ", kind: "quick_sale" }, 100),
+  ).toBeNull()
+  expect(
+    catalogFreeLineCatalogDraft({ kind: "additional_cost" }, 100),
+  ).toBeNull()
 })

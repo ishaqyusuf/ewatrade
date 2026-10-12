@@ -35,13 +35,18 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { isClosedOrder } from "@/lib/order-action-eligibility"
 import { formatOrderDetailMoney as formatMinorMoney } from "@/lib/order-detail-dispatch-docket"
 import { cn } from "@/lib/utils"
 import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
+import { catalogFreeLineCatalogDraft } from "@ewatrade/utils/catalog-free-lines"
+import { minorToMajorInput } from "@ewatrade/utils/currency"
+import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
 import { Text as NativeText, View as NativeView } from "react-native"
@@ -70,6 +75,8 @@ export function ClassicOrderDetailContent({
   const returnLabel = commercialOrderReturnLabel(summary)
   const closed = isClosedOrder(order.status)
   const { fulfillmentScheduledForFuture } = useOrderDetailPresentation(order)
+  const router = useRouter()
+  const canSaveToCatalog = canEditMobileCatalog(useAuthContext().profile)
 
   return (
     <View className="gap-4" testID="commercial-order-overview-screen">
@@ -188,6 +195,21 @@ export function ClassicOrderDetailContent({
             key={line.id}
             line={line}
             onFulfill={() => onFulfillLine(line.id)}
+            onSaveToCatalog={
+              canSaveToCatalog
+                ? (draft) =>
+                    router.push({
+                      params: {
+                        kind: draft.kind,
+                        name: draft.name,
+                        ...(draft.priceMinor === null
+                          ? {}
+                          : { price: minorToMajorInput(draft.priceMinor) }),
+                      },
+                      pathname: "/first-product-setup-modal",
+                    })
+                : undefined
+            }
             order={order}
           />
         ))}
@@ -660,6 +682,7 @@ function OrderLineRow({
   isFulfilling,
   line,
   onFulfill,
+  onSaveToCatalog,
   order,
 }: {
   disabled: boolean
@@ -667,6 +690,9 @@ function OrderLineRow({
   isFulfilling: boolean
   line: CommercialOrderLine
   onFulfill: () => void
+  onSaveToCatalog?: (
+    draft: NonNullable<ReturnType<typeof catalogFreeLineCatalogDraft>>,
+  ) => void
   order: CommercialOrder
 }) {
   const largeText = useLargeTextLayout()
@@ -677,6 +703,10 @@ function OrderLineRow({
     !isClosedOrder(order.status) && canFulfillCommercialOrderLine(line)
   const title = commerceLineTitle(line)
   const catalogFree = Boolean(line.customLine)
+  const catalogDraft =
+    onSaveToCatalog && line.customLine
+      ? catalogFreeLineCatalogDraft(line.customLine, line.unitPriceMinor)
+      : null
   const service = line.kind === "service" && !catalogFree
   const tint = service ? "lilac" : catalogAvatarTint(title, "product")
   const option = commerceLineOption(line)
@@ -806,6 +836,19 @@ function OrderLineRow({
             {state.label}
           </NativeText>
         </NativeView>
+        {catalogDraft ? (
+          <Pressable
+            accessibilityLabel={`Save ${catalogDraft.name} to catalog`}
+            accessibilityRole="button"
+            className="min-h-9 justify-center self-start"
+            haptic
+            onPress={() => onSaveToCatalog?.(catalogDraft)}
+          >
+            <Text className="text-xs font-bold text-primary">
+              Save to catalog
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
       <View className={cn("gap-2", !largeText && "items-end")}>
         <Text

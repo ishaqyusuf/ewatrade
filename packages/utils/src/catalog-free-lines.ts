@@ -25,6 +25,28 @@ export function catalogFreeLineDisplay(line: {
   }
 }
 
+/**
+ * Starting point for saving a typed-price line as a Catalog item: the words as
+ * the name, the typed price, and a kind that suits it. Null when there are no
+ * words to name the item with.
+ */
+export function catalogFreeLineCatalogDraft(
+  line: { kind: CatalogFreeLineKind; description?: string | null },
+  unitPriceMinor?: number | null,
+) {
+  const name = line.description?.trim()
+  if (!name) return null
+  return {
+    kind:
+      line.kind === "quick_sale" ? ("product" as const) : ("service" as const),
+    name,
+    priceMinor:
+      typeof unitPriceMinor === "number" && unitPriceMinor > 0
+        ? unitPriceMinor
+        : null,
+  }
+}
+
 export type CatalogFreeLineDraft = {
   id: string
   kind: CatalogFreeLineKind

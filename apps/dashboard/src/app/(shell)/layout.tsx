@@ -1,3 +1,4 @@
+import { CatalogCreateAccessProvider } from "@/components/catalog-item/catalog-create-access"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { QuickAssistant } from "@/components/quick-assistant/quick-assistant"
@@ -92,60 +93,70 @@ export default async function ShellLayout({
           ctx={ctx}
           navItems={navItems}
         />
-        <GlobalSheetsProvider
-          access={{
-            serviceIntake:
-              ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
-              (ctx.membership.role === "MANAGER" &&
-                ctx.membership.staffAccessMode === "LEGACY"),
-            staffHistory: ["OWNER", "ADMIN"].includes(ctx.membership.role),
-            staffDirectory:
-              ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
-              (ctx.membership.role === "MANAGER" &&
-                ctx.membership.staffAccessMode === "LEGACY"),
-            sales: canUseSalesOperations(ctx.membership.role),
-            ordersPage: canAccessDashboardPath(
-              "/sales",
-              ctx.membership.role,
-              navigationContext,
-            ),
-            catalog: canAccessDashboardPath(
-              "/catalog",
-              ctx.membership.role,
-              navigationContext,
-            ),
-            scopedStaff,
-            domains: canAccessDashboardPath(
-              "/settings/domains",
-              ctx.membership.role,
-              navigationContext,
-            ),
-            finance:
-              ["OWNER", "ADMIN"].includes(ctx.membership.role.toUpperCase()) &&
-              (planFeatures?.includes("finance") ?? true),
-            prescriptions:
-              !scopedStaff && canUseSalesOperations(ctx.membership.role),
-            managePrescriptionSetup: Boolean(
-              membershipRole && canManageTenant(membershipRole),
-            ),
-          }}
-          actorUserId={session.user.id}
-          store={{
-            id: store.id,
-            name: store.name,
-            currencyCode: store.currencyCode,
-            businessProfileKey:
-              store.businessOnboarding?.businessProfileKey ?? null,
-          }}
-          storeIds={ctx.stores.map((item) => item.id)}
-          tenantId={ctx.tenant.id}
-          timeZone={ctx.tenant.timezone}
+        <CatalogCreateAccessProvider
+          allowed={canAccessDashboardPath(
+            "/catalog",
+            ctx.membership.role,
+            navigationContext,
+          )}
         >
-          {/* 70px header + this + the wrapper's pb-4 fill exactly one screen. */}
-          <main className="flex min-h-[calc(100vh-70px-1rem)] min-w-0 flex-col px-4 md:px-8">
-            {children}
-          </main>
-        </GlobalSheetsProvider>
+          <GlobalSheetsProvider
+            access={{
+              serviceIntake:
+                ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
+                (ctx.membership.role === "MANAGER" &&
+                  ctx.membership.staffAccessMode === "LEGACY"),
+              staffHistory: ["OWNER", "ADMIN"].includes(ctx.membership.role),
+              staffDirectory:
+                ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
+                (ctx.membership.role === "MANAGER" &&
+                  ctx.membership.staffAccessMode === "LEGACY"),
+              sales: canUseSalesOperations(ctx.membership.role),
+              ordersPage: canAccessDashboardPath(
+                "/sales",
+                ctx.membership.role,
+                navigationContext,
+              ),
+              catalog: canAccessDashboardPath(
+                "/catalog",
+                ctx.membership.role,
+                navigationContext,
+              ),
+              scopedStaff,
+              domains: canAccessDashboardPath(
+                "/settings/domains",
+                ctx.membership.role,
+                navigationContext,
+              ),
+              finance:
+                ["OWNER", "ADMIN"].includes(
+                  ctx.membership.role.toUpperCase(),
+                ) &&
+                (planFeatures?.includes("finance") ?? true),
+              prescriptions:
+                !scopedStaff && canUseSalesOperations(ctx.membership.role),
+              managePrescriptionSetup: Boolean(
+                membershipRole && canManageTenant(membershipRole),
+              ),
+            }}
+            actorUserId={session.user.id}
+            store={{
+              id: store.id,
+              name: store.name,
+              currencyCode: store.currencyCode,
+              businessProfileKey:
+                store.businessOnboarding?.businessProfileKey ?? null,
+            }}
+            storeIds={ctx.stores.map((item) => item.id)}
+            tenantId={ctx.tenant.id}
+            timeZone={ctx.tenant.timezone}
+          >
+            {/* 70px header + this + the wrapper's pb-4 fill exactly one screen. */}
+            <main className="flex min-h-[calc(100vh-70px-1rem)] min-w-0 flex-col px-4 md:px-8">
+              {children}
+            </main>
+          </GlobalSheetsProvider>
+        </CatalogCreateAccessProvider>
         {navItems.some((item) => item.href === "/assistant") ? (
           <QuickAssistant
             key={`${session.user.id}:${ctx.tenant.id}:${store.id}`}

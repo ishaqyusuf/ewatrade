@@ -8,7 +8,11 @@ import { useLocalSearchParams, useNavigation } from "expo-router"
 
 export default function FirstProductSetupModalRoute() {
   const navigation = useNavigation()
-  const params = useLocalSearchParams<{ kind?: string }>()
+  const params = useLocalSearchParams<{
+    kind?: string
+    name?: string
+    price?: string
+  }>()
   const initialKind =
     params.kind === "product" || params.kind === "service"
       ? params.kind
@@ -28,6 +32,8 @@ export default function FirstProductSetupModalRoute() {
     >
       <SimpleCatalogItemScreen
         initialKind={initialKind}
+        initialName={params.name}
+        initialPrice={params.price}
         onComplete={(completion) =>
           showOperationSuccess(navigation, {
             kind: completion.kind,

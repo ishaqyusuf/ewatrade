@@ -11,6 +11,9 @@ export type CatalogItemCompletion = {
 
 export type SimpleCatalogItemScreenProps = {
   initialKind?: CatalogItemKind
+  initialName?: string
+  /** Major-unit text as the price field takes it, e.g. "4500". */
+  initialPrice?: string
   onComplete?: (completion: CatalogItemCompletion) => void
 }
 

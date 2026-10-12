@@ -91,6 +91,8 @@ type SetupAttempt = SetupCommand & {
 
 export function useCatalogSetup({
   initialKind,
+  initialName,
+  initialPrice,
   onComplete,
 }: SimpleCatalogItemScreenProps) {
   const trpc = useTRPC()
@@ -246,8 +248,8 @@ export function useCatalogSetup({
   const [selectedHelperKey, setSelectedHelperKey] = useState<string | null>(
     null,
   )
-  const [name, setName] = useState("")
-  const [price, setPrice] = useState("")
+  const [name, setName] = useState(initialName ?? "")
+  const [price, setPrice] = useState(initialPrice ?? "")
   const [multiplePriceOptions, setMultiplePriceOptions] = useState(false)
   const [unitName, setUnitName] = useState("")
   const [openingStock, setOpeningStock] = useState("")
