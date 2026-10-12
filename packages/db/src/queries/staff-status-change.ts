@@ -100,6 +100,7 @@ async function assertStaffStatusAuthority(
 export async function prepareStaffStatusChangeInTransaction(
   tx: Prisma.TransactionClient,
   input: StaffStatusChangeInput,
+  options: { administrativeOnly?: boolean } = {},
 ) {
   const reason = input.reason?.trim() ?? null
   if (reason !== null && (!reason || reason.length > 500))
@@ -124,6 +125,11 @@ export async function prepareStaffStatusChangeInTransaction(
 
   await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} AND "isActive"=true FOR UPDATE`
   const actor = await assertStaffStatusAuthority(tx, input)
+  if (options.administrativeOnly && !["OWNER", "ADMIN"].includes(actor.role))
+    throw new StaffStoreAccessError(
+      "FORBIDDEN",
+      "Current Owner/Admin authority is required for assistant staff status changes.",
+    )
   const target =
     input.membershipId !== undefined
       ? Prisma.sql`"id" = ${input.membershipId}`
@@ -238,11 +244,9 @@ export async function prepareStaffStatusChangeInTransaction(
   }
 }
 
-export async function reviewStaffStatusChangeInTransaction(
-  tx: Prisma.TransactionClient,
-  input: StaffStatusChangeInput,
+export function staffStatusChangeReviewFromPrepared(
+  prepared: Awaited<ReturnType<typeof prepareStaffStatusChangeInTransaction>>,
 ) {
-  const prepared = await prepareStaffStatusChangeInTransaction(tx, input)
   const { membership, nextStatus, reason } = prepared
   const review = {
     membershipId: membership.id,
@@ -278,12 +282,23 @@ export async function reviewStaffStatusChangeInTransaction(
   }
 }
 
+export async function reviewStaffStatusChangeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: StaffStatusChangeInput,
+  options: { administrativeOnly?: boolean } = {},
+) {
+  return staffStatusChangeReviewFromPrepared(
+    await prepareStaffStatusChangeInTransaction(tx, input, options),
+  )
+}
+
 export async function reviewStaffStatusChange(
   db: PrismaClient,
   input: StaffStatusChangeInput,
+  options: { administrativeOnly?: boolean } = {},
 ) {
   return db.$transaction(
-    (tx) => reviewStaffStatusChangeInTransaction(tx, input),
+    (tx) => reviewStaffStatusChangeInTransaction(tx, input, options),
     {
       maxWait: 10_000,
       timeout: 30_000,

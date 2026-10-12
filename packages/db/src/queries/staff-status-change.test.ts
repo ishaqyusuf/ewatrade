@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
+  prepareReviewedStaffStatusChangeInTransaction,
   updateRetailOpsStaffStatus,
   updateRetailOpsStaffStatusInTransaction,
 } from "./retail-ops-staff"
@@ -391,4 +392,45 @@ describe("canonical staff status changes", () => {
     expect(options).toEqual({ maxWait: 10_000, timeout: 30_000 })
     expect(f.calls.filter((row) => row.kind === "write")).toHaveLength(1)
   })
+})
+
+test("assistant preparation requires reason/revision and administrative authority without changing native legacy Manager access", async () => {
+  const legacy = fixture({ actorRole: "MANAGER", actorMode: "LEGACY" })
+  await expect(
+    prepareReviewedStaffStatusChangeInTransaction(legacy.tx, input),
+  ).rejects.toThrow("Owner/Admin")
+  expect(legacy.calls.some((call) => call.kind === "write")).toBe(false)
+  const owner = fixture()
+  await expect(
+    prepareReviewedStaffStatusChangeInTransaction(owner.tx, {
+      ...input,
+      expectedRevision: undefined,
+    }),
+  ).rejects.toThrow("current revision")
+  await expect(
+    prepareReviewedStaffStatusChangeInTransaction(owner.tx, {
+      ...input,
+      reason: " ",
+    }),
+  ).rejects.toThrow("current revision")
+})
+
+test("assistant closure owns one original locked preparation and durable original outcome", async () => {
+  const f = fixture()
+  const prepared = await prepareReviewedStaffStatusChangeInTransaction(
+    f.tx,
+    input,
+  )
+  const beforeLocks = f.calls.filter((call) => call.kind === "lock").length
+  expect(prepared.review.membershipId).toBe("member")
+  expect(prepared.review.expectedRevision).toBe(7)
+  expect(f.calls.some((call) => call.kind === "write")).toBe(false)
+  const saved = await prepared.execute()
+  expect(saved.lifecycleEventId).toBe("event")
+  expect(saved.staffAccessRevision).toBe(8)
+  expect(saved.reason).toBe("Review staff access")
+  expect(f.calls.filter((call) => call.kind === "lock").length).toBe(
+    beforeLocks,
+  )
+  expect(f.calls.filter((call) => call.kind === "audit")).toHaveLength(1)
 })

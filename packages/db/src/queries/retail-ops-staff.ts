@@ -14,13 +14,17 @@ import {
 import { assertQaTenantIdentity } from "./qa-maintenance"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
 import {
-  type StaffStoreAccessInput,
-  setStaffStoreAccess,
+  type StaffStatusChangeInput,
+  prepareStaffStatusChangeInTransaction,
+  staffStatusChangeReviewFromPrepared,
+} from "./staff-status-change"
+import {
   StaffStoreAccessError,
+  type StaffStoreAccessInput,
   assertStaffStoreAccessAuthority,
+  setStaffStoreAccess,
 } from "./staff-store-access"
 import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
-import { prepareStaffStatusChangeInTransaction } from "./staff-status-change"
 
 export type RetailOpsStaffInviteRole = "cashier" | "operator" | "manager"
 export type RetailOpsStaffListRoleFilter =
@@ -424,9 +428,15 @@ export function getRetailOpsStaffInviteRecipientProblem(
 ) {
   if (!membership) return null
   if (!isMutableStaffRole(membership.role))
-    return { code: "STAFF_PROTECTED_ROLE" as const, message: "This membership cannot be changed through a staff invitation." }
+    return {
+      code: "STAFF_PROTECTED_ROLE" as const,
+      message: "This membership cannot be changed through a staff invitation.",
+    }
   if (membership.status === "ACTIVE")
-    return { code: "STAFF_ALREADY_ACTIVE" as const, message: "This person is already active in the business." }
+    return {
+      code: "STAFF_ALREADY_ACTIVE" as const,
+      message: "This person is already active in the business.",
+    }
   return null
 }
 
@@ -1061,8 +1071,9 @@ export async function inviteRetailOpsStaff(
   db: PrismaClient,
   input: InviteRetailOpsStaffInput,
 ): Promise<InvitedRetailOpsStaff> {
-  return db.$transaction(tx => inviteRetailOpsStaffInTransaction(tx, input), {
-    maxWait: 10_000, timeout: 30_000,
+  return db.$transaction((tx) => inviteRetailOpsStaffInTransaction(tx, input), {
+    maxWait: 10_000,
+    timeout: 30_000,
   })
 }
 
@@ -1166,11 +1177,15 @@ export async function inviteRetailOpsStaffInTransaction(
     },
   })
 
-  const recipientProblem = getRetailOpsStaffInviteRecipientProblem(existingMembership)
+  const recipientProblem =
+    getRetailOpsStaffInviteRecipientProblem(existingMembership)
   if (recipientProblem?.code === "STAFF_PROTECTED_ROLE")
     throw new StaffStoreAccessError("FORBIDDEN", recipientProblem.message)
   if (recipientProblem?.code === "STAFF_ALREADY_ACTIVE")
-    throw new RetailOpsStaffError(recipientProblem.code, recipientProblem.message)
+    throw new RetailOpsStaffError(
+      recipientProblem.code,
+      recipientProblem.message,
+    )
 
   if (!existingMembership || !isCountedStaffMembership(existingMembership)) {
     await assertRetailOpsEntitlementAvailable(tx, {
@@ -1316,8 +1331,47 @@ export async function updateRetailOpsStaffStatusInTransaction(
   tx: Prisma.TransactionClient,
   input: UpdateRetailOpsStaffStatusInput,
 ): Promise<UpdatedRetailOpsStaffStatus> {
-  const { membership, actorMembershipId, nextStatus, reason } =
-    await prepareStaffStatusChangeInTransaction(tx, input)
+  const prepared = await prepareStaffStatusChangeInTransaction(tx, input)
+  return applyPreparedStaffStatusChange(tx, input, prepared)
+}
+
+/** One locked canonical preparation, joined to signed assistant completion. */
+export async function prepareReviewedStaffStatusChangeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: StaffStatusChangeInput,
+) {
+  if (input.expectedRevision === undefined || !input.reason?.trim())
+    throw new StaffStoreAccessError(
+      "INVALID_INPUT",
+      "Review the current revision and enter a reason before confirming staff status.",
+    )
+  const prepared = await prepareStaffStatusChangeInTransaction(tx, input, {
+    administrativeOnly: true,
+  })
+  return {
+    review: staffStatusChangeReviewFromPrepared(prepared),
+    execute: () =>
+      applyPreparedStaffStatusChange(
+        tx,
+        {
+          actorUserId: input.actorUserId,
+          tenantId: input.tenantId,
+          staffUserId: prepared.membership.userId,
+          status: input.status,
+          expectedRevision: input.expectedRevision,
+          reason: input.reason,
+        },
+        prepared,
+      ),
+  }
+}
+
+async function applyPreparedStaffStatusChange(
+  tx: Prisma.TransactionClient,
+  input: UpdateRetailOpsStaffStatusInput,
+  prepared: Awaited<ReturnType<typeof prepareStaffStatusChangeInTransaction>>,
+): Promise<UpdatedRetailOpsStaffStatus> {
+  const { membership, actorMembershipId, nextStatus, reason } = prepared
   const updatedAt = new Date()
   const updatedMembership = await tx.membership.update({
     where: {
