@@ -35,12 +35,16 @@ import { type ReactNode, useEffect, useState } from "react"
 import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
-import { GeneralAttachComposer } from "./general-attachment-tray"
-import { GeneralUnavailableProposals } from "./general-unavailable-proposals"
 import { GeneralAnswerCard } from "./general-answer-card"
+import { GeneralAttachComposer } from "./general-attachment-tray"
 import { GeneralSentFile } from "./general-chat-photo"
-import { GeneralProposalCard } from "./general-proposal-card"
+import {
+  GeneralOutcomeList,
+  GeneralProposalCard,
+  isGeneralOutcome,
+} from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
+import { GeneralUnavailableProposals } from "./general-unavailable-proposals"
 import { useGeneralAssistant } from "./use-general-assistant"
 
 export type GeneralAssistantVM = ReturnType<typeof useGeneralAssistant>
@@ -85,10 +89,7 @@ export function generalChatFlags(vm: GeneralAssistantVM) {
       vm.pending ||
       vm.busy ||
       !!vm.runId,
-    exhausted:
-      !!vm.data &&
-      (vm.data.allowance.remainingRequests <= 0 ||
-        vm.data.allowance.remainingTokens <= 0),
+    exhausted: !!vm.data && generalBudgetUsed(vm.data.allowance),
     currencyCode: vm.data?.currencyCode ?? "",
   }
 }
@@ -172,6 +173,9 @@ export function GeneralThread({
   const [highlight, setHighlight] = useState<string | null>(null)
   const { enabled, disabled, exhausted, currencyCode } = generalChatFlags(vm)
   const last = vm.chat.messages.at(-1)
+  const outcomes = vm.data?.proposals.filter(isGeneralOutcome) ?? []
+  const drafts =
+    vm.data?.proposals.filter((proposal) => !isGeneralOutcome(proposal)) ?? []
   const focused = vm.data?.proposals.some((p) => p.id === focusId)
   useEffect(() => {
     if (!focusId || !focused) return
@@ -268,7 +272,9 @@ export function GeneralThread({
           ) : null}
           {vm.state.isError ? (
             <div role="alert" className="flex items-center gap-3 text-sm">
-              <p>This chat could not load. Try again or open another saved chat.</p>
+              <p>
+                This chat could not load. Try again or open another saved chat.
+              </p>
               <Button
                 size="sm"
                 variant="outline"
@@ -344,11 +350,22 @@ export function GeneralThread({
             </p>
           ) : null}
           {vm.state.data?.unavailableProposals?.length ? (
-            <GeneralUnavailableProposals rows={vm.state.data.unavailableProposals} />
+            <GeneralUnavailableProposals
+              rows={vm.state.data.unavailableProposals}
+            />
           ) : null}
           {vm.data?.proposals.length ? (
-            <div className="flex flex-col gap-3 pl-10">
-              {vm.data.proposals.map((proposal) => (
+            <div className={cn("flex flex-col gap-3", !compact && "pl-10")}>
+              {outcomes.length ? (
+                <GeneralOutcomeList
+                  proposals={outcomes}
+                  currencyCode={currencyCode}
+                  onOpenReceipt={(proposal) =>
+                    proposal.receipt && openReceipt(proposal.receipt)
+                  }
+                />
+              ) : null}
+              {drafts.map((proposal) => (
                 <div
                   key={proposal.id}
                   id={`general-proposal-${proposal.id}`}
@@ -364,9 +381,6 @@ export function GeneralThread({
                     onConfirm={() => void vm.confirm(proposal)}
                     onCancel={() => void vm.cancel(proposal)}
                     onEdit={() => setEditing(proposal)}
-                    onOpenReceipt={() =>
-                      proposal.receipt && openReceipt(proposal.receipt)
-                    }
                   />
                 </div>
               ))}
@@ -389,10 +403,11 @@ export function GeneralThread({
               Check reply status
             </Button>
           ) : null}
-          {exhausted ? (
-            <output className="block text-sm text-muted-foreground">
-              Monthly allowance used. You can still review and confirm saved
-              drafts.
+          {exhausted && vm.data ? (
+            <output className="block text-sm text-amber-700 dark:text-amber-400">
+              This month’s reply budget is used up. Replies resume on{" "}
+              {generalBudgetResets(vm.data.allowance)}. You can still confirm,
+              edit or cancel drafts.
             </output>
           ) : null}
         </StickToBottom.Content>
@@ -449,7 +464,10 @@ export function GeneralComposer({
     busy: vm.busy,
     blocked: disabled,
     disabled: off,
-    placeholder: exhausted ? "Monthly allowance used" : "Ask anything",
+    placeholder:
+      exhausted && vm.data
+        ? `Replies resume on ${generalBudgetResets(vm.data.allowance)}`
+        : "Ask anything",
     label: "Ask a question or say what to record",
     voiceConversationId: enabled ? vm.conversationId : null,
     footer,
@@ -493,11 +511,36 @@ export function GeneralSuggestions({
   )
 }
 
+type GeneralBudget = {
+  remainingRequests: number
+  remainingTokens: number
+  resetsAt: string
+  requestLimit?: number
+}
+
+/** Replies stop when either the message count or the token budget runs out. */
+export function generalBudgetUsed(budget: GeneralBudget) {
+  return budget.remainingRequests <= 0 || budget.remainingTokens <= 0
+}
+
+export function generalBudgetResets(budget: GeneralBudget) {
+  return new Date(budget.resetsAt).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  })
+}
+
+/** Footer line; never shows messages left once the token budget is spent. */
+export function generalBudgetLine(budget: GeneralBudget) {
+  const resets = generalBudgetResets(budget)
+  if (generalBudgetUsed(budget)) return `Reply budget used · resets ${resets}`
+  return budget.requestLimit
+    ? `${budget.remainingRequests} of ${budget.requestLimit} chat messages left · resets ${resets}`
+    : `${budget.remainingRequests} messages left · resets ${resets}`
+}
+
 export function allowanceLine(vm: GeneralAssistantVM) {
-  if (!vm.data) return null
-  return `${vm.data.allowance.remainingRequests} messages left · resets ${new Date(
-    vm.data.allowance.resetsAt,
-  ).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
+  return vm.data ? generalBudgetLine(vm.data.allowance) : null
 }
 
 type SavedChat = NonNullable<
@@ -744,7 +787,18 @@ export function GeneralChat({ actions }: { actions?: ReactNode }) {
       <div className="shrink-0 px-3 pt-2 pb-3">
         <GeneralComposer
           vm={vm}
-          footer={<p className="text-center">{allowanceLine(vm)}</p>}
+          footer={
+            <p
+              className={cn(
+                "text-center",
+                vm.data &&
+                  generalBudgetUsed(vm.data.allowance) &&
+                  "text-amber-700 dark:text-amber-400",
+              )}
+            >
+              {allowanceLine(vm)}
+            </p>
+          }
         />
       </div>
     </section>

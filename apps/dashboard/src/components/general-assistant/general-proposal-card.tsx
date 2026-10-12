@@ -5,7 +5,15 @@ import {
   generalActionSummary,
 } from "@ewatrade/assistant/general/contracts"
 import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
-import { Badge, Button } from "@ewatrade/ui"
+import { Badge, Button, cn } from "@ewatrade/ui"
+import {
+  ArrowRight01Icon,
+  Cancel01Icon,
+  Clock01Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Fragment, useState } from "react"
 import { GeneralChatPhotoThumb } from "./general-chat-photo"
 import { GeneralProductPicture } from "./general-product-picture"
 
@@ -18,6 +26,90 @@ const statusLabel: Record<GeneralProposal["status"], string> = {
   FAILED: "Failed",
 }
 
+/** Saved, cancelled and failed proposals: listed, not shown as cards. */
+export function isGeneralOutcome(proposal: GeneralProposal) {
+  return (
+    !!proposal.receipt ||
+    proposal.status === "COMPLETED" ||
+    proposal.status === "CANCELLED" ||
+    proposal.status === "FAILED"
+  )
+}
+
+function reviewLines(proposal: GeneralProposal, currencyCode: string) {
+  const product =
+    proposal.payload.action === "product_create" ? proposal.payload : null
+  // The picture shows as an image, so its text line is not repeated.
+  const picture = product ? productCreatePicture(product) : null
+  return (
+    proposal.review ?? [generalActionSummary(proposal.payload, currencyCode)]
+  )
+    .flatMap((line) => line.split("\n"))
+    .filter((line) => line !== picture)
+}
+
+/** "Total: ₦4,800.00" → ["Total", "₦4,800.00"]; item lines have no label. */
+function reviewPair(line: string) {
+  const at = line.indexOf(": ")
+  return at > 0 ? [line.slice(0, at), line.slice(at + 2)] : null
+}
+
+/** A file going onto an order shows as the photo itself. */
+function filedAttachment(proposal: GeneralProposal) {
+  return proposal.payload.action === "order_attachment_add"
+    ? proposal.payload.attachmentId
+    : null
+}
+
+function ReviewLines({ lines }: { lines: string[] }) {
+  return (
+    <dl className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
+      {lines.map((line, index) => {
+        const pair = reviewPair(line)
+        if (!pair)
+          return (
+            <dd
+              // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
+              key={index}
+              className={cn(
+                "col-span-2 font-medium",
+                lines[index + 1] &&
+                  reviewPair(lines[index + 1] as string) &&
+                  "mb-0.5 border-b border-dashed pb-1.5",
+              )}
+            >
+              {line}
+            </dd>
+          )
+        const [label, value] = pair
+        const total = /^total\b/i.test(label as string)
+        return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
+          <Fragment key={index}>
+            <dt
+              className={cn(
+                "text-muted-foreground",
+                total && "font-semibold text-foreground",
+              )}
+            >
+              {label}
+            </dt>
+            <dd
+              className={cn(
+                "text-right tabular-nums",
+                total && "font-semibold",
+              )}
+            >
+              {value}
+            </dd>
+          </Fragment>
+        )
+      })}
+    </dl>
+  )
+}
+
+/** A draft that still needs the owner: review, then Confirm, Edit or Cancel. */
 export function GeneralProposalCard({
   proposal,
   currencyCode,
@@ -25,7 +117,6 @@ export function GeneralProposalCard({
   onConfirm,
   onCancel,
   onEdit,
-  onOpenReceipt,
 }: {
   proposal: GeneralProposal
   currencyCode: string
@@ -33,40 +124,12 @@ export function GeneralProposalCard({
   onConfirm: () => void
   onCancel: () => void
   onEdit: () => void
-  onOpenReceipt: () => void
 }) {
-  const { receipt } = proposal
   const title = capabilityForAction(proposal.payload.action).title
-  // A file going onto an order shows as the photo itself.
-  const filed =
-    proposal.payload.action === "order_attachment_add"
-      ? proposal.payload.attachmentId
-      : null
-  if (receipt)
-    return (
-      <section
-        aria-label={receipt.title}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3"
-      >
-        {filed ? <GeneralChatPhotoThumb attachmentId={filed} /> : null}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{receipt.title}</p>
-          <p className="text-sm text-muted-foreground">{receipt.detail}</p>
-        </div>
-        <Button size="sm" variant="outline" onClick={onOpenReceipt}>
-          Open
-        </Button>
-      </section>
-    )
+  const filed = filedAttachment(proposal)
   const product =
     proposal.payload.action === "product_create" ? proposal.payload : null
-  // The picture shows as an image, so its text line is not repeated.
-  const picture = product ? productCreatePicture(product) : null
-  const lines = (
-    proposal.review ?? [generalActionSummary(proposal.payload, currencyCode)]
-  )
-    .flatMap((line) => line.split("\n"))
-    .filter((line) => line !== picture)
+  const lines = reviewLines(proposal, currencyCode)
   const lapsed = new Date(proposal.expiresAt).getTime() <= Date.now()
   const pending = proposal.status === "PENDING" && !lapsed
   // Expired drafts stay editable; saving issues a fresh approval.
@@ -75,13 +138,26 @@ export function GeneralProposalCard({
   return (
     <section
       aria-label={title}
-      className="flex min-w-0 flex-col gap-3 rounded-lg border px-4 py-3 [overflow-wrap:anywhere]"
+      className={cn(
+        "flex min-w-0 flex-col gap-3 rounded-lg border border-l-[3px] bg-card px-4 py-3 [overflow-wrap:anywhere]",
+        renewable ? "border-l-amber-500" : "border-l-primary",
+      )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <Badge variant={pending ? "default" : "secondary"}>
-          {renewable ? statusLabel.EXPIRED : statusLabel[proposal.status]}
-        </Badge>
+        {renewable ? (
+          <Badge
+            variant="outline"
+            className="border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400"
+          >
+            <HugeiconsIcon icon={Clock01Icon} />
+            {statusLabel.EXPIRED}
+          </Badge>
+        ) : (
+          <Badge variant={pending ? "default" : "secondary"}>
+            {statusLabel[proposal.status]}
+          </Badge>
+        )}
       </div>
       <div className="flex min-w-0 gap-3">
         {product ? (
@@ -92,58 +168,195 @@ export function GeneralProposalCard({
         ) : filed ? (
           <GeneralChatPhotoThumb attachmentId={filed} />
         ) : null}
-        <ul className="min-w-0 flex-1 space-y-1 text-sm">
-          {lines.map((line, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
-            <li key={index}>{line}</li>
-          ))}
-        </ul>
+        <ReviewLines lines={lines} />
       </div>
-      {pending ? (
-        <p className="text-xs text-muted-foreground">
-          Nothing changes until you confirm. Expires{" "}
-          {new Date(proposal.expiresAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-          .
-        </p>
-      ) : renewable ? (
-        <p className="text-xs text-muted-foreground">
-          Approval expired. Edit to review a fresh draft.
-        </p>
-      ) : null}
       {pending || renewable ? (
-        <div className="flex flex-wrap gap-2">
-          {pending ? (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap gap-2">
+            {pending ? (
+              <Button
+                size="sm"
+                disabled={disabled || !proposal.approvalToken}
+                onClick={onConfirm}
+              >
+                Confirm
+              </Button>
+            ) : null}
             <Button
               size="sm"
-              disabled={disabled || !proposal.approvalToken}
-              onClick={onConfirm}
-            >
-              Confirm
-            </Button>
-          ) : null}
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={disabled}
-            onClick={onEdit}
-          >
-            Edit
-          </Button>
-          {pending ? (
-            <Button
-              size="sm"
-              variant="ghost"
+              variant="outline"
               disabled={disabled}
-              onClick={onCancel}
+              onClick={onEdit}
             >
-              Cancel draft
+              {pending ? "Edit" : "Edit and review again"}
             </Button>
-          ) : null}
+            {pending ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={disabled}
+                onClick={onCancel}
+              >
+                Cancel draft
+              </Button>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {pending
+              ? `Nothing changes until you confirm · expires ${new Date(
+                  proposal.expiresAt,
+                ).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : "Approval expired. Edit to review a fresh draft."}
+          </p>
         </div>
       ) : null}
+    </section>
+  )
+}
+
+/** Saved, cancelled and failed drafts of this chat as one compact list. */
+export function GeneralOutcomeList({
+  proposals,
+  currencyCode,
+  onOpenReceipt,
+}: {
+  proposals: GeneralProposal[]
+  currencyCode: string
+  onOpenReceipt: (proposal: GeneralProposal) => void
+}) {
+  const [shown, setShown] = useState<ReadonlySet<string>>(new Set())
+  const saved = proposals.filter(
+    (proposal) => proposal.receipt || proposal.status === "COMPLETED",
+  ).length
+  const cancelled = proposals.filter(
+    (proposal) => !proposal.receipt && proposal.status === "CANCELLED",
+  ).length
+  const failed = proposals.length - saved - cancelled
+  const toggle = (id: string) =>
+    setShown((current) => {
+      const next = new Set(current)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  return (
+    <section
+      aria-label="Results in this chat"
+      className="min-w-0 overflow-hidden rounded-lg border [overflow-wrap:anywhere]"
+    >
+      <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+        <span>In this chat</span>
+        <span>
+          {[
+            saved ? `${saved} saved` : null,
+            cancelled ? `${cancelled} cancelled` : null,
+            failed ? `${failed} failed` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </div>
+      <ul className="divide-y">
+        {proposals.map((proposal) => {
+          const { receipt } = proposal
+          if (receipt) {
+            const filed = filedAttachment(proposal)
+            return (
+              <li
+                key={proposal.id}
+                id={`general-proposal-${proposal.id}`}
+                className="flex min-h-11 items-center gap-3 py-2 pr-2 pl-4"
+              >
+                <span
+                  role="img"
+                  aria-label="Done"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+                >
+                  <HugeiconsIcon icon={Tick02Icon} className="size-3" />
+                </span>
+                {filed ? (
+                  <GeneralChatPhotoThumb
+                    attachmentId={filed}
+                    className="size-8"
+                  />
+                ) : null}
+                <p className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-sm">
+                  <span className="font-medium">{receipt.title}</span>
+                  <span className="text-muted-foreground">
+                    {receipt.detail}
+                  </span>
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Open ${receipt.title}`}
+                  onClick={() => onOpenReceipt(proposal)}
+                >
+                  Open
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+                </Button>
+              </li>
+            )
+          }
+          const title = capabilityForAction(proposal.payload.action).title
+          const lines = reviewLines(proposal, currencyCode)
+          const summary =
+            lines.find((line) => /^total\b/i.test(line)) ?? lines[0]
+          const open = shown.has(proposal.id)
+          const status = statusLabel[proposal.status]
+          const done = proposal.status === "COMPLETED"
+          return (
+            <li key={proposal.id} id={`general-proposal-${proposal.id}`}>
+              <div className="flex min-h-11 items-center gap-3 py-2 pr-2 pl-4">
+                <span
+                  role="img"
+                  aria-label={status}
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full",
+                    done
+                      ? "bg-primary/10 text-primary"
+                      : proposal.status === "FAILED"
+                        ? "bg-muted text-destructive"
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  <HugeiconsIcon
+                    icon={done ? Tick02Icon : Cancel01Icon}
+                    className="size-3"
+                  />
+                </span>
+                <p className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+                  <span className={cn(done && "font-medium text-foreground")}>
+                    {title}
+                  </span>
+                  <span>
+                    {status}
+                    {summary ? ` · ${summary}` : null}
+                  </span>
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-expanded={open}
+                  onClick={() => toggle(proposal.id)}
+                >
+                  {open ? "Hide" : "Details"}
+                </Button>
+              </div>
+              {open ? (
+                <ul className="space-y-0.5 pr-4 pb-3 pl-12 text-xs text-muted-foreground">
+                  {lines.map((line, index) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: review lines have no ids
+                    <li key={index}>{line}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          )
+        })}
+      </ul>
     </section>
   )
 }

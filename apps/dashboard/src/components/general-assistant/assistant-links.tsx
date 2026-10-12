@@ -5,7 +5,11 @@ import { useTRPC } from "@/trpc/client"
 import { cn } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
-import type { GeneralPendingReview } from "./general-chat"
+import {
+  type GeneralPendingReview,
+  generalBudgetLine,
+  generalBudgetUsed,
+} from "./general-chat"
 
 type SetupArea = {
   area: string
@@ -113,13 +117,15 @@ export function AssistantLinks({
         ) : null}
       </div>
       {general ? (
-        <p className="text-[11px] text-muted-foreground">
-          {general.remainingRequests} of {general.requestLimit} chat messages
-          left · resets{" "}
-          {new Date(general.resetsAt).toLocaleDateString(undefined, {
-            day: "numeric",
-            month: "short",
-          })}
+        <p
+          className={cn(
+            "text-[11px]",
+            generalBudgetUsed(general)
+              ? "text-amber-700 dark:text-amber-400"
+              : "text-muted-foreground",
+          )}
+        >
+          {generalBudgetLine(general)}
         </p>
       ) : null}
     </div>
