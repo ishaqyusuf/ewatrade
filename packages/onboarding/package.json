@@ -33,7 +33,6 @@
     "./lib/direct-signup-schema": "./src/lib/direct-signup-schema.ts",
     "./lib/onboarding-verification": "./src/lib/onboarding-verification.ts",
     "./lib/legal-publication": "./src/lib/legal-publication.ts",
-    "./lib/preview-intake-guard": "./src/lib/preview-intake-guard.ts",
     "./lib/qa-access-server": "./src/lib/qa-access-server.ts",
     "./lib/qa-fill-definitions": "./src/lib/qa-fill-definitions.ts",
     "./lib/qa-fill-definitions.production": "./src/lib/qa-fill-definitions.production.ts",

@@ -121,7 +121,6 @@ const EXPECTED = [
       NEXT_PUBLIC_DASHBOARD_URL: equals("https://dash.ewatrade.com"),
       NEXT_PUBLIC_PLATFORM_DOMAIN: equals("ewatrade.com"),
       NEXT_PUBLIC_MARKETING_URL: equals("https://ewatrade.com"),
-      NEXT_PUBLIC_SIGNUP_ENABLED: equals("true"),
       NEXT_PUBLIC_STOREFRONT_URL: equals("https://ewatrade.com"),
       NEXT_PUBLIC_CHAT_URL: equals("https://chat.ewatrade.com"),
       EXPO_PUBLIC_LOGLY_ENABLED: equals("false"),

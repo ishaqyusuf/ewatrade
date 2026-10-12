@@ -4,7 +4,6 @@ import { NextRequest } from "next/server"
 const envKeys = [
   "NODE_ENV",
   "APP_ENV",
-  "NEXT_PUBLIC_SIGNUP_ENABLED",
   "NEXT_PUBLIC_PLATFORM_DOMAIN",
   "NEXT_PUBLIC_DASHBOARD_URL",
   "EMAIL_QA_DOMAIN_ROUTES",
@@ -107,7 +106,6 @@ beforeEach(() => {
   findTenant.mockImplementation(async () => null)
   Reflect.set(process.env, "NODE_ENV", "production")
   process.env.APP_ENV = "production"
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true"
   process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://ewatrade.com/dashboard"
   process.env.EMAIL_QA_DOMAIN_ROUTES = '{"ishaq.qa.test":"tester@example.com"}'
   Reflect.deleteProperty(process.env, "VERCEL_API_TOKEN")
@@ -278,12 +276,6 @@ test("an invalid access token cannot create an account or workspace", async () =
   expect(createTenant).not.toHaveBeenCalled()
 })
 
-test("disabled signup still refuses a valid early-access continuation", async () => {
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "false"
-  expect((await POST(request("owner@example.com"))).status).toBe(403)
-  expect(signUp).not.toHaveBeenCalled()
-})
-
 test("expired and consumed access links remain closed", async () => {
   for (const completed of [false, true]) {
     findSession.mockResolvedValueOnce({
@@ -406,11 +398,4 @@ test("failed automatic sign-in sends the welcome email and success screen to das
   expect(JSON.stringify(dispatch.mock.lastCall)).toContain(
     "https://ewatrade.com/dashboard/login",
   )
-})
-test("Preview blocks dashboard signup before account or workspace creation", async () => {
-  process.env.APP_ENV = "preview"
-  const response = await POST(request("owner@example.com"))
-  expect(response.status).toBe(503)
-  expect(signUp).not.toHaveBeenCalled()
-  expect(createTenant).not.toHaveBeenCalled()
 })

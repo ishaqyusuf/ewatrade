@@ -15,7 +15,6 @@ import {
 } from "../../../lib/early-access-response"
 import { phoneCountry } from "../../../lib/international-phone"
 import { issueOnboardingVerification } from "../../../lib/onboarding-verification"
-import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
 
 // Hosting-derived suggestion only, never an identity or authorization signal.
 export function GET(request: NextRequest) {
@@ -33,13 +32,6 @@ export function GET(request: NextRequest) {
 // verification link. The returned token only lets this browser/device continue
 // the form; account creation still requires the verified email.
 export async function POST(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
-  if (process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true")
-    return NextResponse.json(
-      { message: "Signup is not currently available." },
-      { status: 403, headers: earlyAccessHeaders },
-    )
   if (!isSignupAvailableForLegalPublication(isApprovedLegalPublication()))
     return NextResponse.json(
       {

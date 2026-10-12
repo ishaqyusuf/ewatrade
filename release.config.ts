@@ -78,7 +78,6 @@ const previewOnly = [
   "API_URL",
   "BETTER_AUTH_URL",
   "BETTER_AUTH_PRODUCTION_URL",
-  "NEXT_PUBLIC_SIGNUP_ENABLED",
 ]
 
 export default {

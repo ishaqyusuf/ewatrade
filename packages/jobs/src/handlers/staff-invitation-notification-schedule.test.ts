@@ -6,7 +6,6 @@ import {
 } from "./staff-invitation-notification-schedule"
 
 const config = {
-  STAFF_INVITATION_NOTIFICATIONS_ENABLED: "true",
   EMAIL_DELIVERY_MODE: "live",
   EMAIL_FROM: "invite@example.com",
   RESEND_API_KEY: "provider-free-test-value",
@@ -15,23 +14,6 @@ const config = {
 }
 
 describe("staff invitation outbox discovery", () => {
-  test("disabled gate performs no database discovery or queue submission", async () => {
-    let calls = 0
-    const deps: StaffInvitationScheduleDependencies = {
-      listDue: async () => {
-        calls++
-        return []
-      },
-      enqueue: async () => {
-        calls++
-      },
-    }
-    expect(await runStaffInvitationNotificationSchedule({}, deps)).toEqual({
-      enabled: false,
-      notificationsQueued: 0,
-    })
-    expect(calls).toBe(0)
-  })
   test("bounded discovery projects only identities and awaits every enqueue", async () => {
     const now = new Date("2026-10-12T12:00:00Z")
     const calls: unknown[] = []
@@ -49,7 +31,7 @@ describe("staff invitation outbox discovery", () => {
     }
     expect(
       await runStaffInvitationNotificationSchedule(config, deps, now),
-    ).toEqual({ enabled: true, notificationsQueued: 2 })
+    ).toEqual({ notificationsQueued: 2 })
     expect(calls).toEqual([
       { limit: 100, now },
       { tenantId: "tenant-a", notificationId: "one" },
@@ -84,6 +66,7 @@ describe("staff invitation outbox discovery", () => {
       },
     }
     for (const patch of [
+      { EMAIL_DELIVERY_MODE: "console" },
       { RESEND_API_KEY: "" },
       { STAFF_INVITATION_ENCRYPTION_KEY: "" },
       { STAFF_INVITATION_DECRYPTION_KEYS: "not-json" },
@@ -94,7 +77,6 @@ describe("staff invitation outbox discovery", () => {
           deps,
         ),
       ).toEqual({
-        enabled: true,
         deliveryConfigured: false,
         notificationsQueued: 0,
       })

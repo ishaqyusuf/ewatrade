@@ -2,7 +2,6 @@ import { prisma } from "@ewatrade/db"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod"
-import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
 import { workspaceSchema } from "../../../lib/signup-schemas"
 import { resolveSignupWorkspace } from "../../../lib/signup-workspace"
 
@@ -12,16 +11,12 @@ const checkSchema = z.object({
 })
 
 export async function GET(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   return checkAvailability({
     slug: request.nextUrl.searchParams.get("slug")?.trim().toLowerCase(),
   })
 }
 
 export async function POST(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   return checkAvailability(await request.json().catch(() => null))
 }
 

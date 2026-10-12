@@ -21,7 +21,6 @@ import { LEGAL_DOCUMENT_VERSION } from "@ewatrade/utils/legal-documents"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { resolveDashboardUrl } from "../../../lib/dashboard-url"
-import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
 import { resolveSignupLegalAcceptance } from "../../../lib/signup-legal"
 import { getDashboardRouteUrl } from "../../../lib/signup-navigation"
 import { signupPayloadSchema } from "../../../lib/signup-schemas"
@@ -71,15 +70,6 @@ function buildWelcomeEmailText(params: {
 // ─── Signup route ─────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
-  if (process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== "true") {
-    return NextResponse.json(
-      { message: "Signup is not currently available." },
-      { status: 403 },
-    )
-  }
-
   // ── 1. Parse + validate payload ──────────────────────────────────────────
   const body = await request.json().catch(() => null)
   const result = signupPayloadSchema.safeParse(body)

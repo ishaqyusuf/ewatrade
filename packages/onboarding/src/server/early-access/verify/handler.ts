@@ -5,11 +5,8 @@ import {
   earlyAccessHtml,
 } from "../../../lib/early-access-response"
 import { verifyEarlyAccessEmail } from "../../../lib/early-access-service"
-import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
 
 export async function GET(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   const token = request.nextUrl.searchParams.get("token")?.trim()
   if (!token)
     return earlyAccessHtml({

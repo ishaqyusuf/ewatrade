@@ -6,11 +6,8 @@ import {
 } from "../../../lib/early-access-response"
 import { requireApprovedSession } from "../../../lib/early-access-service"
 import { issueOnboardingVerification } from "../../../lib/onboarding-verification"
-import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
 
 export async function POST(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   const body = z
     .object({ accessToken: z.string().min(1).max(200) })
     .safeParse(await request.json().catch(() => null))

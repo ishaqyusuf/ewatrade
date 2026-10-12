@@ -13,14 +13,11 @@ import {
   earlyAccessHtml,
 } from "@/lib/early-access-response"
 import { approveEarlyAccess } from "@/lib/early-access-service"
-import { blockMarketingIntakeInPreview } from "@/lib/preview-intake-guard"
 import { getQaWebRequestOrigin } from "@/lib/qa-request-origin"
 import { renderMarketingEarlyAccessConfirmationTemplate } from "@ewatrade/email"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   const token = request.nextUrl.searchParams.get("token")?.trim()
   if (!token)
     return earlyAccessHtml({

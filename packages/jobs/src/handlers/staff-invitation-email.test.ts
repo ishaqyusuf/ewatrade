@@ -1,13 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import type { EmailDeliveryReceipt, EmailMessage } from "@ewatrade/email"
-import {
-  createStaffInvitationEmailAdapter,
-  staffInvitationNotificationsEnabled,
-} from "./staff-invitation-email"
+import { createStaffInvitationEmailAdapter } from "./staff-invitation-email"
 
 const config = {
-  STAFF_INVITATION_NOTIFICATIONS_ENABLED: "true",
   EMAIL_DELIVERY_MODE: "live",
   EMAIL_FROM: "EwaTrade <invite@example.com>",
   RESEND_API_KEY: "provider-free-test-value",
@@ -51,18 +47,8 @@ function fixture(
 }
 
 describe("staff invitation guarded email adapter", () => {
-  test("dispatch stays off unless explicitly enabled", () => {
-    for (const value of [undefined, "false", "1", "TRUE", " true "])
-      expect(
-        staffInvitationNotificationsEnabled({
-          STAFF_INVITATION_NOTIFICATIONS_ENABLED: value,
-        }),
-      ).toBe(false)
-    expect(staffInvitationNotificationsEnabled(config)).toBe(true)
-  })
   test("configuration refusal happens before provider guard or transport", async () => {
     for (const patch of [
-      { STAFF_INVITATION_NOTIFICATIONS_ENABLED: "false" },
       { EMAIL_DELIVERY_MODE: "console" },
       { EMAIL_CAPTURE_FILE: "/tmp/not-written" },
       { RESEND_API_KEY: "" },

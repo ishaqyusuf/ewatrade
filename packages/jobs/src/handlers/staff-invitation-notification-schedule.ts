@@ -1,8 +1,5 @@
 import type { StaffInvitationNotificationIdentifier } from "@ewatrade/db/queries"
-import {
-  staffInvitationDeliveryConfigured,
-  staffInvitationNotificationsEnabled,
-} from "./staff-invitation-email"
+import { staffInvitationDeliveryConfigured } from "./staff-invitation-email"
 
 export type StaffInvitationScheduleDependencies = {
   listDue(input: { limit: number; now: Date }): Promise<
@@ -16,10 +13,8 @@ export async function runStaffInvitationNotificationSchedule(
   dependencies: StaffInvitationScheduleDependencies,
   now = new Date(),
 ) {
-  if (!staffInvitationNotificationsEnabled(config))
-    return { enabled: false, notificationsQueued: 0 }
   if (!staffInvitationDeliveryConfigured(config))
-    return { enabled: true, deliveryConfigured: false, notificationsQueued: 0 }
+    return { deliveryConfigured: false, notificationsQueued: 0 }
   const due = await dependencies.listDue({ limit: 100, now })
   const results = await Promise.allSettled(
     due.map(({ tenantId, id }) =>
@@ -29,5 +24,5 @@ export async function runStaffInvitationNotificationSchedule(
   const failed = results.filter((result) => result.status === "rejected").length
   if (failed)
     throw Error(`Could not queue ${failed} staff invitation notification(s).`)
-  return { enabled: true, notificationsQueued: due.length }
+  return { notificationsQueued: due.length }
 }

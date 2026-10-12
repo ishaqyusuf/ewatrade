@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { blockMarketingIntakeInPreview } from "../../../lib/preview-intake-guard"
 
 import { prisma } from "@ewatrade/db"
 
@@ -20,8 +19,6 @@ import {
 } from "../../../lib/early-access-response"
 
 export async function GET(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   const token = request.nextUrl.searchParams.get("token")?.trim()
 
   if (!token) {
@@ -87,8 +84,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const previewBlock = blockMarketingIntakeInPreview()
-  if (previewBlock) return previewBlock
   const parsed = z
     .object({
       token: z.string().regex(/^ea_[A-Za-z0-9_-]{43}$/),

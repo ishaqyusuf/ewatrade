@@ -9,13 +9,9 @@ import {
 } from "@ewatrade/email"
 import type { StaffInvitationDispatchDependencies } from "./staff-invitation-notification-dispatch"
 
-export function staffInvitationNotificationsEnabled(config: NodeJS.ProcessEnv) {
-  return config.STAFF_INVITATION_NOTIFICATIONS_ENABLED === "true"
-}
-
+/** Invitations are emailed whenever live email is set up. */
 export function staffInvitationEmailConfigured(config: NodeJS.ProcessEnv) {
   return (
-    staffInvitationNotificationsEnabled(config) &&
     config.EMAIL_DELIVERY_MODE?.trim().toLowerCase() === "live" &&
     Boolean(config.RESEND_API_KEY?.trim()) &&
     !config.EMAIL_CAPTURE_FILE?.trim() &&

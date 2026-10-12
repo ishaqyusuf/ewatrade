@@ -10,7 +10,6 @@ import { task } from "@trigger.dev/sdk/v3"
 import {
   createStaffInvitationEmailAdapter,
   staffInvitationDeliveryConfigured,
-  staffInvitationNotificationsEnabled,
 } from "../handlers/staff-invitation-email"
 import { runStaffInvitationNotificationDispatch } from "../handlers/staff-invitation-notification-dispatch"
 import { assertQaJobProviderAllowed } from "../qa-provider-guard"
@@ -21,10 +20,8 @@ export const staffInvitationNotificationDispatch = task({
   retry: { maxAttempts: 1 },
   queue: { concurrencyLimit: 5 },
   run: async (payload: StaffInvitationNotificationIdentifier) => {
-    if (!staffInvitationNotificationsEnabled(process.env))
-      return { enabled: false }
     if (!staffInvitationDeliveryConfigured(process.env))
-      return { enabled: true, deliveryConfigured: false }
+      return { deliveryConfigured: false }
     if (
       !payload ||
       Object.keys(payload).length !== 2 ||

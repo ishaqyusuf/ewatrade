@@ -170,7 +170,6 @@ const keys = [
   "NODE_ENV",
   "APP_ENV",
   "VERCEL_ENV",
-  "NEXT_PUBLIC_SIGNUP_ENABLED",
   "NEXT_PUBLIC_DASHBOARD_URL",
   "EMAIL_QA_DOMAIN_ROUTES",
 ] as const
@@ -187,7 +186,6 @@ beforeEach(() => {
   Reflect.set(process.env, "NODE_ENV", "production")
   process.env.APP_ENV = "production"
   process.env.VERCEL_ENV = "production"
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true"
   process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   process.env.EMAIL_QA_DOMAIN_ROUTES = '{"ishaq.qa.test":"tester@example.com"}'
 })
@@ -252,15 +250,9 @@ test("start issues an unverified recipient-bound setup, profile and tester email
   expect(sessions.size).toBe(2)
 })
 
-test("switch, legal and Preview gates refuse before any persistence or delivery", async () => {
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "false"
-  expect((await POST(request())).status).toBe(403)
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true"
+test("the legal gate refuses before any persistence or delivery", async () => {
   legalAvailable = false
   expect((await POST(request())).status).toBe(412)
-  legalAvailable = true
-  process.env.VERCEL_ENV = "preview"
-  expect((await POST(request())).status).toBe(503)
   expect(leads).toHaveLength(0)
   expect(dispatch).not.toHaveBeenCalled()
 })

@@ -101,7 +101,6 @@ const keys = [
   "NODE_ENV",
   "APP_ENV",
   "VERCEL_ENV",
-  "NEXT_PUBLIC_SIGNUP_ENABLED",
   "NEXT_PUBLIC_DASHBOARD_URL",
   "EMAIL_QA_DOMAIN_ROUTES",
 ] as const
@@ -115,7 +114,6 @@ beforeEach(() => {
   Reflect.set(process.env, "NODE_ENV", "production")
   process.env.APP_ENV = "production"
   process.env.VERCEL_ENV = "production"
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true"
   process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://dash.ewatrade.com"
   Reflect.deleteProperty(process.env, "EMAIL_QA_DOMAIN_ROUTES")
 })
@@ -172,10 +170,7 @@ test("starts a setup session and emails a verification link", async () => {
   )
 })
 
-test("is closed while the signup switch is off or the Terms gate is closed", async () => {
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "false"
-  expect((await start()).status).toBe(403)
-  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true"
+test("is closed while the Terms gate is closed", async () => {
   legalEffective = false
   expect((await start()).status).toBe(412)
   expect(sessions.size).toBe(0)
@@ -207,10 +202,4 @@ test("limits repeated starts per email and per client", async () => {
     (await start({ ...input, email: "another@example.com" }, "198.51.100.2"))
       .status,
   ).toBe(200)
-})
-
-test("Preview rejects signup start before any writes", async () => {
-  process.env.VERCEL_ENV = "preview"
-  expect((await start()).status).toBe(503)
-  expect(sessions.size).toBe(0)
 })
