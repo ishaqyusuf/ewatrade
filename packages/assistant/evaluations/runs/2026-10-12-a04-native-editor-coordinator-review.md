@@ -76,3 +76,20 @@ capability areas, six capability-row changes and zero procedure changes.
 All 13 frozen whole-file source/handoff hashes match the index; S05/privacy
 rows and router-summary changes are absent. Staged whitespace checks pass.
 This isolated index review does not claim whole-worktree or hosted CI success.
+
+Reviewed source is committed on main as `677293e1`; all frozen whole-file hashes
+match that commit and the index is empty afterward. No push/deploy occurred.
+
+## Updated device readiness observation
+
+After source integration, the existing Device Manager reports GreenTill API34
+**running** (green indicator and Stop control). This supersedes the earlier
+stopped-device observation. The coordinator selected the existing **Show** menu
+command and activated it with Return. No cold boot, stop, edit, wipe or new
+device launch occurred. The UI inventory after Show still advertises Android
+Studio only, with no emulator/Android app surface available to computer use.
+Device Manager remains visible; no native assistant app/build or flow was tested.
+Running infrastructure is not native acceptance. Obtain the visible running
+device/app surface before executing the outstanding journeys.
+
+![Current Device Manager running state; not a native assistant test](/Users/M1PRO/Documents/code/ewatrade/artifacts/assistant-operations-parallel/A04/device-manager-running-v1.jpg)
