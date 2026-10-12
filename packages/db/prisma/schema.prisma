@@ -1,6 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  // Nested `include`s load in one joined query instead of one query per
+  // relation. Each round trip to remote Neon costs ~200 ms from a dev machine,
+  // so a two-line return went from 212 queries (43 s) to 96 (20 s).
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
