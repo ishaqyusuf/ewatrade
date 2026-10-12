@@ -1,3 +1,4 @@
+import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import { CatalogFreeSaleLines } from "@/components/mobile/create-sale/catalog-free-sale-lines"
@@ -7,6 +8,7 @@ import {
   saleItemsLabel,
   saleUnitCount,
 } from "@/components/mobile/create-sale/sale-unit-count"
+import { FloatingSearchCaption } from "@/components/mobile/floating-search-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { saleOfferingTitle } from "@/components/mobile/sale-item-picker"
 import { getSaleOfferingStockLabel } from "@/components/mobile/sale-item-picker-model"
@@ -15,14 +17,14 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { searchMatch } from "@ewatrade/utils/search-rank"
-import { useState } from "react"
-import { Text as NativeText, TextInput } from "react-native"
+import { Text as NativeText } from "react-native"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
@@ -52,17 +54,17 @@ type Entry =
 
 /**
  * Step 1, owner revision (9 Oct 2026): every sellable item with inline Add and
- * quantity; items in the sale move to the top. Search sits at the bottom with
- * the sale total above it and a round Next button beside it; the total hides
- * while the search is focused so the keyboard leaves room for the list.
+ * quantity; items in the sale move to the top. The floating search sits at the
+ * bottom with Proceed beside it and the sale total floating above (hidden while
+ * typing); all of it slides away on scroll down.
  */
 export function ClassicSaleItems({
   model,
   actionsHeight,
   onActionsHeightChange: setActionsHeight,
 }: SaleStepViewProps) {
-  const colors = useColors()
-  const [searchFocused, setSearchFocused] = useState(false)
+  const largeText = useLargeTextLayout()
+  const scrollHide = useBottomSearchScroll()
   const {
     itemKind,
     isOffline,
@@ -168,6 +170,8 @@ export function ClassicSaleItems({
         keyboardShouldPersistTaps="handled"
         onEndReached={fetchNextChoices}
         onEndReachedThreshold={0.35}
+        onScroll={scrollHide.onScroll}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View className="gap-3 pb-1">
@@ -281,117 +285,48 @@ export function ClassicSaleItems({
         }
       />
       <BottomSearchFooter
-        variant="action-bar"
+        accessibilityLabel={
+          itemKind === "service" ? "Search services" : "Search items"
+        }
+        alwaysShowSearch
+        caption={
+          <FloatingSearchCaption
+            label={
+              saleLineCount
+                ? saleItemsLabel(saleLineCount, unitCount)
+                : "Add the first item"
+            }
+            value={saleLineCount ? money(totalMinor, currencyCode) : undefined}
+          />
+        }
+        hidden={scrollHide.hidden}
+        layout={largeText ? "stacked" : "inline"}
+        localSearch
+        maxLength={160}
+        onChangeText={setProductSearch}
         onHeightChange={setActionsHeight}
-        accessibilityLabel="Order actions"
-        onChangeText={() => undefined}
-        placeholder=""
-        searchVisible={false}
+        placeholder={
+          itemKind === "service" ? "Search services" : "Search items"
+        }
         totalCount={0}
-        value=""
+        value={productSearch}
       >
-        <View className="gap-2.5">
-          {searchFocused ? null : (
-            <View className="flex-row items-end justify-between gap-3">
-              <View className="min-w-0 shrink">
-                <Text className="text-[11px] font-bold text-muted-foreground">
-                  Sale total
-                </Text>
-                <Text className="text-[12.5px] font-bold text-muted-foreground">
-                  {saleLineCount
-                    ? saleItemsLabel(saleLineCount, unitCount)
-                    : "Add the first item"}
-                </Text>
-              </View>
-              <Text className="text-2xl font-extrabold tabular-nums tracking-tight text-foreground">
-                {money(totalMinor, currencyCode)}
-              </Text>
-            </View>
+        <ActionButton
+          accessibilityLabel="Next: customer"
+          className={cn(
+            largeText
+              ? "w-full rounded-full"
+              : "min-h-[52px] w-[132px] rounded-full",
+            // Floating over the list, so a disabled Proceed stays solid.
+            !canContinue && "border border-border bg-card opacity-100",
           )}
-          <View className="flex-row items-center gap-2.5">
-            <View
-              style={{
-                alignItems: "center",
-                backgroundColor: searchFocused ? colors.card : colors.muted,
-                borderColor: searchFocused ? colors.primary : "transparent",
-                borderRadius: 16,
-                borderWidth: 1.5,
-                flex: 1,
-                flexDirection: "row",
-                gap: 8,
-                height: 50,
-                paddingLeft: 14,
-                paddingRight: 8,
-              }}
-            >
-              <Icon
-                className="size-[18px] text-muted-foreground"
-                name="Search"
-              />
-              <TextInput
-                accessibilityLabel="Search items"
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxFontSizeMultiplier={1.3}
-                onBlur={() => setSearchFocused(false)}
-                onChangeText={setProductSearch}
-                onFocus={() => setSearchFocused(true)}
-                placeholder={
-                  itemKind === "service" ? "Search services" : "Search items"
-                }
-                placeholderTextColor={colors.mutedForeground}
-                returnKeyType="search"
-                selectionColor={colors.primary}
-                style={{
-                  color: colors.foreground,
-                  flex: 1,
-                  fontSize: 15,
-                  height: "100%",
-                  padding: 0,
-                }}
-                value={productSearch}
-              />
-              {productSearch ? (
-                <Pressable
-                  accessibilityLabel="Clear search"
-                  accessibilityRole="button"
-                  className="size-[30px] items-center justify-center rounded-full bg-border"
-                  hitSlop={8}
-                  onPress={() => setProductSearch("")}
-                >
-                  <Icon className="size-[13px] text-foreground" name="X" />
-                </Pressable>
-              ) : null}
-            </View>
-            <Pressable
-              accessibilityLabel="Next: customer"
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canContinue }}
-              disabled={!canContinue}
-              haptic
-              onPress={proceedToCustomer}
-              style={{
-                alignItems: "center",
-                backgroundColor: canContinue ? colors.primary : colors.muted,
-                borderRadius: 999,
-                height: 52,
-                justifyContent: "center",
-                width: 52,
-              }}
-              testID="sale-next-step"
-            >
-              <Icon
-                className="size-[22px]"
-                color={
-                  canContinue
-                    ? colors.primaryForeground
-                    : colors.mutedForeground
-                }
-                name="ChevronRight"
-              />
-            </Pressable>
-          </View>
-        </View>
+          disabled={!canContinue}
+          onPress={proceedToCustomer}
+          testID="sale-next-step"
+          trailingIcon="ArrowRight"
+        >
+          Proceed
+        </ActionButton>
       </BottomSearchFooter>
     </View>
   )
