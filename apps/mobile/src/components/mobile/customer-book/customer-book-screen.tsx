@@ -404,7 +404,6 @@ export function CustomerBookContent(
         <BottomSearchFooter
           alwaysShowSearch
           hidden={scrollHide.hidden}
-          variant="action-bar"
           localSearch={isOffline}
           maxLength={160}
           onHeightChange={setFooterHeight}
