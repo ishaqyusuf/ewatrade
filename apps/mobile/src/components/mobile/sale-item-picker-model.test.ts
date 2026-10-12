@@ -4,6 +4,7 @@ import {
   SALE_ITEM_PICKER_COMPACT_LIMIT,
   addSaleItemPickerLine,
   getSaleItemPickerPresentation,
+  getSaleItemPickerSummary,
   getSaleOfferingStockLabel,
   getSelectableSaleItemChoices,
   openSaleItemPicker,
@@ -164,5 +165,52 @@ describe("sale item picker lines", () => {
         lines: selected,
       }),
     ).toBe(selected)
+  })
+})
+
+describe("sale item picker summary", () => {
+  const offering = (fixedPriceMinor: number | null, currencyCode = "NGN") => ({
+    currencyCode,
+    fixedPriceMinor,
+  })
+
+  test("counts lines and units and totals priced lines", () => {
+    expect(
+      getSaleItemPickerSummary([
+        { id: "a", offering: offering(650_000), quantity: "4" },
+        { id: "b", offering: offering(1_400_000), quantity: "1" },
+        { id: "c", offering: offering(450_000), quantity: "2" },
+      ]),
+    ).toEqual({
+      currencyCode: "NGN",
+      itemCount: 3,
+      totalMinor: 4_900_000,
+      unitCount: 7,
+    })
+  })
+
+  test("keeps decimal quantities and ignores blank ones", () => {
+    const summary = getSaleItemPickerSummary([
+      { id: "a", offering: offering(200_000), quantity: "1.5" },
+      { id: "b", offering: offering(100_000), quantity: "" },
+    ])
+    expect(summary.unitCount).toBe(1.5)
+    expect(summary.totalMinor).toBe(300_000)
+  })
+
+  test("shows no total for an unpriced line, mixed currencies or no lines", () => {
+    expect(
+      getSaleItemPickerSummary([
+        { id: "a", offering: offering(650_000), quantity: "1" },
+        { id: "b", offering: offering(null), quantity: "1" },
+      ]).totalMinor,
+    ).toBeNull()
+    expect(
+      getSaleItemPickerSummary([
+        { id: "a", offering: offering(650_000), quantity: "1" },
+        { id: "b", offering: offering(100, "USD"), quantity: "1" },
+      ]).totalMinor,
+    ).toBeNull()
+    expect(getSaleItemPickerSummary([]).totalMinor).toBeNull()
   })
 })

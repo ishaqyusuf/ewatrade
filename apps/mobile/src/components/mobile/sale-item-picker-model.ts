@@ -127,3 +127,34 @@ export function getSaleItemPickerPresentation({
     ? "screen"
     : "sheet"
 }
+
+/**
+ * The picker's floating sale summary: lines, units and the total. The total
+ * is null unless every line has a fixed price in one currency, so the
+ * summary never shows a partial figure as the sale total.
+ */
+export function getSaleItemPickerSummary<
+  T extends { currencyCode: string; fixedPriceMinor: number | null },
+>(lines: SaleItemPickerLine<T>[]) {
+  let unitCount = 0
+  let totalMinor = 0
+  let complete = lines.length > 0
+  const currencyCode = lines[0]?.offering.currencyCode ?? null
+  for (const line of lines) {
+    const parsed = Number(line.quantity)
+    const quantity = Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+    unitCount += quantity
+    if (
+      line.offering.fixedPriceMinor === null ||
+      line.offering.currencyCode !== currencyCode
+    )
+      complete = false
+    else totalMinor += Math.round(line.offering.fixedPriceMinor * quantity)
+  }
+  return {
+    currencyCode,
+    itemCount: lines.length,
+    totalMinor: complete ? totalMinor : null,
+    unitCount: Math.round(unitCount * 1000) / 1000,
+  }
+}

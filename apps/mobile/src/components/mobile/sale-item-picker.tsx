@@ -1,10 +1,12 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
+import { FloatingSearchCaption } from "@/components/mobile/floating-search-field"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import {
   type SaleItemPickerLine,
   getSaleItemPickerLineCounts,
+  getSaleItemPickerSummary,
   getSaleOfferingStockLabel,
 } from "@/components/mobile/sale-item-picker-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -289,6 +291,7 @@ export function FullScreenSaleItemPicker({
     () => getSaleItemPickerLineCounts(draft),
     [draft],
   )
+  const summary = useMemo(() => getSaleItemPickerSummary(draft), [draft])
 
   return (
     <NativeModal
@@ -450,6 +453,21 @@ export function FullScreenSaleItemPicker({
           <BottomSearchFooter
             accessibilityLabel="Search product or service"
             alwaysShowSearch
+            caption={
+              summary.itemCount ? (
+                <FloatingSearchCaption
+                  label={`${summary.itemCount} ${summary.itemCount === 1 ? "item" : "items"} · ${summary.unitCount} ${summary.unitCount === 1 ? "unit" : "units"}`}
+                  value={
+                    summary.totalMinor !== null && summary.currencyCode
+                      ? formatMinorMoney(
+                          summary.totalMinor,
+                          summary.currencyCode,
+                        ).replace(/\.00$/, "")
+                      : undefined
+                  }
+                />
+              ) : undefined
+            }
             hidden={scrollHide.hidden}
             maxLength={160}
             layout={largeText ? "stacked" : "inline"}
@@ -461,7 +479,11 @@ export function FullScreenSaleItemPicker({
           >
             <ActionButton
               accessibilityLabel={`Proceed with ${draft.length} selected lines`}
-              className={largeText ? "w-full" : "w-[132px]"}
+              className={
+                largeText
+                  ? "w-full rounded-full"
+                  : "min-h-[52px] w-[132px] rounded-full"
+              }
               onPress={onProceed}
               trailingIcon="ArrowRight"
             >
