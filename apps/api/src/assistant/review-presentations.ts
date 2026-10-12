@@ -21,6 +21,11 @@ const clip = (text: string, max: number) =>
   text.length <= max ? text : `${text.slice(0, max - 1)}…`
 const plural = (count: number, one: string, many: string) =>
   `${count} ${count === 1 ? one : many}`
+/** "supplier_delivery" or "SHIFT" → "Supplier delivery" / "Shift". */
+const words = (code: string) => {
+  const text = code.toLowerCase().replaceAll("_", " ")
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
 /** "+2", "-1" or "0" for a variance. */
 const signed = (value: string) =>
   /^[-0]/.test(value) || Number(value) === 0 ? value : `+${value}`
@@ -189,9 +194,9 @@ export function stockReceivePresentation(
     sections: [
       {
         title: "Details",
-        summary: payload.source,
+        summary: words(payload.source),
         rows: [
-          { label: "Source", value: payload.source },
+          { label: "Source", value: words(payload.source) },
           {
             label: "Unit factor",
             value: `× ${p.factor} = ${p.canonicalQuantity}`,
@@ -400,7 +405,7 @@ export function stockCountCreatePresentation(
       lines.map((line) => ({
         ...line,
         counted: line.observedQuantity,
-        detail: `${line.custodyType.toLowerCase()}${line.custodyReferenceId ? ` ${line.custodyReferenceId}` : ""} · reserved ${line.reservedQuantity}`,
+        detail: `${words(line.custodyType)}${line.custodyReferenceId ? ` ${line.custodyReferenceId}` : ""} · reserved ${line.reservedQuantity}`,
       })),
       "Counted",
     ),
@@ -450,7 +455,7 @@ export function closeoutCreatePresentation(
   const blocked = lines.filter((line) => !line.preservesReservations).length
   return {
     summary: {
-      party: `${payload.custodyType.toLowerCase()} closeout · ${payload.custodyReferenceId}`,
+      party: `${words(payload.custodyType)} closeout · ${payload.custodyReferenceId}`,
       context: clip(payload.reason, 400),
     },
     facts: [
@@ -484,7 +489,7 @@ export function closeoutFinalizePresentation(
 ): GeneralReviewPresentation {
   return {
     summary: {
-      party: `Finalize ${closeout.custodyType.toLowerCase()} closeout`,
+      party: `Finalize ${words(closeout.custodyType).toLowerCase()} closeout`,
       context: clip(payload.reason, 400),
     },
     facts: [

@@ -125,6 +125,7 @@ test("a stock receipt reads the item, quantity and on-hand change", () => {
   expect(p.facts).toContainEqual({ label: "Unit cost", value: "unknown" })
   expect(p.facts).toContainEqual({ label: "Effective", value: "12 Oct 2026" })
   expect(p.sections?.[0]?.chips).toEqual([{ label: "Eggs" }])
+  expect(p.sections?.[0]?.summary).toBe("Supplier delivery")
 })
 
 test("waste reads as a decrease with its value change", () => {
@@ -227,7 +228,7 @@ test("a closeout flags declarations below reserved stock", () => {
       reason: "End of shift",
     }),
   )
-  expect(create.summary.party).toBe("shift closeout · Morning")
+  expect(create.summary.party).toBe("Shift closeout · Morning")
   expect(create.facts).toContainEqual({
     label: "Below reserved",
     value: "1 · blocks finalizing",

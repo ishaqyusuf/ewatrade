@@ -71,8 +71,8 @@ export function GeneralReviewPresentationBody({
                   key={column.label}
                   scope="col"
                   className={cn(
-                    "py-1 font-normal",
-                    column.align === "end" ? "text-right" : "text-left",
+                    "py-1 font-normal whitespace-nowrap",
+                    column.align === "end" ? "pl-3 text-right" : "text-left",
                   )}
                 >
                   {column.label}
