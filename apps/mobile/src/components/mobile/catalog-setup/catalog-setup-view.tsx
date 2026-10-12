@@ -1,7 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { KeyboardInlineComposer } from "@/components/mobile/keyboard-inline-composer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -44,6 +43,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const scrollRef = useRef<ScrollView>(null)
   // Category search lives in its footer; illustrations open full screen.
   const [categoryQuery, setCategoryQuery] = useState("")
+  const [categorySearchFocused, setCategorySearchFocused] = useState(false)
   const [illustrationsOpen, setIllustrationsOpen] = useState(false)
   const [editors, setEditors] = useState<Array<{ key: CatalogEditorKey }>>([])
   const {
@@ -459,27 +459,18 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                     </ActionButton>
                   </BottomSearchFooter>
                 ) : entry.key === "category" ? (
+                  // Stays put on scroll, so the search is always at hand
+                  // while picking a category.
                   <BottomSearchFooter
-                    accessibilityLabel="Search categories"
-                    onChangeText={() => undefined}
-                    placeholder=""
-                    searchVisible={false}
+                    accessibilityLabel="Search all categories"
+                    alwaysShowSearch
+                    localSearch
+                    onChangeText={setCategoryQuery}
+                    onFocusChange={setCategorySearchFocused}
+                    placeholder="Search all categories"
                     totalCount={0}
-                    value=""
-                    variant="action-bar"
-                  >
-                    <FormField
-                      accessibilityLabel="Search all categories"
-                      autoCapitalize="none"
-                      label="Search all categories"
-                      leadingIcon="Search"
-                      onChangeText={setCategoryQuery}
-                      placeholder="Search all categories"
-                      returnKeyType="search"
-                      value={categoryQuery}
-                      variant="search"
-                    />
-                  </BottomSearchFooter>
+                    value={categoryQuery}
+                  />
                 ) : ["stock", "codes", "pricing", "description"].includes(
                     entry.key,
                   ) ? (
@@ -522,7 +513,11 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                 ) : undefined,
               content:
                 entry.key === "category" ? (
-                  <ClassicCategoryEditor model={model} query={categoryQuery} />
+                  <ClassicCategoryEditor
+                    model={model}
+                    query={categoryQuery}
+                    searchFocused={categorySearchFocused}
+                  />
                 ) : (
                   <CatalogFocusedEditor
                     editor={entry.key}

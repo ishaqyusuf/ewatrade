@@ -1,4 +1,5 @@
 import { FormField } from "@/components/mobile/form-field"
+import { SearchFold } from "@/components/mobile/search-fold"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -30,9 +31,12 @@ const shown = (category: string) => category.split(" / ").join(" › ")
 export function ClassicCategoryEditor({
   model,
   query,
+  searchFocused = false,
 }: {
   model: CatalogSetupModel
   query: string
+  /** Folds the selected category card while the bottom search is in use. */
+  searchFocused?: boolean
 }) {
   const [all, setAll] = useState(false)
   const [own, setOwn] = useState("")
@@ -96,10 +100,12 @@ export function ClassicCategoryEditor({
   const use = (category: string) => model.setCategory(category)
   return (
     <View className="gap-1">
-      <SelectedCategoryCard
-        category={model.category}
-        onRemove={() => model.setCategory("")}
-      />
+      <SearchFold folded={searchFocused || searching}>
+        <SelectedCategoryCard
+          category={model.category}
+          onRemove={() => model.setCategory("")}
+        />
+      </SearchFold>
       {searching ? (
         <>
           <SectionTitle title="Results" trailing={String(results.length)} />
