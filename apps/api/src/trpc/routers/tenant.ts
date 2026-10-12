@@ -15,9 +15,11 @@ import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createBusinessSchema, createStoreSchema } from "../../schemas/tenant"
+import { qaScopedMembershipWhere } from "../../utils/qa-session-access"
 import {
   authenticatedProcedure,
   createTRPCRouter,
+  mobileEntryProcedure,
   protectedProcedure,
 } from "../init"
 
@@ -68,7 +70,9 @@ export const tenantRouter = createTRPCRouter({
       }
     }),
 
-  businesses: authenticatedProcedure.query(async ({ ctx }) => {
+  // A derived QA session lists only its own selected business; ordinary
+  // sessions list every active Membership.
+  businesses: mobileEntryProcedure.query(async ({ ctx }) => {
     const age = await getCustomerAccountAgeStatus(ctx.db, ctx.session.user.id)
     if (!age.eligible) {
       throw new TRPCError({
@@ -89,11 +93,15 @@ export const tenantRouter = createTRPCRouter({
           },
         },
       },
-      where: {
-        status: "ACTIVE",
-        userId: ctx.session.user.id,
-      },
+      where: ctx.qaSessionScope
+        ? qaScopedMembershipWhere(ctx.session.user.id, ctx.qaSessionScope)
+        : { status: "ACTIVE", userId: ctx.session.user.id },
     })
+    if (ctx.qaSessionScope && memberships.length === 0)
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Your selected QA business or Store is no longer available.",
+      })
 
     return memberships.map((membership) => ({
       currencyCode: membership.tenant.currencyCode,

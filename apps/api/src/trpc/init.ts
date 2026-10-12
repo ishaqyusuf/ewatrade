@@ -26,7 +26,10 @@ import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
 import superjson from "superjson"
 import { qaLiveEffectForProcedure } from "../utils/qa-provider-operation"
-import { isQaDerivedSessionAllowed } from "../utils/qa-session-access"
+import {
+  type QaSessionScope,
+  isQaDerivedSessionAllowed,
+} from "../utils/qa-session-access"
 import { getRequestTrace } from "../utils/request-trace"
 import { safeCompare } from "../utils/safe-compare"
 import { scopeStaffRequest } from "../utils/staff-request-access"
@@ -52,11 +55,7 @@ export type TRPCContext = {
   privacyClientIp: string | null
   userAgent: string | null
   activeStoreId: string | null
-  qaSessionScope: {
-    membershipId: string
-    storeId: string
-    tenantId: string
-  } | null
+  qaSessionScope: QaSessionScope | null
 }
 
 function getBearerToken(authorization: string | null | undefined) {
@@ -500,8 +499,8 @@ export const authenticatedProcedure = publicProcedure
   .use(requireGlobalAuthMiddleware)
   .use(captureDashboardOutcome)
 
-// Mobile entry may authenticate a derived QA session, but its only consumer
-// must read the server-validated scope instead of enumerating global access.
+// Mobile entry may authenticate a derived QA session, but its consumers must
+// read the server-validated scope instead of enumerating global access.
 export const mobileEntryProcedure = publicProcedure.use(requireAuthMiddleware)
 
 // Startup must read or declare this session's own age before Tenant access.

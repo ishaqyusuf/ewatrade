@@ -52,6 +52,7 @@ import {
 } from "../../auth/apple-credentials"
 import { verifyAppleIdToken } from "../../auth/mobile-apple"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
+import { qaScopedMembershipWhere } from "../../utils/qa-session-access"
 import {
   createTRPCRouter,
   mobileEntryProcedure,
@@ -518,20 +519,8 @@ export const authRouter = createTRPCRouter({
         message: "Choose an eligible age range before opening your workspace.",
       })
     if (ctx.qaSessionScope) {
-      const scope = ctx.qaSessionScope
       const membership = await ctx.db.membership.findFirst({
-        where: {
-          id: scope.membershipId,
-          userId: ctx.session.user.id,
-          status: "ACTIVE",
-          tenant: {
-            id: scope.tenantId,
-            dataClassification: "QA",
-            isActive: true,
-            qaPurgeStartedAt: null,
-            stores: { some: { id: scope.storeId, status: "ACTIVE" } },
-          },
-        },
+        where: qaScopedMembershipWhere(ctx.session.user.id, ctx.qaSessionScope),
         select: { id: true },
       })
       if (!membership)
