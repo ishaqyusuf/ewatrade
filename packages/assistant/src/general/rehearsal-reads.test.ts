@@ -7,7 +7,7 @@ test("dated rehearsal reads preserve explicit instants and select canonical read
   for (const [command, toolName] of [
     ["sales", "readSalesSummary"],
     ["orders", "readOrders"],
-  ]) {
+  ] as const) {
     expect(
       read(`${command} from 2026-10-01T00:00:00Z to 2026-10-10T00:00:00Z`),
     ).toEqual({

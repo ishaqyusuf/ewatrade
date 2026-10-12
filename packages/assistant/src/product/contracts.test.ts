@@ -230,6 +230,12 @@ describe("focused product contract", () => {
     if (!execute)
       throw new Error("The product staging tool must be executable.")
     const options = { toolCallId: "test", messages: [] }
+    const executeOnce = async (input: Parameters<typeof execute>[0]) => {
+      const result = await execute(input, options)
+      if (Symbol.asyncIterator in result)
+        throw new Error("The product staging tool must not stream.")
+      return result
+    }
     await execute(
       {
         items: [
@@ -254,27 +260,22 @@ describe("focused product contract", () => {
     )
     expect(rows).toHaveLength(1)
     expect(rows[0]?.payload).toMatchObject({ name: "Large eggs" })
-    const refused = await execute(
-      { items: [{ kind: "service", name: "Cleaning" }] },
-      options,
-    )
+    const refused = await executeOnce({
+      items: [{ kind: "service", name: "Cleaning" }],
+    })
     expect(refused.status).toBe("failed")
     expect(rows).toHaveLength(1)
-    const multiple = await execute(
-      {
-        items: [
-          { kind: "product", name: "Eggs" },
-          { kind: "product", name: "Feed" },
-        ],
-      },
-      options,
-    )
+    const multiple = await executeOnce({
+      items: [
+        { kind: "product", name: "Eggs" },
+        { kind: "product", name: "Feed" },
+      ],
+    })
     expect(multiple.status).toBe("failed")
     // A first description stages straight away; the unit is kept or defaults.
-    const missingUnit = await execute(
-      { items: [{ kind: "product", name: "Eggs", price: "150" }] },
-      options,
-    )
+    const missingUnit = await executeOnce({
+      items: [{ kind: "product", name: "Eggs", price: "150" }],
+    })
     expect(missingUnit.status).toBe("success")
     expect(rows).toHaveLength(1)
     expect(rows[0]?.payload).toMatchObject({ name: "Eggs", priceMinor: 15000 })

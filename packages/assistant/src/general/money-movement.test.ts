@@ -50,8 +50,8 @@ test("movement receipt retains Book identity; capability is enabled dashboard fi
       bookId: "book",
       title: "Recorded",
       detail: "No transfer performed",
-    }).bookId,
-  ).toBe("book")
+    }),
+  ).toMatchObject({ bookId: "book" })
   expect(
     generalReceiptSchema.safeParse({
       kind: "finance_movement",

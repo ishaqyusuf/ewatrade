@@ -12,7 +12,7 @@ const payload = {
   moneyAlreadyReceived: true,
 }
 test("receipt requires exact positive money and an explicit received-money acknowledgment", () => {
-  expect(generalActionSchema.parse(payload)).toEqual(payload)
+  expect<unknown>(generalActionSchema.parse(payload)).toEqual(payload)
   for (const amountMinor of ["0", "01", "-1", "1.5", "1e3", "100000000000001"])
     expect(
       generalActionSchema.safeParse({ ...payload, amountMinor }).success,

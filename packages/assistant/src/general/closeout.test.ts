@@ -8,7 +8,7 @@ const create = {
   reason: "End of shift",
 }
 test("closeout creation permits exact zero declarations and retains custody identity", () => {
-  expect(generalActionSchema.parse(create)).toEqual(create)
+  expect<unknown>(generalActionSchema.parse(create)).toEqual(create)
   for (const quantity of ["-1", "1e3", "1.0000001", "NaN"])
     expect(
       generalActionSchema.safeParse({
@@ -58,7 +58,7 @@ test("finalization refers to saved declarations and requires a reason", () => {
     closeoutId: "saved",
     reason: "Reviewed original declarations",
   }
-  expect(generalActionSchema.parse(final)).toEqual(final)
+  expect<unknown>(generalActionSchema.parse(final)).toEqual(final)
   expect(
     generalActionSchema.safeParse({
       ...final,

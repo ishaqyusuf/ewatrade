@@ -48,7 +48,7 @@ test("owning receipt requires original Intake and Order identity", () => {
     title: "Intake confirmed",
     detail: "Recorded payment; work stays queued.",
   }
-  expect(serviceIntakeReceiptSchema.parse(receipt)).toEqual(receipt)
+  expect<unknown>(serviceIntakeReceiptSchema.parse(receipt)).toEqual(receipt)
   expect(
     serviceIntakeReceiptSchema.safeParse({ ...receipt, orderId: "" }).success,
   ).toBe(false)

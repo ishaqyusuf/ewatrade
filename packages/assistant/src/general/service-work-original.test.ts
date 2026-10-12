@@ -8,7 +8,9 @@ describe("original Service record navigation", () => {
       { kind: "service_work_note", jobId: "job", recordId: "note" },
       { kind: "service_work_exception", jobId: "job", recordId: "exception" },
     ])
-      expect(serviceWorkOriginalTargetSchema.parse(target)).toEqual(target)
+      expect<unknown>(serviceWorkOriginalTargetSchema.parse(target)).toEqual(
+        target,
+      )
     for (const target of [
       { kind: "service_work", jobId: "job", recordId: "event" },
       { kind: "service_work_note", jobId: "job", eventId: "note" },
