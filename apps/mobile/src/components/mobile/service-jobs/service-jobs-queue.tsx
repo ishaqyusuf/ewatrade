@@ -19,6 +19,7 @@ import {
 import { FlatList } from "react-native-css/components/FlatList"
 import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-screen"
 import { HeroCard } from "../green-till/hero-card"
+import { SearchFold } from "../search-fold"
 import { ServiceAction as ActionButton } from "./service-action"
 import { overdueWork, workMatches } from "./service-work-summary"
 import type { ServiceJobsModel } from "./use-service-jobs"
@@ -36,10 +37,13 @@ const WORK_FILTER_LABELS: Record<string, string> = {
 export function ServiceJobsQueue({
   model,
   feedback,
+  heroFolded = false,
   onScroll,
 }: {
   model: ServiceJobsModel
   feedback: ReactNode
+  /** Folds the hero while the bottom search is in use; the chips stay. */
+  heroFolded?: boolean
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }) {
   const {
@@ -128,36 +132,38 @@ export function ServiceJobsQueue({
       ListHeaderComponent={
         <View className="gap-5 pb-5">
           {feedback}
-          <HeroCard
-            label="Service work"
-            title={
-              jobsQuery.isPending
-                ? "Your work queue"
-                : jobsQuery.isError && !jobs.length
-                  ? "Work unavailable"
-                  : `${active} active job${active === 1 ? "" : "s"}`
-            }
-            sub={jobsQuery.isPending ? undefined : heroSub}
-            pill={{
-              label: isOfflineMode ? "Offline" : "Synced",
-              tone: isOfflineMode ? "offline" : "synced",
-            }}
-            stats={
-              jobsQuery.isPending || (jobsQuery.isError && !jobs.length)
-                ? undefined
-                : [
-                    { label: "Ready", value: String(ready) },
-                    { label: "In progress", value: String(working) },
-                    { label: "Queued", value: String(queued) },
-                  ]
-            }
-          >
-            {jobsQuery.isPending ? (
-              <View className="mt-4">
-                <Skeleton height={40} />
-              </View>
-            ) : null}
-          </HeroCard>
+          <SearchFold folded={heroFolded}>
+            <HeroCard
+              label="Service work"
+              title={
+                jobsQuery.isPending
+                  ? "Your work queue"
+                  : jobsQuery.isError && !jobs.length
+                    ? "Work unavailable"
+                    : `${active} active job${active === 1 ? "" : "s"}`
+              }
+              sub={jobsQuery.isPending ? undefined : heroSub}
+              pill={{
+                label: isOfflineMode ? "Offline" : "Synced",
+                tone: isOfflineMode ? "offline" : "synced",
+              }}
+              stats={
+                jobsQuery.isPending || (jobsQuery.isError && !jobs.length)
+                  ? undefined
+                  : [
+                      { label: "Ready", value: String(ready) },
+                      { label: "In progress", value: String(working) },
+                      { label: "Queued", value: String(queued) },
+                    ]
+              }
+            >
+              {jobsQuery.isPending ? (
+                <View className="mt-4">
+                  <Skeleton height={40} />
+                </View>
+              ) : null}
+            </HeroCard>
+          </SearchFold>
           {jobs.length ? (
             <ScrollView
               contentContainerStyle={{ gap: 8, paddingHorizontal: 18 }}

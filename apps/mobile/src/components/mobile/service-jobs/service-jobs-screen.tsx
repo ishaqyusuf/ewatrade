@@ -13,6 +13,8 @@ import { Keyboard, type ScrollView } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ListCreateFab } from "../list-create-fab"
+import { getListCreateFabFooterOffset } from "../list-create-fab-model"
+import { useSearchFold } from "../search-fold"
 import { ServiceAction } from "./service-action"
 import {
   ServiceChromeContext,
@@ -65,6 +67,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
   const linesTop = useRef(0)
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const searchFold = useSearchFold(model.search)
   const insets = useSafeAreaInsets()
   const {
     creating,
@@ -295,6 +298,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
               <ServiceJobsQueue
                 model={model}
                 feedback={feedback}
+                heroFolded={searchFold.folded}
                 onScroll={scrollHide.onScroll}
               />
             )}
@@ -309,10 +313,10 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                   bottomOffset={
                     scrollHide.hidden && !search
                       ? 0
-                      : Math.max(
-                          0,
-                          footerHeight + 14 - Math.max(insets.bottom + 16, 24),
-                        )
+                      : getListCreateFabFooterOffset({
+                          bottomInset: insets.bottom,
+                          footerHeight,
+                        })
                   }
                   disabled={isOfflineMode}
                   onPress={() => {
@@ -330,11 +334,11 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                   localSearch={isOfflineMode}
                   maxLength={160}
                   onChangeText={setSearch}
+                  onFocusChange={searchFold.onFocusChange}
                   onHeightChange={setFooterHeight}
                   placeholder="Receipt, customer or service"
                   totalCount={jobs.length}
                   value={search}
-                  variant="action-bar"
                 />
               </>
             ) : null}
