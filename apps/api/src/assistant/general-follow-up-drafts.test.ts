@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { FinanceError } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { announcedWithoutAction } from "./general-announced-action"
@@ -62,5 +63,25 @@ test("a draft outside the proposal limits says which field to fix", () => {
   })
   expect(
     recoverableToolFailure("readCatalogItem", result.error),
+  ).toBeUndefined()
+})
+
+test("a finance rule refusal tells the model what to change", () => {
+  const sameBook = new FinanceError(
+    "INVALID_JOURNAL",
+    "Choose a different account in the same financial book.",
+  )
+  expect(recoverableToolFailure("draftAction", sameBook)).toEqual({
+    status: "needs_changes",
+    reason: "Choose a different account in the same financial book.",
+  })
+  expect(
+    recoverableToolFailure(
+      "draftAction",
+      new FinanceError(
+        "FORBIDDEN",
+        "Only Owners and Admins can manage finance.",
+      ),
+    ),
   ).toBeUndefined()
 })

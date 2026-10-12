@@ -1,3 +1,4 @@
+import { FinanceError } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 
@@ -17,10 +18,23 @@ export function recoverableToolFailure(toolName: string, error: unknown) {
         .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join("; "),
     }
+  // Bookkeeping drafts call finance rules directly, outside the procedure that
+  // maps their errors; "use an account in the same book" is the model's to fix
+  // (live check, 12 Oct 2026, was reported as unavailable for the role).
+  if (
+    toolName === "draftAction" &&
+    error instanceof FinanceError &&
+    error.code !== "FORBIDDEN" &&
+    error.code !== "NOT_FOUND"
+  )
+    return { status: "needs_changes" as const, reason: error.message }
   // A stale or guessed ID is not an access problem. Reported as one, the
   // model told the owner they had no access to an item it had read in an
   // earlier reply (12 Oct 2026); earlier tool results are not in history.
-  if (error instanceof TRPCError && error.code === "NOT_FOUND")
+  if (
+    (error instanceof TRPCError || error instanceof FinanceError) &&
+    error.code === "NOT_FOUND"
+  )
     return {
       status: "not_found" as const,
       reason: `${error.message} ${NOT_FOUND_GUIDANCE}`,
