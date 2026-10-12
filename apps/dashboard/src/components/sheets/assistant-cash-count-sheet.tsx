@@ -29,7 +29,10 @@ export function AssistantCashCountSheet() {
       },
     ),
   )
-  const state = assistantFinanceReadState(input.success, query)
+  const state = assistantFinanceReadState(input.success, {
+    ...query,
+    isFetching: query.isFetching || query.isPaused,
+  })
   return (
     <Sheet
       open={Boolean(assistantCashCount)}

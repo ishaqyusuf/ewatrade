@@ -31,7 +31,7 @@ export function ServiceIntakeReceiptSheet({ timeZone }: { timeZone: string }) {
           title="Service intake receipt"
           description="Original intake and current work links."
           footer={
-            query.data && !query.isError ? (
+            query.data && !query.isError && !query.isPaused ? (
               <Button
                 variant="outline"
                 disabled={query.isFetching}
@@ -47,7 +47,7 @@ export function ServiceIntakeReceiptSheet({ timeZone }: { timeZone: string }) {
               This intake link is invalid. Close it and open the original
               receipt.
             </p>
-          ) : query.isPending || query.isFetching ? (
+          ) : query.isPending || query.isFetching || query.isPaused ? (
             <output aria-live="polite">Loading original intake…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">

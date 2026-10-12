@@ -51,7 +51,7 @@ function BusinessReportQuery({ target }: { target: BusinessReportTarget }) {
   })
   return (
     <>
-      {query.isPending || query.isFetching ? (
+      {query.isPending || query.isFetching || query.isPaused ? (
         <output aria-live="polite">Loading current report…</output>
       ) : query.isError ? (
         <div role="alert" className="grid gap-3">
@@ -78,6 +78,7 @@ function BusinessReportQuery({ target }: { target: BusinessReportTarget }) {
       {canPage &&
       query.data?.pagination &&
       !query.isFetching &&
+      !query.isPaused &&
       !query.isError ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button
@@ -101,7 +102,7 @@ function BusinessReportQuery({ target }: { target: BusinessReportTarget }) {
       <div className="mt-4">
         <Button
           variant="outline"
-          disabled={query.isFetching}
+          disabled={query.isFetching || query.isPaused}
           onClick={() => void query.refetch()}
         >
           Refresh report

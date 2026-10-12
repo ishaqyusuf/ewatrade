@@ -157,3 +157,18 @@ S03 prepared source checkpoint: one locked administrative assistant/native write
 G01 and D04 integrated source checkpoint: both now partial, planned and unbookmarked. G01 full item/debt totals precede bounded detail pages; current currency presentation and original-scope global report are implemented. Its connected QA scope was empty, so nonempty pagination/finance proof remains open. D04 strict fixed-price intake, native transaction composition, editor and owning receipt are registered; the four-case canonical attempt still timed out in its first case, with the full covered saved state preserved. Signed and saved web acceptance, Finance receiving-account payment and automatic-reminder support remain open. The 45-ticket catalog remains 13 accepted (28.9%), 32 awaiting acceptance (71.1%): 17 partial, 14 pending and one mobile-deferred. [Integration evidence](runs/2026-10-12-reporting-intake-integration.md).
 
 G02 signed-source/recovery checkpoint: three signed cases and five receipt-fault/recovery/access cases pass, preserving all saved Finance/auth/chat/proposal/setup/budget fingerprints. The first budget mismatch remains unexplained and recorded; a rerun does not erase it. Same-key retry recreates its pending baseline inside rollback and does not prove persisted or concurrent HTTP recovery. Native history/day-summary reads, saved browser/transport and privileged financial close remain open. G02 stays partial, planned and unbookmarked; accepted13/45 unchanged. [Diagnostic](runs/2026-10-12-g02-signed-rollback-diagnostic-v2.md), [recovery](runs/2026-10-12-g02-recovery-rollback-v1.md).
+
+G02 native-read checkpoint: four actual bounded native read cases passed with all
+72 saved before/after fingerprints identical in every case. Four global object
+wrappers now withhold cached facts while a fresh query is paused; isolated source
+checks pass. Saved cash-count history is empty, so positive original receipt and
+pagination remain unverified. HTTP/browser acceptance remains pending.
+[Native evidence](runs/2026-10-12-g02-native-read-rollback-v1.md),
+[paused-cache source](runs/2026-10-12-g02-paused-cache-source-v1.md).
+
+D04 canonical checkpoint: all four creation/replay/original receipt, immutable
+snapshot, stale-review and revoked-authority cases now pass forced rollback with
+full saved state unchanged. Current foreign relationJoins configuration was
+fingerprinted; speedup cannot be attributed solely to the D04 source delta.
+Signed and saved web acceptance remain pending; no new accepted bookmark.
+[Four-case evidence](runs/2026-10-12-service-intake-four-case-attempt.v4.md).

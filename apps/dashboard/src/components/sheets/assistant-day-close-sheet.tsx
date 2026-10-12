@@ -50,6 +50,7 @@ export function AssistantDayCloseSheet() {
           input.success &&
             checklist.data &&
             !checklist.isFetching &&
+            !checklist.isPaused &&
             !checklist.isError,
         ),
         retry: false,
@@ -57,8 +58,14 @@ export function AssistantDayCloseSheet() {
       },
     ),
   )
-  const checklistState = assistantFinanceReadState(input.success, checklist)
-  const reportState = assistantFinanceReadState(input.success, report)
+  const checklistState = assistantFinanceReadState(input.success, {
+    ...checklist,
+    isFetching: checklist.isFetching || checklist.isPaused,
+  })
+  const reportState = assistantFinanceReadState(input.success, {
+    ...report,
+    isFetching: report.isFetching || report.isPaused,
+  })
   return (
     <Sheet
       open={Boolean(assistantDayCloseBook)}
