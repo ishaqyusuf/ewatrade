@@ -330,3 +330,11 @@ unavailable Open/Close/filter/local-draft/malformed-link checks have screenshots
 Signed and saved web acceptance remain open. D04 bounded service options/editor
 source prerequisite is integrated; child passing checks reused. No new bookmark.
 [Source evidence](runs/2026-10-12-staff-status-and-service-editor-source.md).
+
+G01 transaction-seam source checkpoint: seven reviewed source/test/evaluation
+paths retain canonical authority, validation order, locks, replay, arithmetic and
+bounded root transactions while allowing caller-owned composition.41focused
+tests230assertions and actual-source types pass; unchanged evidence reused.
+Prepared nonempty rollback comparisons are not executed: connected QA remains
+explicitly paused. No positive-data or saved web acceptance inferred.
+[Seam source evidence](runs/2026-10-12-g01-transaction-seams-source.v1.md).

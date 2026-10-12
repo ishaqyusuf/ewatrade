@@ -1,7 +1,10 @@
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { getFinanceReportsInTransaction } from "../finance/reports"
-import { getFinanceSupplierPayableAging } from "../finance/supplier-aging"
+import {
+  getFinanceSupplierPayableAging,
+  getFinanceSupplierPayableAgingInTransaction,
+} from "../finance/supplier-aging"
 import type { BusinessReport } from "./types"
 
 export function supplierAgingBusinessReport(
@@ -58,6 +61,18 @@ export async function getBusinessSupplierAgingReport(
 ) {
   return supplierAgingBusinessReport(
     await getFinanceSupplierPayableAging(db, { ...input, limit: 10 }),
+  )
+}
+
+export async function getBusinessSupplierAgingReportInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Parameters<typeof getBusinessSupplierAgingReport>[1],
+) {
+  return supplierAgingBusinessReport(
+    await getFinanceSupplierPayableAgingInTransaction(tx, {
+      ...input,
+      limit: 10,
+    }),
   )
 }
 
@@ -132,21 +147,26 @@ export function getBusinessPostedProfitReport(
   },
 ) {
   return db.$transaction(
-    async (tx) => {
-      await assertFinanceManager(tx, input)
-      const accounts = await tx.financeAccount.findMany({
-        where: { book: { tenantId: input.tenantId }, bookId: input.bookId },
-        select: { id: true },
-        take: 201,
-      })
-      if (accounts.length > 200)
-        throw new Error(
-          "This Book exceeds the bounded native report account scope; a staged report is required.",
-        )
-      return postedProfitBusinessReport(
-        await getFinanceReportsInTransaction(tx, input),
-      )
-    },
+    (tx) => getBusinessPostedProfitReportInTransaction(tx, input),
     { maxWait: 10000, timeout: 30000, isolationLevel: "RepeatableRead" },
+  )
+}
+
+export async function getBusinessPostedProfitReportInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Parameters<typeof getBusinessPostedProfitReport>[1],
+) {
+  await assertFinanceManager(tx, input)
+  const accounts = await tx.financeAccount.findMany({
+    where: { book: { tenantId: input.tenantId }, bookId: input.bookId },
+    select: { id: true },
+    take: 201,
+  })
+  if (accounts.length > 200)
+    throw new Error(
+      "This Book exceeds the bounded native report account scope; a staged report is required.",
+    )
+  return postedProfitBusinessReport(
+    await getFinanceReportsInTransaction(tx, input),
   )
 }

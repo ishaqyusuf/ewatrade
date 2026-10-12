@@ -4,7 +4,7 @@ import {
   moneyAccountPaymentMethods,
   moneyAccountPaymentMethodsProblem,
 } from "@ewatrade/utils/finance-payment-methods"
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import type {
   CommercialPaymentMethod,
   FinanceAccountKind,
@@ -134,9 +134,8 @@ export async function createFinanceExpenseCategory(
   )
 }
 
-export async function createFinanceBook(
-  db: PrismaClient,
-  input: FinanceActor & { startsAt: Date },
+function assertFinanceBookInput(
+  input: Parameters<typeof createFinanceBookInTransaction>[1],
 ) {
   if (
     !Number.isFinite(input.startsAt.getTime()) ||
@@ -147,41 +146,55 @@ export async function createFinanceBook(
       "Choose a valid bookkeeping start date.",
     )
   }
-  return db.$transaction(
-    async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "Tenant" WHERE id = ${input.tenantId} FOR UPDATE`
-      const tenant = await assertFinanceManager(tx, input)
-      const existing = await tx.financeBook.findUnique({
-        where: {
-          tenantId_currencyCode: {
-            tenantId: tenant.id,
-            currencyCode: tenant.currencyCode,
-          },
-        },
-      })
-      if (existing) {
-        if (existing.startsAt.getTime() !== input.startsAt.getTime()) {
-          throw new FinanceError(
-            "CONFLICT",
-            "This business already has a different bookkeeping start date.",
-          )
-        }
-        return { id: existing.id }
-      }
-      const book = await tx.financeBook.create({
-        data: {
-          tenantId: tenant.id,
-          currencyCode: tenant.currencyCode,
-          timezone: tenant.timezone,
-          startsAt: input.startsAt,
-          createdById: input.actorUserId,
-          accounts: { create: FINANCE_DEFAULT_ACCOUNTS },
-        },
-      })
-      return { id: book.id }
+}
+
+export async function createFinanceBook(
+  db: PrismaClient,
+  input: Parameters<typeof createFinanceBookInTransaction>[1],
+) {
+  assertFinanceBookInput(input)
+  return db.$transaction((tx) => createFinanceBookInTransaction(tx, input), {
+    maxWait: 10_000,
+    timeout: 30_000,
+  })
+}
+
+/** Caller owns the transaction; canonical authority, locks and replay remain unchanged. */
+export async function createFinanceBookInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & { startsAt: Date },
+) {
+  assertFinanceBookInput(input)
+  await tx.$queryRaw`SELECT id FROM "Tenant" WHERE id = ${input.tenantId} FOR UPDATE`
+  const tenant = await assertFinanceManager(tx, input)
+  const existing = await tx.financeBook.findUnique({
+    where: {
+      tenantId_currencyCode: {
+        tenantId: tenant.id,
+        currencyCode: tenant.currencyCode,
+      },
     },
-    { maxWait: 10_000, timeout: 30_000 },
-  )
+  })
+  if (existing) {
+    if (existing.startsAt.getTime() !== input.startsAt.getTime()) {
+      throw new FinanceError(
+        "CONFLICT",
+        "This business already has a different bookkeeping start date.",
+      )
+    }
+    return { id: existing.id }
+  }
+  const book = await tx.financeBook.create({
+    data: {
+      tenantId: tenant.id,
+      currencyCode: tenant.currencyCode,
+      timezone: tenant.timezone,
+      startsAt: input.startsAt,
+      createdById: input.actorUserId,
+      accounts: { create: FINANCE_DEFAULT_ACCOUNTS },
+    },
+  })
+  return { id: book.id }
 }
 
 export async function getFinanceBook(db: PrismaClient, input: FinanceActor) {
@@ -216,16 +229,8 @@ function assertPaymentMethods(
   if (problem) throw new FinanceError("INVALID_JOURNAL", problem)
 }
 
-export async function createFinanceMoneyAccount(
-  db: PrismaClient,
-  input: FinanceActor & {
-    bookId: string
-    code: string
-    name: string
-    purpose: MoneyAccountPurpose
-    /** Omitted: the account takes its type's default methods. */
-    paymentMethods?: OrderPaymentMethod[]
-  },
+function normalizeFinanceMoneyAccount(
+  input: Parameters<typeof createFinanceMoneyAccountInTransaction>[1],
 ) {
   if (
     !/^[A-Z0-9_-]{1,32}$/i.test(input.code) ||
@@ -246,39 +251,58 @@ export async function createFinanceMoneyAccount(
         paymentMethods: input.paymentMethods,
       }).map(storedPaymentMethod)
     : []
+  return paymentMethods
+}
+
+export async function createFinanceMoneyAccount(
+  db: PrismaClient,
+  input: Parameters<typeof createFinanceMoneyAccountInTransaction>[1],
+) {
+  normalizeFinanceMoneyAccount(input)
   return db.$transaction(
-    async (tx) => {
-      await lockFinanceBook(tx, input)
-      const previous = await tx.financeAccount.findUnique({
-        where: { bookId_code: { bookId: input.bookId, code: input.code } },
-      })
-      if (previous) {
-        if (
-          previous.name !== input.name.trim() ||
-          previous.purpose !== input.purpose ||
-          previous.archivedAt ||
-          previous.paymentMethods.join() !== paymentMethods.join()
-        ) {
-          throw new FinanceError(
-            "CONFLICT",
-            "That account code is already in use.",
-          )
-        }
-        return previous
-      }
-      return tx.financeAccount.create({
-        data: {
-          bookId: input.bookId,
-          code: input.code,
-          name: input.name.trim(),
-          kind: "ASSET",
-          purpose: input.purpose,
-          paymentMethods,
-        },
-      })
-    },
+    (tx) => createFinanceMoneyAccountInTransaction(tx, input),
     { maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns the transaction; canonical authority, locks and replay remain unchanged. */
+export async function createFinanceMoneyAccountInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceActor & {
+    bookId: string
+    code: string
+    name: string
+    purpose: MoneyAccountPurpose
+    /** Omitted: the account takes its type's default methods. */
+    paymentMethods?: OrderPaymentMethod[]
+  },
+) {
+  const paymentMethods = normalizeFinanceMoneyAccount(input)
+  await lockFinanceBook(tx, input)
+  const previous = await tx.financeAccount.findUnique({
+    where: { bookId_code: { bookId: input.bookId, code: input.code } },
+  })
+  if (previous) {
+    if (
+      previous.name !== input.name.trim() ||
+      previous.purpose !== input.purpose ||
+      previous.archivedAt ||
+      previous.paymentMethods.join() !== paymentMethods.join()
+    ) {
+      throw new FinanceError("CONFLICT", "That account code is already in use.")
+    }
+    return previous
+  }
+  return tx.financeAccount.create({
+    data: {
+      bookId: input.bookId,
+      code: input.code,
+      name: input.name.trim(),
+      kind: "ASSET",
+      purpose: input.purpose,
+      paymentMethods,
+    },
+  })
 }
 
 /**
