@@ -740,6 +740,6 @@ export function generalActionSummary(
     case "payment_record":
       return `${amount(action.amountMinor)} · ${action.method.replaceAll("_", " ")} · order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
     case "order_attachment_add":
-      return `Attach file ${action.attachmentId} to order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
+      return `${action.attachmentId ? `Attach file ${action.attachmentId} to` : "Note on"} order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
   }
 }

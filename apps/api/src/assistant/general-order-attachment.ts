@@ -1,6 +1,7 @@
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
 import { listAssistantAttachments } from "@ewatrade/db/assistant-attachments"
 import {
+  addCommercialOrderActivity,
   addStoredFileToCommercialOrderInTransaction,
   resolveOrderScope,
 } from "@ewatrade/db/queries"
@@ -21,10 +22,14 @@ import { requireGeneralScope } from "./general-context"
 
 type AttachAction = Extract<GeneralAction, { action: "order_attachment_add" }>
 
-async function current(ctx: GeneralTransactionContext, payload: AttachAction) {
-  const scope = requireGeneralScope(ctx)
+/** The sent file, when the entry has one; a note alone needs none. */
+async function sentFile(
+  ctx: GeneralTransactionContext,
+  scope: ReturnType<typeof requireGeneralScope>,
+  attachmentId: string,
+) {
   const [attachment] = await listAssistantAttachments(ctx.db, scope, [
-    payload.attachmentId,
+    attachmentId,
   ])
   if (
     !attachment ||
@@ -43,6 +48,19 @@ async function current(ctx: GeneralTransactionContext, payload: AttachAction) {
       code: "BAD_REQUEST",
       message: "Only photos and PDFs can be attached to an order.",
     })
+  return { attachment, kind }
+}
+
+async function current(ctx: GeneralTransactionContext, payload: AttachAction) {
+  const scope = requireGeneralScope(ctx)
+  if (!payload.attachmentId && !payload.note?.trim())
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Say what to note on the order, or send the file to attach.",
+    })
+  const file = payload.attachmentId
+    ? await sentFile(ctx, scope, payload.attachmentId)
+    : null
   const visibility = await resolveOrderScope(ctx.db, {
     tenantId: scope.tenantId,
     storeId: scope.storeId,
@@ -61,38 +79,59 @@ async function current(ctx: GeneralTransactionContext, payload: AttachAction) {
       message: "This order is unavailable in your current Store.",
     })
   return {
-    attachment,
-    kind,
+    file,
     order,
     scope,
     visibility,
-    // Attaching never edits the order, so only the file's readiness matters.
-    target: { id: attachment.id, revision: attachment.contentDigest },
+    // Notes never edit the order, so only the file's readiness matters.
+    target: file
+      ? { id: file.attachment.id, revision: file.attachment.contentDigest }
+      : { id: order.id, revision: "note" },
   }
 }
 
 export const orderAttachmentAdd = {
-  stale: "That file or order changed. Review the attachment again.",
-  unavailable: "This file can't be attached right now.",
+  stale: "That file or order changed. Review it again.",
+  unavailable: "This can't be added to the order right now.",
   async validate(ctx, payload) {
     return (await current(ctx, payload)).target
   },
   async review(ctx, payload) {
-    const { kind, order, target } = await current(ctx, payload)
+    const { file, order, target } = await current(ctx, payload)
+    const customer = order.customerName || "Walk-in customer"
     return {
       target,
       lines: [
-        `Attach this ${kind === "IMAGE" ? "photo" : "file"} to ${order.orderNumber} · ${order.customerName || "Walk-in customer"}`,
+        file
+          ? `Attach this ${file.kind === "IMAGE" ? "photo" : "file"} to ${order.orderNumber} · ${customer}`
+          : `Add a note to ${order.orderNumber} · ${customer}`,
         ...(payload.note ? [`Note: ${payload.note}`] : []),
         "Adds it to the order's Notes & photos. The order's items, totals and payments do not change.",
       ],
     }
   },
   async execute(ctx, payload, key) {
-    const { attachment, kind, order, scope, visibility } = await current(
-      ctx,
-      payload,
-    )
+    const { file, order, scope, visibility } = await current(ctx, payload)
+    if (!file) {
+      await addCommercialOrderActivity(ctx.db, {
+        actorUserId: scope.userId,
+        attachments: [],
+        body: payload.note,
+        clientActivityId: key,
+        orderId: order.id,
+        scope: visibility,
+        source: "assistant",
+        tenantId: scope.tenantId,
+      })
+      return {
+        kind: "order" as const,
+        recordId: order.id,
+        orderId: order.id,
+        title: "Note added",
+        detail: `Added to ${order.orderNumber}'s Notes & photos.`,
+      }
+    }
+    const { attachment, kind } = file
     const bytes = await setupAttachmentStorage(scope.dataClassification).read({
       target: setupAttachmentTarget(attachment),
     })

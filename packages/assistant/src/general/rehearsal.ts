@@ -67,6 +67,17 @@ export function respondGeneralRehearsal(
           kind: "text",
           text: "Send the receipt photo or PDF with your message, then ask again.",
         }
+  const orderNote = /^note on order (\S{1,128}): (.{1,2000})$/i.exec(ownerText)
+  if (orderNote?.[1] && orderNote[2])
+    return {
+      kind: "tool",
+      toolName: "draftAction",
+      input: {
+        action: "order_attachment_add",
+        orderId: orderNote[1],
+        note: orderNote[2],
+      },
+    }
   const typedSale =
     /^record sale (.{1,200}?) for (\d+(?:\.\d{1,2})?)(?: paid (cash|card|pos|bank_transfer|other))?$/i.exec(
       ownerText,

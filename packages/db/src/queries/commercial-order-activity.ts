@@ -152,7 +152,7 @@ function validate(input: AddCommercialOrderActivityInput) {
 
 /** Appends a note and/or pending attachments; idempotent per client identity. */
 export async function addCommercialOrderActivity(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: AddCommercialOrderActivityInput,
 ) {
   const { body, clientActivityId } = validate(input)

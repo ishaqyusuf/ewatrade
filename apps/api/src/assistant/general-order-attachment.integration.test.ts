@@ -147,7 +147,7 @@ if (enabled) setDefaultTimeout(180_000)
         })
         const reviewed = await generalProposalWithReview(ctx, row)
         expect(reviewed.review?.[0]).toContain(
-          `Attach receipt.jpg to ${order.orderNumber}`,
+          `Attach this photo to ${order.orderNumber}`,
         )
         const app = generalProposalForApp(row)
         const result = await decideGeneralProposal(ctx, {
@@ -185,6 +185,36 @@ if (enabled) setDefaultTimeout(180_000)
           },
         })
         expect(Array.from(bytes)).toEqual(Array.from(RECEIPT))
+
+        // A note alone, with no file.
+        const noteDraft = await draftGeneralProposal(ctx, conversation.id, {
+          action: "order_attachment_add",
+          note: "Customer will collect at 5pm",
+          orderId: order.id,
+        })
+        const noteRow = await db.assistantActionProposal.findUniqueOrThrow({
+          where: { id: noteDraft.proposalId },
+        })
+        expect(
+          (await generalProposalWithReview(ctx, noteRow)).review?.[0],
+        ).toContain(`Add a note to ${order.orderNumber}`)
+        const noteApp = generalProposalForApp(noteRow)
+        const noted = await decideGeneralProposal(ctx, {
+          approvalToken: noteApp.approvalToken,
+          decision: "confirm",
+          proposalId: noteApp.id,
+          revision: noteApp.revision,
+        })
+        expect(noted.receipt).toMatchObject({ title: "Note added" })
+        const after = await listCommercialOrderActivity(db, {
+          orderId: order.id,
+          scope: { tenantId },
+          tenantId,
+        })
+        expect(after).toHaveLength(2)
+        expect(
+          after.find((entry) => entry.body === "Customer will collect at 5pm"),
+        ).toMatchObject({ source: "assistant", attachments: [] })
       } finally {
         if (tenantId) await db.tenant.deleteMany({ where: { id: tenantId } })
         if (userId) await db.user.deleteMany({ where: { id: userId } })

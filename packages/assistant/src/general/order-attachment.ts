@@ -2,12 +2,15 @@ import { z } from "zod"
 
 const id = z.string().trim().min(1).max(128)
 
-/** Files a photo or PDF the user sent in this chat (e.g. a receipt) on an order. */
+/**
+ * Adds to an order's Notes & photos: a photo or PDF the user sent in this
+ * chat (e.g. a receipt), a note, or both. One of the two is required.
+ */
 export const orderAttachmentAddAction = z
   .object({
     action: z.literal("order_attachment_add"),
     orderId: id,
-    attachmentId: id,
-    note: z.string().trim().max(500).optional(),
+    attachmentId: id.optional(),
+    note: z.string().trim().max(2000).optional(),
   })
   .strict()
