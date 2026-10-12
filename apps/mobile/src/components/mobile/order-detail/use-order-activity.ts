@@ -5,7 +5,7 @@ import {
   ORDER_VIDEO_TYPES,
   readOrderAttachmentFile,
   uploadOrderAttachment,
-  uploadOrderVideoDirect,
+  uploadOrderAttachmentDirect,
 } from "@/lib/order-attachment-upload"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -223,7 +223,7 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
           attachmentId: attachment.id,
         })
         if (route.mode === "direct") {
-          await uploadOrderVideoDirect({
+          await uploadOrderAttachmentDirect({
             buffer: item.buffer,
             clientToken: route.clientToken,
             contentType: route.contentType,
@@ -268,7 +268,7 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
     canAddFiles: files.length < MAX_FILES && !isPosting,
     error,
     isPosting,
-    /** Direct video upload progress, 0–100, while one is sending. */
+    /** Direct upload progress, 0–100, while a live file is sending. */
     progress,
     pickPhoto,
     pickVideo,

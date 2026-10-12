@@ -51,8 +51,8 @@ function activityError(error: unknown): never {
           : "PRECONDITION_FAILED",
       message:
         error.code === "INTEGRITY_MISMATCH"
-          ? "The video didn't arrive complete. Attach it again."
-          : "Videos can't be saved right now. Try again in a moment.",
+          ? "The file didn't arrive complete. Attach it again."
+          : "Files can't be saved right now. Try again in a moment.",
     })
   if (error instanceof CatalogError)
     throw new TRPCError({
@@ -132,9 +132,10 @@ export const orderActivityRouter = createTRPCRouter({
     }),
 
   /**
-   * Where a pending file's bytes go. Live videos upload straight to private
-   * storage with a token for that one object, then call confirmUpload;
-   * everything else is sent to the API upload route.
+   * Where a pending file's bytes go. On live data every file uploads straight
+   * to private storage with a token for that one object (Vercel caps request
+   * bodies near 4.5 MB), then calls confirmUpload; QA files go to the API
+   * upload route.
    */
   uploadTarget: protectedProcedure
     .input(z.object({ attachmentId: z.string().trim().min(1) }).strict())
@@ -146,7 +147,6 @@ export const orderActivityRouter = createTRPCRouter({
           mode: "api" as const,
           path: `/api/orders/attachments/${row.id}/upload`,
         }
-        if (row.kind !== "VIDEO") return api
         const storage = createOrderVideoStorage(
           ctx.tenantContext.tenant.dataClassification,
         )
@@ -161,7 +161,7 @@ export const orderActivityRouter = createTRPCRouter({
       }
     }),
 
-  /** After a direct upload: the stored video must be the promised one. */
+  /** After a direct upload: the stored file must be the promised one. */
   confirmUpload: protectedProcedure
     .input(z.object({ attachmentId: z.string().trim().min(1) }).strict())
     .mutation(async ({ ctx, input }) => {
@@ -171,7 +171,7 @@ export const orderActivityRouter = createTRPCRouter({
         const storage = createOrderVideoStorage(
           ctx.tenantContext.tenant.dataClassification,
         )
-        if (row.kind !== "VIDEO" || storage.mode !== "direct")
+        if (storage.mode !== "direct")
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "This file is uploaded through the app.",

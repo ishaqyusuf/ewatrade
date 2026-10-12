@@ -111,7 +111,7 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
           attachmentId: attachment.id,
         })
         if (route.mode === "direct") {
-          // Live videos go straight to private storage, then get checked.
+          // Live files go straight to private storage, then get checked.
           await put(route.pathname, file, {
             access: "private",
             contentType: route.contentType,

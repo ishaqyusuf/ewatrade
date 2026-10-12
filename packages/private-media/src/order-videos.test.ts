@@ -94,3 +94,37 @@ describe("QA videos in the local test store", async () => {
     ).rejects.toBeInstanceOf(PrivateObjectStorageError)
   })
 })
+
+describe("live direct uploads", () => {
+  const environment = {
+    APP_ENV: "local",
+    BLOB_STORE_ID: "store_abc123",
+    BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_abc123_secret",
+  }
+  const target = (contentType: string, sizeBytes: number) => ({
+    tenantId: "tenant",
+    orderId: "order",
+    attachmentId: "file",
+    contentDigest: "c".repeat(64),
+    contentType,
+    sizeBytes,
+  })
+
+  test("issue a one-object token for photos, PDFs and videos", async () => {
+    const storage = createOrderVideoStorage("LIVE", environment)
+    if (storage.mode !== "direct") throw new Error("expected direct uploads")
+    const photo = await storage.uploadToken(target("image/jpeg", 6_000_000))
+    expect(photo.pathname).toEndWith(".jpg")
+    expect(photo.clientToken).toStartWith("vercel_blob_client_")
+    const video = await storage.uploadToken(target("video/mp4", 80_000_000))
+    expect(video.pathname).toEndWith(".mp4")
+  })
+
+  test("refuse files past their kind's limit", async () => {
+    const storage = createOrderVideoStorage("LIVE", environment)
+    if (storage.mode !== "direct") throw new Error("expected direct uploads")
+    await expect(
+      storage.uploadToken(target("image/jpeg", 11 * 1024 * 1024)),
+    ).rejects.toBeInstanceOf(PrivateObjectStorageError)
+  })
+})

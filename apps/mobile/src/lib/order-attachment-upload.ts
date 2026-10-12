@@ -80,10 +80,10 @@ export async function uploadOrderAttachment(input: {
 }
 
 /**
- * Live videos go straight to private storage with the one-object token the
+ * Live files go straight to private storage with the one-object token the
  * server issued; the server then checks what arrived (confirmUpload).
  */
-export async function uploadOrderVideoDirect(input: {
+export async function uploadOrderAttachmentDirect(input: {
   pathname: string
   clientToken: string
   contentType: string

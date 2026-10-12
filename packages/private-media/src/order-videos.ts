@@ -18,7 +18,9 @@ import {
 import {
   ORDER_VIDEO_MAX_BYTES,
   type OrderAttachmentTarget,
+  createOrderAttachmentStorage,
   orderAttachmentKind,
+  orderAttachmentMaxBytes,
   orderAttachmentStoragePath,
 } from "./order-attachments"
 import { privateBlobConfiguration } from "./vercel-blob"
@@ -69,13 +71,27 @@ function videoTarget(target: OrderAttachmentTarget) {
   return orderAttachmentStoragePath(target)
 }
 
+/** Any order file, within its own kind's size limit. */
+function directTarget(target: OrderAttachmentTarget) {
+  if (
+    !orderAttachmentKind(target.contentType) ||
+    !Number.isSafeInteger(target.sizeBytes) ||
+    target.sizeBytes < 1 ||
+    target.sizeBytes > orderAttachmentMaxBytes(target.contentType)
+  )
+    throw new PrivateObjectStorageError("INVALID_OBJECT")
+  return orderAttachmentStoragePath(target)
+}
+
 /**
  * Videos on Order activity. They are too large to pass through the API on
  * live data (Vercel caps request bodies), so the device uploads straight to
  * private Blob storage with a short-lived token bound to one path, type and
  * size, and the server confirms the stored object afterwards. QA data streams
  * through the API into the local test store, checking size and SHA-256.
- * Playback streams with Range support so phones can seek.
+ * Playback streams with Range support so phones can seek. On live data the
+ * same direct upload carries photos and PDFs too, which would otherwise hit
+ * the same body cap.
  */
 export function createOrderVideoStorage(
   dataClassification: "LIVE" | "QA",
@@ -108,7 +124,7 @@ function blobVideoStorage(environment: Environment) {
     storeId: config?.storeId ?? null,
     /** Lets one device write exactly this object, once, while the upload is open. */
     async uploadToken(target: OrderAttachmentTarget) {
-      const pathname = videoTarget(target)
+      const pathname = directTarget(target)
       const configured = ready()
       // Client tokens are minted from the read-write token; OIDC can't.
       if (!("token" in configured))
@@ -125,9 +141,13 @@ function blobVideoStorage(environment: Environment) {
       })
       return { pathname, clientToken }
     },
-    /** The stored object must be the promised path, type and size. */
+    /**
+     * The stored object must be the promised path, type and size. Photos and
+     * PDFs are small enough to read back, so their SHA-256 and file signature
+     * are checked too; videos are checked by size and type.
+     */
     async confirm(target: OrderAttachmentTarget) {
-      const pathname = videoTarget(target)
+      const pathname = directTarget(target)
       let stored: Awaited<ReturnType<typeof head>>
       try {
         stored = await head(pathname, ready())
@@ -140,6 +160,8 @@ function blobVideoStorage(environment: Environment) {
         stored.contentType !== target.contentType
       )
         throw new PrivateObjectStorageError("INTEGRITY_MISMATCH")
+      if (orderAttachmentKind(target.contentType) !== "VIDEO")
+        await createOrderAttachmentStorage("LIVE", environment).read({ target })
       return { storagePath: pathname }
     },
     async open(
