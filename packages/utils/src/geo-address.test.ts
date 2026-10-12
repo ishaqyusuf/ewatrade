@@ -57,18 +57,18 @@ describe("geo address", () => {
   })
 
   test("calls the provider with a user agent and maps its reply", async () => {
-    let seen: { url: string; agent: string | null } | null = null
+    const seen: { url: string; agent: string | null }[] = []
     const fake = (async (url: URL, init: RequestInit) => {
-      seen = {
+      seen.push({
         agent: new Headers(init.headers).get("User-Agent"),
         url: String(url),
-      }
+      })
       return new Response(JSON.stringify(ibadan))
     }) as unknown as typeof fetch
     const address = await reverseGeocode(7.47, 3.91, { fetch: fake })
     expect(address.city).toBe("Ibadan")
-    expect(seen?.url).toContain("lat=7.470000")
-    expect(seen?.agent).toContain("EwaTrade")
+    expect(seen[0]?.url).toContain("lat=7.470000")
+    expect(seen[0]?.agent).toContain("EwaTrade")
   })
 
   test("reports failures with a short message", async () => {
@@ -97,6 +97,6 @@ describe("geo lookup limiter", () => {
     await Promise.all(
       [1, 2].map(() => limiter.run(async () => started.push(Date.now()))),
     )
-    expect(started[1] - started[0]).toBeGreaterThanOrEqual(35)
+    expect((started[1] ?? 0) - (started[0] ?? 0)).toBeGreaterThanOrEqual(35)
   })
 })
