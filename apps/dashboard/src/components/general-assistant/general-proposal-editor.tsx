@@ -17,6 +17,10 @@ import {
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
 import { CATALOG_FREE_LINE_LABELS } from "@ewatrade/utils/catalog-free-lines"
 import { useState } from "react"
+import {
+  OrderPaymentAccount,
+  useOrderPaymentAccountChoice,
+} from "../orders/order-payment-account"
 import { GeneralSupplierAllocationReleaseEditor } from "./general-supplier-allocation-release-editor"
 import { GeneralPurchaseRecordingEditor } from "./general-purchase-recording-editor"
 import { GeneralSupplierOpeningEditor } from "./general-supplier-opening-editor"
@@ -74,11 +78,25 @@ export function GeneralProposalEditor(props: {
   if (props.proposal.payload.action === "purchase_record")
     return <GeneralPurchaseRecordingEditor initial={props.proposal.payload} currencyCode={props.currencyCode} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "purchase_register")
-    return <GeneralPurchaseRegistrationEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel}/>
+    return (
+      <GeneralPurchaseRegistrationEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "supplier_opening")
     return <GeneralSupplierOpeningEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "supplier_create")
-    return <GeneralSupplierEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel}/>
+    return (
+      <GeneralSupplierEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (
     props.proposal.payload.action === "expense_void" ||
     props.proposal.payload.action === "bill_payment_reverse" ||
@@ -272,6 +290,18 @@ function GeneralProposalFields({
 }) {
   const initial = proposal.payload
   const [payload, setPayload] = useState(initial)
+  // Paid sales and payments name the account the money went into.
+  const payment =
+    payload.action === "payment_record"
+      ? payload
+      : payload.action === "order_create"
+        ? payload.initialPayment
+        : undefined
+  const account = useOrderPaymentAccountChoice({
+    method: payment?.method ?? "cash",
+    suggestedAccountId: payment?.moneyAccountId,
+    enabled: Boolean(payment),
+  })
   const [amount, setAmount] = useState(
     initial.action === "product_create" ||
       initial.action === "product_price_update"
@@ -312,6 +342,10 @@ function GeneralProposalFields({
       setError("Enter a valid amount.")
       return
     }
+    if (payment && account.problem) {
+      setError(account.problem)
+      return
+    }
     const parsed = generalActionSchema.safeParse({
       ...payload,
       ...(payload.action === "order_create"
@@ -335,12 +369,13 @@ function GeneralProposalFields({
       payload.action === "product_price_update"
         ? { priceMinor: minor }
         : payload.action === "payment_record"
-          ? { amountMinor: minor }
+          ? { amountMinor: minor, moneyAccountId: account.payloadAccountId }
           : payload.action === "order_create" && payload.initialPayment
             ? {
                 initialPayment: {
                   ...payload.initialPayment,
                   amountMinor: minor,
+                  moneyAccountId: account.payloadAccountId,
                 },
               }
             : {}),
@@ -636,6 +671,9 @@ function GeneralProposalFields({
               Stock and saved orders stay unchanged.
             </p>
           </Field>
+        ) : null}
+        {payment ? (
+          <OrderPaymentAccount choice={account} disabled={disabled} />
         ) : null}
         {payload.action === "payment_record" ? (
           <>

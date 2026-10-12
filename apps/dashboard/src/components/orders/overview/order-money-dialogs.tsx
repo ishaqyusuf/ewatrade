@@ -14,6 +14,11 @@ import { useMutation } from "@tanstack/react-query"
 import { type ReactNode, useRef, useState } from "react"
 import { orderMoney } from "../order-draft"
 import {
+  OrderPaymentAccount,
+  originalReceipt,
+  useOrderPaymentAccountChoice,
+} from "../order-payment-account"
+import {
   DialogField,
   MutationError,
   OrderDialog,
@@ -163,6 +168,7 @@ export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
   const [amount, setAmount] = useState(minorToMajorInput(limit))
   const [method, setMethod] = useState<OrderPaymentMethod>("cash")
   const [reference, setReference] = useState("")
+  const account = useOrderPaymentAccountChoice({ method })
   const clientPaymentId = useRef(`payment-${crypto.randomUUID()}`).current
   const record = useMutation(
     trpc.orders.recordPayment.mutationOptions({
@@ -174,12 +180,13 @@ export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
   )
   const amountMinor = majorToMinor(amount)
   const money = (value: number) => orderMoney(value, order.currencyCode)
-  const problem =
+  const amountProblem =
     amountMinor === null || amountMinor <= 0
       ? "Enter an amount."
       : amountMinor > limit
         ? `The balance due is ${money(limit)}.`
         : null
+  const problem = amountProblem ?? account.problem
   return (
     <OrderDialog
       open
@@ -191,7 +198,7 @@ export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
       <DialogField
         label="Amount"
         htmlFor="order-payment-amount"
-        hint={amount && problem ? problem : undefined}
+        hint={amount && amountProblem ? amountProblem : undefined}
       >
         <MoneyInput
           id="order-payment-amount"
@@ -208,6 +215,7 @@ export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
         onChange={setMethod}
         disabled={record.isPending}
       />
+      <OrderPaymentAccount choice={account} disabled={record.isPending} />
       {method !== "cash" ? (
         <DialogField
           label="Reference (optional)"
@@ -243,6 +251,7 @@ export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
               amountMinor,
               clientPaymentId,
               method,
+              moneyAccountId: account.payloadAccountId,
               reference: reference.trim() || undefined,
             })
           }
@@ -289,8 +298,16 @@ export function RefundDialog({
   const money = (value: number) => orderMoney(value, order.currencyCode)
   const [share, setShare] = useState<"all" | "half" | "other">("all")
   const [other, setOther] = useState("")
-  const [method, setMethod] = useState<OrderPaymentMethod>("cash")
+  const original = originalReceipt(order.payments)
+  const [method, setMethod] = useState<OrderPaymentMethod>(
+    original.method ?? "cash",
+  )
   const [reference, setReference] = useState("")
+  const account = useOrderPaymentAccountChoice({
+    method,
+    refund: true,
+    suggestedAccountId: original.moneyAccountId,
+  })
   const [why, setWhy] = useState<RefundReason | null>(null)
   const [ownReason, setOwnReason] = useState("")
   const clientOperationId = useRef(`refund-${crypto.randomUUID()}`).current
@@ -318,7 +335,7 @@ export function RefundDialog({
     why === "other"
       ? ownReason.trim()
       : (REFUND_REASONS.find((row) => row.value === why)?.label ?? "")
-  const problem =
+  const amountProblem =
     amountMinor <= 0
       ? "Enter an amount."
       : amountMinor > paid
@@ -326,6 +343,7 @@ export function RefundDialog({
         : lowerTotal && amountMinor > order.totalMinor
           ? `The total is ${money(order.totalMinor)}.`
           : null
+  const problem = amountProblem ?? account.problem
   return (
     <OrderDialog
       open
@@ -349,7 +367,7 @@ export function RefundDialog({
         <DialogField
           label="Amount"
           htmlFor="order-refund-amount"
-          hint={other && problem ? problem : undefined}
+          hint={other && amountProblem ? amountProblem : undefined}
         >
           <MoneyInput
             id="order-refund-amount"
@@ -365,6 +383,11 @@ export function RefundDialog({
         value={method}
         options={PAYMENT_METHODS}
         onChange={setMethod}
+        disabled={refund.isPending}
+      />
+      <OrderPaymentAccount
+        label="Paid back from"
+        choice={account}
         disabled={refund.isPending}
       />
       {method !== "cash" ? (
@@ -441,7 +464,7 @@ export function RefundDialog({
           { label: "Still to collect", after: money(stillDue), big: true },
         ]}
       />
-      {!lowerTotal && stillDue > 0 && !problem ? (
+      {!lowerTotal && stillDue > 0 && !amountProblem ? (
         <Notice tone="rose" title={`${money(stillDue)} will show as owed`}>
           {credit.allowed
             ? "Choose “Overcharged” if the price was wrong, so the total drops too."
@@ -468,6 +491,7 @@ export function RefundDialog({
               clientOperationId,
               amountMinor,
               method,
+              moneyAccountId: account.payloadAccountId,
               reference: reference.trim() || undefined,
               reason,
               lowerTotal,
@@ -525,8 +549,16 @@ export function ReturnItemsDialog({
   )
   const [conditions, setConditions] = useState<Record<string, Condition>>({})
   const [giveMoney, setGiveMoney] = useState(moneyFirst && credit.allowed)
-  const [method, setMethod] = useState<OrderPaymentMethod>("cash")
+  const original = originalReceipt(order.payments)
+  const [method, setMethod] = useState<OrderPaymentMethod>(
+    original.method ?? "cash",
+  )
   const [reference, setReference] = useState("")
+  const account = useOrderPaymentAccountChoice({
+    method,
+    refund: true,
+    suggestedAccountId: original.moneyAccountId,
+  })
   const [reason, setReason] = useState("")
   const clientOperationId = useRef(`return-${crypto.randomUUID()}`).current
   const save = useMutation(
@@ -725,6 +757,13 @@ export function ReturnItemsDialog({
             onChange={setMethod}
             disabled={save.isPending}
           />
+          {refundNow > 0 ? (
+            <OrderPaymentAccount
+              label="Paid back from"
+              choice={account}
+              disabled={save.isPending}
+            />
+          ) : null}
           {method !== "cash" ? (
             <DialogField
               label="Reference (optional)"
@@ -795,7 +834,11 @@ export function ReturnItemsDialog({
         <Button
           type="button"
           disabled={
-            !chosen.length || invalid || !reason.trim() || save.isPending
+            !chosen.length ||
+            invalid ||
+            !reason.trim() ||
+            (giveMoney && refundNow > 0 && Boolean(account.problem)) ||
+            save.isPending
           }
           onClick={() =>
             save.mutate({
@@ -808,7 +851,12 @@ export function ReturnItemsDialog({
                 disposition: row.condition,
               })),
               money: giveMoney
-                ? { method, reference: reference.trim() || undefined }
+                ? {
+                    method,
+                    moneyAccountId:
+                      refundNow > 0 ? account.payloadAccountId : undefined,
+                    reference: reference.trim() || undefined,
+                  }
                 : null,
             })
           }

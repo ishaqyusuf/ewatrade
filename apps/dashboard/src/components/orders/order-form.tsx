@@ -28,6 +28,10 @@ import {
 } from "./order-draft"
 import { OrderItemPicker } from "./order-item-picker"
 import { OrderItemRow } from "./order-item-row"
+import {
+  OrderPaymentAccount,
+  useOrderPaymentAccountChoice,
+} from "./order-payment-account"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 
@@ -93,6 +97,7 @@ export function OrderForm({
   const [fulfillNow, setFulfillNow] = useState(false)
   const [paidInFull, setPaidInFull] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash")
+  const account = useOrderPaymentAccountChoice({ method: paymentMethod })
   const [customerName, setCustomerName] = useState("")
   const [selectedCustomer, setSelectedCustomer] =
     useState<OrderCustomerSelection | null>(null)
@@ -185,6 +190,10 @@ export function OrderForm({
       return
     }
     const paidMinor = paidInFull ? orderLinesTotalMinor(lines) : null
+    if (paidInFull && account.problem) {
+      setError(account.problem)
+      return
+    }
     if (paidInFull && !paidMinor) {
       setError("The total could not be worked out to mark this order paid.")
       return
@@ -192,7 +201,11 @@ export function OrderForm({
     const payload = {
       fulfillNow: fulfillNow || undefined,
       paidInFull: paidMinor
-        ? { amountMinor: paidMinor, method: paymentMethod }
+        ? {
+            amountMinor: paidMinor,
+            method: paymentMethod,
+            moneyAccountId: account.payloadAccountId,
+          }
         : null,
       customerId: selectedCustomer?.id,
       customerMode: creatingCustomer
@@ -383,6 +396,17 @@ export function OrderForm({
               onValueChange={setPaymentMethod}
             />
           </ControlField>
+        ) : null}
+        {paidInFull ? (
+          <OrderPaymentAccount
+            choice={account}
+            disabled={createMutation.isPending}
+          />
+        ) : null}
+        {paidInFull && !account.book && !account.isError && !account.problem ? (
+          <p className="text-sm text-muted-foreground">
+            Set up Finance to track this payment in a cash or bank account.
+          </p>
         ) : null}
       </div>
       <button
