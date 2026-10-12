@@ -745,7 +745,7 @@ function SummaryStrip({
   fulfilled,
 }: {
   order: OverviewOrder
-  fulfilled: { done: number; total: number }
+  fulfilled: ReturnType<typeof fulfilmentCount>
 }) {
   const money = (value: number) => orderMoney(value, order.currencyCode)
   // Everything came back: lead with the credit, not a ₦0 total (as on mobile).
@@ -827,6 +827,18 @@ function SummaryStrip({
         <dd className="text-xl font-semibold tabular-nums">
           {fulfilled.done} of {fulfilled.total}
         </dd>
+        {fulfilled.returned + fulfilled.partReturned > 0 ? (
+          <dd className="text-xs text-muted-foreground">
+            {[
+              fulfilled.returned ? `${fulfilled.returned} returned` : null,
+              fulfilled.partReturned
+                ? `${fulfilled.partReturned} part returned`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </dd>
+        ) : null}
       </div>
     </dl>
   )

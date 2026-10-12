@@ -77,9 +77,15 @@ const isLineDone = (line: OverviewLine) =>
   line.productFulfillments.length > 0 || Boolean(line.serviceFulfillment)
 
 export function fulfilmentCount(order: OverviewOrder) {
+  const lines = order.lines.filter((line) => line.productReturns.length > 0)
+  const returned = lines.filter((line) => returnableQuantity(line) === 0)
   return {
     done: order.lines.filter(isLineDone).length,
     total: order.lines.length,
+    /** Lines whose handed-over quantity all came back. */
+    returned: returned.length,
+    /** Lines where only part came back. */
+    partReturned: lines.length - returned.length,
   }
 }
 
@@ -119,15 +125,26 @@ export function orderPills(order: OverviewOrder) {
       label: `Part paid · ${money(order.balanceDueMinor)} due`,
       tone: "amber",
     })
+  // Nothing was paid and credits took the whole total (items came back).
+  else if (
+    order.totalMinor === 0 &&
+    order.creditMinor > 0 &&
+    order.amountPaidMinor <= 0
+  )
+    pills.push({ label: "Credited", tone: "muted" })
   else pills.push({ label: "Paid", tone: "green" })
   if (!isClosedOrder(order.status)) {
-    const { done, total } = fulfilmentCount(order)
+    const { done, total, returned, partReturned } = fulfilmentCount(order)
     pills.push(
       done === 0
         ? { label: "Not fulfilled", tone: "muted" }
         : done < total
           ? { label: `${done} of ${total} fulfilled`, tone: "blue" }
-          : { label: "Fulfilled", tone: "green" },
+          : returned === total
+            ? { label: "Returned", tone: "muted" }
+            : returned + partReturned > 0
+              ? { label: "Part returned", tone: "amber" }
+              : { label: "Fulfilled", tone: "green" },
     )
   }
   return pills
