@@ -104,6 +104,7 @@ import {
   requireGeneralScope,
 } from "./general-context"
 import { generalCountAnswer } from "./general-count-answer"
+import { recoverableToolFailure } from "./general-tool-recovery"
 import {
   generalCustomerAllocationHistoryAnswer,
   generalCustomerAllocationHistoryInput,
@@ -266,6 +267,8 @@ export function createGeneralTools(
           storeId: scope.storeId,
           reason: error.message,
         }
+      const recovery = recoverableToolFailure(toolName, error)
+      if (recovery) return { ...recovery, storeId: scope.storeId }
       const capability = readCapabilities.get(toolName)
       if (capability)
         onAnswer({

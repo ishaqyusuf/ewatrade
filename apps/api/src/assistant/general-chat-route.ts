@@ -51,6 +51,10 @@ import {
   GENERAL_BUDGET_LIMITS,
   generalBudgetScopeKey,
 } from "./general-allowance"
+import {
+  ANNOUNCED_ACTION_NUDGE,
+  announcedWithoutAction,
+} from "./general-announced-action"
 import { requireGeneralScope } from "./general-context"
 import { generalPersistentParts } from "./general-persistence"
 import { createGeneralTools } from "./general-tools"
@@ -286,7 +290,7 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
       c.req.raw.signal.addEventListener("abort", abort, { once: true })
       const startedAt = Date.now()
       let failed = false
-      let usage: LanguageModelUsage | undefined
+      const usages: LanguageModelUsage[] = []
       let steps = 0
       const stream = createUIMessageStream<GeneralUIMessage>({
         originalMessages: history,
@@ -330,15 +334,38 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
             maxRetries: 1,
             providerOptions: model.providerOptions as never,
             onFinish: (event) => {
-              usage = event.totalUsage
-              steps = event.steps.length
+              usages.push(event.totalUsage)
+              steps += event.steps.length
             },
           })
           const result = await agent.stream({
             messages,
             abortSignal: controller.signal,
           })
-          writer.merge(result.toUIMessageStream({ sendReasoning: false }))
+          // Written in order so a second pass can continue the same message.
+          for await (const chunk of result.toUIMessageStream<GeneralUIMessage>({
+            sendReasoning: false,
+            sendFinish: false,
+          }))
+            writer.write(chunk)
+          if (!announcedWithoutAction(await result.steps)) {
+            writer.write({ type: "finish" })
+            return
+          }
+          const retry = await agent.stream({
+            messages: [
+              ...messages,
+              ...(await result.response).messages,
+              { role: "user", content: ANNOUNCED_ACTION_NUDGE },
+            ],
+            abortSignal: controller.signal,
+          })
+          writer.merge(
+            retry.toUIMessageStream<GeneralUIMessage>({
+              sendReasoning: false,
+              sendStart: false,
+            }),
+          )
         },
         onError: () => {
           failed = true
@@ -360,12 +387,15 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
               : isAborted
                 ? "ABORTED"
                 : undefined,
-            usage: usage
+            usage: usages.length
               ? {
-                  inputTokens: usage.inputTokens,
-                  outputTokens: usage.outputTokens,
-                  cachedInputTokens: usage.inputTokenDetails?.cacheReadTokens,
-                  totalTokens: usage.totalTokens,
+                  inputTokens: sumUsage(usages, (u) => u.inputTokens),
+                  outputTokens: sumUsage(usages, (u) => u.outputTokens),
+                  cachedInputTokens: sumUsage(
+                    usages,
+                    (u) => u.inputTokenDetails?.cacheReadTokens,
+                  ),
+                  totalTokens: sumUsage(usages, (u) => u.totalTokens),
                 }
               : undefined,
             stepCount: steps,
@@ -394,6 +424,16 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
       return routeFailure(c, error)
     }
   })
+}
+/** Undefined when no pass reported the figure. */
+function sumUsage(
+  usages: LanguageModelUsage[],
+  pick: (usage: LanguageModelUsage) => number | undefined,
+) {
+  const values = usages
+    .map(pick)
+    .filter((value): value is number => value !== undefined)
+  return values.length ? values.reduce((a, b) => a + b, 0) : undefined
 }
 function routeFailure(c: Context, error: unknown) {
   if (!(error instanceof TRPCError))
