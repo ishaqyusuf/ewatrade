@@ -238,7 +238,13 @@ const RETURN_OUTCOME: Record<string, string> = {
   no_restock: "Not restocked",
 }
 
-export type EventTone = "default" | "money" | "stock" | "change" | "danger"
+export type EventTone =
+  | "default"
+  | "money"
+  | "stock"
+  | "change"
+  | "credit"
+  | "danger"
 
 /** Plain-English title, amount and detail lines for one timeline event. */
 export function describeEvent(
@@ -343,12 +349,13 @@ export function describeEvent(
       }
     case "credited":
       return {
+        // Same words as mobile.
         title:
           item.creditKind === "overcharge"
-            ? "Total lowered · overcharged"
-            : "Total lowered · items returned",
+            ? "Price corrected"
+            : "Returned items credited",
         amount: amount ? `−${amount}` : null,
-        tone: "change" as EventTone,
+        tone: "credit" as EventTone,
         detail: meta(actor),
         lines: [...changes, ...(item.reason ? [`Reason: ${item.reason}`] : [])],
         linkLabel: null,
