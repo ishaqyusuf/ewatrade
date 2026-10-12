@@ -1,45 +1,132 @@
 import { randomUUID } from "node:crypto"
-import { createSimpleCatalogItemInTransaction } from "@ewatrade/db/queries"
 import { readServiceIntakeReceiptInTransaction } from "@ewatrade/db/service-intake-receipt"
-import { reviewServiceIntakeInTransaction } from "@ewatrade/db/service-intake-review"
 import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
+import {
+  type G02BudgetCall,
+  observeG02BudgetCalls,
+} from "./general-cash-count-budget-trace"
+import { cashCountReceiptFault } from "./general-cash-count-receipt-fault"
 import type { GeneralContext } from "./general-context"
-import { decideGeneralProposal } from "./general-proposals"
+import {
+  decideGeneralProposal,
+  editGeneralProposal,
+  generalProposalForApp,
+} from "./general-proposals"
+import { serviceIntake } from "./general-service-intake"
 import { proposalApprovalToken, proposalDigest } from "./proposal-security"
+import { seedServiceIntakeRollbackFixture } from "./service-intake-rollback-fixture"
+import {
+  type ServiceIntakeSignedCase,
+  runServiceIntakeSignedCases,
+  serviceIntakeSignedCases,
+} from "./service-intake-signed-rollback-cases"
+import {
+  assertServiceIntakeSignedFactsUnchanged,
+  assertServiceIntakeSignedNativeCreation,
+  serviceIntakeSignedRollbackFacts,
+  verifyServiceIntakeSignedFinanceInventory,
+} from "./service-intake-signed-rollback-facts"
+import {
+  assertServiceIntakeSignedEnvironment,
+  assertServiceIntakeSignedScope,
+  signedIntakeCheck as check,
+  serviceIntakeSignedScope,
+  serviceIntakeSignedTransactionBridge,
+} from "./service-intake-signed-rollback-guards"
+export { ServiceIntakeSignedRollbackFailure } from "./service-intake-signed-rollback-cases"
 
-function check(value: unknown, message: string): asserts value {
-  if (!value) throw Error(message)
+// These are the canonical unpaid Intake/Order/ledger/work effects only. Finance,
+// auth, chat, all budgets, payments and message intents must remain unchanged.
+const nativeEffects = [
+  "Tenant",
+  "AssistantActionProposal",
+  "D04:AssistantActionProposal",
+  ...[
+    "CommercialOrder",
+    "CommercialOrderLine",
+    "OfferingSnapshot",
+    "CommercialServiceAuthorization",
+    "ServiceIntake",
+    "ServiceIntakeLine",
+    "ServiceJob",
+    "ServiceJobLine",
+    "ServiceWorkAssignment",
+    "ServiceDueCommitment",
+    "ServiceWorkEvent",
+    "CustomerLedgerAccount",
+    "CustomerLedgerEntry",
+    "CustomerLedgerCommand",
+  ].map((table) => `D04:${table}`),
+]
+
+async function refused(run: () => Promise<unknown>, code: TRPCError["code"]) {
+  try {
+    await run()
+  } catch (error) {
+    if (error instanceof TRPCError && error.code === code) return
+    throw error
+  }
+  throw Error(`Expected signed ${code} refusal`)
 }
-/** One real root transaction per signed case; all fixtures, receipts and effects roll back. */
+
+/** Source-only until coordinator assigns the exact reviewed chat/session and exclusive slot. */
 export async function verifyServiceIntakeSignedRollback(
   ctx: GeneralContext,
   conversationId: string,
 ) {
+  assertServiceIntakeSignedEnvironment(process.env)
   const db = ctx.db
-  const tenantId = "cmuzedcda000hbw9kd6e50z8u"
-  const storeId = "cmuzedcow000jbw9kluarpxfs"
-  const actorUserId = "cmuzedc7e000gbw9ky1dioc9f"
-  check(
-    process.env.RUN_D04_QA_ROLLBACK === "1" &&
-      process.env.NODE_ENV === "development" &&
-      process.env.APP_ENV === "local",
-    "Coordinator-scheduled local rollback required",
+  const {
+    tenantId,
+    storeId,
+    userId: actorUserId,
+    email,
+  } = serviceIntakeSignedScope
+  const [identity] = await db.$queryRaw<
+    Array<{ database: string }>
+  >`SELECT current_database() AS database`
+  assertServiceIntakeSignedScope(
+    {
+      database: identity?.database ?? "",
+      tenantId: ctx.tenantContext.tenant.id,
+      storeId: ctx.tenantContext.activeStore?.id ?? "",
+      userId: ctx.session.user.id,
+      conversationId,
+      sessionId: ctx.session.session.id,
+    },
+    process.env,
   )
-  check(
-    ctx.session.user.id === actorUserId &&
-      ctx.tenantContext.tenant.id === tenantId &&
-      ctx.tenantContext.activeStore?.id === storeId,
-    "Exact QA scope required",
-  )
-  check(
-    (
-      await db.$queryRaw<
-        Array<{ name: string }>
-      >`SELECT current_database() AS name`
-    )[0]?.name === "ewatrade_qa_v1",
-    "Exact QA database required",
-  )
+  await db.membership
+    .findFirstOrThrow({
+      where: {
+        tenantId,
+        userId: actorUserId,
+        role: "OWNER",
+        status: "ACTIVE",
+        tenant: { dataClassification: "QA", isActive: true },
+        user: { email },
+      },
+      select: { id: true },
+    })
+    .then((row) =>
+      check(
+        row.id === ctx.tenantContext.membership.id,
+        "Exact current QA Owner membership required",
+      ),
+    )
+  await db.store.findFirstOrThrow({
+    where: { id: storeId, tenantId, status: "ACTIVE" },
+    select: { id: true },
+  })
+  await db.session.findFirstOrThrow({
+    where: {
+      id: ctx.session.session.id,
+      userId: actorUserId,
+      expiresAt: { gt: new Date() },
+    },
+    select: { id: true },
+  })
   await db.assistantConversation.findFirstOrThrow({
     where: {
       id: conversationId,
@@ -47,272 +134,440 @@ export async function verifyServiceIntakeSignedRollback(
       storeId,
       ownerUserId: actorUserId,
       purpose: "GENERAL",
+      status: "ACTIVE",
     },
     select: { id: true },
   })
-  const facts = async () =>
-    (
-      await db.$queryRaw<Array<{ hash: string }>>`SELECT md5(jsonb_build_object(
-    'tenant',(SELECT to_jsonb(t) FROM "Tenant" t WHERE t.id=${tenantId}),
-    'ledgerAccounts',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.id) FROM "CustomerLedgerAccount" a WHERE a."tenantId"=${tenantId}),
-    'ledgerEntries',(SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id) FROM "CustomerLedgerEntry" e WHERE e."tenantId"=${tenantId}),
-    'ledgerCommands',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM "CustomerLedgerCommand" c WHERE c."tenantId"=${tenantId}),
-    'ledgerAllocations',(SELECT jsonb_agg(to_jsonb(l) ORDER BY l.id) FROM "CustomerLedgerAllocation" l JOIN "CustomerLedgerAccount" a ON a.id=l."accountId" WHERE a."tenantId"=${tenantId}),
-    'ledgerReleases',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.id) FROM "CustomerLedgerAllocationRelease" r JOIN "CustomerLedgerAllocation" l ON l.id=r."allocationId" JOIN "CustomerLedgerAccount" a ON a.id=l."accountId" WHERE a."tenantId"=${tenantId}),
-    'ledgerReceipts',(SELECT jsonb_agg(to_jsonb(r) ORDER BY r.id) FROM "CustomerLedgerReceipt" r JOIN "CustomerLedgerAccount" a ON a.id=r."accountId" WHERE a."tenantId"=${tenantId}),
-    'financeBooks',(SELECT jsonb_agg(to_jsonb(b) ORDER BY b.id) FROM "FinanceBook" b WHERE b."tenantId"=${tenantId}),
-    'financeAccounts',(SELECT jsonb_agg(to_jsonb(a) ORDER BY a.id) FROM "FinanceAccount" a JOIN "FinanceBook" b ON b.id=a."bookId" WHERE b."tenantId"=${tenantId}),
-    'financeCommands',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM "FinanceCommand" c JOIN "FinanceBook" b ON b.id=c."bookId" WHERE b."tenantId"=${tenantId}),
-    'financeJournals',(SELECT jsonb_agg(to_jsonb(j) ORDER BY j.id) FROM "FinanceJournalEntry" j JOIN "FinanceBook" b ON b.id=j."bookId" WHERE b."tenantId"=${tenantId}),
-    'financeJournalLines',(SELECT jsonb_agg(to_jsonb(l) ORDER BY l.id) FROM "FinanceJournalLine" l JOIN "FinanceBook" b ON b.id=l."bookId" WHERE b."tenantId"=${tenantId}),
-    'financePeriods',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.id) FROM "FinancePeriod" p JOIN "FinanceBook" b ON b.id=p."bookId" WHERE b."tenantId"=${tenantId}),
-    'memberships',(SELECT jsonb_agg(to_jsonb(m) ORDER BY m.id) FROM "Membership" m WHERE m."tenantId"=${tenantId}),
-    'catalog',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM "CatalogItem" c WHERE c."tenantId"=${tenantId}),
-    'orders',(SELECT jsonb_agg(to_jsonb(o) ORDER BY o.id) FROM "CommercialOrder" o WHERE o."tenantId"=${tenantId}),
-    'intakes',(SELECT jsonb_agg(to_jsonb(i) ORDER BY i.id) FROM "ServiceIntake" i WHERE i."tenantId"=${tenantId}),
-    'jobs',(SELECT jsonb_agg(to_jsonb(j) ORDER BY j.id) FROM "ServiceJob" j WHERE j."tenantId"=${tenantId}),
-    'payments',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.id) FROM "CommercialOrderPayment" p WHERE p."tenantId"=${tenantId}),
-    'proposals',(SELECT jsonb_agg(to_jsonb(p) ORDER BY p.id) FROM "AssistantActionProposal" p WHERE p."tenantId"=${tenantId}),
-    'chats',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.id) FROM "AssistantConversation" c WHERE c."tenantId"=${tenantId}),
-    'messages',(SELECT jsonb_agg(to_jsonb(m) ORDER BY m.id) FROM "AssistantMessage" m WHERE m."conversationId"=${conversationId})
-  )::text) AS hash`
-    )[0]?.hash
-  const before = await facts()
-  const results: Array<{ mode: string; proved: boolean }> = []
-  for (const mode of [
-    "completion-replay",
-    "changed-token",
-    "stale-price",
-    "revoked",
-    "receipt-failure",
-  ] as const) {
-    const id = randomUUID()
-    const decision = {
-      proposalId: id,
-      revision: 1,
-      decision: "confirm" as const,
-      approvalToken: "",
+  await verifyServiceIntakeSignedFinanceInventory(db)
+  const recoveryNonce = randomUUID()
+  let faultProved = false
+  const startedAt = new Date().toISOString()
+  const facts = () => serviceIntakeSignedRollbackFacts(db, tenantId)
+  type CaseReport = {
+    checks: string[]
+    budgetCalls: G02BudgetCall[]
+    proposalId: string
+    commandKey: string
+    receipt?: unknown
+  }
+  const runCase = async (
+    mode: ServiceIntakeSignedCase,
+    tx: Prisma.TransactionClient,
+    checks: string[],
+  ): Promise<CaseReport> => {
+    if (mode === "receipt-recovery-replay")
+      check(
+        faultProved,
+        "Receipt recovery requires the preceding full-state rollback proof",
+      )
+    const nonce = mode.startsWith("receipt-") ? recoveryNonce : randomUUID()
+    const fixture = await seedServiceIntakeRollbackFixture(tx, {
+      tenantId,
+      storeId,
+      actorUserId,
+      nonce,
+    })
+    const payload = {
+      action: "service_intake" as const,
+      customerId: fixture.customerId,
+      lines: [
+        { offeringId: fixture.trackedId, quantity: "2" },
+        { offeringId: fixture.chargeId, quantity: "1" },
+      ],
+      requestedAssigneeId: actorUserId,
+      instructions: "Original signed instructions",
+      dueCommitmentAt: "2026-10-15T10:00:00.123Z",
     }
-    const rollback = new Error(`D04_SIGNED_ROLLBACK:${mode}`)
-    let proved = false
-    const scopedDb = new Proxy(db, {
-      get(owner, key) {
-        if (key !== "$transaction") {
-          const value = Reflect.get(owner, key)
-          return typeof value === "function" ? value.bind(owner) : value
-        }
-        return (
-          operation: (tx: Prisma.TransactionClient) => Promise<unknown>,
-          options: {
-            maxWait?: number
-            timeout?: number
-            isolationLevel?: string
-          },
-        ) => {
-          check(
-            options.maxWait === 10_000 &&
-              options.timeout === 30_000 &&
-              options.isolationLevel === "Serializable",
-            "Signed transaction bounds changed",
-          )
-          return db.$transaction(
-            async (tx) => {
-              const item = await createSimpleCatalogItemInTransaction(tx, {
-                tenantId,
-                storeId,
-                actorUserId,
-                kind: "service",
-                clientOperationId: `${id}:catalog`,
-                name: `D04 signed ${id}`,
-                priceMinor: 1000,
-                workPolicy: "tracked",
-                authorizationPolicy: "after_required_payment",
-                quantityScale: 0,
-              })
-              const offering = item.variants[0]?.offerings[0]
-              check(offering, "Exact canonical Offering required")
-              const payload = {
-                action: "service_intake" as const,
-                customerName: `D04 signed ${id}`,
-                lines: [{ offeringId: offering.id, quantity: "2" }],
-                instructions: "Original instructions",
-                dueCommitmentAt: "2026-10-15T10:00:00.123Z",
-              }
-              const { action: _action, ...fields } = payload
-              const reviewed = await reviewServiceIntakeInTransaction(tx, {
-                ...fields,
-                tenantId,
-                storeId,
-                actorUserId,
-                dueCommitmentAt: new Date(payload.dueCommitmentAt),
-              })
-              const binding = {
-                id,
-                expiresAt: new Date(Date.now() + 900_000),
-                payloadHash: proposalDigest(payload),
-                tenantId,
-                storeId,
-                actorUserId,
-                revision: 1,
-              }
-              const approvalToken = proposalApprovalToken(
-                binding,
-                process.env.ASSISTANT_APPROVAL_SIGNING_KEY ?? "",
-              )
-              decision.approvalToken =
-                mode === "changed-token"
-                  ? `${approvalToken}changed`
-                  : approvalToken
-              await tx.assistantActionProposal.create({
-                data: {
-                  ...binding,
-                  conversationId,
-                  action: "service_intake",
-                  payload,
-                  roleSnapshot: "OWNER",
-                  approvalTokenHash: proposalDigest(approvalToken),
-                  idempotencyKey: `assistant_${id}`,
-                  targetRecordId: storeId,
-                  targetRevision: reviewed.revision,
-                },
-              })
-              if (mode === "stale-price")
-                await tx.sellableOffering.update({
-                  where: { id: offering.id },
-                  data: { fixedPriceMinor: 2000 },
-                })
-              if (mode === "revoked")
-                await tx.membership.update({
-                  where: { id: ctx.tenantContext.membership.id },
-                  data: { status: "SUSPENDED" },
-                })
-              let injected = false
-              const executionTx =
-                mode === "receipt-failure"
-                  ? new Proxy(tx, {
-                      get(target, field) {
-                        if (field !== "assistantActionProposal")
-                          return Reflect.get(target, field)
-                        return new Proxy(target.assistantActionProposal, {
-                          get(delegate, method) {
-                            if (method !== "update") {
-                              const value = Reflect.get(delegate, method)
-                              return typeof value === "function"
-                                ? value.bind(delegate)
-                                : value
-                            }
-                            return async (args: {
-                              data: { status?: string }
-                            }) => {
-                              if (args.data.status === "COMPLETED") {
-                                injected = true
-                                throw Error("Injected D04 receipt failure")
-                              }
-                              return delegate.update(
-                                args as Parameters<typeof delegate.update>[0],
-                              )
-                            }
-                          },
-                        })
-                      },
-                    })
-                  : tx
-              try {
-                const app = (await operation(executionTx)) as {
-                  status: string
-                  receipt: { kind: string; recordId: string; orderId?: string }
-                }
-                check(
-                  mode === "completion-replay" &&
-                    app.status === "COMPLETED" &&
-                    app.receipt.kind === "service_intake",
-                  "Invalid signed command executed",
-                )
-                const receipt = await readServiceIntakeReceiptInTransaction(
-                  tx,
-                  {
-                    tenantId,
-                    storeId,
-                    actorUserId,
-                    intakeId: app.receipt.recordId,
-                  },
-                )
-                check(
-                  receipt.orderId === app.receipt.orderId &&
-                    receipt.totalMinor === 2000 &&
-                    receipt.jobs.length === 1 &&
-                    receipt.jobs[0]?.lines[0]?.authorizationStatus ===
-                      "PENDING_PAYMENT",
-                  "Canonical signed receipt graph differs",
-                )
-                const replay = await operation(tx)
-                check(
-                  JSON.stringify(app) === JSON.stringify(replay),
-                  "Completed signed replay changed its receipt",
-                )
-                check(
-                  (await tx.serviceIntake.count({
-                    where: { tenantId, clientIntakeId: `assistant_${id}` },
-                  })) === 1,
-                  "Signed replay created duplicate intake",
-                )
-                proved = true
-              } catch (error) {
-                if (mode === "completion-replay") throw error
-                if (mode === "receipt-failure")
-                  check(
-                    injected &&
-                      error instanceof Error &&
-                      error.message.includes("receipt failure"),
-                    "Receipt injection did not occur after domain execution",
-                  )
-                else {
-                  check(
-                    error instanceof TRPCError &&
-                      error.code ===
-                        (mode === "revoked" ? "FORBIDDEN" : "CONFLICT"),
-                    "Unexpected signed failure",
-                  )
-                  check(
-                    (await tx.serviceIntake.count({
-                      where: { tenantId, clientIntakeId: `assistant_${id}` },
-                    })) === 0,
-                    "Rejected command wrote an Intake",
-                  )
-                }
-                proved = true
-              }
-              throw rollback
-            },
-            {
-              isolationLevel: "Serializable",
-              maxWait: 10_000,
-              timeout: 30_000,
-            },
-          )
-        }
+    const review = await serviceIntake.review({ ...ctx, db: tx }, payload)
+    const binding = {
+      id: nonce,
+      tenantId,
+      storeId,
+      actorUserId,
+      revision: 1,
+      expiresAt: new Date(Date.now() + 900_000),
+      payloadHash: proposalDigest(payload),
+    }
+    const token = proposalApprovalToken(
+      binding,
+      process.env.ASSISTANT_APPROVAL_SIGNING_KEY ?? "",
+    )
+    const key = `assistant_${nonce}`
+    const row = await tx.assistantActionProposal.create({
+      data: {
+        ...binding,
+        conversationId,
+        action: payload.action,
+        payload,
+        roleSnapshot: "OWNER",
+        approvalTokenHash: proposalDigest(token),
+        idempotencyKey: key,
+        targetRecordId: review.target.id,
+        targetRevision: review.target.revision,
       },
     })
-    try {
-      await decideGeneralProposal({ ...ctx, db: scopedDb }, decision)
-    } catch (error) {
+    const original = generalProposalForApp(row)
+    check(
+      original.approvalToken === token && original.status === "PENDING",
+      "Canonical app proposal binding differs",
+    )
+    checks.push("canonical-reviewed-signed-proposal")
+    if (mode === "stale-price")
+      await tx.sellableOffering.update({
+        where: { id: fixture.trackedId },
+        data: { fixedPriceMinor: 2000 },
+      })
+    if (mode === "revoked")
+      await tx.membership.update({
+        where: { id: ctx.tenantContext.membership.id },
+        data: { status: "SUSPENDED" },
+      })
+    if (mode === "expired-session")
+      await tx.session.update({
+        where: { id: ctx.session.session.id },
+        data: { expiresAt: new Date(0) },
+      })
+    if (mode === "cross-tenant")
+      await tx.assistantActionProposal.update({
+        where: { id: nonce },
+        data: { tenantId: `d04-foreign-${nonce}` },
+      })
+    if (mode === "cross-store")
+      await tx.assistantActionProposal.update({
+        where: { id: nonce },
+        data: { storeId: `d04-foreign-${nonce}` },
+      })
+    const seeded = await serviceIntakeSignedRollbackFacts(tx, tenantId)
+    const budgetCalls: G02BudgetCall[] = []
+    const observedTx = observeG02BudgetCalls(tx, "transaction", (call) =>
+      budgetCalls.push(call),
+    )
+    // This private verifier bridge is a root-shaped dispatcher argument only;
+    // every callback gets the real transaction client and reruns fresh authority.
+    const runContext = (
+      client: Prisma.TransactionClient = observedTx,
+    ): GeneralContext => ({
+      ...ctx,
+      db: serviceIntakeSignedTransactionBridge(
+        client,
+      ) as unknown as GeneralContext["db"],
+    })
+    const decision = {
+      proposalId: nonce,
+      revision: 1,
+      decision: "confirm" as const,
+      approvalToken: token,
+    }
+    const assertOriginal = async (
+      receipt: { kind: string; recordId: string; orderId?: string },
+      total: number,
+      instructions: string,
+    ) => {
       check(
-        error === rollback,
-        `Signed ${mode} did not end with the owned rollback`,
+        receipt.kind === "service_intake" && receipt.orderId,
+        "Signed native receipt missing",
+      )
+      const owning = await readServiceIntakeReceiptInTransaction(tx, {
+        tenantId,
+        storeId,
+        actorUserId,
+        intakeId: receipt.recordId,
+      })
+      check(
+        owning.orderId === receipt.orderId &&
+          owning.totalMinor === total &&
+          owning.initialPaymentMinor === 0 &&
+          owning.initialBalanceMinor === total &&
+          owning.instructions === instructions &&
+          owning.promisedAt?.toISOString() === payload.dueCommitmentAt &&
+          owning.assigneeUserId === actorUserId &&
+          owning.lines.length === 2 &&
+          owning.jobs.length === 1 &&
+          owning.jobs[0]?.lines.length === 1 &&
+          owning.jobs[0]?.lines[0]?.authorizationStatus === "PENDING_PAYMENT" &&
+          owning.jobs[0]?.lines[0]?.status === "QUEUED",
+        "Canonical owning Intake/Order/Job original facts differ",
+      )
+      const tracked = owning.lines.find(
+        (line) => line.offeringId === fixture.trackedId,
+      )
+      const charge = owning.lines.find(
+        (line) => line.offeringId === fixture.chargeId,
+      )
+      check(
+        tracked?.unitPriceMinor === 1000 &&
+          tracked.workPolicy === "TRACKED" &&
+          tracked.quantity === (total === 3500 ? "3" : "2") &&
+          charge?.unitPriceMinor === 500 &&
+          charge.quantity === "1" &&
+          charge.workPolicy === "CHARGE_ONLY" &&
+          owning.jobs[0]?.lines[0]?.commercialOrderLineId ===
+            tracked.orderLineId,
+        "Signed receipt changed exact Offering/quantity/immutable policy identity",
+      )
+      const order = await tx.commercialOrder.findUniqueOrThrow({
+        where: { id: owning.orderId },
+      })
+      check(
+        order.customerId === fixture.customerId &&
+          order.createdByUserId === actorUserId &&
+          order.amountPaidMinor === 0,
+        "Signed owning Order lost saved Customer/actor/unpaid identity",
+      )
+      const saved = await tx.assistantActionProposal.findUniqueOrThrow({
+        where: { id: nonce },
+      })
+      check(
+        saved.status === "COMPLETED" &&
+          proposalDigest(saved.executedResult) === proposalDigest(receipt),
+        "Original assistant receipt is not atomically completed",
+      )
+      check(
+        (await tx.serviceIntake.count({
+          where: { tenantId, clientIntakeId: key },
+        })) === 1,
+        "Signed command duplicated Intake",
+      )
+      checks.push(
+        "genuine-original-intake-order-job-receipt",
+        "exact-customer-total-tracked-only-unpaid-gate",
+        "atomic-completed-receipt",
+      )
+      return owning
+    }
+    let receipt: unknown
+    if (mode === "edit-confirm") {
+      const changed = await editGeneralProposal(runContext(), {
+        proposalId: nonce,
+        revision: 1,
+        payload: {
+          ...payload,
+          instructions: "Edited signed instructions",
+          lines: [
+            { offeringId: fixture.trackedId, quantity: "3" },
+            { offeringId: fixture.chargeId, quantity: "1" },
+          ],
+        },
+      })
+      check(
+        changed.revision === 2 &&
+          changed.status === "PENDING" &&
+          changed.approvalToken &&
+          changed.approvalToken !== token &&
+          changed.payload.action === "service_intake" &&
+          changed.payload.instructions === "Edited signed instructions",
+        "Edit did not issue the new canonical signed revision",
+      )
+      assertServiceIntakeSignedFactsUnchanged(
+        seeded,
+        await serviceIntakeSignedRollbackFacts(tx, tenantId),
+        ["AssistantActionProposal", "D04:AssistantActionProposal"],
+      )
+      checks.push("real-edit-new-revision-and-token-no-native-effects")
+      const app = await decideGeneralProposal(runContext(), {
+        ...decision,
+        revision: changed.revision,
+        approvalToken: changed.approvalToken,
+      })
+      check(
+        app.status === "COMPLETED" && app.receipt?.kind === "service_intake",
+        "Edited signed confirmation failed",
+      )
+      receipt = await assertOriginal(
+        app.receipt,
+        3500,
+        "Edited signed instructions",
+      )
+      const executed = await serviceIntakeSignedRollbackFacts(tx, tenantId)
+      assertServiceIntakeSignedFactsUnchanged(seeded, executed, nativeEffects)
+      assertServiceIntakeSignedNativeCreation(seeded, executed)
+    } else if (
+      mode === "completion-replay" ||
+      mode === "completed-replay-revoked" ||
+      mode === "receipt-recovery-replay"
+    ) {
+      const app = await decideGeneralProposal(runContext(), decision)
+      check(
+        app.status === "COMPLETED" && app.receipt?.kind === "service_intake",
+        "Signed confirmation failed",
+      )
+      receipt = await assertOriginal(app.receipt, 2500, payload.instructions)
+      const completed = await serviceIntakeSignedRollbackFacts(tx, tenantId)
+      assertServiceIntakeSignedFactsUnchanged(seeded, completed, nativeEffects)
+      assertServiceIntakeSignedNativeCreation(seeded, completed)
+      if (mode === "completed-replay-revoked") {
+        await tx.membership.update({
+          where: { id: ctx.tenantContext.membership.id },
+          data: { status: "SUSPENDED" },
+        })
+        const revoked = await serviceIntakeSignedRollbackFacts(tx, tenantId)
+        await refused(
+          () => decideGeneralProposal(runContext(), decision),
+          "FORBIDDEN",
+        )
+        assertServiceIntakeSignedFactsUnchanged(
+          revoked,
+          await serviceIntakeSignedRollbackFacts(tx, tenantId),
+        )
+        checks.push(
+          "completed-original-receipt-replay-still-requires-fresh-authority",
+        )
+      } else {
+        const replay = await decideGeneralProposal(runContext(), decision)
+        check(
+          proposalDigest(app) === proposalDigest(replay),
+          "Completed signed replay changed the original app receipt",
+        )
+        assertServiceIntakeSignedFactsUnchanged(
+          completed,
+          await serviceIntakeSignedRollbackFacts(tx, tenantId),
+        )
+        checks.push("fresh-authority-completed-replay-no-effects")
+      }
+      if (mode === "receipt-recovery-replay")
+        checks.push("same-command-key-after-fault-rollback-no-duplicates")
+    } else if (mode === "cancel-replay") {
+      const cancelled = await decideGeneralProposal(runContext(), {
+        ...decision,
+        decision: "cancel",
+      })
+      check(
+        cancelled.status === "CANCELLED" && cancelled.receipt === null,
+        "Canonical cancel executed a command",
+      )
+      const settled = await serviceIntakeSignedRollbackFacts(tx, tenantId)
+      assertServiceIntakeSignedFactsUnchanged(seeded, settled, [
+        "AssistantActionProposal",
+        "D04:AssistantActionProposal",
+      ])
+      const replay = await decideGeneralProposal(runContext(), {
+        ...decision,
+        decision: "cancel",
+      })
+      check(
+        proposalDigest(cancelled) === proposalDigest(replay),
+        "Cancellation replay changed",
+      )
+      assertServiceIntakeSignedFactsUnchanged(
+        settled,
+        await serviceIntakeSignedRollbackFacts(tx, tenantId),
+      )
+      checks.push(
+        "real-cancel-no-native-effects",
+        "fresh-authority-cancel-replay-no-write",
+      )
+    } else if (mode === "receipt-failure") {
+      const fault = Error("D04 original receipt fault")
+      let attempted: unknown
+      const faulty = cashCountReceiptFault(
+        observedTx,
+        nonce,
+        fault,
+        (value) => {
+          attempted = value
+        },
+      )
+      try {
+        await decideGeneralProposal(runContext(faulty), decision)
+        throw Error("Receipt fault not reached")
+      } catch (error) {
+        if (error !== fault) throw error
+      }
+      check(
+        attempted &&
+          typeof attempted === "object" &&
+          "kind" in attempted &&
+          attempted.kind === "service_intake" &&
+          "recordId" in attempted &&
+          typeof attempted.recordId === "string",
+        "Fault did not follow genuine canonical execution",
+      )
+      const owning = await readServiceIntakeReceiptInTransaction(tx, {
+        tenantId,
+        storeId,
+        actorUserId,
+        intakeId: attempted.recordId,
+      })
+      check(
+        owning.totalMinor === 2500 && owning.jobs.length === 1,
+        "Injected receipt used fabricated native effects",
+      )
+      const failed = await tx.assistantActionProposal.findUniqueOrThrow({
+        where: { id: nonce },
+      })
+      check(
+        failed.status === "EXECUTING" && failed.executedResult === null,
+        "Receipt fault falsely completed",
+      )
+      const executed = await serviceIntakeSignedRollbackFacts(tx, tenantId)
+      assertServiceIntakeSignedFactsUnchanged(seeded, executed, nativeEffects)
+      assertServiceIntakeSignedNativeCreation(seeded, executed)
+      checks.push(
+        "identity-receipt-fault-after-real-native-effects",
+        "completion-not-written-for-fault",
+      )
+      faultProved = true
+    } else {
+      const code =
+        mode === "revoked"
+          ? "FORBIDDEN"
+          : mode === "expired-session"
+            ? "UNAUTHORIZED"
+            : mode.startsWith("cross-")
+              ? "NOT_FOUND"
+              : "CONFLICT"
+      await refused(
+        () =>
+          decideGeneralProposal(runContext(), {
+            ...decision,
+            revision: mode === "stale-revision" ? 0 : 1,
+            approvalToken:
+              mode === "changed-token"
+                ? `${token[0] === "a" ? "b" : "a"}${token.slice(1)}`
+                : token,
+          }),
+        code,
+      )
+      assertServiceIntakeSignedFactsUnchanged(
+        seeded,
+        await serviceIntakeSignedRollbackFacts(tx, tenantId),
+      )
+      checks.push(
+        `real-${mode}-${code}-refusal`,
+        "proposal-and-native-financial-auth-chat-budget-facts-unchanged",
       )
     }
-    check(proved, `Signed ${mode} was not proved`)
-    results.push({ mode, proved })
+    return {
+      checks,
+      budgetCalls,
+      proposalId: nonce,
+      commandKey: key,
+      ...(receipt ? { receipt } : {}),
+    }
   }
-  const after = await facts()
-  check(
-    before && before === after,
-    "Signed suite changed saved source/chat state",
-  )
+  const cases = Object.fromEntries(
+    serviceIntakeSignedCases.map((name) => [
+      name,
+      (tx: Prisma.TransactionClient, checks: string[]) =>
+        runCase(name, tx, checks),
+    ]),
+  ) as Record<
+    ServiceIntakeSignedCase,
+    (tx: Prisma.TransactionClient, checks: string[]) => Promise<CaseReport>
+  >
+  const results = await runServiceIntakeSignedCases({
+    facts,
+    transaction: (run, options) => db.$transaction(run, options),
+    cases,
+  })
   return {
-    version: 1,
+    version: 2,
+    startedAt,
     results,
     savedStatePreserved: true,
     persistentAvailabilityChanged: false,
+    providerCalls: 0,
+    committedFixtures: false,
+    acceptance: false,
   }
 }
