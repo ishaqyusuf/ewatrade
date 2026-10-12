@@ -1,6 +1,7 @@
 import type { RehearsalTurn } from "@ewatrade/ai/rehearsal-model"
 import { generalActionSchema } from "./contracts"
 import { statedMoneyFromCanonical } from "./stated-money"
+import { statedTimeFromCanonical } from "./stated-time"
 type PromptMessage = {
   role: string
   content: string | Array<{ type: string; text?: string }>
@@ -10,10 +11,13 @@ export function respondGeneralRehearsal(
   prompt: readonly PromptMessage[],
 ): RehearsalTurn {
   const turn = rehearsalTurn(prompt)
-  // Drafts are built in stored minor units; the model writes stated money in
-  // major units, so send them the way draftAction expects.
+  // Drafts are built in stored form (minor units, UTC); the model writes
+  // stated money in major units and times with an offset, as draftAction expects.
   return turn.kind === "tool" && turn.toolName === "draftAction"
-    ? { ...turn, input: statedMoneyFromCanonical(turn.input) }
+    ? {
+        ...turn,
+        input: statedTimeFromCanonical(statedMoneyFromCanonical(turn.input)),
+      }
     : turn
 }
 function rehearsalTurn(prompt: readonly PromptMessage[]): RehearsalTurn {

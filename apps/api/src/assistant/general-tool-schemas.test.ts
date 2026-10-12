@@ -110,3 +110,28 @@ test("draftAction takes stated sale and payment money in major units", async () 
   )
   expect(json).toContain("Never convert to kobo/cents")
 })
+
+// 12 Oct 2026: local Lagos times were drafted with Z, an hour off.
+test("draftAction takes draft times as local business time", async () => {
+  const tools = createGeneralTools(
+    owner,
+    "conversation",
+    () => {},
+    () => {},
+  )
+  const schema = asSchema(tools.draftAction?.inputSchema)
+  const due = {
+    action: "order_metadata_update",
+    orderId: "order",
+    reason: "Customer asked",
+    patch: { deliveryDueAt: "2026-10-16T15:00" },
+  }
+  const local = await schema.validate?.(due)
+  expect(local?.success && local.value).toEqual(due)
+  const utc = await schema.validate?.({
+    ...due,
+    patch: { deliveryDueAt: "2026-10-16T15:00:00Z" },
+  })
+  expect(utc?.success).toBe(false)
+  expect(String(!utc?.success && utc?.error.message)).toContain("never add Z")
+})

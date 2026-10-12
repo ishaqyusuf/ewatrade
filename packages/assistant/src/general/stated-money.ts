@@ -111,7 +111,7 @@ function fieldsFor(action: unknown) {
 }
 
 /** Calls `leaf` on each object holding the path's last key. */
-function visit(
+export function visitDraftPath(
   value: unknown,
   segments: string[],
   path: (string | number)[],
@@ -123,10 +123,11 @@ function visit(
   if (!rest.length) return leaf(record, path)
   const key = head.replace(/\[\]$/, "")
   const next = record[key]
-  if (!head.endsWith("[]")) return visit(next, rest, [...path, key], leaf)
+  if (!head.endsWith("[]"))
+    return visitDraftPath(next, rest, [...path, key], leaf)
   if (Array.isArray(next))
     next.forEach((item, index) =>
-      visit(item, rest, [...path, key, index], leaf),
+      visitDraftPath(item, rest, [...path, key, index], leaf),
     )
 }
 
@@ -143,7 +144,7 @@ export function canonicalStatedMoneyDraft(input: unknown): unknown {
   if (!fields.length) return input
   const draft = structuredClone(input) as Record<string, unknown>
   for (const field of fields)
-    visit(draft, field.segments, [], (parent, path) => {
+    visitDraftPath(draft, field.segments, [], (parent, path) => {
       if (field.canonicalKey in parent)
         throw issue(
           [...path, field.canonicalKey],
@@ -169,7 +170,7 @@ export function statedMoneyFromCanonical(input: unknown): unknown {
   if (!fields.length) return input
   const draft = structuredClone(input) as Record<string, unknown>
   for (const field of fields)
-    visit(draft, field.segments, [], (parent) => {
+    visitDraftPath(draft, field.segments, [], (parent) => {
       const value = parent[field.canonicalKey]
       if (typeof value !== "number" && typeof value !== "string") return
       parent[field.modelKey] = minorToStatedAmount(value)
@@ -201,7 +202,7 @@ export function statedMoneyIssue<
   }
 }
 
-type JsonNode = {
+export type JsonNode = {
   properties?: Record<string, JsonNode>
   required?: string[]
   items?: JsonNode
@@ -212,7 +213,7 @@ type JsonNode = {
   [key: string]: unknown
 }
 /** The node and every union/intersection branch below it. */
-function branches(node: JsonNode | undefined): JsonNode[] {
+export function branches(node: JsonNode | undefined): JsonNode[] {
   if (!node) return []
   return [
     node,
@@ -224,22 +225,27 @@ function branches(node: JsonNode | undefined): JsonNode[] {
   ]
 }
 
+/** Schema objects that can hold the last key of a draft path. */
+export function schemaParents(action: JsonNode, segments: string[]) {
+  let nodes = [action]
+  for (const segment of segments.slice(0, -1)) {
+    const key = segment.replace(/\[\]$/, "")
+    nodes = nodes
+      .flatMap(branches)
+      .map((node) => node.properties?.[key])
+      .map((node) => (segment.endsWith("[]") ? node?.items : node))
+      .filter((node): node is JsonNode => Boolean(node))
+  }
+  return nodes.flatMap(branches)
+}
+
 /** Rewrites the draftAction JSON schema so stated fields read as major units. */
 export function statedMoneyJsonSchema<T extends object>(schema: T): T {
   const root = structuredClone(schema) as JsonNode
   for (const action of branches(root)) {
     const name = action.properties?.action?.const
     for (const field of fieldsFor(name)) {
-      let nodes = [action]
-      for (const segment of field.segments.slice(0, -1)) {
-        const key = segment.replace(/\[\]$/, "")
-        nodes = nodes
-          .flatMap(branches)
-          .map((node) => node.properties?.[key])
-          .map((node) => (segment.endsWith("[]") ? node?.items : node))
-          .filter((node): node is JsonNode => Boolean(node))
-      }
-      for (const node of nodes.flatMap(branches)) {
+      for (const node of schemaParents(action, field.segments)) {
         const properties = node.properties
         if (!properties?.[field.canonicalKey]) continue
         // Same key order, so the model reads the fields where it expects them.

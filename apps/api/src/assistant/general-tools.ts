@@ -42,6 +42,10 @@ import {
   statedMoneyIssue,
   statedMoneyJsonSchema,
 } from "@ewatrade/assistant/general/stated-money"
+import {
+  canonicalStatedTimeDraft,
+  statedTimeJsonSchema,
+} from "@ewatrade/assistant/general/stated-time"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
@@ -215,22 +219,28 @@ function objectToolSchema<T>(schema: z.ZodType<T>) {
   )
 }
 
+/** A draft as the model wrote it, in the stored proposal form. */
+function canonicalDraft(input: unknown, timeZone: string) {
+  return canonicalStatedTimeDraft(canonicalStatedMoneyDraft(input), timeZone)
+}
+
 /**
  * draftAction as the model sees it: money the merchant states is written in
- * major units and checked in the stored minor form. The input stays as the
- * model wrote it, because the SDK puts the validated value back into the
- * model's history and a minor-unit copy there gets imitated on the next call;
- * `execute` converts it with canonicalStatedMoneyDraft.
+ * major units and times as local business time, and both are checked in the
+ * stored form. The input stays as the model wrote it, because the SDK puts
+ * the validated value back into the model's history and a converted copy
+ * there gets imitated on the next call; `execute` converts it again.
  */
-function draftToolSchema<T>(schema: z.ZodType<T>) {
+function draftToolSchema<T>(schema: z.ZodType<T>, timeZone: string) {
   const base = objectToolSchema(schema)
   return jsonSchema<unknown>(
-    async () => statedMoneyJsonSchema(await base.jsonSchema),
+    async () =>
+      statedTimeJsonSchema(statedMoneyJsonSchema(await base.jsonSchema)),
     {
       validate: async (value) => {
         let canonical: unknown
         try {
-          canonical = canonicalStatedMoneyDraft(value)
+          canonical = canonicalDraft(value, timeZone)
         } catch (error) {
           return { success: false, error: error as Error }
         }
@@ -260,6 +270,7 @@ export function createGeneralTools(
   onAnswer: (answer: GeneralAnswer) => void,
 ): ToolSet {
   const scope = requireGeneralScope(ctx)
+  const timeZone = ctx.tenantContext.tenant.timezone ?? "Africa/Lagos"
   const readCapabilities = new Map<string, Capability>(
     capabilityManifest
       .filter((capability) => capability.mode === "read")
@@ -1844,13 +1855,13 @@ export function createGeneralTools(
         ...serviceWorkInstructions,
         ...quoteDecisionInstructions,
       ].join("\n\n"),
-      inputSchema: draftToolSchema(actionSchema),
+      inputSchema: draftToolSchema(actionSchema, timeZone),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {
           const result = await draftGeneralProposal(
             fresh,
             conversationId,
-            canonicalStatedMoneyDraft(input),
+            canonicalDraft(input, timeZone),
           )
           onProposal(result.proposalId)
           return result

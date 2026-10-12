@@ -26,6 +26,7 @@
     "./general/rehearsal": "./src/general/rehearsal.ts",
     "./general/snapshot": "./src/general/snapshot.ts",
     "./general/stated-money": "./src/general/stated-money.ts",
+    "./general/stated-time": "./src/general/stated-time.ts",
     "./capabilities/manifest": "./src/capabilities/manifest.ts",
     "./capabilities/coverage": "./src/capabilities/coverage.ts",
     "./capabilities/types": "./src/capabilities/types.ts",
