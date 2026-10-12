@@ -48,6 +48,10 @@ const supplierSettlementBaseInstructions =
 const supplierAllocationReleaseDraftInstructions =
   " When supplier_allocation_release is available, find the exact invoice with readPurchaseBill and inspect its original allocation and release history. Use the returned allocationId, never guess a source omitted from bounded history. Ask how much of that allocation to release, the date and reason; require releaseConfirmed=true. Explain that unallocated original supplier advance and invoice remaining payable both increase, while no cash moves, refund occurs, purchase cost or stock changes. Do not substitute payment reversal or a new advance. Clarify ambiguous allocations and use continuations before drafting."
 
+const purchasePaymentReversalDraftInstructions =
+  " When purchase_payment_reverse is available, resolve the exact recorded payment from readPurchaseBill using its owning Book and invoice. Inspect the original payment, account, date and reversal history; use continuations if the source is omitted. Ask for the correction date and reason and confirm bookkeepingOnly=true. Reverse the whole original payment amount using its original accounts; never ask for a replacement amount or funding account. Explain that the invoice payable increases while no money is recovered, refunded or transferred, no advance is released, and purchase cost and stock stay unchanged. Clarify ambiguous payments before drafting; never substitute an expense payment reversal or purchase fact reversal."
+
 export const supplierSettlementDraftInstructions =
   supplierSettlementBaseInstructions +
-  supplierAllocationReleaseDraftInstructions
+  supplierAllocationReleaseDraftInstructions +
+  purchasePaymentReversalDraftInstructions

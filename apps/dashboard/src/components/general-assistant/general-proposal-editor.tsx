@@ -75,7 +75,8 @@ export function GeneralProposalEditor(props: {
     return <GeneralSupplierEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel}/>
   if (
     props.proposal.payload.action === "expense_void" ||
-    props.proposal.payload.action === "bill_payment_reverse"
+    props.proposal.payload.action === "bill_payment_reverse" ||
+    props.proposal.payload.action === "purchase_payment_reverse"
   )
     return (
       <GeneralBillCorrectionEditor

@@ -18,7 +18,7 @@ import { useState } from "react"
 import { z } from "zod"
 type Action = Extract<
   GeneralAction,
-  { action: "expense_void" | "bill_payment_reverse" }
+  { action: "expense_void" | "bill_payment_reverse" | "purchase_payment_reverse" }
 >
 const schema = z.object({
   date: z.string().min(1),
@@ -126,7 +126,7 @@ export function GeneralBillCorrectionEditor({
         />
       </FieldGroup>
       <p className="text-sm text-muted-foreground">
-        The reviewed expense or payment stays selected. Ask for a new draft to
+        The reviewed bill or payment stays selected. Ask for a new draft to
         change the target.
       </p>
       {error ? (

@@ -34,7 +34,8 @@ export async function verifySupplierSettlementProposalRollback(
     app.payload.action !== "supplier_advance" &&
     app.payload.action !== "supplier_advance_allocate" &&
     app.payload.action !== "purchase_payment" &&
-    app.payload.action !== "supplier_allocation_release"
+    app.payload.action !== "supplier_allocation_release" &&
+    app.payload.action !== "purchase_payment_reverse"
   )
     throw Error("An exact pending supplier settlement proposal is required")
   const bookId = app.payload.bookId
@@ -51,7 +52,17 @@ export async function verifySupplierSettlementProposalRollback(
               select: { billId: true },
             })
           ).billId
-        : null
+        : app.payload.action === "purchase_payment_reverse"
+          ? (
+              await db.financeBillPayment.findFirstOrThrow({
+                where: {
+                  id: app.payload.paymentId,
+                  bookId: app.payload.bookId,
+                },
+                select: { billId: true },
+              })
+            ).billId
+          : null
   await db.financeBook.findFirstOrThrow({
     where: { id: bookId, tenantId },
     select: { id: true },
@@ -69,6 +80,17 @@ export async function verifySupplierSettlementProposalRollback(
     commands: await db.financeCommand.count({ where: { bookId } }),
     supplierEntries: await db.financeSupplierEntry.count({ where: { bookId } }),
     payments: await db.financeBillPayment.count({ where: { bookId } }),
+    paymentReversals: await db.financeBillPayment.findMany({
+      where: { bookId },
+      select: {
+        id: true,
+        reversedAt: true,
+        reversalEffectiveAt: true,
+        reversedById: true,
+        reversalReason: true,
+      },
+      orderBy: { id: "asc" },
+    }),
     allocations: await db.financeSupplierAllocation.count({
       where: { bookId },
     }),
@@ -222,7 +244,11 @@ export async function verifySupplierSettlementProposalRollback(
   expect(pending).toBe(true)
   let staleProof: { elapsedMs: number; savedFactsUnchanged: boolean } | null =
     null
-  if (app.payload.action === "supplier_allocation_release" && billId) {
+  if (
+    (app.payload.action === "supplier_allocation_release" ||
+      app.payload.action === "purchase_payment_reverse") &&
+    billId
+  ) {
     const changedDb = new Proxy(db, {
       get(target, key) {
         if (key === "$transaction")
@@ -237,7 +263,7 @@ export async function verifySupplierSettlementProposalRollback(
               })
               expect(changed.count).toBe(1)
               await run(tx)
-              throw Error("STALE_RELEASE_DID_NOT_REFUSE")
+              throw Error("STALE_SETTLEMENT_DID_NOT_REFUSE")
             }, options)
         const value = Reflect.get(target, key)
         return typeof value === "function" ? value.bind(target) : value

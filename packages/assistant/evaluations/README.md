@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Purchase payment reversal | [1](fixtures/purchase-payment-reversal.v1.md) | Exact original payment/accounts, whole-payment correction, no-money boundary, stale/chronology/rollback/replay and owning invoice | None yet |
 | Supplier allocation release | [1](fixtures/supplier-allocation-release.v1.md) | Exact original allocation, partial release, no-cash boundary, stale/chronology/rollback/replay and owning invoice | None yet |
 | Supplier settlement | [1](fixtures/supplier-settlement.v1.md) | Paid advances, exact-source allocation, partial payment, stale/chronology/rollback/replay and owning receipt | None yet |
 | Purchase recognition | [1](fixtures/purchase-recognition.v1.md) | Independent invoice/ownership, exact posting review, rollback/replay and physical receipt boundaries | None yet |
@@ -34,6 +35,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Purchase payment reversal source and signed rollback, 12 October 2026](runs/2026-10-12-purchase-payment-reversal-source.md): strict review/editor, private locked original proof, canonical reversal/replay16.998s and actual signed completion rollback17.988s/stale refusal preserve facts;12 tests678 assertions/scoped types and component browser checks pass. Full saved chat confirmation/recovery pending, capability planned, E05 partial.
 
 - [Supplier allocation release full proposal and web, 12 October 2026](runs/2026-10-12-allocation-release-web.md): private locked preparation removes duplicate proof reads; signed completion rollback19.90s and stale refusal preserve facts. Actual Edit/re-review/Confirm/Open/Close/reload, exact original allocation/release/journal/payable/advance and concurrent recovery pass. Source-available; E05 partial, five other canonical procedures pending.
 

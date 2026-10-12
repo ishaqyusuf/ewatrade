@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
 import {
   getFinancePurchasePaymentReview,
+  getFinancePurchasePaymentReversalReview,
   getFinanceSupplierAllocationReview,
   getFinanceSupplierAllocationReleaseReview,
 } from "./purchase-settlements"
@@ -17,6 +18,15 @@ const base = {
 }
 function fixture(
   o: {
+    missingPayment?: boolean
+    reversedPayment?: boolean
+    reversedPaymentJournal?: boolean
+    malformedPayment?: boolean
+    wrongPaymentActor?: boolean
+    wrongPaymentSupplier?: boolean
+    wrongPaymentAccount?: boolean
+    archivedPaymentAccount?: boolean
+    insufficientPaid?: boolean
     denied?: boolean
     missingBook?: boolean
     closed?: boolean
@@ -146,7 +156,7 @@ function fixture(
               dueAt: null,
               description: "Goods",
               totalMinor: 1000n,
-              paidMinor: o.paid ? 1000n : 100n,
+              paidMinor: o.insufficientPaid ? 25n : o.paid ? 1000n : 100n,
               recognitionEvent: null,
               lines: [
                 {
@@ -156,6 +166,71 @@ function fixture(
                 },
               ],
               supplierEntries: [billEntry],
+            }
+      },
+    },
+    financeBillPayment: {
+      findFirst: async (a: unknown) => {
+        expect(a).toMatchObject({ where: { id: "payment", bookId: "book" } })
+        const paymentAt = new Date("2026-10-03T12:00:00.123Z")
+        return o.missingPayment
+          ? null
+          : {
+              id: "payment",
+              bookId: "book",
+              billId: "bill",
+              accountId: "cash",
+              amountMinor: 50n,
+              actorUserId: "owner",
+              effectiveAt: paymentAt,
+              reference: "ORIGINAL",
+              reversedAt: o.reversedPayment ? date : null,
+              account: {
+                id: "cash",
+                name: "Shop cash",
+                kind: "ASSET",
+                purpose: o.wrongPaymentAccount ? "INVENTORY" : "CASH",
+                archivedAt: o.archivedPaymentAccount ? date : null,
+              },
+              bill: {
+                id: "bill",
+                kind: "PURCHASE",
+                supplierId: "supplier",
+                storeId: "store",
+                paidMinor: o.insufficientPaid ? 25n : 100n,
+              },
+              supplierEntry: {
+                id: "payment-entry",
+                kind: "PURCHASE_PAYMENT",
+                side: "DEBIT",
+                bookId: "book",
+                supplierId: o.wrongPaymentSupplier ? "other" : "supplier",
+                billId: "bill",
+                paymentId: "payment",
+                amountMinor: 50n,
+                moneyAccountId: "cash",
+                actorUserId: "owner",
+                effectiveAt: paymentAt,
+                description: "Paid invoice",
+                reversals: [],
+                journalEntry: {
+                  id: "payment-journal",
+                  sourceKind: "PURCHASE_PAYMENT",
+                  sourceId: "payment",
+                  actorUserId: o.wrongPaymentActor ? "other" : "owner",
+                  effectiveAt: paymentAt,
+                  description: "Paid invoice",
+                  storeId: "store",
+                  reversalOfId: null,
+                  reversal: o.reversedPaymentJournal
+                    ? { id: "reversal" }
+                    : null,
+                  lines: [
+                    line("payable", 50n, 0n),
+                    line("cash", 0n, o.malformedPayment ? 49n : 50n),
+                  ],
+                },
+              },
             }
       },
     },
@@ -491,4 +566,81 @@ test("release review refuses invalid original allocation, source, period, author
         ...change,
       }),
     ).rejects.toBeDefined()
+})
+
+const reverseInput = {
+  tenantId: "tenant",
+  actorUserId: "owner",
+  bookId: "book",
+  paymentId: "payment",
+  effectiveAt: date,
+  reason: "Duplicate payment record",
+}
+test("purchase payment reversal reviews the whole original payment and restores only its payable", async () => {
+  const review = await getFinancePurchasePaymentReversalReview(
+    fixture(),
+    reverseInput,
+  )
+  expect(review).toMatchObject({
+    paymentId: "payment",
+    paymentJournalId: "payment-journal",
+    supplierEntryId: "payment-entry",
+    reference: "ORIGINAL",
+    amountMinor: "50",
+    moneyAccountId: "cash",
+    moneyAccountName: "Shop cash",
+    paidBeforeMinor: "100",
+    paidAfterMinor: "50",
+    outstandingBeforeMinor: "900",
+    outstandingAfterMinor: "950",
+    paymentEffectiveAt: "2026-10-03T12:00:00.123Z",
+    effectiveAt: date.toISOString(),
+    reason: reverseInput.reason,
+    moneyTransfer: "NOT_PERFORMED",
+  })
+  expect(review.lines).toEqual([
+    {
+      accountId: "payable",
+      accountName: "Supplier payable",
+      debitMinor: "0",
+      creditMinor: "50",
+    },
+    {
+      accountId: "cash",
+      accountName: "Shop cash",
+      debitMinor: "50",
+      creditMinor: "0",
+    },
+  ])
+})
+test("purchase payment reversal refuses altered original sources, settled history, authority and cutoff", async () => {
+  for (const options of [
+    { missingPayment: true },
+    { reversedPayment: true },
+    { reversedPaymentJournal: true },
+    { malformedPayment: true },
+    { wrongPaymentActor: true },
+    { wrongPaymentSupplier: true },
+    { wrongPaymentAccount: true },
+    { archivedPaymentAccount: true },
+    { insufficientPaid: true },
+    { denied: true },
+    { missingBook: true },
+    { closed: true },
+    { missingBill: true },
+    { voided: true },
+    { corrected: true },
+    { malformedBill: true },
+    { archivedControl: true },
+    { latestBill: true },
+  ])
+    await expect(
+      getFinancePurchasePaymentReversalReview(fixture(options), reverseInput),
+    ).rejects.toThrow()
+  await expect(
+    getFinancePurchasePaymentReversalReview(fixture(), {
+      ...reverseInput,
+      effectiveAt: new Date("2026-10-02"),
+    }),
+  ).rejects.toThrow("cannot precede")
 })

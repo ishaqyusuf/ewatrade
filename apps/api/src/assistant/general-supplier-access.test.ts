@@ -88,3 +88,25 @@ test("supplier/purchase finance access disappears on Free plan, revoked access o
         expect(() => assertGeneralAction(ctx, c.action)).toThrow()
     }
 })
+
+test("purchase payment reversal stays planned and retains finance authority when made source-visible", () => {
+  const capability = capabilityManifest.find(
+    (c) => c.id === "finance.purchase.payment.reverse",
+  )
+  if (!capability) throw Error("Purchase payment reversal capability required")
+  expect(capability.rollout).toBe("planned")
+  expect(canUseCapability(actor("OWNER"), capability)).toBe(false)
+  const source = { ...capability, rollout: "source" as const }
+  for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"])
+    expect(canUseCapability(actor(role), source)).toBe(
+      role === "OWNER" || role === "ADMIN",
+    )
+  expect(canUseCapability(actor("OWNER", "free"), source)).toBe(false)
+  expect(canUseCapability(actor("MANAGER", "pro", true), source)).toBe(false)
+  const suspended = actor("OWNER")
+  suspended.tenantContext.staffAccess = {
+    ...suspended.tenantContext.staffAccess,
+    status: "SUSPENDED",
+  } as GeneralContext["tenantContext"]["staffAccess"]
+  expect(canUseCapability(suspended, source)).toBe(false)
+})

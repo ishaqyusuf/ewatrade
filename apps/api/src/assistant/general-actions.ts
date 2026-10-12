@@ -32,6 +32,7 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import { purchasePaymentReverse } from "./general-purchase-payment-reversal"
 import { supplierAllocationRelease } from "./general-supplier-allocation-release"
 import { supplierAdvance, supplierAdvanceAllocate, purchasePayment } from "./general-supplier-settlement"
 import { purchaseRecognize } from "./general-purchase-recognition"
@@ -592,6 +593,7 @@ const adapters: {
   purchase_register: purchaseRegister,
   purchase_recognize: purchaseRecognize,
   supplier_create: supplierCreate,
+  purchase_payment_reverse: purchasePaymentReverse,
   supplier_allocation_release: supplierAllocationRelease,
   supplier_advance: supplierAdvance,
   supplier_advance_allocate: supplierAdvanceAllocate,

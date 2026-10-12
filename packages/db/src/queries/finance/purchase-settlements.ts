@@ -371,9 +371,141 @@ export async function payFinancePurchaseBillInTransaction(
   )
 }
 
-export async function reverseFinancePurchasePaymentInTransaction(
+async function reviewPurchasePaymentReversalSource(
+  tx: Transaction,
+  input: Omit<ReverseFinancePurchasePaymentInput, "clientCommandId">,
+  bookId: string,
+) {
+  const payment = await tx.financeBillPayment.findFirst({
+    where: { id: input.paymentId, bookId: bookId },
+    include: {
+      bill: true,
+      account: true,
+      supplierEntry: {
+        include: {
+          journalEntry: {
+            include: { lines: true, reversal: { select: { id: true } } },
+          },
+          reversals: { select: { id: true } },
+        },
+      },
+    },
+  })
+  if (
+    !payment ||
+    payment.bill.kind !== "PURCHASE" ||
+    !payment.bill.supplierId ||
+    !payment.supplierEntry
+  )
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Purchase payment not found in this financial book.",
+    )
+  if (
+    payment.reversedAt ||
+    payment.supplierEntry.reversals.length ||
+    payment.supplierEntry.journalEntry.reversal
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "This purchase payment has already been reversed.",
+    )
+  if (input.effectiveAt < payment.effectiveAt)
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "A reversal cannot precede the purchase payment.",
+    )
+  const { bill: verifiedBill } = await verifyPurchaseBill(
+    tx,
+    bookId,
+    payment.billId,
+  )
+  requireNotBeforeLatest(
+    input.effectiveAt,
+    await getLatestBillSupplierEntryAt(tx, bookId, verifiedBill.id),
+  )
+  if (
+    verifiedBill.supplierId !== payment.bill.supplierId ||
+    payment.account.kind !== "ASSET" ||
+    !["CASH", "BANK", "CLEARING"].includes(payment.account.purpose)
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The purchase payment no longer matches an active purchase source.",
+    )
+  const source = payment.supplierEntry
+  const journal = source.journalEntry
+  assertPostingHeader({
+    journal,
+    sourceKind: "PURCHASE_PAYMENT",
+    sourceId: payment.id,
+    actorUserId: payment.actorUserId,
+    effectiveAt: payment.effectiveAt,
+  })
+  if (
+    source.kind !== "PURCHASE_PAYMENT" ||
+    source.side !== "DEBIT" ||
+    source.bookId !== bookId ||
+    source.supplierId !== payment.bill.supplierId ||
+    source.billId !== payment.billId ||
+    source.paymentId !== payment.id ||
+    source.amountMinor !== payment.amountMinor ||
+    source.moneyAccountId !== payment.accountId ||
+    source.actorUserId !== payment.actorUserId ||
+    source.effectiveAt.getTime() !== payment.effectiveAt.getTime() ||
+    source.description !== journal.description ||
+    journal.storeId !== payment.bill.storeId ||
+    journal.lines.length !== 2 ||
+    !journal.lines.some(
+      (line) =>
+        line.accountId === source.moneyAccountId &&
+        line.creditMinor === payment.amountMinor &&
+        line.debitMinor === BigInt(0),
+    ) ||
+    !journal.lines.some(
+      (line) =>
+        line.accountId !== source.moneyAccountId &&
+        line.debitMinor === payment.amountMinor &&
+        line.creditMinor === BigInt(0),
+    )
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The purchase payment does not match its original journal.",
+    )
+  const payable = await getPurchaseControlAccount(
+    tx,
+    bookId,
+    PAYABLE_CODE,
+    "LIABILITY",
+    "PAYABLE",
+  )
+  if (
+    !journal.lines.some(
+      (line) =>
+        line.accountId === payable.id &&
+        line.debitMinor === payment.amountMinor &&
+        line.creditMinor === BigInt(0),
+    )
+  )
+    throw new FinanceError(
+      "CONFLICT",
+      "The purchase payment did not debit Payable.",
+    )
+  if (payment.bill.paidMinor < payment.amountMinor)
+    throw new FinanceError(
+      "CONFLICT",
+      "The purchase bill paid total cannot be reconciled.",
+    )
+  return { payment, bill: verifiedBill, source, journal, payable }
+}
+
+async function executeFinancePurchasePaymentReversal(
   tx: Transaction,
   input: ReverseFinancePurchasePaymentInput,
+  preparedSource?: Awaited<
+    ReturnType<typeof reviewPurchasePaymentReversalSource>
+  >,
 ) {
   requirePurchaseDate(input.effectiveAt)
   const reason = text(input.reason, "reversal reason")
@@ -384,127 +516,9 @@ export async function reverseFinancePurchasePaymentInTransaction(
     "REVERSE_PURCHASE_PAYMENT",
     { ...payload, reason },
     async (book) => {
-      const payment = await tx.financeBillPayment.findFirst({
-        where: { id: input.paymentId, bookId: book.id },
-        include: {
-          bill: true,
-          account: true,
-          supplierEntry: {
-            include: {
-              journalEntry: {
-                include: { lines: true, reversal: { select: { id: true } } },
-              },
-              reversals: { select: { id: true } },
-            },
-          },
-        },
-      })
-      if (
-        !payment ||
-        payment.bill.kind !== "PURCHASE" ||
-        !payment.bill.supplierId ||
-        !payment.supplierEntry
-      )
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Purchase payment not found in this financial book.",
-        )
-      if (
-        payment.reversedAt ||
-        payment.supplierEntry.reversals.length ||
-        payment.supplierEntry.journalEntry.reversal
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "This purchase payment has already been reversed.",
-        )
-      if (input.effectiveAt < payment.effectiveAt)
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "A reversal cannot precede the purchase payment.",
-        )
-      const { bill: verifiedBill } = await verifyPurchaseBill(
-        tx,
-        book.id,
-        payment.billId,
-      )
-      requireNotBeforeLatest(
-        input.effectiveAt,
-        await getLatestBillSupplierEntryAt(tx, book.id, verifiedBill.id),
-      )
-      if (
-        verifiedBill.supplierId !== payment.bill.supplierId ||
-        payment.account.kind !== "ASSET" ||
-        !["CASH", "BANK", "CLEARING"].includes(payment.account.purpose)
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "The purchase payment no longer matches an active purchase source.",
-        )
-      const source = payment.supplierEntry
-      const journal = source.journalEntry
-      assertPostingHeader({
-        journal,
-        sourceKind: "PURCHASE_PAYMENT",
-        sourceId: payment.id,
-        actorUserId: payment.actorUserId,
-        effectiveAt: payment.effectiveAt,
-      })
-      if (
-        source.kind !== "PURCHASE_PAYMENT" ||
-        source.side !== "DEBIT" ||
-        source.bookId !== book.id ||
-        source.supplierId !== payment.bill.supplierId ||
-        source.billId !== payment.billId ||
-        source.paymentId !== payment.id ||
-        source.amountMinor !== payment.amountMinor ||
-        source.moneyAccountId !== payment.accountId ||
-        source.actorUserId !== payment.actorUserId ||
-        source.effectiveAt.getTime() !== payment.effectiveAt.getTime() ||
-        source.description !== journal.description ||
-        journal.storeId !== payment.bill.storeId ||
-        journal.lines.length !== 2 ||
-        !journal.lines.some(
-          (line) =>
-            line.accountId === source.moneyAccountId &&
-            line.creditMinor === payment.amountMinor &&
-            line.debitMinor === BigInt(0),
-        ) ||
-        !journal.lines.some(
-          (line) =>
-            line.accountId !== source.moneyAccountId &&
-            line.debitMinor === payment.amountMinor &&
-            line.creditMinor === BigInt(0),
-        )
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "The purchase payment does not match its original journal.",
-        )
-      const payable = await getPurchaseControlAccount(
-        tx,
-        book.id,
-        PAYABLE_CODE,
-        "LIABILITY",
-        "PAYABLE",
-      )
-      if (
-        !journal.lines.some(
-          (line) =>
-            line.accountId === payable.id &&
-            line.debitMinor === payment.amountMinor &&
-            line.creditMinor === BigInt(0),
-        )
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "The purchase payment did not debit Payable.",
-        )
-      if (payment.bill.paidMinor < payment.amountMinor)
-        throw new FinanceError(
-          "CONFLICT",
-          "The purchase bill paid total cannot be reconciled.",
-        )
+      const { payment, source, journal } =
+        preparedSource ??
+        (await reviewPurchasePaymentReversalSource(tx, input, book.id))
       const reversalDescription = `Purchase payment reversal: ${reason}`
       const posted = await postFinanceJournalInTransaction(tx, {
         ...input,
@@ -1324,6 +1338,123 @@ export async function prepareReviewedFinanceSupplierAllocationReleaseInTransacti
         )
       commandId = clientCommandId
       return (execution ??= executeFinanceSupplierAllocationRelease(
+        tx,
+        { ...owned, clientCommandId },
+        source,
+      ))
+    },
+  }
+}
+
+async function loadFinancePurchasePaymentReversalReview(
+  tx: Transaction,
+  input: Omit<ReverseFinancePurchasePaymentInput, "clientCommandId">,
+  lockBook = false,
+) {
+  const reason = text(input.reason, "reversal reason")
+  const book = await settlementReviewBook(tx, input, lockBook)
+  const source = await reviewPurchasePaymentReversalSource(tx, input, book.id)
+  const { payment, bill, journal, payable } = source
+  if (payment.account.archivedAt)
+    throw new FinanceError(
+      "CONFLICT",
+      "The original payment account is archived. Review a valid correction.",
+    )
+  const supplier = await tx.financeSupplierAccount.findFirstOrThrow({
+    where: { id: bill.supplierId!, bookId: book.id },
+    select: { id: true, name: true, code: true },
+  })
+  const review = {
+    bookId: book.id,
+    currencyCode: book.currencyCode,
+    startsAt: book.startsAt.toISOString(),
+    closedThrough: book.closedThrough?.toISOString() ?? null,
+    paymentId: payment.id,
+    paymentEffectiveAt: payment.effectiveAt.toISOString(),
+    paymentActorUserId: payment.actorUserId,
+    reference: payment.reference,
+    paymentJournalId: journal.id,
+    supplierEntryId: source.source.id,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    supplierCode: supplier.code,
+    billId: bill.id,
+    billDescription: bill.description,
+    totalMinor: bill.totalMinor.toString(),
+    paidBeforeMinor: bill.paidMinor.toString(),
+    paidAfterMinor: (bill.paidMinor - payment.amountMinor).toString(),
+    outstandingBeforeMinor: (bill.totalMinor - bill.paidMinor).toString(),
+    outstandingAfterMinor: (
+      bill.totalMinor -
+      bill.paidMinor +
+      payment.amountMinor
+    ).toString(),
+    amountMinor: payment.amountMinor.toString(),
+    moneyAccountId: payment.accountId,
+    moneyAccountName: payment.account.name,
+    moneyAccountPurpose: payment.account.purpose,
+    payableAccountId: payable.id,
+    payableAccountName: payable.name,
+    effectiveAt: input.effectiveAt.toISOString(),
+    reason,
+    lines: journal.lines.map((line) => ({
+      accountId: line.accountId,
+      accountName:
+        line.accountId === payment.accountId
+          ? payment.account.name
+          : payable.name,
+      debitMinor: line.creditMinor.toString(),
+      creditMinor: line.debitMinor.toString(),
+    })),
+    effect: "REVERSE_RECORDED_PURCHASE_PAYMENT" as const,
+    moneyTransfer: "NOT_PERFORMED" as const,
+  }
+  return { review, source }
+}
+export async function getFinancePurchasePaymentReversalReview(
+  tx: Transaction,
+  input: Omit<ReverseFinancePurchasePaymentInput, "clientCommandId">,
+) {
+  return (await loadFinancePurchasePaymentReversalReview(tx, input)).review
+}
+export async function reverseFinancePurchasePaymentInTransaction(
+  tx: Transaction,
+  input: ReverseFinancePurchasePaymentInput,
+) {
+  return executeFinancePurchasePaymentReversal(tx, input)
+}
+/** Exact original payment proof is freshly checked under the Book lock; callers cannot supply it. */
+export async function prepareReviewedFinancePurchasePaymentReversalInTransaction(
+  tx: Transaction,
+  input: Omit<ReverseFinancePurchasePaymentInput, "clientCommandId">,
+) {
+  const owned = {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    bookId: input.bookId,
+    paymentId: input.paymentId,
+    effectiveAt: new Date(input.effectiveAt),
+    reason: input.reason,
+  }
+  const { review, source } = await loadFinancePurchasePaymentReversalReview(
+    tx,
+    owned,
+    true,
+  )
+  let commandId: string | undefined
+  let execution:
+    | ReturnType<typeof executeFinancePurchasePaymentReversal>
+    | undefined
+  return {
+    review,
+    execute: (clientCommandId: string) => {
+      if (commandId !== undefined && commandId !== clientCommandId)
+        throw new FinanceError(
+          "CONFLICT",
+          "Prepared reversal is bound to one command.",
+        )
+      commandId = clientCommandId
+      return (execution ??= executeFinancePurchasePaymentReversal(
         tx,
         { ...owned, clientCommandId },
         source,

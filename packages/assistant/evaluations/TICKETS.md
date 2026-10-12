@@ -100,7 +100,7 @@ Canonical procedure checklist within E05 (the parent remains partial):
 - [ ] `finance.recordPurchase` — direct purchase recording.
 - [ ] `finance.recordSupplierOpening` — supplier opening balances.
 - [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
-- [ ] `finance.reversePurchasePayment` — purchase payment reversal; next implementation.
+- [ ] `finance.reversePurchasePayment` — purchase payment reversal; source/signed rollback/editor verified, full saved chat confirmation/recovery next. [Evidence](runs/2026-10-12-purchase-payment-reversal-source.md).
 - [ ] `finance.reversePurchaseRecognition` — purchase fact reversal.
 - [ ] `finance.reverseSupplierEntry` — supplier entry reversal.
 
