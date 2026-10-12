@@ -350,3 +350,12 @@ day-close history-entry Open/Close preserves saved chat and unsent draft; full13
 post-check fails only on QaClientAuthorization,133others match. No saved answer
 Open or full preservation/acceptance claimed; actual screenshots are recorded.
 [Evidence](runs/2026-10-12-saved-chat-and-signed-intake-checkpoint.md).
+
+
+S03 actual signed suspension/completed replay, cancellation/replay, changed-token
+and stale-revision refusal all pass one forced-rollback run, preserving covered
+saved staff/auth/chat/global-budget state. No ACTIVE fixture/provider/activation.
+Accepted-reactivation, persisted/concurrent recovery and saved confirmation remain
+open;13/45accepted unchanged. D04 diagnostics/remaining-case selector committed
+`9e393bec`, preserving every full134 assertion and existing edit-confirm evidence.
+[Signed staff evidence](runs/2026-10-12-staff-status-signed-rollback.md).
