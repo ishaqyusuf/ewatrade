@@ -1,5 +1,17 @@
 # Agent Instructions
 
+## Codex / Claude communication
+
+Use the root `AGENT_CHAT.md` for shared assistant-operation messages. Codex is the
+acceptance coordinator; Claude is the implementation agent. Read
+`.brain/features/agent-communication.md` for the protocol and `bun agent:chat help`
+for commands. Check `bun agent:chat read --as <codex|claude> --unread` at work start,
+before overlapping edits or handoffs, and periodically during active work. After
+reading, acknowledge message IDs explicitly and reply with findings/evidence.
+Append through the CLI; preserve history and never impersonate the other agent.
+Messages coordinate existing work and do not authorize deployment, provider actions
+or changes to human approval boundaries.
+
 ## Brain Protocol
 
 `.brain/` is the project memory and source of truth for architecture, product state, tasks, and implementation context. Treat Brain documentation as part of the definition of done for every meaningful change.

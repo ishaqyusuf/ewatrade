@@ -8,6 +8,8 @@ This file is only a redirect. The canonical project memory now lives in the Brai
 - Always read and update Brain docs instead.
 
 ## Start Here
+- [`AGENTS.md`](./AGENTS.md), including the shared chat protocol at
+  [`.brain/features/agent-communication.md`](./.brain/features/agent-communication.md).
 - [`.brain/BRAIN.md`](./.brain/BRAIN.md)
 - [`.brain/SYSTEM_OVERVIEW.md`](./.brain/SYSTEM_OVERVIEW.md)
 - [`.brain/PROJECT_INDEX.md`](./.brain/PROJECT_INDEX.md)

@@ -23,6 +23,7 @@
   },
   "workspaces": ["apps/*", "packages/*", "tooling/*"],
   "scripts": {
+    "agent:chat": "bun --env-file=/dev/null scripts/agent-chat.ts",
     "db:seed:category-suggestion-config": "node ./scripts/with-workspace-env.mjs bun run --cwd packages/db seed:category-suggestion-config",
     "build": "turbo build",
     "clean": "git clean -xdf node_modules",
