@@ -1,5 +1,9 @@
 # Assistant conversation evaluations
 
+[Staff Job handoff review](runs/2026-10-12-staff-job-handoff-review.md): seven focused checks pass; revoked-access return repair pending. Actual saved purchase-object screenshots show same-chat and unsent-draft continuity, separately from the unaccepted S04 flow.
+
+[H02 coordinator review](runs/2026-10-12-h02-coordinator-review.md): two reproduced impact-gate gaps require implementation repairs before acceptance. Earlier passing evidence is reused.
+
 [Quotation decision integration review](runs/2026-10-12-quotation-decision-integration-review.md): nine new logical cases, scoped compilation and structural coverage pass; authenticated synthetic screenshots; signed/runtime/native acceptance remains open.
 
 [D05 completion verifier source review](runs/2026-10-12-service-work-completion-verifier-review.md): eight provider-free cases/50 assertions and scoped compilation pass;13 connected cases remain unscheduled, with no parent acceptance.
