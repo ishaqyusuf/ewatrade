@@ -80,7 +80,11 @@ rollback23.15s with100 category links; signed stale-stock refusal preserves all 
 Advisory stock previews now batch; full GENERAL Edit review11.56s passes with rollback.
 Maximum dashboard Edit/re-review/Confirm/Open/Close/reload and exact saved ten movements/
 values/100 category links pass; concurrent completed recovery adds no effects. Broader
-stale-source/operational acceptance audit remains open. Evidence:
+operational acceptance remains open. Nine real signed receipt refusal probes now pass
+with all saved facts unchanged: changed token, old revision, revoked role, expired
+session, closed period, archived posting account, retired configuration, changed
+category label and changed valuation pool. Evidence:
+[signed receipt guards and acceptance audit](runs/2026-10-12-supplier-acceptance-audit.md),
 [maximum receipt web report](runs/2026-10-12-ten-line-receipt-web.md),
 [ten-line receipt batch report](runs/2026-10-12-ten-line-receipt-batch.md),
 [stock preparation bounds report](runs/2026-10-12-stock-bounds-preparation.md),
@@ -90,6 +94,19 @@ stale-source/operational acceptance audit remains open. Evidence:
 [physical receipt proposal/web report](runs/2026-10-11-receipt-proposal-web.md).
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.
+
+E05's remaining canonical procedures have **no accepted assistant milestone**:
+
+- [ ] `finance.recordPurchase` — direct purchase recording.
+- [ ] `finance.recordSupplierOpening` — supplier opening balances.
+- [ ] `finance.releaseSupplierAllocation` — allocation release; next implementation.
+- [ ] `finance.reversePurchasePayment` — purchase payment reversal.
+- [ ] `finance.reversePurchaseRecognition` — purchase fact reversal.
+- [ ] `finance.reverseSupplierEntry` — supplier entry reversal.
+
+These require assistant review/confirmation, owning receipts and relevant refusal,
+rollback/recovery and web evidence. Existing registered-purchase flows do not accept
+these separate procedures. E05 keeps its ◐ mark and has no 🔖 bookmark.
 
 H01 has the coverage generator/check groundwork; complete CI acceptance is pending.
 H03 has versioned fixtures and deterministic/manual-web reports; complete evaluation

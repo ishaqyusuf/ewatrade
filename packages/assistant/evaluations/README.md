@@ -34,6 +34,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier acceptance audit and signed receipt guards, 12 October 2026](runs/2026-10-12-supplier-acceptance-audit.md): nine real signed refusal probes preserve saved facts; focused role/plan/security/legal tests pass. Six distinct canonical procedures still need assistant implementation and acceptance. E05 remains partial and unbookmarked.
+
 - [Ten-line receipt stock/valuation writes, 12 October 2026](runs/2026-10-12-ten-line-receipt-batch.md): maximum ten mixed goods/100 categories, exact saved canonical command proof19.50s and complete signed assistant confirmation23.15s roll back correctly; changed stock revision refuses with facts unchanged. Advisory draft29.51s and final maximum browser confirmation/recovery remain open; E05 stays partial.
 
 - [Bounded purchase stock preparation, 12 October 2026](runs/2026-10-12-stock-bounds-preparation.md): fresh source reads batch across 1–10 goods, exact shared/packaged quantities and scope/revision guards retained. Ten actual sources prepare in3.11s with saved financial/stock facts unchanged. Full ten-line posting remains pending; E05 stays partial.
