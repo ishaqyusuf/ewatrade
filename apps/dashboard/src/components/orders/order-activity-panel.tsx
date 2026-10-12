@@ -10,12 +10,24 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { put } from "@vercel/blob/client"
 import { useRef, useState } from "react"
 
-const ACCEPT =
-  "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+const VIDEO_TYPES = ["video/mp4", "video/quicktime"]
+const ACCEPT = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+  ...VIDEO_TYPES,
+].join(",")
 const MAX_BYTES = 10 * 1024 * 1024
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024
 const MAX_FILES = 6
+
+const isVideo = (type: string) => VIDEO_TYPES.includes(type)
 
 async function sha256(file: File) {
   const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer())
@@ -28,11 +40,18 @@ function contentPath(attachmentId: string) {
   return `/api/orders/attachments/${encodeURIComponent(attachmentId)}/content`
 }
 
-/** The note box at the foot of an order's Activity: text, photos and PDFs. */
+/** The note box at the foot of an order's Activity: text, photos, PDFs, videos. */
 export function OrderNoteComposer({ orderId }: { orderId: string }) {
   const trpc = useTRPC()
   const client = useQueryClient()
   const add = useMutation(trpc.orders.activity.add.mutationOptions())
+  const uploadTarget = useMutation(
+    trpc.orders.activity.uploadTarget.mutationOptions(),
+  )
+  const confirmUpload = useMutation(
+    trpc.orders.activity.confirmUpload.mutationOptions(),
+  )
+  const [progress, setProgress] = useState<number | null>(null)
   const [body, setBody] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -44,11 +63,18 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
   function choose(list: FileList | null) {
     const picked = Array.from(list ?? [])
     if (picked.some((file) => !ACCEPT.split(",").includes(file.type))) {
-      setError("Attach photos (JPG, PNG, WebP, HEIC) or PDFs.")
+      setError(
+        "Attach photos (JPG, PNG, WebP, HEIC), PDFs or videos (MP4, MOV).",
+      )
       return
     }
-    if (picked.some((file) => file.size > MAX_BYTES)) {
-      setError("Each file must be smaller than 10 MB.")
+    if (
+      picked.some(
+        (file) =>
+          file.size > (isVideo(file.type) ? MAX_VIDEO_BYTES : MAX_BYTES),
+      )
+    ) {
+      setError("Photos and PDFs can be up to 10 MB, videos up to 100 MB.")
       return
     }
     setError(null)
@@ -81,15 +107,27 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
         )
         const attachment = index >= 0 ? pending.splice(index, 1)[0] : undefined
         if (attachment?.status !== "PENDING_UPLOAD") continue
-        const response = await fetch(
-          `/api/orders/attachments/${encodeURIComponent(attachment.id)}/upload`,
-          {
-            body: file,
-            credentials: "same-origin",
-            headers: { "Content-Type": file.type },
-            method: "PUT",
-          },
-        )
+        const route = await uploadTarget.mutateAsync({
+          attachmentId: attachment.id,
+        })
+        if (route.mode === "direct") {
+          // Live videos go straight to private storage, then get checked.
+          await put(route.pathname, file, {
+            access: "private",
+            contentType: route.contentType,
+            multipart: true,
+            token: route.clientToken,
+            onUploadProgress: ({ percentage }) => setProgress(percentage),
+          })
+          await confirmUpload.mutateAsync({ attachmentId: attachment.id })
+          continue
+        }
+        const response = await fetch(route.path, {
+          body: file,
+          credentials: "same-origin",
+          headers: { "Content-Type": file.type },
+          method: "PUT",
+        })
         if (!response.ok) {
           const result = (await response.json().catch(() => null)) as {
             error?: string
@@ -106,6 +144,7 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
       )
     } finally {
       setPosting(false)
+      setProgress(null)
       await client.invalidateQueries({
         queryKey: trpc.orders.activity.list.queryKey({ orderId }),
       })
@@ -170,7 +209,7 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
           onClick={() => input.current?.click()}
         >
           <HugeiconsIcon icon={Attachment01Icon} className="size-4" />
-          Photo or PDF
+          Photo, PDF or video
         </Button>
         <Button
           type="button"
@@ -178,7 +217,11 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
           disabled={posting || (!body.trim() && files.length === 0)}
           onClick={() => void post()}
         >
-          {posting ? "Saving…" : "Post"}
+          {posting
+            ? progress !== null
+              ? `Uploading ${Math.round(progress)}%`
+              : "Saving…"
+            : "Post"}
         </Button>
       </div>
     </div>
@@ -193,7 +236,7 @@ type NoteAttachment = {
   originalFileName: string | null
 }
 
-/** Photos open full size; PDFs and HEIC open as files. */
+/** Photos open full size, videos play in place; PDFs and HEIC open as files. */
 export function OrderNoteAttachments({
   attachments,
 }: { attachments: NoteAttachment[] }) {
@@ -208,6 +251,17 @@ export function OrderNoteAttachments({
           >
             Uploading…
           </span>
+        ) : attachment.kind === "VIDEO" ? (
+          // biome-ignore lint/a11y/useMediaCaption: Staff clips of goods and deliveries have no captions.
+          <video
+            key={attachment.id}
+            controls
+            preload="metadata"
+            playsInline
+            src={contentPath(attachment.id)}
+            aria-label={attachment.originalFileName ?? "Order video"}
+            className="max-h-64 w-full max-w-sm border border-border bg-black"
+          />
         ) : attachment.kind === "IMAGE" &&
           !["image/heic", "image/heif"].includes(attachment.contentType) ? (
           <a

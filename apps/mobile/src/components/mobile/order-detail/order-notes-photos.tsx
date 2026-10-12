@@ -8,8 +8,10 @@ import { useColors } from "@/hooks/use-color"
 import { orderAttachmentSource } from "@/lib/order-attachment-upload"
 import { cn } from "@/lib/utils"
 import { Image } from "expo-image"
+import { VideoView, useVideoPlayer } from "expo-video"
 import { useState } from "react"
 import {
+  Alert,
   Modal,
   Text as NativeText,
   View as NativeView,
@@ -19,8 +21,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useOrderActivity } from "./use-order-activity"
 
 /**
- * Staff notes, photos and PDFs on an order: a composer above a newest-first
- * list. Works only online; uploads finish before the entry is shown complete.
+ * Staff notes, photos, PDFs and videos on an order: a composer above a
+ * newest-first list. Works only online; uploads finish before the entry is
+ * shown complete.
  */
 export function OrderNotesAndPhotos({
   orderId,
@@ -31,7 +34,10 @@ export function OrderNotesAndPhotos({
 }) {
   const colors = useColors()
   const model = useOrderActivity(orderId, isOffline)
-  const [viewing, setViewing] = useState<string | null>(null)
+  const [viewing, setViewing] = useState<{
+    id: string
+    video: boolean
+  } | null>(null)
   const entries = [...model.entries].reverse()
   const canPost =
     !isOffline &&
@@ -77,6 +83,8 @@ export function OrderNotesAndPhotos({
               <View key={file.id} className="relative">
                 {file.mimeType === "application/pdf" ? (
                   <PdfTile name={file.fileName} />
+                ) : file.mimeType.startsWith("video/") ? (
+                  <VideoTile />
                 ) : (
                   <Image
                     accessibilityLabel={file.fileName}
@@ -122,6 +130,24 @@ export function OrderNotesAndPhotos({
           />
           <ComposerButton
             disabled={isOffline || !model.canAddFiles}
+            icon="Video"
+            label="Add video"
+            onPress={() =>
+              Alert.alert("Add a video", "Up to one minute.", [
+                {
+                  text: "Record video",
+                  onPress: () => void model.pickVideo("camera"),
+                },
+                {
+                  text: "Choose video",
+                  onPress: () => void model.pickVideo("library"),
+                },
+                { style: "cancel", text: "Cancel" },
+              ])
+            }
+          />
+          <ComposerButton
+            disabled={isOffline || !model.canAddFiles}
             icon="FileText"
             label="Attach PDF"
             onPress={() => void model.pickDocument()}
@@ -153,7 +179,11 @@ export function OrderNotesAndPhotos({
                 fontWeight: "800",
               }}
             >
-              {model.isPosting ? "Saving…" : "Post"}
+              {model.isPosting
+                ? model.progress !== null
+                  ? `${Math.round(model.progress)}%`
+                  : "Saving…"
+                : "Post"}
             </NativeText>
           </Pressable>
         </View>
@@ -205,12 +235,26 @@ export function OrderNotesAndPhotos({
                         key={attachment.id}
                         name={attachment.originalFileName ?? "PDF"}
                       />
+                    ) : attachment.kind === "VIDEO" ? (
+                      <Pressable
+                        key={attachment.id}
+                        accessibilityLabel="Play video"
+                        accessibilityRole="button"
+                        haptic
+                        onPress={() =>
+                          setViewing({ id: attachment.id, video: true })
+                        }
+                      >
+                        <VideoTile playable />
+                      </Pressable>
                     ) : (
                       <Pressable
                         key={attachment.id}
                         accessibilityLabel="View photo"
                         accessibilityRole="imagebutton"
-                        onPress={() => setViewing(attachment.id)}
+                        onPress={() =>
+                          setViewing({ id: attachment.id, video: false })
+                        }
                       >
                         <Image
                           contentFit="cover"
@@ -226,7 +270,7 @@ export function OrderNotesAndPhotos({
           ))}
         </View>
       ) : null}
-      <PhotoViewer attachmentId={viewing} onClose={() => setViewing(null)} />
+      <AttachmentViewer viewing={viewing} onClose={() => setViewing(null)} />
     </View>
   )
 }
@@ -280,13 +324,51 @@ function PdfTile({ name }: { name: string }) {
   )
 }
 
-function PhotoViewer({
-  attachmentId,
+function VideoTile({ playable = false }: { playable?: boolean }) {
+  const colors = useColors()
+  return (
+    <NativeView
+      style={{
+        alignItems: "center",
+        backgroundColor: colors.foreground,
+        borderRadius: 12,
+        height: 64,
+        justifyContent: "center",
+        width: 64,
+      }}
+    >
+      <Icon
+        className="size-[22px]"
+        color={colors.background}
+        name={playable ? "Play" : "Video"}
+      />
+    </NativeView>
+  )
+}
+
+/** Streams the video with the session's headers; the API supports seeking. */
+function OrderVideo({ attachmentId }: { attachmentId: string }) {
+  const player = useVideoPlayer(orderAttachmentSource(attachmentId), (video) =>
+    video.play(),
+  )
+  return (
+    <VideoView
+      contentFit="contain"
+      nativeControls
+      player={player}
+      style={{ flex: 1 }}
+    />
+  )
+}
+
+function AttachmentViewer({
+  viewing,
   onClose,
 }: {
-  attachmentId: string | null
+  viewing: { id: string; video: boolean } | null
   onClose: () => void
 }) {
+  const attachmentId = viewing?.id ?? null
   const insets = useSafeAreaInsets()
   const colors = useColors()
   // Inline styles: className styling is not applied inside this native Modal.
@@ -299,7 +381,9 @@ function PhotoViewer({
       visible={attachmentId !== null}
     >
       <NativeView style={{ backgroundColor: colors.background, flex: 1 }}>
-        {attachmentId ? (
+        {viewing?.video ? (
+          <OrderVideo attachmentId={viewing.id} />
+        ) : attachmentId ? (
           <Image
             accessibilityLabel="Order photo"
             contentFit="contain"
@@ -308,7 +392,7 @@ function PhotoViewer({
           />
         ) : null}
         <Pressable
-          accessibilityLabel="Close photo"
+          accessibilityLabel={viewing?.video ? "Close video" : "Close photo"}
           accessibilityRole="button"
           haptic
           onPress={onClose}

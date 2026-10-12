@@ -13,6 +13,8 @@ export const ORDER_ATTACHMENT_TYPES = [
   "application/pdf",
 ] as const
 export const ORDER_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
+export const ORDER_VIDEO_TYPES = ["video/mp4", "video/quicktime"] as const
+export const ORDER_VIDEO_MAX_BYTES = 100 * 1024 * 1024
 
 function authHeaders() {
   const session = getSession()
@@ -47,23 +49,24 @@ export async function readOrderAttachmentFile(uri: string) {
   }
 }
 
+/** Sends a file's bytes to the API upload path the server named. */
 export async function uploadOrderAttachment(input: {
-  attachmentId: string
+  path: string
   buffer: ArrayBuffer
   contentType: string
 }) {
-  // Hermes has no AbortSignal.timeout.
+  // Hermes has no AbortSignal.timeout. Videos get longer on slow networks.
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 90_000)
-  const response = await fetch(
-    `${getBaseUrl()}/api/orders/attachments/${encodeURIComponent(input.attachmentId)}/upload`,
-    {
-      method: "PUT",
-      headers: { ...authHeaders(), "Content-Type": input.contentType },
-      body: input.buffer,
-      signal: controller.signal,
-    },
-  ).finally(() => clearTimeout(timer))
+  const timer = setTimeout(
+    () => controller.abort(),
+    input.contentType.startsWith("video/") ? 10 * 60_000 : 90_000,
+  )
+  const response = await fetch(`${getBaseUrl()}${input.path}`, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": input.contentType },
+    body: input.buffer,
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timer))
   if (response.ok) return
   const result: unknown = await response.json().catch(() => null)
   throw new Error(
@@ -74,6 +77,27 @@ export async function uploadOrderAttachment(input: {
       ? result.error
       : "A file didn't upload. Try again.",
   )
+}
+
+/**
+ * Live videos go straight to private storage with the one-object token the
+ * server issued; the server then checks what arrived (confirmUpload).
+ */
+export async function uploadOrderVideoDirect(input: {
+  pathname: string
+  clientToken: string
+  contentType: string
+  buffer: ArrayBuffer
+  onProgress: (percentage: number) => void
+}) {
+  const { put } = await import("@vercel/blob/client")
+  await put(input.pathname, input.buffer, {
+    access: "private",
+    contentType: input.contentType,
+    multipart: true,
+    token: input.clientToken,
+    onUploadProgress: ({ percentage }) => input.onProgress(percentage),
+  })
 }
 
 /** Authenticated image source for expo-image; bytes are never cached publicly. */

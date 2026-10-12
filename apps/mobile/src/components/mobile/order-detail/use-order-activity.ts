@@ -1,8 +1,11 @@
 import {
   ORDER_ATTACHMENT_MAX_BYTES,
   ORDER_ATTACHMENT_TYPES,
+  ORDER_VIDEO_MAX_BYTES,
+  ORDER_VIDEO_TYPES,
   readOrderAttachmentFile,
   uploadOrderAttachment,
+  uploadOrderVideoDirect,
 } from "@/lib/order-attachment-upload"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -23,7 +26,10 @@ export type OrderActivityDraftFile = {
 
 const MAX_FILES = 6
 
-/** Order notes, photos and PDFs: load, pick, then post and upload in one go. */
+const isVideo = (mimeType: string) =>
+  (ORDER_VIDEO_TYPES as readonly string[]).includes(mimeType)
+
+/** Order notes, photos, PDFs and videos: load, pick, then post and upload. */
 export function useOrderActivity(orderId: string, isOffline: boolean) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -34,6 +40,13 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
     ),
   )
   const addMutation = useMutation(trpc.orders.activity.add.mutationOptions())
+  const uploadTarget = useMutation(
+    trpc.orders.activity.uploadTarget.mutationOptions(),
+  )
+  const confirmUpload = useMutation(
+    trpc.orders.activity.confirmUpload.mutationOptions(),
+  )
+  const [progress, setProgress] = useState<number | null>(null)
   const [body, setBody] = useState("")
   const [files, setFiles] = useState<OrderActivityDraftFile[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -42,14 +55,24 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
   const clientActivityId = useRef(`activity-${Crypto.randomUUID()}`)
 
   function addFile(file: Omit<OrderActivityDraftFile, "id">) {
+    const video = isVideo(file.mimeType)
     if (
+      !video &&
       !(ORDER_ATTACHMENT_TYPES as readonly string[]).includes(file.mimeType)
     ) {
-      setError("Attach a photo (JPG, PNG, WebP, HEIC) or a PDF.")
+      setError("Attach a photo (JPG, PNG, WebP, HEIC), a PDF or a video.")
       return
     }
-    if (file.sizeBytes <= 0 || file.sizeBytes > ORDER_ATTACHMENT_MAX_BYTES) {
-      setError("Choose a file smaller than 10 MB.")
+    if (
+      file.sizeBytes <= 0 ||
+      file.sizeBytes >
+        (video ? ORDER_VIDEO_MAX_BYTES : ORDER_ATTACHMENT_MAX_BYTES)
+    ) {
+      setError(
+        video
+          ? "Videos can be up to 100 MB. Record a shorter one."
+          : "Choose a file smaller than 10 MB.",
+      )
       return
     }
     setError(null)
@@ -90,6 +113,48 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
     addFile({
       fileName: asset.fileName ?? `photo.${asset.mimeType.split("/")[1]}`,
       mimeType: asset.mimeType,
+      sizeBytes: asset.fileSize ?? new File(asset.uri).size,
+      uri: asset.uri,
+    })
+  }
+
+  /** Up to a minute, so it stays within the 100 MB limit. */
+  async function pickVideo(source: "camera" | "library") {
+    if (isPosting || files.length >= MAX_FILES) return
+    Keyboard.dismiss()
+    if (source === "camera") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync()
+      if (!permission.granted) {
+        setError(
+          "Camera access is off. Choose a video instead, or enable camera access in Settings.",
+        )
+        return
+      }
+    }
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["videos"],
+      allowsEditing: false,
+      videoMaxDuration: 60,
+      videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+    }
+    const result =
+      source === "camera"
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options)
+    if (result.canceled) return
+    const asset = result.assets[0]
+    // Android reports some MP4s without a type; the file name settles it.
+    const mimeType =
+      asset?.mimeType ??
+      (asset?.uri.toLowerCase().endsWith(".mov")
+        ? "video/quicktime"
+        : "video/mp4")
+    if (!asset) return
+    addFile({
+      fileName:
+        asset.fileName ??
+        `video.${mimeType === "video/quicktime" ? "mov" : "mp4"}`,
+      mimeType,
       sizeBytes: asset.fileSize ?? new File(asset.uri).size,
       uri: asset.uri,
     })
@@ -153,11 +218,24 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
             attachment.sizeBytes === item.sizeBytes,
         )
         const attachment = index >= 0 ? pending.splice(index, 1)[0] : undefined
-        if (attachment && attachment.status === "PENDING_UPLOAD")
+        if (attachment?.status !== "PENDING_UPLOAD") continue
+        const route = await uploadTarget.mutateAsync({
+          attachmentId: attachment.id,
+        })
+        if (route.mode === "direct") {
+          await uploadOrderVideoDirect({
+            buffer: item.buffer,
+            clientToken: route.clientToken,
+            contentType: route.contentType,
+            onProgress: setProgress,
+            pathname: route.pathname,
+          })
+          await confirmUpload.mutateAsync({ attachmentId: attachment.id })
+        } else
           await uploadOrderAttachment({
-            attachmentId: attachment.id,
             buffer: item.buffer,
             contentType: item.file.mimeType,
+            path: route.path,
           })
       }
       setBody("")
@@ -171,6 +249,7 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
       )
     } finally {
       setIsPosting(false)
+      setProgress(null)
       await queryClient.invalidateQueries({
         queryKey: trpc.orders.activity.list.queryKey({ orderId }),
       })
@@ -189,7 +268,10 @@ export function useOrderActivity(orderId: string, isOffline: boolean) {
     canAddFiles: files.length < MAX_FILES && !isPosting,
     error,
     isPosting,
+    /** Direct video upload progress, 0–100, while one is sending. */
+    progress,
     pickPhoto,
+    pickVideo,
     pickDocument,
     removeFile,
     post,
