@@ -39,6 +39,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier opening signed checks, 12 October 2026](runs/2026-10-12-supplier-opening-signed.md): PAYABLE/ADVANCE actual signed completion rollback9.446–9.617s and authentic stale-review refusal9.236–9.303s preserve saved facts; exact owning supplier receipts/one history proof read per transaction, scoped helper/script types pass. Planned; full saved dashboard acceptance pending, E05 partial.
+
 - [Supplier opening source and editor, 12 October 2026](runs/2026-10-12-supplier-opening-source.md): strict pre-existing balance/server Book-start review and private canonical preparation; nine tests453 assertions/scoped types pass. Both exact native opening/replay/duplicate/input-snapshot transactions roll back in14.594–14.702s with every saved fact unchanged. PAYABLE/ADVANCE editor acknowledgement/exact amount/Cancel and screenshots pass. Planned; full signed/saved chat acceptance pending, E05 partial.
 
 - [Supplier entry reversal signed checks, 12 October 2026](runs/2026-10-12-supplier-entry-reversal-signed.md): all three original source kinds reach signed completion rollback in11.027–11.330s; valid stale approvals refuse in10.554–10.847s with saved facts unchanged. One original proof read per transaction; affected types pass. Persistent action remains planned; saved web acceptance and approval for source visibility/API restart remain pending. E05 partial.

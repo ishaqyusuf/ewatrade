@@ -37,7 +37,8 @@ export async function verifySupplierSettlementProposalRollback(
     app.payload.action !== "supplier_allocation_release" &&
     app.payload.action !== "purchase_payment_reverse" &&
     app.payload.action !== "purchase_recognition_reverse" &&
-    app.payload.action !== "supplier_entry_reverse"
+    app.payload.action !== "supplier_entry_reverse" &&
+    app.payload.action !== "supplier_opening"
   )
     throw Error("An exact pending supplier settlement proposal is required")
   const bookId = app.payload.bookId
@@ -88,12 +89,14 @@ export async function verifySupplierSettlementProposalRollback(
             select: { supplierId: true },
           })
         ).supplierId
-      : app.payload.action === "supplier_advance"
+      : app.payload.action === "supplier_advance" ||
+          app.payload.action === "supplier_opening"
         ? app.payload.supplierId
         : null
   const facts = async () => ({
     supplierHistory:
-      app.payload.action === "supplier_entry_reverse"
+      app.payload.action === "supplier_entry_reverse" ||
+      app.payload.action === "supplier_opening"
         ? (
             await db.financeSupplierEntry.findMany({
               where: { bookId, supplierId: supplierId! },
@@ -246,7 +249,8 @@ export async function verifySupplierSettlementProposalRollback(
                     expect(write.data.executedResult).toMatchObject({
                       kind:
                         app.payload.action === "supplier_advance" ||
-                        app.payload.action === "supplier_entry_reverse"
+                        app.payload.action === "supplier_entry_reverse" ||
+                        app.payload.action === "supplier_opening"
                           ? "finance_supplier"
                           : app.payload.action ===
                               "purchase_recognition_reverse"
@@ -254,7 +258,8 @@ export async function verifySupplierSettlementProposalRollback(
                             : "finance_purchase_bill",
                       recordId:
                         app.payload.action === "supplier_advance" ||
-                        app.payload.action === "supplier_entry_reverse"
+                        app.payload.action === "supplier_entry_reverse" ||
+                        app.payload.action === "supplier_opening"
                           ? supplierId
                           : app.payload.action ===
                               "purchase_recognition_reverse"
@@ -423,7 +428,10 @@ export async function verifySupplierSettlementProposalRollback(
       savedFactsUnchanged: true,
     }
   }
-  if (app.payload.action === "supplier_entry_reverse") {
+  if (
+    app.payload.action === "supplier_entry_reverse" ||
+    app.payload.action === "supplier_opening"
+  ) {
     if (!supplierId) throw Error("Exact owning supplier required")
     const changedDb = new Proxy(db, {
       get(target, key) {
@@ -443,7 +451,7 @@ export async function verifySupplierSettlementProposalRollback(
                 data: { name: supplier.name + " QA stale review" },
               })
               await run(tx)
-              throw Error("STALE_SUPPLIER_ENTRY_DID_NOT_REFUSE")
+              throw Error("STALE_SUPPLIER_SOURCE_DID_NOT_REFUSE")
             }, options)
         const value = Reflect.get(target, key)
         return typeof value === "function" ? value.bind(target) : value
