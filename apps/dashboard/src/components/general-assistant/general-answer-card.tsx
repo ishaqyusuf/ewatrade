@@ -2,6 +2,7 @@
 
 import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
 import { OpenStaffMemberSheet } from "@/components/open-staff-member-sheet"
+import { OpenStaffInvitationSheet } from "@/components/open-staff-invitation-sheet"
 import { OpenStaffDirectorySheet } from "@/components/open-staff-directory-sheet"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { useSyncExternalStore } from "react"
@@ -34,6 +35,8 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
             <OpenStaffHistorySheet target={answer.target} />
           ) : answer.target.kind === "staff_directory" ? (
             <OpenStaffDirectorySheet target={answer.target} />
+          ) : answer.target.kind === "staff_invitation" ? (
+            <OpenStaffInvitationSheet commandId={answer.target.commandId} />
           ) : (
             <OpenStaffMemberSheet membershipId={answer.target.membershipId} />
           )}

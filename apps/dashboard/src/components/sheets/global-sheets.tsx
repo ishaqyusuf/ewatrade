@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 
 import { StaffHistorySheet } from "./staff-history-sheet"
+import { StaffInvitationSheet } from "./staff-invitation-sheet"
 import { StaffMemberSheet } from "./staff-member-sheet"
 import { StaffDirectorySheet } from "./staff-directory-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
@@ -104,6 +105,7 @@ export function GlobalSheets({
         </>
       ) : null}
       {access.staffHistory ? <StaffHistorySheet /> : null}
+      {access.staffHistory ? <StaffInvitationSheet /> : null}
       {access.staffDirectory ? (
         <>
           <StaffDirectorySheet />

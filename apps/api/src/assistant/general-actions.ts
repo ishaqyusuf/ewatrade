@@ -1,4 +1,5 @@
 import { purchaseRecord } from "./general-purchase-recording"
+import { staffInvitation } from "./general-staff-invitation"
 import { supplierOpening } from "./general-supplier-opening"
 import { supplierEntryReverse } from "./general-supplier-entry-reversal"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
@@ -43,7 +44,11 @@ import {
 import { purchaseRecognitionReverse } from "./general-purchase-recognition-reversal"
 import { purchasePaymentReverse } from "./general-purchase-payment-reversal"
 import { supplierAllocationRelease } from "./general-supplier-allocation-release"
-import { supplierAdvance, supplierAdvanceAllocate, purchasePayment } from "./general-supplier-settlement"
+import {
+  supplierAdvance,
+  supplierAdvanceAllocate,
+  purchasePayment,
+} from "./general-supplier-settlement"
 import { purchaseRecognize } from "./general-purchase-recognition"
 import { purchaseRegister } from "./general-purchase-registration"
 import { supplierCreate } from "./general-supplier-create"
@@ -622,9 +627,7 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
         `${target.review.customerName || "Walk-in customer"} · ${target.review.orderNumber}`,
         `${generalMoney(payload.amountMinor, currency(ctx))} · ${payload.method.replaceAll("_", " ")}`,
         ...(payload.moneyAccountId
-          ? [
-              `Received into: ${await paymentAccountName(ctx, payload)}`,
-            ]
+          ? [`Received into: ${await paymentAccountName(ctx, payload)}`]
           : []),
         `Balance after: ${generalMoney(target.review.balanceDueMinor - payload.amountMinor, currency(ctx))}`,
         ...(payload.note ? [payload.note] : []),
@@ -667,6 +670,7 @@ const adapters: {
   purchase_recognize: purchaseRecognize,
   supplier_create: supplierCreate,
   purchase_recognition_reverse: purchaseRecognitionReverse,
+  staff_invitation: staffInvitation,
   supplier_entry_reverse: supplierEntryReverse,
   supplier_opening: supplierOpening,
   purchase_payment_reverse: purchasePaymentReverse,

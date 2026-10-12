@@ -1,5 +1,11 @@
 import { generalAnswerTargetSchema } from "./answer-target"
-export { generalAnswerTargetSchema, staffMemberTargetSchema } from "./answer-target"
+import { staffInvitationAction } from "./staff-invitation"
+export { staffInvitationDraftInstructions } from "./staff-invitation"
+export {
+  generalAnswerTargetSchema,
+  staffMemberTargetSchema,
+  staffInvitationTargetSchema,
+} from "./answer-target"
 export { staffDirectoryTargetSchema } from "./staff-directory-target"
 export { staffHistoryTargetSchema } from "./staff-history-target"
 import { purchaseRecordAction } from "./purchase-recording"
@@ -8,7 +14,11 @@ import { supplierEntryReverseAction } from "./supplier-entry-reversal"
 import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
 import { supplierAllocationReleaseAction } from "./supplier-allocation-release"
-import { supplierAdvanceAction, supplierAdvanceAllocateAction, purchasePaymentAction } from "./supplier-settlement"
+import {
+  supplierAdvanceAction,
+  supplierAdvanceAllocateAction,
+  purchasePaymentAction,
+} from "./supplier-settlement"
 export { supplierSettlementDraftInstructions } from "./supplier-settlement"
 import { purchaseRecognitionAction } from "./purchase-recognition"
 export { purchaseRecognitionDraftInstructions } from "./purchase-recognition"
@@ -324,6 +334,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   orderAttachmentAddAction,
   closeoutCreateAction,
   closeoutFinalizeAction,
+  staffInvitationAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
@@ -332,6 +343,7 @@ export const generalReceiptSchema = z
   .object({
     kind: z.enum([
       "finance_purchase_bill",
+      "staff_invitation",
       "finance_purchase_registration",
       "finance_supplier",
       "finance_bill",
@@ -495,21 +507,28 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
+    case "staff_invitation":
+      return action.intent.kind === "INVITE"
+        ? `Invite ${action.intent.invite.email} · ${action.intent.invite.assignments.length} Store assignment(s)`
+        : `${action.intent.kind === "RESEND" ? "Resend" : "Revoke"} staff invitation · ${action.intent.reason}`
     case "product_batch_fulfill":
       return `Fulfil remaining order lines · ${action.reason}`
     case "purchase_recognize":
       return `Recognize purchase ${action.stage.toLowerCase()} · ${action.reference}`
-    case "purchase_record": return `Record received purchase · ${action.description}`
+    case "purchase_record":
+      return `Record received purchase · ${action.description}`
     case "purchase_register":
       return `Register purchase agreement · ${action.description}`
-    case "supplier_entry_reverse": return `Reverse original supplier entry · ${action.reason}`
+    case "supplier_entry_reverse":
+      return `Reverse original supplier entry · ${action.reason}`
     case "purchase_recognition_reverse":
       return `Reverse original purchase fact · ${action.reason}`
     case "purchase_payment_reverse":
       return `Reverse recorded purchase payment · ${action.reason}`
     case "supplier_allocation_release":
       return `Release supplier allocation · ${action.reason}`
-    case "supplier_opening": return `Record supplier opening ${action.kind.toLowerCase()} · ${action.description}`
+    case "supplier_opening":
+      return `Record supplier opening ${action.kind.toLowerCase()} · ${action.description}`
     case "supplier_advance":
       return `Record supplier advance · ${action.description}`
     case "supplier_advance_allocate":

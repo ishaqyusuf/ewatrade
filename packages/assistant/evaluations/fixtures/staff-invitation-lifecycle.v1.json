@@ -14,17 +14,25 @@
     "Claim leases reclaim only unsent work; expired SENDING becomes OUTCOME_UNKNOWN, never automatic resend",
     "Known provider acceptance is SENT; only trusted matching provider evidence can mark DELIVERED",
     "At most three claims; terminal cancellation/sent/exhausted failure erases acceptance payload",
-    "Provider acceptance persistence failure propagates without a duplicate send or rejection relabel"
+    "Provider acceptance persistence failure propagates without a duplicate send or rejection relabel",
+    "Real signed confirmation to COMPLETED with original reviewed grants and queued encrypted outbox, forced rollback",
+    "Changed approval token and real Store-label stale-source refusal preserve saved facts",
+    "Legacy missing original review remains explicit; exact command/member discovery returns no custody",
+    "Global receipt and local Edit form validate grants, preserve original review and retain assistant/chat on Close"
   ],
   "sourceChecks": [
     "packages/db/src/staff-invitation-custody.test.ts",
     "packages/db/src/queries/staff-invitation-commands.test.ts",
     "packages/db/src/queries/staff-invitation-notifications.test.ts",
     "packages/jobs/src/handlers/staff-invitation-notification-dispatch.test.ts",
-    "packages/db/src/queries/staff-invitation-commands.integration-check.ts"
+    "packages/db/src/queries/staff-invitation-commands.integration-check.ts",
+    "packages/assistant/src/general/staff-invitation.test.ts",
+    "packages/db/src/queries/staff-invitation-command-receipt.test.ts",
+    "apps/api/src/assistant/general-staff-invitation.test.ts",
+    "apps/api/src/assistant/general-staff-invitation.integration-check.ts"
   ],
   "remaining": [
-    "Signed assistant Edit/re-review/Confirm and original grant preview",
+    "Full saved draft/Edit/re-review/Confirm, signed resend/revoke and completed recovery",
     "Registered guarded email transport, periodic ID-only discovery and receipt reconciliation",
     "Saved global receipt, chat continuity, full web acceptance and screenshots",
     "Concurrency and complete stale/authority/quota refusal evidence",

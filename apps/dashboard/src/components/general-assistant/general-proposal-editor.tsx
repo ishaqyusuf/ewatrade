@@ -1,4 +1,5 @@
 "use client"
+import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -61,6 +62,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "staff_invitation")
+    return <GeneralStaffInvitationEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "supplier_allocation_release")
     return <GeneralSupplierAllocationReleaseEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "supplier_advance" || props.proposal.payload.action === "supplier_advance_allocate" || props.proposal.payload.action === "purchase_payment")

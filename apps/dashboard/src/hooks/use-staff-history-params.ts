@@ -8,6 +8,7 @@ export function useStaffHistoryParams() {
       staffHistory: parseAsString,
       staffMember: parseAsString,
       staffDirectory: parseAsString,
+      staffInvitation: parseAsString,
     },
     { history: "push" },
   )
@@ -25,6 +26,7 @@ export function useStaffHistoryParams() {
         staffHistory: JSON.stringify(staffHistoryTargetSchema.parse(value)),
         staffMember: null,
         staffDirectory: null,
+        staffInvitation: null,
       }),
     close: () => setParams({ staffHistory: null }),
   }

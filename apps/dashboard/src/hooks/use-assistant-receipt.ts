@@ -25,6 +25,10 @@ export function useAssistantReceipt() {
       inventoryCloseout: parseAsString,
       stockTransfer: parseAsString,
       inventoryOperation: parseAsString,
+      staffInvitation: parseAsString,
+      staffMember: parseAsString,
+      staffHistory: parseAsString,
+      staffDirectory: parseAsString,
     },
     { history: "push", shallow: true },
   )
@@ -49,18 +53,44 @@ export function useAssistantReceipt() {
       inventoryCloseout: null,
       stockTransfer: null,
       inventoryOperation: null,
+      staffInvitation: null,
+      staffMember: null,
+      staffHistory: null,
+      staffDirectory: null,
     }
     switch (receipt.kind) {
+      case "staff_invitation":
+        return setParams({ ...closed, staffInvitation: receipt.recordId })
       case "finance_purchase_bill":
-        return setParams({ ...closed, purchaseBill: receipt.recordId, purchaseBillBook: receipt.bookId ?? null })
+        return setParams({
+          ...closed,
+          purchaseBill: receipt.recordId,
+          purchaseBillBook: receipt.bookId ?? null,
+        })
       case "finance_purchase_registration":
-        return setParams({...closed,purchaseRegistration:receipt.recordId,purchaseRegistrationBook:receipt.bookId??null})
+        return setParams({
+          ...closed,
+          purchaseRegistration: receipt.recordId,
+          purchaseRegistrationBook: receipt.bookId ?? null,
+        })
       case "finance_supplier":
-        return setParams({...closed, financeSheet: "supplier-statement", supplierId: receipt.recordId})
+        return setParams({
+          ...closed,
+          financeSheet: "supplier-statement",
+          supplierId: receipt.recordId,
+        })
       case "finance_bill":
-        return setParams({...closed, financeSheet: "bill", billId: receipt.recordId})
+        return setParams({
+          ...closed,
+          financeSheet: "bill",
+          billId: receipt.recordId,
+        })
       case "finance_movement":
-        return setParams({...closed, financeMovement: receipt.recordId, financeMovementBook: receipt.bookId ?? null})
+        return setParams({
+          ...closed,
+          financeMovement: receipt.recordId,
+          financeMovementBook: receipt.bookId ?? null,
+        })
       case "customer":
         return setParams({ ...closed, customerDetail: receipt.recordId })
       case "product":

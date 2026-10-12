@@ -283,3 +283,5 @@ omitted, and money accounts list `paymentMethods`/`availableForPayments`. Order
 payments (`payment_record`, `order_create.initialPayment`) need a `moneyAccountId`
 that takes the payment's method once Finance is set up. Fixture versions are
 unchanged, and there is no new model-run evidence yet.
+
+S02 signed/global receipt source:8tests66assertions; actual signed completion22.808s, changed token3.925s and real Store-label stale refusal7.672s all roll back. Original native receipt/discovery and desktop local editor/receipt/Close evidence pass; saved HTTP/chat/email acceptance remains pending. [Run](runs/2026-10-12-staff-invitation-assistant-source.md).

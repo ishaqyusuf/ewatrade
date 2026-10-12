@@ -17,6 +17,10 @@ import {
 } from "./retail-ops-staff"
 import { cancelStaffInvitationNotificationsInTransaction } from "./staff-invitation-notifications"
 import {
+  staffInvitationCommandReceiptSchema as receiptSchema,
+  staffInvitationSavedReviewSchema,
+} from "./staff-invitation-command-receipt"
+import {
   reviewStaffInvitationInTransaction,
   staffInvitationReviewInput,
 } from "./staff-invitation-review"
@@ -60,17 +64,6 @@ export class StaffInvitationCommandError extends Error {
     this.name = "StaffInvitationCommandError"
   }
 }
-const receiptSchema = z
-  .object({
-    version: z.literal(1),
-    commandId: id,
-    kind: z.enum(["INVITE", "RESEND", "REVOKE"]),
-    membershipId: id,
-    invitationId: id,
-    notificationId: id.nullable(),
-    status: z.enum(["saved", "revoked"]),
-  })
-  .strict()
 export type StaffInvitationCommandReceipt = z.infer<typeof receiptSchema>
 function hash(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex")
@@ -105,6 +98,7 @@ async function lifecycle(tx: Tx, input: Scope & { invitationId: string }) {
       status: true,
       role: true,
       staffAccessRevision: true,
+      catalogEditor: true,
       invitedAt: true,
       user: { select: { email: true, name: true, displayName: true } },
       retailOpsStaffProfile: { select: { id: true, defaultStoreId: true } },
@@ -114,7 +108,11 @@ async function lifecycle(tx: Tx, input: Scope & { invitationId: string }) {
           status: "ACTIVE",
           store: { tenantId: input.tenantId, status: "ACTIVE" },
         },
-        select: { storeId: true, role: true },
+        select: {
+          storeId: true,
+          role: true,
+          store: { select: { name: true } },
+        },
       },
     },
   })
@@ -227,9 +225,14 @@ export async function reviewStaffInvitationCommandInTransaction(
       expiresAt: invitation.expiresAt.toISOString(),
       acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
       defaultStoreId,
-      assignments: [...membership.staffStoreAssignments].sort((a, b) =>
-        a.storeId.localeCompare(b.storeId),
-      ),
+      catalogEditor: membership.catalogEditor,
+      assignments: membership.staffStoreAssignments
+        .map((a) => ({
+          storeId: a.storeId,
+          role: a.role,
+          storeName: a.store.name,
+        }))
+        .sort((a, b) => a.storeId.localeCompare(b.storeId)),
     },
     reason: parsed.reason,
     blockers,
@@ -253,6 +256,69 @@ export async function reviewStaffInvitationCommand(
     (tx) => reviewStaffInvitationCommandInTransaction(tx, input),
     { maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Acquire the command lock before lifecycle locks; returned command stays in this transaction. */
+export async function prepareReviewedStaffInvitationCommandInTransaction(
+  tx: Tx,
+  input: ReviewInput & Scope,
+  config: NodeJS.ProcessEnv = process.env,
+) {
+  await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} AND "isActive"=true FOR UPDATE`
+  const review = await reviewStaffInvitationCommandInTransaction(tx, input)
+  if (review.blockers.length)
+    throw new StaffInvitationCommandError(
+      "CONFLICT",
+      review.blockers.map((b) => b.message).join(" "),
+    )
+  return {
+    review,
+    execute: (clientCommandId: string) =>
+      executeStaffInvitationCommandInTransaction(
+        tx,
+        { ...input, clientCommandId, expectedReviewHash: review.reviewHash },
+        config,
+      ),
+  }
+}
+
+function savedReview(
+  review: Awaited<ReturnType<typeof reviewStaffInvitationCommandInTransaction>>,
+) {
+  const invite = review.kind === "INVITE"
+  return staffInvitationSavedReviewSchema.parse({
+    recipient: review.recipient,
+    membershipBefore: invite
+      ? review.currentMembership
+        ? {
+            role: review.currentMembership.role,
+            status: review.currentMembership.status,
+            accessRevision: review.currentMembership.staffAccessRevision,
+          }
+        : null
+      : {
+          role: review.current.role,
+          status: review.current.status,
+          accessRevision: review.current.accessRevision,
+        },
+    grants: invite
+      ? review.proposed
+      : {
+          role: review.current.role,
+          status: "INVITED",
+          defaultStoreId: review.current.defaultStoreId,
+          catalogEditor: review.current.catalogEditor,
+          assignments: review.current.assignments,
+        },
+    seats: invite ? review.seats : null,
+    reason: invite ? null : review.reason,
+    emailEffect:
+      review.kind === "REVOKE"
+        ? "CANCEL_UNSENT_WORK"
+        : "REQUEST_INVITATION_EMAIL",
+    reviewedAt: review.asOf,
+    reviewHash: review.reviewHash,
+  })
 }
 
 /** Atomic command + invitation + encrypted outbox. Does not enqueue or send. */
@@ -439,6 +505,7 @@ export async function executeStaffInvitationCommandInTransaction(
     invitationId,
     notificationId,
     status: parsed.kind === "REVOKE" ? "revoked" : "saved",
+    details: savedReview(review),
   })
   await tx.staffInvitationCommand.create({
     data: {
@@ -538,6 +605,15 @@ export async function getStaffInvitationCommandInTransaction(
     select: {
       result: true,
       createdAt: true,
+      membership: {
+        select: {
+          id: true,
+          role: true,
+          status: true,
+          staffAccessRevision: true,
+          catalogEditor: true,
+        },
+      },
       invitation: {
         select: {
           status: true,
@@ -567,6 +643,7 @@ export async function getStaffInvitationCommandInTransaction(
   return {
     receipt: receiptSchema.parse(row.result),
     savedAt: row.createdAt.toISOString(),
+    membership: row.membership,
     invitation: {
       ...row.invitation,
       status:
@@ -586,4 +663,69 @@ export async function getStaffInvitationCommand(
     (tx) => getStaffInvitationCommandInTransaction(tx, input),
     { maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+export async function listStaffInvitationsInTransaction(
+  tx: Tx,
+  input: Scope & { membershipId: string },
+) {
+  await assertStaffStoreAccessAuthority(tx, input)
+  const member = await tx.membership.findFirst({
+    where: { id: input.membershipId, tenantId: input.tenantId },
+    select: { id: true },
+  })
+  if (!member)
+    throw new StaffInvitationCommandError(
+      "NOT_FOUND",
+      "Staff membership is unavailable.",
+    )
+  const now = new Date(),
+    where = { tenantId: input.tenantId, membershipId: member.id }
+  const total = await tx.retailOpsStaffInviteToken.count({ where })
+  const rows = await tx.retailOpsStaffInviteToken.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 10,
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      status: true,
+      expiresAt: true,
+      acceptedAt: true,
+      revokedAt: true,
+      sentAt: true,
+      createdAt: true,
+      notifications: {
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: 1,
+        select: { status: true, commandId: true },
+      },
+    },
+  })
+  return {
+    membershipId: member.id,
+    total,
+    limited: total > rows.length,
+    asOf: now.toISOString(),
+    data: rows.map(({ notifications, ...row }) => ({
+      ...row,
+      status:
+        row.status === "ACTIVE" && row.expiresAt <= now
+          ? "EXPIRED"
+          : row.status,
+      notificationStatus: notifications[0]?.status ?? "NOT_RECORDED",
+      commandId: notifications[0]?.commandId ?? null,
+    })),
+  }
+}
+export async function listStaffInvitations(
+  db: PrismaClient,
+  input: Scope & { membershipId: string },
+) {
+  return db.$transaction((tx) => listStaffInvitationsInTransaction(tx, input), {
+    isolationLevel: "RepeatableRead",
+    maxWait: 10_000,
+    timeout: 30_000,
+  })
 }

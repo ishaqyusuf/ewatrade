@@ -23,7 +23,10 @@ import {
 } from "../trpc/routers/catalog"
 import { assertCanUseCustomers } from "../trpc/routers/customers"
 import { assertCanManageInventory } from "../trpc/routers/inventory"
-import { assertCanManageSalesOperations, assertCanOperateOrders } from "../trpc/routers/orders"
+import {
+  assertCanManageSalesOperations,
+  assertCanOperateOrders,
+} from "../trpc/routers/orders"
 import { assertServiceOperator } from "../trpc/routers/service-permissions"
 import { staffProcedureAction } from "../utils/staff-procedure-policy"
 import { generalCapabilityEnabled } from "./general-rollout"
@@ -85,64 +88,86 @@ export function requireGeneralScope(
  * transaction commands directly, so these must stay in step with the routers.
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
-  "staff.invitation.review": tenant => {
+  "staff.invitation.manage": assertStaffInvitationAccess,
+  "staff.invitations.read": assertStaffInvitationAccess,
+  "staff.invitation.command.read": assertStaffInvitationAccess,
+  "staff.invitation.review": (tenant) => {
     if (!["OWNER", "ADMIN"].includes(tenant.membership.role))
-      throw new TRPCError({ code: "FORBIDDEN", message: "Owner/Admin access is required for staff invitations." })
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Owner/Admin access is required for staff invitations.",
+      })
   },
-  "staff.history.read": tenant => {
+  "staff.history.read": (tenant) => {
     if (!["OWNER", "ADMIN"].includes(tenant.membership.role))
-      throw new TRPCError({ code: "FORBIDDEN", message: "Owner/Admin access is required for staff history." })
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Owner/Admin access is required for staff history.",
+      })
   },
-  "staff.directory.read": tenant => assertCanManageSalesOperations(tenant.membership.role),
-  "staff.member.read": tenant => assertCanManageSalesOperations(tenant.membership.role),
-  "finance.supplier.allocation.release": tenant => assertFinanceAccess(tenant),
-  "finance.bills.read": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.recognize": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.record": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.register": tenant => assertFinanceAccess(tenant),
-  "finance.supplier.advance": tenant => assertFinanceAccess(tenant),
-  "finance.supplier.advance.allocate": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.pay": tenant => assertFinanceAccess(tenant),
-  "finance.supplier.create": tenant => assertFinanceAccess(tenant),
-  "finance.purchase_registrations.read": tenant => assertFinanceAccess(tenant),
-  "finance.purchase_recognition.read": tenant => assertFinanceAccess(tenant),
-  "finance.purchases.read": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.read": tenant => assertFinanceAccess(tenant),
-  "finance.suppliers.read": tenant => assertFinanceAccess(tenant),
-  "finance.supplier_statement.read": tenant => assertFinanceAccess(tenant),
-  "finance.bill.read": tenant => assertFinanceAccess(tenant),
-  "finance.expense_categories.read": tenant => assertFinanceAccess(tenant),
-  "finance.money_accounts.read": tenant => assertFinanceAccess(tenant),
-  "customers.account.read": tenant => assertFinanceAccess(tenant),
-  "customers.sources.read": tenant => assertFinanceAccess(tenant),
-  "customers.statement.read": tenant => assertFinanceAccess(tenant),
-  "finance.expense.void": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.fact.reverse": tenant => assertFinanceAccess(tenant),
-  "finance.supplier.opening": tenant => assertFinanceAccess(tenant),
-  "finance.supplier.entry.reverse": tenant => assertFinanceAccess(tenant),
-  "finance.purchase.payment.reverse": tenant => assertFinanceAccess(tenant),
-  "finance.bill_payment.reverse": tenant => assertFinanceAccess(tenant),
-  "finance.bill.pay": tenant => assertFinanceAccess(tenant),
-  "finance.expense.record": tenant => assertFinanceAccess(tenant),
-  "finance.money_movement.record": tenant => assertFinanceAccess(tenant),
-  "customers.entry.read": tenant => assertFinanceAccess(tenant),
-  "customers.allocation_history.read": tenant => assertFinanceAccess(tenant),
-  "customers.credit.apply": tenant => assertFinanceAccess(tenant),
-  "customers.allocation.release": tenant => assertFinanceAccess(tenant),
-  "customers.receipt.record": tenant => assertFinanceAccess(tenant),
-  "customers.credit.refund": tenant => assertFinanceAccess(tenant),
-  "sales.product.return": tenant => assertCanOperateOrders(tenant.membership.role),
-  "sales.products.fulfill": tenant => assertCanOperateOrders(tenant.membership.role),
-  "sales.product.fulfill": tenant => assertCanOperateOrders(tenant.membership.role),
-  "sales.service.authorize": tenant => assertCanManageSalesOperations(tenant.membership.role),
-  "sales.service.fulfill": tenant => assertCanOperateOrders(tenant.membership.role),
-  "sales.order.cancel": tenant=>assertCanAmendOrders(tenant.membership.role),
-  "sales.order.metadata.update": tenant=>assertCanAmendOrders(tenant.membership.role),
-  "sales.order.replace": tenant=>assertCanAmendOrders(tenant.membership.role),
+  "staff.directory.read": (tenant) =>
+    assertCanManageSalesOperations(tenant.membership.role),
+  "staff.member.read": (tenant) =>
+    assertCanManageSalesOperations(tenant.membership.role),
+  "finance.supplier.allocation.release": (tenant) =>
+    assertFinanceAccess(tenant),
+  "finance.bills.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.recognize": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.record": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.register": (tenant) => assertFinanceAccess(tenant),
+  "finance.supplier.advance": (tenant) => assertFinanceAccess(tenant),
+  "finance.supplier.advance.allocate": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.pay": (tenant) => assertFinanceAccess(tenant),
+  "finance.supplier.create": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase_registrations.read": (tenant) =>
+    assertFinanceAccess(tenant),
+  "finance.purchase_recognition.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchases.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.suppliers.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.supplier_statement.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.bill.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.expense_categories.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.money_accounts.read": (tenant) => assertFinanceAccess(tenant),
+  "customers.account.read": (tenant) => assertFinanceAccess(tenant),
+  "customers.sources.read": (tenant) => assertFinanceAccess(tenant),
+  "customers.statement.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.expense.void": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.fact.reverse": (tenant) => assertFinanceAccess(tenant),
+  "finance.supplier.opening": (tenant) => assertFinanceAccess(tenant),
+  "finance.supplier.entry.reverse": (tenant) => assertFinanceAccess(tenant),
+  "finance.purchase.payment.reverse": (tenant) => assertFinanceAccess(tenant),
+  "finance.bill_payment.reverse": (tenant) => assertFinanceAccess(tenant),
+  "finance.bill.pay": (tenant) => assertFinanceAccess(tenant),
+  "finance.expense.record": (tenant) => assertFinanceAccess(tenant),
+  "finance.money_movement.record": (tenant) => assertFinanceAccess(tenant),
+  "customers.entry.read": (tenant) => assertFinanceAccess(tenant),
+  "customers.allocation_history.read": (tenant) => assertFinanceAccess(tenant),
+  "customers.credit.apply": (tenant) => assertFinanceAccess(tenant),
+  "customers.allocation.release": (tenant) => assertFinanceAccess(tenant),
+  "customers.receipt.record": (tenant) => assertFinanceAccess(tenant),
+  "customers.credit.refund": (tenant) => assertFinanceAccess(tenant),
+  "sales.product.return": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "sales.products.fulfill": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "sales.product.fulfill": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "sales.service.authorize": (tenant) =>
+    assertCanManageSalesOperations(tenant.membership.role),
+  "sales.service.fulfill": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "sales.order.cancel": (tenant) =>
+    assertCanAmendOrders(tenant.membership.role),
+  "sales.order.metadata.update": (tenant) =>
+    assertCanAmendOrders(tenant.membership.role),
+  "sales.order.replace": (tenant) =>
+    assertCanAmendOrders(tenant.membership.role),
   "sales.order.attachment.add": (tenant) =>
     assertCanOperateOrders(tenant.membership.role),
   "search.records": () => {},
-  "catalog.history.read": (tenant) => assertCanReadCatalog(tenant.membership.role),
+  "catalog.history.read": (tenant) =>
+    assertCanReadCatalog(tenant.membership.role),
   "catalog.page": (tenant) => assertCanReadCatalog(tenant.membership.role),
   "catalog.count": (tenant) => assertCanReadCatalog(tenant.membership.role),
   "customers.page": (tenant) => assertCanUseCustomers(tenant.membership.role),
@@ -200,6 +225,14 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertCanOperateOrders(tenant.membership.role),
   "sales.payment.record": (tenant) =>
     assertCanOperateOrders(tenant.membership.role),
+}
+
+function assertStaffInvitationAccess(tenant: TenantContext) {
+  if (!["OWNER", "ADMIN"].includes(tenant.membership.role))
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Owner/Admin access is required for staff invitations.",
+    })
 }
 
 /** Scoped staff may use a capability only where every procedure grants it. */

@@ -11,6 +11,7 @@ export function useStaffMemberParams() {
       staffMember: parseAsString,
       staffHistory: parseAsString,
       staffDirectory: parseAsString,
+      staffInvitation: parseAsString,
     },
     { history: "push" },
   )
@@ -29,12 +30,14 @@ export function useStaffMemberParams() {
         }).membershipId,
         staffHistory: null,
         staffDirectory: null,
+        staffInvitation: null,
       }),
     close: () => setParams({ staffMember: null }),
     openHistory: (membershipId: string) =>
       setParams({
         staffMember: null,
         staffDirectory: null,
+        staffInvitation: null,
         staffHistory: JSON.stringify(
           staffHistoryTargetSchema.parse({
             kind: "staff_history",

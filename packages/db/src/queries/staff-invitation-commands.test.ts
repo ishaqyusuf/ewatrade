@@ -124,9 +124,12 @@ describe("canonical invitation command identity and review", () => {
       status: "INVITED",
       role: "CASHIER",
       staffAccessRevision: 3,
+      catalogEditor: false,
       user: { email: invitation.email, name: "Staff", displayName: null },
       retailOpsStaffProfile: { id: "profile", defaultStoreId: "store" },
-      staffStoreAssignments: [{ storeId: "store", role: "CASHIER" }],
+      staffStoreAssignments: [
+        { storeId: "store", role: "CASHIER", store: { name: "Shop" } },
+      ],
     }
     const tx = {
       $queryRaw: async () => [

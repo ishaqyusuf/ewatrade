@@ -1,4 +1,7 @@
-import { STAFF_STORE_ACCESS_ROLLOUT_READY, StaffStoreAccessError } from "@ewatrade/db/staff-store-access"
+import {
+  STAFF_STORE_ACCESS_ROLLOUT_READY,
+  StaffStoreAccessError,
+} from "@ewatrade/db/staff-store-access"
 
 import {
   type EwaTradeRole,
@@ -8,6 +11,11 @@ import {
 import {
   RetailOpsStaffError,
   reviewStaffInvitation,
+  reviewStaffInvitationCommand,
+  executeStaffInvitationCommand,
+  getStaffInvitationCommand,
+  listStaffInvitations,
+  StaffInvitationCommandError,
   staffInvitationReviewInput,
   RetailOpsSubscriptionError,
   completeRetailOpsStaffOnboarding,
@@ -42,6 +50,27 @@ import {
   retailOpsStaffDirectoryMemberSchema,
   retailOpsStaffHistoryPageSchema,
 } from "../../schemas/retail-ops-staff-reads"
+import {
+  staffInvitationCommandInput,
+  staffInvitationCommandReviewInput,
+  staffInvitationCommandReadSchema,
+  staffInvitationsReadSchema,
+} from "../../schemas/retail-ops-staff-invitations"
+
+async function staffInvitationCommand<T>(operation: () => Promise<T>) {
+  try {
+    return await operation()
+  } catch (error) {
+    if (error instanceof StaffInvitationCommandError)
+      throw new TRPCError({ code: error.code, message: error.message })
+    if (error instanceof StaffStoreAccessError)
+      throw new TRPCError({
+        code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code,
+        message: error.message,
+      })
+    throw error
+  }
+}
 
 async function staffRead<T>(operation: () => Promise<T>) {
   try {
@@ -174,13 +203,65 @@ export const retailOpsStaffRouter = createTRPCRouter({
     .input(staffInvitationReviewInput)
     .query(async ({ ctx, input }) => {
       try {
-        return await reviewStaffInvitation(ctx.db, { ...input, tenantId: ctx.tenantContext.tenant.id, actorUserId: ctx.session.user.id })
+        return await reviewStaffInvitation(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        })
       } catch (error) {
         if (error instanceof StaffStoreAccessError)
-          throw new TRPCError({ code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code, message: error.message })
+          throw new TRPCError({
+            code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code,
+            message: error.message,
+          })
         throw error
       }
     }),
+
+  staffInvitationCommandReview: protectedProcedure
+    .input(staffInvitationCommandReviewInput)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        reviewStaffInvitationCommand(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  staffInvitationCommandSave: protectedProcedure
+    .input(staffInvitationCommandInput)
+    .mutation(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        executeStaffInvitationCommand(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  staffInvitationCommand: protectedProcedure
+    .input(staffInvitationCommandReadSchema)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        getStaffInvitationCommand(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  staffInvitations: protectedProcedure
+    .input(staffInvitationsReadSchema)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        listStaffInvitations(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
 
   staffHistoryPage: protectedProcedure
     .input(retailOpsStaffHistoryPageSchema)
@@ -346,7 +427,10 @@ export const retailOpsStaffRouter = createTRPCRouter({
         return hideStaffInviteAcceptanceToken(invitedStaff)
       } catch (error) {
         if (error instanceof StaffStoreAccessError)
-          throw new TRPCError({ code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code, message: error.message })
+          throw new TRPCError({
+            code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code,
+            message: error.message,
+          })
         if (error instanceof RetailOpsStaffError) {
           throw new TRPCError({
             code: getStaffErrorCode(error),

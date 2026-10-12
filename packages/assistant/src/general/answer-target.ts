@@ -10,7 +10,15 @@ export const staffMemberTargetSchema = z
   })
   .strict()
 
+export const staffInvitationTargetSchema = z
+  .object({
+    kind: z.literal("staff_invitation"),
+    commandId: z.string().trim().min(1).max(160),
+  })
+  .strict()
+
 export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
+  staffInvitationTargetSchema,
   staffHistoryTargetSchema,
   staffMemberTargetSchema,
   staffDirectoryTargetSchema,

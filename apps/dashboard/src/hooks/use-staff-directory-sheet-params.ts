@@ -6,6 +6,7 @@ export function useStaffDirectorySheetParams() {
   const [{ staffDirectory }, setParams] = useQueryStates(
     {
       staffDirectory: parseAsString,
+      staffInvitation: parseAsString,
       staffMember: parseAsString,
       staffHistory: parseAsString,
     },
@@ -24,6 +25,7 @@ export function useStaffDirectorySheetParams() {
       setParams({
         staffDirectory: JSON.stringify(staffDirectoryTargetSchema.parse(value)),
         staffMember: null,
+        staffInvitation: null,
         staffHistory: null,
       }),
     close: () => setParams({ staffDirectory: null }),
