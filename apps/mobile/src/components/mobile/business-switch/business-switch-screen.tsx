@@ -2,7 +2,9 @@ import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { getListCreateFabFooterOffset } from "@/components/mobile/list-create-fab-model"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
+import { SearchFold, useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
@@ -34,6 +36,7 @@ import {
 } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { ScrollView } from "react-native-css/components/ScrollView"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   ClassicWorkspaceHeader,
   ClassicWorkspaceRow,
@@ -56,21 +59,26 @@ export function BusinessSwitchChrome(props: WorkflowModalChromeProps) {
 function WorkspaceBody({
   vm,
   footerSpace,
+  heroFolded = false,
   onScroll,
   sheet = false,
 }: {
   vm: WorkspaceController
   footerSpace: number
+  /** Folds the current-business card while the bottom search is in use. */
+  heroFolded?: boolean
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
   sheet?: boolean
 }) {
   const colors = useColors()
   const header = (
     <View className="gap-4 pb-4">
-      <ClassicWorkspaceHeader
-        count={vm.businesses.length}
-        currentName={vm.currentName}
-      />
+      <SearchFold folded={heroFolded}>
+        <ClassicWorkspaceHeader
+          count={vm.businesses.length}
+          currentName={vm.currentName}
+        />
+      </SearchFold>
       <View className="gap-3">
         {vm.local ? (
           <StatusBanner
@@ -224,6 +232,8 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
   const vm = useBusinessSwitch({ onComplete })
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const searchFold = useSearchFold(vm.search)
+  const insets = useSafeAreaInsets()
   const discovered = useRef(false)
   if (shouldShowListSearch(vm.businesses.length) || vm.search)
     discovered.current = true
@@ -234,6 +244,7 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
       <WorkspaceBody
         vm={vm}
         footerSpace={(searchVisible ? footerHeight : 0) + 112}
+        heroFolded={searchFold.folded}
         onScroll={scrollHide.onScroll}
       />
       {searchVisible ? (
@@ -248,13 +259,19 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
           value={vm.search}
           onChangeText={vm.setSearch}
           totalCount={vm.businesses.length}
+          onFocusChange={searchFold.onFocusChange}
           onHeightChange={setFooterHeight}
         />
       ) : null}
       <ListCreateFab
         accessibilityLabel="Add a new business"
         bottomOffset={
-          searchVisible && !(scrollHide.hidden && !vm.search) ? footerHeight : 0
+          searchVisible && !(scrollHide.hidden && !vm.search)
+            ? getListCreateFabFooterOffset({
+                bottomInset: insets.bottom,
+                footerHeight,
+              })
+            : 0
         }
         disabled={!vm.canCreate}
         onPress={vm.openCreate}
