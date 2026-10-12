@@ -51,10 +51,7 @@ import {
   GENERAL_BUDGET_LIMITS,
   generalBudgetScopeKey,
 } from "./general-allowance"
-import {
-  ANNOUNCED_ACTION_NUDGE,
-  announcedWithoutAction,
-} from "./general-announced-action"
+import { streamGeneralReply } from "./general-announced-action"
 import { requireGeneralScope } from "./general-context"
 import { generalPersistentParts } from "./general-persistence"
 import { createGeneralTools } from "./general-tools"
@@ -338,34 +335,7 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
               steps += event.steps.length
             },
           })
-          const result = await agent.stream({
-            messages,
-            abortSignal: controller.signal,
-          })
-          // Written in order so a second pass can continue the same message.
-          for await (const chunk of result.toUIMessageStream<GeneralUIMessage>({
-            sendReasoning: false,
-            sendFinish: false,
-          }))
-            writer.write(chunk)
-          if (!announcedWithoutAction(await result.steps)) {
-            writer.write({ type: "finish" })
-            return
-          }
-          const retry = await agent.stream({
-            messages: [
-              ...messages,
-              ...(await result.response).messages,
-              { role: "user", content: ANNOUNCED_ACTION_NUDGE },
-            ],
-            abortSignal: controller.signal,
-          })
-          writer.merge(
-            retry.toUIMessageStream<GeneralUIMessage>({
-              sendReasoning: false,
-              sendStart: false,
-            }),
-          )
+          await streamGeneralReply(agent, messages, writer, controller.signal)
         },
         onError: () => {
           failed = true

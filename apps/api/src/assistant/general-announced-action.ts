@@ -1,3 +1,10 @@
+import type {
+  ModelMessage,
+  ToolLoopAgent,
+  UIMessage,
+  UIMessageStreamWriter,
+} from "ai"
+
 /**
  * A reply that only promises work and called no tool. DeepSeek sometimes ends
  * a turn on its preamble: "Use 90 pieces… Draft it." got "I'll draft the stock
@@ -25,3 +32,37 @@ export function announcedWithoutAction(
 
 export const ANNOUNCED_ACTION_NUDGE =
   "[App note, not from the user] Your last reply announced an action but called no tool, so nothing happened. Do it now in this reply: call the tools (read the records again first if you need their identifiers), or say plainly what is missing. Do not announce it again."
+
+/**
+ * Streams one GENERAL reply into `writer`, giving an announce-only reply one
+ * more pass that continues the same message (one start, one finish).
+ */
+export async function streamGeneralReply<M extends UIMessage>(
+  agent: Pick<ToolLoopAgent, "stream">,
+  messages: ModelMessage[],
+  writer: UIMessageStreamWriter<M>,
+  abortSignal: AbortSignal,
+) {
+  const result = await agent.stream({ messages, abortSignal })
+  // Written in order so a second pass can continue the same message.
+  for await (const chunk of result.toUIMessageStream<M>({
+    sendReasoning: false,
+    sendFinish: false,
+  }))
+    writer.write(chunk)
+  if (!announcedWithoutAction(await result.steps)) {
+    writer.write({ type: "finish" })
+    return
+  }
+  const retry = await agent.stream({
+    messages: [
+      ...messages,
+      ...(await result.response).messages,
+      { role: "user", content: ANNOUNCED_ACTION_NUDGE },
+    ],
+    abortSignal,
+  })
+  writer.merge(
+    retry.toUIMessageStream<M>({ sendReasoning: false, sendStart: false }),
+  )
+}

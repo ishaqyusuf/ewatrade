@@ -1,8 +1,16 @@
 import { expect, test } from "bun:test"
+import {
+  type RehearsalTurn,
+  createRehearsalModel,
+} from "@ewatrade/ai/rehearsal-model"
 import { FinanceError } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
+import { ToolLoopAgent, createUIMessageStream, stepCountIs, tool } from "ai"
 import { z } from "zod"
-import { announcedWithoutAction } from "./general-announced-action"
+import {
+  announcedWithoutAction,
+  streamGeneralReply,
+} from "./general-announced-action"
 import { recoverableToolFailure } from "./general-tool-recovery"
 
 // 12 Oct 2026, Jawdah Poultry QA stock receipt: "Use 90 pieces… Draft it."
@@ -84,4 +92,62 @@ test("a finance rule refusal tells the model what to change", () => {
       ),
     ),
   ).toBeUndefined()
+})
+
+async function replyChunks(turns: Array<RehearsalTurn>) {
+  const prompts: unknown[] = []
+  const agent = new ToolLoopAgent({
+    model: createRehearsalModel((prompt) => {
+      prompts.push(prompt.at(-1))
+      return turns[prompts.length - 1] ?? { kind: "text", text: "Done." }
+    }),
+    tools: {
+      draftAction: tool({
+        inputSchema: z.object({}),
+        execute: async () => ({ proposalId: "proposal" }),
+      }),
+    },
+    stopWhen: stepCountIs(6),
+  })
+  const stream = createUIMessageStream({
+    execute: ({ writer }) =>
+      streamGeneralReply(
+        agent,
+        [{ role: "user", content: "Draft it." }],
+        writer,
+        new AbortController().signal,
+      ),
+  })
+  const chunks: Array<{ type: string; delta?: string }> = []
+  for await (const chunk of stream) chunks.push(chunk)
+  return { chunks, prompts }
+}
+const count = (chunks: Array<{ type: string }>, type: string) =>
+  chunks.filter((chunk) => chunk.type === type).length
+
+test("an announce-only reply continues the same message and drafts", async () => {
+  const { chunks, prompts } = await replyChunks([
+    { kind: "text", text: "I'll draft the stock receipt now." },
+    { kind: "tool", toolName: "draftAction", input: {} },
+    { kind: "text", text: "Draft ready." },
+  ])
+  expect(prompts).toHaveLength(3)
+  expect(JSON.stringify(prompts[1])).toContain("[App note, not from the user]")
+  expect(count(chunks, "start")).toBe(1)
+  expect(count(chunks, "finish")).toBe(1)
+  expect(chunks.at(-1)?.type).toBe("finish")
+  expect(count(chunks, "tool-output-available")).toBe(1)
+  const text = chunks.map((chunk) => chunk.delta ?? "").join("")
+  expect(text).toContain("I'll draft the stock receipt now.")
+  expect(text).toContain("Draft ready.")
+})
+
+test("an ordinary reply streams once with one start and one finish", async () => {
+  const { chunks, prompts } = await replyChunks([
+    { kind: "text", text: "You have 148 Pieces available." },
+  ])
+  expect(prompts).toHaveLength(1)
+  expect(count(chunks, "start")).toBe(1)
+  expect(count(chunks, "finish")).toBe(1)
+  expect(chunks.at(-1)?.type).toBe("finish")
 })
