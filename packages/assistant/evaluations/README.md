@@ -218,3 +218,5 @@ and browser assertions. Mobile evaluations are excluded from the current work.
 - [Purchase registration proposal database acceptance, 11 October 2026](runs/2026-10-11-registration-proposal-database.md): 37 assertions pass; rollback, concurrent replay, fresh supplier/authority guards and actual reads; full web/model acceptance pending.
 
 - [Saved purchase agreement receipt web acceptance, 11 October 2026](runs/2026-10-11-registration-receipt-web.md): actual Open/Close preserves the assistant chat; saved canonical agreement details and screenshot; backend fixture confirmation only.
+
+- [Maximum ten-line draft and receipt web acceptance, 12 October 2026](runs/2026-10-12-ten-line-receipt-web.md): read-only draft batches, full GENERAL Edit review11.56s, actual Edit/re-review/Confirm/Open/Close/reload, exact ten saved movements/values/100 categories and concurrent completed recovery; E05 parent audit pending.

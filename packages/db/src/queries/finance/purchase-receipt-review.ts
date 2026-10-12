@@ -1,6 +1,9 @@
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
 import type { Prisma } from "../../../generated/prisma/client"
-import { previewOrdinaryStockReceipt } from "../inventory-operations"
+import {
+  previewOrdinaryStockReceipt,
+  previewPurchaseStockReceipts,
+} from "../inventory-operations"
 import type { PurchaseRecognitionInput } from "./purchase-recognition-preparation"
 import { purchaseRecognitionCategories } from "./purchase-recognition-receipt-source"
 import { purchaseRecognitionReviewSource } from "./purchase-recognition-review"
@@ -16,7 +19,30 @@ export async function getFinancePurchaseReceiptReview(
   if (input.stage !== "RECEIPT")
     throw new FinanceError("CONFLICT", "Choose a physical purchase receipt.")
   const { review, document } = await purchaseRecognitionReviewSource(tx, input)
-  return composePurchaseReceiptReview(tx, input, { review, document })
+  const stock = await previewPurchaseStockReceipts(tx, {
+    tenantId: input.tenantId,
+    storeId: review.storeId,
+    lines: document.lines.map((line) => ({
+      balanceSourceId: line.balanceSourceId,
+      enteredInventoryUnitId: line.enteredInventoryUnitId,
+      enteredQuantity: line.enteredQuantity.toFixed(),
+      expectedConfigurationVersionId: line.configurationVersionId,
+    })),
+  })
+  return composePurchaseReceiptReview(
+    tx,
+    input,
+    { review, document },
+    async (_, line) => {
+      const preview = stock.get(line.balanceSourceId)
+      if (!preview)
+        throw new FinanceError(
+          "CONFLICT",
+          "The original receipt stock source is unavailable.",
+        )
+      return preview
+    },
+  )
 }
 
 /** Internal composer; public review and locked confirmation load their own source. */

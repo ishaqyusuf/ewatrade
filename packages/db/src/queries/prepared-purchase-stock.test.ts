@@ -4,6 +4,7 @@ import { Prisma } from "../../generated/prisma/client"
 import {
   preparePurchaseStockReceiptInTransaction,
   preparePurchaseStockReceiptsInTransaction,
+  previewPurchaseStockReceipts,
   type SingleBalanceInput,
 } from "./inventory-operations"
 
@@ -624,5 +625,68 @@ test("batch refuses preexisting identity, stale CAS and incomplete or changed sa
     if (flag === "prior") expect(f.posting.queries).toEqual(["identities"])
     if (flag === "stale" || flag === "partial")
       expect(f.posting.queries).toEqual(["identities", "balances-CAS"])
+  }
+})
+
+test("advisory one/ten-line preview batches four reads without locks or effects and matches locked source math", async () => {
+  for (const count of [1, 10]) {
+    const f = batchFixture(count)
+    const preview = await previewPurchaseStockReceipts(f.tx, f.scope)
+    expect(preview.size).toBe(count)
+    expect(f.queries.map((query) => query.kind)).toEqual([
+      "balances",
+      "units",
+      "labels",
+      "items",
+    ])
+    expect(f.state.writes).toHaveLength(0)
+    const prepared = await preparePurchaseStockReceiptsInTransaction(
+      f.tx,
+      f.scope,
+    )
+    for (const [id, source] of prepared.sources)
+      expect(preview.get(id)).toEqual(source.preview)
+    f.batch.balances[0]!.revision++
+    const fresh = await previewPurchaseStockReceipts(f.tx, f.scope)
+    expect(fresh.get("balance-0")!.revision).toBe(4)
+    expect(preview.get("balance-0")!.revision).toBe(3)
+  }
+})
+
+test("advisory batch refuses missing/foreign sources, stale unit ownership and invalid bounds without effects", async () => {
+  for (const mutate of [
+    (f: ReturnType<typeof batchFixture>) => {
+      f.batch.balances.pop()
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.batch.balances[0]!.tenantId = "foreign"
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.batch.balances[0]!.storeId = "foreign"
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.batch.balances[0]!.custodyType = "REP"
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.batch.units[0]!.configurationVersion.productId = "foreign"
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.batch.units[0]!.configurationVersion.status = "SUPERSEDED"
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.scope.lines[0]!.enteredQuantity = "2.1251"
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.scope.lines = []
+    },
+    (f: ReturnType<typeof batchFixture>) => {
+      f.scope.lines.push(f.scope.lines[0]!)
+    },
+  ]) {
+    const f = batchFixture()
+    mutate(f)
+    await expect(previewPurchaseStockReceipts(f.tx, f.scope)).rejects.toThrow()
+    expect(f.state.writes).toHaveLength(0)
+    expect(f.queries.some((query) => query.kind.includes("lock"))).toBe(false)
   }
 })

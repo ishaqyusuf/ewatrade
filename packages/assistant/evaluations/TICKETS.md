@@ -77,8 +77,11 @@ and pass actual Edit/re-review/Confirm/Open/Close with exact saved effects and
 completed recovery. Fresh stock preparation now batches 1–10 original goods; ten mixed sources prepare
 in3.11s with saved financial/stock facts unchanged. Ten-line posting/valuation now passes canonical19.50s and signed assistant completion
 rollback23.15s with100 category links; signed stale-stock refusal preserves all facts.
-Advisory draft29.51s needs batching; maximum browser confirmation/recovery and broader
-stale-source/operational acceptance remain open. Evidence:
+Advisory stock previews now batch; full GENERAL Edit review11.56s passes with rollback.
+Maximum dashboard Edit/re-review/Confirm/Open/Close/reload and exact saved ten movements/
+values/100 category links pass; concurrent completed recovery adds no effects. Broader
+stale-source/operational acceptance audit remains open. Evidence:
+[maximum receipt web report](runs/2026-10-12-ten-line-receipt-web.md),
 [ten-line receipt batch report](runs/2026-10-12-ten-line-receipt-batch.md),
 [stock preparation bounds report](runs/2026-10-12-stock-bounds-preparation.md),
 [supplier creation/registration web report](runs/2026-10-12-supplier-registration-web.md),

@@ -499,14 +499,14 @@ type PurchaseStockReceiptInput = OrdinaryStockPreviewInput & {
   expectedConfigurationVersionId: string
 }
 
-/** Fresh, bounded source preparation. Caller owns the Book lock and outer transaction. */
-export async function preparePurchaseStockReceiptsInTransaction(
-  tx: Prisma.TransactionClient,
-  sourceInput: {
-    tenantId: string
-    storeId: string
-    lines: Omit<PurchaseStockReceiptInput, "tenantId" | "storeId">[]
-  },
+type PurchaseStockReceiptSourcesInput = {
+  tenantId: string
+  storeId: string
+  lines: Omit<PurchaseStockReceiptInput, "tenantId" | "storeId">[]
+}
+
+function purchaseStockReceiptSourceLines(
+  sourceInput: PurchaseStockReceiptSourcesInput,
 ) {
   const lines = sourceInput.lines
     .map((line) => ({
@@ -541,41 +541,18 @@ export async function preparePurchaseStockReceiptsInTransaction(
       line.expectedConfigurationVersionId,
     )
   }
-  const unitIds = [...unitConfigurations.keys()].sort()
-  const configurationIds = [...new Set(unitConfigurations.values())].sort()
-  const lockedBalances = await tx.$queryRaw<
-    Array<{ id: string }>
-  >`SELECT id FROM "StockBalanceSource"
-    WHERE id = ANY(${balanceIds}::text[]) AND "tenantId" = ${sourceInput.tenantId}
-    AND "storeId" = ${sourceInput.storeId} ORDER BY id FOR UPDATE`
-  if (
-    lockedBalances.length !== balanceIds.length ||
-    new Set(lockedBalances.map((row) => row.id)).size !== balanceIds.length ||
-    lockedBalances.some((row) => !balanceIds.includes(row.id))
-  )
-    throw new CatalogError(
-      "INVALID_STOCK_OPERATION",
-      "The original purchase stock source is unavailable.",
-    )
-  const lockedUnits = await tx.$queryRaw<
-    Array<{ id: string; configurationVersionId: string }>
-  >`SELECT u.id, u."configurationVersionId" FROM "InventoryUnit" u
-    JOIN "UnitConfigurationVersion" c ON c.id = u."configurationVersionId"
-    JOIN "CatalogProduct" p ON p.id = c."productId"
-    JOIN "CatalogItem" i ON i.id = p."catalogItemId" AND i."tenantId" = ${sourceInput.tenantId}
-    WHERE u.id = ANY(${unitIds}::text[]) AND c.id = ANY(${configurationIds}::text[])
-    ORDER BY u.id FOR SHARE OF u, c`
-  if (
-    lockedUnits.length !== unitIds.length ||
-    new Set(lockedUnits.map((row) => row.id)).size !== unitIds.length ||
-    lockedUnits.some(
-      (row) => unitConfigurations.get(row.id) !== row.configurationVersionId,
-    )
-  )
-    throw new CatalogError(
-      "STALE_CONFIGURATION",
-      "The original purchase unit is unavailable in this business.",
-    )
+  return { lines, balanceIds, unitConfigurations }
+}
+
+async function loadPurchaseStockReceiptSources(
+  tx: Prisma.TransactionClient,
+  sourceInput: PurchaseStockReceiptSourcesInput,
+  lines: PurchaseStockReceiptInput[],
+) {
+  const balanceIds = lines.map((line) => line.balanceSourceId)
+  const unitIds = [
+    ...new Set(lines.map((line) => line.enteredInventoryUnitId)),
+  ].sort()
   const balances = await tx.stockBalanceSource.findMany({
     include: balanceGraph,
     where: {
@@ -623,10 +600,11 @@ export async function preparePurchaseStockReceiptsInTransaction(
     select: { id: true, name: true },
   })
   const itemById = new Map(items.map((item) => [item.id, item]))
-  const loaded = new Map<string, PreparedPurchaseStockSource>()
-  const stock = new Map<
+  const loaded = new Map<
     string,
-    ReturnType<typeof prepareLoadedPurchaseStockReceipt>
+    PreparedPurchaseStockSource & {
+      preview: Awaited<ReturnType<typeof previewLoadedOrdinaryStockAdjustment>>
+    }
   >()
   for (const input of lines) {
     const balance = balanceById.get(input.balanceSourceId)
@@ -673,12 +651,76 @@ export async function preparePurchaseStockReceiptsInTransaction(
           .map((canonical) => canonical.name),
       },
     )
-    loaded.set(balance.id, { input, balance, unit })
-    stock.set(
-      balance.id,
-      prepareLoadedPurchaseStockReceipt(tx, input, balance, unit, preview),
-    )
+    loaded.set(balance.id, { input, balance, unit, preview })
   }
+  return loaded
+}
+
+/** Advisory fresh source reads only. Confirmation separately reloads under source locks. */
+export async function previewPurchaseStockReceipts(
+  tx: Prisma.TransactionClient,
+  sourceInput: PurchaseStockReceiptSourcesInput,
+) {
+  const { lines } = purchaseStockReceiptSourceLines(sourceInput)
+  const loaded = await loadPurchaseStockReceiptSources(tx, sourceInput, lines)
+  return new Map([...loaded].map(([id, source]) => [id, source.preview]))
+}
+
+/** Fresh, bounded source preparation. Caller owns the Book lock and outer transaction. */
+export async function preparePurchaseStockReceiptsInTransaction(
+  tx: Prisma.TransactionClient,
+  sourceInput: PurchaseStockReceiptSourcesInput,
+) {
+  const { lines, balanceIds, unitConfigurations } =
+    purchaseStockReceiptSourceLines(sourceInput)
+  const unitIds = [...unitConfigurations.keys()].sort()
+  const configurationIds = [...new Set(unitConfigurations.values())].sort()
+  const lockedBalances = await tx.$queryRaw<
+    Array<{ id: string }>
+  >`SELECT id FROM "StockBalanceSource"
+    WHERE id = ANY(${balanceIds}::text[]) AND "tenantId" = ${sourceInput.tenantId}
+    AND "storeId" = ${sourceInput.storeId} ORDER BY id FOR UPDATE`
+  if (
+    lockedBalances.length !== balanceIds.length ||
+    new Set(lockedBalances.map((row) => row.id)).size !== balanceIds.length ||
+    lockedBalances.some((row) => !balanceIds.includes(row.id))
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The original purchase stock source is unavailable.",
+    )
+  const lockedUnits = await tx.$queryRaw<
+    Array<{ id: string; configurationVersionId: string }>
+  >`SELECT u.id, u."configurationVersionId" FROM "InventoryUnit" u
+    JOIN "UnitConfigurationVersion" c ON c.id = u."configurationVersionId"
+    JOIN "CatalogProduct" p ON p.id = c."productId"
+    JOIN "CatalogItem" i ON i.id = p."catalogItemId" AND i."tenantId" = ${sourceInput.tenantId}
+    WHERE u.id = ANY(${unitIds}::text[]) AND c.id = ANY(${configurationIds}::text[])
+    ORDER BY u.id FOR SHARE OF u, c`
+  if (
+    lockedUnits.length !== unitIds.length ||
+    new Set(lockedUnits.map((row) => row.id)).size !== unitIds.length ||
+    lockedUnits.some(
+      (row) => unitConfigurations.get(row.id) !== row.configurationVersionId,
+    )
+  )
+    throw new CatalogError(
+      "STALE_CONFIGURATION",
+      "The original purchase unit is unavailable in this business.",
+    )
+  const loaded = await loadPurchaseStockReceiptSources(tx, sourceInput, lines)
+  const stock = new Map(
+    [...loaded].map(([id, source]) => [
+      id,
+      prepareLoadedPurchaseStockReceipt(
+        tx,
+        source.input,
+        source.balance,
+        source.unit,
+        source.preview,
+      ),
+    ]),
+  )
   let execution:
     | Promise<Map<string, ReturnType<typeof serializeOperation>>>
     | undefined

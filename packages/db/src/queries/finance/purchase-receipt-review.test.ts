@@ -76,7 +76,7 @@ function fixture() {
     transactionScale: 3,
     stockBehavior: "CANONICAL_SHARED",
     configurationVersionId: "config",
-    configurationVersion: { status: "CURRENT" },
+    configurationVersion: { status: "CURRENT", productId: "product" },
   }
   const balance = {
     id: "balance",
@@ -90,6 +90,7 @@ function fixture() {
     inventoryUnitId: "unit",
     inventoryUnit: unit,
     product: { catalogItemId: "item" },
+    productId: "product",
     variant: { name: "Default" },
     store: { currencyCode: "NGN" },
   }
@@ -170,12 +171,18 @@ function fixture() {
         return state.categories
       },
     },
-    stockBalanceSource: { findFirst: async () => balance },
+    stockBalanceSource: {
+      findFirst: async () => balance,
+      findMany: async () => [balance],
+    },
     inventoryUnit: {
       findFirst: async () => unit,
-      findMany: async () => [{ name: "bag" }],
+      findMany: async () => [unit],
     },
-    catalogItem: { findUniqueOrThrow: async () => ({ name: "Flour" }) },
+    catalogItem: {
+      findUniqueOrThrow: async () => ({ name: "Flour" }),
+      findMany: async () => [{ id: "item", name: "Flour" }],
+    },
   } as unknown as Prisma.TransactionClient
   return { tx, document, unit, balance, state }
 }
