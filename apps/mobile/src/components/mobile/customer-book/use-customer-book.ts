@@ -7,11 +7,7 @@ import {
   getCustomerBookPresentation,
 } from "@/components/mobile/customer-book-presentation-model"
 import { useAuthContext } from "@/hooks/use-auth"
-import {
-  LIST_PAGE_SIZE,
-  shouldFetchNextListPage,
-  shouldShowListSearch,
-} from "@/lib/list-pagination"
+import { LIST_PAGE_SIZE, shouldFetchNextListPage } from "@/lib/list-pagination"
 import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
 import {
   activeBusinessOfflineCommands,
@@ -108,18 +104,6 @@ export function useCustomerBook({
       },
     ),
   )
-  const customerCount = useQuery(
-    trpc.orders.customerCount.queryOptions(undefined, {
-      enabled: !creation.blocked && !isOffline,
-      retry: false,
-    }),
-  )
-  const directoryCount = useQuery(
-    trpc.customers.count.queryOptions(undefined, {
-      enabled: !creation.blocked && !isOffline,
-      retry: false,
-    }),
-  )
   const initialOrder = useQuery(
     trpc.orders.get.queryOptions(
       { orderId: lookupOrderId ?? "" },
@@ -193,10 +177,6 @@ export function useCustomerBook({
       buildCommerceCustomers(loadedOrders, pendingOrders, directoryCustomers),
     [directoryCustomers, loadedOrders, pendingOrders],
   )
-  const pendingCustomerCount = useMemo(
-    () => buildCommerceCustomers([], pendingOrders).length,
-    [pendingOrders],
-  )
   const directoryProfile = useMemo(() => {
     if (!customerLookup.data || customerLookup.data.id !== lookupCustomerId)
       return null
@@ -231,14 +211,6 @@ export function useCustomerBook({
     },
     [customers, directoryProfile, directoryCustomers, customerLookup.data?.id],
   )
-  const showSearch =
-    Boolean(search) ||
-    shouldShowListSearch(
-      Math.max(
-        (customerCount.data ?? 0) + (directoryCount.data ?? 0),
-        customers.length,
-      ) + pendingCustomerCount,
-    )
 
   useEffect(() => {
     if (
@@ -407,11 +379,7 @@ export function useCustomerBook({
     setSelectedCustomerId,
     orders,
     directory,
-    customerCount,
-    directoryCount,
     customers,
-    pendingCustomerCount,
-    showSearch,
     selectedCustomer,
     selectedIsSaved: Boolean(
       selectedCustomer &&
