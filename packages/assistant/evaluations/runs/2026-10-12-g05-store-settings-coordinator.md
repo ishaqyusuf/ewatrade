@@ -32,3 +32,35 @@ Fix the packet's stale statement that the persistence ADR is absent: it exists
 at .brain/decisions/2026-10-12-collection-payout-persistence.md.
 
 No new runtime/provider/deployment authority, acceptance or native parity claimed.
+
+## Signed rollback fixture source review — 12 October 2026
+
+Claude supplied an unrun fixture, hash
+69b3cfdba0f6425e0a313322a19f0d91742990312bf5841396a23ee74a3fac02:
+apps/api/src/assistant/general-store-settings-change.integration-check.ts.
+Root Biome and fresh full API TypeScript checks pass. Source verifies exact saved
+QA scope, explicit local/signing opt-in, bounded Serializable/10s/30s transaction
+options, staged real authority refusals and forced rollback. No connected run
+or settings mutation was performed by root.
+
+Before claiming full verification, strengthen the proposal fingerprint beyond
+id/status/revision to include payload/hash/target/token/idempotency/result/decision
+and timestamps. Signed success currently covers order_visibility only; business
+receipt defaults, Store receipt overrides/removal and reminder success/replay are
+unproven. The guarded runner must explain its process-only source-test capability
+availability setup because settings.store.change remains planned. No persistent
+rollout change is authorized. Requests sent to Claude; UI gates remain open.
+
+Claude supplied v2, hash
+ff4bf946d7ca6e0f8445d4935727e23dd352bc0136ce1eaae47ca24ed94d93f6.
+Root verified the expanded full proposal fingerprint and five success/replay
+cases (visibility, business receipt defaults, Store override, override removal,
+reminders), plus the five existing refusal cases. The source review coverage
+comments are addressed; Biome passes. The planned capability's runner setup now
+specifies a process-only in-memory availability override restored in finally.
+This fixture remains UNRUN; none of its connected assertions is claimed passed.
+
+The fresh full API compile for v2 overlapped the in-progress S05 target addition
+and exits2 on general-staff-activity.ts's unresolved staff-activity-target package
+export. No G05 fixture diagnostic is emitted, but the integrated check is not
+green. Wait for S05's frozen export/target packet before repeating compilation.

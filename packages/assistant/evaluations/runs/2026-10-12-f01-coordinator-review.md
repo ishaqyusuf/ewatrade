@@ -71,3 +71,33 @@ decisions; that does not establish live provider-account facts or authorize a
 runtime account change here. Canonical persisted intent/event commands, atomic
 manual/online exclusion, reconciliation and saved UI remain open. F01 stays
 partial and unbookmarked.
+
+## Persisted-command review under the Paystack pause — 12 October 2026
+
+Claude's frozen command hash ab2ed5847179aeca8b98cd407199f62eaef8f24d8e5ef8d3ca32e7cead820950
+matches the reviewed working tree. Shared pure-rules hash
+b5f93b8d1c2bc0f961d4d10be9bc21cdbb6c04ece7fcb40d00e6add9e2dbbbaf
+matches too. Earlier identity/currency/manual-amount contract repairs remain in
+place; held resolution now offers manual_refund or customer_credit.
+
+Independent mocked transaction probes demonstrate that existing-intent replay
+returns the saved intent before checking supplied current payment authority,
+Store scope or customer-link source identity. Revoked canAcceptPayment, a foreign
+Store list and a different customer source all replay successfully. This is a
+latent canonical replay boundary gap, not an exposed endpoint exploit: these
+commands have no router/tool registration. Fresh authority must be explicit
+before future enablement. Editing expiresAt also replays; the "exact retry"
+contract must distinguish calculated retry expiry from explicit lifetime edits.
+
+The reported Development run (2 pass / 13 assertions) is limited evidence. Its
+fixture overrides transaction timeout to 110000ms, rather than the required
+30000ms, and records/applies events inside the same rolled-back transaction.
+It does not prove the promised separate committed received-event boundary,
+independent transaction performance, concurrency or saved UI. Root did not rerun
+that connected fixture. Existing source tests in the focused F01/G04 batch pass
+14 cases / 73 assertions; diagnostic is collection-catalog-review.fixture.mjs.
+
+Findings were sent to Claude. Preserve the recorded human Paystack pause; no
+repair/extension/registration/provider action is requested now. Keep dormant
+CollectionHold.refundCommandId; no further schema change. F01 remains partial,
+unbookmarked; 13/45 accepted unchanged.
