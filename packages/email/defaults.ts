@@ -28,3 +28,11 @@ export function defaultCommercialOrderFulfillmentReminderSubject(input: {
     ? `Order ${input.orderNumber} is due today`
     : `Order ${input.orderNumber} is due tomorrow`
 }
+
+export function defaultCommercialOrderReminderDigestSubject(input: {
+  businessName: string
+  summary: string
+}) {
+  const summary = input.summary.charAt(0).toUpperCase() + input.summary.slice(1)
+  return `${summary} · ${input.businessName}`
+}

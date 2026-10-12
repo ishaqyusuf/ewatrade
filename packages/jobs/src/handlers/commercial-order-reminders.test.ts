@@ -26,7 +26,7 @@ describe("commercial Order reminder classification", () => {
     ).toBe("day_before")
   })
 
-  test("does not remind for deliveries outside the configured daily windows", () => {
+  test("flags recent unfulfilled deliveries as overdue and ignores the rest", () => {
     expect(
       commercialOrderReminderTiming({
         deliveryDueAt: new Date("2026-07-27T16:00:00.000Z"),
@@ -37,6 +37,13 @@ describe("commercial Order reminder classification", () => {
     expect(
       commercialOrderReminderTiming({
         deliveryDueAt: new Date("2026-07-24T16:00:00.000Z"),
+        now,
+        timeZone: "Africa/Lagos",
+      }),
+    ).toBe("overdue")
+    expect(
+      commercialOrderReminderTiming({
+        deliveryDueAt: new Date("2026-07-17T16:00:00.000Z"),
         now,
         timeZone: "Africa/Lagos",
       }),

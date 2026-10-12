@@ -7,6 +7,7 @@ import {
   accountPrivacyOutcome,
   earlyAccessLead,
   orderReminder,
+  orderReminderDigest,
   playRefundReviewAlert,
   staffInvite,
   workspaceWelcome,
@@ -15,6 +16,10 @@ import { renderAccountDeletionVerificationTemplate } from "./account-deletion-ve
 import { renderAccountPrivacyNoticeAlertTemplate } from "./account-privacy-notice-alert"
 import { renderAccountPrivacyOutcomeTemplate } from "./account-privacy-outcome"
 import { renderCommercialOrderFulfillmentReminderTemplate } from "./commercial-order-fulfillment-reminder"
+import {
+  COMMERCIAL_ORDER_REMINDER_DIGEST_SECTION_LIMIT,
+  renderCommercialOrderReminderDigestTemplate,
+} from "./commercial-order-reminder-digest"
 import { renderEarlyAccessVerificationTemplate } from "./early-access-verification"
 import { renderMarketingEarlyAccessAdminTemplate } from "./marketing-early-access-admin"
 import { renderMarketingEarlyAccessConfirmationTemplate } from "./marketing-early-access-confirmation"
@@ -47,6 +52,7 @@ const templates = [
     ...orderReminder,
     timing: "same_day",
   }),
+  renderCommercialOrderReminderDigestTemplate(orderReminderDigest),
   renderWorkspaceWelcomeTemplate(workspaceWelcome),
   renderMobileOwnerOtpTemplate({
     code: "482913",
@@ -74,7 +80,7 @@ const templates = [
 
 describe("EwaTrade email templates", () => {
   test("renders every preview state through the shared brand system", () => {
-    expect(templates).toHaveLength(18)
+    expect(templates).toHaveLength(19)
 
     for (const template of templates) {
       expect(template.html).toStartWith("<!doctype html>")
@@ -159,5 +165,40 @@ describe("EwaTrade email templates", () => {
     expect(result.text).toBe(
       "Your EwaTrade account deletion request code is <482913>. It expires in 10 minutes. If you did not request this, ignore this email. Never share the code.",
     )
+  })
+  test("order reminder digest lists every section and caps long lists", () => {
+    const template =
+      renderCommercialOrderReminderDigestTemplate(orderReminderDigest)
+    for (const content of [template.html, template.text]) {
+      expect(content).toContain("EWA-1039")
+      expect(content).toContain("EWA-1051")
+      expect(content).toContain("EWA-1055")
+      expect(content).toContain("Open orders")
+    }
+    expect(template.text).toContain("Overdue (1)")
+    expect(template.text).toContain("Due today (2)")
+    expect(template.text).toContain("Due tomorrow (1)")
+    expect(template.text.indexOf("Overdue (1)")).toBeLessThan(
+      template.text.indexOf("Due today (2)"),
+    )
+
+    const orders = Array.from({ length: 23 }, (_, index) => ({
+      customerName: null,
+      dueLabel: "Today, 2:00 PM",
+      orderNumber: `EWA-${2000 + index}`,
+      orderUrl: null,
+      storeName: "Lekki Store",
+    }))
+    const capped = renderCommercialOrderReminderDigestTemplate({
+      businessName: "Amina Home & Trade",
+      ordersUrl: null,
+      sections: [{ orders, timing: "same_day" }],
+    })
+    const hidden =
+      orders.length - COMMERCIAL_ORDER_REMINDER_DIGEST_SECTION_LIMIT
+    expect(capped.text).toContain("23 orders due today")
+    expect(capped.text).toContain(`and ${hidden} more`)
+    expect(capped.text).not.toContain("EWA-2022")
+    expect(capped.html).not.toContain("Open orders")
   })
 })

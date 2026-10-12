@@ -6,6 +6,8 @@ import {
   OrderStatus,
   CommercialOrderReminderTiming as ReminderTimingEnum,
   SellableOfferingKind,
+  StaffStoreAssignmentStatus,
+  StoreStaffRole,
 } from "@ewatrade/db/enums"
 import { resolveRetailOpsPlanId } from "@ewatrade/db/queries"
 import {
@@ -14,42 +16,28 @@ import {
 } from "@ewatrade/db/subscription-plans"
 import {
   createCommercialOrderFulfillmentReminderDispatch,
+  createCommercialOrderReminderDigestDispatch,
   planNotificationDeliveries,
 } from "@ewatrade/notifications"
 import { EmailService } from "@ewatrade/notifications/services/email-service"
 
-export type CommercialOrderReminderTiming = "day_before" | "same_day"
+import {
+  COMMERCIAL_ORDER_OVERDUE_LOOKBACK_DAYS,
+  type CommercialOrderReminderTiming,
+  type DigestOrder,
+  type DigestRecipient,
+  type PlannedDigest,
+  commercialOrderDigestSections,
+  isCommercialOrderDigestWindow,
+  localDateKey,
+  planCommercialOrderReminderDigests,
+  reminderCoverageKey,
+} from "./commercial-order-reminder-digest"
 
-function localDayNumber(value: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  }).formatToParts(value)
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, Number(part.value)]),
-  )
-  return Math.floor(
-    Date.UTC(values.year ?? 0, (values.month ?? 1) - 1, values.day ?? 1) /
-      86_400_000,
-  )
-}
-
-export function commercialOrderReminderTiming(input: {
-  deliveryDueAt: Date
-  now: Date
-  timeZone: string
-}): CommercialOrderReminderTiming | null {
-  const daysUntilDelivery =
-    localDayNumber(input.deliveryDueAt, input.timeZone) -
-    localDayNumber(input.now, input.timeZone)
-  if (daysUntilDelivery === 0) return "same_day"
-  if (daysUntilDelivery === 1) return "day_before"
-  return null
-}
+export {
+  type CommercialOrderReminderTiming,
+  commercialOrderReminderTiming,
+} from "./commercial-order-reminder-digest"
 
 export function isCommercialOrderReminderRecipientRole(role: string) {
   const normalized = role.trim().toUpperCase()
@@ -72,10 +60,28 @@ export function tenantSendsOrderReminders(tenant: {
   return !!plan && planHasFeature(plan, "orderReminders")
 }
 
-function timingEnum(timing: CommercialOrderReminderTiming) {
-  return timing === "same_day"
-    ? ReminderTimingEnum.SAME_DAY
-    : ReminderTimingEnum.DAY_BEFORE
+const CLAIM_LEASE_MS = 15 * 60 * 1_000
+
+const timingEnum = {
+  day_before: ReminderTimingEnum.DAY_BEFORE,
+  overdue: ReminderTimingEnum.OVERDUE,
+  same_day: ReminderTimingEnum.SAME_DAY,
+} as const satisfies Record<CommercialOrderReminderTiming, ReminderTimingEnum>
+
+const timingFromEnum: Record<
+  ReminderTimingEnum,
+  CommercialOrderReminderTiming
+> = {
+  [ReminderTimingEnum.DAY_BEFORE]: "day_before",
+  [ReminderTimingEnum.OVERDUE]: "overdue",
+  [ReminderTimingEnum.SAME_DAY]: "same_day",
+}
+
+function dashboardUrl() {
+  const value =
+    process.env.NEXT_PUBLIC_DASHBOARD_URL?.trim() ||
+    process.env.DASHBOARD_URL?.trim()
+  return value ? value.replace(/\/$/, "") : null
 }
 
 function deliveryDueLabel(deliveryDueAt: Date, timeZone: string) {
@@ -86,37 +92,258 @@ function deliveryDueLabel(deliveryDueAt: Date, timeZone: string) {
   }).format(deliveryDueAt)
 }
 
+type TenantContext = {
+  id: string
+  name: string
+  timezone: string
+}
+
+async function loadRecipients(tenantId: string): Promise<DigestRecipient[]> {
+  const memberships = await prisma.membership.findMany({
+    include: {
+      staffStoreAssignments: {
+        select: { storeId: true },
+        where: {
+          role: StoreStaffRole.MANAGER,
+          status: StaffStoreAssignmentStatus.ACTIVE,
+        },
+      },
+      user: true,
+    },
+    where: {
+      status: MembershipStatus.ACTIVE,
+      tenantId,
+      OR: [
+        {
+          role: {
+            in: [
+              MembershipRole.OWNER,
+              MembershipRole.ADMIN,
+              MembershipRole.MANAGER,
+            ],
+          },
+        },
+        {
+          staffStoreAssignments: {
+            some: {
+              role: StoreStaffRole.MANAGER,
+              status: StaffStoreAssignmentStatus.ACTIVE,
+            },
+          },
+        },
+      ],
+    },
+  })
+  return memberships.map((membership) => ({
+    accessMode: membership.staffAccessMode,
+    email: membership.user.email,
+    managedStoreIds: membership.staffStoreAssignments.map(
+      (assignment) => assignment.storeId,
+    ),
+    name:
+      membership.user.displayName ||
+      membership.user.name ||
+      membership.user.firstName ||
+      null,
+    role: membership.role,
+  }))
+}
+
+/** Claims the day's digest row; returns the attempt number or null. */
+async function claimDigest(input: {
+  localDate: string
+  now: Date
+  orderCount: number
+  recipient: DigestRecipient
+  tenantId: string
+}) {
+  const digest = await prisma.commercialOrderReminderDigest.upsert({
+    create: {
+      localDate: input.localDate,
+      orderCount: input.orderCount,
+      recipientEmail: input.recipient.email,
+      recipientName: input.recipient.name,
+      tenantId: input.tenantId,
+    },
+    update: {},
+    where: {
+      tenantId_localDate_recipientEmail: {
+        localDate: input.localDate,
+        recipientEmail: input.recipient.email,
+        tenantId: input.tenantId,
+      },
+    },
+  })
+  if (digest.status === CommercialOrderReminderDeliveryStatus.SENT) return null
+
+  const claim = await prisma.commercialOrderReminderDigest.updateMany({
+    data: {
+      attemptCount: { increment: 1 },
+      errorMessage: null,
+      lastAttemptAt: input.now,
+      orderCount: input.orderCount,
+      status: CommercialOrderReminderDeliveryStatus.PENDING,
+    },
+    where: {
+      id: digest.id,
+      OR: [
+        { lastAttemptAt: null },
+        {
+          lastAttemptAt: { lt: new Date(input.now.getTime() - CLAIM_LEASE_MS) },
+        },
+      ],
+      status: { not: CommercialOrderReminderDeliveryStatus.SENT },
+    },
+  })
+  if (claim.count === 0) return null
+  return { attempt: digest.attemptCount + 1, digestId: digest.id }
+}
+
+async function sendDigest(input: {
+  attempt: number
+  digest: PlannedDigest
+  digestId: string
+  tenant: TenantContext
+}) {
+  const { digest, tenant } = input
+  const recipient = {
+    displayName: digest.recipient.name ?? undefined,
+    email: digest.recipient.email,
+  }
+  const [only] = digest.entries
+  const dispatch =
+    digest.entries.length === 1 && only && only.timing !== "overdue"
+      ? createCommercialOrderFulfillmentReminderDispatch(
+          {
+            businessName: tenant.name,
+            customerName: only.order.customerName,
+            deliveryDueLabel: deliveryDueLabel(
+              only.order.deliveryDueAt,
+              tenant.timezone,
+            ),
+            orderId: only.order.id,
+            orderNumber: only.order.orderNumber,
+            storeName: only.order.storeName,
+            timing: only.timing,
+          },
+          recipient,
+        )
+      : createCommercialOrderReminderDigestDispatch(
+          {
+            attempt: input.attempt,
+            businessName: tenant.name,
+            digestId: input.digestId,
+            ordersUrl: dashboardUrl() ? `${dashboardUrl()}/sales` : null,
+            sections: commercialOrderDigestSections({
+              dashboardUrl: dashboardUrl(),
+              entries: digest.entries,
+              timeZone: tenant.timezone,
+            }),
+          },
+          recipient,
+        )
+  return new EmailService().sendBulk(
+    planNotificationDeliveries(dispatch).dispatches,
+  )
+}
+
+async function recordDigestOutcome(input: {
+  digest: PlannedDigest
+  digestId: string
+  error: string | null
+  now: Date
+  tenantId: string
+}) {
+  const status = input.error
+    ? CommercialOrderReminderDeliveryStatus.FAILED
+    : CommercialOrderReminderDeliveryStatus.SENT
+  const sentAt = input.error ? null : input.now
+  const recipientEmail = input.digest.recipient.email
+  await prisma.$transaction([
+    prisma.commercialOrderReminderDigest.update({
+      data: { errorMessage: input.error, sentAt, status },
+      where: { id: input.digestId },
+    }),
+    ...input.digest.entries.map(({ order, timing }) =>
+      prisma.commercialOrderReminderDelivery.upsert({
+        create: {
+          attemptCount: 1,
+          digestId: input.digestId,
+          errorMessage: input.error,
+          lastAttemptAt: input.now,
+          orderId: order.id,
+          recipientEmail,
+          recipientName: input.digest.recipient.name,
+          sentAt,
+          status,
+          storeId: order.storeId,
+          tenantId: input.tenantId,
+          timing: timingEnum[timing],
+        },
+        update: {
+          attemptCount: { increment: 1 },
+          digestId: input.digestId,
+          errorMessage: input.error,
+          lastAttemptAt: input.now,
+          sentAt,
+          status,
+        },
+        where: {
+          orderId_timing_recipientEmail: {
+            orderId: order.id,
+            recipientEmail,
+            timing: timingEnum[timing],
+          },
+        },
+      }),
+    ),
+  ])
+}
+
+/**
+ * Hourly. Inside each Tenant's local morning window, sends every manager one
+ * email listing Orders overdue, due today and due tomorrow, instead of one
+ * email per Order. At most one digest per recipient per local day.
+ */
 export async function commercialOrderRemindersHandler(
   input: { now?: Date } = {},
 ) {
   const now = input.now ?? new Date()
   const candidates = await prisma.commercialOrder.findMany({
-    include: {
+    select: {
+      customerName: true,
+      deliveryDueAt: true,
+      id: true,
+      orderNumber: true,
       store: {
-        include: { commercialOrderReminderSettings: true },
-      },
-      tenant: {
-        include: {
-          subscription: { select: { plan: { select: { key: true } } } },
-          users: {
-            include: { user: true },
-            where: {
-              role: {
-                in: [
-                  MembershipRole.OWNER,
-                  MembershipRole.ADMIN,
-                  MembershipRole.MANAGER,
-                ],
-              },
-              status: MembershipStatus.ACTIVE,
+        select: {
+          commercialOrderReminderSettings: {
+            select: {
+              dayBeforeEnabled: true,
+              enabled: true,
+              sameDayEnabled: true,
             },
           },
+          name: true,
+        },
+      },
+      storeId: true,
+      tenant: {
+        select: {
+          id: true,
+          metadata: true,
+          name: true,
+          subscription: { select: { plan: { select: { key: true } } } },
+          timezone: true,
         },
       },
     },
     where: {
       deliveryDueAt: {
-        gte: new Date(now.getTime() - 24 * 60 * 60 * 1_000),
+        gte: new Date(
+          now.getTime() -
+            (COMMERCIAL_ORDER_OVERDUE_LOOKBACK_DAYS + 1) * 24 * 60 * 60 * 1_000,
+        ),
         lte: new Date(now.getTime() + 48 * 60 * 60 * 1_000),
       },
       lines: {
@@ -135,132 +362,112 @@ export async function commercialOrderRemindersHandler(
     },
   })
 
+  const byTenant = new Map<
+    string,
+    { orders: DigestOrder[]; tenant: (typeof candidates)[number]["tenant"] }
+  >()
+  for (const order of candidates) {
+    if (!order.deliveryDueAt) continue
+    const group = byTenant.get(order.tenant.id) ?? {
+      orders: [],
+      tenant: order.tenant,
+    }
+    group.orders.push({
+      customerName: order.customerName,
+      deliveryDueAt: order.deliveryDueAt,
+      id: order.id,
+      orderNumber: order.orderNumber,
+      settings: order.store.commercialOrderReminderSettings,
+      storeId: order.storeId,
+      storeName: order.store.name,
+    })
+    byTenant.set(order.tenant.id, group)
+  }
+
   let failed = 0
   let sent = 0
   let skipped = 0
 
-  for (const order of candidates) {
-    if (!order.deliveryDueAt) continue
-    if (!tenantSendsOrderReminders(order.tenant)) {
+  for (const { orders, tenant } of byTenant.values()) {
+    if (
+      !isCommercialOrderDigestWindow(now, tenant.timezone) ||
+      !tenantSendsOrderReminders(tenant)
+    ) {
       skipped += 1
       continue
     }
-    const timing = commercialOrderReminderTiming({
-      deliveryDueAt: order.deliveryDueAt,
+    const localDate = localDateKey(now, tenant.timezone)
+    const [recipients, sentDigests, coverage] = await Promise.all([
+      loadRecipients(tenant.id),
+      prisma.commercialOrderReminderDigest.findMany({
+        select: { recipientEmail: true },
+        where: {
+          localDate,
+          status: CommercialOrderReminderDeliveryStatus.SENT,
+          tenantId: tenant.id,
+        },
+      }),
+      prisma.commercialOrderReminderDelivery.findMany({
+        select: { orderId: true, recipientEmail: true, timing: true },
+        where: {
+          orderId: { in: orders.map((order) => order.id) },
+          status: CommercialOrderReminderDeliveryStatus.SENT,
+        },
+      }),
+    ])
+    const alreadySent = new Set(
+      sentDigests.map((digest) => digest.recipientEmail),
+    )
+    const digests = planCommercialOrderReminderDigests({
+      coveredKeys: new Set(
+        coverage.map((row) =>
+          reminderCoverageKey({
+            email: row.recipientEmail,
+            orderId: row.orderId,
+            timing: timingFromEnum[row.timing],
+          }),
+        ),
+      ),
       now,
-      timeZone: order.tenant.timezone,
+      orders,
+      recipients: recipients.filter(
+        (recipient) => !alreadySent.has(recipient.email.trim().toLowerCase()),
+      ),
+      timeZone: tenant.timezone,
     })
-    const settings = order.store.commercialOrderReminderSettings
-    const enabled =
-      (settings?.enabled ?? true) &&
-      (timing === "same_day"
-        ? (settings?.sameDayEnabled ?? true)
-        : timing === "day_before"
-          ? (settings?.dayBeforeEnabled ?? true)
-          : false)
-    if (!timing || !enabled) {
-      skipped += 1
-      continue
-    }
 
-    for (const membership of order.tenant.users) {
-      const recipientEmail = membership.user.email.trim().toLowerCase()
-      if (!recipientEmail) continue
-      const reminder = await prisma.commercialOrderReminderDelivery.upsert({
-        create: {
-          orderId: order.id,
-          recipientEmail,
-          recipientName:
-            membership.user.displayName ||
-            membership.user.name ||
-            membership.user.firstName ||
-            null,
-          storeId: order.storeId,
-          tenantId: order.tenantId,
-          timing: timingEnum(timing),
-        },
-        update: {},
-        where: {
-          orderId_timing_recipientEmail: {
-            orderId: order.id,
-            recipientEmail,
-            timing: timingEnum(timing),
-          },
-        },
+    for (const digest of digests) {
+      const claim = await claimDigest({
+        localDate,
+        now,
+        orderCount: digest.entries.length,
+        recipient: digest.recipient,
+        tenantId: tenant.id,
       })
-      if (reminder.status === CommercialOrderReminderDeliveryStatus.SENT) {
+      if (!claim) {
         skipped += 1
         continue
       }
-
-      const claim = await prisma.commercialOrderReminderDelivery.updateMany({
-        data: {
-          attemptCount: { increment: 1 },
-          errorMessage: null,
-          lastAttemptAt: now,
-          status: CommercialOrderReminderDeliveryStatus.PENDING,
-        },
-        where: {
-          id: reminder.id,
-          OR: [
-            { lastAttemptAt: null },
-            {
-              lastAttemptAt: {
-                lt: new Date(now.getTime() - 15 * 60 * 1_000),
-              },
-            },
-          ],
-          status: {
-            not: CommercialOrderReminderDeliveryStatus.SENT,
-          },
-        },
+      const result = await sendDigest({
+        attempt: claim.attempt,
+        digest,
+        digestId: claim.digestId,
+        tenant,
       })
-      if (claim.count === 0) {
-        skipped += 1
-        continue
-      }
-      const dispatch = createCommercialOrderFulfillmentReminderDispatch(
-        {
-          businessName: order.tenant.name,
-          customerName: order.customerName,
-          deliveryDueLabel: deliveryDueLabel(
-            order.deliveryDueAt,
-            order.tenant.timezone,
-          ),
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          storeName: order.store.name,
-          timing,
-        },
-        {
-          displayName: reminder.recipientName ?? undefined,
-          email: recipientEmail,
-        },
-      )
-      const result = await new EmailService().sendBulk(
-        planNotificationDeliveries(dispatch).dispatches,
-      )
-      if (result.failed > 0 || result.sent === 0) {
-        failed += 1
-        await prisma.commercialOrderReminderDelivery.update({
-          data: {
-            errorMessage:
-              result.deliveries.find((delivery) => delivery.error)?.error ??
-              "No reminder email was delivered.",
-            status: CommercialOrderReminderDeliveryStatus.FAILED,
-          },
-          where: { id: reminder.id },
-        })
-      } else {
-        sent += 1
-        await prisma.commercialOrderReminderDelivery.update({
-          data: {
-            sentAt: now,
-            status: CommercialOrderReminderDeliveryStatus.SENT,
-          },
-          where: { id: reminder.id },
-        })
-      }
+      const error =
+        result.failed > 0 || result.sent === 0
+          ? (result.deliveries.find((delivery) => delivery.error)?.error ??
+            "No reminder email was delivered.")
+          : null
+      await recordDigestOutcome({
+        digest,
+        digestId: claim.digestId,
+        error,
+        now,
+        tenantId: tenant.id,
+      })
+      if (error) failed += 1
+      else sent += 1
     }
   }
 

@@ -3,6 +3,10 @@ import {
   renderCommercialOrderFulfillmentReminderTemplate,
 } from "../templates/commercial-order-fulfillment-reminder"
 import {
+  type CommercialOrderReminderDigestEmailInput,
+  renderCommercialOrderReminderDigestTemplate,
+} from "../templates/commercial-order-reminder-digest"
+import {
   type MarketingLeadEmailInput,
   renderMarketingEarlyAccessAdminTemplate,
 } from "../templates/marketing-early-access-admin"
@@ -91,6 +95,7 @@ export * from "../templates/marketing-waitlist-admin"
 export * from "../templates/marketing-waitlist-confirmation"
 export * from "../templates/retail-ops-staff-invite"
 export * from "../templates/commercial-order-fulfillment-reminder"
+export * from "../templates/commercial-order-reminder-digest"
 export * from "../templates/mobile-owner-otp"
 export * from "../templates/store-conversation-notification"
 export * from "../templates/store-notification-verification"
@@ -355,6 +360,27 @@ export function createCommercialOrderFulfillmentReminderEmail(params: {
   to: string
 }) {
   const content = renderCommercialOrderFulfillmentReminderTemplate(params.input)
+
+  return createEmailMessage({
+    from: params.from,
+    html: content.html,
+    idempotencyKey: params.idempotencyKey,
+    replyTo: params.replyTo,
+    subject: params.subject,
+    text: content.text,
+    to: params.to,
+  })
+}
+
+export function createCommercialOrderReminderDigestEmail(params: {
+  from: string
+  idempotencyKey: string
+  input: CommercialOrderReminderDigestEmailInput
+  replyTo?: string
+  subject: string
+  to: string
+}) {
+  const content = renderCommercialOrderReminderDigestTemplate(params.input)
 
   return createEmailMessage({
     from: params.from,

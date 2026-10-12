@@ -869,6 +869,7 @@ enum PrescriptionUsageEventType {
 enum CommercialOrderReminderTiming {
   DAY_BEFORE
   SAME_DAY
+  OVERDUE
 }
 
 enum CommercialOrderReminderDeliveryStatus {

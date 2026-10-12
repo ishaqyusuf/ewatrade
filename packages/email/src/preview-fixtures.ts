@@ -1,4 +1,5 @@
 import type { CommercialOrderFulfillmentReminderEmailInput } from "../templates/commercial-order-fulfillment-reminder"
+import type { CommercialOrderReminderDigestEmailInput } from "../templates/commercial-order-reminder-digest"
 import type { MarketingLeadEmailInput } from "../templates/marketing-early-access-admin"
 import type { RetailOpsStaffInviteEmailInput } from "../templates/retail-ops-staff-invite"
 import type { WorkspaceWelcomeEmailInput } from "../templates/workspace-welcome"
@@ -43,6 +44,56 @@ export const orderReminder = {
   storeName: "Lekki Store",
   timing: "day_before",
 } satisfies CommercialOrderFulfillmentReminderEmailInput
+
+export const orderReminderDigest = {
+  businessName: "Amina Home & Trade",
+  ordersUrl: "https://dash.ewatrade.com/sales",
+  sections: [
+    {
+      orders: [
+        {
+          customerName: "Tunde Okafor",
+          dueLabel: "Yesterday, 4:00 PM",
+          orderNumber: "EWA-1039",
+          orderUrl: "https://dash.ewatrade.com/sales/orders/order_preview_1039",
+          storeName: "Lekki Store",
+        },
+      ],
+      timing: "overdue",
+    },
+    {
+      orders: [
+        {
+          customerName: "Feyi Adeyemi",
+          dueLabel: "Today, 2:00 PM",
+          orderNumber: "EWA-1048",
+          orderUrl: "https://dash.ewatrade.com/sales/orders/order_preview_1048",
+          storeName: "Lekki Store",
+        },
+        {
+          customerName: null,
+          dueLabel: "Today, 5:30 PM",
+          orderNumber: "EWA-1051",
+          orderUrl: "https://dash.ewatrade.com/sales/orders/order_preview_1051",
+          storeName: "Yaba Store",
+        },
+      ],
+      timing: "same_day",
+    },
+    {
+      orders: [
+        {
+          customerName: "Chiamaka Obi",
+          dueLabel: "Tomorrow, 10:00 AM",
+          orderNumber: "EWA-1055",
+          orderUrl: "https://dash.ewatrade.com/sales/orders/order_preview_1055",
+          storeName: "Lekki Store",
+        },
+      ],
+      timing: "day_before",
+    },
+  ],
+} satisfies CommercialOrderReminderDigestEmailInput
 
 export const workspaceWelcome = {
   businessName: "Amina Home & Trade",

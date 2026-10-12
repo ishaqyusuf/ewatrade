@@ -1,11 +1,14 @@
 import {
   type CommercialOrderFulfillmentReminderEmailInput,
+  type CommercialOrderReminderDigestEmailInput,
   type EmailDispatchResult,
   type EmailMessage,
   type EmailTransport,
   type MarketingEmailInput,
   type RetailOpsStaffInviteEmailInput,
+  commercialOrderReminderDigestSummary,
   createCommercialOrderFulfillmentReminderEmail,
+  createCommercialOrderReminderDigestEmail,
   createMarketingEarlyAccessAdminEmail,
   createMarketingEarlyAccessConfirmationEmail,
   createMarketingWaitlistAdminEmail,
@@ -13,6 +16,7 @@ import {
   createRetailOpsStaffInviteEmail,
   createTestRoutedEmailMessages,
   defaultCommercialOrderFulfillmentReminderSubject,
+  defaultCommercialOrderReminderDigestSubject,
   defaultMarketingEarlyAccessAdminSubject,
   defaultMarketingEarlyAccessConfirmationSubject,
   defaultMarketingWaitlistAdminSubject,
@@ -84,6 +88,33 @@ function planEmailMessagesForDispatch(
           subject: defaultCommercialOrderFulfillmentReminderSubject({
             orderNumber: payload.orderNumber,
             timing: payload.timing,
+          }),
+          to: recipient.email,
+        }),
+        recipientEmail: recipient.email,
+      }))
+    }
+    case "commercial_order_reminder_digest": {
+      const { attempt, digestId, ...input } =
+        dispatch.payload as CommercialOrderReminderDigestEmailInput & {
+          attempt: number
+          digestId: string
+        }
+
+      return emailRecipients.map((recipient) => ({
+        deliveryRole: "admin",
+        message: createCommercialOrderReminderDigestEmail({
+          from,
+          idempotencyKey: [
+            "commercial-order-reminder-digest",
+            digestId,
+            attempt,
+          ].join(":"),
+          input,
+          replyTo,
+          subject: defaultCommercialOrderReminderDigestSubject({
+            businessName: input.businessName,
+            summary: commercialOrderReminderDigestSummary(input),
           }),
           to: recipient.email,
         }),

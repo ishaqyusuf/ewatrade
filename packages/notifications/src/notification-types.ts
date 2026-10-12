@@ -9,6 +9,7 @@ import type {
 } from "./core-types"
 import {
   commercialOrderFulfillmentReminder,
+  commercialOrderReminderDigest,
   marketingEarlyAccessRequested,
   marketingWaitlistJoined,
   retailOpsStaffInvited,
@@ -124,6 +125,7 @@ export function createNotificationDispatchFromType<
 
 export const ewatradeNotificationTypes = defineNotificationTypes({
   commercial_order_fulfillment_reminder: commercialOrderFulfillmentReminder,
+  commercial_order_reminder_digest: commercialOrderReminderDigest,
   marketing_early_access_requested: marketingEarlyAccessRequested,
   marketing_waitlist_joined: marketingWaitlistJoined,
   retail_ops_staff_invited: retailOpsStaffInvited,

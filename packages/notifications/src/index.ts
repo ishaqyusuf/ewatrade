@@ -9,6 +9,7 @@ import {
 } from "./notification-types"
 import type {
   CommercialOrderFulfillmentReminderPayload,
+  CommercialOrderReminderDigestPayload,
   MarketingEarlyAccessRequestedPayload,
   MarketingWaitlistJoinedPayload,
   NotificationDispatch,
@@ -174,6 +175,26 @@ export function createCommercialOrderFulfillmentReminderDispatch(
   return createNotificationDispatchFromType(
     ewatradeNotificationTypes,
     "commercial_order_fulfillment_reminder",
+    payload,
+    {
+      recipients: [
+        createEmailNotificationContact({
+          deliveryRole: "admin",
+          displayName: recipient.displayName,
+          email: recipient.email,
+        }),
+      ],
+    },
+  )
+}
+
+export function createCommercialOrderReminderDigestDispatch(
+  payload: CommercialOrderReminderDigestPayload,
+  recipient: { displayName?: string; email: string },
+) {
+  return createNotificationDispatchFromType(
+    ewatradeNotificationTypes,
+    "commercial_order_reminder_digest",
     payload,
     {
       recipients: [

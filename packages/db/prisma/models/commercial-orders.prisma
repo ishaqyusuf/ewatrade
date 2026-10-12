@@ -109,15 +109,41 @@ model CommercialOrderReminderDelivery {
   lastAttemptAt  DateTime?
   sentAt         DateTime?
   errorMessage   String?
+  // Daily digest that carried this Order reminder; null for pre-digest sends.
+  digestId       String?
   createdAt      DateTime                              @default(now())
   updatedAt      DateTime                              @updatedAt
   tenant         Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store          Store                                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
   order          CommercialOrder                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  digest         CommercialOrderReminderDigest?        @relation(fields: [digestId], references: [id], onDelete: SetNull)
 
   @@unique([orderId, timing, recipientEmail])
   @@index([tenantId, status, createdAt])
   @@index([storeId, timing, createdAt])
+  @@index([digestId])
+}
+
+// One reminder email per recipient per Tenant-local day, listing every due Order.
+model CommercialOrderReminderDigest {
+  id             String                                @id @default(cuid())
+  tenantId       String
+  recipientEmail String
+  recipientName  String?
+  localDate      String
+  status         CommercialOrderReminderDeliveryStatus @default(PENDING)
+  orderCount     Int                                   @default(0)
+  attemptCount   Int                                   @default(0)
+  lastAttemptAt  DateTime?
+  sentAt         DateTime?
+  errorMessage   String?
+  createdAt      DateTime                              @default(now())
+  updatedAt      DateTime                              @updatedAt
+  tenant         Tenant                                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries     CommercialOrderReminderDelivery[]
+
+  @@unique([tenantId, localDate, recipientEmail])
+  @@index([tenantId, status, createdAt])
 }
 
 model CommercialOrderPayment {
