@@ -22,10 +22,17 @@ export function respondGeneralRehearsal(
 }
 function rehearsalTurn(prompt: readonly PromptMessage[]): RehearsalTurn {
   const last = prompt.at(-1)
+  // The answer or draft card shows the details; the reply only points to it.
   if (last?.role === "tool")
     return {
       kind: "text",
-      text: "Check the saved records or proposal below. A proposal changes nothing until you press Confirm.",
+      text:
+        Array.isArray(last.content) &&
+        last.content.some(
+          (part) => (part as { toolName?: string }).toolName === "draftAction",
+        )
+          ? "Here's the draft to review. Nothing changes until you confirm."
+          : "Here's what I found.",
     }
   const text =
     typeof last?.content === "string"
