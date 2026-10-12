@@ -276,6 +276,7 @@ export async function listFinanceCashCounts(
     accountId?: string
     cursor?: string
     limit?: number
+    direction?: "forward" | "backward"
   },
 ) {
   const limit = input.limit ?? 30
@@ -307,6 +308,7 @@ export async function listFinanceCashCounts(
           "CONFLICT",
           "Refresh cash-count history to continue.",
         )
+      const backward = input.direction === "backward"
       const rows = await tx.financeReconciliation.findMany({
         where: cursor
           ? {
@@ -314,21 +316,36 @@ export async function listFinanceCashCounts(
                 where,
                 {
                   OR: [
-                    { asOf: { lt: cursor.asOf } },
-                    { asOf: cursor.asOf, id: { lt: cursor.id } },
+                    {
+                      asOf: backward
+                        ? { gt: cursor.asOf }
+                        : { lt: cursor.asOf },
+                    },
+                    {
+                      asOf: cursor.asOf,
+                      id: backward ? { gt: cursor.id } : { lt: cursor.id },
+                    },
                   ],
                 },
               ],
             }
           : where,
-        orderBy: [{ asOf: "desc" }, { id: "desc" }],
+        // Ascending seeks the nearest newer originals; presentation stays newest first.
+        orderBy: [
+          { asOf: backward ? "asc" : "desc" },
+          { id: backward ? "asc" : "desc" },
+        ],
         take: limit + 1,
         include: { account: { select: { name: true } } },
       })
       const page = rows.slice(0, limit)
+      if (backward) page.reverse()
       return {
         currencyCode: book.currencyCode,
-        nextCursor: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
+        nextCursor:
+          rows.length > limit
+            ? ((backward ? page[0]?.id : page.at(-1)?.id) ?? null)
+            : null,
         items: page.map((count) => ({
           id: count.id,
           accountId: count.accountId,
