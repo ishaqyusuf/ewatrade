@@ -74,8 +74,10 @@ Supplier/purchase discovery is now source-available: name/code search resolves t
 canonical Book, 12 real read checks pass and saved statement/invoice overlays retain
 the assistant. Supplier creation and agreement registration are now source-available
 and pass actual Edit/re-review/Confirm/Open/Close with exact saved effects and
-completed recovery. Larger operating bounds and full signed stale-source/operational
-acceptance remain open. Evidence:
+completed recovery. Fresh stock preparation now batches 1–10 original goods; ten mixed sources prepare
+in3.11s with saved financial/stock facts unchanged. Full ten-line posting/valuation
+and signed stale-source/operational acceptance remain open. Evidence:
+[stock preparation bounds report](runs/2026-10-12-stock-bounds-preparation.md),
 [supplier creation/registration web report](runs/2026-10-12-supplier-registration-web.md),
 [supplier discovery report](runs/2026-10-12-supplier-discovery.md),
 [supplier settlement web report](runs/2026-10-12-supplier-settlement-web.md) and

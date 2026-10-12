@@ -16,6 +16,8 @@ These scenarios are fixtures, not executed model evaluations.
 | PN08 | Review/edit/confirm and Open/Close | Fresh acknowledgment; date milliseconds and fixed original target preserved; saved global agreement sheet preserves assistant chat |
 | PN09 | Prepared receipt source, rollback and replay | Locks original balance/unit/configuration; rejects replacement values; one execution; full two-line proposal completion failure rolls back all effects; completed replay has no duplicate event |
 
+| PN10 | Maximum ten original goods | Fresh preparation of mixed shared/packaged stock has fixed database call count and exact quantities; lock completeness, bounds, repeated-unit configuration, source/custody/unit/refusal and command/CAS guards remain enforced. Full ten-line posting and valuation inside30s must pass separately before acceptance |
+
 Canonical review, proposal/database tests and actual web confirmation are recorded
 separately from settlement, larger operating bounds and live-model acceptance.
 Evidence: [physical receipt proposal/web](../runs/2026-10-11-receipt-proposal-web.md).

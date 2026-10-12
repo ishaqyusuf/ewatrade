@@ -34,6 +34,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Bounded purchase stock preparation, 12 October 2026](runs/2026-10-12-stock-bounds-preparation.md): fresh source reads batch across 1–10 goods, exact shared/packaged quantities and scope/revision guards retained. Ten actual sources prepare in3.11s with saved financial/stock facts unchanged. Full ten-line posting remains pending; E05 stays partial.
+
 - [Supplier creation and agreement web, 12 October 2026](runs/2026-10-12-supplier-registration-web.md): both actual Edit/re-review/Confirm and global Open/Close pass with exact revised identity/goods/date, no new payable/posting/stock and completed recovery. Two actions source-available; assertion preservation fixed and verified. E05 remains partial.
 
 - [Supplier and purchase discovery, 12 October 2026](runs/2026-10-12-supplier-discovery.md): name/code lookup discovers the canonical Book; 12 real read checks and unchanged saved facts pass. Supplier statement and invoice Open/Close preserve chat, with screenshots. Six supplier/purchase reads and explicit-Book funding dependency are source-available. E05 remains partial; no model run.

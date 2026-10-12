@@ -20,6 +20,7 @@ import type { FinancePurchaseRecognitionStage } from "../../../generated/prisma/
 import {
   postSingleBalanceStockOperationInTransaction,
   preparePurchaseStockReceiptInTransaction,
+  preparePurchaseStockReceiptsInTransaction,
   type SingleBalanceInput,
 } from "../inventory-operations"
 import type { FinanceActor } from "./access"
@@ -224,27 +225,16 @@ export async function prepareReviewedFinancePurchaseReceiptInTransaction(
     prepared.book,
     invoiceAmount,
   )
-  const ids = source.document.lines.map((line) => line.balanceSourceId).sort()
-  await tx.$queryRaw`SELECT id FROM "StockBalanceSource" WHERE id = ANY(${ids}::text[]) AND "tenantId" = ${input.tenantId} ORDER BY id FOR UPDATE`
-  const stock = new Map<
-    string,
-    Awaited<ReturnType<typeof preparePurchaseStockReceiptInTransaction>>
-  >()
-  for (const line of [...source.document.lines].sort((a, b) =>
-    a.balanceSourceId.localeCompare(b.balanceSourceId),
-  )) {
-    stock.set(
-      line.balanceSourceId,
-      await preparePurchaseStockReceiptInTransaction(tx, {
-        tenantId: command.tenantId,
-        storeId: source.document.storeId,
-        balanceSourceId: line.balanceSourceId,
-        enteredInventoryUnitId: line.enteredInventoryUnitId,
-        enteredQuantity: line.enteredQuantity.toFixed(),
-        expectedConfigurationVersionId: line.configurationVersionId,
-      }),
-    )
-  }
+  const stock = await preparePurchaseStockReceiptsInTransaction(tx, {
+    tenantId: command.tenantId,
+    storeId: source.document.storeId,
+    lines: source.document.lines.map((line) => ({
+      balanceSourceId: line.balanceSourceId,
+      enteredInventoryUnitId: line.enteredInventoryUnitId,
+      enteredQuantity: line.enteredQuantity.toFixed(),
+      expectedConfigurationVersionId: line.configurationVersionId,
+    })),
+  })
   const header = await composePurchaseRecognitionReview(
     tx,
     command,

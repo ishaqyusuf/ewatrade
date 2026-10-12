@@ -117,6 +117,22 @@ async function loadCompatibleEnteredUnit(
       "Entered Inventory Unit does not belong to this Product.",
     )
   }
+  return assertCompatibleEnteredUnit(balance, unit)
+}
+
+type EnteredUnitGraph = Prisma.InventoryUnitGetPayload<{
+  include: { configurationVersion: true }
+}>
+
+function assertCompatibleEnteredUnit(
+  balance: BalanceGraph,
+  unit: EnteredUnitGraph,
+) {
+  if (unit.configurationVersion.productId !== balance.productId)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Entered Inventory Unit does not belong to this Product.",
+    )
   if (
     unit.configurationVersion.status !== UnitConfigurationStatus.CURRENT ||
     unit.configurationVersionId !== balance.inventoryUnit.configurationVersionId
@@ -215,7 +231,8 @@ async function previewLoadedOrdinaryStockAdjustment(
   tx: Prisma.TransactionClient,
   input: OrdinaryStockPreviewInput & { direction: "increase" | "decrease" },
   balance: BalanceGraph,
-  unit: Awaited<ReturnType<typeof loadCompatibleEnteredUnit>>,
+  unit: EnteredUnitGraph,
+  labels?: { productName: string; canonicalUnitNames: string[] },
 ) {
   const enteredQuantity = parseExactDecimal(input.enteredQuantity, {
     allowZero: false,
@@ -240,8 +257,9 @@ async function previewLoadedOrdinaryStockAdjustment(
       "INSUFFICIENT_STOCK",
       "The operation would leave on-hand below reserved stock.",
     )
-  const canonicalUnits =
-    balance.kind === StockBalanceKind.SHARED_POOL
+  const canonicalUnits = labels
+    ? labels.canonicalUnitNames.map((name) => ({ name }))
+    : balance.kind === StockBalanceKind.SHARED_POOL
       ? await tx.inventoryUnit.findMany({
           where: {
             configurationVersionId: unit.configurationVersionId,
@@ -250,10 +268,12 @@ async function previewLoadedOrdinaryStockAdjustment(
           select: { name: true },
         })
       : []
-  const item = await tx.catalogItem.findUniqueOrThrow({
-    where: { id: balance.product.catalogItemId },
-    select: { name: true },
-  })
+  const item = labels
+    ? { name: labels.productName }
+    : await tx.catalogItem.findUniqueOrThrow({
+        where: { id: balance.product.catalogItemId },
+        select: { name: true },
+      })
   return {
     balanceSourceId: balance.id,
     revision: balance.revision,
@@ -471,6 +491,201 @@ export async function preparePurchaseStockReceiptInTransaction(
     balance,
     unit,
   )
+  return prepareLoadedPurchaseStockReceipt(tx, input, balance, unit, preview)
+}
+
+type PurchaseStockReceiptInput = OrdinaryStockPreviewInput & {
+  expectedConfigurationVersionId: string
+}
+
+/** Fresh, bounded source preparation. Caller owns the Book lock and outer transaction. */
+export async function preparePurchaseStockReceiptsInTransaction(
+  tx: Prisma.TransactionClient,
+  sourceInput: {
+    tenantId: string
+    storeId: string
+    lines: Omit<PurchaseStockReceiptInput, "tenantId" | "storeId">[]
+  },
+) {
+  const lines = sourceInput.lines
+    .map((line) => ({
+      ...line,
+      tenantId: sourceInput.tenantId,
+      storeId: sourceInput.storeId,
+    }))
+    .sort((a, b) => a.balanceSourceId.localeCompare(b.balanceSourceId))
+  const balanceIds = lines.map((line) => line.balanceSourceId)
+  if (
+    !lines.length ||
+    lines.length > 10 ||
+    new Set(balanceIds).size !== lines.length
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Purchase receipts require 1–10 distinct stock sources.",
+    )
+  const unitConfigurations = new Map<string, string>()
+  for (const line of lines) {
+    const previous = unitConfigurations.get(line.enteredInventoryUnitId)
+    if (
+      previous !== undefined &&
+      previous !== line.expectedConfigurationVersionId
+    )
+      throw new CatalogError(
+        "STALE_CONFIGURATION",
+        "Original purchase units have conflicting configurations.",
+      )
+    unitConfigurations.set(
+      line.enteredInventoryUnitId,
+      line.expectedConfigurationVersionId,
+    )
+  }
+  const unitIds = [...unitConfigurations.keys()].sort()
+  const configurationIds = [...new Set(unitConfigurations.values())].sort()
+  const lockedBalances = await tx.$queryRaw<
+    Array<{ id: string }>
+  >`SELECT id FROM "StockBalanceSource"
+    WHERE id = ANY(${balanceIds}::text[]) AND "tenantId" = ${sourceInput.tenantId}
+    AND "storeId" = ${sourceInput.storeId} ORDER BY id FOR UPDATE`
+  if (
+    lockedBalances.length !== balanceIds.length ||
+    new Set(lockedBalances.map((row) => row.id)).size !== balanceIds.length ||
+    lockedBalances.some((row) => !balanceIds.includes(row.id))
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The original purchase stock source is unavailable.",
+    )
+  const lockedUnits = await tx.$queryRaw<
+    Array<{ id: string; configurationVersionId: string }>
+  >`SELECT u.id, u."configurationVersionId" FROM "InventoryUnit" u
+    JOIN "UnitConfigurationVersion" c ON c.id = u."configurationVersionId"
+    JOIN "CatalogProduct" p ON p.id = c."productId"
+    JOIN "CatalogItem" i ON i.id = p."catalogItemId" AND i."tenantId" = ${sourceInput.tenantId}
+    WHERE u.id = ANY(${unitIds}::text[]) AND c.id = ANY(${configurationIds}::text[])
+    ORDER BY u.id FOR SHARE OF u, c`
+  if (
+    lockedUnits.length !== unitIds.length ||
+    new Set(lockedUnits.map((row) => row.id)).size !== unitIds.length ||
+    lockedUnits.some(
+      (row) => unitConfigurations.get(row.id) !== row.configurationVersionId,
+    )
+  )
+    throw new CatalogError(
+      "STALE_CONFIGURATION",
+      "The original purchase unit is unavailable in this business.",
+    )
+  const balances = await tx.stockBalanceSource.findMany({
+    include: balanceGraph,
+    where: {
+      id: { in: balanceIds },
+      tenantId: sourceInput.tenantId,
+      storeId: sourceInput.storeId,
+    },
+  })
+  const units = await tx.inventoryUnit.findMany({
+    include: { configurationVersion: true },
+    where: {
+      id: { in: unitIds },
+      configurationVersion: {
+        product: { catalogItem: { tenantId: sourceInput.tenantId } },
+      },
+    },
+  })
+  const balanceById = new Map(balances.map((balance) => [balance.id, balance]))
+  const unitById = new Map(units.map((unit) => [unit.id, unit]))
+  const sharedConfigurationIds = [
+    ...new Set(
+      balances
+        .filter((balance) => balance.kind === StockBalanceKind.SHARED_POOL)
+        .map((balance) => balance.inventoryUnit.configurationVersionId),
+    ),
+  ]
+  const canonicalUnits = sharedConfigurationIds.length
+    ? await tx.inventoryUnit.findMany({
+        where: {
+          configurationVersionId: { in: sharedConfigurationIds },
+          stockBehavior: "CANONICAL_SHARED",
+        },
+        select: { name: true, configurationVersionId: true },
+      })
+    : []
+  const items = await tx.catalogItem.findMany({
+    where: {
+      id: {
+        in: [
+          ...new Set(balances.map((balance) => balance.product.catalogItemId)),
+        ],
+      },
+      tenantId: sourceInput.tenantId,
+    },
+    select: { id: true, name: true },
+  })
+  const itemById = new Map(items.map((item) => [item.id, item]))
+  const stock = new Map<
+    string,
+    ReturnType<typeof prepareLoadedPurchaseStockReceipt>
+  >()
+  for (const input of lines) {
+    const balance = balanceById.get(input.balanceSourceId)
+    const unit = unitById.get(input.enteredInventoryUnitId)
+    const item = balance && itemById.get(balance.product.catalogItemId)
+    if (
+      !balance ||
+      balance.tenantId !== input.tenantId ||
+      balance.storeId !== input.storeId ||
+      !item
+    )
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "The original purchase stock source is unavailable.",
+      )
+    if (balance.custodyType !== "STORE")
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Purchase receipts require Store custody.",
+      )
+    if (!unit)
+      throw new CatalogError(
+        "STALE_CONFIGURATION",
+        "The original purchase unit is unavailable in this business.",
+      )
+    assertCompatibleEnteredUnit(balance, unit)
+    if (unit.configurationVersionId !== input.expectedConfigurationVersionId)
+      throw new CatalogError(
+        "STALE_CONFIGURATION",
+        "Refresh the original purchase unit configuration.",
+      )
+    const preview = await previewLoadedOrdinaryStockAdjustment(
+      tx,
+      { ...input, direction: "increase" },
+      balance,
+      unit,
+      {
+        productName: item.name,
+        canonicalUnitNames: canonicalUnits
+          .filter(
+            (canonical) =>
+              canonical.configurationVersionId === unit.configurationVersionId,
+          )
+          .map((canonical) => canonical.name),
+      },
+    )
+    stock.set(
+      balance.id,
+      prepareLoadedPurchaseStockReceipt(tx, input, balance, unit, preview),
+    )
+  }
+  return stock
+}
+
+function prepareLoadedPurchaseStockReceipt(
+  tx: Prisma.TransactionClient,
+  input: PurchaseStockReceiptInput,
+  balance: BalanceGraph,
+  unit: EnteredUnitGraph,
+  preview: Awaited<ReturnType<typeof previewLoadedOrdinaryStockAdjustment>>,
+) {
   let execution: Promise<ReturnType<typeof serializeOperation>> | undefined
   let confirmedHash: string | undefined
   return {
