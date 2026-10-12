@@ -1,25 +1,19 @@
-import {
-  type StockCategorySelector,
-  normalizeStockCategorySelectors,
-} from "@ewatrade/utils/inventory-categories"
+import type { StockCategorySelector } from "@ewatrade/utils/inventory-categories"
+import { randomUUID } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
-import { postSingleBalanceStockOperationInTransaction } from "../inventory-operations"
-import type { FinanceActor } from "./access"
-import { assertFinanceManager } from "./access"
+import { lockFinanceBook, type FinanceActor } from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
+import { purchaseJournalEntryId } from "./purchase-source"
+import { FinanceError } from "./rules"
+import { normalizeFinancePurchase } from "./purchase-recording-input"
 import {
-  getPurchaseControlAccount,
-  purchaseJournalEntryId,
-  requirePurchaseDate,
-} from "./purchase-source"
-import {
-  FinanceError,
-  MAX_FINANCE_AMOUNT,
-  assertFinancePostingDate,
-  financeAmount,
-} from "./rules"
-import { recordPurchaseReceiptValuationInTransaction } from "./valuation-receipts"
+  resolveFinancePurchaseRecordingSource,
+  composeFinancePurchaseRecordingReview,
+  financePurchaseRecordingReviewDigest,
+  prepareFinancePurchaseRecordingStock,
+} from "./purchase-recording-review"
+import { recordDirectPurchaseReceiptValuationsInTransaction } from "./valuation-receipts"
 
 export type FinancePurchaseLineInput = {
   balanceSourceId: string
@@ -44,266 +38,154 @@ export type FinancePurchaseInput = FinanceActor & {
   lines: FinancePurchaseLineInput[]
 }
 
-function validateText(value: string, label: string, maximum: number) {
-  if (typeof value !== "string" || !value.trim() || value.length > maximum) {
-    throw new FinanceError("INVALID_JOURNAL", `Enter a valid ${label}.`)
+/** Capture only supported fields; dates and categories cannot change after preparation. */
+function snapshotPurchase(
+  input: Omit<FinancePurchaseInput, "clientCommandId">,
+) {
+  return {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    bookId: input.bookId,
+    supplierId: input.supplierId,
+    storeId: input.storeId,
+    description: input.description,
+    reference: input.reference,
+    incurredAt: new Date(input.incurredAt),
+    dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
+    lines: input.lines.map((l) => ({
+      balanceSourceId: l.balanceSourceId,
+      description: l.description,
+      amountMinor: l.amountMinor,
+      enteredQuantity: l.enteredQuantity,
+      enteredInventoryUnitId: l.enteredInventoryUnitId,
+      expectedBalanceRevision: l.expectedBalanceRevision,
+      expectedConfigurationVersionId: l.expectedConfigurationVersionId,
+      categories: l.categories.map((c) => ({ ...c })),
+    })),
   }
 }
-
-function validatePurchaseInput(input: FinancePurchaseInput) {
-  validateText(input.description, "purchase description", 400)
-  if (
-    (input.reference !== undefined &&
-      (typeof input.reference !== "string" || input.reference.length > 160)) ||
-    !Number.isFinite(input.incurredAt.getTime()) ||
-    (input.dueAt !== undefined &&
-      (!Number.isFinite(input.dueAt.getTime()) ||
-        input.dueAt < input.incurredAt))
-  ) {
-    throw new FinanceError(
-      "INVALID_JOURNAL",
-      "Check the purchase dates and reference.",
-    )
-  }
-  if (
-    !Array.isArray(input.lines) ||
-    input.lines.length < 1 ||
-    input.lines.length > 10
-  ) {
-    throw new FinanceError("INVALID_JOURNAL", "A purchase requires 1–10 lines.")
-  }
-  const seenBalances = new Set<string>()
-  const lines = input.lines.map((line, position) => {
-    validateText(line.balanceSourceId, "Balance Source", 128)
-    validateText(line.description, "line description", 200)
-    validateText(line.enteredInventoryUnitId, "Inventory Unit", 128)
-    validateText(
-      line.expectedConfigurationVersionId,
-      "configuration version",
-      128,
-    )
-    if (
-      !Number.isInteger(line.expectedBalanceRevision) ||
-      line.expectedBalanceRevision < 0 ||
-      line.expectedBalanceRevision > 2_147_483_647 ||
-      !Array.isArray(line.categories) ||
-      line.categories.length === 0 ||
-      typeof line.enteredQuantity !== "string" ||
-      !line.enteredQuantity.trim()
-    ) {
-      throw new FinanceError(
-        "INVALID_JOURNAL",
-        "Check the purchase line details.",
-      )
-    }
-    if (seenBalances.has(line.balanceSourceId)) {
-      throw new FinanceError(
-        "INVALID_JOURNAL",
-        "Each purchase line must use a distinct Balance Source.",
-      )
-    }
-    seenBalances.add(line.balanceSourceId)
-    let categories: StockCategorySelector[]
-    try {
-      categories = normalizeStockCategorySelectors(line.categories)
-    } catch (error) {
-      throw new FinanceError(
-        "INVALID_JOURNAL",
-        error instanceof Error ? error.message : "Invalid stock categories.",
-      )
-    }
-    return {
-      ...line,
-      categories,
-      description: line.description.trim(),
-      amount: financeAmount(line.amountMinor),
-      position,
-    }
-  })
-  const totalMinor = lines.reduce(
-    (total, line) => total + line.amount,
-    BigInt(0),
-  )
-  if (totalMinor > MAX_FINANCE_AMOUNT) {
-    throw new FinanceError(
-      "INVALID_AMOUNT",
-      "Purchase total exceeds the transaction limit.",
-    )
-  }
-  return { lines, totalMinor }
-}
-
-export async function recordFinancePurchaseInTransaction(
+async function executePurchase(
   tx: Prisma.TransactionClient,
   input: FinancePurchaseInput,
+  preparedSource?: Awaited<
+    ReturnType<typeof resolveFinancePurchaseRecordingSource>
+  >,
+  preparedStock?: Awaited<
+    ReturnType<typeof prepareFinancePurchaseRecordingStock>
+  >,
 ) {
-  const { lines, totalMinor } = validatePurchaseInput(input)
-  requirePurchaseDate(input.incurredAt)
+  const normalized = normalizeFinancePurchase(input)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   const commandPayload = {
     ...payload,
     description: input.description.trim(),
     reference: input.reference?.trim() || null,
-    lines: lines.map(({ amount, ...line }) => ({
+    lines: normalized.lines.map(({ amount, ...line }) => ({
       ...line,
       amountMinor: amount.toString(),
     })),
   }
-
   return financeDocumentCommand(
     tx,
     input,
     "RECORD_PURCHASE",
     commandPayload,
     async (book) => {
-      const tenant = await assertFinanceManager(tx, input)
-      assertFinancePostingDate({
-        effectiveAt: input.incurredAt,
-        startsAt: book.startsAt,
-        closedThrough: book.closedThrough,
-        now: new Date(),
-      })
-      if (tenant.currencyCode !== book.currencyCode) {
-        throw new FinanceError(
-          "CONFLICT",
-          "The financial book currency no longer matches the business currency.",
+      const source =
+        preparedSource ??
+        (await resolveFinancePurchaseRecordingSource(tx, input, book))
+      const stock =
+        preparedStock ?? (await prepareFinancePurchaseRecordingStock(tx, input))
+      for (const line of source.lines) {
+        const preview = stock.sources.get(line.balanceSourceId)?.preview
+        if (
+          !preview ||
+          preview.revision !== line.expectedBalanceRevision ||
+          preview.configurationVersionId !==
+            line.expectedConfigurationVersionId ||
+          preview.currencyCode !== book.currencyCode
         )
+          throw new FinanceError(
+            "CONFLICT",
+            "Refresh the purchase stock configuration and revision.",
+          )
       }
-      if (input.dueAt && input.dueAt < input.incurredAt) {
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "The purchase due date cannot precede its incurred date.",
-        )
-      }
-      const [supplier, store] = await Promise.all([
-        tx.financeSupplierAccount.findFirst({
-          where: { id: input.supplierId, bookId: book.id },
-          select: { id: true, name: true },
-        }),
-        tx.store.findFirst({
-          where: {
-            id: input.storeId,
-            tenantId: input.tenantId,
-            currencyCode: book.currencyCode,
-          },
-          select: { id: true },
-        }),
-      ])
-      if (!supplier) {
-        throw new FinanceError("NOT_FOUND", "Supplier not found in this book.")
-      }
-      if (!store) {
-        throw new FinanceError(
-          "NOT_FOUND",
-          "Choose a Store using this business currency.",
-        )
-      }
-      const inventory = await getPurchaseControlAccount(
-        tx,
-        book.id,
-        "1300",
-        "ASSET",
-        "INVENTORY",
-      )
-      const payable = await getPurchaseControlAccount(
-        tx,
-        book.id,
-        "2000",
-        "LIABILITY",
-        "PAYABLE",
-      )
       const bill = await tx.financeBill.create({
         data: {
           bookId: book.id,
-          supplierId: supplier.id,
+          supplierId: source.supplier.id,
           kind: "PURCHASE",
-          payeeName: supplier.name,
+          payeeName: source.supplier.name,
           description: input.description.trim(),
           reference: input.reference?.trim() || null,
           incurredAt: input.incurredAt,
           dueAt: input.dueAt,
-          storeId: store.id,
-          totalMinor,
+          storeId: source.store.id,
+          totalMinor: source.totalMinor,
           actorUserId: input.actorUserId,
         },
       })
-
-      for (const line of lines) {
-        const billLine = await tx.financeBillLine.create({
-          data: {
-            bookId: book.id,
-            billId: bill.id,
-            accountId: inventory.id,
-            position: line.position,
-            description: line.description,
-            amountMinor: line.amount,
-          },
-        })
-        const clientOperationId = financePostingCommandId(
+      const billLines = source.lines.map((line) => ({
+        id: randomUUID(),
+        bookId: book.id,
+        billId: bill.id,
+        accountId: source.inventory.id,
+        position: line.position,
+        description: line.description,
+        amountMinor: line.amount,
+      }))
+      await tx.financeBillLine.createMany({ data: billLines })
+      const commands = source.lines.map((line) => ({
+        actorUserId: input.actorUserId,
+        balanceSourceId: line.balanceSourceId,
+        clientOperationId: financePostingCommandId(
           input.clientCommandId,
           `purchase-stock:${book.id}:${line.position}`,
-        )
-        const priorOperation = await tx.stockOperation.findUnique({
-          where: {
-            tenantId_clientOperationId: {
-              tenantId: input.tenantId,
-              clientOperationId,
-            },
-          },
-          select: { id: true },
-        })
-        if (priorOperation) {
-          throw new FinanceError(
-            "CONFLICT",
-            "The purchase stock identity already exists outside this command.",
-          )
-        }
-        const operation = await postSingleBalanceStockOperationInTransaction(
-          tx,
-          {
-            actorUserId: input.actorUserId,
-            balanceSourceId: line.balanceSourceId,
-            clientOperationId,
-            direction: "increase",
-            effectiveAt: input.incurredAt,
-            enteredInventoryUnitId: line.enteredInventoryUnitId,
-            enteredQuantity: line.enteredQuantity,
-            expectedBalanceRevision: line.expectedBalanceRevision,
-            expectedConfigurationVersionId: line.expectedConfigurationVersionId,
-            categories: line.categories,
-            reason: line.description,
-            schemaVersion: 1,
-            source: "finance_purchase",
-            storeId: store.id,
-            tenantId: input.tenantId,
-            type: "receipt",
-          },
-        )
-        const movement = operation.movements[0]
-        if (operation.movements.length !== 1 || !movement) {
+        ),
+        direction: "increase" as const,
+        effectiveAt: input.incurredAt,
+        enteredInventoryUnitId: line.enteredInventoryUnitId,
+        enteredQuantity: line.enteredQuantity,
+        expectedBalanceRevision: line.expectedBalanceRevision,
+        expectedConfigurationVersionId: line.expectedConfigurationVersionId,
+        categories: line.categories,
+        reason: line.description,
+        schemaVersion: 1 as const,
+        source: "finance_purchase" as const,
+        storeId: source.store.id,
+        tenantId: input.tenantId,
+        type: "receipt" as const,
+      }))
+      const operations = await stock.execute(commands)
+      const receipts = source.lines.map((line, index) => {
+        const operation = operations.get(line.balanceSourceId),
+          movement = operation?.movements[0]
+        if (!operation || operation.movements.length !== 1 || !movement)
           throw new FinanceError(
             "CONFLICT",
             "The purchase receipt did not produce one movement.",
           )
-        }
-        const receipt = await tx.financePurchaseReceiptLine.create({
-          data: {
-            tenantId: input.tenantId,
-            bookId: book.id,
-            billLineId: billLine.id,
-            stockOperationId: operation.id,
-            stockMovementId: movement.id,
-          },
-        })
-        await recordPurchaseReceiptValuationInTransaction(tx, {
+        return {
+          id: randomUUID(),
           tenantId: input.tenantId,
           bookId: book.id,
-          receiptId: receipt.id,
-          actorUserId: input.actorUserId,
-          expectedStockRevision: line.expectedBalanceRevision + 1,
-        })
-      }
-
+          billLineId: billLines[index]!.id,
+          stockOperationId: operation.id,
+          stockMovementId: movement.id,
+        }
+      })
+      await tx.financePurchaseReceiptLine.createMany({ data: receipts })
+      await recordDirectPurchaseReceiptValuationsInTransaction(tx, {
+        tenantId: input.tenantId,
+        bookId: book.id,
+        billId: bill.id,
+        actorUserId: input.actorUserId,
+        receipts: receipts.map((r, index) => ({
+          receiptId: r.id,
+          expectedStockRevision:
+            source.lines[index]!.expectedBalanceRevision + 1,
+        })),
+      })
       const journal = await postFinanceJournalInTransaction(tx, {
         ...input,
         clientCommandId: financePostingCommandId(
@@ -314,27 +196,27 @@ export async function recordFinancePurchaseInTransaction(
         sourceId: bill.id,
         description: input.description.trim(),
         effectiveAt: input.incurredAt,
-        storeId: store.id,
+        storeId: source.store.id,
         lines: [
           {
-            accountId: inventory.id,
+            accountId: source.inventory.id,
             side: "DEBIT",
-            amountMinor: totalMinor.toString(),
+            amountMinor: source.totalMinor.toString(),
           },
           {
-            accountId: payable.id,
+            accountId: source.payable.id,
             side: "CREDIT",
-            amountMinor: totalMinor.toString(),
+            amountMinor: source.totalMinor.toString(),
           },
         ],
       })
       await tx.financeSupplierEntry.create({
         data: {
           bookId: book.id,
-          supplierId: supplier.id,
+          supplierId: source.supplier.id,
           kind: "PURCHASE_BILL",
           side: "CREDIT",
-          amountMinor: totalMinor,
+          amountMinor: source.totalMinor,
           journalEntryId: purchaseJournalEntryId(journal),
           effectiveAt: input.incurredAt,
           actorUserId: input.actorUserId,
@@ -345,6 +227,61 @@ export async function recordFinancePurchaseInTransaction(
       return { id: bill.id }
     },
   )
+}
+export async function recordFinancePurchaseInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinancePurchaseInput,
+) {
+  normalizeFinancePurchase(input)
+  return executePurchase(tx, {
+    ...snapshotPurchase(input),
+    clientCommandId: input.clientCommandId,
+  })
+}
+/** Whole review is freshly rebuilt under Book/stock locks; source proof never leaves this closure. */
+export async function prepareReviewedFinancePurchaseRecordingInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Omit<FinancePurchaseInput, "clientCommandId">,
+  expectedReviewDigest: string,
+) {
+  if (!/^[a-f0-9]{64}$/.test(expectedReviewDigest))
+    throw new FinanceError("CONFLICT", "Refresh the received purchase review.")
+  normalizeFinancePurchase({ ...input, clientCommandId: "review" })
+  const owned = snapshotPurchase(input),
+    book = await lockFinanceBook(tx, owned)
+  const source = await resolveFinancePurchaseRecordingSource(tx, owned, book),
+    stock = await prepareFinancePurchaseRecordingStock(tx, owned)
+  const review = await composeFinancePurchaseRecordingReview(
+    tx,
+    owned,
+    book,
+    source,
+    new Map([...stock.sources].map(([id, s]) => [id, s.preview])),
+  )
+  if (financePurchaseRecordingReviewDigest(review) !== expectedReviewDigest)
+    throw new FinanceError(
+      "CONFLICT",
+      "Purchase, stock or valuation changed. Review again.",
+    )
+  let commandId: string | undefined,
+    execution: ReturnType<typeof executePurchase> | undefined
+  return {
+    review,
+    execute: (clientCommandId: string) => {
+      if (commandId !== undefined && commandId !== clientCommandId)
+        throw new FinanceError(
+          "CONFLICT",
+          "Prepared received purchase is bound to one command.",
+        )
+      commandId = clientCommandId
+      return (execution ??= executePurchase(
+        tx,
+        { ...owned, clientCommandId },
+        source,
+        stock,
+      ))
+    },
+  }
 }
 
 export async function recordFinancePurchase(

@@ -88,12 +88,64 @@ export async function recordPurchaseReceiptValuationsInTransaction(
   )
 }
 
-/** Repository-internal composition: caller proves fresh dated owner against these actual loaded receipts. */
+/** Registered receipts retain their separate verified recognition-date owner. */
 export async function recordRecognitionReceiptValuations(
   tx: Prisma.TransactionClient,
   input: Omit<ValuationInput, "receiptId" | "expectedStockRevision"> & {
     receipts: Array<{ receiptId: string; expectedStockRevision: number }>
   },
+  resolveDates: (receipts: Receipt[]) => Promise<Map<string, Date>>,
+) {
+  return recordPurchaseReceiptValuationBatch(
+    tx,
+    input,
+    "PURCHASE_ACCRUAL",
+    resolveDates,
+  )
+}
+/** Direct purchase date comes only from the actual owning bill loaded in this transaction. */
+export async function recordDirectPurchaseReceiptValuationsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: Omit<ValuationInput, "receiptId" | "expectedStockRevision"> & {
+    billId: string
+    receipts: Array<{ receiptId: string; expectedStockRevision: number }>
+  },
+) {
+  return recordPurchaseReceiptValuationBatch(
+    tx,
+    input,
+    "PURCHASE",
+    async (receipts) => {
+      if (
+        receipts.some(
+          (r) =>
+            r.billLine.bill.id !== input.billId ||
+            r.billLine.bill.bookId !== input.bookId ||
+            r.billLine.bookId !== input.bookId ||
+            r.billLine.account.bookId !== input.bookId,
+        )
+      )
+        throw new FinanceError(
+          "CONFLICT",
+          "The original direct purchase receipt owner changed.",
+        )
+      return new Map(
+        receipts.map((r) => [
+          r.stockMovementId,
+          new Date(r.billLine.bill.incurredAt),
+        ]),
+      )
+    },
+  )
+}
+
+/** Repository-internal composition: caller proves fresh dated owner against these actual loaded receipts. */
+async function recordPurchaseReceiptValuationBatch(
+  tx: Prisma.TransactionClient,
+  input: Omit<ValuationInput, "receiptId" | "expectedStockRevision"> & {
+    receipts: Array<{ receiptId: string; expectedStockRevision: number }>
+  },
+  expectedKind: "PURCHASE" | "PURCHASE_ACCRUAL",
   resolveDates: (receipts: Receipt[]) => Promise<Map<string, Date>>,
 ) {
   if (
@@ -119,11 +171,11 @@ export async function recordRecognitionReceiptValuations(
     receipts.length !== input.receipts.length ||
     new Set(receipts.map((r) => r.stockMovement.balanceSourceId)).size !==
       receipts.length ||
-    receipts.some((r) => r.billLine.bill.kind !== "PURCHASE_ACCRUAL")
+    receipts.some((r) => r.billLine.bill.kind !== expectedKind)
   )
     throw new FinanceError(
       "CONFLICT",
-      "The complete registered purchase receipts are unavailable.",
+      "The complete original purchase receipts are unavailable.",
     )
   const dates = await resolveDates(receipts)
   const sources = input.receipts.map((confirmation) => {
@@ -132,7 +184,7 @@ export async function recordRecognitionReceiptValuations(
     if (!receipt || !effectiveAt)
       throw new FinanceError(
         "CONFLICT",
-        "The registered receipt date is unavailable.",
+        "The original receipt date is unavailable.",
       )
     return {
       ...prepareLoadedReceiptValuation(

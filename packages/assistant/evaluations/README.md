@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Direct purchase recording | [1](fixtures/purchase-recording.v1.md) | Combined invoice/received goods, full1–10 sources, exact stock/value/payable, stale/rollback/replay and owning bill | None yet |
 | Supplier opening | [1](fixtures/supplier-opening.v1.md) | Pre-existing payable/advance, server start, exact controls, duplicate/cutoff/scope, review/editor/rollback/recovery | None yet |
 | Supplier entry reversal | [1](fixtures/supplier-entry-reversal.v1.md) | Original opening/paid advance sources, whole journal correction, consumption/source refusal, stale/rollback/replay and owning supplier | None yet |
 | Purchase fact reversal | [1](fixtures/purchase-recognition-reversal.v1.md) | Exact original invoice/ownership fact, whole journal correction, settlement/dependency/receipt refusal, stale/rollback/replay and owning agreement | None yet |
@@ -38,6 +39,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Direct purchase canonical review/posting, 12 October 2026](runs/2026-10-12-direct-purchase-canonical.md):13 tests290 assertions; one/ten mixed goods with10/100 categories complete exact canonical rollback/readback/replay in18.787/18.869s. Four real stale-source refusal probes preserve facts. Assistant action/editor/signed/saved web pending, E05 partial.
 
 - [Supplier opening signed checks, 12 October 2026](runs/2026-10-12-supplier-opening-signed.md): PAYABLE/ADVANCE actual signed completion rollback9.446–9.617s and authentic stale-review refusal9.236–9.303s preserve saved facts; exact owning supplier receipts/one history proof read per transaction, scoped helper/script types pass. Planned; full saved dashboard acceptance pending, E05 partial.
 

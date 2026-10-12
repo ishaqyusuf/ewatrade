@@ -100,7 +100,7 @@ remain open; E03/E04 full browser confirmation remains open.
 
 Canonical procedure checklist within E05 (the parent remains partial):
 
-- [ ] `finance.recordPurchase` — direct purchase recording.
+- [ ] `finance.recordPurchase` — shared canonical review/private preparation and full1–10 goods/100-category batched posting verified with exact rollback/readback/replay and four authentic stale-source refusals; strict assistant action/editor/signed/saved web acceptance pending. [Canonical evidence](runs/2026-10-12-direct-purchase-canonical.md).
 - [ ] `finance.recordSupplierOpening` — strict opening source/server Book-start review, both canonical rollback/replay/duplicate guards, dashboard editor and actual signed completion rollback/stale-review refusal verified; saved chat confirmation/recovery pending. [Signed evidence](runs/2026-10-12-supplier-opening-signed.md).
 - [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
 - [x] `finance.reversePurchasePayment` — exact original-payment correction, signed rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-purchase-payment-reversal-web.md).

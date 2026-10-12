@@ -3,6 +3,7 @@ import type { Prisma } from "../../../generated/prisma/client"
 import {
   recordPurchaseReceiptValuationInTransaction,
   recordRecognitionReceiptValuations,
+  recordDirectPurchaseReceiptValuationsInTransaction,
 } from "./valuation-receipts"
 
 const effectiveAt = new Date("2026-09-30T12:00:00.000Z")
@@ -485,4 +486,63 @@ test("completed valuation replay keeps original events without reading or writin
     recordRecognitionReceiptValuations(f.tx, f.input, f.dates),
   ).rejects.toThrow("source already differs")
   expect(f.calls).toEqual(["receipts", "receipts"])
+})
+
+function directBatchFixture() {
+  const f = batchFixture()
+  for (const r of f.receipts) {
+    r.billLine.bill.kind = "PURCHASE"
+    Object.assign(r.billLine, { bookId: "book-1" })
+    Object.assign(r.billLine.bill, { id: "direct-bill", bookId: "book-1" })
+    Object.assign(r.billLine.account, { bookId: "book-1" })
+  }
+  return { ...f, direct: { ...f.input, billId: "direct-bill" } }
+}
+test("direct ten-line valuation derives dates from the actual original bill and replays exact saved sources", async () => {
+  const f = directBatchFixture()
+  const events = await recordDirectPurchaseReceiptValuationsInTransaction(
+    f.tx,
+    f.direct,
+  )
+  expect(events).toHaveLength(10)
+  for (let index = 0; index < 10; index++) {
+    const e = events[index]!
+    expect(e.sourceCostMinor).toBe(125n)
+    expect(e.effectiveAt.getTime()).toBe(effectiveAt.getTime())
+    expect(e.purchaseReceiptId).toBe(f.receipts[index]!.id)
+    expect(e.valueAfterMinor).toBe(
+      index % 4 === 0 ? 125n : index % 4 === 2 ? 525n : null,
+    )
+    Object.assign(f.receipts[index]!, { valuationEvent: e })
+    f.receipts[index]!.stockMovement.balanceSource.revision++
+  }
+  f.calls.length = 0
+  expect(
+    await recordDirectPurchaseReceiptValuationsInTransaction(f.tx, f.direct),
+  ).toEqual(events)
+  expect(f.calls).toEqual(["receipts"])
+})
+test("direct bill, line, account, actor and receipt date provenance all refuse before effects", async () => {
+  for (const [owner, field, value] of [
+    ["bill", "id", "other"],
+    ["bill", "bookId", "other"],
+    ["billLine", "bookId", "other"],
+    ["account", "bookId", "other"],
+    ["bill", "kind", "PURCHASE_ACCRUAL"],
+    ["bill", "actorUserId", "other"],
+    ["bill", "incurredAt", new Date(effectiveAt.getTime() + 1)],
+  ] as const) {
+    const f = directBatchFixture(),
+      line = f.receipts[0]!.billLine
+    Object.assign(owner === "billLine" ? line : line[owner], { [field]: value })
+    await expect(
+      recordDirectPurchaseReceiptValuationsInTransaction(f.tx, f.direct),
+    ).rejects.toThrow()
+    expect(f.calls).toEqual(["receipts"])
+  }
+  const f = directBatchFixture()
+  await expect(
+    recordRecognitionReceiptValuations(f.tx, f.input, f.dates),
+  ).rejects.toThrow()
+  expect(f.calls).toEqual(["receipts"])
 })
