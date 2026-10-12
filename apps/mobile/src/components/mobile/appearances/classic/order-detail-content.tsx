@@ -705,7 +705,7 @@ function OrderLineRow({
   const catalogFree = Boolean(line.customLine)
   const catalogDraft =
     onSaveToCatalog && line.customLine
-      ? catalogFreeLineCatalogDraft(line.customLine, line.unitPriceMinor)
+      ? catalogFreeLineCatalogDraft(line.customLine, line.totalMinor)
       : null
   const service = line.kind === "service" && !catalogFree
   const tint = service ? "lilac" : catalogAvatarTint(title, "product")

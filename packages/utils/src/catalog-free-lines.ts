@@ -30,9 +30,13 @@ export function catalogFreeLineDisplay(line: {
  * the name, the typed price, and a kind that suits it. Null when there are no
  * words to name the item with.
  */
+/**
+ * A typed-price line as a new catalog item draft. Pass the line's total:
+ * these lines are priced by order total (no unit price) and always qty 1.
+ */
 export function catalogFreeLineCatalogDraft(
   line: { kind: CatalogFreeLineKind; description?: string | null },
-  unitPriceMinor?: number | null,
+  amountMinor?: number | null,
 ) {
   const name = line.description?.trim()
   if (!name) return null
@@ -41,9 +45,7 @@ export function catalogFreeLineCatalogDraft(
       line.kind === "quick_sale" ? ("product" as const) : ("service" as const),
     name,
     priceMinor:
-      typeof unitPriceMinor === "number" && unitPriceMinor > 0
-        ? unitPriceMinor
-        : null,
+      typeof amountMinor === "number" && amountMinor > 0 ? amountMinor : null,
   }
 }
 

@@ -325,10 +325,7 @@ export function OrderOverview({
               returnable.some((row) => row.orderLineId === line.id)
             const catalogDraft =
               canSaveToCatalog && line.customLine
-                ? catalogFreeLineCatalogDraft(
-                    line.customLine,
-                    line.unitPriceMinor,
-                  )
+                ? catalogFreeLineCatalogDraft(line.customLine, line.totalMinor)
                 : null
             return (
               <li
