@@ -48,6 +48,7 @@
     "./staff-invitation-custody": "./src/staff-invitation-custody.ts",
     "./service-intake-review": "./src/queries/service-intake-review.ts",
     "./service-intake-receipt": "./src/queries/service-intake-receipt.ts",
+    "./business-reporting/presentation": "./src/queries/business-reporting/presentation.ts",
     "./business-reporting": "./src/queries/business-reporting/index.ts"
   },
   "scripts": {

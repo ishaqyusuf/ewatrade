@@ -1,8 +1,10 @@
+import type { BusinessReport } from "@ewatrade/db/business-reporting"
+// Client-safe entry: the business-reporting barrel also exports server queries
+// (Prisma, node:async_hooks), which break the browser bundle.
 import {
-  type BusinessReport,
   businessReportRowValue,
   businessReportSummary,
-} from "@ewatrade/db/business-reporting"
+} from "@ewatrade/db/business-reporting/presentation"
 import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 
