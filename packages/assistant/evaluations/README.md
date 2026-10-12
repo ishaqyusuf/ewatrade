@@ -1,5 +1,9 @@
 # Assistant conversation evaluations
 
+[Quick-chat object continuity](runs/2026-10-12-quick-chat-object-continuity.md): actual saved chat and original object retain the unsent draft through Close and Minimize/Reopen; screenshots captured. No additional ticket acceptance.
+
+[Native payment-route review](runs/2026-10-12-native-payment-route-review.md): a schema-valid payment without an Order link wrongly falls back to its payment ID as an Order ID; A04 repair required before exact-object acceptance.
+
 [Staff Job handoff review](runs/2026-10-12-staff-job-handoff-review.md): seven focused checks pass; revoked-access return repair pending. Actual saved purchase-object screenshots show same-chat and unsent-draft continuity, separately from the unaccepted S04 flow.
 
 [H02 coordinator review](runs/2026-10-12-h02-coordinator-review.md): two reproduced impact-gate gaps require implementation repairs before acceptance. Earlier passing evidence is reused.
