@@ -202,7 +202,7 @@ export async function setStaffStoreAccess(
     where: { membershipId: membership.id },
     data: { defaultStoreId: input.defaultStoreId },
   })
-  await tx.staffAccessAuditEvent.create({
+  return tx.staffAccessAuditEvent.create({
     data: {
       tenantId: input.tenantId,
       membershipId: membership.id,
@@ -232,6 +232,7 @@ export async function setStaffStoreAccess(
         defaultStoreId: input.defaultStoreId,
       },
     },
+    select: { id: true },
   })
 }
 
@@ -247,35 +248,52 @@ export async function updateRetailOpsStaffStoreAccess(
 ) {
   return db.$transaction(
     async (tx) => {
-      const membership = await tx.membership.findUnique({
-        where: {
-          tenantId_userId: {
-            tenantId: input.tenantId,
-            userId: input.staffUserId,
-          },
-        },
-        select: { id: true, staffAccessMode: true },
-      })
-      if (!membership)
-        throw new StaffStoreAccessError(
-          "INVALID_INPUT",
-          "Staff membership not found.",
-        )
-      if (
-        membership.staffAccessMode === "LEGACY" &&
-        !input.confirmLegacyCutover
-      ) {
-        throw new StaffStoreAccessError(
-          "CONFLICT",
-          "Review and confirm the replacement of existing business-wide access before switching this person to selected Stores.",
-        )
-      }
-      await setStaffStoreAccess(tx, { ...input, membershipId: membership.id })
-      return {
-        membershipId: membership.id,
-        revision: input.expectedRevision + 1,
-      }
+      const { membershipId, revision } =
+        await updateRetailOpsStaffStoreAccessInTransaction(tx, input)
+      return { membershipId, revision }
     },
     { maxWait: 10_000, timeout: 30_000 },
   )
+}
+
+/** Caller owns commit/rollback; the original audit ID can join an atomic receipt. */
+export async function updateRetailOpsStaffStoreAccessInTransaction(
+  tx: Prisma.TransactionClient,
+  input: StaffStoreAccessInput & {
+    tenantId: string
+    staffUserId: string
+    actorUserId: string
+    expectedRevision: number
+    confirmLegacyCutover?: boolean
+  },
+) {
+  const membership = await tx.membership.findUnique({
+    where: {
+      tenantId_userId: {
+        tenantId: input.tenantId,
+        userId: input.staffUserId,
+      },
+    },
+    select: { id: true, staffAccessMode: true },
+  })
+  if (!membership)
+    throw new StaffStoreAccessError(
+      "INVALID_INPUT",
+      "Staff membership not found.",
+    )
+  if (membership.staffAccessMode === "LEGACY" && !input.confirmLegacyCutover) {
+    throw new StaffStoreAccessError(
+      "CONFLICT",
+      "Review and confirm the replacement of existing business-wide access before switching this person to selected Stores.",
+    )
+  }
+  const event = await setStaffStoreAccess(tx, {
+    ...input,
+    membershipId: membership.id,
+  })
+  return {
+    membershipId: membership.id,
+    revision: input.expectedRevision + 1,
+    accessEventId: event.id,
+  }
 }
