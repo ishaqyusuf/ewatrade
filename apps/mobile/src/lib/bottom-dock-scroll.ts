@@ -26,7 +26,9 @@ export function nextBottomDockScrollState(
   // Native bounce/refresh can report offsets beyond either edge. Those are
   // edge feedback, not a reversal of the user's scroll direction.
   const scrollY = Math.min(maxY, Math.max(0, y))
-  if (scrollY <= 24 || maxY - scrollY <= 1) {
+  // Near the top the dock always shows. The bottom edge keeps whatever state
+  // the scroll left it in: only scrolling back up brings a hidden dock back.
+  if (scrollY <= 24) {
     return {
       direction: 0,
       hidden: false,

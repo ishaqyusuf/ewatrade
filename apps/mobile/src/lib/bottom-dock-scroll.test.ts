@@ -21,9 +21,14 @@ describe("bottom dock scroll intent", () => {
     expect(scroll([40, 80, 78, 81, 79, 82]).hidden).toBe(true)
     expect(scroll([40, 80, 76, 72, 68]).hidden).toBe(false)
   })
-  test("both edges stay visible through native overscroll and rebound", () => {
-    expect(scroll([40, 100, 700, 740, 700]).hidden).toBe(false)
+  test("the top edge stays visible through native overscroll and rebound", () => {
     expect(scroll([40, 100, 0, -80, 0]).hidden).toBe(false)
+  })
+  test("reaching the bottom keeps a hidden dock hidden", () => {
+    expect(scroll([40, 100, 700]).hidden).toBe(true)
+    expect(scroll([40, 100, 700, 740, 700]).hidden).toBe(true)
+    expect(scroll([40, 100, 700, 690]).hidden).toBe(true)
+    expect(scroll([40, 100, 700, 680]).hidden).toBe(false)
   })
   test("short content and restored scroll positions start visible", () => {
     expect(scroll([0, 40, 0], 300).hidden).toBe(false)
