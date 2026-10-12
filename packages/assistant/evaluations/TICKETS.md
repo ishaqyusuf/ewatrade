@@ -172,3 +172,12 @@ full saved state unchanged. Current foreign relationJoins configuration was
 fingerprinted; speedup cannot be attributed solely to the D04 source delta.
 Signed and saved web acceptance remain pending; no new accepted bookmark.
 [Four-case evidence](runs/2026-10-12-service-intake-four-case-attempt.v4.md).
+
+S03 staff-status source integration: strict action, planned administrative
+capabilities, fresh review, canonical prepared adapter, two-field editor and
+original-event global sheet are integrated. Six focused checks53assertions and
+scoped source compilation pass; desktop synthetic content/validation and actual
+unavailable Open/Close/filter/local-draft/malformed-link checks have screenshots.
+Signed and saved web acceptance remain open. D04 bounded service options/editor
+source prerequisite is integrated; child passing checks reused. No new bookmark.
+[Source evidence](runs/2026-10-12-staff-status-and-service-editor-source.md).

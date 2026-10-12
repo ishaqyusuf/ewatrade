@@ -6,7 +6,11 @@ export const staffStatusAction = z
     membershipId: id,
     status: z.enum(["active", "suspended"]),
     expectedRevision: z.number().int().positive().safe(),
-    reason: z.string().trim().min(1).max(500),
+    reason: z
+      .string()
+      .trim()
+      .min(1, "Enter a reason.")
+      .max(500, "Keep the reason within 500 characters."),
   })
   .strict()
 export type GeneralStaffStatusAction = z.infer<typeof staffStatusAction>

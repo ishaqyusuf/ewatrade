@@ -114,3 +114,6 @@ export function getStaffStatusReceipt(db: PrismaClient, input: Scope) {
     },
   )
 }
+export type StaffStatusReceiptRecord = Awaited<
+  ReturnType<typeof getStaffStatusReceiptInTransaction>
+>

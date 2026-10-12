@@ -1,5 +1,5 @@
 "use client"
-import { flattenServiceOfferings } from "@/components/service-work/service-utils"
+import { catalogOfferingDisplayName } from "@/components/service-work/service-utils"
 import { useTRPC } from "@/trpc/client"
 import {
   type ServiceIntakeAction,
@@ -17,6 +17,13 @@ import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { preserveReviewedTimestamp } from "./posting-date"
+import {
+  type ServiceIntakeEditorContinuation,
+  type ServiceIntakeEditorOffering,
+  selectedServiceIntakeOfferings,
+  serviceIntakeEditorReadState,
+  serviceIntakeOfferingChoices,
+} from "./service-intake-editor-options"
 
 export type ServiceIntakeEditorProps = {
   initial: ServiceIntakeAction
@@ -26,32 +33,40 @@ export type ServiceIntakeEditorProps = {
   onCancel: () => void
 }
 export type ServiceIntakeEditorOptions = {
-  offerings: Array<{
-    id: string
-    name: string
-    priceMinor: number | null
-    workPolicy: string
-  }>
+  offerings: ServiceIntakeEditorOffering[]
   assignees: Array<{ id: string; name: string }>
   customerName?: string
   loading?: boolean
   unavailable?: boolean
+  paused?: boolean
+  search?: string
+  onSearchChange?: (value: string) => void
+  onSearch?: () => void
+  onNext?: () => void
+  onFirst?: () => void
+  onSelectedOfferingsChange?: (ids: string[]) => void
   onRetry?: () => void
 }
 export function GeneralServiceIntakeEditor(props: ServiceIntakeEditorProps) {
   const trpc = useTRPC()
+  const [search, setSearch] = useState("")
+  const [request, setRequest] = useState<ServiceIntakeEditorContinuation>({})
+  const [selectedIds, setSelectedIds] = useState(
+    props.initial.lines.map((line) => line.offeringId),
+  )
+  const [retained, setRetained] = useState<{
+    scope: string
+    offerings: ServiceIntakeEditorOffering[]
+  }>({ scope: "", offerings: [] })
   const context = useQuery(
     trpc.tenant.current.queryOptions(undefined, { retry: false, staleTime: 0 }),
   )
-  const storeId = context.data?.activeStore?.id
-  const items = useQuery(
-    trpc.catalog.listItems.queryOptions(
-      { kind: "service" },
-      { retry: false, staleTime: 0 },
-    ),
-  )
-  const staff = useQuery(
-    trpc.services.assignees.queryOptions(undefined, {
+  const contextReady = serviceIntakeEditorReadState([context]) === "ready"
+  const storeId = contextReady ? context.data?.activeStore?.id : undefined
+  const scope = `${context.data?.tenant.id}:${storeId}:${context.data?.membership.id}`
+  const choices = useQuery(
+    trpc.serviceAssistantIntake.options.queryOptions(request, {
+      enabled: contextReady && Boolean(storeId),
       retry: false,
       staleTime: 0,
     }),
@@ -60,42 +75,77 @@ export function GeneralServiceIntakeEditor(props: ServiceIntakeEditorProps) {
     trpc.customers.getById.queryOptions(
       { customerId: props.initial.customerId ?? "" },
       {
-        enabled: Boolean(props.initial.customerId),
+        enabled: contextReady && Boolean(storeId && props.initial.customerId),
         retry: false,
         staleTime: 0,
       },
     ),
   )
+  const state = serviceIntakeEditorReadState([
+    context,
+    choices,
+    ...(props.initial.customerId ? [customer] : []),
+  ])
+  const wrongStore = state === "ready" && choices.data?.storeId !== storeId
+  const unavailable =
+    state === "unavailable" || (contextReady && !storeId) || wrongStore
+  const ready = state === "ready" && !unavailable
+  const page: ServiceIntakeEditorOffering[] = ready
+    ? (choices.data?.offerings ?? []).map((row) => ({
+        id: row.offeringId,
+        name: catalogOfferingDisplayName(
+          row.itemName,
+          row.variantName,
+          row.offeringName,
+        ),
+        priceMinor: row.fixedPriceMinor,
+        workPolicy: row.service?.workPolicy ?? "unknown",
+      }))
+    : []
+  const offerings = ready
+    ? [
+        ...new Map(
+          [
+            ...selectedServiceIntakeOfferings(
+              retained.scope === scope ? retained.offerings : [],
+              selectedIds,
+            ),
+            ...page,
+          ].map((row) => [row.id, row]),
+        ).values(),
+      ]
+    : []
+  const navigate = (next: ServiceIntakeEditorContinuation) => {
+    if (!ready) return
+    setRetained({
+      scope,
+      offerings: selectedServiceIntakeOfferings(offerings, selectedIds),
+    })
+    setRequest(next)
+  }
+  const continuation = ready ? choices.data?.continuation : null
   return (
     <GeneralServiceIntakeEditorView
       {...props}
       options={{
-        offerings: flattenServiceOfferings(items.data ?? [], storeId ?? "")
-          .filter((o) => o.pricingPolicy === "fixed")
-          .map((o) => ({
-            id: o.id,
-            name: o.displayName,
-            priceMinor: o.fixedPriceMinor,
-            workPolicy: o.serviceWorkPolicy?.workPolicy ?? "unknown",
-          })),
-        assignees: staff.data ?? [],
-        customerName: customer.data?.name,
-        loading:
-          context.isFetching ||
-          items.isFetching ||
-          staff.isFetching ||
-          Boolean(props.initial.customerId && customer.isFetching),
-        unavailable:
-          context.isError ||
-          (!context.isPending && !storeId) ||
-          items.isError ||
-          staff.isError ||
-          Boolean(props.initial.customerId && customer.isError),
+        offerings,
+        assignees: ready ? (choices.data?.assignees ?? []) : [],
+        customerName: ready ? customer.data?.name : undefined,
+        loading: state === "loading" && !unavailable,
+        unavailable,
+        paused: state === "paused",
+        search,
+        onSearchChange: setSearch,
+        onSearch: () => navigate({ query: search.trim() || undefined }),
+        onFirst: () => navigate({ query: request.query }),
+        onNext: continuation ? () => navigate(continuation) : undefined,
+        onSelectedOfferingsChange: setSelectedIds,
         onRetry: () => {
           void context.refetch()
-          void items.refetch()
-          void staff.refetch()
-          if (props.initial.customerId) void customer.refetch()
+          if (contextReady && storeId) {
+            void choices.refetch()
+            if (props.initial.customerId) void customer.refetch()
+          }
         },
       }}
     />
@@ -133,7 +183,8 @@ export function GeneralServiceIntakeEditorView({
   const [due, setDue] = useState(displayDate(initial.dueCommitmentAt))
   const [requested, setRequested] = useState(displayDate(initial.requestedAt))
   const [error, setError] = useState<string | null>(null)
-  const blocked = disabled || options.loading || options.unavailable
+  const blocked =
+    disabled || options.loading || options.unavailable || options.paused
   const unresolved =
     draft.lines.some(
       (line) => !options.offerings.some((o) => o.id === line.offeringId),
@@ -145,7 +196,13 @@ export function GeneralServiceIntakeEditorView({
   const patch = <K extends keyof ServiceIntakeAction>(
     key: K,
     value: ServiceIntakeAction[K],
-  ) => setDraft((current) => ({ ...current, [key]: value }))
+  ) => {
+    setDraft((current) => ({ ...current, [key]: value }))
+    if (key === "lines")
+      options.onSelectedOfferingsChange?.(
+        (value as ServiceIntakeAction["lines"]).map((line) => line.offeringId),
+      )
+  }
   const text = (
     key:
       | "customerName"
@@ -197,240 +254,300 @@ export function GeneralServiceIntakeEditorView({
         <output aria-live="polite">
           Loading current services, customer and assignees…
         </output>
-      ) : options.unavailable ? (
+      ) : options.unavailable || options.paused ? (
         <div role="alert">
-          <p>Current intake choices are unavailable.</p>
+          <p>
+            {options.paused
+              ? "Reconnect to load current intake choices."
+              : "Current intake choices are unavailable."}
+          </p>
           <Button type="button" variant="outline" onClick={options.onRetry}>
             Try again
           </Button>
         </div>
       ) : null}
-      <fieldset disabled={Boolean(blocked)} className="grid gap-5">
-        <FieldGroup>
-          {initial.customerId ? (
-            <p className="text-sm">
-              Saved customer: {options.customerName ?? "Unavailable"}. Ask for a
-              new draft to choose another customer.
-            </p>
-          ) : (
-            <>
-              <ControlField label="Customer name (optional)">
+      {!options.loading && !options.unavailable && !options.paused ? (
+        <fieldset disabled={Boolean(blocked)} className="grid gap-5">
+          {options.onSearch ? (
+            <div className="grid gap-2">
+              <ControlField label="Find services">
                 <Input
-                  value={draft.customerName ?? ""}
+                  value={options.search ?? ""}
                   maxLength={160}
-                  onChange={(e) => text("customerName", e.target.value)}
-                />
-              </ControlField>
-              <ControlField label="Phone (optional)">
-                <Input
-                  value={draft.customerPhone ?? ""}
-                  maxLength={40}
-                  onChange={(e) => text("customerPhone", e.target.value)}
-                />
-              </ControlField>
-              <ControlField label="Email (optional)">
-                <Input
-                  type="email"
-                  value={draft.customerEmail ?? ""}
-                  maxLength={320}
-                  onChange={(e) => text("customerEmail", e.target.value)}
-                />
-              </ControlField>
-            </>
-          )}
-          {draft.lines.map((line, index) => (
-            <div key={rowKeys[index]} className="grid gap-3 border-t pt-4">
-              <ControlField label={`Service ${index + 1}`}>
-                <SelectControl
-                  value={line.offeringId}
-                  options={options.offerings.map((o) => ({
-                    value: o.id,
-                    label: `${o.name} · ${o.workPolicy.toLowerCase().replaceAll("_", " ")}`,
-                  }))}
-                  onValueChange={(value) =>
-                    patch(
-                      "lines",
-                      draft.lines.map((row, i) =>
-                        i === index ? { ...row, offeringId: value } : row,
-                      ),
-                    )
+                  placeholder="Search by service name"
+                  onChange={(event) =>
+                    options.onSearchChange?.(event.target.value)
                   }
                 />
               </ControlField>
-              <ControlField label="Exact quantity">
-                <Input
-                  value={line.quantity}
-                  inputMode="decimal"
-                  maxLength={40}
-                  onChange={(e) =>
-                    patch(
-                      "lines",
-                      draft.lines.map((row, i) =>
-                        i === index
-                          ? { ...row, quantity: e.target.value }
-                          : row,
-                      ),
-                    )
-                  }
-                />
-              </ControlField>
-              {draft.lines.length > 1 ? (
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setRowKeys(rowKeys.filter((_, i) => i !== index))
-                    patch(
-                      "lines",
-                      draft.lines.filter((_, i) => i !== index),
-                    )
-                  }}
+                  variant="outline"
+                  onClick={options.onSearch}
                 >
-                  Remove service
+                  Search
                 </Button>
-              ) : null}
+                <Button type="button" variant="ghost" onClick={options.onFirst}>
+                  First page
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!options.onNext}
+                  onClick={options.onNext}
+                >
+                  Next choices
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Choices are paged. Search or continue to find another service;
+                selected services stay in the draft. Confirmation rechecks
+                availability.
+              </p>
             </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            disabled={draft.lines.length >= 100 || !options.offerings.length}
-            onClick={() => {
-              const offering = options.offerings[0]
-              if (!offering) return
-              setRowKeys([...rowKeys, crypto.randomUUID()])
-              patch("lines", [
-                ...draft.lines,
-                { offeringId: offering.id, quantity: "1" },
-              ])
-            }}
-          >
-            Add service
-          </Button>
-          <ControlField label="Instructions (optional)">
-            <Textarea
-              value={draft.instructions ?? ""}
-              maxLength={4_000}
-              onChange={(e) => text("instructions", e.target.value)}
-            />
-          </ControlField>
-          <ControlField label="Condition note (optional)">
-            <Textarea
-              value={draft.conditionNote ?? ""}
-              maxLength={2_000}
-              onChange={(e) => text("conditionNote", e.target.value)}
-            />
-          </ControlField>
-          <ControlField label="Assignee">
-            <SelectControl
-              value={draft.requestedAssigneeId ?? "unassigned"}
-              options={[
-                { value: "unassigned", label: "Unassigned" },
-                ...options.assignees.map((a) => ({
-                  value: a.id,
-                  label: a.name,
-                })),
-              ]}
-              onValueChange={(value) =>
-                patch(
-                  "requestedAssigneeId",
-                  value === "unassigned" ? undefined : value,
-                )
-              }
-            />
-          </ControlField>
-          <ControlField label="Promised date and time (UTC, optional)">
-            <Input
-              type="datetime-local"
-              step={1}
-              value={due}
-              onChange={(e) => setDue(e.target.value)}
-            />
-          </ControlField>
-          <ControlField label="Requested date and time (UTC, optional)">
-            <Input
-              type="datetime-local"
-              step={1}
-              value={requested}
-              onChange={(e) => setRequested(e.target.value)}
-            />
-          </ControlField>
-          <ControlField label="Service level">
-            <SelectControl
-              value={draft.serviceLevel ?? "standard"}
-              options={[
-                { value: "standard", label: "Standard" },
-                { value: "express", label: "Express (Store settings apply)" },
-              ]}
-              onValueChange={(value) =>
-                patch("serviceLevel", value as "standard" | "express")
-              }
-            />
-          </ControlField>
-          <ControlField label="Priority">
-            <SelectControl
-              value={draft.priority ?? "normal"}
-              options={[
-                { value: "normal", label: "Normal" },
-                { value: "urgent", label: "Urgent" },
-              ]}
-              onValueChange={(value) =>
-                patch("priority", value as "normal" | "urgent")
-              }
-            />
-          </ControlField>
-          <ControlField
-            label={`Initial recorded payment (${currencyCode}, optional)`}
-          >
-            <Input
-              inputMode="decimal"
-              value={payment}
-              maxLength={16}
-              onChange={(e) => setPayment(e.target.value)}
-            />
-          </ControlField>
-          {payment.trim() ? (
-            <>
-              <ControlField label="Payment method">
-                <SelectControl
-                  value={draft.initialPaymentMethod ?? "cash"}
-                  options={[
-                    { value: "cash", label: "Cash" },
-                    { value: "bank_transfer", label: "Bank transfer" },
-                    { value: "card", label: "Card" },
-                    { value: "pos", label: "POS" },
-                    { value: "other", label: "Other" },
-                  ]}
-                  onValueChange={(value) =>
-                    patch(
-                      "initialPaymentMethod",
-                      value as ServiceIntakeAction["initialPaymentMethod"],
-                    )
-                  }
-                />
-              </ControlField>
-              <ControlField label="Payment reference (optional)">
-                <Input
-                  value={draft.initialPaymentReference ?? ""}
-                  maxLength={160}
-                  onChange={(e) =>
-                    text("initialPaymentReference", e.target.value)
-                  }
-                />
-              </ControlField>
-            </>
           ) : null}
-        </FieldGroup>
-        <p className="text-xs text-muted-foreground">
-          Finance-backed receiving accounts and automatic customer reminders
-          require the owning Order or Service form. No provider charge or
-          message is made here.
-        </p>
-      </fieldset>
-      {unresolved && !options.loading ? (
+          <FieldGroup>
+            {initial.customerId ? (
+              <p className="text-sm">
+                Saved customer: {options.customerName ?? "Unavailable"}. Ask for
+                a new draft to choose another customer.
+              </p>
+            ) : (
+              <>
+                <ControlField label="Customer name (optional)">
+                  <Input
+                    value={draft.customerName ?? ""}
+                    maxLength={160}
+                    onChange={(e) => text("customerName", e.target.value)}
+                  />
+                </ControlField>
+                <ControlField label="Phone (optional)">
+                  <Input
+                    value={draft.customerPhone ?? ""}
+                    maxLength={40}
+                    onChange={(e) => text("customerPhone", e.target.value)}
+                  />
+                </ControlField>
+                <ControlField label="Email (optional)">
+                  <Input
+                    type="email"
+                    value={draft.customerEmail ?? ""}
+                    maxLength={320}
+                    onChange={(e) => text("customerEmail", e.target.value)}
+                  />
+                </ControlField>
+              </>
+            )}
+            {draft.lines.map((line, index) => (
+              <div key={rowKeys[index]} className="grid gap-3 border-t pt-4">
+                <ControlField label={`Service ${index + 1}`}>
+                  <SelectControl
+                    value={line.offeringId}
+                    options={serviceIntakeOfferingChoices(
+                      options.offerings,
+                      line.offeringId,
+                    )}
+                    onValueChange={(value) =>
+                      patch(
+                        "lines",
+                        draft.lines.map((row, i) =>
+                          i === index ? { ...row, offeringId: value } : row,
+                        ),
+                      )
+                    }
+                  />
+                </ControlField>
+                <ControlField label="Exact quantity">
+                  <Input
+                    value={line.quantity}
+                    inputMode="decimal"
+                    maxLength={40}
+                    onChange={(e) =>
+                      patch(
+                        "lines",
+                        draft.lines.map((row, i) =>
+                          i === index
+                            ? { ...row, quantity: e.target.value }
+                            : row,
+                        ),
+                      )
+                    }
+                  />
+                </ControlField>
+                {draft.lines.length > 1 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setRowKeys(rowKeys.filter((_, i) => i !== index))
+                      patch(
+                        "lines",
+                        draft.lines.filter((_, i) => i !== index),
+                      )
+                    }}
+                  >
+                    Remove service
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={draft.lines.length >= 100 || !options.offerings.length}
+              onClick={() => {
+                const offering = options.offerings[0]
+                if (!offering) return
+                setRowKeys([...rowKeys, crypto.randomUUID()])
+                patch("lines", [
+                  ...draft.lines,
+                  { offeringId: offering.id, quantity: "1" },
+                ])
+              }}
+            >
+              Add service
+            </Button>
+            <ControlField label="Instructions (optional)">
+              <Textarea
+                value={draft.instructions ?? ""}
+                maxLength={4_000}
+                onChange={(e) => text("instructions", e.target.value)}
+              />
+            </ControlField>
+            <ControlField label="Condition note (optional)">
+              <Textarea
+                value={draft.conditionNote ?? ""}
+                maxLength={2_000}
+                onChange={(e) => text("conditionNote", e.target.value)}
+              />
+            </ControlField>
+            <ControlField label="Assignee">
+              <SelectControl
+                value={draft.requestedAssigneeId ?? "unassigned"}
+                options={[
+                  { value: "unassigned", label: "Unassigned" },
+                  ...(draft.requestedAssigneeId &&
+                  !options.assignees.some(
+                    (assignee) => assignee.id === draft.requestedAssigneeId,
+                  )
+                    ? [
+                        {
+                          value: draft.requestedAssigneeId,
+                          label: "Selected assignee is unavailable",
+                        },
+                      ]
+                    : []),
+                  ...options.assignees.map((a) => ({
+                    value: a.id,
+                    label: a.name,
+                  })),
+                ]}
+                onValueChange={(value) =>
+                  patch(
+                    "requestedAssigneeId",
+                    value === "unassigned" ? undefined : value,
+                  )
+                }
+              />
+            </ControlField>
+            <ControlField label="Promised date and time (UTC, optional)">
+              <Input
+                type="datetime-local"
+                step={1}
+                value={due}
+                onChange={(e) => setDue(e.target.value)}
+              />
+            </ControlField>
+            <ControlField label="Requested date and time (UTC, optional)">
+              <Input
+                type="datetime-local"
+                step={1}
+                value={requested}
+                onChange={(e) => setRequested(e.target.value)}
+              />
+            </ControlField>
+            <ControlField label="Service level">
+              <SelectControl
+                value={draft.serviceLevel ?? "standard"}
+                options={[
+                  { value: "standard", label: "Standard" },
+                  { value: "express", label: "Express (Store settings apply)" },
+                ]}
+                onValueChange={(value) =>
+                  patch("serviceLevel", value as "standard" | "express")
+                }
+              />
+            </ControlField>
+            <ControlField label="Priority">
+              <SelectControl
+                value={draft.priority ?? "normal"}
+                options={[
+                  { value: "normal", label: "Normal" },
+                  { value: "urgent", label: "Urgent" },
+                ]}
+                onValueChange={(value) =>
+                  patch("priority", value as "normal" | "urgent")
+                }
+              />
+            </ControlField>
+            <ControlField
+              label={`Initial recorded payment (${currencyCode}, optional)`}
+            >
+              <Input
+                inputMode="decimal"
+                value={payment}
+                maxLength={16}
+                onChange={(e) => setPayment(e.target.value)}
+              />
+            </ControlField>
+            {payment.trim() ? (
+              <>
+                <ControlField label="Payment method">
+                  <SelectControl
+                    value={draft.initialPaymentMethod ?? "cash"}
+                    options={[
+                      { value: "cash", label: "Cash" },
+                      { value: "bank_transfer", label: "Bank transfer" },
+                      { value: "card", label: "Card" },
+                      { value: "pos", label: "POS" },
+                      { value: "other", label: "Other" },
+                    ]}
+                    onValueChange={(value) =>
+                      patch(
+                        "initialPaymentMethod",
+                        value as ServiceIntakeAction["initialPaymentMethod"],
+                      )
+                    }
+                  />
+                </ControlField>
+                <ControlField label="Payment reference (optional)">
+                  <Input
+                    value={draft.initialPaymentReference ?? ""}
+                    maxLength={160}
+                    onChange={(e) =>
+                      text("initialPaymentReference", e.target.value)
+                    }
+                  />
+                </ControlField>
+              </>
+            ) : null}
+          </FieldGroup>
+          <p className="text-xs text-muted-foreground">
+            Finance-backed receiving accounts and automatic customer reminders
+            require the owning Order or Service form. No provider charge or
+            message is made here.
+          </p>
+        </fieldset>
+      ) : null}
+      {unresolved &&
+      !options.loading &&
+      !options.unavailable &&
+      !options.paused ? (
         <p role="alert">
-          A saved service or assignee is unavailable. Choose a current option
-          before reviewing.
+          A selected service or assignee is outside these choices or
+          unavailable. Search or continue to find it, or explicitly choose a
+          current option before reviewing.
         </p>
       ) : null}
       {error ? (

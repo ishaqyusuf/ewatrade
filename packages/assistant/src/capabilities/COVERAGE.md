@@ -6,24 +6,27 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 561 (420 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 121
-- Merchant planned: 133
+- Router procedures: 564 (423 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 125
+- Merchant planned: 132
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 115 (61 read, 54 write)
+- Capabilities: 118 (63 read, 55 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `staff.status.change` | 1 | write (`staff_status`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.updateStaffStatus` |
+| `staff.status.review` | 1 | read | `reviewStaffStatus` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStatusReview` |
+| `staff.status.receipt.read` | 1 | read | `readStaffStatusReceipt` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStatusReceipt` |
 | `sales.items.report` | 1 | read | `readItemSalesReport` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `businessReporting.itemSales` |
 | `sales.collections.report` | 1 | read | `readPaymentCollectionsReport` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `businessReporting.paymentCollections` |
 | `customers.debt.report` | 1 | read | `readCustomerDebtReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.customerDebt` |
 | `finance.supplier_aging.report` | 1 | read | `readSupplierAgingReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.supplierAging` |
 | `finance.posted_profit.report` | 1 | read | `readPostedProfitReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.postedProfit` |
 | `inventory.stock.report` | 1 | read | `readStockReport` | OWNER, ADMIN, MANAGER | stock | dashboard | planned | `businessReporting.stock` |
-| `services.intake.options.read` | 1 | read | `readServiceIntakeOptions` | OWNER, ADMIN, MANAGER | read, read, read | dashboard | planned | `catalog.listItemsPage`, `services.getSettings`, `services.assignees` |
+| `services.intake.options.read` | 1 | read | `readServiceIntakeOptions` | OWNER, ADMIN, MANAGER | read, read, read, Owner/Admin only | dashboard | planned | `catalog.listItemsPage`, `services.getSettings`, `services.assignees`, `serviceAssistantIntake.options` |
 | `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.createAndConfirmIntake` |
 | `finance.cash_count.record` | 1 | write (`cash_count_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordCashCount` |
 | `finance.cash_accounts.read` | 1 | read | `readCashAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
@@ -146,13 +149,16 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `staff.status.change` | Suspend Amina's business access because she is on leave | [apps/api/src/assistant/general-staff-status.test.ts](../../../../apps/api/src/assistant/general-staff-status.test.ts)<br>[packages/assistant/src/general/staff-status.test.ts](../../../../packages/assistant/src/general/staff-status.test.ts)<br>[packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
+| `staff.status.review` | Review reactivating Amina using her current access | [packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
+| `staff.status.receipt.read` | Open the original saved staff suspension | [packages/db/src/queries/staff-status-receipt.test.ts](../../../../packages/db/src/queries/staff-status-receipt.test.ts) |
 | `sales.items.report` | How many crates of eggs did we sell last week? | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `sales.collections.report` | How much money did we record today? | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `customers.debt.report` | Show current posted customer debt in NGN | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `finance.supplier_aging.report` | Show posted supplier aging as of a UTC date | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `finance.posted_profit.report` | Show posted Book profit and missing cost coverage | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `inventory.stock.report` | Show current stock for eggs | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
-| `services.intake.options.read` | Find shirt washing services and assignees | [packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts) |
+| `services.intake.options.read` | Find shirt washing services and assignees | [packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts)<br>[apps/dashboard/src/components/general-assistant/service-intake-editor-options.test.ts](../../../../apps/dashboard/src/components/general-assistant/service-intake-editor-options.test.ts)<br>[apps/dashboard/src/components/general-assistant/service-intake-editor-options-ui.test.ts](../../../../apps/dashboard/src/components/general-assistant/service-intake-editor-options-ui.test.ts) |
 | `services.intake.create` | Take two shirts for Amina and promise Thursday morning | [packages/assistant/src/general/service-intake.test.ts](../../../../packages/assistant/src/general/service-intake.test.ts)<br>[packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts)<br>[apps/api/src/assistant/general-service-intake-rollback.integration-check.ts](../../../../apps/api/src/assistant/general-service-intake-rollback.integration-check.ts) |
 | `finance.cash_count.record` | I counted zero cash in the front till at this time | [packages/assistant/src/general/cash-count.test.ts](../../../../packages/assistant/src/general/cash-count.test.ts)<br>[packages/db/src/queries/finance/cash-count-review.test.ts](../../../../packages/db/src/queries/finance/cash-count-review.test.ts) |
 | `finance.cash_accounts.read` | Find the front till | [packages/db/src/queries/finance/assistant-cash-count-reads.test.ts](../../../../packages/db/src/queries/finance/assistant-cash-count-reads.test.ts) |
@@ -287,7 +293,6 @@ track conversational evaluation separately from these source test links.
 | H04 | 10 |
 | S01 | 1 |
 | S02 | 1 |
-| S03 | 1 |
 
 ## Merchant procedures
 
@@ -570,8 +575,10 @@ track conversational evaluation separately from these source test links.
 | `retailOps.staffInvitationCommandSave` | mutation | Owner/Admin only | staff | supported | staff.invitation.manage |
 | `retailOps.staffInvitationReview` | query | Owner/Admin only | staff | supported | staff.invitation.review |
 | `retailOps.staffInvitations` | query | Owner/Admin only | staff | supported | staff.invitations.read |
+| `retailOps.staffStatusReceipt` | query | Owner/Admin only | staff | supported | staff.status.receipt.read |
+| `retailOps.staffStatusReview` | query | Owner/Admin only | staff | supported | staff.status.review |
 | `retailOps.subscription` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
-| `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | planned | S03 |
+| `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | supported | staff.status.change |
 | `search.global` | query | read | search | supported | search.records |
 | `serviceAccess.createRequestForm` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.createTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
@@ -580,6 +587,7 @@ track conversational evaluation separately from these source test links.
 | `serviceAccess.requests` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.revokeTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.updateRequest` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAssistantIntake.options` | query | Owner/Admin only | services | supported | services.intake.options.read |
 | `serviceAssistantIntake.receipt` | query | read | services | planned | D04 |
 | `serviceCommerce.acknowledgeStoreConversationStaffRead` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
 | `serviceCommerce.approveQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |

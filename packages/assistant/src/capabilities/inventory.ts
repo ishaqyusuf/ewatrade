@@ -196,7 +196,6 @@ formOnly(
 // Staff
 planned("staff", "S01", ["retailOps.staff"])
 planned("staff", "S02", ["retailOps.inviteStaff"])
-planned("staff", "S03", ["retailOps.updateStaffStatus"])
 
 // Service commerce, communications and regulated workflows
 planned("commerce", "G03", [

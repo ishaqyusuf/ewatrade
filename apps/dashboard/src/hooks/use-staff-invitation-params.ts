@@ -1,15 +1,14 @@
 "use client"
 import { staffInvitationTargetSchema } from "@ewatrade/assistant/general/contracts"
-import { parseAsString, useQueryStates } from "nuqs"
+import { useQueryStates } from "nuqs"
+import {
+  assistantObjectParams,
+  closedAssistantObjectParams,
+} from "./use-assistant-receipt"
 
 export function useStaffInvitationParams() {
   const [{ staffInvitation }, setParams] = useQueryStates(
-    {
-      staffInvitation: parseAsString,
-      staffMember: parseAsString,
-      staffHistory: parseAsString,
-      staffDirectory: parseAsString,
-    },
+    assistantObjectParams,
     { history: "push", shallow: true },
   )
   const parsed = staffInvitationTargetSchema.safeParse({
@@ -21,6 +20,7 @@ export function useStaffInvitationParams() {
     commandId: parsed.success ? parsed.data.commandId : null,
     open: (commandId: string) =>
       setParams({
+        ...closedAssistantObjectParams,
         staffInvitation: staffInvitationTargetSchema.parse({
           kind: "staff_invitation",
           commandId,

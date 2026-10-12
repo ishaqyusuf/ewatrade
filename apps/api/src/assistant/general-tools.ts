@@ -18,6 +18,9 @@ import {
 import {
   type GeneralAnswer,
   generalDateRange,
+  staffStatusDraftInstructions,
+  staffStatusReadInput,
+  staffStatusReviewInput,
 } from "@ewatrade/assistant/general/contracts"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
@@ -345,6 +348,43 @@ export function createGeneralTools(
         }),
     }),
 
+    reviewStaffStatus: tool({
+      description:
+        "Review suspending or reactivating an exact saved business membership selected by name/email directory search. Ask for a reason and clarify ambiguous people. The server supplies current access revision and whole-business impact/current grants. This read reserves no access and changes no status. Never restore removed grants or activate an unaccepted invitation.",
+      inputSchema: staffStatusReviewInput,
+      execute: (input) =>
+        wrap("reviewStaffStatus", async (fresh) => {
+          const review = await retailOpsRouter
+            .createCaller(fresh)
+            .staffStatusReview(input)
+          return review
+        }),
+    }),
+    readStaffStatusReceipt: tool({
+      description:
+        "Read one exact original saved status event from a completed receipt or staff history. Original status/role/reason/time and actor reference are separate from current directory identities and current membership. Never infer original Store grants, restored permissions or missing identity snapshots.",
+      inputSchema: staffStatusReadInput,
+      execute: (input) =>
+        wrap("readStaffStatusReceipt", async (fresh) => {
+          const receipt = await retailOpsRouter
+            .createCaller(fresh)
+            .staffStatusReceipt(input)
+          onAnswer({
+            id: `staff-status_${crypto.randomUUID()}`,
+            title: "Original staff status outcome",
+            value: `${receipt.before.status ?? "Unavailable"} → ${receipt.after.status ?? "Unavailable"}`,
+            scope: "Current business · original membership status event",
+            asOf: receipt.asOf,
+            detail:
+              `Recorded ${receipt.happenedAt}. Reason: ${receipt.reason ?? "Not recorded"}. Current directory name: ${receipt.subject.name ?? "Unavailable"}. Current membership: ${receipt.currentMembership?.status ?? "Unavailable"}. Original grants and historical identity snapshots are not recorded here.`.slice(
+                0,
+                1000,
+              ),
+            target: { kind: "staff_status", eventId: receipt.eventId },
+          })
+          return receipt
+        }),
+    }),
     readStaffInvitations: tool({
       description:
         "Read the newest ten saved invitations for an exact staff membership selected from directory/email search. Total is exact in the request snapshot; limited history is explicit. Return original token-record identity/state/expiry and recorded outbox state, never raw links, hashes, credentials or delivery inference from sentAt. Clarify multiple ACTIVE pending records before drafting resend/revoke; do not invent invitation IDs.",
@@ -1502,6 +1542,7 @@ export function createGeneralTools(
         cashCountDraftInstructions,
         supplierSettlementDraftInstructions,
         staffInvitationDraftInstructions,
+        staffStatusDraftInstructions,
         serviceIntakeDraftInstructions,
       ].join("\n\n"),
       inputSchema: objectToolSchema(actionSchema),

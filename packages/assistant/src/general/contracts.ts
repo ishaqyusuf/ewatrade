@@ -1,4 +1,13 @@
 import { serviceIntakeAction } from "./service-intake"
+import { staffStatusAction } from "./staff-status"
+export {
+  staffStatusAction,
+  staffStatusDraftInstructions,
+  staffStatusReviewInput,
+  staffStatusReadInput,
+  staffStatusTargetSchema,
+} from "./staff-status"
+export type { GeneralStaffStatusAction } from "./staff-status"
 export { serviceIntakeDraftInstructions } from "./service-intake"
 import { cashCountAction } from "./cash-count"
 export {
@@ -352,6 +361,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   closeoutCreateAction,
   closeoutFinalizeAction,
   staffInvitationAction,
+  staffStatusAction,
   serviceIntakeAction,
   cashCountAction,
 ])
@@ -363,6 +373,7 @@ export const generalReceiptSchema = z
     kind: z.enum([
       "finance_purchase_bill",
       "staff_invitation",
+      "staff_status",
       "service_intake",
       "finance_purchase_registration",
       "finance_supplier",
@@ -536,6 +547,8 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
+    case "staff_status":
+      return `${action.status === "suspended" ? "Suspend" : "Reactivate"} staff membership`
     case "service_intake":
       return `Service intake · ${action.lines.length} service line(s)`
     case "staff_invitation":

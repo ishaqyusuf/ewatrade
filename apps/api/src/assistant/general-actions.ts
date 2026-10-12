@@ -79,6 +79,7 @@ import { purchaseRegister } from "./general-purchase-registration"
 import { serviceLineAction } from "./general-service-fulfillment"
 import { serviceIntake } from "./general-service-intake"
 import { staffInvitation } from "./general-staff-invitation"
+import { staffStatus } from "./general-staff-status"
 import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
 import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
 import { stockReceive } from "./general-stock-receipt"
@@ -674,6 +675,7 @@ const adapters: {
   supplier_create: supplierCreate,
   purchase_recognition_reverse: purchaseRecognitionReverse,
   staff_invitation: staffInvitation,
+  staff_status: staffStatus,
   service_intake: serviceIntake,
   supplier_entry_reverse: supplierEntryReverse,
   supplier_opening: supplierOpening,

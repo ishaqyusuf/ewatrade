@@ -3,11 +3,18 @@ import { readServiceIntakeReceiptInTransaction } from "@ewatrade/db/service-inta
 import { ServiceIntakeReviewError } from "@ewatrade/db/service-intake-review"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import {
+  generalServiceIntakeOptionsInput,
+  readGeneralServiceIntakeOptions,
+} from "../../assistant/general-service-intake-options"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import { assertServiceManager } from "./service-permissions"
 
-/** Owning receipt reads only; the app's signed GENERAL decision owns creation. */
+/** Protected choices and owning receipts; signed GENERAL decisions own creation. */
 export const serviceAssistantIntakeRouter = createTRPCRouter({
+  options: protectedProcedure
+    .input(generalServiceIntakeOptionsInput)
+    .query(({ ctx, input }) => readGeneralServiceIntakeOptions(ctx, input)),
   receipt: protectedProcedure
     .input(z.object({ intakeId: z.string().trim().min(1).max(128) }).strict())
     .query(async ({ ctx, input }) => {

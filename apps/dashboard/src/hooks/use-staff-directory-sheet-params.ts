@@ -1,15 +1,14 @@
 "use client"
 import { staffDirectoryTargetSchema } from "@ewatrade/assistant/general/contracts"
-import { parseAsString, useQueryStates } from "nuqs"
+import { useQueryStates } from "nuqs"
+import {
+  assistantObjectParams,
+  closedAssistantObjectParams,
+} from "./use-assistant-receipt"
 
 export function useStaffDirectorySheetParams() {
   const [{ staffDirectory }, setParams] = useQueryStates(
-    {
-      staffDirectory: parseAsString,
-      staffInvitation: parseAsString,
-      staffMember: parseAsString,
-      staffHistory: parseAsString,
-    },
+    assistantObjectParams,
     { history: "push" },
   )
   let target: ReturnType<typeof staffDirectoryTargetSchema.parse> | null = null
@@ -23,6 +22,7 @@ export function useStaffDirectorySheetParams() {
     target,
     open: (value: ReturnType<typeof staffDirectoryTargetSchema.parse>) =>
       setParams({
+        ...closedAssistantObjectParams,
         staffDirectory: JSON.stringify(staffDirectoryTargetSchema.parse(value)),
         staffMember: null,
         staffInvitation: null,

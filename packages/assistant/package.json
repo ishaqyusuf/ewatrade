@@ -29,7 +29,8 @@
     "./capabilities/coverage": "./src/capabilities/coverage.ts",
     "./capabilities/types": "./src/capabilities/types.ts",
     "./general/service-intake": "./src/general/service-intake.ts",
-    "./general/business-report-target": "./src/general/business-report-target.ts"
+    "./general/business-report-target": "./src/general/business-report-target.ts",
+    "./general/staff-status": "./src/general/staff-status.ts"
   },
   "scripts": {
     "lint": "biome check .",

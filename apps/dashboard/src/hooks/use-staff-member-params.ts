@@ -3,18 +3,16 @@ import {
   staffHistoryTargetSchema,
   staffMemberTargetSchema,
 } from "@ewatrade/assistant/general/contracts"
-import { parseAsString, useQueryStates } from "nuqs"
+import { useQueryStates } from "nuqs"
+import {
+  assistantObjectParams,
+  closedAssistantObjectParams,
+} from "./use-assistant-receipt"
 
 export function useStaffMemberParams() {
-  const [{ staffMember }, setParams] = useQueryStates(
-    {
-      staffMember: parseAsString,
-      staffHistory: parseAsString,
-      staffDirectory: parseAsString,
-      staffInvitation: parseAsString,
-    },
-    { history: "push" },
-  )
+  const [{ staffMember }, setParams] = useQueryStates(assistantObjectParams, {
+    history: "push",
+  })
   const parsed = staffMemberTargetSchema.safeParse({
     kind: "staff_member",
     membershipId: staffMember,
@@ -24,6 +22,7 @@ export function useStaffMemberParams() {
     membershipId: parsed.success ? parsed.data.membershipId : null,
     open: (membershipId: string) =>
       setParams({
+        ...closedAssistantObjectParams,
         staffMember: staffMemberTargetSchema.parse({
           kind: "staff_member",
           membershipId,
@@ -35,6 +34,7 @@ export function useStaffMemberParams() {
     close: () => setParams({ staffMember: null }),
     openHistory: (membershipId: string) =>
       setParams({
+        ...closedAssistantObjectParams,
         staffMember: null,
         staffDirectory: null,
         staffInvitation: null,

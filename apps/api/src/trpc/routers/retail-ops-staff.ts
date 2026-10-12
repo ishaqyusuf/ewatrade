@@ -10,25 +10,27 @@ import {
 } from "@ewatrade/auth/roles"
 import {
   RetailOpsStaffError,
-  reviewStaffInvitation,
-  reviewStaffInvitationCommand,
-  executeStaffInvitationCommand,
-  getStaffInvitationCommand,
-  listStaffInvitations,
-  StaffInvitationCommandError,
-  staffInvitationReviewInput,
   RetailOpsSubscriptionError,
+  StaffDirectoryError,
+  StaffInvitationCommandError,
   completeRetailOpsStaffOnboarding,
+  executeStaffInvitationCommand,
+  getStaffDirectoryMember,
+  getStaffInvitationCommand,
   inviteRetailOpsStaff,
   listRetailOpsStaff,
   listStaffDirectoryPage,
   listStaffHistoryPage,
-  getStaffDirectoryMember,
-  StaffDirectoryError,
+  listStaffInvitations,
   resolveRetailOpsStaffInviteToken,
+  reviewStaffInvitation,
+  reviewStaffInvitationCommand,
+  reviewStaffStatusChange,
+  staffInvitationReviewInput,
   updateRetailOpsStaffStatus,
 } from "@ewatrade/db/queries"
 import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
+import { getStaffStatusReceipt } from "@ewatrade/db/staff-status-receipt"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
 import { buildStaffInvitationLinks } from "@ewatrade/utils/staff-invitation-links"
 import { TRPCError } from "@trpc/server"
@@ -40,22 +42,26 @@ import {
   retailOpsUpdateStaffStatusSchema,
 } from "../../schemas/retail-ops"
 import {
+  staffInvitationCommandInput,
+  staffInvitationCommandReadSchema,
+  staffInvitationCommandReviewInput,
+  staffInvitationsReadSchema,
+} from "../../schemas/retail-ops-staff-invitations"
+import {
+  retailOpsStaffDirectoryMemberSchema,
+  retailOpsStaffDirectoryPageSchema,
+  retailOpsStaffHistoryPageSchema,
+} from "../../schemas/retail-ops-staff-reads"
+import {
+  staffStatusReadInput,
+  staffStatusReviewInput,
+} from "../../schemas/staff-status"
+import {
   authenticatedProcedure,
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "../init"
-import {
-  retailOpsStaffDirectoryPageSchema,
-  retailOpsStaffDirectoryMemberSchema,
-  retailOpsStaffHistoryPageSchema,
-} from "../../schemas/retail-ops-staff-reads"
-import {
-  staffInvitationCommandInput,
-  staffInvitationCommandReviewInput,
-  staffInvitationCommandReadSchema,
-  staffInvitationsReadSchema,
-} from "../../schemas/retail-ops-staff-invitations"
 
 async function staffInvitationCommand<T>(operation: () => Promise<T>) {
   try {
@@ -199,6 +205,32 @@ function resolveStore(
 }
 
 export const retailOpsStaffRouter = createTRPCRouter({
+  staffStatusReview: protectedProcedure
+    .input(staffStatusReviewInput)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        reviewStaffStatusChange(
+          ctx.db,
+          {
+            ...input,
+            tenantId: ctx.tenantContext.tenant.id,
+            actorUserId: ctx.session.user.id,
+          },
+          { administrativeOnly: true },
+        ),
+      ),
+    ),
+  staffStatusReceipt: protectedProcedure
+    .input(staffStatusReadInput)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        getStaffStatusReceipt(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
   staffInvitationReview: protectedProcedure
     .input(staffInvitationReviewInput)
     .query(async ({ ctx, input }) => {

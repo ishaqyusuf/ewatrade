@@ -29,6 +29,7 @@ import { StaffDirectorySheet } from "./staff-directory-sheet"
 import { StaffHistorySheet } from "./staff-history-sheet"
 import { StaffInvitationSheet } from "./staff-invitation-sheet"
 import { StaffMemberSheet } from "./staff-member-sheet"
+import { StaffStatusSheet } from "./staff-status-sheet"
 import { StockCountSheet } from "./stock-count-sheet"
 import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
 import { StoreConversationSheet } from "./store-conversation-sheet"
@@ -124,6 +125,12 @@ export function GlobalSheets({
         <BusinessReportSheet key={`business-report:${objectScope}`} />
       ) : null}
       {access.staffHistory ? <StaffHistorySheet /> : null}
+      {access.staffHistory ? (
+        <StaffStatusSheet
+          key={`staff-status:${objectScope}`}
+          timeZone={timeZone}
+        />
+      ) : null}
       {access.staffHistory ? <StaffInvitationSheet /> : null}
       {access.staffDirectory ? (
         <>
