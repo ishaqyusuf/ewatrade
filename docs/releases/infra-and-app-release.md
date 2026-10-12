@@ -56,11 +56,11 @@ unsigned facts; it does not produce ready signed release evidence. Hosted
 protection, signing and live acceptance must be configured before treating the
 application gate as active. Planning and local tests do not establish readiness.
 
-Trigger uses two separate projects in School Clerk. Application Preview uses
-`ewatrade preview` (`proj_hymzhteicvpixaksoyqk`); real Production uses EwaTrade
-(`proj_pdnthdiwdevukelgmvzc`). Both hosted environments are labelled `prod` by
-Trigger. Exact distinct project references establish the mapping; Preview never
-uses the real Production project or its runtime key.
+Trigger uses two separate projects. Application Preview uses `ewatrade preview`
+(`proj_hymzhteicvpixaksoyqk`) in School Clerk; real Production uses Ewatrade
+(`proj_ahtovhgtjjkctpakuwjz`) in Zeroes & One. Both hosted environments are
+labelled `prod` by Trigger. Exact distinct project references establish the
+mapping; Preview never uses the real Production project or its runtime key.
 
 For a standalone jobs deployment, use `bun run jobs:preview:deploy` or
 `bun run jobs:deploy`. The commands select `.env.preview` or `.env.production`

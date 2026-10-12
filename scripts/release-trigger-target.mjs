@@ -1,10 +1,14 @@
-/** Non-secret Trigger ownership identifiers shared with Node tooling. */
+/**
+ * Non-secret Trigger ownership identifiers shared with Node tooling. The
+ * organization fields describe Production (Zeroes & One); Preview still lives
+ * in the School Clerk organization.
+ */
 export const EWATRADE_TRIGGER_TARGETS = Object.freeze({
-  organizationId: "cmcu9njpv03uln128dm2y3xyz",
-  organizationSlug: "school-clerk-7783",
+  organizationId: "cmv56r6n3001vmw0i4y43rqtv",
+  organizationSlug: "zeroes-one-9521",
   production: Object.freeze({
-    projectRef: "proj_pdnthdiwdevukelgmvzc",
-    projectSlug: "ewatrade-deLw",
+    projectRef: "proj_ahtovhgtjjkctpakuwjz",
+    projectSlug: "ewatrade-kERp",
     providerEnvironment: "prod",
   }),
   preview: Object.freeze({
