@@ -141,6 +141,8 @@ async function lockedOrderInStore(tx: Prisma.TransactionClient, scope: Scope) {
   })
   return {
     ...order,
+    /** The held Order lock, for callees that would otherwise re-lock. */
+    locked,
     paid: effectiveCommercialAmountPaid({
       amountPaidMinor: order.amountPaidMinor,
       paymentCount: order.payments.length,
@@ -314,17 +316,21 @@ export async function returnCommercialOrderItemsInTransaction(
   const returns = []
   for (const line of input.lines)
     returns.push(
-      await returnCommercialOrderProductLineInTransaction(tx, {
-        actorUserId: input.actorUserId,
-        clientReturnId: `${input.clientOperationId}:${line.orderLineId}`,
-        disposition: line.disposition,
-        orderLineId: line.orderLineId,
-        quantity: line.quantity,
-        reason: input.reason,
-        schemaVersion: 1,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      }),
+      await returnCommercialOrderProductLineInTransaction(
+        tx,
+        {
+          actorUserId: input.actorUserId,
+          clientReturnId: `${input.clientOperationId}:${line.orderLineId}`,
+          disposition: line.disposition,
+          orderLineId: line.orderLineId,
+          quantity: line.quantity,
+          reason: input.reason,
+          schemaVersion: 1,
+          storeId: input.storeId,
+          tenantId: input.tenantId,
+        },
+        order.locked,
+      ),
     )
   if (!input.money)
     return {

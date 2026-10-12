@@ -64,6 +64,7 @@ import {
 } from "./commercial-payments"
 import { fulfillCatalogFreeLinesInTransaction } from "./commercial-service-fulfillment"
 import {
+  assertHeldCommerceFinancialOrder,
   lockCommerceFinancialContext,
   lockCommerceFinancialOrder,
 } from "./customer-ledger/commerce-locks"
@@ -1903,10 +1904,17 @@ export function returnCommercialOrderProductLine(
   )
 }
 
-/** Caller owns the transaction and current authorization; source effects stay atomic. */
+/**
+ * Caller owns the transaction and current authorization; source effects stay atomic.
+ * A caller returning several lines passes the Order lock it already holds, so
+ * each line skips re-locking (about six round trips a line).
+ */
 export async function returnCommercialOrderProductLineInTransaction(
   tx: Prisma.TransactionClient,
   input: ReturnCommercialOrderProductLineInput,
+  heldOrder?: NonNullable<
+    Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  >,
 ) {
   assertSchemaVersion(input.schemaVersion)
   // Store is a scope assertion, not a new business payload for existing return identities.
@@ -1916,24 +1924,34 @@ export async function returnCommercialOrderProductLineInTransaction(
     ...payload
   } = input
   const hash = payloadHash(payload)
-  const identity = await tx.commercialOrderLine.findFirst({
-    select: { orderId: true },
-    where: {
-      id: input.orderLineId,
-      kind: SellableOfferingKind.PRODUCT_UNIT,
-      order: { tenantId: input.tenantId },
-    },
-  })
+  if (heldOrder)
+    assertHeldCommerceFinancialOrder(tx, heldOrder, {
+      tenantId: input.tenantId,
+      orderId: heldOrder.order.id,
+    })
+  // With a held lock the line read below still checks the line belongs to it.
+  const identity = heldOrder
+    ? { orderId: heldOrder.order.id }
+    : await tx.commercialOrderLine.findFirst({
+        select: { orderId: true },
+        where: {
+          id: input.orderLineId,
+          kind: SellableOfferingKind.PRODUCT_UNIT,
+          order: { tenantId: input.tenantId },
+        },
+      })
   if (!identity) {
     throw new CatalogError(
       "ORDER_NOT_FOUND",
       "Fulfilled Product Order line not found.",
     )
   }
-  const lockedOrder = await lockCommerceFinancialOrder(tx, {
-    tenantId: input.tenantId,
-    orderId: identity.orderId,
-  })
+  const lockedOrder =
+    heldOrder ??
+    (await lockCommerceFinancialOrder(tx, {
+      tenantId: input.tenantId,
+      orderId: identity.orderId,
+    }))
   if (!lockedOrder) {
     throw new CatalogError(
       "ORDER_NOT_FOUND",
