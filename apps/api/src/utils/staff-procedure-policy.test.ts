@@ -1,6 +1,19 @@
 import { expect, test } from "bun:test"
 import { staffProcedureAction } from "./staff-procedure-policy"
 
+test("assistant quotation endpoints permit only audited reads and retain unknown-path refusal", () => {
+  for (const path of [
+    "serviceCommerce.assistantQuoteApprovalDetail",
+    "serviceCommerce.assistantPendingQuoteApprovals",
+  ]) {
+    expect(staffProcedureAction(path, "query")).toBe("read")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+  }
+  expect(
+    staffProcedureAction("serviceCommerce.assistantApproveQuote", "mutation"),
+  ).toBeNull()
+})
+
 test("scoped procedures fail closed, including new queries and privileged mutations", () => {
   for (const path of [
     "finance.expenses",

@@ -8,6 +8,7 @@ import {
   CommerceQuoteError,
   CustomerChannelsError,
   ServiceCommerceQuoteReleaseError,
+  ServiceCommercePolicyError,
   StoreConversationAvailabilityError,
   StoreConversationChannelModeError,
   approveCommerceQuoteVersion,
@@ -38,6 +39,14 @@ import {
   enqueueWhatsAppConnectionTest,
 } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
+import {
+  readGeneralQuoteApproval,
+  readGeneralPendingQuoteApprovals,
+} from "../../../assistant/general-quote-reads"
+import {
+  generalQuoteApprovalReadInput,
+  generalPendingQuoteApprovalsInput,
+} from "../../../schemas/assistant-quote-reads"
 
 import {
   customerChannelAttendantAssignSchema,
@@ -173,6 +182,34 @@ function storeId(
 }
 
 export const serviceCommerceChannelsRouter = createTRPCRouter({
+  assistantQuoteApprovalDetail: protectedProcedure
+    .input(generalQuoteApprovalReadInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await readGeneralQuoteApproval(ctx, input)
+      } catch (error) {
+        if (error instanceof ServiceCommercePolicyError)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This quotation is unavailable under current policy.",
+          })
+        mapQuoteReleaseError(error)
+      }
+    }),
+  assistantPendingQuoteApprovals: protectedProcedure
+    .input(generalPendingQuoteApprovalsInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await readGeneralPendingQuoteApprovals(ctx, input)
+      } catch (error) {
+        if (error instanceof ServiceCommercePolicyError)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Quotation review is unavailable under current policy.",
+          })
+        mapQuoteReleaseError(error)
+      }
+    }),
   approveQuoteVersion: protectedProcedure
     .input(customerChannelQuoteApprovalDecisionSchema)
     .mutation(async ({ ctx, input }) => {

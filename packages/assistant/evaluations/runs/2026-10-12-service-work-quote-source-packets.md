@@ -34,8 +34,8 @@ its original contract and audit/reconciliation behavior; native pending unchange
 Actual G03 focused run:9 tests46assertions pass, including no-write delegate guards,
 selected different approver, stale original version, revoked/foreign scopes, filtered
 cursor, configured inventory reads and native audited compatibility. One scoped API
-compiler check follows actual query sources and reports0diagnostics. Pure protected
-router/tool and original triple global sheet integration remain parent-owned and
+compiler check follows actual query sources and reports0diagnostics. Pure protected dashboard detail/pending endpoints are now source-integrated.
+Model tool and original triple global sheet integration remain parent-owned and
 pending; no browser claim or screenshot applies to this source-only packet. Booking,
 issue/approval/release/pickup/delivery and second-vertical acceptance remain open.
 
@@ -45,3 +45,14 @@ cases without duplicate runs. G01 connected pause and D04 remaining12 unschedule
 preservation gates unchanged. S04 source web screenshots are cataloged separately.
 Brain impact: service-work-lifecycle feature, quote-reads feature, pure quote ADR,
 API contracts, task state and parallel delivery plan. No Prisma/migration change.
+
+
+Protected quotation read follow-up: serviceCommerce.assistantQuoteApprovalDetail
+and assistantPendingQuoteApprovals use strict exported input schemas and the pure
+fresh-scope adapters. Canonical quote/release errors retain normal mapping; policy
+refusals expose a generic unavailable message. Only their query forms are admitted
+by the scoped-staff read map; mutations and invented assistant approval paths remain
+refused. One new policy regression passes5assertions. Existing9/46 source evidence
+reused; no connected or browser check. Tool/global original triple integration next.
+
+Protected-route scoped compiler reports0diagnostics. No baseline or connected suite repeated.
