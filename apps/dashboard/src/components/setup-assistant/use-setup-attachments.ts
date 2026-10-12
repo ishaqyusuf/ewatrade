@@ -42,6 +42,8 @@ function refusalCopy(reason: string, kind: SetupAttachmentKind | null) {
       return "This setup already has the most files it can hold. Use Import for larger lists."
     case "UPLOADS_UNAVAILABLE":
       return "Files can't be sent right now. Type your list instead."
+    case "PHOTOS_UNAVAILABLE":
+      return "Photos can't be read right now. Send a PDF or type it instead."
     case "CONVERSATION_CLOSED":
       return "Reopen setup to send files."
     default:

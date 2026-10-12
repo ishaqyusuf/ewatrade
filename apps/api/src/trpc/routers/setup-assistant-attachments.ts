@@ -26,6 +26,7 @@ import {
   setupAttachmentStorage,
   setupAttachmentTarget,
 } from "../../assistant/attachment-storage"
+import { assistantMediaAvailability } from "../../assistant/media-availability"
 import { assistantVoiceAvailability } from "../../assistant/voice-availability"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
@@ -176,6 +177,12 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
         return { ok: false as const, reason: "UNSUPPORTED_TYPE" as const }
       if (!isSetupAttachmentStorageAvailable(scope.dataClassification))
         return { ok: false as const, reason: "UPLOADS_UNAVAILABLE" as const }
+      // Refused here too, so older apps can't send a photo nobody can read.
+      if (
+        checked.kind === "IMAGE" &&
+        !assistantMediaAvailability(scope.dataClassification).photos
+      )
+        return { ok: false as const, reason: "PHOTOS_UNAVAILABLE" as const }
       try {
         const attachment = await createAssistantAttachmentIntent(
           ctx.db,

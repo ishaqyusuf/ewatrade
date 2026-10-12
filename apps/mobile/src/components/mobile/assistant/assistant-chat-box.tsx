@@ -42,6 +42,18 @@ export function AssistantChatBox({
       staleTime: 30_000,
     }),
   )
+  // What a sent file can be read as right now (photos need the vision model).
+  const availability = useQuery(
+    trpc.assistant.availability.queryOptions(undefined, {
+      retry: false,
+      staleTime: 30_000,
+    }),
+  ).data
+  // An older API only says mediaEnabled.
+  const media = availability?.media ?? {
+    photos: true,
+    files: availability?.mediaEnabled === true,
+  }
   const valueRef = useRef(composer.value)
   valueRef.current = composer.value
   const onChangeRef = useRef(composer.onChange)
@@ -94,7 +106,8 @@ export function AssistantChatBox({
     )
   }, [readyKey])
 
-  const canAttach = Boolean(conversationId)
+  const canAttach = Boolean(conversationId) && media?.files === true
+  const canPhoto = media?.photos === true
   const canTalk = Boolean(conversationId) && capabilities.data?.enabled === true
   const state = recorder.state
   const pick = (source: "camera" | "library" | "pdf") => {
@@ -148,16 +161,20 @@ export function AssistantChatBox({
     >
       {menuOpen && receipts.canAdd ? (
         <View className="flex-row flex-wrap gap-2 px-1 pt-1">
-          <MenuChip
-            icon="Camera"
-            label="Camera"
-            onPress={() => pick("camera")}
-          />
-          <MenuChip
-            icon="Image"
-            label="Photos"
-            onPress={() => pick("library")}
-          />
+          {canPhoto ? (
+            <>
+              <MenuChip
+                icon="Camera"
+                label="Camera"
+                onPress={() => pick("camera")}
+              />
+              <MenuChip
+                icon="Image"
+                label="Photos"
+                onPress={() => pick("library")}
+              />
+            </>
+          ) : null}
           <MenuChip icon="FileText" label="PDF" onPress={() => pick("pdf")} />
         </View>
       ) : null}

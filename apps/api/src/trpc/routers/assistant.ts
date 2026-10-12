@@ -17,6 +17,7 @@ import { z } from "zod"
 import { projectGeneralProposalHistory } from "../../assistant/general-proposal-history"
 import { readGeneralAllowance } from "../../assistant/general-allowance"
 import { generalAssistantAvailability } from "../../assistant/general-availability"
+import { assistantMediaAvailability } from "../../assistant/media-availability"
 import {
   requireGeneralScope,
   supportsGeneralCapability,
@@ -30,10 +31,14 @@ import { createTRPCRouter, protectedProcedure } from "../init"
 const id = z.string().min(1).max(128)
 export const assistantRouter = createTRPCRouter({
   availability: protectedProcedure.query(({ ctx }) => {
-    // mediaEnabled stays for installed apps that still read it.
+    const media = assistantMediaAvailability(
+      ctx.tenantContext.tenant.dataClassification,
+    )
+    // Installed apps read mediaEnabled and offer photos with it.
     const availability = {
       ...generalAssistantAvailability(process.env),
-      mediaEnabled: true,
+      mediaEnabled: media.photos,
+      media,
     }
     if (!availability.enabled) return availability
     try {

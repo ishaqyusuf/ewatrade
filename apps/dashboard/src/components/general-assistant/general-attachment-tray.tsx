@@ -6,8 +6,8 @@ import { type ComponentProps, useEffect, useRef } from "react"
 import { useSetupAttachments } from "../setup-assistant/use-setup-attachments"
 import { AssistantComposer } from "./assistant-composer"
 
-const ACCEPT =
-  "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+const PHOTOS = "image/jpeg,image/png,image/webp,image/heic,image/heif"
+const FILES = "application/pdf"
 
 export type GeneralReadyAttachment = { attachmentId: string; fileName: string }
 
@@ -17,10 +17,13 @@ export type GeneralReadyAttachment = { attachmentId: string; fileName: string }
  */
 export function GeneralAttachComposer({
   conversationId,
+  photos,
   onReadyChange,
   ...composer
 }: Omit<ComponentProps<typeof AssistantComposer>, "attach"> & {
   conversationId: string
+  /** Photos can be read right now; otherwise only PDFs are offered. */
+  photos: boolean
   onReadyChange: (ready: GeneralReadyAttachment[]) => void
 }) {
   const attachments = useSetupAttachments({
@@ -50,7 +53,7 @@ export function GeneralAttachComposer({
     <AssistantComposer
       {...composer}
       attach={{
-        accept: ACCEPT,
+        accept: photos ? `${PHOTOS},${FILES}` : FILES,
         disabled: files.length >= 4,
         onFiles: (picked) => {
           for (const file of picked.slice(0, 4 - files.length))

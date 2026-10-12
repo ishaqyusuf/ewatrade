@@ -28,6 +28,7 @@ const MAX_FILES = 4
 
 const refusal: Record<string, string> = {
   ATTACHMENT_LIMIT: "This chat has reached its file limit. Start a new chat.",
+  PHOTOS_UNAVAILABLE: "Photos can't be read right now. Send a PDF or type it.",
   TOO_LARGE: "Choose a file smaller than 10 MB.",
   UNSUPPORTED_TYPE: "Send a photo (JPG, PNG, WebP, HEIC) or a PDF.",
   UPLOADS_UNAVAILABLE: "Files can't be sent right now.",

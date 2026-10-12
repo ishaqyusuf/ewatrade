@@ -31,6 +31,7 @@ import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { assistantAnalyticsContext } from "../../assistant/analytics"
 import { withExpiredAttachments } from "../../assistant/chat-attachments"
+import { assistantMediaAvailability } from "../../assistant/media-availability"
 import {
   commitSetupDraft,
   describeCommitError,
@@ -113,6 +114,7 @@ export const setupAssistantRouter = createTRPCRouter({
     if (!["OWNER", "ADMIN"].includes(role) || !ctx.tenantContext.activeStore)
       return { enabled: false as const }
     const scope = requireSetupAssistantScope(ctx)
+    const media = assistantMediaAvailability(scope.dataClassification)
     const location = await ctx.db.store.findFirst({
       where: { id: scope.storeId, tenantId: scope.tenantId },
       select: { countryCode: true, tenant: { select: { countryCode: true } } },
@@ -132,7 +134,8 @@ export const setupAssistantRouter = createTRPCRouter({
         followUp: setupFollowUpState([]),
         areas: summarizeSetupAreas(null, []),
         attachments: [],
-        mediaEnabled: true,
+        mediaEnabled: media.files,
+        media,
         businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
       }
     const [messages, draft, sent, activeRun] = await Promise.all([
@@ -185,7 +188,8 @@ export const setupAssistantRouter = createTRPCRouter({
       followUp: setupFollowUpState(draft.entities),
       areas: summarizeSetupAreas(draft.areas, draft.entities),
       attachments,
-      mediaEnabled: true,
+      mediaEnabled: media.files,
+      media,
       /** Ranks library illustrations in the setup list's picker. */
       businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
     }

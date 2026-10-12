@@ -34,12 +34,20 @@ export type SetupComposerPart =
   | { type: "text"; text: string }
   | { type: typeof SETUP_ATTACHMENT_PART; data: SetupAttachmentPartData }
 
-const ACCEPT = [
-  ...Object.values(SETUP_ATTACHMENT_TYPES).flat(),
+const FILE_ACCEPT = [
+  ...SETUP_ATTACHMENT_TYPES.AUDIO,
+  ...SETUP_ATTACHMENT_TYPES.PDF,
+  ...SETUP_ATTACHMENT_TYPES.SPREADSHEET,
+  ...SETUP_ATTACHMENT_TYPES.TEXT,
   ".csv",
   ".tsv",
   ".xlsx",
   ".txt",
+]
+const ACCEPT = FILE_ACCEPT.join(",")
+const ACCEPT_WITH_PHOTOS = [
+  ...SETUP_ATTACHMENT_TYPES.IMAGE,
+  ...FILE_ACCEPT,
   ".heic",
 ].join(",")
 
@@ -69,6 +77,12 @@ export function SetupComposer({
     trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(),
   )
   const voiceEnabled = capabilities.data?.enabled === true
+  // Photos are offered only when they can be read (vision model set up).
+  const availability = useQuery(
+    trpc.assistant.availability.queryOptions(),
+  ).data
+  // An older API has no media field; it gated photos itself.
+  const photos = availability?.media?.photos ?? true
   const [sending, setSending] = useState(false)
   const [input, setInput] = useState("")
   const [transcriptHint, setTranscriptHint] = useState(false)
@@ -307,7 +321,7 @@ export function SetupComposer({
             ref={fileRef}
             type="file"
             multiple
-            accept={ACCEPT}
+            accept={photos ? ACCEPT_WITH_PHOTOS : ACCEPT}
             className="sr-only"
             tabIndex={-1}
             aria-hidden

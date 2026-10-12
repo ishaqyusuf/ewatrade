@@ -501,6 +501,12 @@ export function GeneralComposer({
     (!vm.conversationId && !vm.blank) ||
     exhausted ||
     vm.state.isError
+  const availability = vm.availability.data
+  // An older API only says mediaEnabled.
+  const media = availability?.media ?? {
+    photos: true,
+    files: availability?.mediaEnabled === true,
+  }
   const props = {
     hasAttachments: vm.readyAttachments.length > 0,
     value: vm.draft,
@@ -518,10 +524,12 @@ export function GeneralComposer({
     voiceConversationId: enabled ? vm.conversationId : null,
     footer,
   }
-  return vm.conversationId && enabled ? (
+  // + shows only when a sent file can be stored and read.
+  return vm.conversationId && enabled && media?.files ? (
     <GeneralAttachComposer
       key={`${vm.conversationId}:${vm.attachmentTrayKey}`}
       conversationId={vm.conversationId}
+      photos={media.photos}
       onReadyChange={vm.setReadyAttachments}
       {...props}
     />
