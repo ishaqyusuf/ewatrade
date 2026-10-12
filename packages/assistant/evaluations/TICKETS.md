@@ -5,7 +5,7 @@ and mobile. Existing accepted bookmarks record web acceptance; mobile parity is
 not certified by those bookmarks.
 
 **Accepted for web: 13/45 (28.9%). Pending web acceptance: 32/45 (71.1%).**
-Of those 32: 26 are partial and 6 have not started implementation. A04 has
+Of those 32: 27 are partial and 5 have not started implementation. A04 has
 native packets under review; H02's two source repairs are independently
 revalidated, with CI acceptance pending. S05 and F01 source packets require
 the recorded review repairs. F03 research and H05 readiness packets are also
@@ -51,10 +51,10 @@ accepted milestone is recorded; it does not assert that no related source exists
 | S03 | Suspend/reactivate staff | ◐ Partial | Pending |
 | S04 | Roles, Store assignments and handover | ◐ Partial | Pending |
 | S05 | Daily staff activity history | ◐ Partial — packet 1 reviewed; display repairs and remaining canonical scope pending | Pending |
-| F01 | Collection source contract | ◐ Partial — audit and pure contract reviewed; repairs and persisted integration pending | Pending |
+| F01 | Collection source contract | ◐ Partial — original repairs revalidated; currency/held binding and persisted integration pending | Pending |
 | F02 | Payment link and settlement | ○ Pending | Pending |
 | F03 | Payout feasibility and domain | ◐ Partial — research reviewed; provider-reference/state corrections and policy decisions pending | Pending |
-| F04 | Payout approval and dispatch | ○ Pending | Pending |
+| F04 | Payout approval and dispatch | ◐ Partial — pure packet reviewed; precision/name repairs and canonical integration pending | Pending |
 | F05 | Settlement and recovery | ○ Pending | Pending |
 | G01 | Business reporting | ◐ Partial | Pending |
 | G02 | Cash count and close day | ◐ Partial | Pending |
@@ -65,7 +65,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H02 | Brain and feature change gate | ◐ Partial — source repairs and final frozen handoff reviewed; hosted CI acceptance pending | Pending |
 | H03 | Evaluation and observability | ◐ Partial | Pending |
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
-| H05 | Operational acceptance and rollout | ◐ Partial — rollback readiness source reviewed; connected/UI/canary/release acceptance pending | Pending |
+| H05 | Operational acceptance and rollout | ◐ Partial — eight isolated decision checks pass; connected/UI/canary/release acceptance pending | Pending |
 
 Current delivery split: root owns acceptance review, necessary targeted web/mobile checks and screenshots, acceptance bookmarks and serialized main commits. Existing D05/S04/G03 workers finish their current implementation packets, including G03's unfinished central integration, then hand off for review and archive. The next implementation agent receives the twelve pending tickets including reopened A04 through [the implementation instruction prompt](IMPLEMENTATION_HANDOFF.md). No new agent has been dispatched by this document. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending. Historical web-only/deferred snapshots below remain evidence of their original scope.
 

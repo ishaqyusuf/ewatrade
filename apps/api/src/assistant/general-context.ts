@@ -318,12 +318,24 @@ export function assertCapability(
   ctx: GeneralScopeContext,
   capability: Capability,
 ) {
-  const scope = requireGeneralScope(ctx)
+  requireGeneralScope(ctx)
   if (!generalCapabilityEnabled(capability))
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "The assistant can't do this yet.",
     })
+  return assertCapabilityAuthority(ctx, capability)
+}
+/**
+ * Every check except rollout. A capability rolled back to `planned` still
+ * returns its saved receipts and lets the owner cancel a leftover draft; it
+ * never starts a new effect, which needs `assertCapability`.
+ */
+export function assertCapabilityAuthority(
+  ctx: GeneralScopeContext,
+  capability: Capability,
+) {
+  const scope = requireGeneralScope(ctx)
   if (!supportsGeneralCapability(ctx, capability))
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -367,4 +379,10 @@ export function assertGeneralAction(
   action: GeneralActionName,
 ) {
   return assertCapability(ctx, capabilityForAction(action))
+}
+export function assertGeneralActionAuthority(
+  ctx: GeneralScopeContext,
+  action: GeneralActionName,
+) {
+  return assertCapabilityAuthority(ctx, capabilityForAction(action))
 }

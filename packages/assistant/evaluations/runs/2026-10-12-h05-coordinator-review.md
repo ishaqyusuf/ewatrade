@@ -31,3 +31,62 @@ H05 hunks before serialized main integration; do not include unrelated live edit
 merely because they share the file. No runtime rollout is certified.
 
 H05 stays partial without an accepted bookmark; 13/45 web acceptance unchanged.
+
+## Isolated decision-path evidence — 12 October 2026
+
+The earlier production-path gap is now covered within an isolated fixture:
+[actual decision fixture](../fixtures/rollback-recovery.production-path.fixture.ts).
+Its explicit standalone run passed **8 cases, 29 assertions, 0 failures**:
+
+```sh
+APP_ENV=local NODE_ENV=test \
+EWATRADE_DATABASE_URL='postgresql://probe:probe@127.0.0.1:1/unreachable' \
+ASSISTANT_APPROVAL_SIGNING_KEY='fixture-key-0000000000000000000000' \
+bun --env-file=/dev/null test ./packages/assistant/evaluations/fixtures/rollback-recovery.production-path.fixture.ts
+```
+
+The key is a synthetic process-only fixture value. Run this file alone: its
+module mocks replace the workspace and age database loaders. The transaction
+and delegates are synthetic; the actual `decideGeneralProposal`, session/privacy
+checks, scope comparison, authority, rollout and decision branches execute.
+This does not prove database locks, concurrency, canonical workspace resolution,
+persisted recovery, transport behavior or a connected rollback drill.
+
+Verified branches: repeated completed confirmation returns the exact saved
+receipt with no write; pending cancellation writes once and its retry returns
+the same result; pending confirmation stays forbidden before an effect; fresh
+Cashier role, expired session, privacy block, changed Store and revoked scoped
+Manager access refuse recovery. Session/privacy/Store/scoped-access cases refuse
+before a proposal read. Existing six owner checks and affected-source compiler
+evidence are reused rather than repeated.
+
+The three implementation files and owner handoff still match the frozen source
+hashes. Review-presentation changes formerly sharing `general-proposals.ts` are
+already committed separately in `969ee54d`; its remaining diff is H05 only.
+Only the H05 authority hunks of `general-context.ts` belong in this integration;
+the live S05 domain entry remains outside it. The impact record now describes
+the assistant behavior change explicitly instead of claiming no assistant impact.
+
+The local policy ADR records Preview as the proposed canary and planned-plus-
+release as rollback. No deployment, switch, restart or account setting was
+executed. Phase acceptance, deployed inventory, observed errors and actual
+canary/rollback expansion evidence remain open; H05 is partial and unbookmarked.
+
+Integration checks: the exact 13 staged source/evidence/catalog paths pass the
+H02 impact evaluator with **zero errors** against unchanged HEAD/index coverage
+(zero capability/procedure row changes). Frozen source hashes match; the S05
+shared domain hunk is absent from the index. Staged whitespace checks pass.
+The evaluator deliberately excludes unrelated agents' unstaged coverage edits;
+this is a packet check, not a hosted CI or whole-worktree acceptance claim.
+
+## Separate saved purchase-card screenshot checkpoint
+
+The actual existing QA assistant chat renders the structured purchase card from
+`969ee54d`. Expand shows all ten saved goods rows with their quantities, costs
+and **₦10.45** total; folding restores the initial view on the same chat URL.
+No send, edit, confirmation or business write occurred. This checks the current
+saved purchase presentation, not H05 rollback UI or mobile acceptance.
+
+![Expanded saved purchase review](/Users/M1PRO/Documents/code/ewatrade/artifacts/assistant-operations-parallel/H05/saved-chat-expanded-purchase-review-v1.jpg)
+
+![Folded saved purchase review](/Users/M1PRO/Documents/code/ewatrade/artifacts/assistant-operations-parallel/H05/saved-chat-folded-purchase-review-v1.jpg)

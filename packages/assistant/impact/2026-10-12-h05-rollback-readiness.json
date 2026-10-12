@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "2026-10-12-h05-rollback-readiness",
+  "tickets": [
+    "H05"
+  ],
+  "summary": "Rollback readiness: rolling a capability back to planned now withdraws only new effects. Completed-receipt replay and draft cancellation use current authority without the rollout check; pending drafts of a rolled-back capability show no approval and a paused notice without re-reading the domain.",
+  "capabilities": [
+    {
+      "id": "customers.credit.refund",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Representative existing action exercised by the isolated decision fixture. The shared GENERAL recovery policy changes across existing actions: current authority permits completed replay and draft cancellation after rollback; pending confirmation still needs rollout. Capability declarations, supported clients, versions and rollout values are unchanged. This record does not certify a live rollback."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "H05 readiness checkpoint."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "Coverage rows unchanged; COVERAGE.md already is the capability/version/exclusion inventory."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "GENERAL recovery behavior and the isolated-versus-connected evidence boundary."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Fresh authority still governs completed replay and cancellation; pending confirmation retains rollout."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-rollback-readiness.test.ts",
+      "executed": true,
+      "result": "2 pass with an unreachable placeholder database URL; with general-rollout and held-credit-refund tests 6 pass (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-h05-rollout-readiness.md",
+      "executed": false
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/rollback-recovery.production-path.fixture.ts",
+      "executed": true,
+      "result": "Coordinator isolated run: 8 pass, 0 fail, 29 assertions on 12 October 2026. Actual decideGeneralProposal with synthetic transaction and workspace/age loaders; no database, provider, live manifest toggle or connected rollback. Run alone to isolate module mocks."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-h05-coordinator-review.md",
+      "executed": true,
+      "result": "Frozen source matches the decision-path checks; current authority, pending-effect refusal and paused projection reviewed. Parent acceptance remains open."
+    }
+  ]
+}

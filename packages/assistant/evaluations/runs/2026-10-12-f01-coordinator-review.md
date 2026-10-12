@@ -39,3 +39,35 @@ open; a proposed policy must not be described as already approved.
 
 F01 stays partial without an accepted bookmark. The full 45-ticket scope and
 13/45 web acceptance are unchanged.
+
+## Repair revalidation and remaining contract gaps — 12 October 2026
+
+The original three failures above describe the earlier source. Updated probes
+now supply the new required tenant/source fields and an actor with canonical
+payment-acceptance permission. A valid matching control still settles 1000,
+permits a manual receipt and creates an intent with the valid expiry. Against
+those controls, wrong source identity returns `source_mismatch`, all four invalid
+manual amounts return `INVALID_AMOUNT`, and an invalid expiry returns
+`INVALID_EXPIRY`. This last result is no longer a refusal caused by missing actor
+permission. Existing owner six-case/22-case evidence is reused.
+
+Two extended pure probes still fail the intended safe contract:
+
+1. With matching source identity but source currency **USD**, a received intent
+   and event in **NGN** return `settle` for 1000. Match the current canonical
+   source currency as well as the intent/event currency before settlement;
+   preserve the received money for reconciliation when they disagree.
+2. `decideHeldResolution` has no held intent/Tenant/source identity to compare.
+   A held NGN amount paired with another Tenant's order/customer returns an
+   approved customer-credit decision when supplied an authorized actor boolean.
+   Bind held money to its original intent/Tenant/source and resolve both through
+   the canonical authorized transaction before proposing credit or refund.
+   This is a synthetic helper result, not evidence of an actual cross-Tenant
+   posting: the helper is not wired to a persisted command.
+
+The diagnostic script above contains both original repair controls and these
+extended probes. The local collection/payout/canary ADR now records policy
+decisions; that does not establish live provider-account facts or authorize a
+runtime account change here. Canonical persisted intent/event commands, atomic
+manual/online exclusion, reconciliation and saved UI remain open. F01 stays
+partial and unbookmarked.

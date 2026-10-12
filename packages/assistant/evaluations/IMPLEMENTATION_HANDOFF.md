@@ -9,25 +9,25 @@ acceptance bookmarks and serialized commits to `main`.
 
 This handoff originally covered twelve pending tickets. A04 and H02 now have
 implementation packets under coordinator review; their implementation owner
-continues those repairs. S05/F01 source and F03/H05 packets are also with that owner. Six tickets
+continues those repairs. S05/F01/F04 source and F03/H05 packets are also with that owner. Five tickets
 remain unstarted. Avoid duplicate ownership.
 
 | ID | Deliverable |
 |---|---|
 | A04 | Started, owner retained: native inventory and six catalog/order editors under review. Continue missing native review/editor/receipt-object flows and review repairs. Preserve Setup/product workflows; prepare keyboard, large text, loading, expiry, offline, reload, business-switch and role journeys for acceptance. |
 | S05 | Started, owner retained: daily staff operational history from actual actor-attributed order, payment, stock, service and authorized finance sources. Show canonical record, outcome, time and Store; separate performed/assigned/approved work. Preserve unknown historical attribution and exact full-result counts. |
-| F01 | Started, owner retained: checkout audit and pure collection contract under review. Repair exact source binding, amount and expiry validation; complete persisted canonical intent commands and atomic manual/online receipt protection. |
+| F01 | Started, owner retained: original source/amount/expiry repairs revalidated. Repair source-currency validation and held-money source binding; complete persisted canonical intent commands and atomic manual/online receipt protection. |
 | F02 | Reviewed payment link and separately confirmed sharing; signed settlement/reconciliation, expiry and duplicate/out-of-order/partial outcomes. Build deterministic provider support before any authorized sandbox run. |
 | F03 | Started, owner retained: payout research and proposed domain reviewed. Correct documented same-reference retry behavior and missing approval-URL statuses; reconcile country/currency/funding/verification/fees/limits/account requirements and unresolved decisions. Existing checkout credentials do not establish transfer authority. |
-| F04 | Reviewed payout intent with verified payee/account suffix, debit account, amount, fees and total; agreed step-up policy, durable outbox, stable idempotency, limits and kill switch. No invented policy or live dispatch. |
+| F04 | Started, owner retained: pure payout packet reviewed. Repair derived-money precision and empty resolved-name verification; complete reviewed intent, fresh beneficiary/step-up authority, atomic outbox and durable reconciliation. No invented policy or live dispatch. |
 | F05 | Authoritative payout/refund settlement and recovery for pending/unknown/succeeded/failed/reversed outcomes. Timeouts must not create duplicate payouts; preserve late success and auditable corrections. |
 | G04 | Bounded custody, reservations, packing transforms, archive and bulk catalog changes using canonical commands, impact review and per-record outcomes. Uncertain imports need review; unsupported deletion/large batches stay form-only. |
 | G05 | Authorized Store/settings reads and selected reviewed configuration changes; reviewed recipient/content, channel consent and delivery recovery for communications. Staff administration remains owned by S01–S05. |
 | H02 | Started, owner retained: both source review repairs revalidated. Align PR/template and handoff descriptions, then provide the final packet for independent CI acceptance. Respect ignored Brain files and CI limits; use reviewed versioned records. |
 | H04 | Reuse the existing voice/file workstream with typed proposals, source citations, uncertain-field review and bounded multi-step plans/receipts. Keep transcription confidence separate from authority; offline execution remains unavailable without approved canonical support. |
-| H05 | Started, owner retained: rollback readiness source reviewed. Complete frozen handoff, actual replay/cancel/revocation checks and readiness documentation. Actual acceptance, enabling, canary execution and deployment belong to the acceptance coordinator and applicable approval gates. |
+| H05 | Started, owner retained: rollback readiness source reviewed; eight isolated actual decision checks pass. Connected recovery, saved object/UI and device journeys, canary and rollout evidence remain open. Actual acceptance, enabling, canary execution and deployment belong to the acceptance coordinator and applicable approval gates. |
 
-The current owner continues A04/H02/S05/F01/F03/H05 and their review repairs. For
+The current owner continues A04/H02/S05/F01/F03/F04/H05 and their review repairs. For
 unclaimed work, use another ready dependency; retain F02/F04/F05 prerequisites.
 Record missing mobile support for the existing web
 capabilities and deliver the native implementations in reviewable packets rather

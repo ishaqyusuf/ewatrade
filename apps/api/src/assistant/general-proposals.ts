@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -28,9 +29,11 @@ import {
 import {
   type GeneralContext,
   assertGeneralAction,
+  assertGeneralActionAuthority,
   requireGeneralScope,
 } from "./general-context"
 import { currentGeneralReceipt } from "./general-legacy-receipt"
+import { generalCapabilityEnabled } from "./general-rollout"
 import {
   isProposalApprovalValid,
   proposalApprovalToken,
@@ -226,7 +229,9 @@ export async function decideGeneralProposal(
         message: "Proposal unavailable.",
       })
     const payload = generalActionSchema.parse(row.payload)
-    assertGeneralAction(fresh, payload.action)
+    // Current authority still applies, but a rolled-back capability may
+    // return its saved receipt and close its drafts; only effects need rollout.
+    assertGeneralActionAuthority(fresh, payload.action)
     if (row.revision !== input.revision)
       throw conflict("This draft was edited. Review its latest version.")
     if (row.status === "COMPLETED" && input.decision === "confirm")
@@ -235,6 +240,7 @@ export async function decideGeneralProposal(
       return generalProposalForApp(row)
     if (row.status !== "PENDING")
       throw conflict("This draft cannot be confirmed. Refresh its status.")
+    if (input.decision === "confirm") assertGeneralAction(fresh, payload.action)
     if (input.decision === "cancel") {
       const changed = await fresh.db.assistantActionProposal.updateMany({
         where: { id: row.id, revision: row.revision, status: "PENDING" },
@@ -354,6 +360,18 @@ export async function generalProposalWithReview(
   row: AssistantActionProposal,
 ): Promise<GeneralProposal> {
   const proposal = generalProposalForApp(row)
+  // A rolled-back capability keeps its history but offers no approval.
+  if (
+    proposal.status === "PENDING" &&
+    !generalCapabilityEnabled(capabilityForAction(proposal.payload.action))
+  )
+    return {
+      ...proposal,
+      approvalToken: undefined,
+      review: [
+        "This action is paused in the assistant. Nothing has changed; cancel the draft or use the form.",
+      ],
+    }
   const adapter = generalActionAdapter(proposal.payload)
   if (!adapter.review) return proposal
   if (["CANCELLED", "EXPIRED", "FAILED"].includes(proposal.status)) {
