@@ -12,6 +12,8 @@ import {
   stockCountCreatePresentation,
   stockCountFinalizePresentation,
   stockReceivePresentation,
+  stockTransferDispatchPresentation,
+  stockTransferTransitionPresentation,
 } from "./review-presentations"
 
 const valid = (p: GeneralReviewPresentation) => {
@@ -245,4 +247,83 @@ test("a closeout flags declarations below reserved stock", () => {
     "Declared",
     "Variance",
   ])
+})
+
+const stores = {
+  productName: "Quail Eggs",
+  variantName: "Default",
+  unitName: "Piece",
+  sourceStore: { name: "Main store" },
+  targetStore: { name: "Ikeja branch" },
+}
+
+test("a transfer dispatch reads quantity, route and transit", () => {
+  const p = valid(
+    stockTransferDispatchPresentation(
+      {
+        ...stores,
+        quantity: "30",
+        factor: "1",
+        canonicalQuantity: "30",
+        before: "149",
+        after: "119",
+        reserved: "1",
+        availableAfter: "118",
+        inTransitAfter: "30",
+      },
+      { reason: "Restock Ikeja" },
+      "Same currency; no money moves.",
+    ),
+  )
+  expect(p.summary).toEqual({
+    party: "Quail Eggs · Default",
+    context: "Main store → Ikeja branch · Restock Ikeja",
+    amount: "30 Piece",
+    amountLabel: "to send",
+  })
+  expect(p.facts).toContainEqual({ label: "At Main store", value: "149 → 119" })
+  expect(p.sections?.[0]?.note).toContain("Same currency; no money moves.")
+})
+
+test("receiving and returning name the store and keep earlier history", () => {
+  const transition = {
+    ...stores,
+    plan: { quantity: "20", remainingBefore: "30", remainingAfter: "10" },
+    dispatchedQuantity: "30",
+    targetBefore: "5",
+    targetAfter: "25",
+    targetReserved: "0",
+    acknowledgments: [
+      {
+        kind: "RECEIVE",
+        quantity: "0",
+        remainingAfter: "30",
+        reason: "None yet",
+      },
+    ],
+  }
+  const receive = valid(
+    stockTransferTransitionPresentation(
+      transition,
+      { reason: "Counted at Ikeja" },
+      true,
+      "No money moves.",
+    ),
+  )
+  expect(receive.summary.amountLabel).toBe("received at Ikeja branch")
+  expect(receive.facts).toContainEqual({
+    label: "In transit",
+    value: "30 → 10",
+  })
+  expect(receive.sections?.[0]?.rows?.[0]?.label).toBe("Received")
+  const back = valid(
+    stockTransferTransitionPresentation(
+      { ...transition, acknowledgments: [] },
+      { reason: "Not needed" },
+      false,
+      "No money moves.",
+    ),
+  )
+  expect(back.summary.amountLabel).toBe("returned to Main store")
+  expect(back.sections).toEqual([])
 })

@@ -510,3 +510,120 @@ export function closeoutFinalizePresentation(
     note: "The saved reconciliation controls stock and any financial posting. Unknown cost is not invented. This does not close a financial period.",
   }
 }
+
+// C04 ---------------------------------------------------------------------
+
+type TransferStores = {
+  productName: string
+  variantName: string
+  unitName: string
+  sourceStore: { name: string }
+  targetStore: { name: string }
+}
+const route = (r: TransferStores, reason: string) =>
+  clip(`${r.sourceStore.name} → ${r.targetStore.name} · ${reason}`, 400)
+
+export function stockTransferDispatchPresentation(
+  r: TransferStores & {
+    quantity: string
+    factor: string
+    canonicalQuantity: string
+    before: string
+    after: string
+    reserved: string
+    availableAfter: string
+    inTransitAfter: string
+  },
+  payload: { reason: string },
+  financialNote: string,
+): GeneralReviewPresentation {
+  return {
+    summary: {
+      party: item(r),
+      context: route(r, payload.reason),
+      amount: `${r.quantity} ${r.unitName}`,
+      amountLabel: "to send",
+    },
+    facts: [
+      {
+        label: `At ${r.sourceStore.name}`,
+        value: `${r.before} → ${r.after}`,
+      },
+      { label: "Available", value: r.availableAfter },
+      { label: "In transit", value: `${r.inTransitAfter} ${r.unitName}` },
+    ],
+    sections: [
+      {
+        title: "Details",
+        summary: `${r.targetStore.name} receives separately`,
+        rows: [
+          {
+            label: "Unit factor",
+            value: `× ${r.factor} = ${r.canonicalQuantity}`,
+          },
+          { label: "Reserved", value: r.reserved },
+        ],
+        note: `Stock at ${r.targetStore.name} stays unchanged until its receipt is confirmed there. ${financialNote}`,
+      },
+    ],
+  }
+}
+
+export function stockTransferTransitionPresentation(
+  r: TransferStores & {
+    plan: { quantity: string; remainingBefore: string; remainingAfter: string }
+    dispatchedQuantity: string
+    targetBefore: string
+    targetAfter: string
+    targetReserved: string
+    acknowledgments: Array<{
+      kind: string
+      quantity: string
+      remainingAfter: string
+      reason: string
+    }>
+    acknowledgmentHistoryLimited?: boolean
+  },
+  payload: { reason: string },
+  receiving: boolean,
+  financialNote: string,
+): GeneralReviewPresentation {
+  const store = receiving ? r.targetStore.name : r.sourceStore.name
+  return {
+    summary: {
+      party: item(r),
+      context: route(r, payload.reason),
+      amount: `${r.plan.quantity} ${r.unitName}`,
+      amountLabel: receiving ? `received at ${store}` : `returned to ${store}`,
+    },
+    facts: [
+      {
+        label: "In transit",
+        value: `${r.plan.remainingBefore} → ${r.plan.remainingAfter}`,
+      },
+      { label: `At ${store}`, value: `${r.targetBefore} → ${r.targetAfter}` },
+      { label: "Dispatched", value: `${r.dispatchedQuantity} ${r.unitName}` },
+    ],
+    sections: r.acknowledgments.length
+      ? [
+          {
+            title: "Earlier receipts and returns",
+            summary: String(r.acknowledgments.length),
+            rows: r.acknowledgments.slice(0, 60).map((ack) => ({
+              label: ack.kind === "RECEIVE" ? "Received" : "Returned",
+              value: `${ack.quantity} ${r.unitName}`,
+              detail: clip(`${ack.remainingAfter} left · ${ack.reason}`, 400),
+            })),
+            ...(r.acknowledgmentHistoryLimited
+              ? { note: "Only the first 100 records are shown." }
+              : {}),
+          },
+        ]
+      : [],
+    note: `${
+      receiving
+        ? "Confirm only the quantity actually received; the rest stays in transit with its history."
+        : "Returns all remaining transit stock; earlier receipts stay recorded."
+    } Reserved at ${store}: ${r.targetReserved}. ${financialNote}`,
+  }
+}

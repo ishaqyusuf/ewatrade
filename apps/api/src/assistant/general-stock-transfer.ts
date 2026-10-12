@@ -1,4 +1,7 @@
-import type { GeneralAction, GeneralReceipt } from "@ewatrade/assistant/general/contracts"
+import type {
+  GeneralAction,
+  GeneralReceipt,
+} from "@ewatrade/assistant/general/contracts"
 import {
   createAndDispatchStockTransferInTransaction,
   lockStockTransferReview,
@@ -16,6 +19,10 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import {
+  stockTransferDispatchPresentation,
+  stockTransferTransitionPresentation,
+} from "./review-presentations"
 import { assertGeneralTransferAccess } from "./general-transfer-access"
 import { proposalDigest } from "./proposal-security"
 
@@ -76,6 +83,11 @@ export const stockTransferDispatch: GeneralActionAdapter<Dispatch> = {
     const { review: r, target } = await dispatchReview(ctx, payload)
     return {
       target,
+      presentation: stockTransferDispatchPresentation(
+        r,
+        payload,
+        financialNote(r.sourceStore.currencyCode, r.targetStore.currencyCode),
+      ),
       lines: [
         `Send ${r.quantity} ${r.unitName}: ${r.sourceStore.name} → ${r.targetStore.name}.`,
         `${r.productName} · ${r.variantName} · factor ${r.factor} · canonical quantity ${r.canonicalQuantity}.`,
@@ -176,6 +188,12 @@ function transitionAdapter<
       const receiving = transition === "receive"
       return {
         target,
+        presentation: stockTransferTransitionPresentation(
+          r,
+          payload,
+          receiving,
+          financialNote(r.sourceStore.currencyCode, r.targetStore.currencyCode),
+        ),
         lines: [
           `${receiving ? "Acknowledge receipt of" : "Return remaining"} ${r.plan.quantity} ${r.unitName} at ${receiving ? r.targetStore.name : r.sourceStore.name}.`,
           `${r.productName} · ${r.variantName} · ${r.sourceStore.name} → ${r.targetStore.name}. Originally dispatched ${r.dispatchedQuantity} ${r.unitName}.`,
