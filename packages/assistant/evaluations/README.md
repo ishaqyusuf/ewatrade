@@ -9,6 +9,9 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Service work actions, context/review and original records | [1](fixtures/service-work.v1.json) | Natural intentions and exact targets; common seven-category matrix; private text, clinical/refusal, ready/reminder boundary, original receipts and global continuity | None yet |
+| Original quotation and booking reads | [1](fixtures/quote-booking-reads.v1.json) | Original tuples, bounded page totals, native authority, stored/current separation, pure replay, injection, outage and global continuity | None yet |
+| Staff Store access and assigned-work review | [1](fixtures/staff-access.v1.json) | Natural exact privilege review, seven-category matrix, complete count/bounded rows, stale workload, separate reassignment and preserved draft | None yet |
 | Cash count and day-close review | [1](fixtures/cash-count-day-close.v1.json) | Physical acknowledgement/zero, original variance/current history, exact Book/cutoff, stale/rollback/replay, global object and unresolved closing gates | None yet |
 | Staff suspend/reactivate | [1](fixtures/staff-status.v1.md) | Whole-business status, acceptance/current grant/plan guards, revision/reason, actor refusal, signed recovery and global original history | None yet |
 | Saved history compatibility | [1](fixtures/chat-history-compatibility.v1.json) | Unknown/retired action and receipt notices, preserved valid history, no approval and propagated authority failure | None yet |
