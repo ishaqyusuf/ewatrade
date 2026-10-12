@@ -48,7 +48,7 @@ const ORDER = {
   orderNumber: "#2040",
 } as CommercialOrder
 
-describe("Order Quiet Sheet fulfilment confirmation", () => {
+describe("Order action sheet fulfilment confirmation", () => {
   test("presents the selected Product line without executing it", () => {
     expect(
       getOrderFulfilmentConfirmation(ORDER, {
@@ -100,7 +100,7 @@ describe("Order Quiet Sheet fulfilment confirmation", () => {
   })
 })
 
-describe("Order Quiet Sheet payment methods", () => {
+describe("Order action sheet payment methods", () => {
   test("matches the four owner-approved choices", () => {
     expect(ORDER_PAYMENT_METHODS).toEqual([
       ["cash", "Cash"],

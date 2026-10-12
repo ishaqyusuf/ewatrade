@@ -7,7 +7,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { THEME } from "@/lib/theme"
 import type { ThemeOverride } from "@/lib/theme-preference"
 import { cn } from "@/lib/utils"
@@ -50,18 +49,13 @@ function ThemePreview({ preview }: { preview: ThemeOverride }) {
 export const MoreThemeSheet = forwardRef<
   BottomSheetModal,
   {
-    appearance: MobileDesign
     options: AppThemeOptionPresentation[]
     pending: boolean
     error: string | null
     onSelect: (value: ThemeOverride) => void
   }
->(function MoreThemeSheet(
-  { appearance, options, pending, error, onSelect },
-  ref,
-) {
+>(function MoreThemeSheet({ options, pending, error, onSelect }, ref) {
   const { height } = useWindowDimensions()
-  const market = appearance === "market-day"
   return (
     <Modal
       ref={ref}
@@ -73,14 +67,8 @@ export const MoreThemeSheet = forwardRef<
     >
       <BottomSheetScrollView keyboardShouldPersistTaps="handled">
         <View className="gap-3 px-4 pb-5">
-          <Text
-            className={cn(
-              "text-xs [-rn-line-height:18]",
-              market ? "text-market-muted-ink" : "text-muted-foreground",
-            )}
-          >
-            Choose Light, Dark or System for this device. Your design edition
-            stays the same.
+          <Text className="text-xs text-muted-foreground [-rn-line-height:18]">
+            Choose Light, Dark or System for this device.
           </Text>
           {error ? (
             <StatusBanner
@@ -106,37 +94,19 @@ export const MoreThemeSheet = forwardRef<
                 className={cn(
                   "min-h-20 flex-row items-center gap-3 px-3 py-3",
                   option.selected
-                    ? market
-                      ? "rounded-2xl border border-market-palm bg-market-field"
-                      : "rounded-2xl border border-primary bg-accent"
+                    ? "rounded-2xl border border-primary bg-accent"
                     : cn(
                         "border-t",
-                        index === 0
-                          ? "border-t-transparent"
-                          : market
-                            ? "border-market-line"
-                            : "border-border",
+                        index === 0 ? "border-t-transparent" : "border-border",
                       ),
                 )}
               >
                 <ThemePreview preview={option.preview} />
                 <View className="min-w-0 flex-1 gap-1">
-                  <Text
-                    className={cn(
-                      "font-extrabold",
-                      market ? "text-market-ink" : "text-foreground",
-                    )}
-                  >
+                  <Text className="font-extrabold text-foreground">
                     {option.label}
                   </Text>
-                  <Text
-                    className={cn(
-                      "text-xs [-rn-line-height:18]",
-                      market
-                        ? "text-market-muted-ink"
-                        : "text-muted-foreground",
-                    )}
-                  >
+                  <Text className="text-xs text-muted-foreground [-rn-line-height:18]">
                     {option.detail}
                   </Text>
                 </View>
@@ -144,9 +114,7 @@ export const MoreThemeSheet = forwardRef<
                   className={cn(
                     "size-6 shrink-0 items-center justify-center rounded-full border-2",
                     option.selected
-                      ? market
-                        ? "border-market-palm bg-market-palm"
-                        : "border-primary bg-primary"
+                      ? "border-primary bg-primary"
                       : "border-border bg-card",
                   )}
                 >
@@ -176,27 +144,21 @@ export const MoreThemeSheet = forwardRef<
 export const MoreSignOutSheet = forwardRef<
   BottomSheetModal,
   {
-    appearance: MobileDesign
     syncAlertCount: number
     onCancel: () => void
     onConfirm: () => void
   }
->(function MoreSignOutSheet(
-  { appearance, syncAlertCount, onCancel, onConfirm },
-  ref,
-) {
+>(function MoreSignOutSheet({ syncAlertCount, onCancel, onConfirm }, ref) {
   const { height } = useWindowDimensions()
   const largeText = useLargeTextLayout()
   const [footerHeight, setFooterHeight] = useState(88)
-  const market = appearance === "market-day"
   const footer = useCallback(
     (props: BottomSheetFooterProps) => (
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
           className={cn(
-            "gap-3 px-4 pb-5 pt-3",
-            market ? "bg-market-field" : "bg-card",
+            "gap-3 bg-card px-4 pb-5 pt-3",
             !largeText && "flex-row",
           )}
         >
@@ -217,7 +179,7 @@ export const MoreSignOutSheet = forwardRef<
         </View>
       </BottomSheetFooter>
     ),
-    [largeText, market, onCancel, onConfirm],
+    [largeText, onCancel, onConfirm],
   )
   return (
     <VariableContextProvider value={{ "--more-signout-footer": footerHeight }}>
@@ -231,12 +193,7 @@ export const MoreSignOutSheet = forwardRef<
       >
         <BottomSheetScrollView>
           <View className="px-5 pt-2">
-            <Text
-              className={cn(
-                "text-sm [-rn-line-height:22]",
-                market ? "text-market-ink" : "text-foreground",
-              )}
-            >
+            <Text className="text-sm text-foreground [-rn-line-height:22]">
               {syncAlertCount > 0
                 ? `${syncAlertCount} unsynced ${syncAlertCount === 1 ? "change remains" : "changes remain"} on this device. Signing out will not silently clear the queue.`
                 : "You will need to sign in again to access this workspace."}

@@ -13,13 +13,11 @@ import { VariableContextProvider } from "nativewind"
 import { useCallback, useState } from "react"
 import { useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
-import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceCommandModel } from "./use-service-command"
 
 export function ServiceCommandReview({
   command,
 }: { command: ServiceCommandModel }) {
-  const { market } = useServiceAppearance()
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(144)
   const accepted = command.isAccepted
@@ -34,11 +32,7 @@ export function ServiceCommandReview({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={
-            market
-              ? "gap-2 border-t border-market-line bg-market-field px-5 pb-5 pt-3"
-              : "gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-          }
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           {accepted ? (
             <ServiceAction
@@ -70,10 +64,10 @@ export function ServiceCommandReview({
         </View>
       </BottomSheetFooter>
     ),
-    [accepted, command, market],
+    [accepted, command],
   )
-  const ink = market ? "text-market-ink" : "text-foreground"
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
+  const ink = "text-foreground"
+  const muted = "text-muted-foreground"
   return (
     <Modal
       ref={command.modal.ref}

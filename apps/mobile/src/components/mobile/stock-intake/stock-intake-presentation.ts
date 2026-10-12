@@ -21,4 +21,3 @@ export type StockSectionProps = {
   description?: string
   children: ReactNode
 }
-export type StockHeaderProps = { storeName: string; description: string }

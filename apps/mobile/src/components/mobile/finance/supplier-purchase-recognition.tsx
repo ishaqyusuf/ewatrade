@@ -1105,7 +1105,6 @@ export function SupplierPurchaseRegistrationForm({
                     patchLine(line.balanceSourceId, { categoryInput: value })
                   }
                   disabled={locked}
-                  market={false}
                 />
                 <ActionButton
                   variant="outline"

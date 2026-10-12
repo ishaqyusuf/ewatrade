@@ -1,6 +1,4 @@
 import { ClassicAutoUpdateScreen } from "@/components/mobile/appearances/classic/auto-update-screen"
-import { MarketDayAutoUpdateScreen } from "@/components/mobile/appearances/market-day/auto-update-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import {
   APP_UPDATE_RESUME_KEY,
   cancelBuildDownload,
@@ -23,10 +21,6 @@ export function AppBuildUpdate({
   const state = useAppUpdate()
   const pathname = usePathname()
   const router = useRouter()
-  const market = useMobileDesign("updates") === "market-day"
-  const Presentation = market
-    ? MarketDayAutoUpdateScreen
-    : ClassicAutoUpdateScreen
   useEffect(() => {
     if (!restoreRoute) return
     const session = getSession()
@@ -89,7 +83,7 @@ export function AppBuildUpdate({
         if (!state.busy) void dismissNativeBuild()
       }}
     >
-      <Presentation
+      <ClassicAutoUpdateScreen
         title={titles[phase]}
         message={message}
         failed={false}

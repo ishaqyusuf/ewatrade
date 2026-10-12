@@ -311,9 +311,7 @@ const contracts = [
       "useSafeAreaInsets",
       "Math.max(insets.bottom, 8)",
       'testID="bottom-search-footer"',
-      'variant?: "default" | "market-day"',
-      '"market-search"',
-      "variant === \"market-day\"\n                    ? marketDay.canvas\n                    : colors.background",
+      ": { backgroundColor: colors.background }",
       ': "gap-3 px-4 pb-2 pt-2"',
     ],
     reason:

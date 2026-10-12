@@ -19,7 +19,6 @@ export type CatalogRow = {
   unitName: string
 }
 export type CatalogItemsContentProps = {
-  designScreen?: "catalog" | "catalog-picker"
   dockHidden?: boolean
   onAddItem: () => void
   onAddProduct?: () => void

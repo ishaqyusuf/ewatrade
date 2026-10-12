@@ -1,6 +1,5 @@
 import type { BusinessProfile } from "@ewatrade/utils"
 import type { ReactNode } from "react"
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
 export type SignUpStep = "businessType" | "profile" | "business" | "account"
 
@@ -11,8 +10,6 @@ export type SignUpPresentationProps = {
   /** The owner's answers so far, shown as a preview of their Home. */
   preview?: SignUpPreview
   onBack: () => void
-  /** Lets the screen's search footer hide while the form scrolls down. */
-  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
   step: SignUpStep
 }
 

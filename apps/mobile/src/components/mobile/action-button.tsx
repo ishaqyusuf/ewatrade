@@ -3,7 +3,6 @@ import { Icon, type IconKeys } from "@/components/ui/icon"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import { VariableContextProvider } from "nativewind"
@@ -175,74 +174,5 @@ export function ActionButton({
         </View>
       </Button>
     </VariableContextProvider>
-  )
-}
-
-type MarketDayActionButtonProps = Omit<
-  ActionButtonProps,
-  "disabledForegroundColor" | "foregroundColor" | "tone"
-> & {
-  tone?: "marigold" | "palm" | "paprika"
-}
-
-export function MarketDayActionButton({
-  children,
-  className,
-  disabled,
-  isLoading,
-  tone = "paprika",
-  ...props
-}: MarketDayActionButtonProps) {
-  const marketDay = useMarketDayPalette()
-  const largeTextLayout = useLargeTextLayout()
-  const isUnavailable = !!disabled || !!isLoading
-  const tonePalette = {
-    marigold: {
-      backgroundColor: marketDay.marigold,
-      foregroundColor: marketDay.onMarigold,
-    },
-    palm: {
-      backgroundColor: marketDay.palm,
-      foregroundColor: marketDay.onPalm,
-    },
-    paprika: {
-      backgroundColor: marketDay.paprika,
-      foregroundColor: marketDay.onPaprika,
-    },
-  } as const
-  const activePalette = tonePalette[tone]
-  const foregroundColor = isUnavailable
-    ? marketDay.mutedInk
-    : activePalette.foregroundColor
-
-  return (
-    <View
-      className={cn(
-        "w-full overflow-hidden rounded-[14px]",
-        isUnavailable
-          ? "bg-market-line"
-          : tone === "marigold"
-            ? "bg-market-marigold"
-            : tone === "palm"
-              ? "bg-market-palm"
-              : "bg-market-paprika",
-      )}
-    >
-      <ActionButton
-        {...props}
-        className={cn(
-          largeTextLayout
-            ? "min-h-[64px] bg-transparent active:bg-transparent"
-            : "min-h-[54px] bg-transparent active:bg-transparent",
-          className,
-        )}
-        disabled={disabled}
-        disabledForegroundColor={foregroundColor}
-        foregroundColor={foregroundColor}
-        isLoading={isLoading}
-      >
-        {children}
-      </ActionButton>
-    </View>
   )
 }

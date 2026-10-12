@@ -68,7 +68,6 @@ export function BarcodeField(props: ComponentProps<typeof FormField>) {
           navigationBarTranslucent
         >
           <MobileWorkflowChrome
-            screen="first-product"
             hideHeader={false}
             keyboardBottomOffset={0}
             title="Scan barcode"

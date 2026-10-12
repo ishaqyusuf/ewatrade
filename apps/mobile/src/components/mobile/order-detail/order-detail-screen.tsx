@@ -5,10 +5,6 @@ import {
   CommercialOrderOverviewHeader,
 } from "@/components/mobile/appearances/classic/order-detail-content"
 import {
-  OrderDetailDispatchDocket,
-  OrderDetailDispatchDocketPrimaryAction,
-} from "@/components/mobile/appearances/market-day/order-detail-dispatch-docket"
-import {
   orderAssistantDraft,
   useAskAssistant,
 } from "@/components/mobile/assistant/use-ask-assistant"
@@ -29,7 +25,6 @@ import {
 import { getOrderFulfilmentConfirmation } from "@/lib/order-action-sheet-model"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import { isReceiptOrderEligible } from "@ewatrade/order-receipts"
 import {
   formatMinorMoney,
   majorToMinor,
@@ -39,7 +34,7 @@ import { createQaPaymentFixture } from "@ewatrade/utils/qa-quick-fill"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { Linking } from "react-native"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import {
@@ -52,21 +47,8 @@ import { timelineActivity } from "./order-timeline-model"
 import { useOrderChanges } from "./use-order-changes"
 
 import { ClassicOrderDetailScreen } from "@/components/mobile/appearances/classic/order-detail-screen"
-import { MarketDayOrderDetailScreen } from "@/components/mobile/appearances/market-day/order-detail-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
-  const appearance = useMobileDesign("order-detail")
-  const isMarketDay = appearance === "market-day"
-  const Screen = isMarketDay
-    ? MarketDayOrderDetailScreen
-    : ClassicOrderDetailScreen
-  const Content = isMarketDay
-    ? OrderDetailDispatchDocket
-    : ClassicOrderDetailContent
-  const PrimaryAction = isMarketDay
-    ? OrderDetailDispatchDocketPrimaryAction
-    : ClassicOrderDetailPrimaryAction
   const router = useRouter()
   const { profile } = useAuthContext()
   const trpc = useTRPC()
@@ -82,11 +64,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const [paymentReference, setPaymentReference] = useState("")
   const [mastheadHeight, setMastheadHeight] = useState(116)
   const [mastheadVisible, setMastheadVisible] = useState(true)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Appearance changes invalidate measured masthead geometry.
-  useEffect(() => {
-    setMastheadVisible(true)
-    setMastheadHeight(116)
-  }, [appearance])
   const [selectedFulfilmentLineId, setSelectedFulfilmentLineId] = useState<
     string | null
   >(null)
@@ -403,12 +380,12 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
 
   return (
     <MotionView animate={!orderReadyOnOpen} fill>
-      <Screen
+      <ClassicOrderDetailScreen
         hasBalanceDue={hasBalanceDue}
         mastheadVisible={mastheadVisible}
         onScroll={handleScroll}
       >
-        <Content
+        <ClassicOrderDetailContent
           activity={activity}
           onChange={() => changes.open("menu")}
           assistant={
@@ -468,25 +445,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           }}
           order={order}
         />
-        {isMarketDay ? (
-          <ActionButton
-            icon="ReceiptText"
-            variant="outline"
-            disabled={isOffline || !isReceiptOrderEligible(order.status)}
-            onPress={() =>
-              router.push({
-                pathname: "/order-receipts-modal",
-                params: { orderIds: order.id },
-              })
-            }
-          >
-            Generate receipt
-          </ActionButton>
-        ) : null}
-      </Screen>
+      </ClassicOrderDetailScreen>
 
       {hasBalanceDue ? (
-        <PrimaryAction
+        <ClassicOrderDetailPrimaryAction
           disabled={isOffline}
           onPress={openPaymentForm}
           order={order}
@@ -494,7 +456,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       ) : null}
 
       <OrderPaymentSheet
-        appearance={appearance}
         amountPaid={amountPaid}
         balanceMinor={order.balanceDueMinor}
         balanceLabel={formatMinorMoney(
@@ -562,7 +523,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       />
 
       <OrderFulfilmentConfirmationSheet
-        appearance={appearance}
         error={error}
         isLoading={fulfilmentMutation.isPending}
         onCancel={() => {
@@ -576,7 +536,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       />
 
       <OrderFulfilmentConfirmationSheet
-        appearance={appearance}
         error={error}
         isLoading={fulfilAllMutation.isPending}
         onCancel={() => {

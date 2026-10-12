@@ -1,4 +1,3 @@
-import { AuthBrandHeader } from "@/components/mobile/auth-header"
 import { BrandLogo } from "@/components/mobile/brand"
 import { SalesExampleStage } from "@/components/mobile/green-till/auth-stage"
 import { MobileScreen } from "@/components/mobile/screen"
@@ -8,9 +7,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import type { MobileDesignScreen } from "@/lib/mobile-design/screens"
 import { type Href, Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { type ReactNode, useId } from "react"
@@ -219,25 +216,8 @@ export function GreenTillSetupProgress({ step }: { step: number }) {
   )
 }
 
-/** Preserve the other appearance's generic entry surface. */
-export function AuthFlowScreen({
-  appearanceScreen = "sign-up",
-  ...props
-}: GreenTillAuthScreenProps & { appearanceScreen?: MobileDesignScreen }) {
-  const design = useMobileDesign(appearanceScreen)
-  if (design === "classic") return <GreenTillAuthScreen {...props} />
-  return (
-    <View className="flex-1 bg-background">
-      <MobileScreen contentClassName="gap-6">
-        <AuthBrandHeader
-          title={props.title}
-          subtitle={typeof props.subtitle === "string" ? props.subtitle : ""}
-        />
-        {props.children}
-      </MobileScreen>
-      {props.footer}
-    </View>
-  )
+export function AuthFlowScreen(props: GreenTillAuthScreenProps) {
+  return <GreenTillAuthScreen {...props} />
 }
 
 const styles = StyleSheet.create({

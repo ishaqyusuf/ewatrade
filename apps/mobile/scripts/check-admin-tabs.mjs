@@ -52,7 +52,7 @@ const contracts = [
     file: "src/components/mobile/orders/orders-screen.tsx",
     markers: [
       "FlatList",
-      "CommercePendingOrderRow",
+      "ClassicPendingOrderRow",
       "useAdminDockScroll",
       "Orders pending sync",
       "Search order, customer, or item",

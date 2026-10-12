@@ -1,12 +1,10 @@
+import { ClassicUpdatesScreen } from "@/components/mobile/appearances/classic/updates-screen"
 import {
   checkNativeBuild,
   installedBuild,
   useAppUpdate,
   withAppUpdateLock,
 } from "@/lib/app-update-client"
-import { ClassicUpdatesScreen } from "@/components/mobile/appearances/classic/updates-screen"
-import { MarketDayUpdatesScreen } from "@/components/mobile/appearances/market-day/updates-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import * as Sentry from "@sentry/react-native"
 import Constants from "expo-constants"
 import { useRouter } from "expo-router"
@@ -27,10 +25,6 @@ function getErrorMessage(error: unknown) {
 export default function UpdatesScreen() {
   const router = useRouter()
   const nativeUpdate = useAppUpdate()
-  const Presentation =
-    useMobileDesign("updates") === "market-day"
-      ? MarketDayUpdatesScreen
-      : ClassicUpdatesScreen
   const {
     currentlyRunning,
     availableUpdate,
@@ -193,7 +187,7 @@ export default function UpdatesScreen() {
   const downloading = isDownloading || action === "downloading"
   const restarting = isRestarting || action === "restarting"
   return (
-    <Presentation
+    <ClassicUpdatesScreen
       status={status}
       message={
         Updates.isEnabled || Boolean(installedBuild())

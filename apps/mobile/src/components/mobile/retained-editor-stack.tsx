@@ -60,7 +60,6 @@ export function RetainedEditorStack({
     >
       <BottomSheetModalProvider>
         <MobileWorkflowChrome
-          screen="first-product"
           hideHeader
           title="Item details"
           closeLabel="Back to item"

@@ -1,6 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
@@ -14,23 +13,15 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { cn } from "@/lib/utils"
 import {
   findCatalogOptionSuggestion,
   getCatalogOptionValueHint,
 } from "@ewatrade/utils/business-catalog-guidance"
-import type { CatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
 import { VariableContextProvider } from "nativewind"
 import { useRef, useState } from "react"
 import { Keyboard, ScrollView, View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import {
-  CatalogCategoryEditor,
-  CatalogSubcategoryEditor,
-  ClassicCategoryEditor,
-} from "./catalog-category-editor"
+import { ClassicCategoryEditor } from "./catalog-category-editor"
 import { CatalogSetupHelperPicker } from "./catalog-helper-picker"
 import { CatalogIllustrationBrowser } from "./catalog-illustration-browser"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
@@ -42,25 +33,19 @@ import {
   CatalogSetupDetailRows,
 } from "./catalog-setup-details"
 import { CatalogSetupEssentials } from "./catalog-setup-essentials"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import { SellingUnitEditor } from "./selling-unit-editor"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const largeTextLayout = useLargeTextLayout()
-  const market = useMobileDesign("first-product") === "market-day"
   const businessName = useAuthContext().profile?.businessName
-  const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(88)
   const [composerHeight, setComposerHeight] = useState(88)
   const scrollRef = useRef<ScrollView>(null)
-  // Classic: Category search lives in its footer; illustrations open full screen.
+  // Category search lives in its footer; illustrations open full screen.
   const [categoryQuery, setCategoryQuery] = useState("")
   const [illustrationsOpen, setIllustrationsOpen] = useState(false)
-  const [editors, setEditors] = useState<
-    Array<{ key: CatalogEditorKey; parent?: CatalogCategoryPreset }>
-  >([])
-  const { KindChoice } = market ? Market : Classic
+  const [editors, setEditors] = useState<Array<{ key: CatalogEditorKey }>>([])
   const {
     isOffline,
     variantComposerInputRef,
@@ -125,7 +110,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   ).length
   if (model.scopeChanged || !model.canManage)
     return (
-      <View className={catalogSetupClassName("p-5", market)}>
+      <View className="p-5">
         <StatusBanner
           tone="warning"
           title={
@@ -143,7 +128,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     )
   if (model.completion)
     return (
-      <View className={catalogSetupClassName("p-5", market)}>
+      <View className="p-5">
         <StatusBanner
           tone="success"
           title="Item saved"
@@ -157,25 +142,16 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   if (!kind) {
     return (
       <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-        <View
-          className={cn(
-            "flex-1",
-            market ? "bg-market-canvas" : "px-[18px] pt-2",
-          )}
-        >
-          {market ? (
-            <Market.MarketSetupHeader kind={null} />
-          ) : (
-            <View className="pb-3.5">
-              <HeroCard
-                label={`New item${businessName ? ` · ${businessName}` : ""}`}
-                sub="Pick one. You can add details later."
-                title="What are you adding?"
-              />
-            </View>
-          )}
-          <View className={market ? "gap-3 p-4" : "gap-3"}>
-            <KindChoice
+        <View className="flex-1 px-[18px] pt-2">
+          <View className="pb-3.5">
+            <HeroCard
+              label={`New item${businessName ? ` · ${businessName}` : ""}`}
+              sub="Pick one. You can add details later."
+              title="What are you adding?"
+            />
+          </View>
+          <View className="gap-3">
+            <Classic.KindChoice
               description="Something you keep and sell. Tracks stock."
               icon="Package"
               label="Product"
@@ -187,7 +163,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                   : undefined
               }
             />
-            <KindChoice
+            <Classic.KindChoice
               description="Work you price and deliver. No stock."
               icon="Wrench"
               label="Service"
@@ -228,7 +204,6 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
   const composer = (
     <KeyboardInlineComposer
       disabled={model.locked}
-      appearance={market ? "market-day" : "classic"}
       onHeightChange={setComposerHeight}
       closedOffset={0}
       canSubmit={
@@ -289,7 +264,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
     <VariableContextProvider
       value={{ "--setup-main-bottom": activeFooterHeight + 24 }}
     >
-      <View className={market ? "flex-1 bg-market-canvas" : "flex-1"}>
+      <View className="flex-1">
         <CatalogSetupHelperPicker
           disabled={model.locked}
           businessProfileKey={businessProfileKey}
@@ -306,21 +281,17 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
           }
           bottomOffset={activeFooterHeight + 12}
           extraKeyboardSpace={0}
-          className={catalogSetupClassName("flex-1", market)}
+          className="flex-1"
           disableScrollOnKeyboardHide
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           onTouchStart={hideVariantComposer}
         >
-          {market ? <Market.MarketSetupHeader kind={kind} /> : null}
           <View
             pointerEvents={model.locked ? "none" : "auto"}
-            className={catalogSetupClassName(
-              "gap-5 px-4 pt-4 pb-[var(--setup-main-bottom)]",
-              market,
-            )}
+            className="gap-5 px-4 pt-4 pb-[var(--setup-main-bottom)]"
           >
-            {!market && kind ? (
+            {kind ? (
               <Classic.CatalogLivePreview
                 currencyCode={model.currencyCode}
                 kind={kind}
@@ -330,61 +301,29 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                 unitName={model.unitName}
               />
             ) : null}
-            {market ? (
-              <Market.MarketQuickSetup
-                title={selectedHelper?.title}
-                disabled={model.locked}
-                onPress={() => setHelperPickerOpen(true)}
+            <Pressable
+              accessibilityHint="Apply a common setup pattern to this item."
+              accessibilityLabel="Choose a quick setup"
+              accessibilityRole="button"
+              className="min-h-11 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 active:bg-accent"
+              haptic
+              onPress={() => setHelperPickerOpen(true)}
+              transition
+            >
+              <Icon className="size-sm text-primary" name="LayoutGrid" />
+              <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
+                {selectedHelper
+                  ? `Quick setup: ${selectedHelper.title}`
+                  : "Quick setup"}
+              </Text>
+              {!selectedHelper ? (
+                <Text className="text-xs font-bold text-primary">Optional</Text>
+              ) : null}
+              <Icon
+                className="size-sm text-muted-foreground"
+                name="ChevronRight"
               />
-            ) : (
-              <Pressable
-                accessibilityHint="Apply a common setup pattern to this item."
-                accessibilityLabel="Choose a quick setup"
-                accessibilityRole="button"
-                className={catalogSetupClassName(
-                  "min-h-11 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 active:bg-accent",
-                  market,
-                )}
-                haptic
-                onPress={() => setHelperPickerOpen(true)}
-                transition
-              >
-                <Icon
-                  className={catalogSetupClassName(
-                    "size-sm text-primary",
-                    market,
-                  )}
-                  name="LayoutGrid"
-                />
-                <Text
-                  className={catalogSetupClassName(
-                    "min-w-0 flex-1 text-sm font-bold text-foreground",
-                    market,
-                  )}
-                >
-                  {selectedHelper
-                    ? `Quick setup: ${selectedHelper.title}`
-                    : "Quick setup"}
-                </Text>
-                {!selectedHelper ? (
-                  <Text
-                    className={catalogSetupClassName(
-                      "text-xs font-bold text-primary",
-                      market,
-                    )}
-                  >
-                    Optional
-                  </Text>
-                ) : null}
-                <Icon
-                  className={catalogSetupClassName(
-                    "size-sm text-muted-foreground",
-                    market,
-                  )}
-                  name="ChevronRight"
-                />
-              </Pressable>
-            )}
+            </Pressable>
             {model.storesLoading ? (
               <StatusBanner
                 title="Loading current Store"
@@ -444,15 +383,10 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
 
             <CatalogSetupEssentials
               model={model}
-              market={market}
               focused
               onOpenCategory={() => openEditor("category")}
             />
-            <CatalogSetupDetailRows
-              model={model}
-              open={openEditor}
-              market={market}
-            />
+            <CatalogSetupDetailRows model={model} open={openEditor} />
           </View>
         </KeyboardAwareScrollView>
         {!variantComposerMode && editors.length === 0 ? (
@@ -464,7 +398,6 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             placeholder=""
             totalCount={0}
             value=""
-            variant={market ? "market-day" : "default"}
           >
             {model.storesError && !isOffline && !isSaving ? (
               <ActionButton onPress={model.retryStores} variant="outline">
@@ -472,12 +405,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               </ActionButton>
             ) : null}
             {!isOffline && saveReadiness.hint && !model.hasAttempt ? (
-              <Text
-                className={cn(
-                  "text-center text-xs",
-                  market ? "text-market-muted-ink" : "text-muted-foreground",
-                )}
-              >
+              <Text className="text-center text-xs text-muted-foreground">
                 {saveReadiness.hint}
               </Text>
             ) : null}
@@ -486,15 +414,6 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
               isLoading={isSaving}
               loadingLabel="Saving item"
               onPress={model.hasAttempt ? submit : () => openEditor("review")}
-              foregroundColor={market ? palette.onPalm : undefined}
-              disabledForegroundColor={market ? palette.mutedInk : undefined}
-              className={
-                market
-                  ? model.canSave
-                    ? "bg-market-palm active:bg-market-hero-pressed"
-                    : "bg-market-line active:bg-market-line"
-                  : undefined
-              }
               trailingIcon="ArrowRight"
             >
               {isOffline
@@ -511,20 +430,19 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
         {editors.length > 0 ? (
           <RetainedEditorStack
             editors={editors.map((entry, index) => ({
-              key: `${index}-${entry.key}-${entry.parent?.key ?? "root"}`,
+              key: `${index}-${entry.key}`,
               title:
-                entry.parent?.label ??
-                (!market && entry.key === "images"
+                entry.key === "images"
                   ? "Photos"
-                  : !market && entry.key === "units"
+                  : entry.key === "units"
                     ? "Sell another way"
-                    : !market && entry.key === "codes"
+                    : entry.key === "codes"
                       ? "SKU and barcode"
-                      : !market && entry.key === "pricing"
+                      : entry.key === "pricing"
                         ? "Prices and availability"
-                        : CATALOG_EDITOR_TITLES[entry.key]),
+                        : CATALOG_EDITOR_TITLES[entry.key],
               footer:
-                !market && entry.key === "options" && kind === "product" ? (
+                entry.key === "options" && kind === "product" ? (
                   <BottomSearchFooter
                     accessibilityLabel="Customer choices actions"
                     onChangeText={() => undefined}
@@ -540,7 +458,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                         : "Done"}
                     </ActionButton>
                   </BottomSearchFooter>
-                ) : !market && entry.key === "category" ? (
+                ) : entry.key === "category" ? (
                   <BottomSearchFooter
                     accessibilityLabel="Search categories"
                     onChangeText={() => undefined}
@@ -562,8 +480,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                       variant="search"
                     />
                   </BottomSearchFooter>
-                ) : !market &&
-                  ["stock", "codes", "pricing", "description"].includes(
+                ) : ["stock", "codes", "pricing", "description"].includes(
                     entry.key,
                   ) ? (
                   <BottomSearchFooter
@@ -591,7 +508,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                         ? "Image actions"
                         : "Selling units actions"
                     }
-                    variant={market ? "default" : "action-bar"}
+                    variant="action-bar"
                   >
                     <ActionButton
                       disabled={
@@ -599,46 +516,18 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                       }
                       onPress={backEditor}
                     >
-                      {entry.key === "images"
-                        ? market
-                          ? "Done with image"
-                          : "Done"
-                        : market
-                          ? "Done with selling units"
-                          : "Done"}
+                      Done
                     </ActionButton>
                   </BottomSearchFooter>
                 ) : undefined,
               content:
-                !market && entry.key === "category" ? (
+                entry.key === "category" ? (
                   <ClassicCategoryEditor model={model} query={categoryQuery} />
-                ) : entry.key === "category" ? (
-                  entry.parent ? (
-                    <CatalogSubcategoryEditor
-                      category={entry.parent}
-                      model={model}
-                    />
-                  ) : (
-                    <CatalogCategoryEditor
-                      model={model}
-                      onAppliedSuggestion={() => {
-                        Keyboard.dismiss()
-                        setEditors([])
-                      }}
-                      onSelectParent={(parent) =>
-                        setEditors((current) => [
-                          ...current,
-                          { key: "category", parent },
-                        ])
-                      }
-                    />
-                  )
                 ) : (
                   <CatalogFocusedEditor
                     editor={entry.key}
                     model={model}
                     open={openEditor}
-                    market={market}
                     onOpenIllustrations={() => {
                       Keyboard.dismiss()
                       setIllustrationsOpen(true)
@@ -652,7 +541,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             onScrollTouch={hideVariantComposer}
           >
             {unitOverlay}
-            <CatalogSetupConfirmation model={model} market={market} />
+            <CatalogSetupConfirmation model={model} />
             {composer}
             {illustrationsOpen ? (
               <CatalogIllustrationBrowser
@@ -673,7 +562,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
         ) : (
           <>
             {unitOverlay}
-            <CatalogSetupConfirmation model={model} market={market} />
+            <CatalogSetupConfirmation model={model} />
           </>
         )}
       </View>

@@ -13,6 +13,9 @@ const source = [
   "create-sale/create-sale-review.tsx",
   "create-sale/create-sale-sheets.tsx",
   "appearances/classic/create-sale.tsx",
+  "appearances/classic/create-sale-buyer.tsx",
+  "appearances/classic/create-sale-checkout.tsx",
+  "appearances/classic/create-sale-items.tsx",
 ]
   .map((file) =>
     readFileSync(join(MOBILE_DIR, "src/components/mobile", file), "utf8"),
@@ -59,15 +62,12 @@ const completeSource = [
 const contracts = [
   {
     markers: [
-      "getCreateCustomerSheetMaxHeight(height)",
-      "CREATE_CUSTOMER_SHEET_SNAP_POINTS",
       'keyboardBehavior="fillParent"',
       "isCreateCustomerSaveDisabled",
       "hasCreateCustomerDraft",
       "enablePanDownToClose={!hasDraft && !isLoading}",
       "<AppBottomSheetBackdrop",
       "dismissible={!hasDraft && !isLoading}",
-      "Optional contact",
       'leadingIcon="User"',
       'leadingIcon="Phone"',
       'leadingIcon="Mail"',
@@ -77,7 +77,7 @@ const contracts = [
       "fill={colors.mutedForeground}",
     ],
     reason:
-      "the compact customer form must distinguish required and optional details, cap its sheet, disable invalid saves, and avoid trigger touch-through",
+      "the customer form must distinguish required and optional details, disable invalid saves, and avoid trigger touch-through",
   },
   {
     markers: [
@@ -133,8 +133,6 @@ const contracts = [
       "of 3",
       "FlatList",
       "BottomSearchFooter",
-      "No items added yet",
-      "sale-add-item-fab",
       "CompactSaleItemPicker",
       "setCompactPickerVisible(true)",
       "visible={compactPickerVisible}",
@@ -161,10 +159,8 @@ const contracts = [
       'accessibilityRole="button"',
       'keyboardType="decimal-pad"',
       "Create customer",
-      "Continue as guest",
 
       "active:bg-accent",
-      "Search customer, phone, or email",
       "Amount received",
       "All amount paid",
       "minorToMajorInput(totalMinor)",

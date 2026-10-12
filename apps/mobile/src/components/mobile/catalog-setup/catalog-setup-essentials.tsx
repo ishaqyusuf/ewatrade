@@ -1,5 +1,4 @@
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -7,17 +6,14 @@ import { Text } from "@/components/ui/text"
 import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { Text as NativeText, View } from "react-native"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupEssentials({
   model,
-  market,
   focused = false,
   onOpenCategory,
 }: {
   model: CatalogSetupModel
-  market: boolean
   focused?: boolean
   onOpenCategory?: () => void
 }) {
@@ -43,13 +39,11 @@ export function CatalogSetupEssentials({
     currencyCode,
     formGuidance,
   } = model
-  const { OptionalDetailAction, ToggleRow, CatalogEssentialsFields } = market
-    ? Market
-    : Classic
+  const { OptionalDetailAction, ToggleRow, CatalogEssentialsFields } = Classic
   if (!kind) return null
   const bestMatch = model.categorySuggestions[0]
   const categoryChip =
-    market || kind !== "product" ? null : model.category ? (
+    kind !== "product" ? null : model.category ? (
       <CategoryChip
         icon="Check"
         lead="Category"
@@ -98,21 +92,14 @@ export function CatalogSetupEssentials({
   )
   return (
     <>
-      {market ? (
-        fields
-      ) : (
-        <View className="gap-3 rounded-[20px] bg-card p-3.5 shadow-sm">
-          {fields}
-        </View>
-      )}
+      <View className="gap-3 rounded-[20px] bg-card p-3.5 shadow-sm">
+        {fields}
+      </View>
       {!focused && kind === "product" && !showAdvanced && showOpeningStock ? (
         <FormField
           actionLabel="Remove"
           keyboardType="decimal-pad"
           label="Opening stock"
-          inputClassName={
-            market ? "bg-market-field text-market-ink" : undefined
-          }
           helper="Optional. Blank means no opening-stock declaration."
           onActionPress={() => {
             setOpeningStock("")
@@ -128,9 +115,6 @@ export function CatalogSetupEssentials({
         <FormField
           actionLabel="Remove"
           label="Description"
-          inputClassName={
-            market ? "bg-market-field text-market-ink" : undefined
-          }
           maxLength={2000}
           multiline
           onActionPress={() => {
@@ -146,26 +130,11 @@ export function CatalogSetupEssentials({
       ) : null}
 
       {!focused && kind === "product" ? (
-        <View
-          className={catalogSetupClassName(
-            "mt-1 border-t border-border pt-4",
-            market,
-          )}
-        >
-          <Text
-            className={catalogSetupClassName(
-              "text-lg font-extrabold text-foreground",
-              market,
-            )}
-          >
+        <View className="mt-1 border-t border-border pt-4">
+          <Text className="text-lg font-extrabold text-foreground">
             Optional product details
           </Text>
-          <Text
-            className={catalogSetupClassName(
-              "mb-1 text-xs [-rn-line-height:20] text-muted-foreground",
-              market,
-            )}
-          >
+          <Text className="mb-1 text-xs [-rn-line-height:20] text-muted-foreground">
             Add starting quantity or customer-facing context only when needed.
           </Text>
           {!showAdvanced && !showOpeningStock ? (

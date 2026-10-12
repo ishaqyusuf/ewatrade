@@ -38,7 +38,7 @@ type ActionOptions = {
   onCollected: () => void
 }
 
-// One command owner for both appearances. Inputs are captured before review;
+// One command owner for the workspace. Inputs are captured before review;
 // the runner, not query invalidation, decides whether a command was accepted.
 export function useServiceActions({
   selectedJob,

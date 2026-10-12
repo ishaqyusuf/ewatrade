@@ -15,8 +15,6 @@ import { Text } from "@/components/ui/text"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
@@ -62,11 +60,9 @@ function initials(value: string) {
 export function SaleItemAvatar({
   choice,
   size = "compact",
-  appearance = "classic",
 }: {
   choice: SaleOfferingChoice
   size?: "compact" | "large"
-  appearance?: MobileDesign
 }) {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null)
 
@@ -88,17 +84,12 @@ export function SaleItemAvatar({
 
   return (
     <View
-      className={cn(
-        avatarClassName,
-        "items-center justify-center",
-        appearance === "market-day" ? "bg-market-field" : "bg-muted",
-      )}
+      className={cn(avatarClassName, "items-center justify-center bg-muted")}
     >
       {label ? (
         <Text
           className={cn(
-            "font-extrabold",
-            appearance === "market-day" ? "text-market-ink" : "text-foreground",
+            "font-extrabold text-foreground",
             size === "large" ? "text-sm" : "text-xs",
           )}
         >
@@ -115,17 +106,14 @@ export function SaleItemAvatar({
 }
 
 function SaleOfferingPickerRow({
-  appearance = "classic",
   addedCount,
   choice,
   onPress,
 }: {
-  appearance?: MobileDesign
   addedCount: number
   choice: SaleOfferingChoice
   onPress: () => void
 }) {
-  const market = appearance === "market-day"
   const disabled = Boolean(choice.disabledReason)
   const stockLabel = getSaleOfferingStockLabel({
     availableQuantity: choice.availableQuantity,
@@ -140,10 +128,7 @@ function SaleOfferingPickerRow({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       className={cn(
-        "min-h-18 flex-row items-center gap-3 border-b py-4",
-        market
-          ? "border-market-line active:bg-market-field"
-          : "border-border active:bg-accent",
+        "min-h-18 flex-row items-center gap-3 border-b border-border py-4 active:bg-accent",
         disabled && "opacity-50",
       )}
       disabled={disabled}
@@ -151,22 +136,12 @@ function SaleOfferingPickerRow({
       onPress={onPress}
       transition
     >
-      <SaleItemAvatar choice={choice} appearance={appearance} />
+      <SaleItemAvatar choice={choice} />
       <View className="min-w-0 flex-1 gap-1">
-        <Text
-          className={cn(
-            "font-extrabold",
-            market ? "text-market-ink" : "text-foreground",
-          )}
-        >
+        <Text className="font-extrabold text-foreground">
           {saleOfferingTitle(choice)}
         </Text>
-        <Text
-          className={cn(
-            "text-xs",
-            market ? "text-market-muted-ink" : "text-muted-foreground",
-          )}
-        >
+        <Text className="text-xs text-muted-foreground">
           {choice.offeringName} ·{" "}
           {choice.fixedPriceMinor === null
             ? "Price not set"
@@ -209,7 +184,6 @@ export function saleOfferingTitle(choice: SaleOfferingChoice) {
 }
 
 type CompactSaleItemPickerProps = {
-  appearance?: MobileDesign
   choices: SaleOfferingChoice[]
   itemKind?: "service"
   lineCountsByOfferingId: Map<string, number>
@@ -219,7 +193,6 @@ type CompactSaleItemPickerProps = {
 }
 
 export function CompactSaleItemPicker({
-  appearance = "classic",
   choices,
   itemKind,
   lineCountsByOfferingId,
@@ -254,7 +227,6 @@ export function CompactSaleItemPicker({
           ) : (
             choices.map((choice) => (
               <SaleOfferingPickerRow
-                appearance={appearance}
                 addedCount={lineCountsByOfferingId.get(choice.id) ?? 0}
                 choice={choice}
                 key={choice.id}
@@ -269,7 +241,6 @@ export function CompactSaleItemPicker({
 }
 
 type FullScreenSaleItemPickerProps = {
-  appearance?: MobileDesign
   isLoading?: boolean
   error?: string | null
   onRetry?: () => void
@@ -290,7 +261,6 @@ type FullScreenSaleItemPickerProps = {
 }
 
 export function FullScreenSaleItemPicker({
-  appearance = "classic",
   isLoading = false,
   error,
   onRetry,
@@ -310,8 +280,6 @@ export function FullScreenSaleItemPicker({
   visible,
 }: FullScreenSaleItemPickerProps) {
   const colors = useColors()
-  const palette = useMarketDayPalette()
-  const market = appearance === "market-day"
   const largeText = useLargeTextLayout()
   const [footerHeight, setFooterHeight] = useState(104)
   const scrollHide = useBottomSearchScroll()
@@ -335,52 +303,21 @@ export function FullScreenSaleItemPicker({
           "--sale-picker-bottom": footerHeight + 24,
         }}
       >
-        <View
-          className={cn(
-            "flex-1",
-            market ? "bg-market-canvas" : "bg-background",
-          )}
-        >
+        <View className="flex-1 bg-background">
           <StatusBar
-            backgroundColor={market ? palette.palm : colors.background}
-            style={market || colorScheme === "dark" ? "light" : "dark"}
+            backgroundColor={colors.background}
+            style={colorScheme === "dark" ? "light" : "dark"}
           />
-          <View
-            className={cn(
-              "h-[var(--sale-picker-top)]",
-              market && "bg-market-palm",
-            )}
-          />
+          <View className="h-[var(--sale-picker-top)]" />
 
-          <View
-            className={cn(
-              "flex-row items-start justify-between gap-4 border-b px-4 py-4",
-              market
-                ? "border-b-[5px] border-market-marigold bg-market-palm"
-                : "border-border",
-            )}
-          >
+          <View className="flex-row items-start justify-between gap-4 border-b border-border px-4 py-4">
             <View className="min-w-0 flex-1 gap-1">
-              <Text
-                className={cn(
-                  "font-extrabold",
-                  market
-                    ? "font-market-display text-[28px] text-market-on-palm [-rn-line-height:34]"
-                    : "text-xl text-foreground",
-                )}
-              >
+              <Text className="text-xl font-extrabold text-foreground">
                 {itemKind === "service"
                   ? "Add services"
                   : "Add products or services"}
               </Text>
-              <Text
-                className={cn(
-                  "text-sm",
-                  market
-                    ? "text-market-on-palm-muted"
-                    : "text-muted-foreground",
-                )}
-              >
+              <Text className="text-sm text-muted-foreground">
                 Add each item as many times as needed, then set quantities.
               </Text>
             </View>
@@ -395,12 +332,7 @@ export function FullScreenSaleItemPicker({
             </Pressable>
           </View>
 
-          <View
-            className={cn(
-              "min-h-[112px] border-b px-4 py-3",
-              market ? "border-market-line bg-market-field" : "border-border",
-            )}
-          >
+          <View className="min-h-[112px] border-b border-border px-4 py-3">
             <View className="mb-2 flex-row items-center justify-between gap-3">
               <Text className="text-xs font-bold uppercase tracking-[1.2px] text-muted-foreground">
                 Selected
@@ -425,11 +357,7 @@ export function FullScreenSaleItemPicker({
                   {draft.map((line) => (
                     <View className="w-[72px] items-center gap-1" key={line.id}>
                       <View className="relative">
-                        <SaleItemAvatar
-                          choice={line.offering}
-                          size="large"
-                          appearance={appearance}
-                        />
+                        <SaleItemAvatar choice={line.offering} size="large" />
                         <Pressable
                           accessibilityLabel={`Remove one ${line.offering.displayName} line`}
                           allowOverflow
@@ -510,7 +438,6 @@ export function FullScreenSaleItemPicker({
             scrollEventThrottle={16}
             renderItem={({ item }) => (
               <SaleOfferingPickerRow
-                appearance={appearance}
                 addedCount={lineCountsByOfferingId.get(item.id) ?? 0}
                 choice={item}
                 onPress={() => onAdd(item)}
@@ -526,7 +453,6 @@ export function FullScreenSaleItemPicker({
             hidden={scrollHide.hidden}
             maxLength={160}
             layout={largeText ? "stacked" : "inline"}
-            variant={market ? "market-day" : "default"}
             onHeightChange={setFooterHeight}
             onChangeText={onQueryChange}
             placeholder="Search items"
@@ -535,11 +461,7 @@ export function FullScreenSaleItemPicker({
           >
             <ActionButton
               accessibilityLabel={`Proceed with ${draft.length} selected lines`}
-              className={cn(
-                largeText ? "w-full" : "w-[132px]",
-                market && "bg-market-palm active:bg-market-hero-pressed",
-              )}
-              foregroundColor={market ? palette.onPalm : undefined}
+              className={largeText ? "w-full" : "w-[132px]"}
               onPress={onProceed}
               trailingIcon="ArrowRight"
             >

@@ -8,7 +8,6 @@ const FILES = {
   layout: join(MOBILE_DIR, "src/app/_layout.tsx"),
   loginRoute: join(MOBILE_DIR, "src/app/login.tsx"),
   login: join(MOBILE_DIR, "src/components/mobile/login/login-screen.tsx"),
-  nativeIntent: join(MOBILE_DIR, "src/app/+native-intent.tsx"),
   onboardingRoute: join(MOBILE_DIR, "src/app/onboarding.tsx"),
   onboarding: join(
     MOBILE_DIR,
@@ -18,8 +17,10 @@ const FILES = {
     MOBILE_DIR,
     "src/components/mobile/onboarding/onboarding-presentation.ts",
   ),
-  onboardingQa: join(MOBILE_DIR, "src/lib/onboarding-market-day-qa.ts"),
-  signupAgePresentation: join(MOBILE_DIR, "src/components/mobile/green-till/age-screen.tsx"),
+  signupAgePresentation: join(
+    MOBILE_DIR,
+    "src/components/mobile/green-till/age-screen.tsx",
+  ),
   signupRoute: join(MOBILE_DIR, "src/app/sign-up.tsx"),
   signupAgeEntry: join(
     MOBILE_DIR,
@@ -30,28 +31,16 @@ const FILES = {
     MOBILE_DIR,
     "src/components/mobile/sign-up/sign-up-presentation.ts",
   ),
-  signupMarketAppearance: join(
-    MOBILE_DIR,
-    "src/components/mobile/appearances/market-day/sign-up-screen.tsx",
-  ),
   splashGate: join(MOBILE_DIR, "src/components/mobile/startup-splash-gate.tsx"),
   staffOnboardingRoute: join(MOBILE_DIR, "src/app/staff-onboarding.tsx"),
   staffOnboarding: join(
     MOBILE_DIR,
     "src/components/mobile/staff-onboarding/staff-onboarding-screen.tsx",
   ),
-  staffOnboardingSurface: join(
-    MOBILE_DIR,
-    "src/components/mobile/appearances/market-day/staff-onboarding-screen.tsx",
-  ),
   verifyEmailRoute: join(MOBILE_DIR, "src/app/verify-email.tsx"),
   verifyEmail: join(
     MOBILE_DIR,
     "src/components/mobile/verify-email/verify-email-screen.tsx",
-  ),
-  verifyEmailAppearance: join(
-    MOBILE_DIR,
-    "src/components/mobile/appearances/market-day/verify-email-screen.tsx",
   ),
   verificationResend: join(
     MOBILE_DIR,
@@ -79,7 +68,8 @@ const CONTRACTS = [
       "function SignUpRoute()",
       "<AccountAgeEntry />",
     ],
-    reason: "signup entry must open business sign-up directly, starting with the age step",
+    reason:
+      "signup entry must open business sign-up directly, starting with the age step",
   },
   {
     file: FILES.signupAgeEntry,
@@ -94,8 +84,14 @@ const CONTRACTS = [
   },
   {
     file: FILES.signupAgePresentation,
-    markers: ['selected === "UNDER_13"', "disabled={!selected}", 'selected !== "UNDER_13"', "onContinue(selected)"],
-    reason: "the neutral age presentation must block under-13 and only forward an eligible band",
+    markers: [
+      'selected === "UNDER_13"',
+      "disabled={!selected}",
+      'selected !== "UNDER_13"',
+      "onContinue(selected)",
+    ],
+    reason:
+      "the neutral age presentation must block under-13 and only forward an eligible band",
   },
   {
     file: FILES.layout,
@@ -149,28 +145,12 @@ const CONTRACTS = [
       'router.replace("/login")',
     ],
     reason:
-      "the approved three-step Market Day onboarding and persisted Login handoff must remain intact",
+      "the approved three-step onboarding and persisted Login handoff must remain intact",
   },
   {
     file: FILES.onboardingPresentation,
     markers: ["Set up your business", "Build your catalog", "Run daily work"],
     reason: "the three onboarding tasks must remain visible",
-  },
-  {
-    file: FILES.onboardingQa,
-    markers: [
-      'DEVELOPMENT_SCHEME = "ewatrade-dev:"',
-      'ONBOARDING_QA_HOST = "onboarding-market-day"',
-      'return "/onboarding"',
-    ],
-    reason:
-      "the exact development-only QA route must keep current native onboarding evidence reproducible",
-  },
-  {
-    file: FILES.nativeIntent,
-    markers: ["resolveOnboardingMarketDayQaPath", "onboardingMarketDayQaPath"],
-    reason:
-      "native intent handling must preserve the development-only onboarding QA route",
   },
   {
     file: FILES.signup,
@@ -208,18 +188,6 @@ const CONTRACTS = [
     reason: "signup must retain its four-step presentation contract",
   },
   {
-    file: FILES.signupMarketAppearance,
-    markers: [
-      "SignUpMarketHeader",
-      "SignUpMarketStall",
-      "canopyScrolledAway",
-      "palette.canvas",
-      "onPress={() => onSelect(profile)}",
-    ],
-    reason:
-      "Market Day signup must keep its canopy and selectable business types",
-  },
-  {
     file: FILES.verifyEmail,
     markers: [
       "OTP_LENGTH = 6",
@@ -234,12 +202,6 @@ const CONTRACTS = [
     ],
     reason:
       "OTP verification must keep separated OTP entry, auto-submit, resend, and production verify behavior",
-  },
-  {
-    file: FILES.verifyEmailAppearance,
-    markers: ["MobileScreen", 'accessibilityLabel="Verify and continue"'],
-    reason:
-      "Market Day OTP must retain its mobile presentation and verify action",
   },
   {
     file: FILES.verificationResend,
@@ -269,20 +231,8 @@ const CONTRACTS = [
       "resolveStaffInviteToken",
       "completeStaffOnboarding",
       "Sign in to accept invite",
-      "MarketDayStaffOnboardingScreen",
     ],
     reason: "staff onboarding must stay invite-based",
-  },
-  {
-    file: FILES.staffOnboardingSurface,
-    markers: [
-      "Welcome to the counter.",
-      'placeholder="Enter your full name"',
-      'placeholder="Enter your display name"',
-      "Start selling",
-    ],
-    reason:
-      "staff onboarding must collect only minimal profile details through the selected surface",
   },
 ]
 const FORBIDDEN = [

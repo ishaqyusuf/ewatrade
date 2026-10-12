@@ -26,7 +26,7 @@ export type OrdersSummaryProps = {
   isOffline?: boolean
   savedAt?: string
   onDateChange?: (value: OrderDispatchDateFilter) => void
-  /** Classic: server sales totals for the chosen period. */
+  /** Server sales totals for the chosen period. */
   report?: {
     currencyCode: string
     orderCount: number
@@ -43,7 +43,7 @@ export type OrdersRowProps = {
   index: number
   order: CommercialOrder
   onPress: () => void
-  /** Classic: rows of one day share a card. */
+  /** Rows of one day share a card. */
   position?: { first: boolean; last: boolean }
 }
 

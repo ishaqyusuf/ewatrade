@@ -1,15 +1,9 @@
-import { ActionButton } from "@/components/mobile/action-button"
 import { useOptionalAdminTabs } from "@/components/mobile/admin-tabs/admin-tabs-context"
 import {
-  ClassicDashboardEmptyOrders,
-  ClassicDashboardHero,
   ClassicDashboardOverview,
   ClassicDashboardScreen,
   ClassicDashboardSectionHeader,
   ClassicDashboardSetup,
-  ClassicSalesRepEmptySales,
-  ClassicSalesRepOverview,
-  ClassicSalesRepSection,
 } from "@/components/mobile/appearances/classic/dashboard-screen"
 import {
   GreenTillOwnerHome,
@@ -17,39 +11,17 @@ import {
   type HomeRecentOrder,
 } from "@/components/mobile/appearances/classic/green-till-home"
 import { ClassicCounterHeader } from "@/components/mobile/appearances/classic/home-counter-parts"
-import {
-  BusinessHomeMarketLedgerEmptyOrders,
-  BusinessHomeMarketLedgerHero,
-  BusinessHomeMarketLedgerOverview,
-  BusinessHomeMarketLedgerSectionHeader,
-  BusinessHomeMarketLedgerSetup,
-} from "@/components/mobile/appearances/market-day/business-home-market-ledger"
-import { MarketDayDashboardScreen } from "@/components/mobile/appearances/market-day/dashboard-screen"
-import {
-  SalesRepShiftLedgerEmptySales,
-  SalesRepShiftLedgerHero,
-  SalesRepShiftLedgerOverview,
-  SalesRepShiftLedgerSection,
-} from "@/components/mobile/appearances/market-day/sales-rep-shift-ledger"
-import {
-  DashboardActionRow,
-  DashboardRecentOrderRow,
-} from "@/components/mobile/dashboard-kit"
-import {
-  HomeSkeleton,
-  ListSkeleton,
-} from "@/components/mobile/loading-skeletons"
+import { DashboardActionRow } from "@/components/mobile/dashboard-kit"
+import { HomeSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
 import { OrderVisibilityCard } from "@/components/mobile/staff/order-visibility-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
-import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { hasStoredCustomerShellAccess } from "@/lib/customer-conversation-store"
 import { setLastMobileShell } from "@/lib/customer-shell-preference"
 import {
@@ -59,7 +31,6 @@ import {
   isSalesRepRole,
   normalizeMobileRole,
 } from "@/lib/mobile-roles"
-import { getSalesRepShiftLedgerPresentation } from "@/lib/sales-rep-shift-ledger"
 import {
   getMobileDashboardFeatureVisibility,
   getMobileDashboardNavigation,
@@ -129,37 +100,7 @@ export function OperationsDashboardSurface({
     !["OWNER", "ADMIN"].includes(normalizeMobileRole(profile?.role))
   const canEditCatalog = canEditMobileCatalog(profile)
   const isAttendant = isSalesRepRole(profile?.role)
-  const appearance = useMobileDesign(
-    isAttendant ? "sales-rep-home" : "business-home",
-  )
-  const isMarketDay = appearance === "market-day"
-  const isClassicOwner = !isMarketDay && !isAttendant && !scopedStaff
-  const Screen = isMarketDay ? MarketDayDashboardScreen : ClassicDashboardScreen
-  const OwnerHero = isMarketDay
-    ? BusinessHomeMarketLedgerHero
-    : ClassicCounterHeader
-  const RepHero = isMarketDay ? SalesRepShiftLedgerHero : ClassicDashboardHero
-  const OwnerOverview = isMarketDay
-    ? BusinessHomeMarketLedgerOverview
-    : ClassicDashboardOverview
-  const OwnerSetup = isMarketDay
-    ? BusinessHomeMarketLedgerSetup
-    : ClassicDashboardSetup
-  const OwnerSection = isMarketDay
-    ? BusinessHomeMarketLedgerSectionHeader
-    : ClassicDashboardSectionHeader
-  const OwnerEmpty = isMarketDay
-    ? BusinessHomeMarketLedgerEmptyOrders
-    : ClassicDashboardEmptyOrders
-  const RepOverview = isMarketDay
-    ? SalesRepShiftLedgerOverview
-    : ClassicSalesRepOverview
-  const RepSection = isMarketDay
-    ? SalesRepShiftLedgerSection
-    : ClassicSalesRepSection
-  const RepEmpty = isMarketDay
-    ? SalesRepShiftLedgerEmptySales
-    : ClassicSalesRepEmptySales
+  const isClassicOwner = !isAttendant && !scopedStaff
   const featureAvailabilityQuery = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, {
       enabled: !isOffline,
@@ -219,7 +160,7 @@ export function OperationsDashboardSurface({
       { enabled: salesQueryEnabled, retry: false },
     ),
   )
-  const repSalesQueryEnabled = isAttendant && !isMarketDay && !isOffline
+  const repSalesQueryEnabled = isAttendant && !isOffline
   const repTodaySales = useQuery(
     trpc.orders.reportSummary.queryOptions(
       { ...windows.today, mine: true, statuses: [...SALE_STATUSES] },
@@ -265,7 +206,6 @@ export function OperationsDashboardSurface({
         : isOffline
           ? "empty"
           : "loading"
-  const revealRecentOrders = useFirstReveal(orderRows.length > 0)
   const currency = profile?.currencyCode ?? "NGN"
   const orderValue = orderRows.reduce(
     (total, order) => total + order.totalMinor,
@@ -318,18 +258,6 @@ export function OperationsDashboardSurface({
     availabilityPending: isFeatureAvailabilityPending,
     isOffline,
     loadedOrderCount: orderRows.length,
-  })
-  const salesRepPresentation = getSalesRepShiftLedgerPresentation({
-    hasSellableCatalogItem,
-    isOffline,
-    pendingCommandCount,
-    workspaceState: isOfflineAvailabilityUnknown
-      ? "offline-unknown"
-      : isFeatureAvailabilityPending
-        ? "loading"
-        : isFeatureAvailabilityUnavailable
-          ? "unavailable"
-          : "available",
   })
   const allNavItems = [
     {
@@ -494,7 +422,7 @@ export function OperationsDashboardSurface({
         : action !== operationalAction || hasProduct),
   )
   return (
-    <Screen
+    <ClassicDashboardScreen
       businessName={profile?.businessName ?? "Business"}
       centralAction={{
         icon: "Plus",
@@ -504,7 +432,7 @@ export function OperationsDashboardSurface({
           : createModal.present,
       }}
       hero={
-        isAttendant && !isMarketDay ? (
+        isAttendant ? (
           <ClassicCounterHeader
             businessName={profile?.businessName ?? "Business"}
             greetingName={firstName}
@@ -519,26 +447,8 @@ export function OperationsDashboardSurface({
             onProfilePress={() => router.push("/account")}
             roleLabel="Sales rep"
           />
-        ) : isAttendant ? (
-          <RepHero
-            businessName={profile?.businessName ?? "Business"}
-            cue={salesRepPresentation.heroCue}
-            greetingName={firstName}
-            hasNotification={isOffline || pendingCommandCount > 0}
-            onBusinessPress={() =>
-              router.push("/business-switch-modal" as never)
-            }
-            onNotificationPress={() =>
-              router.push("/sync-status-modal" as never)
-            }
-            onSearchPress={
-              isOffline
-                ? undefined
-                : () => router.push("/global-search" as never)
-            }
-          />
         ) : (
-          <OwnerHero
+          <ClassicCounterHeader
             businessName={profile?.businessName ?? "Business"}
             greetingName={firstName}
             hasNotification={isOffline || pendingCommandCount > 0}
@@ -713,7 +623,7 @@ export function OperationsDashboardSurface({
           title="Store overview unavailable"
           tone="warning"
         />
-      ) : isAttendant && !isMarketDay ? (
+      ) : isAttendant ? (
         <GreenTillRepHome
           isOffline={isOffline}
           onCloseout={() => router.push("/closeout-modal" as never)}
@@ -776,22 +686,8 @@ export function OperationsDashboardSurface({
                 : { status: "loading" }
           }
         />
-      ) : isAttendant ? (
-        <RepOverview
-          {...salesRepPresentation}
-          onCloseoutPress={() => router.push("/closeout-modal" as never)}
-          onCustomerBookPress={
-            featureAvailability.hasCustomers && !scopedStaff
-              ? () => router.push("/customer-book-modal" as never)
-              : undefined
-          }
-          onStartSalePress={() => router.push("/create-sale-modal" as never)}
-          onSyncPress={() => router.push("/sync-status-modal" as never)}
-          recentOrderCount={String(orderRows.length)}
-          recentOrderValue={formatMinorMoney(orderValue, currency)}
-        />
       ) : showStoreSetup ? (
-        <OwnerSetup
+        <ClassicDashboardSetup
           catalogReady={hasSellableCatalogItem}
           itemValue={hasSellableCatalogItem ? "Ready" : "0"}
           onAddItemPress={openQuickCreate}
@@ -806,7 +702,7 @@ export function OperationsDashboardSurface({
         />
       ) : (
         <>
-          <OwnerOverview
+          <ClassicDashboardOverview
             primaryDetail={
               hasProduct
                 ? "Current inventory ledger"
@@ -862,7 +758,7 @@ export function OperationsDashboardSurface({
           />
 
           <View>
-            <OwnerSection title="Today’s work" />
+            <ClassicDashboardSectionHeader title="Today’s work" />
             {homeActions.map((action) => (
               <DashboardActionRow key={action.label} {...action} />
             ))}
@@ -895,151 +791,10 @@ export function OperationsDashboardSurface({
         </Pressable>
       ) : null}
 
-      {isAttendant &&
-      isMarketDay &&
-      canManageMobileStock(profile?.role, profile?.staffAccessMode) ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/stock-intake-modal" as never)}
-          className="mx-4 flex-row items-center gap-3 border border-border p-4"
-        >
-          <Icon name="Warehouse" className="size-sm text-muted-foreground" />
-          <Text className="flex-1 text-base font-medium text-foreground">
-            Receive or adjust stock
-          </Text>
-          <Icon name="ChevronRight" className="size-sm text-muted-foreground" />
-        </Pressable>
-      ) : null}
-
-      {isAttendant && isMarketDay ? (
-        <RepSection title="Your sales">
-          <ActionButton
-            variant="outline"
-            onPress={() => router.push("/your-sales" as never)}
-          >
-            View all sales
-          </ActionButton>
-          {orders.isLoading ? (
-            <ListSkeleton
-              count={3}
-              label="Loading recent sales"
-              variant="item"
-            />
-          ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
-            <StatusBanner
-              icon="Wind"
-              message="Your queued sales will appear here after sync."
-              title="Sales pending sync"
-              tone="warning"
-            />
-          ) : orderRows.length === 0 ? (
-            <RepEmpty message="New sales will appear here as soon as they are created." />
-          ) : (
-            orderRows.slice(0, 4).map((order, index) => (
-              <RevealItem
-                active={revealRecentOrders}
-                index={index}
-                key={order.id}
-              >
-                <DashboardRecentOrderRow
-                  amount={formatMinorMoney(
-                    order.totalMinor,
-                    order.currencyCode,
-                  )}
-                  customer={
-                    order.customerName ||
-                    order.customerPhone ||
-                    "Walk-in customer"
-                  }
-                  detail={`${order.orderNumber} · ${order.lines
-                    .map(
-                      (line) =>
-                        `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-                    )
-                    .join(", ")}`}
-                  onPress={() =>
-                    router.push(
-                      `/order/${encodeURIComponent(order.id)}` as never,
-                    )
-                  }
-                  status={formatStatusLabel(order.status)}
-                  tone={getOrderStatusTone(order.status)}
-                />
-              </RevealItem>
-            ))
-          )}
-        </RepSection>
-      ) : isMarketDay ? (
-        <View>
-          <OwnerSection
-            actionLabel="See all"
-            onActionPress={() => router.push("/orders" as never)}
-            title="Recent orders"
-          />
-          {orders.isLoading ? (
-            <ListSkeleton
-              count={3}
-              label="Loading recent orders"
-              variant="item"
-            />
-          ) : orderRows.length === 0 && provisional.commercialOrders > 0 ? (
-            <StatusBanner
-              icon="Wind"
-              message="Your queued orders will appear here after sync."
-              title="Orders pending sync"
-              tone="warning"
-            />
-          ) : orderRows.length === 0 ? (
-            <OwnerEmpty
-              actionLabel="Create first order"
-              message={
-                featureVisibility.showGettingStarted
-                  ? "Record your first sale — pick catalog items or type a price. It will appear here."
-                  : "New orders will appear here as soon as they are created."
-              }
-              onActionPress={() => router.push("/create-sale-modal" as never)}
-            />
-          ) : (
-            orderRows.slice(0, 4).map((order, index) => (
-              <RevealItem
-                active={revealRecentOrders}
-                index={index}
-                key={order.id}
-              >
-                <DashboardRecentOrderRow
-                  amount={formatMinorMoney(
-                    order.totalMinor,
-                    order.currencyCode,
-                  )}
-                  customer={
-                    order.customerName ||
-                    order.customerPhone ||
-                    "Walk-in customer"
-                  }
-                  detail={`${order.orderNumber} · ${order.lines
-                    .map(
-                      (line) =>
-                        `${line.quantity} × ${line.snapshot?.catalogItemName ?? "Item"}`,
-                    )
-                    .join(", ")}`}
-                  onPress={() =>
-                    router.push(
-                      `/order/${encodeURIComponent(order.id)}` as never,
-                    )
-                  }
-                  status={formatStatusLabel(order.status)}
-                  tone={getOrderStatusTone(order.status)}
-                />
-              </RevealItem>
-            ))
-          )}
-        </View>
-      ) : null}
-
       {!isAttendant && !embeddedInAdminTabs ? (
         <CreateActionSheet actions={createActions} modal={createModal} />
       ) : null}
-    </Screen>
+    </ClassicDashboardScreen>
   )
 }
 
@@ -1049,23 +804,6 @@ type HomeAction = {
   label: string
   onPress: () => void
   tone?: "neutral" | "primary" | "success" | "warning"
-}
-
-function formatStatusLabel(status: string) {
-  return status
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
-function getOrderStatusTone(status: string) {
-  if (status === "COMPLETED") return "success" as const
-  if (status === "CANCELLED" || status === "REFUNDED") {
-    return "destructive" as const
-  }
-  if (status === "DRAFT" || status === "PENDING") return "warning" as const
-  return "primary" as const
 }
 
 type CreateAction = {

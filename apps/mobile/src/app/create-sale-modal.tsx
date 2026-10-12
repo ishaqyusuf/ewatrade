@@ -6,16 +6,11 @@ import {
 } from "@/components/mobile/create-sale/create-sale-screen"
 import { CreateSaleWorkflowChrome } from "@/components/mobile/create-sale/create-sale-workflow-chrome"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
-import {
-  type OperationSuccessParams,
-  showOperationSuccess,
-} from "@/lib/operation-success-navigation"
-import { useLocalSearchParams, useNavigation } from "expo-router"
+import type { OperationSuccessParams } from "@/lib/operation-success-navigation"
+import { useLocalSearchParams } from "expo-router"
 import { useState } from "react"
 
 export default function CreateSaleModalRoute() {
-  const navigation = useNavigation()
   const params = useLocalSearchParams<{
     catalogItemId?: string
     offeringId?: string
@@ -28,7 +23,6 @@ export default function CreateSaleModalRoute() {
   }>()
   const { profile } = useAuthContext()
   const itemKind = params.kind === "service" ? "service" : undefined
-  const classic = useMobileDesign("create-sale") !== "market-day"
   const [success, setSuccess] = useState<OperationSuccessParams | null>(null)
 
   return (
@@ -54,14 +48,9 @@ export default function CreateSaleModalRoute() {
             : undefined
         }
         itemKind={itemKind}
-        onComplete={(completion) => {
-          // Classic already shows the success sheet (onRecorded).
-          if (!classic)
-            showOperationSuccess(navigation, saleSuccessParams(completion))
-        }}
         onRecorded={(completion) => {
-          // Classic: the success rises as a sheet over the checkout.
-          if (classic) setSuccess(saleSuccessParams(completion))
+          // The success rises as a sheet over the checkout.
+          setSuccess(saleSuccessParams(completion))
         }}
         presentation="screen"
       />

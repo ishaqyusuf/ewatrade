@@ -5,10 +5,7 @@ import {
 } from "@/components/mobile/sale-item-picker"
 import type { SaleStepViewProps } from "./create-sale-presentation"
 
-export function CreateSaleSheets({
-  model,
-  appearance,
-}: Pick<SaleStepViewProps, "model" | "appearance">) {
+export function CreateSaleSheets({ model }: Pick<SaleStepViewProps, "model">) {
   const {
     itemKind,
     isOffline,
@@ -44,7 +41,6 @@ export function CreateSaleSheets({
   return (
     <>
       <CreateSaleCustomerSheet
-        appearance={appearance}
         description={
           isOffline
             ? "Attach these details to this order. The customer directory is updated only when the queued order is accepted during sync."
@@ -63,7 +59,6 @@ export function CreateSaleSheets({
         ref={customerModal.ref}
       />
       <CompactSaleItemPicker
-        appearance={appearance}
         choices={compactPickerChoices}
         itemKind={itemKind}
         lineCountsByOfferingId={lineCountsByOfferingId}
@@ -75,7 +70,6 @@ export function CreateSaleSheets({
         visible={compactPickerVisible}
       />
       <FullScreenSaleItemPicker
-        appearance={appearance}
         choices={allRows}
         draft={pickerDraft}
         hasNextPage={!isOffline && Boolean(catalog.hasNextPage)}

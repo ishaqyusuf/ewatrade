@@ -1,12 +1,5 @@
-import {
-  AuthActionButton,
-  AuthBrandHeader,
-  MobileScreen,
-  StatusBanner,
-} from "@/components/mobile"
 import { StartupSplash } from "@/components/mobile/startup-splash"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { getCustomerConversationSession } from "@/lib/customer-conversation-store"
 import {
   type MobileShell,
@@ -24,7 +17,6 @@ export default function StartRoute() {
   const [pendingSetup, setPendingSetup] = useState<boolean | null>(null)
   const [lastShell, setLastShell] = useState<MobileShell | null>(null)
   const auth = useAuthContext()
-  const splashDesign = useMobileDesign("startup-splash")
   const trpc = useTRPC()
   const accessProfile = useQuery(
     trpc.auth.getMobileAccessProfile.queryOptions(undefined, {
@@ -69,16 +61,11 @@ export default function StartRoute() {
   }
 
   if (auth.isAuthenticated && accessProfile.isError) {
-    if (splashDesign === "classic") {
-      return (
-        <StartupSplash
-          state={startupAccessFailureState(accessProfile.error)}
-          onRetry={() => void accessProfile.refetch()}
-        />
-      )
-    }
     return (
-      <AccessProfileUnavailable onRetry={() => void accessProfile.refetch()} />
+      <StartupSplash
+        state={startupAccessFailureState(accessProfile.error)}
+        onRetry={() => void accessProfile.refetch()}
+      />
     )
   }
 
@@ -114,23 +101,4 @@ export default function StartRoute() {
   if (destination.kind === "no-access") return <Redirect href="/no-access" />
 
   return <Redirect href="/dashboard" />
-}
-
-function AccessProfileUnavailable({ onRetry }: { onRetry: () => void }) {
-  return (
-    <MobileScreen contentClassName="justify-center gap-6">
-      <AuthBrandHeader
-        subtitle="Your account is signed in, but we could not confirm which workspace is currently available."
-        title="Checking your access"
-      />
-      <StatusBanner
-        actionLabel="Try again"
-        message="Check your connection and retry. We will not open a workspace until access is confirmed."
-        onActionPress={onRetry}
-        title="Access check unavailable"
-        tone="warning"
-      />
-      <AuthActionButton onPress={onRetry}>Try again</AuthActionButton>
-    </MobileScreen>
-  )
 }

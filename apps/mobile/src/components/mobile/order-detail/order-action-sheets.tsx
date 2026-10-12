@@ -5,13 +5,6 @@ import {
   ClassicOrderConfirmationDetail,
   ClassicOrderPaymentChoice,
 } from "@/components/mobile/appearances/classic/order-action-presentation"
-import {
-  MarketDayOrderActionWarning,
-  MarketDayOrderConfirmationDetail,
-  MarketDayOrderPaymentChoice,
-  OrderQuietActionStack,
-  OrderQuietSummary,
-} from "@/components/mobile/appearances/market-day/order-action-presentation"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -21,7 +14,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import {
   ORDER_PAYMENT_METHODS,
   type OrderFulfilmentConfirmation,
@@ -35,30 +27,12 @@ import {
 import { type ReactNode, forwardRef } from "react"
 import { useWindowDimensions } from "react-native"
 
-const presentations = {
-  classic: {
-    Summary: ClassicOrderActionSummary,
-    ActionStack: ClassicOrderActionStack,
-    PaymentChoice: ClassicOrderPaymentChoice,
-    ConfirmationDetail: ClassicOrderConfirmationDetail,
-    Warning: ClassicOrderActionWarning,
-  },
-  "market-day": {
-    Summary: OrderQuietSummary,
-    ActionStack: OrderQuietActionStack,
-    PaymentChoice: MarketDayOrderPaymentChoice,
-    ConfirmationDetail: MarketDayOrderConfirmationDetail,
-    Warning: MarketDayOrderActionWarning,
-  },
-}
-
 export type OrderPaymentMethod =
   RouterInputs["orders"]["recordPayment"]["method"]
 
 export const OrderPaymentSheet = forwardRef<
   BottomSheetModal,
   {
-    appearance?: MobileDesign
     amountPaid: string
     balanceMinor?: number
     balanceLabel: string
@@ -77,7 +51,6 @@ export const OrderPaymentSheet = forwardRef<
   }
 >(function OrderPaymentSheet(
   {
-    appearance = "market-day",
     amountPaid,
     balanceMinor,
     balanceLabel,
@@ -97,7 +70,6 @@ export const OrderPaymentSheet = forwardRef<
   ref,
 ) {
   const largeTextLayout = useLargeTextLayout()
-  const { Summary, ActionStack, PaymentChoice } = presentations[appearance]
 
   return (
     <Modal
@@ -112,7 +84,10 @@ export const OrderPaymentSheet = forwardRef<
           keyboardShouldPersistTaps="handled"
         >
           <View className="gap-5 px-5 pb-6">
-            <Summary label="Balance due" value={balanceLabel} />
+            <ClassicOrderActionSummary
+              label="Balance due"
+              value={balanceLabel}
+            />
             {error ? (
               <StatusBanner
                 icon="AlertCircle"
@@ -122,7 +97,7 @@ export const OrderPaymentSheet = forwardRef<
               />
             ) : null}
             {quickFill}
-            {appearance === "classic" && balanceMinor !== undefined ? (
+            {balanceMinor !== undefined ? (
               <View className="flex-row flex-wrap gap-2">
                 {[
                   ["Full", balanceMinor],
@@ -158,7 +133,7 @@ export const OrderPaymentSheet = forwardRef<
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {ORDER_PAYMENT_METHODS.map(([value, label]) => (
-                  <PaymentChoice
+                  <ClassicOrderPaymentChoice
                     key={value}
                     label={label}
                     selected={paymentMethod === value}
@@ -176,7 +151,7 @@ export const OrderPaymentSheet = forwardRef<
           </View>
         </BottomSheetKeyboardAwareScrollView>
         <View className="border-t border-border px-5 pb-5 pt-3">
-          <ActionStack
+          <ClassicOrderActionStack
             actionLabel="Save payment"
             disabled={isOffline}
             isLoading={isLoading}
@@ -195,7 +170,6 @@ OrderPaymentSheet.displayName = "OrderPaymentSheet"
 export const OrderFulfilmentConfirmationSheet = forwardRef<
   BottomSheetModal,
   {
-    appearance?: MobileDesign
     error: string | null
     isLoading: boolean
     onCancel: () => void
@@ -203,19 +177,10 @@ export const OrderFulfilmentConfirmationSheet = forwardRef<
     presentation: OrderFulfilmentConfirmation | null
   }
 >(function OrderFulfilmentConfirmationSheet(
-  {
-    appearance = "market-day",
-    error,
-    isLoading,
-    onCancel,
-    onConfirm,
-    presentation,
-  },
+  { error, isLoading, onCancel, onConfirm, presentation },
   ref,
 ) {
   const { height } = useWindowDimensions()
-  const { Summary, ActionStack, ConfirmationDetail, Warning } =
-    presentations[appearance]
   const largeTextLayout = useLargeTextLayout()
 
   return (
@@ -231,12 +196,12 @@ export const OrderFulfilmentConfirmationSheet = forwardRef<
         <View className="flex-1">
           <BottomSheetScrollView keyboardShouldPersistTaps="handled">
             <View className="gap-4 px-5 pb-5">
-              <Summary
+              <ClassicOrderActionSummary
                 label={presentation.summaryLabel}
                 value={presentation.summaryValue}
               />
 
-              <ConfirmationDetail presentation={presentation} />
+              <ClassicOrderConfirmationDetail presentation={presentation} />
 
               {error ? (
                 <StatusBanner
@@ -246,12 +211,12 @@ export const OrderFulfilmentConfirmationSheet = forwardRef<
                   tone="destructive"
                 />
               ) : (
-                <Warning message={presentation.warning} />
+                <ClassicOrderActionWarning message={presentation.warning} />
               )}
             </View>
           </BottomSheetScrollView>
           <View className="border-t border-border px-5 pb-5 pt-3">
-            <ActionStack
+            <ClassicOrderActionStack
               actionLabel={presentation.actionLabel}
               isLoading={isLoading}
               loadingLabel="Recording…"

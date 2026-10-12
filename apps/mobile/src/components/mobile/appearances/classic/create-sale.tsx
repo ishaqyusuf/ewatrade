@@ -1,8 +1,6 @@
 import { catalogAvatarTint } from "@/components/mobile/catalog/catalog-shelf-model"
 import type {
-  CustomerActionRowProps,
   CustomerSuggestionRowProps,
-  SaleStageHeaderProps,
   SaleTopBarProps,
   SelectedOrderLineProps,
 } from "@/components/mobile/create-sale/create-sale-presentation"
@@ -23,11 +21,6 @@ import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { Text as NativeText, TextInput } from "react-native"
-
-/** Classic renders the step title in its fixed top bar instead. */
-export function ClassicSaleStageHeader(_props: SaleStageHeaderProps) {
-  return null
-}
 
 export function ClassicSaleTopBar({
   onBack,
@@ -250,30 +243,6 @@ export function ClassicSelectedOrderLine({
 }
 
 const wholeMoney = (value: string) => value.replace(/\.00(?=\D*$)/, "")
-
-export function ClassicCustomerActionRow({
-  icon,
-  onPress,
-  title,
-}: CustomerActionRowProps) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      className="min-h-16 flex-row items-center gap-3 border-b border-border px-2 py-4 active:bg-accent"
-      haptic
-      onPress={onPress}
-      transition
-    >
-      <View className="h-10 w-10 items-center justify-center rounded-[14px] bg-tint-lilac">
-        <Icon className="size-[18px] text-primary" name={icon} />
-      </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-extrabold text-foreground">{title}</Text>
-      </View>
-      <Icon className="size-[18px] text-muted-foreground" name="ChevronRight" />
-    </Pressable>
-  )
-}
 
 export function ClassicCustomerSuggestionRow({
   customer,

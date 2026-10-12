@@ -4,9 +4,6 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
-import { cn } from "@/lib/utils"
 import {
   type BottomSheetBackdropProps,
   BottomSheetFlatList,
@@ -19,12 +16,7 @@ import { useWindowDimensions } from "react-native"
 import type { CloseoutLine } from "./closeout-model"
 import type { CloseoutViewModel } from "./closeout-presentation"
 
-export function CloseoutReviewSheet({
-  model,
-  appearance,
-}: { model: CloseoutViewModel; appearance: MobileDesign }) {
-  const market = appearance === "market-day"
-  const palette = useMarketDayPalette()
+export function CloseoutReviewSheet({ model }: { model: CloseoutViewModel }) {
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(140)
   const confirmDisabled =
@@ -44,12 +36,7 @@ export function CloseoutReviewSheet({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={cn(
-            "gap-2 border-t px-5 pb-5 pt-3",
-            market
-              ? "border-market-line bg-market-field"
-              : "border-border bg-card",
-          )}
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           <ActionButton
             disabled={confirmDisabled}
@@ -58,15 +45,6 @@ export function CloseoutReviewSheet({
               model.phase === "creating"
                 ? "Saving declaration"
                 : "Finalizing closeout"
-            }
-            foregroundColor={market ? palette.onPalm : undefined}
-            disabledForegroundColor={market ? palette.mutedInk : undefined}
-            className={
-              market
-                ? confirmDisabled
-                  ? "bg-market-line active:bg-market-line"
-                  : "bg-market-palm active:bg-market-hero-pressed"
-                : undefined
             }
             onPress={() => void model.confirm()}
           >
@@ -87,10 +65,7 @@ export function CloseoutReviewSheet({
       </BottomSheetFooter>
     ),
     [
-      market,
       confirmDisabled,
-      palette.onPalm,
-      palette.mutedInk,
       model.offline,
       model.canManage,
       model.scopeChanged,
@@ -102,8 +77,6 @@ export function CloseoutReviewSheet({
       model.dismissReview,
     ],
   )
-  const ink = market ? "text-market-ink" : "text-foreground"
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   return (
     <VariableContextProvider
       value={{ "--closeout-review-footer": footerHeight }}
@@ -127,11 +100,11 @@ export function CloseoutReviewSheet({
             <View className="gap-3 px-5 pb-2 pt-5">
               <Text
                 accessibilityRole="header"
-                className={cn("text-xl font-extrabold", ink)}
+                className="text-xl font-extrabold text-foreground"
               >
                 Confirm closeout
               </Text>
-              <Text className={cn("text-sm [-rn-line-height:20]", muted)}>
+              <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
                 Finalizing applies these inventory variances. This does not
                 reconcile cash or return stock to a Store.
               </Text>
@@ -150,7 +123,7 @@ export function CloseoutReviewSheet({
                 />
               ) : null}
               {model.hasAttempt ? (
-                <Text className={cn("text-xs [-rn-line-height:18]", muted)}>
+                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
                   These declarations are locked for retry with the same request
                   IDs. Closing this review does not undo a server-side closeout.
                 </Text>
@@ -158,27 +131,22 @@ export function CloseoutReviewSheet({
             </View>
           }
           renderItem={({ item }) => (
-            <View
-              className={cn(
-                "mx-5 gap-1 border-b py-3",
-                market ? "border-market-line" : "border-border",
-              )}
-            >
-              <Text className={cn("font-bold", ink)}>
+            <View className="mx-5 gap-1 border-b border-border py-3">
+              <Text className="font-bold text-foreground">
                 {item.balance.productName} · {item.balance.variantName}
               </Text>
-              <Text className={cn("text-sm", muted)}>
+              <Text className="text-sm text-muted-foreground">
                 Expected {item.balance.onHandQuantity} → Declared{" "}
                 {item.declaredQuantity} {item.balance.inventoryUnitName}
               </Text>
-              <Text className={cn("text-xs", muted)}>
+              <Text className="text-xs text-muted-foreground">
                 Variance {item.variance} {item.balance.inventoryUnitName}
               </Text>
             </View>
           )}
           ListFooterComponent={
             <View className="px-5 pt-4">
-              <Text className={cn("text-xs [-rn-line-height:18]", muted)}>
+              <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
                 Reason: {model.review?.reason || "End of shift closeout"}
               </Text>
               <View className="h-[var(--closeout-review-footer)]" />

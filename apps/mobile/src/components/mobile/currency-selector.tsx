@@ -8,7 +8,7 @@ import {
 import { ScrollView, View } from "react-native"
 
 type CurrencySelectorProps = {
-  appearance?: "classic" | "market-day" | "chips"
+  appearance?: "classic" | "chips"
   disabled?: boolean
   label?: string
   onChange: (currencyCode: OperatingCurrencyCode) => void
@@ -22,7 +22,6 @@ export function CurrencySelector({
   onChange,
   value,
 }: CurrencySelectorProps) {
-  const market = appearance === "market-day"
   if (appearance === "chips")
     return (
       <View className="gap-2">
@@ -74,12 +73,7 @@ export function CurrencySelector({
 
   return (
     <View className="gap-2.5">
-      <Text
-        className={cn(
-          "text-xs font-bold uppercase tracking-[1.4px]",
-          market ? "text-market-muted-ink" : "text-muted-foreground",
-        )}
-      >
+      <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
         {label}
       </Text>
       <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup">
@@ -93,13 +87,9 @@ export function CurrencySelector({
               disabled={disabled}
               className={cn(
                 "min-h-[52px] min-w-[92px] flex-1 items-center justify-center rounded-xl border px-3 py-3",
-                market
-                  ? selected
-                    ? "border-market-palm bg-market-soft-band"
-                    : "border-market-line bg-market-field"
-                  : selected
-                    ? "border-primary bg-primary/10"
-                    : "border-border bg-card",
+                selected
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-card",
               )}
               haptic
               key={currency.code}
@@ -108,13 +98,7 @@ export function CurrencySelector({
               <Text
                 className={cn(
                   "text-sm font-semibold [-rn-include-font-padding:false] [-rn-line-height:20] [-rn-text-align-vertical:center]",
-                  market
-                    ? selected
-                      ? "text-market-accent-ink"
-                      : "text-market-ink"
-                    : selected
-                      ? "text-primary"
-                      : "text-foreground",
+                  selected ? "text-primary" : "text-foreground",
                 )}
               >
                 {currency.symbol} {currency.code}
@@ -123,12 +107,7 @@ export function CurrencySelector({
           )
         })}
       </View>
-      <Text
-        className={cn(
-          "text-xs [-rn-line-height:16]",
-          market ? "text-market-muted-ink" : "text-muted-foreground",
-        )}
-      >
+      <Text className="text-xs [-rn-line-height:16] text-muted-foreground">
         Used for prices, totals, reports, and customer pages.
       </Text>
     </View>

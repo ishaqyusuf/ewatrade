@@ -13,7 +13,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
 import { type WorkJob, actionLabel, type actions } from "./service-jobs-model"
-import { useServiceAppearance } from "./use-service-appearance"
 
 type StatusDraft = {
   jobId: string
@@ -93,7 +92,6 @@ export function ServiceStatusSheet({
   allowed,
   scopeChanged,
 }: { editor: ServiceStatusEditor; allowed: boolean; scopeChanged: boolean }) {
-  const { market } = useServiceAppearance()
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(120)
   const required =
@@ -104,11 +102,7 @@ export function ServiceStatusSheet({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={
-            market
-              ? "gap-2 border-t border-market-line bg-market-field px-5 pb-5 pt-3"
-              : "gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-          }
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           <ServiceAction disabled={disabled} onPress={editor.review}>
             Review status
@@ -119,9 +113,9 @@ export function ServiceStatusSheet({
         </View>
       </BottomSheetFooter>
     ),
-    [disabled, editor, market],
+    [disabled, editor],
   )
-  const ink = market ? "text-market-ink" : "text-foreground"
+  const ink = "text-foreground"
   return (
     <Modal
       ref={editor.modal.ref}
@@ -172,7 +166,7 @@ export function ServiceStatusSheet({
                   · {editor.draft?.line.allocatedQuantity} units
                 </Text>
                 <FormField
-                  variant={market ? "market" : "filled"}
+                  variant="filled"
                   label={required ? "Reason" : "Reason (optional)"}
                   multiline
                   maxLength={500}

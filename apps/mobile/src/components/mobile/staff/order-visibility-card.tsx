@@ -3,14 +3,12 @@ import { NudgeCard } from "@/components/mobile/nudge-card"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useOrderVisibility } from "@/hooks/use-order-visibility"
 import { BottomSheetView } from "@gorhom/bottom-sheet"
 import { NudgeCard as TillNudgeCard } from "../green-till/kit"
 
 export function OrderVisibilityCard({ review = false }: { review?: boolean }) {
   const vm = useOrderVisibility()
-  const market = useMobileDesign("staff") === "market-day"
   const modal = useModal()
   if (!vm.canManage || !vm.storeId) return null
   if (
@@ -27,7 +25,7 @@ export function OrderVisibilityCard({ review = false }: { review?: boolean }) {
   )?.label
   const keep = () => vm.update.mutate({ storeId: vm.storeId })
   // Green Till: one row with the current rule and a Change link.
-  const tillRow = !review && !market
+  const tillRow = !review
   return (
     <>
       {tillRow ? (

@@ -1,6 +1,5 @@
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useState } from "react"
 import { Fragment } from "react"
 import { ActionButton } from "../action-button"
@@ -8,10 +7,6 @@ import {
   ClassicCustomerOrderRow,
   ClassicCustomerPendingRow,
 } from "../appearances/classic/customer-profile"
-import {
-  MarketDayCustomerOrderRow,
-  MarketDayCustomerPendingRow,
-} from "../appearances/market-day/customer-profile"
 import type {
   CommerceCustomer,
   CommercialOrder,
@@ -26,33 +21,16 @@ type HistoryRow =
 const PAGE_SIZE = 12
 
 export function CustomerOrderHistory({
-  market = false,
   customer,
   onOpenOrder,
   onLayout,
   onPageChange,
 }: {
-  market?: boolean
   customer: CommerceCustomer
   onOpenOrder: (orderId: string) => void
   onLayout: (y: number) => void
   onPageChange: () => void
 }) {
-  const palette = useMarketDayPalette()
-  const Row = market ? MarketDayCustomerOrderRow : ClassicCustomerOrderRow
-  const PendingRow = market
-    ? MarketDayCustomerPendingRow
-    : ClassicCustomerPendingRow
-  const ink = market ? "text-market-ink" : "text-foreground"
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
-  const pageAction = market
-    ? {
-        foregroundColor: palette.ink,
-        disabledForegroundColor: palette.mutedInk,
-        className:
-          "border-market-line bg-market-field active:bg-market-soft-band",
-      }
-    : {}
   const [requestedPage, setPage] = useState(0)
   const rows: HistoryRow[] = [
     ...customer.pendingOrders.map((order) => ({
@@ -76,25 +54,10 @@ export function CustomerOrderHistory({
       className="gap-3"
       onLayout={(event) => onLayout(event.nativeEvent.layout.y)}
     >
-      {market ? (
-        <>
-          <Text className={`text-lg font-extrabold ${ink}`}>Loaded orders</Text>
-          <Text className={`text-xs leading-5 ${muted}`}>
-            {customer.orders.length} synced · {customer.pendingOrders.length}{" "}
-            pending sync. Pending values are not included in synced order value.
-          </Text>
-        </>
-      ) : null}
       {/* Green Till: shadow outside, rounded clip inside so a pressed row's
           ripple reaches the card edges without spilling past the corners. */}
-      <View className={market ? undefined : "rounded-[20px] bg-card shadow-sm"}>
-        <View
-          className={
-            market
-              ? "rounded-2xl border border-market-line bg-market-field px-4"
-              : "overflow-hidden rounded-[20px] px-3.5"
-          }
-        >
+      <View className="rounded-[20px] bg-card shadow-sm">
+        <View className="overflow-hidden rounded-[20px] px-3.5">
           {visible.map((row, index) => (
             <Fragment
               key={
@@ -103,11 +66,11 @@ export function CustomerOrderHistory({
                   : `synced:${row.order.id}`
               }
             >
-              {index && !market ? <View className="h-px bg-border" /> : null}
+              {index ? <View className="h-px bg-border" /> : null}
               {row.kind === "pending" ? (
-                <PendingRow order={row.order} />
+                <ClassicCustomerPendingRow order={row.order} />
               ) : (
-                <Row
+                <ClassicCustomerOrderRow
                   order={row.order}
                   onPress={() => onOpenOrder(row.order.id)}
                 />
@@ -115,35 +78,26 @@ export function CustomerOrderHistory({
             </Fragment>
           ))}
           {!rows.length ? (
-            market ? (
-              <View className="gap-2 py-5">
-                <Text className={`text-lg font-bold ${ink}`}>
-                  No loaded orders
-                </Text>
-                <Text className={`text-sm ${muted}`}>
-                  No orders are loaded for this customer.
-                </Text>
-              </View>
-            ) : (
-              <EmptyState
-                icon="ReceiptText"
-                message="No orders are loaded for this customer."
-                title="No loaded orders"
-              />
-            )
+            <EmptyState
+              icon="ReceiptText"
+              message="No orders are loaded for this customer."
+              title="No loaded orders"
+            />
           ) : null}
         </View>
       </View>
       {rows.length > PAGE_SIZE ? (
         <View className="gap-3">
-          <Text accessibilityLiveRegion="polite" className={`text-xs ${muted}`}>
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-xs text-muted-foreground"
+          >
             Showing {start + 1}–{Math.min(start + PAGE_SIZE, rows.length)} of{" "}
             {rows.length} loaded orders
           </Text>
           <View className="flex-row flex-wrap gap-3">
             <View className="min-w-[44%] flex-1">
               <ActionButton
-                {...pageAction}
                 icon="ChevronLeft"
                 variant="outline"
                 disabled={page === 0}
@@ -154,7 +108,6 @@ export function CustomerOrderHistory({
             </View>
             <View className="min-w-[44%] flex-1">
               <ActionButton
-                {...pageAction}
                 icon="ChevronRight"
                 variant="outline"
                 disabled={start + PAGE_SIZE >= rows.length}

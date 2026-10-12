@@ -1,7 +1,4 @@
-import {
-  ActionButton,
-  MarketDayActionButton,
-} from "@/components/mobile/action-button"
+import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
 import { View } from "@/components/ui/view"
@@ -17,7 +14,6 @@ import {
 
 export const WorkspaceFooterContext = createContext<{
   vm: ReturnType<typeof useBusinessSwitch>
-  market: boolean
   onHeight: (height: number) => void
 } | null>(null)
 
@@ -26,22 +22,18 @@ export const WorkspaceFooterContext = createContext<{
 export function BusinessSwitchSheetFooter(props: BottomSheetFooterProps) {
   const context = useContext(WorkspaceFooterContext)
   if (!context) return null
-  const { vm, market, onHeight } = context
+  const { vm, onHeight } = context
   return (
     <BottomSheetFooter {...props}>
       <BottomSheetInputProvider>
         <View
-          className={
-            market
-              ? "gap-3 bg-market-field px-5 pb-5 pt-3"
-              : "gap-3 bg-card px-5 pb-5 pt-3"
-          }
+          className="gap-3 bg-card px-5 pb-5 pt-3"
           onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
         >
           {!vm.blocked && !vm.accepted ? (
             <>
               <FormField
-                variant={market ? "market" : "filled"}
+                variant="filled"
                 label="Find business"
                 leadingIcon="Search"
                 maxLength={BUSINESS_SEARCH_LIMIT}
@@ -50,24 +42,13 @@ export function BusinessSwitchSheetFooter(props: BottomSheetFooterProps) {
                 onChangeText={vm.setSearch}
                 placeholder="Name, role or currency"
               />
-              {market ? (
-                <MarketDayActionButton
-                  tone="marigold"
-                  icon="Plus"
-                  disabled={!vm.canCreate}
-                  onPress={vm.openCreate}
-                >
-                  Add business
-                </MarketDayActionButton>
-              ) : (
-                <ActionButton
-                  icon="Plus"
-                  disabled={!vm.canCreate}
-                  onPress={vm.openCreate}
-                >
-                  Add business
-                </ActionButton>
-              )}
+              <ActionButton
+                icon="Plus"
+                disabled={!vm.canCreate}
+                onPress={vm.openCreate}
+              >
+                Add business
+              </ActionButton>
             </>
           ) : null}
         </View>

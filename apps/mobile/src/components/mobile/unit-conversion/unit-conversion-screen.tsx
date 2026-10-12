@@ -1,6 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import * as Classic from "@/components/mobile/appearances/classic/unit-conversion"
-import * as Market from "@/components/mobile/appearances/market-day/unit-conversion"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { FormField } from "@/components/mobile/form-field"
@@ -14,15 +12,11 @@ import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useColorScheme } from "@/hooks/use-color"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { cn } from "@/lib/utils"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
 import {
-  Keyboard,
   Text as NativeText,
   View as NativeView,
   type ScrollView,
@@ -42,28 +36,14 @@ import { UnitConversionReview } from "./unit-conversion-review"
 import { useUnitConversion } from "./use-unit-conversion"
 
 export function UnitConversionChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="unit-conversion" />
+  return <MobileWorkflowChrome {...props} />
 }
 
 export function UnitConversionContent(props: ConversionProps) {
   const model = useUnitConversion(props)
-  const market = useMobileDesign("unit-conversion") === "market-day"
-  const {
-    ConversionHeader: Header,
-    ConversionSection: Section,
-    ConversionSummary: Summary,
-  } = market ? Market : Classic
-  const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(88)
   const scroll = useRef<ScrollView>(null)
-  const sourceTop = useRef(0)
-  const targetTop = useRef(0)
-  const revealSection = (y: number) => {
-    Keyboard.dismiss()
-    scroll.current?.scrollTo({ y, animated: true })
-  }
   const completed = model.phase === "complete"
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   useEffect(() => {
     if (model.error && !model.review)
       scroll.current?.scrollTo({ y: 0, animated: true })
@@ -72,9 +52,7 @@ export function UnitConversionContent(props: ConversionProps) {
     <VariableContextProvider
       value={{ "--conversion-footer": footerHeight + 24 }}
     >
-      <View
-        className={cn("flex-1", market ? "bg-market-canvas" : "bg-background")}
-      >
+      <View className="flex-1 bg-background">
         <KeyboardAwareScrollView
           ref={scroll}
           className="flex-1"
@@ -85,11 +63,7 @@ export function UnitConversionContent(props: ConversionProps) {
           keyboardShouldPersistTaps="handled"
         >
           <View className="gap-6 px-4 pt-3 pb-[var(--conversion-footer)]">
-            {!market ? (
-              <ClassicConversionHero model={model} />
-            ) : (
-              <Header storeName={model.storeName} />
-            )}
+            <ClassicConversionHero model={model} />
             {model.offline ? (
               <StatusBanner
                 tone="warning"
@@ -151,129 +125,12 @@ export function UnitConversionContent(props: ConversionProps) {
                   onFill={model.fill}
                   onUndo={model.undo}
                 />
-                {market ? (
+                <ClassicConversionBody model={model} />
+                {model.rows.length ? (
                   <>
-                    <Section
-                      title="Source balance"
-                      onLayout={(event) => {
-                        sourceTop.current = event.nativeEvent.layout.y
-                      }}
-                      description="Choose the packaged stock to convert."
-                    >
-                      {model.loading ? (
-                        <Skeleton className="h-16 w-full" />
-                      ) : model.missingStore ? (
-                        <Text className={muted}>
-                          Current Store unavailable.
-                        </Text>
-                      ) : !model.hasBalanceData ? (
-                        <Text className={muted}>
-                          No cached balance report. Reconnect to load stock.
-                        </Text>
-                      ) : (
-                        <ConversionBalanceChoices
-                          rows={model.rows}
-                          selectedId={model.draft.sourceId}
-                          disabled={model.locked}
-                          market={market}
-                          label="Source balances"
-                          onSelect={model.selectSource}
-                          onPageChange={() => revealSection(sourceTop.current)}
-                          emptyMessage="No packaged balances in this Store. Configure packaged inventory before converting units."
-                        />
-                      )}
-                      {!market ? (
-                        <ExactQuantityStepper
-                          label={`Source quantity · ${model.source?.inventoryUnitName ?? "units"}`}
-                          value={model.draft.sourceQuantity}
-                          disabled={model.locked || !model.source}
-                          onChange={(sourceQuantity) =>
-                            model.edit({ sourceQuantity })
-                          }
-                        />
-                      ) : (
-                        <FormField
-                          label={
-                            model.source
-                              ? `Source quantity · ${model.source.inventoryUnitName}`
-                              : "Source quantity"
-                          }
-                          keyboardType="decimal-pad"
-                          maxLength={40}
-                          editable={!model.locked && Boolean(model.source)}
-                          value={model.draft.sourceQuantity}
-                          onChangeText={(sourceQuantity) =>
-                            model.edit({ sourceQuantity })
-                          }
-                        />
-                      )}{" "}
-                    </Section>
-                    <Section
-                      title="Target packaged balance"
-                      onLayout={(event) => {
-                        targetTop.current = event.nativeEvent.layout.y
-                      }}
-                      description="Only matching Product, variant, Store and configuration are shown."
-                    >
-                      <ConversionBalanceChoices
-                        key={model.source?.balanceSourceId ?? "no-source"}
-                        rows={model.targetRows}
-                        selectedId={model.draft.targetId}
-                        disabled={model.locked}
-                        market={market}
-                        label="Target balances"
-                        onSelect={model.selectTarget}
-                        onPageChange={() => revealSection(targetTop.current)}
-                        emptyMessage={
-                          model.source
-                            ? "No compatible target balance. Configure another packaged balance for this Product and variant."
-                            : "Choose a source balance first."
-                        }
-                      />
-                      <FormField
-                        label={
-                          model.target
-                            ? `Target quantity · ${model.target.inventoryUnitName}`
-                            : "Target quantity"
-                        }
-                        keyboardType="decimal-pad"
-                        maxLength={40}
-                        editable={!model.locked && Boolean(model.target)}
-                        value={model.draft.targetQuantity}
-                        onChangeText={(targetQuantity) =>
-                          model.edit({ targetQuantity })
-                        }
-                      />
-                    </Section>
-                    {model.source && model.target && model.projection.value ? (
-                      <Summary
-                        source={model.source}
-                        target={model.target}
-                        projection={model.projection.value}
-                      />
-                    ) : model.source &&
-                      model.target &&
-                      model.draft.sourceQuantity &&
-                      model.draft.targetQuantity &&
-                      model.projection.error ? (
-                      <StatusBanner
-                        tone="warning"
-                        title="Check exact quantities"
-                        message={model.projection.error}
-                      />
-                    ) : null}
-                  </>
-                ) : (
-                  <ClassicConversionBody model={model} />
-                )}
-                {market || model.rows.length ? (
-                  <>
-                    {!market ? (
-                      <Text className="-mb-3 text-xs text-muted-foreground">
-                        No rounding. Record any loss separately as an
-                        Adjustment.
-                      </Text>
-                    ) : null}
+                    <Text className="-mb-3 text-xs text-muted-foreground">
+                      No rounding. Record any loss separately as an Adjustment.
+                    </Text>
                     <FormField
                       label="Reason"
                       multiline
@@ -282,7 +139,7 @@ export function UnitConversionContent(props: ConversionProps) {
                       value={model.draft.reason}
                       onChangeText={(reason) => model.edit({ reason })}
                     />
-                    <Text className={`text-xs ${muted}`}>
+                    <Text className="text-xs text-muted-foreground">
                       Each quantity must fit its unit's precision, up to six
                       decimal places. No rounding is applied. Record loss as a
                       separate Adjustment.
@@ -302,7 +159,6 @@ export function UnitConversionContent(props: ConversionProps) {
             value=""
             onChangeText={() => undefined}
             placeholder=""
-            variant={market ? "market-day" : "default"}
             onHeightChange={setFooterHeight}
           >
             <ActionButton
@@ -311,15 +167,6 @@ export function UnitConversionContent(props: ConversionProps) {
               loadingLabel="Transforming stock"
               onPress={model.openReview}
               trailingIcon="ArrowRight"
-              foregroundColor={market ? palette.onPalm : undefined}
-              disabledForegroundColor={market ? palette.mutedInk : undefined}
-              className={
-                market
-                  ? model.canReview
-                    ? "bg-market-palm active:bg-market-hero-pressed"
-                    : "bg-market-line active:bg-market-line"
-                  : undefined
-              }
             >
               {model.offline
                 ? "Reconnect to convert units"
@@ -329,7 +176,7 @@ export function UnitConversionContent(props: ConversionProps) {
             </ActionButton>
           </BottomSearchFooter>
         ) : null}
-        <UnitConversionReview model={model} market={market} />
+        <UnitConversionReview model={model} />
       </View>
     </VariableContextProvider>
   )
@@ -607,7 +454,6 @@ function ClassicConversionBody({ model }: { model: ConversionModel }) {
             rows={model.rows}
             selectedId={draft.sourceId}
             disabled={model.locked}
-            market={false}
             label="Source balances"
             onSelect={(id) => {
               model.selectSource(id)
@@ -625,7 +471,6 @@ function ClassicConversionBody({ model }: { model: ConversionModel }) {
             rows={model.targetRows}
             selectedId={draft.targetId}
             disabled={model.locked}
-            market={false}
             label="Target balances"
             onSelect={(id) => {
               model.selectTarget(id)

@@ -3,10 +3,8 @@ import {
   getAutoUpdateStepState,
 } from "@/components/app-auto-update-step"
 import { ClassicAutoUpdateScreen } from "@/components/mobile/appearances/classic/auto-update-screen"
-import { MarketDayAutoUpdateScreen } from "@/components/mobile/appearances/market-day/auto-update-screen"
 import { normalizeDownloadProgress } from "@/components/mobile/updates/updates-presentation"
 import { useLaunchAutoUpdate } from "@/hooks/use-launch-auto-update"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { Modal } from "react-native"
 import { AppBuildUpdate } from "./app-build-update"
 
@@ -17,10 +15,6 @@ export function AppAutoUpdateModal({
 }: { restoreRoute?: boolean } = {}) {
   const { dismissFailure, downloadProgress, errorMessage, phase, visible } =
     useLaunchAutoUpdate()
-  const Presentation =
-    useMobileDesign("updates") === "market-day"
-      ? MarketDayAutoUpdateScreen
-      : ClassicAutoUpdateScreen
   const failed = phase === "failed"
   const title = failed
     ? "Update paused"
@@ -45,7 +39,7 @@ export function AppAutoUpdateModal({
         presentationStyle="fullScreen"
         visible={visible}
       >
-        <Presentation
+        <ClassicAutoUpdateScreen
           title={title}
           message={message}
           failed={failed}

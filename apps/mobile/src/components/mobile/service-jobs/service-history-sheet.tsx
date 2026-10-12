@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
 import { textLabel } from "./service-jobs-model"
-import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
 export type ServiceHistoryKind = "notes" | "evidence" | "pending"
@@ -37,7 +36,6 @@ type RecordRow = {
   removable: boolean
 }
 export function ServiceHistorySheet({ model }: { model: ServiceJobsModel }) {
-  const { market } = useServiceAppearance()
   const { height } = useWindowDimensions()
   const history = model.history
   const rows: RecordRow[] =
@@ -86,13 +84,7 @@ export function ServiceHistorySheet({ model }: { model: ServiceJobsModel }) {
         maxToRenderPerBatch={6}
         windowSize={5}
         ListHeaderComponent={
-          <Text
-            className={
-              market
-                ? "px-5 pb-4 text-xs text-market-muted-ink"
-                : "px-5 pb-4 text-xs text-muted-foreground"
-            }
-          >
+          <Text className="px-5 pb-4 text-xs text-muted-foreground">
             {rows.length} loaded{" "}
             {history.kind === "notes" ? "notes" : "attachments"}.{" "}
             {history.kind === "pending"
@@ -101,40 +93,16 @@ export function ServiceHistorySheet({ model }: { model: ServiceJobsModel }) {
           </Text>
         }
         ListEmptyComponent={
-          <Text
-            className={
-              market ? "px-5 py-5 text-market-ink" : "px-5 py-5 text-foreground"
-            }
-          >
+          <Text className="px-5 py-5 text-foreground">
             {model.scopeChanged
               ? "Return to the original account and Store to view these records."
               : "No loaded records."}
           </Text>
         }
         renderItem={({ item }) => (
-          <View
-            className={
-              market
-                ? "mx-5 gap-3 border-b border-market-line py-4"
-                : "mx-5 gap-3 border-b border-border py-4"
-            }
-          >
-            <Text
-              className={
-                market ? "text-sm text-market-ink" : "text-sm text-foreground"
-              }
-            >
-              {item.title}
-            </Text>
-            <Text
-              className={
-                market
-                  ? "text-xs text-market-muted-ink"
-                  : "text-xs text-muted-foreground"
-              }
-            >
-              {item.detail}
-            </Text>
+          <View className="mx-5 gap-3 border-b border-border py-4">
+            <Text className="text-sm text-foreground">{item.title}</Text>
+            <Text className="text-xs text-muted-foreground">{item.detail}</Text>
             {item.removable ? (
               <ServiceAction
                 variant="outline"

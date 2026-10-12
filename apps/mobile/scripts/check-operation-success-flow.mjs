@@ -21,7 +21,6 @@ const checks = [
   {
     file: "app/create-sale-modal.tsx",
     markers: [
-      "showOperationSuccess",
       'kind: "order"',
       "completion.reference",
       "completion.paymentState",
@@ -40,9 +39,6 @@ const checks = [
   {
     file: "components/mobile/operation-success-screen.tsx",
     markers: [
-      "Order created",
-      "Product added",
-      "Service added",
       "Order queued",
       "SuccessDetailRow",
       'accessibilityLabel="Go to home"',

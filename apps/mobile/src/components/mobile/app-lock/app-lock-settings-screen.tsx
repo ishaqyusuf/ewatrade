@@ -1,24 +1,18 @@
-import { AppLockPinPad } from "@/components/mobile/app-lock-pin-pad"
-import { MarketDayAppLockScreen } from "@/components/mobile/appearances/market-day/app-lock-screen"
-import { Text } from "@/components/ui/text"
 import { useAppLockContext } from "@/hooks/use-app-lock"
 import { useAppLockCountdown } from "@/hooks/use-app-lock-countdown"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import {
   appLockBiometricName,
   appLockLockoutMessage,
   appLockTriesLeft,
   appLockWrongPinMessage,
 } from "@/lib/app-lock-messages"
-import { resolveAppLockQuietSealPresentation } from "@/lib/app-lock-quiet-seal-presentation"
 import {
   APP_LOCK_CODE_LENGTH,
   APP_LOCK_MAX_FAILED_ATTEMPTS,
 } from "@/lib/app-lock-store"
 import { useRouter } from "expo-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AppLockManagement } from "./app-lock-management"
+import { useCallback, useEffect, useState } from "react"
 import { AppLockSettingsPage } from "./app-lock-settings-page"
 import {
   AppLockBiometricOffer,
@@ -43,15 +37,11 @@ function normalizeLockCode(value: string) {
 }
 
 export function AppLockSettingsScreen() {
-  const design = useMobileDesign("app-lock")
-  const market = design === "market-day"
   const router = useRouter()
   const auth = useAuthContext()
   const appLock = useAppLockContext()
   const forgotPin = useForgotPin()
-  const [mode, setMode] = useState<AppLockSetupMode>(
-    !market || appLock.isConfigured ? "manage" : "create",
-  )
+  const [mode, setMode] = useState<AppLockSetupMode>("manage")
   // A new PIN after "Change PIN" finishes with "PIN changed", not the offer.
   const [isChangingPin, setIsChangingPin] = useState(false)
   const [code, setCode] = useState("")
@@ -64,14 +54,6 @@ export function AppLockSettingsScreen() {
   const lockoutSeconds = useAppLockCountdown(lockedUntil)
   const isVerifying = mode === "verify-change" || mode === "verify-disable"
   const biometricLabel = appLock.biometricsStatus.label
-  const presentation = useMemo(
-    () =>
-      resolveAppLockQuietSealPresentation(
-        mode === "biometric-offer" ? "manage" : mode,
-        auth.profile?.businessName,
-      ),
-    [auth.profile?.businessName, mode],
-  )
   const entryMessage = isSubmitting
     ? mode === "confirm"
       ? "Saving app lock."
@@ -81,15 +63,6 @@ export function AppLockSettingsScreen() {
     : isVerifying && lockoutSeconds > 0
       ? appLockLockoutMessage(lockoutSeconds)
       : message
-
-  // Pick the opening step once storage is read. Later lock changes are
-  // routed by the step handlers, so saving a PIN can still show the offer.
-  const openingStepChosen = useRef(false)
-  useEffect(() => {
-    if (!appLock.isHydrated || openingStepChosen.current) return
-    openingStepChosen.current = true
-    setMode(!market || appLock.isConfigured ? "manage" : "create")
-  }, [appLock.isConfigured, appLock.isHydrated, market])
 
   const resetEntry = useCallback(() => {
     setCode("")
@@ -157,17 +130,11 @@ export function AppLockSettingsScreen() {
 
       await appLock.setBiometricsEnabled(enabled)
       const name = appLockBiometricName(appLock.biometricsStatus.label)
-      if (market) {
-        setMessage(
-          enabled ? "Biometric unlock enabled." : "Biometric unlock off.",
-        )
-        return
-      }
       setNote(
         enabled ? `Unlock with ${name} is on` : `Unlock with ${name} is off`,
       )
     },
-    [appLock, market],
+    [appLock],
   )
 
   const finishBiometricOffer = useCallback(
@@ -218,18 +185,18 @@ export function AppLockSettingsScreen() {
         setIsChangingPin(false)
         setMode("manage")
         setNote("PIN changed")
-        setMessage(market ? "PIN changed." : null)
+        setMessage(null)
         return
       }
       // The offer needs a PIN first, and only appears when the phone has
       // biometrics set up; Settings keeps the switch for later.
-      if (!market && appLock.biometricsStatus.isAvailable) {
+      if (appLock.biometricsStatus.isAvailable) {
         setMode("biometric-offer")
         return
       }
       setMode("manage")
       setNote(null)
-      setMessage(market ? "App lock is on." : null)
+      setMessage(null)
       return
     }
 
@@ -259,9 +226,9 @@ export function AppLockSettingsScreen() {
       if (mode === "verify-disable") {
         await appLock.clearLock()
         setCode("")
-        setMode(market ? "create" : "manage")
+        setMode("manage")
         setNote(null)
-        setMessage(market ? "App lock is off." : null)
+        setMessage(null)
         setIsError(false)
         setIsSubmitting(false)
         return
@@ -271,23 +238,14 @@ export function AppLockSettingsScreen() {
       setCode("")
       setIsChangingPin(true)
       setMode("create")
-      setMessage(market ? "Create your new PIN code." : null)
+      setMessage(null)
       setIsError(false)
       setIsSubmitting(false)
       return
     }
 
     setIsSubmitting(false)
-  }, [
-    appLock,
-    code,
-    draftCode,
-    isChangingPin,
-    isSubmitting,
-    isVerifying,
-    market,
-    mode,
-  ])
+  }, [appLock, code, draftCode, isChangingPin, isSubmitting, isVerifying, mode])
 
   useEffect(() => {
     if (code.length === APP_LOCK_CODE_LENGTH) {
@@ -298,59 +256,6 @@ export function AppLockSettingsScreen() {
   const close = useCallback(() => {
     router.back()
   }, [router])
-
-  if (market) {
-    return (
-      <MarketDayAppLockScreen
-        mode={mode === "manage" ? "manage" : "entry"}
-        eyebrow={presentation.eyebrow}
-        onClose={close}
-        subtitle={presentation.subtitle}
-        title={presentation.title}
-        management={
-          <AppLockManagement
-            hasLock={appLock.isConfigured}
-            biometricsEnabled={!!appLock.config?.biometricsEnabled}
-            biometricsAvailable={appLock.biometricsStatus.isAvailable}
-            biometricLabel={biometricLabel}
-            biometricDetail={
-              appLock.biometricsStatus.isAvailable
-                ? `Use ${appLockBiometricName(biometricLabel)} from the PIN keypad.`
-                : (appLock.biometricsStatus.reason ??
-                  "Biometric unlock is not available on this device.")
-            }
-            message={message}
-            onChangePin={startChange}
-            onCreatePin={startCreate}
-            onDisable={startDisable}
-            onToggleBiometrics={toggleBiometrics}
-          />
-        }
-        pinpad={
-          <AppLockPinPad
-            codeLength={APP_LOCK_CODE_LENGTH}
-            disabled={isSubmitting || lockoutSeconds > 0}
-            onDeletePress={removeLastDigit}
-            onDigitPress={appendDigit}
-            value={code}
-            variant="quiet-seal"
-          />
-        }
-        feedback={
-          <Text
-            accessibilityLiveRegion="polite"
-            className={
-              entryMessage
-                ? "min-h-5 text-center text-xs font-semibold leading-[18px] text-market-paprika"
-                : "min-h-5 text-center text-xs leading-[18px] text-market-muted-ink"
-            }
-          >
-            {entryMessage ?? " "}
-          </Text>
-        }
-      />
-    )
-  }
 
   if (mode === "manage") {
     return (

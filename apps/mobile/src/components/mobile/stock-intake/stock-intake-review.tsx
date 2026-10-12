@@ -4,8 +4,6 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { cn } from "@/lib/utils"
 import {
   type BottomSheetBackdropProps,
   BottomSheetFooter,
@@ -18,11 +16,7 @@ import { useWindowDimensions } from "react-native"
 import { STOCK_MODES, stockCustodyLabel } from "./stock-intake-model"
 import type { StockIntakeModel } from "./use-stock-intake"
 
-export function StockIntakeReview({
-  model,
-  market,
-}: { model: StockIntakeModel; market: boolean }) {
-  const palette = useMarketDayPalette()
+export function StockIntakeReview({ model }: { model: StockIntakeModel }) {
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(144)
   const disabled =
@@ -42,12 +36,7 @@ export function StockIntakeReview({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={cn(
-            "gap-2 border-t px-5 pb-5 pt-3",
-            market
-              ? "border-market-line bg-market-field"
-              : "border-border bg-card",
-          )}
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           <ActionButton
             disabled={disabled}
@@ -58,15 +47,6 @@ export function StockIntakeReview({
                 : "Recording stock"
             }
             onPress={() => void model.confirm()}
-            foregroundColor={market ? palette.onPalm : undefined}
-            disabledForegroundColor={market ? palette.mutedInk : undefined}
-            className={
-              market
-                ? disabled
-                  ? "bg-market-line active:bg-market-line"
-                  : "bg-market-palm active:bg-market-hero-pressed"
-                : undefined
-            }
           >
             {model.hasCountDraft
               ? "Retry count finalization"
@@ -78,12 +58,6 @@ export function StockIntakeReview({
             disabled={model.pending}
             onPress={model.dismissReview}
             variant="outline"
-            foregroundColor={market ? palette.ink : undefined}
-            className={
-              market
-                ? "border-market-line bg-market-field active:bg-market-line"
-                : undefined
-            }
           >
             {model.hasAttempt ? "Close review" : "Back to draft"}
           </ActionButton>
@@ -92,20 +66,14 @@ export function StockIntakeReview({
     ),
     [
       disabled,
-      market,
       model.pending,
       model.phase,
       model.hasCountDraft,
       model.hasAttempt,
       model.confirm,
       model.dismissReview,
-      palette.onPalm,
-      palette.mutedInk,
-      palette.ink,
     ],
   )
-  const ink = market ? "text-market-ink" : "text-foreground"
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   const review = model.review
   return (
     <VariableContextProvider
@@ -126,12 +94,7 @@ export function StockIntakeReview({
           <View className="gap-3 px-5 pb-[var(--stock-review-footer)]">
             {review ? (
               <>
-                <Text
-                  className={cn(
-                    "text-xs font-bold uppercase tracking-[1px]",
-                    muted,
-                  )}
-                >
+                <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
                   {
                     STOCK_MODES.find((mode) => mode.key === review.draft.mode)
                       ?.label
@@ -140,33 +103,19 @@ export function StockIntakeReview({
                 </Text>
                 <Text
                   accessibilityRole="header"
-                  className={cn("text-xl font-extrabold", ink)}
+                  className="text-xl font-extrabold text-foreground"
                 >
                   {review.balance.productName} · {review.balance.variantName}
                 </Text>
-                <Text className={cn("text-sm", muted)}>
+                <Text className="text-sm text-muted-foreground">
                   {stockCustodyLabel(review.balance, model.people)} · Revision{" "}
                   {review.balance.revision}
                 </Text>
-                <View
-                  className={cn(
-                    "gap-2 rounded-2xl border p-4",
-                    market
-                      ? "border-market-line bg-market-canvas"
-                      : "border-border bg-background",
-                  )}
-                >
-                  <Text
-                    className={cn(
-                      "text-2xl font-bold",
-                      market
-                        ? "font-market-display text-market-accent-ink"
-                        : "text-primary",
-                    )}
-                  >
+                <View className="gap-2 rounded-2xl border border-border bg-background p-4">
+                  <Text className="text-2xl font-bold text-primary">
                     {review.quantity} {review.balance.inventoryUnitName}
                   </Text>
-                  <Text className={cn("text-sm [-rn-line-height:20]", muted)}>
+                  <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
                     {review.draft.mode === "count"
                       ? "Observed quantity; finalization applies the variance."
                       : review.draft.mode === "custody"
@@ -183,21 +132,16 @@ export function StockIntakeReview({
                     {review.draft.categories.map((category) => (
                       <View
                         key={category.name}
-                        className={cn(
-                          "rounded-full border px-3 py-2",
-                          market
-                            ? "border-market-line bg-market-canvas"
-                            : "border-border bg-muted",
-                        )}
+                        className="rounded-full border border-border bg-muted px-3 py-2"
                       >
-                        <Text className={cn("text-sm", ink)}>
+                        <Text className="text-sm text-foreground">
                           {category.name}
                         </Text>
                       </View>
                     ))}
                   </View>
                 ) : (
-                  <Text className={cn("text-sm [-rn-line-height:21]", ink)}>
+                  <Text className="text-sm [-rn-line-height:21] text-foreground">
                     Reason: {review.draft.reason}
                   </Text>
                 )}
@@ -212,7 +156,7 @@ export function StockIntakeReview({
             {model.error ? (
               <StatusBanner tone="destructive" message={model.error} />
             ) : null}
-            <Text className={cn("text-xs [-rn-line-height:18]", muted)}>
+            <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
               {model.hasAttempt
                 ? "This reviewed payload is locked. Retrying uses the same request IDs; closing does not undo a saved operation or Count draft. A revision conflict needs operational review, not a new blind command."
                 : "Confirmation writes an auditable stock operation. Revisions and availability are checked by the server; this review does not reserve stock."}

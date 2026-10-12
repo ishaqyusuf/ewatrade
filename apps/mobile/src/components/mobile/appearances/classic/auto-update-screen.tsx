@@ -57,8 +57,8 @@ export function ClassicAutoUpdateScreen(model: AutoUpdatePresentationProps) {
               {model.downloading ? (
                 <UpdatesProgress progress={model.progress} />
               ) : null}
-              {model.steps.map((step, index) => (
-                <UpdatesStepRow key={step.label} step={step} index={index} />
+              {model.steps.map((step) => (
+                <UpdatesStepRow key={step.label} step={step} />
               ))}
             </View>
           )}

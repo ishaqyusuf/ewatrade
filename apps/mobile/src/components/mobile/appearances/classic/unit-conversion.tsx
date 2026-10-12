@@ -1,48 +1,13 @@
 import { conversionCustody } from "@/components/mobile/unit-conversion/unit-conversion-model"
 import type {
-  ConversionHeaderProps,
   ConversionRowProps,
-  ConversionSectionProps,
   ConversionSummaryProps,
 } from "@/components/mobile/unit-conversion/unit-conversion-presentation"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { cn } from "@/lib/utils"
-import { HeroCard } from "../../green-till/hero-card"
 
-export function ConversionHeader({ storeName }: ConversionHeaderProps) {
-  return (
-    <HeroCard
-      label="Convert units"
-      title="One balance, another unit"
-      sub={storeName}
-    />
-  )
-}
-export function ConversionSection({
-  onLayout,
-  title,
-  description,
-  children,
-}: ConversionSectionProps) {
-  return (
-    <View className="gap-3" onLayout={onLayout}>
-      <Text
-        accessibilityRole="header"
-        className="font-extrabold text-foreground"
-      >
-        {title}
-      </Text>
-      {description ? (
-        <Text className="text-sm text-muted-foreground [-rn-line-height:20]">
-          {description}
-        </Text>
-      ) : null}
-      {children}
-    </View>
-  )
-}
 export function ConversionRow({
   row,
   selected,

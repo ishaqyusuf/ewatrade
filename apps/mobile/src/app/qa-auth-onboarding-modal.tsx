@@ -265,7 +265,6 @@ function AuthQa() {
         resend={
           <>
             <VerificationResendLine
-              design="classic"
               disabled={busy || offline}
               isError={error}
               isSending={false}
@@ -401,7 +400,6 @@ function AuthQa() {
                 {(options as typeof BUSINESS_OPERATING_MODELS).map((option) => (
                   <SignUpChoice
                     key={option.key}
-                    appearance="classic"
                     label={option.label}
                     selected={choices.includes(option.key)}
                     multiple={index === 1}

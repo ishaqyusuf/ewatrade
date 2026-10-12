@@ -3,27 +3,14 @@ import {
   useAdminDockScroll,
   useAdminTabs,
 } from "@/components/mobile/admin-tabs/admin-tabs-context"
-import {
-  OrdersDispatchFilterRow,
-  OrdersDispatchLedgerMasthead,
-  OrdersDispatchLedgerRow,
-  OrdersDispatchLedgerSummary,
-  OrdersDispatchSection,
-} from "@/components/mobile/appearances/market-day/orders-dispatch-ledger"
-import {
-  CommerceFirstOrderGate,
-  CommercePendingOrderRow,
-  commercialOrderHref,
-} from "@/components/mobile/commerce"
+import { commercialOrderHref } from "@/components/mobile/commerce"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
-import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { toggleReceiptSelection } from "@/components/mobile/receipts/receipt-selection"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
-import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -67,8 +54,6 @@ import {
   ClassicOrdersSummary,
   ClassicPendingOrderRow,
 } from "@/components/mobile/appearances/classic/orders-screen"
-import { MarketDayOrdersScreen } from "@/components/mobile/appearances/market-day/orders-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { FlatList } from "react-native-css/components/FlatList"
 import type { OrderFilter } from "./orders-presentation"
 type DateFilter = "all" | "today" | "7_days" | "30_days"
@@ -101,22 +86,6 @@ function statusesForOrderFilter(filter: OrderFilter) {
 }
 
 export function OrdersScreen() {
-  const isMarketDay = useMobileDesign("orders") === "market-day"
-  const Screen = isMarketDay ? MarketDayOrdersScreen : ClassicOrdersScreen
-  const Masthead = isMarketDay
-    ? OrdersDispatchLedgerMasthead
-    : ClassicOrdersMasthead
-  const Summary = isMarketDay
-    ? OrdersDispatchLedgerSummary
-    : ClassicOrdersSummary
-  const Section = isMarketDay ? OrdersDispatchSection : ClassicOrdersSection
-  const FilterRow = isMarketDay
-    ? OrdersDispatchFilterRow
-    : ClassicOrdersFilterRow
-  const Row = isMarketDay ? OrdersDispatchLedgerRow : ClassicOrdersRow
-  const FirstOrderGate = isMarketDay
-    ? CommerceFirstOrderGate
-    : ClassicFirstOrderGate
   const auth = useAuthContext()
   const visibility = useOrderVisibility()
   const rep = isSalesRepRole(auth.profile?.role)
@@ -155,9 +124,6 @@ export function OrdersScreen() {
   ])
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const deferredQuery = useDeferredValue(query)
-  useEffect(() => {
-    if (isMarketDay && isOffline && query) setQuery("")
-  }, [isMarketDay, isOffline, query])
   const createdAfter = useMemo(
     () => createdAfterForDateFilter(dateFilter),
     [dateFilter],
@@ -172,7 +138,7 @@ export function OrdersScreen() {
     }),
     [createdAfter, rep, salesView],
   )
-  const reportEnabled = !isMarketDay && !isOffline
+  const reportEnabled = !isOffline
   const salesReport = useQuery(
     trpc.orders.reportSummary.queryOptions(
       { ...reportWindow, statuses: [...SALE_STATUSES] },
@@ -230,13 +196,13 @@ export function OrdersScreen() {
         statuses,
       },
       {
-        enabled: !isOffline && !isMarketDay,
+        enabled: !isOffline,
         getNextPageParam: (lastPage) => lastPage.nextCursor,
         retry: false,
       },
     ),
   )
-  const orders = isOffline && !isMarketDay ? savedOrders : searchedOrders
+  const orders = isOffline ? savedOrders : searchedOrders
   const loadedOrders = useMemo(
     () => orders.data?.pages.flatMap((page) => page.items) ?? [],
     [orders.data?.pages],
@@ -317,14 +283,9 @@ export function OrdersScreen() {
     },
     [handleDockScroll, insets.top, mastheadHeight],
   )
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Appearance changes invalidate measured masthead geometry.
-  useEffect(() => {
-    setShowCanvasStatusBar(false)
-    setMastheadHeight(0)
-  }, [isMarketDay])
 
   return (
-    <Screen showCanvasStatusBar={showCanvasStatusBar}>
+    <ClassicOrdersScreen showCanvasStatusBar={showCanvasStatusBar}>
       <FlatList
         {...edgeFeedback}
         contentContainerClassName="grow px-[var(--orders-list-side)] pt-[var(--orders-list-top)] pb-[var(--orders-list-bottom)]"
@@ -336,7 +297,7 @@ export function OrdersScreen() {
           visibleProvisionalOrders.length === 0 &&
           !showFirstOrderGate &&
           !orders.isError ? (
-            <Section>
+            <ClassicOrdersSection>
               {loadedOrders.length > 0 ? (
                 <ActionButton
                   variant="outline"
@@ -349,10 +310,8 @@ export function OrdersScreen() {
                   {selectingReceipts ? "Cancel selection" : "Select receipts"}
                 </ActionButton>
               ) : null}
-              {!isMarketDay && orders.isPending && !isOffline ? (
+              {orders.isPending && !isOffline ? (
                 <ClassicOrdersSkeleton />
-              ) : orders.isPending && !isOffline ? (
-                <ListSkeleton count={6} label="Loading orders" />
               ) : (
                 <EmptyState
                   actionLabel={isOffline ? undefined : "Clear filters"}
@@ -375,12 +334,12 @@ export function OrdersScreen() {
                   }
                 />
               )}
-            </Section>
+            </ClassicOrdersSection>
           ) : null
         }
         ListHeaderComponent={
           <View className="gap-5 pb-4">
-            <Masthead
+            <ClassicOrdersMasthead
               title={rep ? "Your sales" : "Orders"}
               businessName={auth.profile?.businessName ?? "Your business"}
               onCustomersPress={() => router.push("/customer-book-modal")}
@@ -414,49 +373,41 @@ export function OrdersScreen() {
               </View>
             ) : null}
             {!showFirstOrderGate ? (
-              isMarketDay ? (
-                <Summary
-                  dateFilter={dateFilter}
-                  loading={orders.isPending && !isOffline}
-                  orders={visibleOrders}
-                />
-              ) : (
-                <ClassicOrdersSummary
-                  report={
-                    salesReport.data
-                      ? {
-                          currencyCode: salesReport.data.currencyCode,
-                          orderCount: salesReport.data.orderCount,
-                          orderValueMinor: salesReport.data.orderValueMinor,
-                          outstandingMinor:
-                            "outstandingMinor" in salesReport.data
-                              ? salesReport.data.outstandingMinor
-                              : undefined,
-                          partial:
-                            "partial" in salesReport.data
-                              ? salesReport.data.partial
-                              : undefined,
-                        }
-                      : null
-                  }
-                  dateFilter={dateFilter}
-                  orders={visibleOrders}
-                  totalCount={isOffline ? visibleOrders.length : totalCount}
-                  onDateChange={setDateFilter}
-                  isOffline={isOffline}
-                  savedAt={
-                    orders.dataUpdatedAt
-                      ? new Date(orders.dataUpdatedAt).toLocaleTimeString(
-                          undefined,
-                          { hour: "2-digit", minute: "2-digit" },
-                        )
-                      : undefined
-                  }
-                  loading={orders.isPending && !isOffline}
-                />
-              )
+              <ClassicOrdersSummary
+                report={
+                  salesReport.data
+                    ? {
+                        currencyCode: salesReport.data.currencyCode,
+                        orderCount: salesReport.data.orderCount,
+                        orderValueMinor: salesReport.data.orderValueMinor,
+                        outstandingMinor:
+                          "outstandingMinor" in salesReport.data
+                            ? salesReport.data.outstandingMinor
+                            : undefined,
+                        partial:
+                          "partial" in salesReport.data
+                            ? salesReport.data.partial
+                            : undefined,
+                      }
+                    : null
+                }
+                dateFilter={dateFilter}
+                orders={visibleOrders}
+                totalCount={isOffline ? visibleOrders.length : totalCount}
+                onDateChange={setDateFilter}
+                isOffline={isOffline}
+                savedAt={
+                  orders.dataUpdatedAt
+                    ? new Date(orders.dataUpdatedAt).toLocaleTimeString(
+                        undefined,
+                        { hour: "2-digit", minute: "2-digit" },
+                      )
+                    : undefined
+                }
+                loading={orders.isPending && !isOffline}
+              />
             ) : null}
-            <Section>
+            <ClassicOrdersSection>
               {provisionalOrders.length > 0 ? (
                 <StatusBanner
                   icon="Wind"
@@ -483,7 +434,7 @@ export function OrdersScreen() {
                 />
               ) : null}
               {showFirstOrderGate ? (
-                <FirstOrderGate
+                <ClassicFirstOrderGate
                   catalogReady={availability.hasActiveSellableItems}
                   onAddItemPress={() =>
                     router.push("/first-product-setup-modal")
@@ -492,43 +443,18 @@ export function OrdersScreen() {
                 />
               ) : (
                 <>
-                  {isMarketDay ? (
-                    <FilterRow
-                      active={dateFilter}
-                      labels={{
-                        "30_days": "30 days",
-                        "7_days": "7 days",
-                        all: "All time",
-                        today: "Today",
-                      }}
-                      onChange={setDateFilter}
-                      values={["today", "7_days", "30_days", "all"]}
-                    />
-                  ) : null}
-                  <FilterRow
+                  <ClassicOrdersFilterRow
                     active={filter}
-                    labels={
-                      isMarketDay
-                        ? {
-                            all:
-                              filter === "all" && !isOffline && orders.data
-                                ? `All ${totalCount}`
-                                : "All",
-                            cancelled: "Cancelled",
-                            completed: "Done",
-                            open: "Open",
-                          }
-                        : {
-                            all: `All${statusCount(countAll.data)}`,
-                            cancelled: `Cancelled${statusCount(countCancelled.data)}`,
-                            completed: `Done${statusCount(countDone.data)}`,
-                            open: `Open${statusCount(countOpen.data)}`,
-                          }
-                    }
+                    labels={{
+                      all: `All${statusCount(countAll.data)}`,
+                      cancelled: `Cancelled${statusCount(countCancelled.data)}`,
+                      completed: `Done${statusCount(countDone.data)}`,
+                      open: `Open${statusCount(countOpen.data)}`,
+                    }}
                     onChange={setFilter}
                     values={["all", "open", "completed", "cancelled"]}
                   />
-                  {showSearch && (!isMarketDay || !isOffline) ? (
+                  {showSearch ? (
                     <FormField
                       accessibilityLabel="Search orders"
                       autoCapitalize="none"
@@ -537,7 +463,7 @@ export function OrdersScreen() {
                       onChangeText={setQuery}
                       placeholder="Search order, customer or item"
                       value={query}
-                      variant={isMarketDay ? "filled" : "till-search"}
+                      variant="till-search"
                     />
                   ) : null}
                   {loadedOrders.length > 0 ? (
@@ -556,21 +482,14 @@ export function OrdersScreen() {
                   ) : null}
                 </>
               )}
-              {visibleProvisionalOrders.map((order) =>
-                isMarketDay ? (
-                  <CommercePendingOrderRow
-                    key={order.clientCommandId}
-                    order={order}
-                  />
-                ) : (
-                  <ClassicPendingOrderRow
-                    key={order.clientCommandId}
-                    order={order}
-                    onPress={() => router.push("/sync-status-modal")}
-                  />
-                ),
-              )}
-            </Section>
+              {visibleProvisionalOrders.map((order) => (
+                <ClassicPendingOrderRow
+                  key={order.clientCommandId}
+                  order={order}
+                  onPress={() => router.push("/sync-status-modal")}
+                />
+              ))}
+            </ClassicOrdersSection>
           </View>
         }
         onScroll={handleScroll}
@@ -596,8 +515,8 @@ export function OrdersScreen() {
         }
         renderItem={({ index, item }) => (
           <RevealItem active={revealRows} index={index}>
-            <Section>
-              {!isMarketDay && dayHeaders.has(item.id) ? (
+            <ClassicOrdersSection>
+              {dayHeaders.has(item.id) ? (
                 <View className="mt-3 -mb-1.5 flex-row flex-wrap items-baseline justify-between gap-2">
                   <Text className="text-[15px] font-extrabold text-foreground">
                     {dayHeaders.get(item.id)?.label}
@@ -607,39 +526,7 @@ export function OrdersScreen() {
                   </Text>
                 </View>
               ) : null}
-              {isMarketDay && selectingReceipts ? (
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityLabel={`Select ${item.orderNumber}`}
-                  accessibilityState={{
-                    checked: receiptIds.includes(item.id),
-                    disabled:
-                      !isReceiptOrderEligible(item.status) ||
-                      (!receiptIds.includes(item.id) &&
-                        receiptIds.length >= 20),
-                  }}
-                  disabled={
-                    !isReceiptOrderEligible(item.status) ||
-                    (!receiptIds.includes(item.id) && receiptIds.length >= 20)
-                  }
-                  className="min-h-12 justify-center border-b border-border py-3"
-                  onPress={() =>
-                    setReceiptIds((current) =>
-                      toggleReceiptSelection(current, item.id),
-                    )
-                  }
-                >
-                  <Text className="font-semibold text-primary">
-                    {receiptIds.includes(item.id)
-                      ? "✓ Selected"
-                      : isReceiptOrderEligible(item.status)
-                        ? "Select receipt"
-                        : "Receipt unavailable"}{" "}
-                    · {item.orderNumber}
-                  </Text>
-                </Pressable>
-              ) : null}
-              <Row
+              <ClassicOrdersRow
                 index={index}
                 position={dayPositions.get(item.id)}
                 selecting={selectingReceipts}
@@ -666,7 +553,7 @@ export function OrdersScreen() {
                 }}
                 order={item}
               />
-            </Section>
+            </ClassicOrdersSection>
           </RevealItem>
         )}
         scrollEventThrottle={16}
@@ -701,13 +588,13 @@ export function OrdersScreen() {
       {isDockHidden && !showFirstOrderGate && !selectingReceipts ? (
         <ListCreateFab
           accessibilityLabel="Add order"
-          tone={isMarketDay ? undefined : "gold"}
+          tone="gold"
           dockHidden
           onPress={() => router.push("/create-sale-modal")}
           sitsAboveDock
           testID="orders-add-fab"
         />
       ) : null}
-    </Screen>
+    </ClassicOrdersScreen>
   )
 }

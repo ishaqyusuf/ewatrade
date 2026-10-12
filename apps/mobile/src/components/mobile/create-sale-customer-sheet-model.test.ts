@@ -1,19 +1,11 @@
 import { describe, expect, test } from "bun:test"
 import {
-  CREATE_CUSTOMER_SHEET_SNAP_POINTS,
   CUSTOMER_SHEET_PRESENT_DELAY_MS,
-  getCreateCustomerSheetMaxHeight,
   hasCreateCustomerDraft,
   isCreateCustomerSaveDisabled,
 } from "./create-sale-customer-sheet-model"
 
 describe("create customer sheet presentation", () => {
-  test("caps the compact sheet at 44% of the viewport", () => {
-    expect(getCreateCustomerSheetMaxHeight(740)).toBe(326)
-    expect(getCreateCustomerSheetMaxHeight(844)).toBe(371)
-    expect(CREATE_CUSTOMER_SHEET_SNAP_POINTS).toEqual(["44%", "84%"])
-  })
-
   test("keeps save disabled until the required name is present", () => {
     expect(isCreateCustomerSaveDisabled({ disabled: false, name: "" })).toBe(
       true,

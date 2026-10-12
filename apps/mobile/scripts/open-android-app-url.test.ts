@@ -19,14 +19,13 @@ describe("Android native app URL launcher", () => {
     expect(() =>
       validateAndroidAppUrl({
         expectedScheme: "ewatrade-dev",
-        url: "ewatrade-dev://business-home-market-ledger/--/attendant",
+        url: "ewatrade-dev://orders/--/attendant",
       }),
     ).toThrow("must not contain /--/")
   })
 
   test("builds a BROWSABLE intent for the selected app package", () => {
-    const url =
-      "ewatrade-dev://business-home-market-ledger?state=attendant&theme=light"
+    const url = "ewatrade-dev://orders?state=attendant&theme=light"
 
     expect(validateAndroidAppUrl({ expectedScheme: "ewatrade-dev", url })).toBe(
       url,

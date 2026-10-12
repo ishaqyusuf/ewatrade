@@ -612,7 +612,6 @@ export function ClassicPricing({ model }: { model: CatalogSetupModel }) {
       {advanced ? (
         <CatalogSetupPricing
           model={model}
-          market={false}
           onLayout={() => undefined}
           onPageChange={() => undefined}
         />

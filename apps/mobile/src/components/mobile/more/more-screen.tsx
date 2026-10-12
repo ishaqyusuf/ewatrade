@@ -11,13 +11,6 @@ import {
   ClassicMoreSection,
   ClassicMoreWorkspace,
 } from "@/components/mobile/appearances/classic/more-screen"
-import {
-  MarketDayMoreFrame,
-  MarketDayMoreHeader,
-  MarketDayMoreRow,
-  MarketDayMoreSection,
-  MarketDayMoreWorkspace,
-} from "@/components/mobile/appearances/market-day/more-screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { useModal } from "@/components/ui/modal"
@@ -26,7 +19,6 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import {
   type AdminManagementRole,
   type AdminMoreItem,
@@ -46,7 +38,7 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
 import { HeroCard } from "../green-till/hero-card"
@@ -96,21 +88,9 @@ function MoreContent({
   syncAlertCount: number
 }) {
   const insets = useSafeAreaInsets()
-  const appearance = useMobileDesign("more")
-  const market = appearance === "market-day"
   const colors = useColors()
-  const Frame = market ? MarketDayMoreFrame : ClassicMoreFrame
-  const Header = market ? MarketDayMoreHeader : ClassicMoreHeader
-  const Workspace = market ? MarketDayMoreWorkspace : ClassicMoreWorkspace
-  const Row = market ? MarketDayMoreRow : ClassicMoreRow
-  const Section = market ? MarketDayMoreSection : ClassicMoreSection
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: appearance changes invalidate header measurements
-  useEffect(() => {
-    setHeaderHeight(0)
-    setShowCanvasStatusBar(false)
-  }, [market])
 
   const router = useRouter()
   const auth = useAuthContext()
@@ -261,7 +241,7 @@ function MoreContent({
 
   return (
     <>
-      <Frame
+      <ClassicMoreFrame
         showCanvasStatusBar={showCanvasStatusBar}
         onScroll={(event) => {
           const next =
@@ -273,7 +253,7 @@ function MoreContent({
           )
         }}
       >
-        {account && !market ? (
+        {account ? (
           // Green Till bar: round back button, centred title, spacer.
           <View className="flex-row items-center gap-2.5">
             <Pressable
@@ -297,16 +277,8 @@ function MoreContent({
             </Text>
             <View className="size-11" />
           </View>
-        ) : account ? (
-          <ActionButton
-            variant="ghost"
-            icon="ArrowLeft"
-            onPress={() => router.back()}
-          >
-            Account
-          </ActionButton>
         ) : (
-          <Header
+          <ClassicMoreHeader
             onLayout={(event) =>
               setHeaderHeight(event.nativeEvent.layout.height)
             }
@@ -338,14 +310,14 @@ function MoreContent({
             </View>
           </HeroCard>
         ) : (
-          <Workspace
+          <ClassicMoreWorkspace
             businessName={auth.profile?.businessName ?? "Current business"}
             onPress={() => router.push("/business-switch-modal")}
             roleLabel={getMobileRoleLabel(auth.profile?.role)}
           />
         )}
 
-        {!account && !market && stagedRecords.length > 0 ? (
+        {!account && stagedRecords.length > 0 ? (
           <View className="gap-3">
             <SectionHeader
               title="Needs your review"
@@ -362,7 +334,6 @@ function MoreContent({
             {stagedRecords.slice(0, 3).map((record) => (
               <MoreApprovalCard
                 key={record.id}
-                appearance={appearance}
                 actorName={
                   record.actor?.displayName ||
                   record.actor?.name ||
@@ -377,7 +348,7 @@ function MoreContent({
           </View>
         ) : null}
         {sections.map((section) =>
-          !market && section.id === "store-tools" ? (
+          section.id === "store-tools" ? (
             <View key={section.id}>
               <SectionHeader title="Store tools" />
               {Array.from(
@@ -399,9 +370,9 @@ function MoreContent({
               )}
             </View>
           ) : (
-            <Section key={section.id} title={section.title}>
+            <ClassicMoreSection key={section.id} title={section.title}>
               {section.items.map((item) => (
-                <Row
+                <ClassicMoreRow
                   detail={
                     MORE_ROW_DETAILS[item.id] ??
                     (item.id === "app-theme"
@@ -418,38 +389,10 @@ function MoreContent({
                   onPress={() => handleItem(item)}
                 />
               ))}
-              {market &&
-              section.id === "offline" &&
-              stagedRecords.length > 0 ? (
-                <View className="mt-2 border-y border-border">
-                  {reviewOfflineRecord.isError ? (
-                    <StatusBanner
-                      tone="destructive"
-                      title="Review not saved"
-                      message={reviewOfflineRecord.error.message}
-                    />
-                  ) : null}
-                  {stagedRecords.slice(0, 3).map((record) => (
-                    <MoreApprovalCard
-                      key={record.id}
-                      appearance={appearance}
-                      actorName={
-                        record.actor?.displayName ||
-                        record.actor?.name ||
-                        record.actor?.email ||
-                        "Staff member"
-                      }
-                      disabled={isOffline || reviewOfflineRecord.isPending}
-                      onApprove={() => reviewOrder(record.id, "approve")}
-                      onReject={() => reviewOrder(record.id, "reject")}
-                    />
-                  ))}
-                </View>
-              ) : null}
-            </Section>
+            </ClassicMoreSection>
           ),
         )}
-        {account && !market ? (
+        {account ? (
           <ListCard>
             <RecordRow
               title="Sync & offline"
@@ -465,14 +408,6 @@ function MoreContent({
               onPress={() => router.push("/sync-status-modal")}
             />
           </ListCard>
-        ) : account ? (
-          <ActionButton
-            variant="outline"
-            icon="RefreshCw"
-            onPress={() => router.push("/sync-status-modal")}
-          >
-            Sync status · {syncAlertCount} waiting
-          </ActionButton>
         ) : null}
         <Pressable
           accessibilityRole="button"
@@ -483,11 +418,10 @@ function MoreContent({
             Account, privacy and deletion
           </Text>
         </Pressable>
-      </Frame>
+      </ClassicMoreFrame>
 
       <MoreThemeSheet
         ref={themeModal.ref}
-        appearance={appearance}
         options={themeOptions}
         pending={themeSavePending}
         error={themeError}
@@ -495,7 +429,6 @@ function MoreContent({
       />
       <MoreSignOutSheet
         ref={signOutModal.ref}
-        appearance={appearance}
         syncAlertCount={syncAlertCount}
         onCancel={() => {
           confirmSignOut.current = false

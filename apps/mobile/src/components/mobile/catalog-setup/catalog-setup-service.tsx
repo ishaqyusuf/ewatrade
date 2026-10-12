@@ -1,16 +1,13 @@
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
 import { Text } from "@/components/ui/text"
 import { View } from "react-native"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupService({
   model,
-  market,
   focused = false,
-}: { model: CatalogSetupModel; market: boolean; focused?: boolean }) {
+}: { model: CatalogSetupModel; focused?: boolean }) {
   const {
     kind,
     showDescription,
@@ -28,50 +25,25 @@ export function CatalogSetupService({
     ServiceDetailAction,
     ServiceAuthorizationOption,
     ServiceWorkTrackingSwitch,
-  } = market ? Market : Classic
+  } = Classic
   if (!kind) return null
   return (
     <>
       {kind === "service" && trackServiceWork ? (
-        <View
-          className={catalogSetupClassName(
-            "mt-1 border-t border-border pt-4",
-            market,
-          )}
-        >
-          <Text
-            className={catalogSetupClassName(
-              "text-lg font-extrabold text-foreground",
-              market,
-            )}
-          >
+        <View className="mt-1 border-t border-border pt-4">
+          <Text className="text-lg font-extrabold text-foreground">
             Work handoff
           </Text>
-          <Text
-            className={catalogSetupClassName(
-              "mb-1 text-xs text-muted-foreground",
-              market,
-            )}
-          >
+          <Text className="mb-1 text-xs text-muted-foreground">
             Choose whether an order should create work for your team.
           </Text>
           <ServiceWorkTrackingSwitch
             onPress={() => setTrackServiceWork(false)}
           />
-          <Text
-            className={catalogSetupClassName(
-              "mt-4 text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-              market,
-            )}
-          >
+          <Text className="mt-4 text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
             Work can start
           </Text>
-          <View
-            className={catalogSetupClassName(
-              "mt-1 border-t border-border",
-              market,
-            )}
-          >
+          <View className="mt-1 border-t border-border">
             <ServiceAuthorizationOption
               description="Use when payment is not required before work begins."
               label="When the order is confirmed"
@@ -91,12 +63,9 @@ export function CatalogSetupService({
               selected={serviceAuthorization === "manual_release"}
             />
           </View>
-          <View className={catalogSetupClassName("mt-4", market)}>
+          <View className="mt-4">
             <FormField
               label="Customer guidance (optional)"
-              inputClassName={
-                market ? "bg-market-field text-market-ink" : undefined
-              }
               maxLength={2000}
               multiline
               onChangeText={setServiceGuidance}
@@ -110,26 +79,11 @@ export function CatalogSetupService({
       {!focused &&
       kind === "service" &&
       (!showDescription || !showAdvanced || !trackServiceWork) ? (
-        <View
-          className={catalogSetupClassName(
-            "mt-1 border-t border-border pt-4",
-            market,
-          )}
-        >
-          <Text
-            className={catalogSetupClassName(
-              "text-lg font-extrabold text-foreground",
-              market,
-            )}
-          >
+        <View className="mt-1 border-t border-border pt-4">
+          <Text className="text-lg font-extrabold text-foreground">
             Service details
           </Text>
-          <Text
-            className={catalogSetupClassName(
-              "mb-1 text-xs text-muted-foreground",
-              market,
-            )}
-          >
+          <Text className="mb-1 text-xs text-muted-foreground">
             Add only what this service needs.
           </Text>
           {!showDescription ? (

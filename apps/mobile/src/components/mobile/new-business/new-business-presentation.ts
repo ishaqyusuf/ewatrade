@@ -18,4 +18,3 @@ export type BusinessProfileRowProps = {
   disabled: boolean
   onPress: () => void
 }
-export type BusinessSummaryProps = { label: string; value: string }

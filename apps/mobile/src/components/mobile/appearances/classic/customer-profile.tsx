@@ -12,7 +12,6 @@ import {
   customerOrderCount,
   customerValueLabel,
 } from "../../commerce/commerce-model"
-import { CommerceMetricTile } from "../../commerce/commerce-primitives"
 import type { CustomerProfileProps } from "../../customer-book/customer-book-view"
 import { HeroCard } from "../../green-till/hero-card"
 import { RecordRow, StatusPill } from "../../green-till/kit"
@@ -139,26 +138,6 @@ export function ClassicCustomerProfile({
         { label: "Since", value: since },
       ]}
     />
-  )
-}
-
-export function ClassicCustomerMetrics({
-  customer,
-  historyComplete,
-}: CustomerProfileProps) {
-  return (
-    <View className="flex-row flex-wrap gap-3">
-      <CommerceMetricTile
-        icon="Wallet"
-        label={historyComplete ? "Order value" : "Loaded value"}
-        value={customerValueLabel(customer)}
-      />
-      <CommerceMetricTile
-        icon="ReceiptText"
-        label={historyComplete ? "Total orders" : "Loaded orders"}
-        value={String(customerOrderCount(customer))}
-      />
-    </View>
   )
 }
 

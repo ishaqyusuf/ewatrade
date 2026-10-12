@@ -1,11 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { ClassicSellingUnitFields } from "@/components/mobile/appearances/classic/selling-unit-editor"
-import { MarketSellingUnitFields } from "@/components/mobile/appearances/market-day/selling-unit-editor"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { useModal } from "@/components/ui/modal"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import {
   type CatalogUnitRelationDirection,
   transposeCatalogUnitRelation,
@@ -30,9 +27,6 @@ export function SellingUnitEditor({
   const [footerHeight, setFooterHeight] = useState(88)
   const referenceSheet = useModal()
   const [referencePickerOpen, setReferencePickerOpen] = useState(false)
-  const market = useMobileDesign("first-product") === "market-day"
-  const palette = useMarketDayPalette()
-  const Fields = market ? MarketSellingUnitFields : ClassicSellingUnitFields
   return (
     <NativeModal
       animationType="slide"
@@ -57,7 +51,6 @@ export function SellingUnitEditor({
           }}
         >
           <MobileWorkflowChrome
-            screen="first-product"
             hideHeader={false}
             keyboardBottomOffset={footerHeight + 12}
             title={
@@ -86,11 +79,11 @@ export function SellingUnitEditor({
                   keyboardShouldPersistTaps="handled"
                 >
                   <View className="pt-3 pb-[var(--selling-unit-footer)]">
-                    <Fields {...fields} />
+                    <ClassicSellingUnitFields {...fields} />
                   </View>
                 </KeyboardAwareScrollView>
                 <BottomSearchFooter
-                  variant={market ? "market-day" : "action-bar"}
+                  variant="action-bar"
                   accessibilityLabel="Selling unit actions"
                   onHeightChange={setFooterHeight}
                   searchVisible={false}
@@ -99,21 +92,8 @@ export function SellingUnitEditor({
                   totalCount={0}
                   value=""
                 >
-                  <ActionButton
-                    icon={market ? undefined : "Check"}
-                    onPress={onSave}
-                    foregroundColor={market ? palette.onPalm : undefined}
-                    className={
-                      market
-                        ? "bg-market-palm active:bg-market-hero-pressed"
-                        : undefined
-                    }
-                  >
-                    {market
-                      ? fields.isEditingUnit
-                        ? "Save unit changes"
-                        : "Add selling unit"
-                      : `${fields.isEditingUnit ? "Save" : "Add"} ${fields.unitEditorDraft.name.trim().toLowerCase() || "selling unit"}`}
+                  <ActionButton icon="Check" onPress={onSave}>
+                    {`${fields.isEditingUnit ? "Save" : "Add"} ${fields.unitEditorDraft.name.trim().toLowerCase() || "selling unit"}`}
                   </ActionButton>
                 </BottomSearchFooter>
               </View>

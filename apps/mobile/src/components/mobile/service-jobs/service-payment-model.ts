@@ -13,7 +13,7 @@ export type ServicePaymentDraft = ServicePaymentFields & {
   job: WorkJob
 }
 
-// Both appearances and the final command boundary use the same validation.
+// The form and the final command boundary use the same validation.
 export function projectServicePayment(
   job: WorkJob,
   kind: ServicePaymentKind,

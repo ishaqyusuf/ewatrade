@@ -220,7 +220,6 @@ export function PinEntryScreen({
           onDigitPress={onDigitPress}
           showBiometric={showBiometric}
           value={value}
-          variant="gate"
         />
       </View>
       {footer ? (

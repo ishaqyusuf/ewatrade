@@ -1,5 +1,4 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
-import { MarketDayActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
@@ -12,9 +11,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { RetailOpsBusiness } from "@/store/businessStore"
 import {
   type BottomSheetBackdropProps,
@@ -41,10 +38,6 @@ import {
   ClassicWorkspaceHeader,
   ClassicWorkspaceRow,
 } from "../appearances/classic/business-switch-screen"
-import {
-  MarketDayWorkspaceHeader,
-  MarketDayWorkspaceRow,
-} from "../appearances/market-day/business-switch-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { BUSINESS_SWITCH_COPY } from "../business-switch-presentation"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
@@ -57,30 +50,28 @@ import { BUSINESS_SEARCH_LIMIT, useBusinessSwitch } from "./use-business-switch"
 type WorkspaceController = ReturnType<typeof useBusinessSwitch>
 type SwitchProps = { onComplete?: () => void }
 export function BusinessSwitchChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="business-switch" />
+  return <MobileWorkflowChrome {...props} />
 }
 
 function WorkspaceBody({
   vm,
-  market,
   footerSpace,
   onScroll,
   sheet = false,
 }: {
   vm: WorkspaceController
-  market: boolean
   footerSpace: number
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
   sheet?: boolean
 }) {
-  const Header = market ? MarketDayWorkspaceHeader : ClassicWorkspaceHeader
-  const Row = market ? MarketDayWorkspaceRow : ClassicWorkspaceRow
   const colors = useColors()
-  const palette = useMarketDayPalette()
   const header = (
     <View className="gap-4 pb-4">
-      <Header count={vm.businesses.length} currentName={vm.currentName} />
-      <View className={market ? "gap-3 px-4" : "gap-3"}>
+      <ClassicWorkspaceHeader
+        count={vm.businesses.length}
+        currentName={vm.currentName}
+      />
+      <View className="gap-3">
         {vm.local ? (
           <StatusBanner
             icon="Building2"
@@ -157,7 +148,7 @@ function WorkspaceBody({
     data: vm.filteredBusinesses,
     keyExtractor: (business: RetailOpsBusiness) => business.id,
     renderItem: ({ item }: { item: RetailOpsBusiness }) => (
-      <Row
+      <ClassicWorkspaceRow
         business={item}
         currentBusinessId={vm.currentBusinessId}
         disabled={!vm.canActivate}
@@ -174,9 +165,9 @@ function WorkspaceBody({
         <RefreshControl
           refreshing={vm.memberships.isFetching}
           onRefresh={() => void vm.refresh()}
-          colors={[market ? palette.palm : colors.primary]}
-          tintColor={market ? palette.palm : colors.primary}
-          progressBackgroundColor={market ? palette.field : colors.card}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+          progressBackgroundColor={colors.card}
         />
       ) : undefined,
   }
@@ -186,7 +177,7 @@ function WorkspaceBody({
         {...listProps}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: market ? 0 : 18,
+          paddingHorizontal: 18,
           paddingBottom: footerSpace,
         }}
       />
@@ -199,11 +190,7 @@ function WorkspaceBody({
         keyboardDismissMode="interactive"
         onScroll={onScroll}
         scrollEventThrottle={16}
-        contentContainerClassName={
-          market
-            ? "grow pb-[var(--workspace-list-bottom)]"
-            : "grow gap-3 px-[18px] pb-[var(--workspace-list-bottom)]"
-        }
+        contentContainerClassName="grow gap-3 px-[18px] pb-[var(--workspace-list-bottom)]"
       />
     </VariableContextProvider>
   )
@@ -235,20 +222,18 @@ function WorkspaceAccessState({ vm }: { vm: WorkspaceController }) {
 
 export function BusinessSwitchContent({ onComplete }: SwitchProps) {
   const vm = useBusinessSwitch({ onComplete })
-  const market = useMobileDesign("business-switch") === "market-day"
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
   const discovered = useRef(false)
   if (shouldShowListSearch(vm.businesses.length) || vm.search)
     discovered.current = true
-  const searchVisible = market || discovered.current
+  const searchVisible = discovered.current
   if (vm.blocked || vm.accepted) return <WorkspaceAccessState vm={vm} />
   return (
-    <View className={market ? "flex-1 bg-market-canvas" : "flex-1"}>
+    <View className="flex-1">
       <WorkspaceBody
         vm={vm}
-        market={market}
-        footerSpace={(searchVisible ? footerHeight : 0) + (market ? 24 : 112)}
+        footerSpace={(searchVisible ? footerHeight : 0) + 112}
         onScroll={scrollHide.onScroll}
       />
       {searchVisible ? (
@@ -264,33 +249,17 @@ export function BusinessSwitchContent({ onComplete }: SwitchProps) {
           onChangeText={vm.setSearch}
           totalCount={vm.businesses.length}
           onHeightChange={setFooterHeight}
-          variant={market ? "market-day" : "default"}
-        >
-          {market ? (
-            <MarketDayActionButton
-              tone="marigold"
-              icon="Plus"
-              disabled={!vm.canCreate}
-              onPress={vm.openCreate}
-            >
-              Add business
-            </MarketDayActionButton>
-          ) : null}
-        </BottomSearchFooter>
-      ) : null}
-      {!market ? (
-        <ListCreateFab
-          accessibilityLabel="Add a new business"
-          bottomOffset={
-            searchVisible && !(scrollHide.hidden && !vm.search)
-              ? footerHeight
-              : 0
-          }
-          disabled={!vm.canCreate}
-          onPress={vm.openCreate}
-          testID="business-add-fab"
         />
       ) : null}
+      <ListCreateFab
+        accessibilityLabel="Add a new business"
+        bottomOffset={
+          searchVisible && !(scrollHide.hidden && !vm.search) ? footerHeight : 0
+        }
+        disabled={!vm.canCreate}
+        onPress={vm.openCreate}
+        testID="business-add-fab"
+      />
     </View>
   )
 }
@@ -309,17 +278,14 @@ export const BusinessSwitchSheet = forwardRef<BottomSheetModal, SwitchProps>(
         modal.dismiss()
       },
     })
-    const market = useMobileDesign("business-switch") === "market-day"
-    const palette = useMarketDayPalette()
     const { height } = useWindowDimensions()
     const [footerHeight, setFooterHeight] = useState(150)
     const portalValues = useRef({
       vm,
-      market,
       onHeight: setFooterHeight,
       height,
     })
-    portalValues.current = { vm, market, onHeight: setFooterHeight, height }
+    portalValues.current = { vm, onHeight: setFooterHeight, height }
     // Gorhom renders its node at a separate PortalHost. Put local providers
     // inside that node, not outside Modal; keep the container type stable.
     const PortalContainer = useCallback(
@@ -358,11 +324,7 @@ export const BusinessSwitchSheet = forwardRef<BottomSheetModal, SwitchProps>(
         <View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-4">
           <Text
             accessibilityRole="header"
-            className={
-              market
-                ? "min-w-0 flex-1 text-xl font-bold text-market-ink"
-                : "min-w-0 flex-1 text-xl font-bold text-foreground"
-            }
+            className="min-w-0 flex-1 text-xl font-bold text-foreground"
           >
             {BUSINESS_SWITCH_COPY.title}
           </Text>
@@ -377,22 +339,13 @@ export const BusinessSwitchSheet = forwardRef<BottomSheetModal, SwitchProps>(
               vm.cancelActivation()
               modal.dismiss()
             }}
-            className={
-              market
-                ? "size-11 items-center justify-center rounded-full bg-market-soft-band"
-                : "size-11 items-center justify-center rounded-full bg-muted"
-            }
+            className="size-11 items-center justify-center rounded-full bg-muted"
           >
-            <Icon
-              name="X"
-              className={
-                market ? "size-sm text-market-ink" : "size-sm text-foreground"
-              }
-            />
+            <Icon name="X" className="size-sm text-foreground" />
           </Pressable>
         </View>
       ),
-      [market, modal.dismiss, vm.cancelActivation, vm.selectingId],
+      [modal.dismiss, vm.cancelActivation, vm.selectingId],
     )
     return (
       <Modal
@@ -408,11 +361,6 @@ export const BusinessSwitchSheet = forwardRef<BottomSheetModal, SwitchProps>(
         onAnimate={(_fromIndex, toIndex) => {
           if (toIndex === -1) vm.cancelActivation()
         }}
-        backgroundStyle={
-          market
-            ? { backgroundColor: palette.field, borderColor: palette.line }
-            : undefined
-        }
         onDismiss={() => {
           vm.cancelActivation()
           const navigate = afterDismiss.current
@@ -424,12 +372,7 @@ export const BusinessSwitchSheet = forwardRef<BottomSheetModal, SwitchProps>(
           {vm.blocked || vm.accepted ? (
             <WorkspaceAccessState vm={vm} />
           ) : (
-            <WorkspaceBody
-              vm={vm}
-              market={market}
-              sheet
-              footerSpace={footerHeight + 24}
-            />
+            <WorkspaceBody vm={vm} sheet footerSpace={footerHeight + 24} />
           )}
         </View>
       </Modal>

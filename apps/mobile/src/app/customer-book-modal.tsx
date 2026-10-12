@@ -3,7 +3,6 @@ import {
   CustomerBookContent,
 } from "@/components/mobile/customer-book/customer-book-screen"
 import { WorkflowModalScreen } from "@/components/mobile/workflow-modal-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useLocalSearchParams } from "expo-router"
 import { useState } from "react"
 
@@ -23,7 +22,6 @@ export default function CustomerBookModalRoute() {
   const customerName = singleParam(params.customerName)
   const customerOrderId = singleParam(params.customerOrderId)
   // Green Till profiles carry their own back bar, so the Customers bar steps aside.
-  const classic = useMobileDesign("customers") !== "market-day"
   const [profileOpen, setProfileOpen] = useState(false)
 
   return (
@@ -31,7 +29,7 @@ export default function CustomerBookModalRoute() {
       chrome={CustomerBookChrome}
       allowSalesRep
       closeLabel="Close customer book"
-      hideHeader={Boolean(customerOrderId) || (classic && profileOpen)}
+      hideHeader={Boolean(customerOrderId) || profileOpen}
       title="Customers"
     >
       <CustomerBookContent

@@ -1,9 +1,7 @@
 import { ClassicVerifyEmailScreen } from "@/components/mobile/appearances/classic/verify-email-screen"
-import { MarketDayVerifyEmailScreen } from "@/components/mobile/appearances/market-day/verify-email-screen"
 import { OtpInput } from "@/components/mobile/otp-input"
 import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
@@ -34,11 +32,6 @@ function normalizeOtpCode(value: string) {
 
 export function VerifyEmailScreen() {
   const auth = useAuthContext()
-  const design = useMobileDesign("verify-email")
-  const Presentation =
-    design === "market-day"
-      ? MarketDayVerifyEmailScreen
-      : ClassicVerifyEmailScreen
   const completeOnboarding = useOnboardingStore(
     (state) => state.completeOnboarding,
   )
@@ -323,7 +316,7 @@ export function VerifyEmailScreen() {
   ])
 
   return (
-    <Presentation
+    <ClassicVerifyEmailScreen
       authEntryHref={authEntryHref}
       email={emailDeliveryLabel}
       mode={mode}
@@ -334,12 +327,11 @@ export function VerifyEmailScreen() {
           length={OTP_LENGTH}
           onChange={updateCode}
           value={code}
-          variant={design === "market-day" ? "market-tally" : "green-till"}
+          variant="green-till"
         />
       }
       resend={
         <VerificationResendLine
-          design={design}
           disabled={requestOtpMutation.isPending || isVerifying}
           isError={status === "error"}
           isSending={requestOtpMutation.isPending}
@@ -347,7 +339,7 @@ export function VerifyEmailScreen() {
           message={message}
           onPress={resendCode}
           wasResent={status === "resent"}
-          cooldownSeconds={design === "market-day" ? 0 : cooldown}
+          cooldownSeconds={cooldown}
         />
       }
       keypad={
@@ -356,7 +348,7 @@ export function VerifyEmailScreen() {
           onDeletePress={removeLastDigit}
           onDigitPress={appendDigit}
           onPastePress={pasteCode}
-          variant={design === "market-day" ? "market-tally" : "green-till"}
+          variant="green-till"
         />
       }
     />

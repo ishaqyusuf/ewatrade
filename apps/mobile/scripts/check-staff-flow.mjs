@@ -77,21 +77,7 @@ const contracts = [
       "SecondaryOperationalRow",
       "StatusBadge",
       "StatusBanner",
-      "StaffOnboardingMarketNameplate",
       "!!session && trimmedName.length > 0",
-    ],
-  },
-  {
-    file: "components/mobile/staff-onboarding-market-nameplate.tsx",
-    markers: [
-      'keyboardAutoScrollEnabled={largeTextLayout || Platform.OS !== "android"}',
-      'keyboardBottomOffset={Platform.OS === "android" ? 12 : 48}',
-      "safeAreaColor={marketDay.palm}",
-      'testID="staff-onboarding-full-name"',
-      'testID="staff-onboarding-display-name"',
-      'testID="staff-onboarding-submit"',
-      'tone="marigold"',
-      'trailingIcon="ArrowRight"',
     ],
   },
 ]

@@ -1,3 +1,7 @@
+import {
+  ServiceChoice as Choice,
+  ServiceSection as Section,
+} from "@/components/mobile/appearances/classic/service-jobs"
 import { FormField } from "@/components/mobile/form-field"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -6,7 +10,6 @@ import { View } from "@/components/ui/view"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useState } from "react"
 import { ServiceAction } from "./service-action"
-import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
 const PAGE_SIZE = 12
@@ -15,11 +18,6 @@ export function ServiceOfferingChoices({
   model,
   onPageChange,
 }: { model: ServiceJobsModel; onPageChange: () => void }) {
-  const {
-    market,
-    ServiceChoice: Choice,
-    ServiceSection: Section,
-  } = useServiceAppearance()
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(0)
   const rows = model.offerings.filter((row) =>
@@ -29,7 +27,7 @@ export function ServiceOfferingChoices({
   const currentPage = Math.min(page, lastPage)
   const start = currentPage * PAGE_SIZE
   const disabled = model.isOfflineMode || model.intakeMutation.isPending
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
+  const muted = "text-muted-foreground"
   return (
     <Section
       title="Services"
@@ -104,7 +102,7 @@ export function ServiceOfferingChoices({
             />
             {selected ? (
               <FormField
-                variant={market ? "market" : "filled"}
+                variant="filled"
                 label="Quantity"
                 keyboardType="decimal-pad"
                 maxLength={40}
@@ -162,7 +160,7 @@ export function ServiceOfferingChoices({
         </View>
       ) : null}
       <FormField
-        variant={market ? "market" : "filled"}
+        variant="filled"
         label="Find a service"
         accessibilityLabel="Search available service offerings"
         leadingIcon="Search"

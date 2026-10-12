@@ -73,14 +73,7 @@ const missingMarkers = REQUIRED_MARKERS.filter(
   (marker) => !configSource.includes(marker),
 )
 const imageFailures = []
-// Retained Market Day/Market Pulse illustrations are separate from launcher assets.
-const expectedFiles = new Set([
-  ...REQUIRED_PNGS.map(({ file }) => file),
-  "market-day-splash-lockup.png",
-  "market-day-splash-lockup.svg",
-  "market-pulse-splash-mark.png",
-  "market-pulse-splash-mark.svg",
-])
+const expectedFiles = new Set(REQUIRED_PNGS.map(({ file }) => file))
 for (const file of readdirSync(ICON_DIR)) {
   if (!expectedFiles.has(file)) {
     imageFailures.push(`Unexpected legacy or unconfigured icon: ${file}`)

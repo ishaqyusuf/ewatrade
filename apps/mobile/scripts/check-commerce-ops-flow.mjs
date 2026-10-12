@@ -9,10 +9,6 @@ const contracts = [
     markers: [
       "AdminOrdersScreen",
       "trpc.orders.list",
-      "OrdersDispatchLedgerSummary",
-      "OrdersDispatchLedgerRow",
-      "OrdersDispatchFilterRow",
-      "CommercePendingOrderRow",
       "commercialOrderHref",
       "customer-book-modal",
       "30 days",
@@ -61,7 +57,6 @@ const contracts = [
       "CustomerOverviewTab",
       "orderLinked",
       "CommerceOrderRow",
-      "CommercePendingOrderRow",
     ],
   },
   {
@@ -72,7 +67,6 @@ const contracts = [
       "trpc.orders.recordPayment",
       "trpc.orders.fulfillProductLine",
       "Payment cannot exceed the balance due",
-      "OrderDetailDispatchDocket",
       "OrderPaymentSheet",
       "OrderFulfilmentConfirmationSheet",
       "openFulfilProductLine",
@@ -84,11 +78,8 @@ const contracts = [
     markers: [
       "OrderPaymentSheet",
       "OrderFulfilmentConfirmationSheet",
-      "OrderQuietSummary",
-      "OrderQuietActionStack",
       "bottomOffset={24}",
       "extraKeyboardSpace={24}",
-      'tone="palm"',
     ],
   },
   {
@@ -97,16 +88,6 @@ const contracts = [
       "CommercialOrderOverviewContent",
       "Managed in Service jobs",
       "commercial-order-overview-screen",
-    ],
-  },
-  {
-    file: "components/mobile/order-detail-dispatch-docket.tsx",
-    markers: [
-      "OrderDetailDispatchDocket",
-      "order-detail-docket-masthead",
-      "Dispatch lines",
-      "Next movement",
-      "OrderDetailDispatchDocketPrimaryAction",
     ],
   },
   {

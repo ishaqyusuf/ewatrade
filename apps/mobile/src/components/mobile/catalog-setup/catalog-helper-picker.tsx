@@ -1,16 +1,10 @@
 import { ClassicHelperRow } from "@/components/mobile/appearances/classic/catalog-helper-picker"
-import { MarketHelperRow } from "@/components/mobile/appearances/market-day/catalog-helper-picker"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { FormField } from "@/components/mobile/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { cn } from "@/lib/utils"
 import {
   findBusinessProfile,
   getRecommendedCatalogSetupHelperKeys,
@@ -40,14 +34,9 @@ export function CatalogSetupHelperPicker({
   visible,
   disabled = false,
 }: CatalogSetupHelperPickerProps) {
-  const market = useMobileDesign("first-product") === "market-day"
-  const Row = market ? MarketHelperRow : ClassicHelperRow
   const [query, setQuery] = useState("")
-  const [footerHeight, setFooterHeight] = useState(88)
-  const scrollHide = useBottomSearchScroll()
   const insets = useSafeAreaInsets()
   const colors = useColors()
-  const palette = useMarketDayPalette()
   const { colorScheme } = useColorScheme()
   const pending = useRef<{
     helper: CatalogSetupHelper | null
@@ -169,54 +158,24 @@ export function CatalogSetupHelperPicker({
       <VariableContextProvider
         value={{
           "--helper-top": insets.top,
-          "--helper-bottom": market ? footerHeight + 24 : insets.bottom + 24,
+          "--helper-bottom": insets.bottom + 24,
         }}
       >
-        <View
-          className={
-            market ? "flex-1 bg-market-canvas" : "flex-1 bg-background"
-          }
-        >
+        <View className="flex-1 bg-background">
           <StatusBar
-            backgroundColor={market ? palette.palm : colors.background}
-            style={market || colorScheme === "dark" ? "light" : "dark"}
+            backgroundColor={colors.background}
+            style={colorScheme === "dark" ? "light" : "dark"}
           />
-          <View
-            className={cn(
-              "pt-[var(--helper-top)]",
-              market && "border-b-[5px] border-market-marigold bg-market-palm",
-            )}
-          >
-            <View
-              className={cn(
-                "flex-row items-start gap-4 px-5 py-4",
-                !market && "border-b border-border",
-              )}
-            >
+          <View className="pt-[var(--helper-top)]">
+            <View className="flex-row items-start gap-4 border-b border-border px-5 py-4">
               <View className="min-w-0 flex-1 gap-2">
-                {market ? (
-                  <Text className="font-market-mono text-[11px] uppercase tracking-[1px] text-market-on-palm-muted">
-                    {kindLabel} / Quick setup
-                  </Text>
-                ) : null}
                 <Text
                   accessibilityRole="header"
-                  className={
-                    market
-                      ? "font-market-display text-[28px] text-market-on-palm [-rn-line-height:34]"
-                      : "text-xl font-extrabold text-foreground"
-                  }
+                  className="text-xl font-extrabold text-foreground"
                 >
-                  {market ? "A head start." : kindLabel + " setups"}
+                  {kindLabel + " setups"}
                 </Text>
-                <Text
-                  className={cn(
-                    "text-sm [-rn-line-height:20]",
-                    market
-                      ? "text-market-on-palm-muted"
-                      : "text-muted-foreground",
-                  )}
-                >
+                <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
                   {businessProfile && personalized.length
                     ? businessProfile.title +
                       " starting points appear first. Review every detail before saving."
@@ -228,25 +187,13 @@ export function CatalogSetupHelperPicker({
                 accessibilityLabel="Close quick setup"
                 onPress={close}
                 haptic
-                className={cn(
-                  "size-11 items-center justify-center rounded-full",
-                  market
-                    ? "border border-market-hero-hairline active:bg-market-hero-pressed"
-                    : "bg-muted active:bg-accent",
-                )}
+                className="size-11 items-center justify-center rounded-full bg-muted active:bg-accent"
               >
-                <Icon
-                  name="X"
-                  className={
-                    market
-                      ? "size-sm text-market-on-palm"
-                      : "size-sm text-foreground"
-                  }
-                />
+                <Icon name="X" className="size-sm text-foreground" />
               </Pressable>
             </View>
           </View>
-          {!market && showSearch ? (
+          {showSearch ? (
             <View className="border-b border-border px-4 py-3">
               <FormField
                 accessibilityLabel={"Search " + kindLabel + " setups"}
@@ -269,8 +216,6 @@ export function CatalogSetupHelperPicker({
             keyExtractor={(row) => row.key}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
-            onScroll={scrollHide.onScroll}
-            scrollEventThrottle={16}
             ListHeaderComponent={
               <Pressable
                 accessibilityRole="button"
@@ -281,47 +226,18 @@ export function CatalogSetupHelperPicker({
                 disabled={disabled}
                 onPress={() => select(null)}
                 haptic
-                className={cn(
-                  "mx-4 my-4 min-h-20 gap-2 rounded-2xl border px-4 py-4",
-                  market
-                    ? "border-market-line bg-market-field"
-                    : "border-border bg-card",
-                )}
+                className="mx-4 my-4 min-h-20 gap-2 rounded-2xl border border-border bg-card px-4 py-4"
               >
                 <View className="flex-row items-center gap-3">
-                  <Icon
-                    name="FilePenLine"
-                    className={
-                      market
-                        ? "size-sm text-market-accent-ink"
-                        : "size-sm text-primary"
-                    }
-                  />
-                  <Text
-                    className={cn(
-                      "min-w-0 flex-1 font-extrabold",
-                      market ? "text-market-ink" : "text-foreground",
-                    )}
-                  >
+                  <Icon name="FilePenLine" className="size-sm text-primary" />
+                  <Text className="min-w-0 flex-1 font-extrabold text-foreground">
                     Start blank
                   </Text>
                   {selectedKey === null ? (
-                    <Icon
-                      name="Check"
-                      className={
-                        market
-                          ? "size-sm text-market-accent-ink"
-                          : "size-sm text-primary"
-                      }
-                    />
+                    <Icon name="Check" className="size-sm text-primary" />
                   ) : null}
                 </View>
-                <Text
-                  className={cn(
-                    "text-xs [-rn-line-height:18]",
-                    market ? "text-market-muted-ink" : "text-muted-foreground",
-                  )}
-                >
+                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
                   {kind === "product"
                     ? "Enter the Product, units, and options yourself."
                     : "Enter the Service and work settings yourself."}
@@ -332,17 +248,12 @@ export function CatalogSetupHelperPicker({
               item.type === "heading" ? (
                 <Text
                   accessibilityRole="header"
-                  className={cn(
-                    "px-5 pb-3 pt-4 text-xs font-bold uppercase tracking-[1px]",
-                    market
-                      ? "font-market-mono text-market-muted-ink"
-                      : "border-b border-border text-muted-foreground",
-                  )}
+                  className="border-b border-border px-5 pb-3 pt-4 text-xs font-bold uppercase tracking-[1px] text-muted-foreground"
                 >
                   {item.label}
                 </Text>
               ) : (
-                <Row
+                <ClassicHelperRow
                   helper={item.helper}
                   highlighted={item.key === highlightedKey}
                   personalized={item.personalized}
@@ -353,31 +264,11 @@ export function CatalogSetupHelperPicker({
               )
             }
             ListEmptyComponent={
-              <Text
-                className={cn(
-                  "px-5 py-12 text-center text-sm",
-                  market ? "text-market-muted-ink" : "text-muted-foreground",
-                )}
-              >
+              <Text className="px-5 py-12 text-center text-sm text-muted-foreground">
                 No quick setups match “{query.trim()}”.
               </Text>
             }
           />
-          {market ? (
-            <BottomSearchFooter
-              localSearch
-              accessibilityLabel={"Search " + kindLabel + " setups"}
-              alwaysShowSearch
-              hidden={scrollHide.hidden}
-              maxLength={160}
-              onHeightChange={setFooterHeight}
-              onChangeText={setQuery}
-              placeholder="Find a setup pattern"
-              totalCount={allHelpers.length}
-              value={query}
-              variant="market-day"
-            />
-          ) : null}
         </View>
       </VariableContextProvider>
     </NativeModal>

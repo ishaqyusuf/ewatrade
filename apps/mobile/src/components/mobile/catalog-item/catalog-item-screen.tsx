@@ -1,6 +1,4 @@
 import { ClassicCatalogItemScreen } from "@/components/mobile/appearances/classic/catalog-item-screen"
-import { MarketDayCatalogItemScreen } from "@/components/mobile/appearances/market-day/catalog-item-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { LIST_PAGE_SIZE } from "@/lib/list-pagination"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -13,10 +11,6 @@ export function CatalogItemScreen({
   const router = useRouter()
   const trpc = useTRPC()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
-  const isMarketDay = useMobileDesign("catalog-item") === "market-day"
-  const Screen = isMarketDay
-    ? MarketDayCatalogItemScreen
-    : ClassicCatalogItemScreen
   const itemQuery = useQuery(
     trpc.catalog.getItem.queryOptions(
       { itemId: catalogItemId },
@@ -57,7 +51,7 @@ export function CatalogItemScreen({
     else router.replace("/catalog")
   }
   return (
-    <Screen
+    <ClassicCatalogItemScreen
       item={item}
       storeId={availability.data?.storeId}
       cachedAt={

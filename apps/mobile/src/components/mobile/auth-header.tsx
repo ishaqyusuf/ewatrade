@@ -3,14 +3,12 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import type { LinkProps } from "expo-router"
 import type { ComponentProps, ReactNode } from "react"
-import { StyleSheet, View } from "react-native"
+import { View } from "react-native"
 import Svg, { Path } from "react-native-svg"
-import { ActionButton, MarketDayActionButton } from "./action-button"
+import { ActionButton } from "./action-button"
 import { BrandMark, BrandWordmark } from "./brand"
 
 type AuthHeaderProps = {
@@ -96,132 +94,14 @@ export function AuthHeader({
 }
 
 type AuthBrandHeaderProps = {
-  actions?: ReactNode
-  kicker?: string
   subtitle: string
   title: string
-  variant?: "default" | "market-day"
 }
 
-export function AuthBrandHeader({
-  actions,
-  kicker = "Your business, in your pocket",
-  subtitle,
-  title,
-  variant = "default",
-}: AuthBrandHeaderProps) {
+export function AuthBrandHeader({ subtitle, title }: AuthBrandHeaderProps) {
   const colors = useColors()
   const { colorScheme } = useColorScheme()
   const largeTextLayout = useLargeTextLayout()
-  const marketDay = useMarketDayPalette()
-
-  if (variant === "market-day") {
-    return (
-      <View className={largeTextLayout ? "gap-4" : "gap-5"}>
-        <View
-          style={[
-            marketDayStyles.canopy,
-            largeTextLayout ? marketDayStyles.compactCanopy : null,
-            { backgroundColor: marketDay.palm },
-          ]}
-        >
-          <View
-            pointerEvents="none"
-            style={[
-              marketDayStyles.skyStripe,
-              { backgroundColor: marketDay.sky },
-            ]}
-          />
-          <View
-            pointerEvents="none"
-            style={[
-              marketDayStyles.marketSun,
-              { backgroundColor: marketDay.paprika },
-            ]}
-          />
-
-          <View
-            className={
-              largeTextLayout
-                ? "gap-3"
-                : "flex-row items-start justify-between gap-3"
-            }
-          >
-            <View className="flex-row items-center gap-3">
-              <View
-                style={[
-                  marketDayStyles.logoMark,
-                  { backgroundColor: marketDay.marigold },
-                ]}
-              >
-                <BrandMark color={marketDay.onMarigold} size={28} />
-              </View>
-              <BrandWordmark reverse width={145} />
-            </View>
-            {actions ? (
-              <View
-                style={[
-                  marketDayStyles.internalActions,
-                  largeTextLayout
-                    ? marketDayStyles.stackedInternalActions
-                    : null,
-                  { backgroundColor: marketDay.onPalm },
-                ]}
-              >
-                {actions}
-              </View>
-            ) : null}
-          </View>
-
-          <View className={largeTextLayout ? "mt-6 gap-1" : "mt-10 gap-1.5"}>
-            <Text
-              style={[
-                marketDayStyles.kicker,
-                { color: marketDay.canopyAccent },
-              ]}
-            >
-              Market day, every day
-            </Text>
-            <Text
-              maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
-              style={[
-                marketDayStyles.canopyMessage,
-                { color: marketDay.onPalm },
-              ]}
-            >
-              {kicker}
-            </Text>
-          </View>
-
-          <View
-            pointerEvents="none"
-            style={[
-              marketDayStyles.angledEdge,
-              { backgroundColor: marketDay.canvas },
-            ]}
-          />
-        </View>
-
-        <View className="gap-2">
-          <Text
-            maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
-            style={[
-              marketDayStyles.title,
-              largeTextLayout ? marketDayStyles.compactTitle : null,
-              { color: marketDay.ink },
-            ]}
-          >
-            {title}
-          </Text>
-          <Text
-            style={[marketDayStyles.subtitle, { color: marketDay.mutedInk }]}
-          >
-            {subtitle}
-          </Text>
-        </View>
-      </View>
-    )
-  }
 
   return (
     <View className={cn(largeTextLayout ? "gap-4" : "items-center gap-5")}>
@@ -268,92 +148,6 @@ export function AuthBrandHeader({
     </View>
   )
 }
-
-const marketDayStyles = StyleSheet.create({
-  angledEdge: {
-    bottom: -41,
-    height: 62,
-    left: -22,
-    position: "absolute",
-    transform: [{ rotate: "-5deg" }],
-    width: "116%",
-  },
-  canopy: {
-    marginHorizontal: -24,
-    marginTop: -24,
-    minHeight: 226,
-    overflow: "hidden",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-  },
-  canopyMessage: {
-    fontSize: 23,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-    lineHeight: 29,
-    maxWidth: 250,
-  },
-  compactCanopy: {
-    minHeight: 248,
-  },
-  compactTitle: {
-    fontSize: 29,
-    lineHeight: 34,
-  },
-  kicker: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.4,
-    lineHeight: 16,
-    textTransform: "uppercase",
-  },
-  internalActions: {
-    borderRadius: 24,
-    flexDirection: "row",
-    gap: 8,
-    padding: 2,
-  },
-  logoMark: {
-    alignItems: "center",
-    borderRadius: 14,
-    height: 44,
-    justifyContent: "center",
-    transform: [{ rotate: "-3deg" }],
-    width: 44,
-  },
-  marketSun: {
-    borderRadius: 999,
-    height: 104,
-    opacity: 0.9,
-    position: "absolute",
-    right: -45,
-    top: 60,
-    width: 104,
-  },
-  skyStripe: {
-    height: 24,
-    opacity: 0.85,
-    position: "absolute",
-    right: 48,
-    top: 124,
-    transform: [{ rotate: "-9deg" }],
-    width: 82,
-  },
-  stackedInternalActions: {
-    alignSelf: "flex-end",
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 21,
-    maxWidth: 330,
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: "900",
-    letterSpacing: -1,
-    lineHeight: 39,
-  },
-})
 
 type AuthMethodButtonProps = {
   brandIcon?: "google"
@@ -551,22 +345,12 @@ type AuthActionButtonProps = Omit<
   ComponentProps<typeof ActionButton>,
   "children"
 > & {
-  appearance?: "default" | "market-day"
   children: ReactNode
 }
 
 export function AuthActionButton({
-  appearance = "default",
   children,
   ...props
 }: AuthActionButtonProps) {
-  if (appearance === "market-day") {
-    return (
-      <MarketDayActionButton {...props} tone="paprika">
-        {children}
-      </MarketDayActionButton>
-    )
-  }
-
   return <ActionButton {...props}>{children}</ActionButton>
 }

@@ -66,7 +66,6 @@ export function AccountAgeStartupGate({
 
   return (
     <AuthFlowScreen
-      appearanceScreen="login"
       eyebrow="Your account"
       title={underage ? "ẸwáTrade isn't available" : "Confirm your age range"}
       subtitle={

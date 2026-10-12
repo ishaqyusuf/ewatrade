@@ -1,7 +1,4 @@
-import {
-  ActionButton,
-  MarketDayActionButton,
-} from "@/components/mobile/action-button"
+import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
@@ -12,9 +9,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColors } from "@/hooks/use-color"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldShowListSearch } from "@/lib/list-pagination"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
@@ -27,11 +22,6 @@ import {
   ClassicStaffHeader,
   ClassicStaffRow,
 } from "../appearances/classic/staff-screen"
-import {
-  MarketDayStaffEmpty,
-  MarketDayStaffHeader,
-  MarketDayStaffRow,
-} from "../appearances/market-day/staff-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { NudgeCard, SectionHeader } from "../green-till/kit"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
@@ -42,42 +32,26 @@ import { useStaffDirectory } from "./use-staff-directory"
 
 type StaffInviteProps = { onComplete?: () => void }
 export function StaffChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="staff" />
+  return <MobileWorkflowChrome {...props} />
 }
 
 export function StaffInviteContent({ onComplete }: StaffInviteProps) {
   const router = useRouter()
-  const appearance = useMobileDesign("staff")
-  const market = appearance === "market-day"
-  const Header = market ? MarketDayStaffHeader : ClassicStaffHeader
-  const Row = market ? MarketDayStaffRow : ClassicStaffRow
-  const Empty = market ? MarketDayStaffEmpty : ClassicStaffEmpty
   const colors = useColors()
-  const palette = useMarketDayPalette()
   const vm = useStaffDirectory(onComplete)
   const { invitation, rows } = vm
-  const ordered = market
-    ? rows
-    : [...rows].sort(
-        (a, b) =>
-          (a.statusLabel === "Pending"
-            ? 0
-            : a.statusLabel === "Active"
-              ? 1
-              : 2) -
-          (b.statusLabel === "Pending"
-            ? 0
-            : b.statusLabel === "Active"
-              ? 1
-              : 2),
-      )
+  const ordered = [...rows].sort(
+    (a, b) =>
+      (a.statusLabel === "Pending" ? 0 : a.statusLabel === "Active" ? 1 : 2) -
+      (b.statusLabel === "Pending" ? 0 : b.statusLabel === "Active" ? 1 : 2),
+  )
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
   const discoveredSearch = useRef(false)
   if (shouldShowListSearch(rows.length) || vm.search)
     discoveredSearch.current = true
   const recovery = Boolean(invitation.recoveryEmail)
-  const showSearch = market || discoveredSearch.current || recovery
+  const showSearch = discoveredSearch.current || recovery
   const showInitialInvite =
     rows.length === 0 &&
     !vm.search &&
@@ -158,10 +132,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
 
   return (
     <VariableContextProvider value={{ "--staff-list-bottom": bottomSpace }}>
-      <View
-        className={market ? "flex-1 bg-market-canvas" : "flex-1"}
-        testID="staff-directory-screen"
-      >
+      <View className="flex-1" testID="staff-directory-screen">
         <View
           className="flex-1"
           accessibilityElementsHidden={invitation.open}
@@ -171,11 +142,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
         >
           <FlatList
             className="flex-1"
-            contentContainerClassName={
-              market
-                ? "grow pb-[var(--staff-list-bottom)]"
-                : "grow px-[18px] pb-[var(--staff-list-bottom)]"
-            }
+            contentContainerClassName="grow px-[18px] pb-[var(--staff-list-bottom)]"
             data={ordered}
             keyExtractor={(row) => row.id}
             showsVerticalScrollIndicator={false}
@@ -185,8 +152,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             scrollEventThrottle={16}
             ListHeaderComponent={
               <View className="gap-4 pb-4">
-                <Header
-                  loadedCount={rows.length}
+                <ClassicStaffHeader
                   activeCount={
                     rows.filter((row) => row.statusLabel === "Active").length
                   }
@@ -203,7 +169,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                   onInvite={invitation.present}
                   inviteDisabled={!vm.canOpenInvite}
                 />
-                {!market && vm.entitlement?.isAtLimit ? (
+                {vm.entitlement?.isAtLimit ? (
                   <NudgeCard
                     icon="UserPlus"
                     tint="amber"
@@ -246,11 +212,6 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                       tone="destructive"
                     />
                   ) : null}
-                  {market ? (
-                    <Text className="text-xs leading-5 text-market-muted-ink">
-                      {vm.quotaMessage}
-                    </Text>
-                  ) : null}
                   {vm.atResultLimit ? (
                     <StatusBanner
                       icon="Search"
@@ -261,11 +222,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                   {vm.searchPending ? (
                     <Text
                       accessibilityLiveRegion="polite"
-                      className={
-                        market
-                          ? "text-xs text-market-muted-ink"
-                          : "text-xs text-muted-foreground"
-                      }
+                      className="text-xs text-muted-foreground"
                     >
                       Updating directory…
                     </Text>
@@ -283,7 +240,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                   />
                 </View>
               ) : (
-                <Empty
+                <ClassicStaffEmpty
                   title={emptyTitle}
                   message={emptyMessage}
                   onInvite={showInitialInvite ? invitation.present : undefined}
@@ -295,9 +252,9 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                 <RefreshControl
                   refreshing={vm.refreshing}
                   onRefresh={() => void vm.refresh()}
-                  tintColor={market ? palette.palm : colors.primary}
-                  colors={[market ? palette.palm : colors.primary]}
-                  progressBackgroundColor={market ? palette.field : colors.card}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
+                  progressBackgroundColor={colors.card}
                 />
               ) : undefined
             }
@@ -310,7 +267,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                 ordered[index + 1]?.statusLabel !== item.statusLabel
               return (
                 <View>
-                  {!market && first ? (
+                  {first ? (
                     <SectionHeader
                       title={
                         item.statusLabel === "Pending"
@@ -328,21 +285,17 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
                       }
                     />
                   ) : null}
-                  {market ? (
-                    <Row staff={item} />
-                  ) : (
-                    <ClassicStaffRow
-                      first={first}
-                      last={last}
-                      staff={item}
-                      onPress={() =>
-                        Alert.alert(
-                          item.name,
-                          `${item.email}\n${item.statusLabel}\n${item.detail}`,
-                        )
-                      }
-                    />
-                  )}
+                  <ClassicStaffRow
+                    first={first}
+                    last={last}
+                    staff={item}
+                    onPress={() =>
+                      Alert.alert(
+                        item.name,
+                        `${item.email}\n${item.statusLabel}\n${item.detail}`,
+                      )
+                    }
+                  />
                 </View>
               )
             }}
@@ -358,20 +311,8 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               value={vm.search}
               totalCount={rows.length}
               placeholder="Name or email"
-              variant={market ? "market-day" : "default"}
             >
-              {market && !showInitialInvite ? (
-                <MarketDayActionButton
-                  tone="marigold"
-                  icon={recovery ? "Search" : "UserPlus"}
-                  disabled={recovery ? false : !vm.canOpenInvite}
-                  onPress={
-                    recovery ? invitation.checkDirectory : invitation.present
-                  }
-                >
-                  {recovery ? "Check directory" : "Invite sales rep"}
-                </MarketDayActionButton>
-              ) : !market && recovery ? (
+              {recovery ? (
                 <ActionButton icon="Search" onPress={invitation.checkDirectory}>
                   Check directory
                 </ActionButton>
@@ -394,7 +335,6 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
         </View>
         <StaffInvitationSheet
           ref={invitation.modalRef}
-          appearance={appearance}
           draft={invitation.draft}
           error={invitation.error}
           quotaMessage={vm.quotaMessage}

@@ -28,7 +28,6 @@ import { ServiceJobsQueue } from "./service-jobs-queue"
 import { ServicePaymentSheet } from "./service-payment-sheet"
 import { ServiceStatusSheet } from "./service-status-sheet"
 import { ServiceTextSheet } from "./service-text-sheet"
-import { useServiceAppearance } from "./use-service-appearance"
 import { useServiceJobs } from "./use-service-jobs"
 
 export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
@@ -37,7 +36,6 @@ export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
     <ServiceChromeContext.Provider value={setHeader}>
       <MobileWorkflowChrome
         {...props}
-        screen="service-jobs"
         title={header?.title ?? props.title}
         onBack={header?.onBack}
         backLabel="Back to work queue"
@@ -61,7 +59,6 @@ export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
 
 export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
   const model = useServiceJobs()
-  const { market } = useServiceAppearance()
   const scroll = useRef<ScrollView>(null)
   const intakeTop = useRef(0)
   const choicesTop = useRef(0)
@@ -77,7 +74,6 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
     error,
     notice,
     isOfflineMode,
-    jobsQuery,
     jobs,
     showQueueSearch,
     search,
@@ -146,9 +142,9 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
     </>
   )
   const blocked = model.scopeChanged || !model.canOperate || !model.storeId
-  // Classic keeps the queue search at the bottom with the gold New service
-  // button above it, both hiding on scroll like the tab bar.
-  const classicQueue = !market && !blocked && !creating && !selectedJobId
+  // The queue search sits at the bottom with the gold New service button
+  // above it, both hiding on scroll like the tab bar.
+  const classicQueue = !blocked && !creating && !selectedJobId
   return (
     <VariableContextProvider
       value={{
@@ -156,9 +152,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           showQueueSearch || classicQueue ? footerHeight + 24 : 48,
       }}
     >
-      <View
-        className={market ? "flex-1 bg-market-canvas" : "flex-1 bg-background"}
-      >
+      <View className="flex-1 bg-background">
         {model.command.locked ? (
           <View className="gap-2 px-5 py-3">
             <ServiceAction
@@ -346,21 +340,6 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                   variant="action-bar"
                 />
               </>
-            ) : null}
-            {market && showQueueSearch ? (
-              <BottomSearchFooter
-                variant={market ? "market-day" : "default"}
-                accessibilityLabel="Search service jobs"
-                hidden={scrollHide.hidden}
-                onHeightChange={setFooterHeight}
-                localSearch={isOfflineMode}
-                alwaysShowSearch
-                maxLength={160}
-                onChangeText={setSearch}
-                placeholder="Receipt or service"
-                totalCount={jobsQuery.data?.pages[0]?.totalCount ?? 0}
-                value={search}
-              />
             ) : null}
           </View>
         )}

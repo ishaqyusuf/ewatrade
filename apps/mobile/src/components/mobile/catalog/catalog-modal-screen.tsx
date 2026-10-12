@@ -4,7 +4,7 @@ import { useRouter } from "expo-router"
 import { CatalogItemsContent } from "./catalog-screen"
 
 export function CatalogModalChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="catalog-picker" />
+  return <MobileWorkflowChrome {...props} />
 }
 
 // This route browses Catalog; Offering selection belongs to Create Sale.
@@ -12,7 +12,6 @@ export function CatalogModalScreen() {
   const router = useRouter()
   return (
     <CatalogItemsContent
-      designScreen="catalog-picker"
       presentation="modal"
       onAddItem={() => router.push("/first-product-setup-modal")}
       onAddProduct={() =>

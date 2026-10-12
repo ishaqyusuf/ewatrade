@@ -1,17 +1,14 @@
 import { Text } from "@/components/ui/text"
 import { type LayoutChangeEvent, View } from "react-native"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import { CatalogVariantManager } from "./catalog-variant-manager"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
 export function CatalogSetupPricing({
   model,
-  market,
   onLayout,
   onPageChange,
 }: {
   model: CatalogSetupModel
-  market: boolean
   onLayout: (event: LayoutChangeEvent) => void
   onPageChange: () => void
 }) {
@@ -36,28 +33,15 @@ export function CatalogSetupPricing({
       {showAdvanced ? (
         <View
           onLayout={onLayout}
-          className={catalogSetupClassName(
-            "mt-3 gap-5 border-t border-border pt-7",
-            market,
-          )}
+          className="mt-3 gap-5 border-t border-border pt-7"
         >
-          <View className={catalogSetupClassName("gap-1", market)}>
-            <Text
-              className={catalogSetupClassName(
-                "text-lg font-extrabold text-foreground",
-                market,
-              )}
-            >
+          <View className="gap-1">
+            <Text className="text-lg font-extrabold text-foreground">
               {kind === "product"
                 ? "Product stock & pricing"
                 : "Price each choice"}
             </Text>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs [-rn-line-height:20] text-muted-foreground",
-                market,
-              )}
-            >
+            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
               {kind === "product"
                 ? "Open any option and unit combination to set its price, stock, and details."
                 : "Set a fixed price, request a quote, or add customer-facing details for each choice."}
@@ -85,18 +69,8 @@ export function CatalogSetupPricing({
             units={additionalUnits}
           />
           {kind === "service" ? (
-            <View
-              className={catalogSetupClassName(
-                "border-l-2 border-primary bg-muted px-3 py-3",
-                market,
-              )}
-            >
-              <Text
-                className={catalogSetupClassName(
-                  "text-xs [-rn-line-height:20] text-muted-foreground",
-                  market,
-                )}
-              >
+            <View className="border-l-2 border-primary bg-muted px-3 py-3">
+              <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
                 Set an amount for each fixed-price choice. Use Quote when the
                 amount depends on the customer request.
               </Text>

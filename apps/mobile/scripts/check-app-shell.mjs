@@ -129,7 +129,6 @@ const contracts = [
     file: "components/mobile/dashboard/operations-dashboard-screen.tsx",
     markers: [
       "OperationsDashboardSurface",
-      "MarketDayDashboardScreen",
       "ClassicDashboardScreen",
       "centralAction={{",
       "getMobileDashboardNavigation",
@@ -144,8 +143,6 @@ const contracts = [
       "trpc.tenant.featureAvailability",
       "mergeMobileWorkspaceFeatureAvailability",
       "featureVisibility.showGettingStarted",
-      "DashboardRecentOrderRow",
-      "BusinessHomeMarketLedgerEmptyOrders",
       'label: "Catalog"',
       'label: "Work"',
       'label: "Reports"',
@@ -163,11 +160,6 @@ const contracts = [
       '"role"',
     ],
     reason: "dashboard presentation must keep the typed app-shell contract",
-  },
-  {
-    file: "components/mobile/appearances/market-day/dashboard-screen.tsx",
-    markers: ["MobileAppShell", "<MobileAppShell", "{...props}"],
-    reason: "Market Day dashboard must render the shared operational shell",
   },
   {
     file: "components/mobile/appearances/classic/dashboard-screen.tsx",

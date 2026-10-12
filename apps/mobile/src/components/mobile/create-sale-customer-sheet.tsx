@@ -1,10 +1,7 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ActionButton } from "@/components/mobile/action-button"
-import { CountrySelect } from "@/components/mobile/country-select"
 import {
-  CREATE_CUSTOMER_SHEET_SNAP_POINTS,
   type SaleCustomerDraft,
-  getCreateCustomerSheetMaxHeight,
   hasCreateCustomerDraft,
   isCreateCustomerSaveDisabled,
 } from "@/components/mobile/create-sale-customer-sheet-model"
@@ -18,9 +15,6 @@ import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { createCustomerFixture } from "@/internal-tooling/fixture-recipes"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
-import { cn } from "@/lib/utils"
 import {
   getCountry,
   toInternationalPhone,
@@ -41,10 +35,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 export type { SaleCustomerDraft } from "@/components/mobile/create-sale-customer-sheet-model"
 
 type CreateSaleCustomerSheetProps = {
-  appearance?: MobileDesign
   phoneCountryCode?: string
   description?: string
-  headline?: string
   disabled?: boolean
   draft: SaleCustomerDraft
   error?: string | null
@@ -62,10 +54,8 @@ export const CreateSaleCustomerSheet = forwardRef<
 >(
   (
     {
-      appearance = "classic",
       phoneCountryCode,
       description = "Save this contact so it can be selected on future orders.",
-      headline = "An order with a name.",
       disabled = false,
       draft,
       error,
@@ -96,20 +86,14 @@ export const CreateSaleCustomerSheet = forwardRef<
       setLocalPhone(toLocalPhone(next.dialCode, draft.phone))
     }, [draft.phone, country.code, country.dialCode, localPhone])
     const { height } = useWindowDimensions()
-    const palette = useMarketDayPalette()
-    const market = appearance === "market-day"
     const [footerHeight, setFooterHeight] = useState(88)
     const hasDraft = hasCreateCustomerDraft(draft)
     // Green Till: a full-screen form that asks for name and phone first;
     // Show more reveals the secondary fields (phone country, email).
     const [moreOpen, setMoreOpen] = useState(false)
-    const showMore = market || moreOpen || Boolean(draft.email.trim())
+    const showMore = moreOpen || Boolean(draft.email.trim())
     const insets = useSafeAreaInsets()
-    const fullScreen = !market
     const expandedHeight = height - insets.top
-    const maxDynamicContentSize = market
-      ? getCreateCustomerSheetMaxHeight(height)
-      : expandedHeight
     const saveDisabled = isCreateCustomerSaveDisabled({
       disabled: disabled || isLoading,
       name: draft.name,
@@ -132,15 +116,12 @@ export const CreateSaleCustomerSheet = forwardRef<
       (props: BottomSheetFooterProps) => (
         <BottomSheetFooter {...props}>
           {/* Full screen: the sheet cannot rise, so Save rides the keyboard. */}
-          <KeyboardStickyView enabled={fullScreen}>
+          <KeyboardStickyView enabled>
             <View
               onLayout={(event) =>
                 setFooterHeight(event.nativeEvent.layout.height)
               }
-              className={cn(
-                "px-5 pb-5 pt-3",
-                market ? "bg-market-field" : "bg-card",
-              )}
+              className="bg-card px-5 pb-5 pt-3"
             >
               <ActionButton
                 icon={recoveryAction ? "Search" : "UserPlus"}
@@ -148,15 +129,6 @@ export const CreateSaleCustomerSheet = forwardRef<
                 isLoading={isLoading}
                 loadingLabel="Saving customer"
                 onPress={recoveryAction?.onPress ?? onSave}
-                foregroundColor={market ? palette.onPalm : undefined}
-                disabledForegroundColor={market ? palette.mutedInk : undefined}
-                className={
-                  market
-                    ? actionDisabled
-                      ? "bg-market-line active:bg-market-line"
-                      : "bg-market-palm active:bg-market-hero-pressed"
-                    : undefined
-                }
               >
                 {recoveryAction?.label ?? saveLabel}
               </ActionButton>
@@ -164,17 +136,7 @@ export const CreateSaleCustomerSheet = forwardRef<
           </KeyboardStickyView>
         </BottomSheetFooter>
       ),
-      [
-        fullScreen,
-        market,
-        actionDisabled,
-        isLoading,
-        onSave,
-        palette.onPalm,
-        palette.mutedInk,
-        saveLabel,
-        recoveryAction,
-      ],
+      [actionDisabled, isLoading, onSave, saveLabel, recoveryAction],
     )
 
     return (
@@ -185,26 +147,22 @@ export const CreateSaleCustomerSheet = forwardRef<
       >
         <Modal
           backdropComponent={renderBackdrop}
-          enableDynamicSizing={!fullScreen}
           enablePanDownToClose={!hasDraft && !isLoading}
           keyboardBehavior="fillParent"
           footerComponent={renderFooter}
-          maxDynamicContentSize={maxDynamicContentSize}
+          maxDynamicContentSize={expandedHeight}
           ref={ref}
           onDismiss={() => {
             setMoreOpen(false)
             onDismiss?.()
           }}
-          snapPoints={
-            fullScreen ? ["100%"] : [...CREATE_CUSTOMER_SHEET_SNAP_POINTS]
-          }
-          detached={!fullScreen}
-          handleComponent={fullScreen ? null : undefined}
-          bottomInset={fullScreen ? 0 : undefined}
+          snapPoints={["100%"]}
+          detached={false}
+          handleComponent={null}
+          bottomInset={0}
           topInset={insets.top}
           accessibilityLabel="Add customer"
-          hideHeader={!market}
-          title={market ? "Create customer" : undefined}
+          hideHeader
         >
           <BottomSheetKeyboardAwareScrollView
             bottomOffset={footerHeight + 12}
@@ -213,21 +171,10 @@ export const CreateSaleCustomerSheet = forwardRef<
             keyboardShouldPersistTaps="handled"
           >
             <View className="gap-4 px-5 pb-5">
-              {market ? (
-                <>
-                  <Text className="border-l-4 border-market-marigold pl-3 font-market-display text-[26px] font-bold text-market-ink [-rn-line-height:32]">
-                    {headline}
-                  </Text>
-                  <Text className="text-sm text-market-muted-ink [-rn-line-height:20]">
-                    {description}
-                  </Text>
-                </>
-              ) : (
-                <ClassicSheetHeader
-                  description={description}
-                  dismissible={!isLoading}
-                />
-              )}
+              <ClassicSheetHeader
+                description={description}
+                dismissible={!isLoading}
+              />
               {error ? (
                 <StatusBanner
                   icon="AlertCircle"
@@ -260,30 +207,17 @@ export const CreateSaleCustomerSheet = forwardRef<
                 }}
               />
               <FormField
-                variant={market ? "market" : "green-gate"}
+                variant="green-gate"
                 maxLength={160}
                 editable={!isLoading && !disabled}
                 autoCapitalize="words"
-                label={market ? "Customer name · Required" : "Name · required"}
+                label="Name · required"
                 leadingIcon="User"
                 onChangeText={(name) => onChange({ ...draft, name })}
                 placeholder="Enter customer name"
                 value={draft.name}
               />
-              {market ? (
-                <Text className="text-xs font-bold uppercase tracking-[1.4px] text-market-muted-ink">
-                  Optional contact
-                </Text>
-              ) : null}
-              {market && useCountryPhone ? (
-                <CountrySelect
-                  label="Phone country"
-                  value={country.code}
-                  onChange={setSelectedCountry}
-                  disabled={disabled || isLoading}
-                />
-              ) : null}
-              {!market && useCountryPhone ? (
+              {useCountryPhone ? (
                 <PhoneField
                   countryCode={country.code}
                   editable={!isLoading && !disabled}
@@ -310,7 +244,7 @@ export const CreateSaleCustomerSheet = forwardRef<
                 />
               ) : (
                 <FormField
-                  variant={market ? "market" : "green-gate"}
+                  variant="green-gate"
                   maxLength={40}
                   editable={!isLoading && !disabled}
                   keyboardType="phone-pad"
@@ -336,7 +270,7 @@ export const CreateSaleCustomerSheet = forwardRef<
               )}
               {showMore ? (
                 <FormField
-                  variant={market ? "market" : "green-gate"}
+                  variant="green-gate"
                   maxLength={320}
                   editable={!isLoading && !disabled}
                   autoCapitalize="none"
@@ -348,14 +282,12 @@ export const CreateSaleCustomerSheet = forwardRef<
                   value={draft.email}
                 />
               ) : null}
-              {!market ? (
-                <ShowMoreToggle
-                  hint={useCountryPhone ? "Email" : "Country, email"}
-                  open={showMore}
-                  locked={Boolean(draft.email.trim())}
-                  onToggle={() => setMoreOpen((open) => !open)}
-                />
-              ) : null}
+              <ShowMoreToggle
+                hint={useCountryPhone ? "Email" : "Country, email"}
+                open={showMore}
+                locked={Boolean(draft.email.trim())}
+                onToggle={() => setMoreOpen((open) => !open)}
+              />
               <View className="h-[var(--sale-customer-footer)]" />
             </View>
           </BottomSheetKeyboardAwareScrollView>

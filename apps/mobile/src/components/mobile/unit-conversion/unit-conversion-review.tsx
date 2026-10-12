@@ -1,18 +1,15 @@
-import { ActionButton } from "@/components/mobile/action-button"
-import { StatusBanner } from "@/components/mobile/status-banner"
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
-import { ConversionSummary as ClassicSummary } from "@/components/mobile/appearances/classic/unit-conversion"
-import { ConversionSummary as MarketSummary } from "@/components/mobile/appearances/market-day/unit-conversion"
+import { ActionButton } from "@/components/mobile/action-button"
+import { ConversionSummary } from "@/components/mobile/appearances/classic/unit-conversion"
+import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { cn } from "@/lib/utils"
 import {
-  BottomSheetFooter,
-  BottomSheetScrollView,
   type BottomSheetBackdropProps,
+  BottomSheetFooter,
   type BottomSheetFooterProps,
+  BottomSheetScrollView,
 } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useCallback, useState } from "react"
@@ -22,12 +19,9 @@ import type { UnitConversionModel } from "./use-unit-conversion"
 
 export function UnitConversionReview({
   model,
-  market,
-}: { model: UnitConversionModel; market: boolean }) {
-  const palette = useMarketDayPalette()
+}: { model: UnitConversionModel }) {
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(140)
-  const Summary = market ? MarketSummary : ClassicSummary
   const disabled =
     model.pending ||
     model.offline ||
@@ -45,26 +39,12 @@ export function UnitConversionReview({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={cn(
-            "gap-2 border-t px-5 pb-5 pt-3",
-            market
-              ? "border-market-line bg-market-field"
-              : "border-border bg-card",
-          )}
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           <ActionButton
             disabled={disabled}
             isLoading={model.pending}
             loadingLabel="Transforming stock"
-            foregroundColor={market ? palette.onPalm : undefined}
-            disabledForegroundColor={market ? palette.mutedInk : undefined}
-            className={
-              market
-                ? disabled
-                  ? "bg-market-line active:bg-market-line"
-                  : "bg-market-palm active:bg-market-hero-pressed"
-                : undefined
-            }
             onPress={() => void model.confirm()}
           >
             {model.hasAttempt
@@ -75,12 +55,6 @@ export function UnitConversionReview({
             disabled={model.pending}
             variant="outline"
             onPress={model.dismissReview}
-            foregroundColor={market ? palette.ink : undefined}
-            className={
-              market
-                ? "border-market-line bg-market-field active:bg-market-line"
-                : undefined
-            }
           >
             {model.hasAttempt ? "Close review" : "Back to draft"}
           </ActionButton>
@@ -89,19 +63,13 @@ export function UnitConversionReview({
     ),
     [
       disabled,
-      market,
       model.pending,
       model.hasAttempt,
       model.confirm,
       model.dismissReview,
-      palette.onPalm,
-      palette.mutedInk,
-      palette.ink,
     ],
   )
   const review = model.review
-  const ink = market ? "text-market-ink" : "text-foreground"
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   return (
     <VariableContextProvider
       value={{ "--conversion-review-footer": footerHeight + 16 }}
@@ -121,24 +89,24 @@ export function UnitConversionReview({
           <View className="gap-3 px-5 pb-[var(--conversion-review-footer)]">
             {review ? (
               <>
-                <Text className={cn("text-base font-extrabold", ink)}>
+                <Text className="text-base font-extrabold text-foreground">
                   {review.source.productName} · {review.source.variantName}
                 </Text>
-                <Text className={cn("text-xs", muted)}>
+                <Text className="text-xs text-muted-foreground">
                   {review.source.storeName} · Source revision{" "}
                   {review.source.revision} · Target revision{" "}
                   {review.target.revision}
                 </Text>
-                <Text className={cn("text-xs [-rn-line-height:18]", muted)}>
+                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
                   From {conversionCustody(review.source)} to{" "}
                   {conversionCustody(review.target)}
                 </Text>
-                <Summary
+                <ConversionSummary
                   source={review.source}
                   target={review.target}
                   projection={review.projection}
                 />
-                <Text className={cn("text-sm [-rn-line-height:21]", ink)}>
+                <Text className="text-sm [-rn-line-height:21] text-foreground">
                   Reason: {review.reason}
                 </Text>
               </>
@@ -152,7 +120,7 @@ export function UnitConversionReview({
                 message="Return online to the original account, business and Store with inventory management permission."
               />
             ) : null}
-            <Text className={cn("text-xs [-rn-line-height:18]", muted)}>
+            <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
               {model.hasAttempt
                 ? "The reviewed quantities and command ID are locked for retry. Closing does not undo a posted transformation. A revision conflict needs operational review before any new command."
                 : "The server rechecks revisions, available stock and exact conservation, then posts both movements together. This review does not reserve stock."}

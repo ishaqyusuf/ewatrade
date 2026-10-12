@@ -1,24 +1,16 @@
-import { ActionButton } from "@/components/mobile/action-button"
 import { MobileAppShell } from "@/components/mobile/app-shell"
 import {
   DashboardActionRow,
-  DashboardHomeHeader,
   DashboardOverviewMetric,
   DashboardRevenueCard,
 } from "@/components/mobile/dashboard-kit"
 import type {
-  DashboardEmptyOrdersProps,
-  DashboardHeroProps,
   DashboardOverviewProps,
   DashboardScreenProps,
   DashboardSectionProps,
   DashboardSetupProps,
   DashboardSyncProps,
-  SalesRepOverviewProps,
-  SalesRepSectionProps,
 } from "@/components/mobile/dashboard/dashboard-presentation"
-import { EmptyState } from "@/components/mobile/empty-state"
-import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -40,30 +32,6 @@ export function ClassicDashboardScreen({
       {hero}
       {children}
     </MobileAppShell>
-  )
-}
-
-export function ClassicDashboardHero({
-  onBusinessPress,
-  cue,
-  ...props
-}: DashboardHeroProps) {
-  return (
-    <View className="gap-2">
-      <DashboardHomeHeader {...props} />
-      <Pressable
-        accessibilityLabel="Switch Business"
-        accessibilityRole="button"
-        className="min-h-11 self-start justify-center px-2 active:bg-muted"
-        haptic
-        onPress={onBusinessPress}
-      >
-        <Text className="text-xs font-bold text-primary">Switch Business</Text>
-      </Pressable>
-      {cue ? (
-        <Text className="text-sm text-muted-foreground">{cue}</Text>
-      ) : null}
-    </View>
   )
 }
 
@@ -196,105 +164,5 @@ export function ClassicDashboardSectionHeader({
         </Pressable>
       ) : null}
     </View>
-  )
-}
-
-export function ClassicDashboardEmptyOrders({
-  actionDisabled,
-  actionLabel,
-  message,
-  onActionPress,
-}: DashboardEmptyOrdersProps) {
-  return (
-    <EmptyState
-      actionLabel={actionLabel}
-      actionProps={{ disabled: actionDisabled, onPress: onActionPress }}
-      className="mt-2"
-      icon="ReceiptText"
-      message={message}
-      title="No orders yet"
-    />
-  )
-}
-
-export function ClassicSalesRepOverview(props: SalesRepOverviewProps) {
-  const largeText = useLargeTextLayout()
-  return (
-    <View className="gap-4">
-      <StatusBanner
-        icon="Building2"
-        message={props.saleActionDetail}
-        title={props.readinessLabel}
-        tone="muted"
-      />
-      <SyncNote {...props} />
-      <View className={largeText ? "gap-3" : "flex-row gap-3"}>
-        <DashboardOverviewMetric
-          detail="Latest orders loaded"
-          icon="ReceiptText"
-          label="Recent sales"
-          value={props.recentOrderCount}
-        />
-        <DashboardOverviewMetric
-          detail={props.catalogFactDetail}
-          icon="Warehouse"
-          label="Sellable catalog"
-          tone="accent"
-          value={props.catalogFactValue}
-        />
-      </View>
-      <DashboardRevenueCard
-        detail="Across loaded sales"
-        label="Recent value"
-        value={props.recentOrderValue}
-      />
-      <ActionButton
-        disabled={props.saleActionDisabled}
-        onPress={props.onStartSalePress}
-        trailingIcon="ArrowRight"
-      >
-        {props.saleActionLabel}
-      </ActionButton>
-      {props.onCustomerBookPress ? (
-        <DashboardActionRow
-          icon="Users"
-          label="Customer book"
-          onPress={props.onCustomerBookPress}
-        />
-      ) : null}
-      <DashboardActionRow
-        icon="ClipboardList"
-        label="Daily closeout"
-        onPress={props.onCloseoutPress}
-      />
-      <DashboardActionRow
-        icon="RefreshCw"
-        label="Sync status"
-        onPress={props.onSyncPress}
-      />
-    </View>
-  )
-}
-
-export function ClassicSalesRepSection({
-  children,
-  title,
-}: SalesRepSectionProps) {
-  return (
-    <View>
-      <ClassicDashboardSectionHeader title={title} />
-      {children}
-    </View>
-  )
-}
-
-export function ClassicSalesRepEmptySales({ message }: { message: string }) {
-  return (
-    <EmptyState
-      className="mt-2"
-      icon="ReceiptText"
-      message={message}
-      title="No sales yet"
-    />
   )
 }

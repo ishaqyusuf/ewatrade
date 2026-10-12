@@ -1,25 +1,14 @@
 import { InventoryProductCard } from "@/components/mobile/inventory-product-card"
-import { SecondarySheetHeader } from "@/components/mobile/secondary-operations"
+import type {
+  StockChoiceProps,
+  StockRowProps,
+  StockSectionProps,
+} from "@/components/mobile/stock-intake/stock-intake-presentation"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { cn } from "@/lib/utils"
-import type {
-  StockChoiceProps,
-  StockHeaderProps,
-  StockRowProps,
-  StockSectionProps,
-} from "@/components/mobile/stock-intake/stock-intake-presentation"
 
-export function StockHeader({ description }: StockHeaderProps) {
-  return (
-    <SecondarySheetHeader
-      icon="Warehouse"
-      title="Inventory movement"
-      description={description}
-    />
-  )
-}
 export function StockSection({
   title,
   description,

@@ -1,4 +1,5 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
+import { ServiceChoice as Choice } from "@/components/mobile/appearances/classic/service-jobs"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -21,7 +22,6 @@ import {
   type ServicePaymentKind,
   projectServicePayment,
 } from "./service-payment-model"
-import { useServiceAppearance } from "./use-service-appearance"
 
 export function useServicePaymentEditor(
   onReview: (draft: ServicePaymentDraft) => boolean,
@@ -93,7 +93,6 @@ export function ServicePaymentSheet({
   allowed,
   scopeChanged,
 }: { editor: Editor; allowed: boolean; scopeChanged: boolean }) {
-  const { market, ServiceChoice: Choice } = useServiceAppearance()
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(120)
   const draft = editor.draft
@@ -106,11 +105,7 @@ export function ServicePaymentSheet({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={
-            market
-              ? "gap-2 border-t border-market-line bg-market-field px-5 pb-5 pt-3"
-              : "gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-          }
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           <ServiceAction disabled={disabled} onPress={editor.review}>
             Review {draft?.kind === "handoff" ? "collection" : "payment"}
@@ -121,9 +116,9 @@ export function ServicePaymentSheet({
         </View>
       </BottomSheetFooter>
     ),
-    [disabled, draft?.kind, editor, market],
+    [disabled, draft?.kind, editor],
   )
-  const ink = market ? "text-market-ink" : "text-foreground"
+  const ink = "text-foreground"
   return (
     <Modal
       ref={editor.modal.ref}
@@ -178,7 +173,7 @@ export function ServicePaymentSheet({
                 {draft.job.balanceDueMinor > 0 ? (
                   <>
                     <MoneyField
-                      variant={market ? "market" : "filled"}
+                      variant="filled"
                       currencyCode={draft.job.currencyCode}
                       label="Amount received"
                       value={draft.amount}
@@ -205,7 +200,7 @@ export function ServicePaymentSheet({
                       ))}
                     </View>
                     <FormField
-                      variant={market ? "market" : "filled"}
+                      variant="filled"
                       label="Payment reference (optional)"
                       maxLength={160}
                       value={draft.reference}
@@ -227,13 +222,7 @@ export function ServicePaymentSheet({
                     {projection.error}
                   </Text>
                 ) : null}
-                <Text
-                  className={
-                    market
-                      ? "text-xs text-market-muted-ink"
-                      : "text-xs text-muted-foreground"
-                  }
-                >
+                <Text className="text-xs text-muted-foreground">
                   {draft.kind === "handoff"
                     ? "Collection requires the exact remaining balance and all active work ready."
                     : "Record only money you have actually received. This does not charge the customer."}

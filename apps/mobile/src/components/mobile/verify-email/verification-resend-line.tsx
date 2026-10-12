@@ -1,9 +1,7 @@
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 
 export function VerificationResendLine({
-  design,
   disabled,
   isError,
   isSending,
@@ -13,7 +11,6 @@ export function VerificationResendLine({
   wasResent,
   cooldownSeconds = 0,
 }: {
-  design: MobileDesign
   disabled: boolean
   isError: boolean
   isSending: boolean
@@ -21,7 +18,7 @@ export function VerificationResendLine({
   message: string | null
   onPress: () => void
   wasResent: boolean
-  /** Seconds until another code can be sent (classic only). */
+  /** Seconds until another code can be sent. */
   cooldownSeconds?: number
 }) {
   const lead = isSending
@@ -33,8 +30,7 @@ export function VerificationResendLine({
         : wasResent
           ? "Code sent again"
           : "Didn't receive it?"
-  const market = design === "market-day"
-  if (!market && cooldownSeconds > 0 && !isSending && !isVerifying && !isError)
+  if (cooldownSeconds > 0 && !isSending && !isVerifying && !isError)
     return (
       <Text
         accessibilityLiveRegion="polite"
@@ -59,25 +55,15 @@ export function VerificationResendLine({
       <Text
         accessibilityLiveRegion="polite"
         className={
-          market
-            ? isError
-              ? "text-center text-xs leading-5 text-market-paprika"
-              : "text-center text-xs leading-5 text-market-muted-ink"
-            : isError
-              ? "text-center text-xs font-semibold leading-5 text-destructive"
-              : "text-center text-xs leading-5 text-muted-foreground"
+          isError
+            ? "text-center text-xs font-semibold leading-5 text-destructive"
+            : "text-center text-xs leading-5 text-muted-foreground"
         }
       >
         {lead}
       </Text>
       {!isSending && !isVerifying ? (
-        <Text
-          className={
-            market
-              ? "text-center text-xs font-extrabold leading-5 text-market-accent-ink"
-              : "text-center text-xs font-bold leading-5 text-foreground"
-          }
-        >
+        <Text className="text-center text-xs font-bold leading-5 text-foreground">
           Resend code
         </Text>
       ) : null}

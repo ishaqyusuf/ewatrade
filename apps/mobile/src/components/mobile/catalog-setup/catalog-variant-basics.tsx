@@ -1,5 +1,4 @@
 import { ClassicServicePricingModeOption } from "@/components/mobile/appearances/classic/catalog-variant-manager"
-import { MarketServicePricingModeOption } from "@/components/mobile/appearances/market-day/catalog-variant-manager"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { Icon } from "@/components/ui/icon"
@@ -7,17 +6,14 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { View } from "react-native"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogVariantManagerProps } from "./catalog-variant-model"
 import type { CatalogVariantsModel } from "./use-catalog-variants"
 
 export function CatalogVariantBasics({
   model,
-  market,
   ...props
 }: CatalogVariantManagerProps & {
   model: CatalogVariantsModel
-  market: boolean
 }) {
   const {
     editor,
@@ -36,59 +32,37 @@ export function CatalogVariantBasics({
   } = props
   const largeTextLayout = useLargeTextLayout()
   const editorUnit = units.find((unit) => unit.id === editor?.unitId)
-
-  const ServicePricingModeOption = market
-    ? MarketServicePricingModeOption
-    : ClassicServicePricingModeOption
   if (!editor) return null
   return (
     <>
       {editorUnit ? (
-        <Text
-          className={catalogSetupClassName(
-            "text-sm [-rn-line-height:24] text-muted-foreground",
-            market,
-          )}
-        >
+        <Text className="text-sm [-rn-line-height:24] text-muted-foreground">
           Editing the {editorUnit.name} price. Quantity, description, media,
           codes, and availability belong to the full option combination.
         </Text>
       ) : null}
 
       {kind === "service" && !editorUnit ? (
-        <View className={catalogSetupClassName("gap-3", market)}>
-          <View className={catalogSetupClassName("gap-1", market)}>
-            <Text
-              className={catalogSetupClassName(
-                "text-sm [-rn-line-height:24] text-muted-foreground",
-                market,
-              )}
-            >
+        <View className="gap-3">
+          <View className="gap-1">
+            <Text className="text-sm [-rn-line-height:24] text-muted-foreground">
               Choose how this Service choice is priced.
             </Text>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-                market,
-              )}
-            >
+            <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
               Pricing
             </Text>
           </View>
           <View
             accessibilityRole="radiogroup"
-            className={catalogSetupClassName(
-              largeTextLayout || market ? "gap-3" : "flex-row gap-3",
-              market,
-            )}
+            className={largeTextLayout ? "gap-3" : "flex-row gap-3"}
           >
-            <ServicePricingModeOption
+            <ClassicServicePricingModeOption
               description="Show one amount before ordering."
               label="Fixed price"
               onPress={() => updateEditor({ quoteRequired: false })}
               selected={!editor.draft.quoteRequired}
             />
-            <ServicePricingModeOption
+            <ClassicServicePricingModeOption
               description="Confirm price after the request."
               label="Quote"
               onPress={() => updateEditor({ quoteRequired: true })}
@@ -99,18 +73,14 @@ export function CatalogVariantBasics({
       ) : null}
 
       <View
-        className={catalogSetupClassName(
+        className={
           largeTextLayout && kind === "product" && !editorUnit
             ? "gap-3"
-            : "flex-row gap-3",
-          market,
-        )}
+            : "flex-row gap-3"
+        }
       >
         {kind === "product" && !editorUnit ? (
           <FormField
-            inputClassName={
-              market ? "bg-market-field text-market-ink" : undefined
-            }
             containerClassName={largeTextLayout ? undefined : "min-w-0 flex-1"}
             keyboardType="decimal-pad"
             label="Opening quantity (optional)"
@@ -122,9 +92,6 @@ export function CatalogVariantBasics({
         ) : null}
         {kind !== "service" || !editor.draft.quoteRequired ? (
           <MoneyField
-            inputClassName={
-              market ? "bg-market-field text-market-ink" : undefined
-            }
             containerClassName={
               largeTextLayout && kind === "product" && !editorUnit
                 ? undefined
@@ -158,18 +125,8 @@ export function CatalogVariantBasics({
       </View>
 
       {kind === "service" && editor.draft.quoteRequired ? (
-        <View
-          className={catalogSetupClassName(
-            "rounded-2xl bg-muted px-4 py-3",
-            market,
-          )}
-        >
-          <Text
-            className={catalogSetupClassName(
-              "text-sm [-rn-line-height:24] text-muted-foreground",
-              market,
-            )}
-          >
+        <View className="rounded-2xl bg-muted px-4 py-3">
+          <Text className="text-sm [-rn-line-height:24] text-muted-foreground">
             Final price will be confirmed after the customer request.
           </Text>
         </View>
@@ -177,9 +134,6 @@ export function CatalogVariantBasics({
 
       {editorUnit ? null : descriptionVisible ? (
         <FormField
-          inputClassName={
-            market ? "bg-market-field text-market-ink" : undefined
-          }
           label="Description"
           maxLength={2000}
           multiline
@@ -197,77 +151,32 @@ export function CatalogVariantBasics({
         <Pressable
           accessibilityHint="Opens an optional description field"
           accessibilityLabel="Add Service choice description"
-          className={catalogSetupClassName(
-            "-mx-2 min-h-16 flex-row items-center gap-3 border-y border-border px-3 py-3",
-            market,
-          )}
+          className="-mx-2 min-h-16 flex-row items-center gap-3 border-y border-border px-3 py-3"
           haptic
           onPress={() => setDescriptionVisible(true)}
           transition
         >
-          <View
-            className={catalogSetupClassName(
-              "h-10 w-10 items-center justify-center rounded-full bg-muted",
-              market,
-            )}
-          >
-            <Icon
-              className={catalogSetupClassName(
-                "size-sm text-foreground",
-                market,
-              )}
-              name="Plus"
-            />
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+            <Icon className="size-sm text-foreground" name="Plus" />
           </View>
-          <View
-            className={catalogSetupClassName("min-w-0 flex-1 gap-0.5", market)}
-          >
-            <Text
-              className={catalogSetupClassName(
-                "font-bold text-foreground",
-                market,
-              )}
-            >
-              Description
-            </Text>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs [-rn-line-height:20] text-muted-foreground",
-                market,
-              )}
-            >
+          <View className="min-w-0 flex-1 gap-0.5">
+            <Text className="font-bold text-foreground">Description</Text>
+            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
               Explain what this Service choice includes.
             </Text>
           </View>
-          <Icon
-            className={catalogSetupClassName(
-              "size-xs text-muted-foreground",
-              market,
-            )}
-            name="ChevronRight"
-          />
+          <Icon className="size-xs text-muted-foreground" name="ChevronRight" />
         </Pressable>
       ) : (
         <Pressable
           accessibilityLabel="Add option description"
-          className={catalogSetupClassName(
-            "min-h-11 flex-row items-center gap-2 self-start rounded-full bg-muted px-4",
-            market,
-          )}
+          className="min-h-11 flex-row items-center gap-2 self-start rounded-full bg-muted px-4"
           haptic
           onPress={() => setDescriptionVisible(true)}
           transition
         >
-          <Icon
-            className={catalogSetupClassName("size-xs text-foreground", market)}
-            name="Plus"
-          />
-          <Text
-            className={catalogSetupClassName(
-              "text-sm font-bold text-foreground",
-              market,
-            )}
-          >
+          <Icon className="size-xs text-foreground" name="Plus" />
+          <Text className="text-sm font-bold text-foreground">
             Add description
           </Text>
         </Pressable>
@@ -275,45 +184,18 @@ export function CatalogVariantBasics({
 
       <Pressable
         accessibilityLabel="Show all option settings"
-        className={catalogSetupClassName(
-          "-mx-2 min-h-16 flex-row items-center gap-3 border-b border-border py-3 pl-3 pr-3",
-          market,
-        )}
+        className="-mx-2 min-h-16 flex-row items-center gap-3 border-b border-border py-3 pl-3 pr-3"
         haptic
         onPress={expandEditor}
         transition
       >
-        <View
-          className={catalogSetupClassName("min-w-0 flex-1 gap-0.5", market)}
-        >
-          <Text
-            className={catalogSetupClassName(
-              "font-bold text-foreground",
-              market,
-            )}
-          >
-            More details
-          </Text>
-          <Text
-            className={catalogSetupClassName(
-              "text-xs [-rn-line-height:20] text-muted-foreground",
-              market,
-            )}
-          >
-            {kind === "service"
-              ? "Image and availability"
-              : market
-                ? "Image, inventory codes, and availability"
-                : "Image and availability"}
+        <View className="min-w-0 flex-1 gap-0.5">
+          <Text className="font-bold text-foreground">More details</Text>
+          <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+            Image and availability
           </Text>
         </View>
-        <Icon
-          className={catalogSetupClassName(
-            "size-xs text-muted-foreground",
-            market,
-          )}
-          name="ChevronRight"
-        />
+        <Icon className="size-xs text-muted-foreground" name="ChevronRight" />
       </Pressable>
     </>
   )

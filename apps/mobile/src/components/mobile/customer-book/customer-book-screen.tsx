@@ -6,7 +6,6 @@ import {
 import { CreateSaleCustomerSheet } from "@/components/mobile/create-sale-customer-sheet"
 import type { CustomerBookFilter } from "@/components/mobile/customer-book-presentation-model"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
@@ -16,7 +15,6 @@ import { Toast } from "@/components/ui/toast"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { shouldFetchNextListPage } from "@/lib/list-pagination"
 import { useBusinessStore } from "@/store/businessStore"
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from "@ewatrade/utils/countries"
@@ -24,35 +22,26 @@ import { VariableContextProvider } from "nativewind"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FlatList } from "react-native-css/components/FlatList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ActionButton, MarketDayActionButton } from "../action-button"
+import { ActionButton } from "../action-button"
 import {
   ClassicCustomerBookFilter,
   ClassicCustomerBookHeader,
   ClassicCustomerBookRow,
 } from "../appearances/classic/customer-book-screen"
-import {
-  MarketDayCustomerBookFilter,
-  MarketDayCustomerBookHeader,
-  MarketDayCustomerBookRow,
-} from "../appearances/market-day/customer-book-screen"
 import { MobileWorkflowChrome } from "../appearances/workflow-chrome"
 import { ListCreateFab } from "../list-create-fab"
 import type { WorkflowModalChromeProps } from "../workflow-modal-screen"
 import { CustomerOpenOrders } from "./customer-open-orders"
 import { type CustomerBookProps, useCustomerBook } from "./use-customer-book"
 export function CustomerBookChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="customers" />
+  return <MobileWorkflowChrome {...props} />
 }
-export function activeCustomerFilterLabel(
-  filter: CustomerBookFilter,
-  market = true,
-) {
-  if (filter === "pending") return market ? "Pending sync" : "Waiting to sync"
+export function activeCustomerFilterLabel(filter: CustomerBookFilter) {
+  if (filter === "pending") return "Waiting to sync"
   if (filter === "synced") return "Synced"
   if (filter === "none") return "No orders yet"
   return "All"
 }
-const MARKET_FILTERS = ["all", "synced", "pending"] as const
 const CLASSIC_FILTERS = ["all", "pending", "none"] as const
 
 export function CustomerBookContent(
@@ -72,14 +61,6 @@ export function CustomerBookContent(
   const canManageTenant = ["OWNER", "ADMIN"].includes(
     profile?.role?.trim().toUpperCase() ?? "",
   )
-  const market = useMobileDesign("customers") === "market-day"
-  const Header = market
-    ? MarketDayCustomerBookHeader
-    : ClassicCustomerBookHeader
-  const Row = market ? MarketDayCustomerBookRow : ClassicCustomerBookRow
-  const Filter = market
-    ? MarketDayCustomerBookFilter
-    : ClassicCustomerBookFilter
   const { initialOrderId } = props
   const {
     router,
@@ -92,11 +73,7 @@ export function CustomerBookContent(
     setSelectedCustomerId,
     orders,
     directory,
-    customerCount,
-    directoryCount,
     customers,
-    pendingCustomerCount,
-    showSearch,
     selectedCustomer,
     selectedIsSaved,
     entryNotice,
@@ -109,18 +86,17 @@ export function CustomerBookContent(
     hasError,
     presentation,
   } = useCustomerBook(props)
-  const searchVisible = market || showSearch
-  // Green Till confirms a save with a bottom toast instead of a banner.
+  // Green Till confirms a save with a bottom toast.
   const toastedNotice = useRef<string | null>(null)
   useEffect(() => {
     if (!creation.notice) {
       toastedNotice.current = null
       return
     }
-    if (market || toastedNotice.current === creation.notice) return
+    if (toastedNotice.current === creation.notice) return
     toastedNotice.current = creation.notice
     Toast.show(creation.notice, { position: "bottom", type: "success" })
-  }, [creation.notice, market])
+  }, [creation.notice])
   const profileOpen = Boolean(selectedCustomer)
   const { onProfileOpenChange } = props
   useEffect(() => {
@@ -171,16 +147,6 @@ export function CustomerBookContent(
           </ActionButton>
         </View>
       ) : null}
-      {creation.notice && market ? (
-        <View className="px-4 py-2">
-          <StatusBanner
-            icon="CheckCircle2"
-            title="Customer directory"
-            message={creation.notice}
-            tone="success"
-          />
-        </View>
-      ) : null}
       {creation.uncertain ? (
         <View className="gap-2 px-4 py-2">
           <StatusBanner
@@ -215,21 +181,6 @@ export function CustomerBookContent(
             phone={selectedCustomer.phone}
             onOpenOrder={(id) => router.push(commercialOrderHref(id) as never)}
           />
-          {market && canManageTenant && selectedIsSaved && selectedCustomer ? (
-            <View className="px-4 pb-3">
-              <ActionButton
-                variant="outline"
-                onPress={() =>
-                  router.push({
-                    pathname: "/customer-ledger/[customerId]",
-                    params: { customerId: selectedCustomer.id },
-                  })
-                }
-              >
-                Statement and payments
-              </ActionButton>
-            </View>
-          ) : null}
         </>
       }
       onStatement={
@@ -241,19 +192,9 @@ export function CustomerBookContent(
               })
           : undefined
       }
-      appearance={market ? "market-day" : "classic"}
       customer={selectedCustomer}
       historyComplete={historyComplete}
       isOffline={isOffline}
-      historyNotice={
-        isOffline
-          ? "Showing cached history. Reconnect to load current orders."
-          : orders.isError
-            ? "Some history could not be loaded. Return to the directory to retry."
-            : search.trim()
-              ? "Search-filtered history. Loaded amounts are not final customer totals."
-              : "Only loaded history is shown; totals may change as more orders arrive."
-      }
       onBack={
         initialOrderId ? returnToOrder : () => setSelectedCustomerId(null)
       }
@@ -280,29 +221,21 @@ export function CustomerBookContent(
   const directoryContent = (
     <VariableContextProvider
       value={{
-        "--customer-book-bottom":
-          (market && searchVisible) || !market ? footerHeight + 24 : 24,
+        "--customer-book-bottom": footerHeight + 24,
       }}
     >
-      <View
-        className={market ? "flex-1 bg-market-canvas" : "flex-1"}
-        testID="customer-book-screen"
-      >
+      <View className="flex-1" testID="customer-book-screen">
         <FlatList
           className="flex-1"
-          contentContainerClassName={
-            market
-              ? "grow gap-2 px-[18px] pb-[var(--customer-book-bottom)]"
-              : "grow px-[18px] pb-[var(--customer-book-bottom)]"
-          }
+          contentContainerClassName="grow px-[18px] pb-[var(--customer-book-bottom)]"
           data={visibleCustomers}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
-          onScroll={market ? undefined : scrollHide.onScroll}
+          onScroll={scrollHide.onScroll}
           scrollEventThrottle={16}
           ListEmptyComponent={
-            isLoading && !market ? (
+            isLoading ? (
               <SkeletonGroup accessibilityLabel="Loading customers">
                 <View className="gap-3">
                   <Skeleton height={64} />
@@ -310,14 +243,6 @@ export function CustomerBookContent(
                   <Skeleton height={64} />
                 </View>
               </SkeletonGroup>
-            ) : isLoading ? (
-              <View className="px-4">
-                <ListSkeleton
-                  count={7}
-                  label="Loading customers"
-                  variant="person"
-                />
-              </View>
             ) : (
               <EmptyState
                 actionLabel={
@@ -358,11 +283,9 @@ export function CustomerBookContent(
           ListHeaderComponent={
             <View className="gap-4 pb-3">
               {feedback}
-              <Header
+              <ClassicCustomerBookHeader
                 loadedCount={customers.length}
-                pendingCount={
-                  market ? pendingCustomerCount : filterCounts.pending
-                }
+                pendingCount={filterCounts.pending}
                 noOrdersCount={filterCounts.none}
                 hasMore={hasMoreCustomers}
                 isLoading={isLoading}
@@ -398,12 +321,12 @@ export function CustomerBookContent(
               ) : null}
               {presentation.showFilters ? (
                 <View className="flex-row flex-wrap gap-2">
-                  {(market ? MARKET_FILTERS : CLASSIC_FILTERS).map((value) => (
-                    <Filter
+                  {CLASSIC_FILTERS.map((value) => (
+                    <ClassicCustomerBookFilter
                       active={filter === value}
-                      count={market ? undefined : filterCounts[value]}
+                      count={filterCounts[value]}
                       key={value}
-                      label={activeCustomerFilterLabel(value, market)}
+                      label={activeCustomerFilterLabel(value)}
                       onPress={() => setFilter(value)}
                     />
                   ))}
@@ -413,7 +336,7 @@ export function CustomerBookContent(
           }
           renderItem={({ item, index }) => (
             <RevealItem index={index} active={reveal}>
-              <Row
+              <ClassicCustomerBookRow
                 customer={item}
                 historyComplete={historyComplete}
                 onPress={() => setSelectedCustomerId(item.id)}
@@ -456,84 +379,48 @@ export function CustomerBookContent(
           refreshControl={isOffline ? undefined : <QueryRefreshControl />}
           showsVerticalScrollIndicator={false}
         />
-        {market && searchVisible ? (
-          <BottomSearchFooter
-            alwaysShowSearch
-            variant={market ? "market-day" : "default"}
-            localSearch={isOffline}
-            maxLength={160}
-            onHeightChange={setFooterHeight}
-            accessibilityLabel="Search customers"
-            onChangeText={setSearch}
-            placeholder="Search name, phone, or email"
-            totalCount={
-              Math.max(
-                (customerCount.data ?? 0) + (directoryCount.data ?? 0),
-                customers.length,
-              ) + pendingCustomerCount
-            }
-            value={search}
-          >
-            {market ? (
-              <MarketDayActionButton
-                icon="UserPlus"
-                tone="palm"
-                disabled={isOffline}
-                onPress={creation.present}
-              >
-                {creation.uncertain
-                  ? "Review unconfirmed save"
-                  : "Add customer"}
-              </MarketDayActionButton>
-            ) : null}
-          </BottomSearchFooter>
-        ) : null}
-        {!market ? (
-          <>
-            <ListCreateFab
-              accessibilityLabel={
-                isOffline
-                  ? "Add customer, needs a connection"
-                  : creation.uncertain
-                    ? "Review unconfirmed save"
-                    : "Add customer"
-              }
-              bottomOffset={
-                scrollHide.hidden && !search
-                  ? 0
-                  : Math.max(
-                      0,
-                      footerHeight + 14 - Math.max(insets.bottom + 16, 24),
-                    )
-              }
-              disabled={isOffline || creation.locked}
-              icon="UserPlus"
-              onPress={creation.present}
-              testID="customer-add-fab"
-              tone="gold"
-            />
-            <BottomSearchFooter
-              alwaysShowSearch
-              hidden={scrollHide.hidden}
-              variant="action-bar"
-              localSearch={isOffline}
-              maxLength={160}
-              onHeightChange={setFooterHeight}
-              accessibilityLabel="Search customers"
-              onChangeText={setSearch}
-              placeholder={
-                isOffline ? "Search saved copy" : "Search name, phone or email"
-              }
-              totalCount={customers.length}
-              value={search}
-            />
-          </>
-        ) : null}
+        <ListCreateFab
+          accessibilityLabel={
+            isOffline
+              ? "Add customer, needs a connection"
+              : creation.uncertain
+                ? "Review unconfirmed save"
+                : "Add customer"
+          }
+          bottomOffset={
+            scrollHide.hidden && !search
+              ? 0
+              : Math.max(
+                  0,
+                  footerHeight + 14 - Math.max(insets.bottom + 16, 24),
+                )
+          }
+          disabled={isOffline || creation.locked}
+          icon="UserPlus"
+          onPress={creation.present}
+          testID="customer-add-fab"
+          tone="gold"
+        />
+        <BottomSearchFooter
+          alwaysShowSearch
+          hidden={scrollHide.hidden}
+          variant="action-bar"
+          localSearch={isOffline}
+          maxLength={160}
+          onHeightChange={setFooterHeight}
+          accessibilityLabel="Search customers"
+          onChangeText={setSearch}
+          placeholder={
+            isOffline ? "Search saved copy" : "Search name, phone or email"
+          }
+          totalCount={customers.length}
+          value={search}
+        />
       </View>
     </VariableContextProvider>
   )
   return (
-    <View className={market ? "flex-1 bg-market-canvas" : "flex-1"}>
+    <View className="flex-1">
       <View
         className="flex-1"
         accessibilityElementsHidden={creation.open}
@@ -552,12 +439,8 @@ export function CustomerBookContent(
         )}
       </View>
       <CreateSaleCustomerSheet
-        headline="A familiar face, saved."
-        description={
-          market ? undefined : "Save them once. They show up in Create sale."
-        }
-        phoneCountryCode={market ? undefined : countryCode}
-        appearance={market ? "market-day" : "classic"}
+        description="Save them once. They show up in Create sale."
+        phoneCountryCode={countryCode}
         disabled={isOffline || creation.locked}
         draft={creation.draft}
         error={creation.error}

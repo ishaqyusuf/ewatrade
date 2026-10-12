@@ -66,7 +66,6 @@ const checks = [
       "Checking your PIN.",
       "appLockWrongPinMessage",
       "useAppLockCountdown",
-      'variant="quiet-seal"',
     ],
   },
   {
@@ -82,7 +81,6 @@ const checks = [
     markers: [
       "export function PinEntryScreen",
       "export function AppLockBiometricOffer",
-      'variant="gate"',
       'StatusBar style="light"',
       "useSafeAreaInsets",
       "Not now",
@@ -95,25 +93,8 @@ const checks = [
       "FingerPrintScan",
       "Use ${appLockBiometricName(biometricLabel)}",
       "Delete last digit",
-      '"quiet-seal"',
-      '"gate"',
       "accessibilityState={{ disabled }}",
-      "QuietSealPinKey",
     ],
-  },
-  {
-    file: "src/lib/app-lock-quiet-seal-layout.ts",
-    markers: [
-      "APP_LOCK_QUIET_SEAL_LAYOUT",
-      "keypadWidth: 254",
-      "largeTextKeyHeight: 68",
-      "pinRailWidth: 218",
-      "choiceLabelFontScaleCap: 2",
-    ],
-  },
-  {
-    file: "src/components/mobile/app-lock-quiet-seal.tsx",
-    markers: ["AppLockQuietSealScreen"],
   },
   {
     file: "src/app/app-lock-modal.tsx",
@@ -131,7 +112,6 @@ const checks = [
       "Those PINs didn’t match. Create it again.",
       "appLockWrongPinMessage",
       "clearLock",
-      'variant="quiet-seal"',
     ],
   },
   {

@@ -251,7 +251,6 @@ export function ClassicSellingUnitFields({
         </View>
         <SellingUnitReferenceSelector
           fields={{ referenceUnits, unitEditorDraft, onChangeDraft, unitName }}
-          market={false}
         />
         <MoneyField
           currencyCode={currencyCode}

@@ -1,9 +1,5 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
-import {
-  ActionButton,
-  type ActionButtonProps,
-  MarketDayActionButton,
-} from "@/components/mobile/action-button"
+import { ActionButton } from "@/components/mobile/action-button"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -14,8 +10,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { createStaffFixture } from "@/internal-tooling/fixture-recipes"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import {
   type BottomSheetBackdropProps,
   BottomSheetFooter,
@@ -33,7 +27,6 @@ import {
 import type { StaffDraft } from "./staff-model"
 
 type StaffInvitationSheetProps = {
-  appearance: MobileDesign
   draft: StaffDraft
   error: string | null
   quotaMessage: string
@@ -49,16 +42,11 @@ type StaffInvitationSheetProps = {
   onDismiss: () => void
 }
 
-function StaffInviteAction(props: ActionButtonProps) {
-  return <MarketDayActionButton {...props} tone="palm" />
-}
-
 export const StaffInvitationSheet = forwardRef<
   BottomSheetModal,
   StaffInvitationSheetProps
 >(function StaffInvitationSheet(
   {
-    appearance,
     draft,
     error,
     quotaMessage,
@@ -75,9 +63,6 @@ export const StaffInvitationSheet = forwardRef<
   },
   ref,
 ) {
-  const market = appearance === "market-day"
-  const Button = market ? StaffInviteAction : ActionButton
-  const palette = useMarketDayPalette()
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(88)
   const hasDraft = hasStaffInviteDraft(draft)
@@ -102,12 +87,10 @@ export const StaffInvitationSheet = forwardRef<
     (props: BottomSheetFooterProps) => (
       <BottomSheetFooter {...props}>
         <View
-          className={
-            market ? "bg-market-field px-5 pb-5 pt-3" : "bg-card px-5 pb-5 pt-3"
-          }
+          className="bg-card px-5 pb-5 pt-3"
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
         >
-          <Button
+          <ActionButton
             icon={uncertain ? "Search" : "UserPlus"}
             disabled={uncertain ? recoveryDisabled : !canSubmit}
             isLoading={isPending}
@@ -115,13 +98,11 @@ export const StaffInvitationSheet = forwardRef<
             onPress={uncertain ? onCheckDirectory : onSave}
           >
             {uncertain ? "Check directory" : "Send invite"}
-          </Button>
+          </ActionButton>
         </View>
       </BottomSheetFooter>
     ),
     [
-      Button,
-      market,
       uncertain,
       recoveryDisabled,
       canSubmit,
@@ -138,11 +119,6 @@ export const StaffInvitationSheet = forwardRef<
       onDismiss={onDismiss}
       backdropComponent={renderBackdrop}
       footerComponent={renderFooter}
-      backgroundStyle={
-        market
-          ? { backgroundColor: palette.field, borderColor: palette.line }
-          : undefined
-      }
       enableDynamicSizing
       enablePanDownToClose={!hasDraft && !isPending}
       keyboardBehavior="fillParent"
@@ -158,21 +134,11 @@ export const StaffInvitationSheet = forwardRef<
         <VariableContextProvider
           value={{ "--staff-invite-footer": footerHeight }}
         >
-          <View
-            className={
-              market
-                ? "gap-4 bg-market-field px-5 pb-[var(--staff-invite-footer)]"
-                : "gap-4 px-5 pb-[var(--staff-invite-footer)]"
-            }
-          >
+          <View className="gap-4 px-5 pb-[var(--staff-invite-footer)]">
             <View className="flex-row items-start justify-between gap-3">
               <Text
                 accessibilityRole="header"
-                className={
-                  market
-                    ? "min-w-0 flex-1 border-l-4 border-market-marigold pl-3 font-market-display text-[26px] leading-8 text-market-ink"
-                    : "min-w-0 flex-1 text-xl font-bold text-foreground"
-                }
+                className="min-w-0 flex-1 text-xl font-bold text-foreground"
               >
                 {uncertain ? "Result not confirmed" : "Invite attendant"}
               </Text>
@@ -185,29 +151,12 @@ export const StaffInvitationSheet = forwardRef<
                   Keyboard.dismiss()
                   onClose()
                 }}
-                className={
-                  market
-                    ? "size-11 items-center justify-center rounded-full border border-market-line bg-market-soft-band"
-                    : "size-11 items-center justify-center rounded-full bg-muted"
-                }
+                className="size-11 items-center justify-center rounded-full bg-muted"
               >
-                <Icon
-                  name="X"
-                  className={
-                    market
-                      ? "size-sm text-market-ink"
-                      : "size-sm text-foreground"
-                  }
-                />
+                <Icon name="X" className="size-sm text-foreground" />
               </Pressable>
             </View>
-            <Text
-              className={
-                market
-                  ? "text-sm leading-5 text-market-muted-ink"
-                  : "text-sm leading-5 text-muted-foreground"
-              }
-            >
+            <Text className="text-sm leading-5 text-muted-foreground">
               An account of their own, with Sales rep access to orders and stock
               work.
             </Text>
@@ -242,7 +191,7 @@ export const StaffInvitationSheet = forwardRef<
               }}
             />
             <FormField
-              variant={market ? "market" : "filled"}
+              variant="filled"
               editable={!locked}
               maxLength={320}
               autoCapitalize="none"
@@ -256,7 +205,7 @@ export const StaffInvitationSheet = forwardRef<
               onChangeText={(email) => onChange({ ...draft, email })}
             />
             <FormField
-              variant={market ? "market" : "filled"}
+              variant="filled"
               editable={!locked}
               maxLength={120}
               autoCapitalize="words"
@@ -266,13 +215,7 @@ export const StaffInvitationSheet = forwardRef<
               value={draft.name}
               onChangeText={(name) => onChange({ ...draft, name })}
             />
-            <Text
-              className={
-                market
-                  ? "pb-5 text-xs leading-5 text-market-muted-ink"
-                  : "pb-5 text-xs leading-5 text-muted-foreground"
-              }
-            >
+            <Text className="pb-5 text-xs leading-5 text-muted-foreground">
               {quotaMessage}
             </Text>
           </View>

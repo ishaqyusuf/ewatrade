@@ -1,21 +1,14 @@
 import type { CommerceCustomer } from "@/components/mobile/commerce"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import type { OfferingRow } from "./create-sale-model"
 import type { useCreateSale } from "./use-create-sale"
 
 export type CreateSaleViewModel = ReturnType<typeof useCreateSale>
 export type SaleStepViewProps = {
   model: CreateSaleViewModel
-  appearance: MobileDesign
   actionsHeight: number
   onActionsHeightChange: (height: number) => void
 }
 
-export type SaleStageHeaderProps = {
-  current: number
-  onBack?: () => void
-  title: string
-}
 export type SelectedOrderLineProps = {
   disabled?: boolean
   offering: OfferingRow
@@ -34,13 +27,7 @@ export type SaleTopBarProps = {
   subtitle: string
   title: string
 }
-export type CustomerActionRowProps = {
-  icon: "UserPlus" | "UserX"
-  onPress: () => void
-  title: string
-}
 export type CustomerSuggestionRowProps = {
   customer: CommerceCustomer
   onPress: () => void
 }
-export type SaleTotalProps = { helper?: string; label: string; value: string }

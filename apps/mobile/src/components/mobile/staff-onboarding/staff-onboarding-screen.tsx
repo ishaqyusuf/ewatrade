@@ -5,13 +5,11 @@ import {
   StatusBanner,
 } from "@/components/mobile"
 import { ClassicStaffOnboardingScreen } from "@/components/mobile/appearances/classic/staff-onboarding-screen"
-import { MarketDayStaffOnboardingScreen } from "@/components/mobile/appearances/market-day/staff-onboarding-screen"
 import { AuthFlowScreen } from "@/components/mobile/green-till/auth-screen"
 import { SalesRepExampleStage } from "@/components/mobile/green-till/auth-stage"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { getMobileRoleLabel, isInvitedStaffProfile } from "@/lib/mobile-roles"
 import { useBusinessStore } from "@/store/businessStore"
 import { useTRPC } from "@/trpc/client"
@@ -67,11 +65,6 @@ function getSearchParam(value: string | string[] | undefined) {
 }
 
 export function StaffOnboardingScreen() {
-  const design = useMobileDesign("staff-onboarding")
-  const Presentation =
-    design === "market-day"
-      ? MarketDayStaffOnboardingScreen
-      : ClassicStaffOnboardingScreen
   const trpc = useTRPC()
   const router = useRouter()
   const params = useLocalSearchParams<{ inviteToken?: string }>()
@@ -151,7 +144,6 @@ export function StaffOnboardingScreen() {
     return (
       <AuthFlowScreen
         stage={<SalesRepExampleStage />}
-        appearanceScreen="staff-onboarding"
         eyebrow="Staff invitation"
         title="Staff invitation"
         subtitle="Sign in with your invited email address to accept this staff access."
@@ -215,7 +207,6 @@ export function StaffOnboardingScreen() {
       return (
         <AuthFlowScreen
           stage={<SalesRepExampleStage />}
-          appearanceScreen="staff-onboarding"
           eyebrow="Staff invitation"
           title="Wrong account"
           subtitle="This invite must be accepted with the email address that was added by the business owner."
@@ -240,7 +231,6 @@ export function StaffOnboardingScreen() {
     return (
       <AuthFlowScreen
         stage={<SalesRepExampleStage />}
-        appearanceScreen="staff-onboarding"
         eyebrow="Staff invitation"
         title="Before accepting staff access"
         subtitle="Staff access is for people aged 13 or older. Choose your own age range before entering staff details."
@@ -318,7 +308,7 @@ export function StaffOnboardingScreen() {
   }
 
   return (
-    <Presentation
+    <ClassicStaffOnboardingScreen
       businessName={profile?.businessName ?? "Invited workspace"}
       canSubmit={canSubmit}
       displayName={displayName}

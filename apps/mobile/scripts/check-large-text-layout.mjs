@@ -54,17 +54,12 @@ const contracts = [
       'largeTextLayout ? "justify-start gap-5" : "justify-start gap-6"',
       'largeTextLayout ? "gap-3" : "flex-row gap-3"',
       '"min-h-14 w-full items-center justify-center rounded-2xl',
-      "SignUpMarketStall",
       "key={step}",
     ],
   },
   {
     file: "app/no-access.tsx",
-    markers: [
-      'title="No workspace available yet"',
-      "Create your business account",
-      "Check again",
-    ],
+    markers: ['title="No workspace available yet"'],
   },
   {
     file: "app/verify-email.tsx",
@@ -96,12 +91,7 @@ const contracts = [
   },
   {
     file: "components/mobile/otp-keypad.tsx",
-    markers: [
-      "useLargeTextLayout",
-      "defaultKeyHeightClassName",
-      "styles.marketKeyLarge",
-      "height: 94",
-    ],
+    markers: ["useLargeTextLayout", "defaultKeyHeightClassName"],
   },
   {
     file: "components/mobile/customer-conversations/customer-conversation-composer.tsx",
@@ -172,15 +162,6 @@ const contracts = [
       "numberOfLines={largeTextLayout ? 2 : 1}",
       'largeTextLayout\n              ? "gap-1"',
       'largeTextLayout\n                ? "min-h-14 flex-row items-center justify-between gap-4 py-2"',
-    ],
-  },
-  {
-    file: "components/mobile/commerce/commerce-primitives.tsx",
-    markers: [
-      "useLargeTextLayout",
-      'largeTextLayout ? "w-9" : "w-6"',
-      "numberOfLines={largeTextLayout ? 2 : 1}",
-      'largeTextLayout\n                  ? "min-h-14 flex-row items-center justify-between gap-4 py-2"',
     ],
   },
   {
@@ -275,7 +256,6 @@ const contracts = [
     file: "components/mobile/auth-header.tsx",
     markers: [
       "useLargeTextLayout",
-      "DISPLAY_TEXT_FONT_SCALE_CAP",
       '"flex-row items-center"',
       '"w-full text-left"',
     ],

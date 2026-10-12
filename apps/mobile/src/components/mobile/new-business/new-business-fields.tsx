@@ -1,5 +1,7 @@
-import * as Classic from "@/components/mobile/appearances/classic/new-business"
-import * as Market from "@/components/mobile/appearances/market-day/new-business"
+import {
+  BusinessChoice,
+  BusinessSection,
+} from "@/components/mobile/appearances/classic/new-business"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { FormField } from "@/components/mobile/form-field"
 import { Pressable } from "@/components/ui/pressable"
@@ -24,22 +26,19 @@ import { PhoneField } from "../phone-field"
 import { newBusinessPhoneDialCode } from "./new-business-model"
 import type { NewBusinessModel } from "./use-new-business"
 
-type FieldsProps = { model: NewBusinessModel; market: boolean }
+type FieldsProps = { model: NewBusinessModel }
 
-export function NewBusinessProfile({ model, market }: FieldsProps) {
-  const { BusinessSection: Section, BusinessChoice: Choice } = market
-    ? Market
-    : Classic
+export function NewBusinessProfile({ model }: FieldsProps) {
   const { draft, updateDraft, locked } = model
   return (
     <View className="gap-7">
-      <Section
+      <BusinessSection
         title="Selected business type"
         description={`${model.selectedProfile?.title ?? "Your selection"} suggestions will appear first when you add Products or Services.`}
       >
         {draft.businessProfileKey === "other-mixed-business" ? (
           <FormField
-            variant={market ? "filled" : "auth"}
+            variant="auth"
             label="What does this business do?"
             maxLength={240}
             value={draft.otherBusinessDescription}
@@ -47,19 +46,16 @@ export function NewBusinessProfile({ model, market }: FieldsProps) {
               updateDraft({ otherBusinessDescription })
             }
             placeholder="Describe the products or services"
-            inputClassName={
-              market ? "bg-market-field text-market-ink" : undefined
-            }
           />
         ) : null}
-      </Section>
-      <Section title="What will you manage?">
+      </BusinessSection>
+      <BusinessSection title="What will you manage?">
         <View
           accessibilityRole="radiogroup"
           className="flex-row flex-wrap gap-2"
         >
           {BUSINESS_OPERATING_MODELS.map((item) => (
-            <Choice
+            <BusinessChoice
               key={item.key}
               label={item.label}
               selected={draft.operatingModel === item.key}
@@ -68,14 +64,14 @@ export function NewBusinessProfile({ model, market }: FieldsProps) {
             />
           ))}
         </View>
-      </Section>
-      <Section
+      </BusinessSection>
+      <BusinessSection
         title="How do customers order?"
         description="Choose one or more channels."
       >
         <View className="flex-row flex-wrap gap-2">
           {BUSINESS_ORDER_CHANNELS.map((item) => (
-            <Choice
+            <BusinessChoice
               key={item.key}
               label={item.label}
               multiple
@@ -85,14 +81,14 @@ export function NewBusinessProfile({ model, market }: FieldsProps) {
             />
           ))}
         </View>
-      </Section>
-      <Section title="Team size">
+      </BusinessSection>
+      <BusinessSection title="Team size">
         <View
           accessibilityRole="radiogroup"
           className="flex-row flex-wrap gap-2"
         >
           {BUSINESS_TEAM_SIZES.map((item) => (
-            <Choice
+            <BusinessChoice
               key={item.key}
               label={item.label}
               selected={draft.teamSize === item.key}
@@ -101,18 +97,16 @@ export function NewBusinessProfile({ model, market }: FieldsProps) {
             />
           ))}
         </View>
-      </Section>
+      </BusinessSection>
     </View>
   )
 }
-export function NewBusinessDetails({ model, market }: FieldsProps) {
+export function NewBusinessDetails({ model }: FieldsProps) {
   const location = useCurrentAddress()
-  const { BusinessSection: Section } = market ? Market : Classic
   const { draft, updateDraft, locked } = model
   const large = useLargeTextLayout()
-  const inputClassName = market ? "bg-market-field text-market-ink" : undefined
   return (
-    <Section title="Identity and location">
+    <BusinessSection title="Identity and location">
       <CountrySelect
         value={draft.countryCode ?? "NG"}
         disabled={locked}
@@ -145,33 +139,30 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
         />
       ) : null}
       <FormField
-        variant={market ? "filled" : "auth"}
+        variant="auth"
         label="Business name"
         leadingIcon="Building2"
         maxLength={120}
         value={draft.businessName}
         onChangeText={(businessName) => updateDraft({ businessName })}
         placeholder="Enter your business name"
-        inputClassName={inputClassName}
       />
       <FormField
-        variant={market ? "filled" : "auth"}
+        variant="auth"
         label="Business address"
         leadingIcon="MapPin"
         maxLength={200}
         value={draft.addressLine1}
         onChangeText={(addressLine1) => updateDraft({ addressLine1 })}
         placeholder="Enter the street address"
-        inputClassName={inputClassName}
       />
       <FormField
-        variant={market ? "filled" : "auth"}
+        variant="auth"
         label="City"
         maxLength={120}
         value={draft.city}
         onChangeText={(city) => updateDraft({ city })}
         placeholder="Enter the city"
-        inputClassName={inputClassName}
       />
       <PhoneField
         countryCode={draft.phoneCountryCode ?? draft.countryCode ?? "NG"}
@@ -182,15 +173,14 @@ export function NewBusinessDetails({ model, market }: FieldsProps) {
           updateDraft({ phoneCountryCode })
         }
         value={draft.phone}
-        variant={market ? "filled" : "auth"}
+        variant="auth"
       />
       <CurrencySelector
-        appearance={market ? "market-day" : "classic"}
         disabled={locked}
         value={draft.currencyCode}
         onChange={(currencyCode) => updateDraft({ currencyCode })}
       />
-    </Section>
+    </BusinessSection>
   )
 }
 /** One review group: a small header with Edit, then the values. */
@@ -240,12 +230,7 @@ function ReviewCard({
   )
 }
 
-export function NewBusinessReview({ model, market }: FieldsProps) {
-  if (!market) return <ClassicReview model={model} />
-  return <MarketReview model={model} market={market} />
-}
-
-function ClassicReview({ model }: { model: NewBusinessModel }) {
+export function NewBusinessReview({ model }: FieldsProps) {
   const { draft } = model
   const country = getCountry(draft.countryCode)
   const label = <T extends { key: string; label: string }>(
@@ -304,93 +289,6 @@ function ClassicReview({ model }: { model: NewBusinessModel }) {
           ? "This preview creates a device-local workspace only."
           : "The new business keeps its stock, sales, customers and staff separate."}
       </Text>
-    </View>
-  )
-}
-
-function MarketReview({ model, market }: FieldsProps) {
-  const { BusinessSection: Section, BusinessSummary: Summary } = Market
-  const { draft } = model
-  return (
-    <View className="gap-6">
-      <Section
-        title="Business summary"
-        description={
-          model.local
-            ? "This preview creates a device-local workspace only."
-            : "A separate workspace will be created and opened automatically."
-        }
-      >
-        <View>
-          <Summary label="Business" value={draft.businessName.trim()} />
-          <Summary
-            label="Location"
-            value={`${draft.addressLine1.trim()}, ${draft.city.trim()}`}
-          />
-          <Summary
-            label="Phone"
-            value={toInternationalPhone(
-              newBusinessPhoneDialCode(draft),
-              draft.phone,
-            )}
-          />
-          <Summary label="Country" value={getCountry(draft.countryCode).name} />
-          <Summary label="Currency" value={draft.currencyCode} />
-          <Summary
-            label="Category"
-            value={model.selectedProfile?.title ?? "Not selected"}
-          />
-          {draft.businessProfileKey === "other-mixed-business" ? (
-            <Summary
-              label="What you do"
-              value={draft.otherBusinessDescription.trim()}
-            />
-          ) : null}
-          <Summary
-            label="Operations"
-            value={
-              BUSINESS_OPERATING_MODELS.find(
-                (item) => item.key === draft.operatingModel,
-              )?.label ?? draft.operatingModel
-            }
-          />
-          <Summary
-            label="Order channels"
-            value={draft.orderChannels
-              .map(
-                (key) =>
-                  BUSINESS_ORDER_CHANNELS.find((item) => item.key === key)
-                    ?.label ?? key,
-              )
-              .join(", ")}
-          />
-          <Summary
-            label="Team"
-            value={
-              BUSINESS_TEAM_SIZES.find((item) => item.key === draft.teamSize)
-                ?.label ?? draft.teamSize
-            }
-          />
-        </View>
-      </Section>
-      <View
-        className={
-          market
-            ? "rounded-xl bg-market-marigold px-4 py-4"
-            : "rounded-xl bg-primary/10 px-4 py-4"
-        }
-      >
-        <Text
-          className={
-            market
-              ? "text-sm text-market-on-marigold [-rn-line-height:21]"
-              : "text-sm text-primary [-rn-line-height:21]"
-          }
-        >
-          The new business keeps its inventory, sales, customers, staff and
-          settings separate.
-        </Text>
-      </View>
     </View>
   )
 }

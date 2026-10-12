@@ -1,6 +1,4 @@
 import { ClassicOnboardingScreen } from "@/components/mobile/appearances/classic/onboarding-screen"
-import { MarketDayOnboardingScreen } from "@/components/mobile/appearances/market-day/onboarding-screen"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useRouter } from "expo-router"
 import { useState } from "react"
@@ -8,15 +6,10 @@ import { ONBOARDING_STEPS } from "./onboarding-presentation"
 
 export function OnboardingScreen() {
   const router = useRouter()
-  const design = useMobileDesign("onboarding")
   const completeOnboarding = useOnboardingStore(
     (state) => state.completeOnboarding,
   )
   const [stepIndex, setStepIndex] = useState(0)
-  const Presentation =
-    design === "market-day"
-      ? MarketDayOnboardingScreen
-      : ClassicOnboardingScreen
   function finish() {
     completeOnboarding(true)
     router.replace("/login")
@@ -32,7 +25,7 @@ export function OnboardingScreen() {
     setStepIndex((current) => Math.max(current - 1, 0))
   }
   return (
-    <Presentation
+    <ClassicOnboardingScreen
       stepIndex={stepIndex}
       onContinue={next}
       onFinish={finish}

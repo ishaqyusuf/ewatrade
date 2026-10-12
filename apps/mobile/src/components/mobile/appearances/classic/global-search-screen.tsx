@@ -530,26 +530,3 @@ export function ClassicSearchOffline() {
     </View>
   )
 }
-
-export function ClassicSearchActionRow({ action }: { action: SearchAction }) {
-  return (
-    <Pressable
-      accessibilityHint={action.detail}
-      accessibilityLabel={action.label}
-      accessibilityRole="button"
-      className="min-h-16 flex-row items-center gap-3 border-b border-border py-3 active:bg-accent"
-      haptic
-      onPress={action.onPress}
-      transition
-    >
-      <View className="size-11 items-center justify-center rounded-full bg-muted">
-        <Icon className="size-sm text-primary" name={action.icon} />
-      </View>
-      <View className="min-w-0 flex-1 gap-1">
-        <Text className="font-extrabold text-foreground">{action.label}</Text>
-        <Text className="text-xs text-muted-foreground">{action.detail}</Text>
-      </View>
-      <Icon className="size-sm text-muted-foreground" name="ChevronRight" />
-    </Pressable>
-  )
-}

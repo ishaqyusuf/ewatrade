@@ -44,31 +44,6 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
       "apps/mobile/src/components/mobile/appearances/classic/staff-onboarding-screen.tsx",
   },
   {
-    formIds: ["mobile.catalog.item"],
-    source:
-      "apps/mobile/src/components/mobile/appearances/market-day/catalog-setup.tsx",
-  },
-  {
-    formIds: ["mobile.closeout"],
-    source:
-      "apps/mobile/src/components/mobile/appearances/market-day/closeout-screen.tsx",
-  },
-  {
-    formIds: ["mobile.order.create"],
-    source:
-      "apps/mobile/src/components/mobile/appearances/market-day/create-sale.tsx",
-  },
-  {
-    formIds: ["mobile.catalog.item"],
-    source:
-      "apps/mobile/src/components/mobile/appearances/market-day/selling-unit-editor.tsx",
-  },
-  {
-    formIds: ["mobile.staff.onboarding"],
-    source:
-      "apps/mobile/src/components/mobile/appearances/market-day/staff-onboarding-screen.tsx",
-  },
-  {
     reason: "Reusable barcode input; the parent component owns coverage.",
     source: "apps/mobile/src/components/mobile/barcode-field.tsx",
   },
@@ -95,11 +70,6 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
     reason: "Illustration library search; it does not own a submitted draft.",
     source:
       "apps/mobile/src/components/mobile/catalog-setup/catalog-illustration-library.tsx",
-  },
-  {
-    formIds: ["mobile.catalog.item"],
-    source:
-      "apps/mobile/src/components/mobile/catalog-setup/catalog-inventory-codes.tsx",
   },
   {
     formIds: ["mobile.catalog.item"],
@@ -147,11 +117,6 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
   {
     formIds: ["mobile.customer.create"],
     source: "apps/mobile/src/components/mobile/create-sale-customer-sheet.tsx",
-  },
-  {
-    formIds: ["mobile.order.create"],
-    source:
-      "apps/mobile/src/components/mobile/create-sale/create-sale-review.tsx",
   },
   {
     reason: "Customer-shell messaging is outside Business QA tooling.",
@@ -324,11 +289,6 @@ const MOBILE_FORM_SOURCE_COVERAGE: readonly SourceCoverage[] = [
       "apps/mobile/src/components/mobile/service-jobs/service-intake-form.tsx",
   },
   {
-    formIds: ["mobile.service.job", "mobile.customer.message"],
-    source:
-      "apps/mobile/src/components/mobile/service-jobs/service-job-workspace.tsx",
-  },
-  {
     formIds: ["mobile.service.job"],
     source:
       "apps/mobile/src/components/mobile/service-jobs/service-offering-choices.tsx",
@@ -447,7 +407,7 @@ const RECIPE_SOURCE_OWNERS: Record<
   "mobile.inventory.unit-conversion":
     "apps/mobile/src/components/mobile/unit-conversion/unit-conversion-screen.tsx",
   "mobile.order.create":
-    "apps/mobile/src/components/mobile/create-sale/create-sale-items.tsx",
+    "apps/mobile/src/components/mobile/appearances/classic/create-sale-items.tsx",
   "mobile.order.payment":
     "apps/mobile/src/components/mobile/order-detail/order-detail-screen.tsx",
   "mobile.order.reminder-settings":

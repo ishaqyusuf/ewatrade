@@ -1,5 +1,5 @@
+import { ServiceJobRow as Row } from "@/components/mobile/appearances/classic/service-jobs"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
@@ -21,7 +21,6 @@ import { ClassicCustomerBookFilter } from "../appearances/classic/customer-book-
 import { HeroCard } from "../green-till/hero-card"
 import { ServiceAction as ActionButton } from "./service-action"
 import { overdueWork, workMatches } from "./service-work-summary"
-import { useServiceAppearance } from "./use-service-appearance"
 import type { ServiceJobsModel } from "./use-service-jobs"
 
 const WORK_FILTER_LABELS: Record<string, string> = {
@@ -44,12 +43,6 @@ export function ServiceJobsQueue({
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }) {
   const {
-    market,
-    ServiceHeader: Header,
-    ServiceJobRow: Row,
-  } = useServiceAppearance()
-  const {
-    setCreating,
     setAmountPaid,
     setPaymentReference,
     setSelectedJobId,
@@ -62,9 +55,9 @@ export function ServiceJobsQueue({
     isSalesRepRole(model.profile?.role) ? "mine" : "all",
   )
   const now = Date.now()
-  const visible = market
-    ? jobs
-    : jobs.filter((job) => workMatches(job, filter, model.profile?.id, now))
+  const visible = jobs.filter((job) =>
+    workMatches(job, filter, model.profile?.id, now),
+  )
   const ready = jobs.filter((job) =>
     workMatches(job, "ready", undefined, now),
   ).length
@@ -112,11 +105,7 @@ export function ServiceJobsQueue({
   return (
     <FlatList
       className="flex-1"
-      contentContainerClassName={
-        market
-          ? "gap-2 px-[18px] pb-[var(--service-jobs-bottom)]"
-          : "px-[18px] pb-[var(--service-jobs-bottom)]"
-      }
+      contentContainerClassName="px-[18px] pb-[var(--service-jobs-bottom)]"
       data={visible}
       keyExtractor={(job) => job.id}
       keyboardDismissMode="interactive"
@@ -139,46 +128,37 @@ export function ServiceJobsQueue({
       ListHeaderComponent={
         <View className="gap-5 pb-5">
           {feedback}
-          {market ? (
-            <Header
-              mode="queue"
-              title="Good work. Ready on time."
-              description="Charge-only services stay in Orders. Tracked offerings appear here after confirmation."
-              meta={`${jobs.length} loaded jobs`}
-            />
-          ) : (
-            <HeroCard
-              label="Service work"
-              title={
-                jobsQuery.isPending
-                  ? "Your work queue"
-                  : jobsQuery.isError && !jobs.length
-                    ? "Work unavailable"
-                    : `${active} active job${active === 1 ? "" : "s"}`
-              }
-              sub={jobsQuery.isPending ? undefined : heroSub}
-              pill={{
-                label: isOfflineMode ? "Offline" : "Synced",
-                tone: isOfflineMode ? "offline" : "synced",
-              }}
-              stats={
-                jobsQuery.isPending || (jobsQuery.isError && !jobs.length)
-                  ? undefined
-                  : [
-                      { label: "Ready", value: String(ready) },
-                      { label: "In progress", value: String(working) },
-                      { label: "Queued", value: String(queued) },
-                    ]
-              }
-            >
-              {jobsQuery.isPending ? (
-                <View className="mt-4">
-                  <Skeleton height={40} />
-                </View>
-              ) : null}
-            </HeroCard>
-          )}
-          {!market && jobs.length ? (
+          <HeroCard
+            label="Service work"
+            title={
+              jobsQuery.isPending
+                ? "Your work queue"
+                : jobsQuery.isError && !jobs.length
+                  ? "Work unavailable"
+                  : `${active} active job${active === 1 ? "" : "s"}`
+            }
+            sub={jobsQuery.isPending ? undefined : heroSub}
+            pill={{
+              label: isOfflineMode ? "Offline" : "Synced",
+              tone: isOfflineMode ? "offline" : "synced",
+            }}
+            stats={
+              jobsQuery.isPending || (jobsQuery.isError && !jobs.length)
+                ? undefined
+                : [
+                    { label: "Ready", value: String(ready) },
+                    { label: "In progress", value: String(working) },
+                    { label: "Queued", value: String(queued) },
+                  ]
+            }
+          >
+            {jobsQuery.isPending ? (
+              <View className="mt-4">
+                <Skeleton height={40} />
+              </View>
+            ) : null}
+          </HeroCard>
+          {jobs.length ? (
             <ScrollView
               contentContainerStyle={{ gap: 8, paddingHorizontal: 18 }}
               horizontal
@@ -197,20 +177,6 @@ export function ServiceJobsQueue({
               ))}
             </ScrollView>
           ) : null}
-          {market ? (
-            <ActionButton
-              icon="Plus"
-              tone="gold"
-              disabled={isOfflineMode}
-              onPress={() => {
-                setAmountPaid("")
-                setPaymentReference("")
-                setCreating(true)
-              }}
-            >
-              New service
-            </ActionButton>
-          ) : null}
           {jobsQuery.isError && !isOfflineMode ? (
             <View className="gap-3">
               <StatusBanner
@@ -228,7 +194,7 @@ export function ServiceJobsQueue({
               </ActionButton>
             </View>
           ) : null}
-          {!market && visible.length ? (
+          {visible.length ? (
             <View className="-mb-3 flex-row items-baseline justify-between px-0.5">
               <Text
                 accessibilityRole="header"
@@ -244,15 +210,13 @@ export function ServiceJobsQueue({
         </View>
       }
       ListEmptyComponent={
-        !market && jobsQuery.isLoading && !isOfflineMode ? (
+        jobsQuery.isLoading && !isOfflineMode ? (
           <SkeletonGroup accessibilityLabel="Loading service work">
             <View className="gap-3">
               <Skeleton height={64} />
               <Skeleton height={64} />
             </View>
           </SkeletonGroup>
-        ) : jobsQuery.isLoading && !isOfflineMode ? (
-          <ListSkeleton count={4} label="Loading service work" />
         ) : jobsQuery.isError && !isOfflineMode ? null : (
           <EmptyState
             icon="ClipboardList"
@@ -288,7 +252,7 @@ export function ServiceJobsQueue({
         </RevealItem>
       )}
       ListFooterComponent={
-        !market && jobsQuery.hasNextPage && !isOfflineMode ? (
+        jobsQuery.hasNextPage && !isOfflineMode ? (
           <ActionButton
             variant="outline"
             isLoading={jobsQuery.isFetchingNextPage}

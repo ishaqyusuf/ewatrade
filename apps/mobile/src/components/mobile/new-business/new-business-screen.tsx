@@ -1,6 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import * as Classic from "@/components/mobile/appearances/classic/new-business"
-import * as Market from "@/components/mobile/appearances/market-day/new-business"
+import {
+  BusinessHeader,
+  BusinessProfileRow,
+} from "@/components/mobile/appearances/classic/new-business"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -8,8 +10,6 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useTRPC } from "@/trpc/client"
 import { listBusinessProfiles } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
@@ -27,7 +27,7 @@ import {
 import { useNewBusiness } from "./use-new-business"
 
 export function NewBusinessWorkflowChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="new-business" />
+  return <MobileWorkflowChrome {...props} />
 }
 
 type PlanSnapshot = {
@@ -73,11 +73,6 @@ export function NewBusinessOnboardingScreen() {
   const router = useRouter()
   // Warn from the first step, so the owner learns before filling the form.
   const limit = useBusinessLimit(!model.local && !model.isOffline)
-  const market = useMobileDesign("new-business") === "market-day"
-  const { BusinessHeader: Header, BusinessProfileRow: ProfileRow } = market
-    ? Market
-    : Classic
-  const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
   const scrollRef = useRef<ScrollView>(null)
@@ -96,7 +91,7 @@ export function NewBusinessOnboardingScreen() {
     )
   const header = (
     <View className="gap-6 pb-6 pt-3">
-      <Header step={model.step} />
+      <BusinessHeader step={model.step} />
       {model.error ? (
         <StatusBanner
           tone={model.status === "uncertain" ? "warning" : "destructive"}
@@ -130,13 +125,7 @@ export function NewBusinessOnboardingScreen() {
         onUndo={model.undoFill}
       />
       {model.step === 1 ? (
-        <Text
-          className={
-            market
-              ? "text-sm text-market-muted-ink [-rn-line-height:21]"
-              : "text-sm text-muted-foreground [-rn-line-height:21]"
-          }
-        >
+        <Text className="text-sm text-muted-foreground [-rn-line-height:21]">
           The type personalizes recommendations. It does not restrict what this
           business can sell.
         </Text>
@@ -147,7 +136,7 @@ export function NewBusinessOnboardingScreen() {
     <VariableContextProvider
       value={{ "--new-business-footer": footerHeight + 24 }}
     >
-      <View className={market ? "flex-1 bg-market-canvas" : "flex-1"}>
+      <View className="flex-1">
         {model.step === 1 ? (
           <FlatList
             className="flex-1"
@@ -160,7 +149,7 @@ export function NewBusinessOnboardingScreen() {
             scrollEventThrottle={16}
             ListHeaderComponent={header}
             renderItem={({ item }) => (
-              <ProfileRow
+              <BusinessProfileRow
                 profile={item}
                 selected={model.draft.businessProfileKey === item.key}
                 disabled={model.locked}
@@ -168,13 +157,7 @@ export function NewBusinessOnboardingScreen() {
               />
             )}
             ListEmptyComponent={
-              <Text
-                className={
-                  market
-                    ? "py-8 text-sm text-market-muted-ink"
-                    : "py-8 text-sm text-muted-foreground"
-                }
-              >
+              <Text className="py-8 text-sm text-muted-foreground">
                 No business type matches that search. Try a broader term.
               </Text>
             }
@@ -196,18 +179,17 @@ export function NewBusinessOnboardingScreen() {
             >
               {header}
               {model.step === 2 ? (
-                <NewBusinessProfile model={model} market={market} />
+                <NewBusinessProfile model={model} />
               ) : model.step === 3 ? (
-                <NewBusinessDetails model={model} market={market} />
+                <NewBusinessDetails model={model} />
               ) : (
-                <NewBusinessReview model={model} market={market} />
+                <NewBusinessReview model={model} />
               )}
             </View>
           </KeyboardAwareScrollView>
         )}
         <BottomSearchFooter
           localSearch
-          variant={market ? "market-day" : "default"}
           accessibilityLabel={
             model.step === 1
               ? "Search business types"
@@ -224,27 +206,11 @@ export function NewBusinessOnboardingScreen() {
           value={model.profileQuery}
         >
           {model.status === "uncertain" ? (
-            <ActionButton
-              onPress={model.reviewBusinesses}
-              foregroundColor={market ? palette.onPalm : undefined}
-              className={
-                market
-                  ? "bg-market-palm active:bg-market-hero-pressed"
-                  : undefined
-              }
-            >
+            <ActionButton onPress={model.reviewBusinesses}>
               Review your businesses
             </ActionButton>
           ) : model.status === "created" ? (
-            <ActionButton
-              onPress={model.openCreatedBusiness}
-              foregroundColor={market ? palette.onPalm : undefined}
-              className={
-                market
-                  ? "bg-market-palm active:bg-market-hero-pressed"
-                  : undefined
-              }
-            >
+            <ActionButton onPress={model.openCreatedBusiness}>
               Open created business
             </ActionButton>
           ) : model.step === 4 && limit ? (
@@ -270,16 +236,6 @@ export function NewBusinessOnboardingScreen() {
                 loadingLabel="Creating business"
                 onPress={model.step === 4 ? model.submit : model.continueFlow}
                 trailingIcon="ArrowRight"
-                foregroundColor={market ? palette.onPalm : undefined}
-                disabledForegroundColor={market ? palette.mutedInk : undefined}
-                className={
-                  market
-                    ? model.locked ||
-                      (model.step === 4 && model.isOffline && !model.local)
-                      ? "bg-market-line active:bg-market-line"
-                      : "bg-market-palm active:bg-market-hero-pressed"
-                    : undefined
-                }
               >
                 {model.step === 4
                   ? model.isOffline && !model.local
@@ -293,12 +249,6 @@ export function NewBusinessOnboardingScreen() {
                 disabled={model.locked}
                 onPress={model.goBack}
                 variant="outline"
-                foregroundColor={market ? palette.ink : undefined}
-                className={
-                  market
-                    ? "border-market-line bg-market-field active:bg-market-line"
-                    : undefined
-                }
               >
                 {model.step === 2 ? "Choose a different business type" : "Back"}
               </ActionButton>

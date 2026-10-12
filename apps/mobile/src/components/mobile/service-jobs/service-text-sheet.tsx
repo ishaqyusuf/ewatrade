@@ -1,4 +1,5 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
+import { ServiceChoice as Choice } from "@/components/mobile/appearances/classic/service-jobs"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
@@ -16,7 +17,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
 import type { WorkJob } from "./service-jobs-model"
-import { useServiceAppearance } from "./use-service-appearance"
 
 export type ServiceTextFields = {
   body: string
@@ -139,7 +139,6 @@ export function ServiceTextSheet({
   allowed: boolean
   scopeChanged: boolean
 }) {
-  const { market, ServiceChoice: Choice } = useServiceAppearance()
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(120)
   const message = editor.draft?.kind === "message"
@@ -150,11 +149,7 @@ export function ServiceTextSheet({
       <BottomSheetFooter {...props}>
         <View
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-          className={
-            market
-              ? "gap-2 border-t border-market-line bg-market-field px-5 pb-5 pt-3"
-              : "gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
-          }
+          className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
           <ServiceAction disabled={disabled} onPress={editor.review}>
             Review {message ? "update" : "note"}
@@ -165,9 +160,9 @@ export function ServiceTextSheet({
         </View>
       </BottomSheetFooter>
     ),
-    [disabled, editor, market, message],
+    [disabled, editor, message],
   )
-  const ink = market ? "text-market-ink" : "text-foreground"
+  const ink = "text-foreground"
   return (
     <Modal
       ref={editor.modal.ref}
@@ -229,7 +224,7 @@ export function ServiceTextSheet({
                   </View>
                 ) : null}
                 <FormField
-                  variant={market ? "market" : "filled"}
+                  variant="filled"
                   label={message ? "Message" : "Internal note"}
                   multiline
                   maxLength={4000}
@@ -246,13 +241,7 @@ export function ServiceTextSheet({
                     onUndo={editor.undoFill}
                   />
                 ) : null}
-                <Text
-                  className={
-                    market
-                      ? "text-xs text-market-muted-ink"
-                      : "text-xs text-muted-foreground"
-                  }
-                >
+                <Text className="text-xs text-muted-foreground">
                   {message
                     ? "Review the channel and message before queuing delivery. Queued does not mean delivered."
                     : "This note stays in the private work record. It is not sent to the customer."}

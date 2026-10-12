@@ -1,11 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { ConversionRow as ClassicRow } from "@/components/mobile/appearances/classic/unit-conversion"
-import { ConversionRow as MarketRow } from "@/components/mobile/appearances/market-day/unit-conversion"
+import { ConversionRow } from "@/components/mobile/appearances/classic/unit-conversion"
 import { FormField } from "@/components/mobile/form-field"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useState } from "react"
 import {
@@ -17,7 +15,6 @@ export function ConversionBalanceChoices({
   rows,
   selectedId,
   disabled,
-  market,
   label,
   emptyMessage,
   onSelect,
@@ -26,7 +23,6 @@ export function ConversionBalanceChoices({
   rows: ConversionBalance[]
   selectedId: string
   disabled: boolean
-  market: boolean
   label: string
   emptyMessage: string
   onSelect: (id: string) => void
@@ -35,8 +31,6 @@ export function ConversionBalanceChoices({
   const chooser = useModal()
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(0)
-  const palette = useMarketDayPalette()
-  const Row = market ? MarketRow : ClassicRow
   const filtered = rows.filter((row) =>
     `${row.productName} ${row.variantName} ${row.inventoryUnitName} ${conversionCustody(row)}`
       .toLowerCase()
@@ -45,25 +39,24 @@ export function ConversionBalanceChoices({
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12))
   const currentPage = Math.min(page, pageCount - 1)
   const selected = rows.find((row) => row.balanceSourceId === selectedId)
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   const content = (
     <View className="gap-3">
       <View accessibilityRole="radiogroup" accessibilityLabel={label}>
         {filtered.slice(currentPage * 12, (currentPage + 1) * 12).map((row) => (
-          <Row
+          <ConversionRow
             key={row.balanceSourceId}
             row={row}
             selected={selectedId === row.balanceSourceId}
             disabled={disabled}
             onPress={() => {
               onSelect(row.balanceSourceId)
-              if (!market) chooser.dismiss()
+              chooser.dismiss()
             }}
           />
         ))}
       </View>
       {!filtered.length ? (
-        <Text className={`text-sm ${muted}`}>
+        <Text className="text-sm text-muted-foreground">
           {query ? "No matching balances. Try another search." : emptyMessage}
         </Text>
       ) : null}
@@ -72,7 +65,7 @@ export function ConversionBalanceChoices({
           accessibilityLabel={`Search ${label.toLowerCase()}`}
           label={`Find ${label.toLowerCase()}`}
           maxLength={160}
-          variant={market ? "market-search" : "search"}
+          variant="search"
           value={query}
           onChangeText={(value) => {
             setQuery(value)
@@ -83,7 +76,7 @@ export function ConversionBalanceChoices({
       ) : null}
       {pageCount > 1 ? (
         <View className="gap-2">
-          <Text className={`text-xs ${muted}`}>
+          <Text className="text-xs text-muted-foreground">
             Page {currentPage + 1} of {pageCount} · {filtered.length} matching
             balances
           </Text>
@@ -94,10 +87,6 @@ export function ConversionBalanceChoices({
               setPage(currentPage - 1)
               onPageChange()
             }}
-            foregroundColor={market ? palette.ink : undefined}
-            className={
-              market ? "border-market-line bg-market-field" : undefined
-            }
           >
             Previous balances
           </ActionButton>
@@ -108,26 +97,20 @@ export function ConversionBalanceChoices({
               setPage(currentPage + 1)
               onPageChange()
             }}
-            foregroundColor={market ? palette.ink : undefined}
-            className={
-              market ? "border-market-line bg-market-field" : undefined
-            }
           >
             Next balances
           </ActionButton>
         </View>
       ) : null}
       {selected ? (
-        <Text className={`text-xs ${muted}`}>
+        <Text className="text-xs text-muted-foreground">
           Selected: {selected.productName} · {selected.variantName} ·{" "}
           {selected.inventoryUnitName} · {conversionCustody(selected)}
         </Text>
       ) : null}
     </View>
   )
-  return market ? (
-    content
-  ) : (
+  return (
     <>
       <ActionButton
         variant="outline"

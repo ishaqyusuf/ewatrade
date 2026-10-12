@@ -22,8 +22,6 @@ export function ClassicStaffHeader({
 }: {
   activeCount?: number
   pendingCount?: number
-  /** Market Day shows it; Classic counts active and pending instead. */
-  loadedCount?: number
   /** At the limit the hero button becomes See plans. */
   onSeePlans?: () => void
   used?: number

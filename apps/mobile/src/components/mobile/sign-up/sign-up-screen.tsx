@@ -2,10 +2,6 @@ import {
   ClassicSignUpCategories,
   ClassicSignUpScreen,
 } from "@/components/mobile/appearances/classic/sign-up-screen"
-import {
-  MarketDaySignUpCategories,
-  MarketDaySignUpScreen,
-} from "@/components/mobile/appearances/market-day/sign-up-screen"
 import { AppleAuthButton } from "@/components/mobile/apple-auth-button"
 import {
   AuthActionButton,
@@ -13,7 +9,6 @@ import {
   AuthFooterAction,
   AuthMethodButton,
 } from "@/components/mobile/auth-header"
-import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CountrySelect } from "@/components/mobile/country-select"
 import { CurrencySelector } from "@/components/mobile/currency-selector"
 import { CurrentLocationCard } from "@/components/mobile/current-location-card"
@@ -25,12 +20,10 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
 import { useCurrentAddress } from "@/hooks/use-current-address"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import {
   createBusinessFixture,
@@ -78,13 +71,6 @@ export function SignUpScreen({
   continuation?: ApprovedNativeOnboarding
 }) {
   const largeTextLayout = useLargeTextLayout()
-  const appearance = useMobileDesign("sign-up")
-  const Screen =
-    appearance === "market-day" ? MarketDaySignUpScreen : ClassicSignUpScreen
-  const Categories =
-    appearance === "market-day"
-      ? MarketDaySignUpCategories
-      : ClassicSignUpCategories
   const router = useRouter()
   const trpc = useTRPC()
   const [name, setName] = useState(continuation?.fullName ?? "")
@@ -189,7 +175,6 @@ export function SignUpScreen({
     teamSize: BusinessTeamSize
   } | null>(null)
   const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
-  const scrollHide = useBottomSearchScroll()
   const normalizedEmail = email.trim().toLowerCase()
   const normalizedBusinessName = businessName.trim()
   const hasBusinessContact =
@@ -536,29 +521,13 @@ export function SignUpScreen({
   }
 
   return (
-    <Screen
+    <ClassicSignUpScreen
       key={step}
       step={step}
       header={header}
       preview={preview}
       onBack={goBack}
-      onScroll={scrollHide.onScroll}
-      footer={
-        step === "businessType" &&
-        showProfileSearch &&
-        appearance === "market-day" ? (
-          <BottomSearchFooter
-            accessibilityLabel="Search business categories"
-            hidden={scrollHide.hidden}
-            label="Business category"
-            onChangeText={setProfileQuery}
-            placeholder="Search categories"
-            totalCount={listBusinessProfiles().length}
-            value={profileQuery}
-            variant={appearance === "market-day" ? "market-day" : "default"}
-          />
-        ) : null
-      }
+      footer={null}
     >
       <QaQuickFillButton
         canUndo={canUndoQuickFill}
@@ -656,7 +625,7 @@ export function SignUpScreen({
 
       {step === "businessType" ? (
         <View className="gap-5">
-          {appearance === "classic" && showProfileSearch ? (
+          {showProfileSearch ? (
             <FormField
               accessibilityLabel="Search business types"
               label="Search business types"
@@ -667,7 +636,7 @@ export function SignUpScreen({
               variant="search"
             />
           ) : null}
-          <Categories
+          <ClassicSignUpCategories
             onSelect={selectBusinessType}
             profiles={visibleBusinessProfiles}
             selectedKey={businessProfileKey}
@@ -683,18 +652,9 @@ export function SignUpScreen({
       ) : step === "profile" ? (
         <View className="gap-5">
           {selectedBusinessProfile ? (
-            appearance === "classic" ? (
-              <SuggestionNote
-                text={`${selectedBusinessProfile.title.split(",")[0]?.trim()} suggestions come first when you add items.`}
-              />
-            ) : (
-              <StatusBanner
-                icon="Briefcase"
-                message={`${selectedBusinessProfile.title} suggestions will appear first when you add Products or Services.`}
-                title="Selected business type"
-                tone="primary"
-              />
-            )
+            <SuggestionNote
+              text={`${selectedBusinessProfile.title.split(",")[0]?.trim()} suggestions come first when you add items.`}
+            />
           ) : null}
           {businessProfileKey === "other-mixed-business" ? (
             <FormField
@@ -702,18 +662,12 @@ export function SignUpScreen({
               onChangeText={setOtherBusinessDescription}
               placeholder="Describe your products or services"
               value={otherBusinessDescription}
-              variant={appearance === "classic" ? "green-gate" : "auth"}
+              variant="green-gate"
             />
           ) : null}
 
           <View className="gap-2">
-            <Text
-              className={
-                appearance === "classic"
-                  ? "text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground"
-                  : "text-sm font-bold text-foreground"
-              }
-            >
+            <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground">
               What will you manage?
             </Text>
             <View
@@ -721,7 +675,6 @@ export function SignUpScreen({
             >
               {BUSINESS_OPERATING_MODELS.map((model) => (
                 <SignUpChoice
-                  appearance={appearance}
                   key={model.key}
                   label={model.label}
                   selected={operatingModel === model.key}
@@ -732,13 +685,7 @@ export function SignUpScreen({
           </View>
 
           <View className="gap-2">
-            <Text
-              className={
-                appearance === "classic"
-                  ? "text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground"
-                  : "text-sm font-bold text-foreground"
-              }
-            >
+            <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground">
               How do customers order?
             </Text>
             <View
@@ -746,7 +693,6 @@ export function SignUpScreen({
             >
               {BUSINESS_ORDER_CHANNELS.map((channel) => (
                 <SignUpChoice
-                  appearance={appearance}
                   key={channel.key}
                   label={channel.label}
                   selected={orderChannels.includes(channel.key)}
@@ -758,13 +704,7 @@ export function SignUpScreen({
           </View>
 
           <View className="gap-2">
-            <Text
-              className={
-                appearance === "classic"
-                  ? "text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground"
-                  : "text-sm font-bold text-foreground"
-              }
-            >
+            <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground">
               Team size
             </Text>
             <View
@@ -772,13 +712,8 @@ export function SignUpScreen({
             >
               {BUSINESS_TEAM_SIZES.map((size) => (
                 <SignUpChoice
-                  appearance={appearance}
                   key={size.key}
-                  label={
-                    appearance === "classic"
-                      ? size.label.replace(" people", "")
-                      : size.label
-                  }
+                  label={size.label.replace(" people", "")}
                   selected={teamSize === size.key}
                   onPress={() => setTeamSize(size.key)}
                 />
@@ -789,18 +724,12 @@ export function SignUpScreen({
       ) : step === "business" ? (
         <View className="gap-3">
           <FormField
-            helper={
-              appearance === "classic"
-                ? undefined
-                : "This is the name customers and your team will see."
-            }
             label="Business name"
-            leadingIcon={appearance === "classic" ? undefined : "Building2"}
             onChangeText={setBusinessName}
             placeholder="Enter your business name"
             editable={!continuation}
             value={businessName}
-            variant={appearance === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
           <CurrentLocationCard
             address={currentAddress.address}
@@ -811,11 +740,10 @@ export function SignUpScreen({
           />
           <FormField
             label="Business address"
-            leadingIcon={appearance === "classic" ? undefined : "MapPin"}
             onChangeText={setAddressLine1}
             placeholder="Street address"
             value={addressLine1}
-            variant={appearance === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
           <View className={largeTextLayout ? "gap-3" : "flex-row gap-3"}>
             <View className={largeTextLayout ? undefined : "flex-1"}>
@@ -828,7 +756,7 @@ export function SignUpScreen({
               placeholder="State"
               textContentType="addressState"
               value={region}
-              variant={appearance === "classic" ? "green-gate" : "auth"}
+              variant="green-gate"
             />
           </View>
           <FormField
@@ -837,7 +765,7 @@ export function SignUpScreen({
             placeholder="City"
             textContentType="addressCity"
             value={city}
-            variant={appearance === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
           <PhoneField
             countryCode={phoneCountryCode}
@@ -848,11 +776,11 @@ export function SignUpScreen({
               setPhoneCountryCode(code)
             }}
             value={phone}
-            variant={appearance === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
           <CurrencySelector
-            appearance={appearance === "classic" ? "chips" : "classic"}
-            label={appearance === "classic" ? "Currency" : undefined}
+            appearance="chips"
+            label="Currency"
             onChange={setCurrencyCode}
             value={currencyCode}
           />
@@ -861,24 +789,22 @@ export function SignUpScreen({
         <View className="gap-3">
           <FormField
             label="Your name"
-            leadingIcon={appearance === "classic" ? undefined : "User"}
             onChangeText={setName}
             placeholder="Enter your full name"
             textContentType="name"
             value={name}
-            variant={appearance === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
           <FormField
             autoCapitalize="none"
             keyboardType="email-address"
-            label={appearance === "classic" ? "Email" : "Email address"}
-            leadingIcon={appearance === "classic" ? undefined : "Mail"}
+            label="Email"
             onChangeText={setEmail}
             placeholder="Enter your email address"
             textContentType="emailAddress"
             editable={!continuation}
             value={email}
-            variant={appearance === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
           {legalPublication.isSuccess ? (
             legalPublication.data.acceptanceRequired ? (
@@ -938,7 +864,6 @@ export function SignUpScreen({
       <View className="gap-4">
         {step === "profile" ? (
           <AuthActionButton
-            appearance={appearance === "market-day" ? "market-day" : "default"}
             disabled={!hasBusinessProfile}
             onPress={continueToBusiness}
             trailingIcon="ArrowRight"
@@ -947,7 +872,6 @@ export function SignUpScreen({
           </AuthActionButton>
         ) : step === "business" ? (
           <AuthActionButton
-            appearance={appearance === "market-day" ? "market-day" : "default"}
             disabled={!normalizedBusinessName || !hasBusinessContact}
             onPress={continueToAccount}
             trailingIcon="ArrowRight"
@@ -956,7 +880,6 @@ export function SignUpScreen({
           </AuthActionButton>
         ) : step === "account" ? (
           <AuthActionButton
-            appearance={appearance === "market-day" ? "market-day" : "default"}
             disabled={!canContinueWithEmail}
             isLoading={requestOtpMutation.isPending}
             loadingLabel="Sending code"
@@ -976,10 +899,7 @@ export function SignUpScreen({
         ) : null}
         {step === "account" ? (
           <>
-            <AuthDivider
-              label={appearance === "classic" ? "or" : "Or Continue With"}
-              plain={appearance === "classic"}
-            />
+            <AuthDivider label="or" plain />
             <AppleAuthButton
               onPress={appleAuth.startAppleAuth}
               disabled={appleAuth.isPending || !canContinueWithGoogle}
@@ -987,10 +907,8 @@ export function SignUpScreen({
             <AuthMethodButton
               brandIcon="google"
               disabled={googleAuth.isPending || !canContinueWithGoogle}
-              label={
-                appearance === "classic" ? "Continue with Google" : "Google"
-              }
-              variant={appearance === "classic" ? "sso" : "default"}
+              label="Continue with Google"
+              variant="sso"
               loadingLabel="Connecting to Google"
               onPress={continueWithGoogle}
               pending={googleAuth.isPending}
@@ -1043,7 +961,7 @@ export function SignUpScreen({
           label="Sign in instead"
         />
       </View>
-    </Screen>
+    </ClassicSignUpScreen>
   )
 }
 

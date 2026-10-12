@@ -4,8 +4,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import type { MobileDesign } from "@/lib/mobile-design/screens"
 import { cn } from "@/lib/utils"
 import { forwardRef } from "react"
 import {
@@ -27,7 +25,6 @@ export type KeyboardInlineComposerPill = {
 }
 
 type KeyboardInlineComposerProps = {
-  appearance?: MobileDesign
   autoCapitalize?: TextInputProps["autoCapitalize"]
   /** A short problem shown above the input, such as a rejected value. */
   errorText?: string | null
@@ -61,7 +58,6 @@ export const KeyboardInlineComposer = forwardRef<
   KeyboardInlineComposerProps
 >(function KeyboardInlineComposer(
   {
-    appearance = "classic",
     autoCapitalize = "words",
     errorText,
     keyboardType,
@@ -90,8 +86,6 @@ export const KeyboardInlineComposer = forwardRef<
   ref,
 ) {
   const colors = useColors()
-  const palette = useMarketDayPalette()
-  const market = appearance === "market-day"
   const largeTextLayout = useLargeTextLayout()
   const canSubmit =
     !disabled && !loading && (canSubmitOverride ?? value.trim().length > 0)
@@ -119,30 +113,15 @@ export const KeyboardInlineComposer = forwardRef<
             ? (event) => onHeightChange(event.nativeEvent.layout.height)
             : undefined
         }
-        className={cn(
-          "gap-2 border-t px-4 pb-3 pt-2",
-          market
-            ? "border-market-line bg-market-canvas"
-            : "border-border bg-background",
-        )}
+        className="gap-2 border-t border-border bg-background px-4 pb-3 pt-2"
       >
         {title ? (
           <View className="gap-0.5">
-            <Text
-              className={cn(
-                "text-xs font-extrabold uppercase tracking-[1.4px]",
-                market ? "text-market-accent-ink" : "text-primary",
-              )}
-            >
+            <Text className="text-xs font-extrabold uppercase tracking-[1.4px] text-primary">
               {title}
             </Text>
             {helperText ? (
-              <Text
-                className={cn(
-                  "text-xs",
-                  market ? "text-market-muted-ink" : "text-muted-foreground",
-                )}
-              >
+              <Text className="text-xs text-muted-foreground">
                 {helperText}
               </Text>
             ) : null}
@@ -173,12 +152,8 @@ export const KeyboardInlineComposer = forwardRef<
                   className={cn(
                     "min-h-9 flex-row items-center justify-center gap-2 rounded-full border px-4",
                     pill.selected
-                      ? market
-                        ? "border-market-palm bg-market-palm"
-                        : "border-primary bg-primary"
-                      : market
-                        ? "border-market-line bg-market-field"
-                        : "border-border bg-card",
+                      ? "border-primary bg-primary"
+                      : "border-border bg-card",
                   )}
                   haptic
                   key={pill.id}
@@ -193,12 +168,8 @@ export const KeyboardInlineComposer = forwardRef<
                     className={cn(
                       "text-xs font-bold",
                       pill.selected
-                        ? market
-                          ? "text-market-on-palm"
-                          : "text-primary-foreground"
-                        : market
-                          ? "text-market-ink"
-                          : "text-foreground",
+                        ? "text-primary-foreground"
+                        : "text-foreground",
                     )}
                   >
                     {pill.label}
@@ -208,12 +179,8 @@ export const KeyboardInlineComposer = forwardRef<
                       className={cn(
                         "size-xs",
                         pill.selected
-                          ? market
-                            ? "text-market-on-palm"
-                            : "text-primary-foreground"
-                          : market
-                            ? "text-market-muted-ink"
-                            : "text-muted-foreground",
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground",
                       )}
                       name="X"
                     />
@@ -232,7 +199,6 @@ export const KeyboardInlineComposer = forwardRef<
               largeTextLayout
                 ? "min-h-14 min-w-0 flex-row items-center rounded-2xl border border-border bg-card px-4"
                 : "min-h-12 min-w-0 flex-1 flex-row items-center rounded-full border border-border bg-card px-4",
-              market && "border-market-line bg-market-field",
             )}
           >
             <TextInput
@@ -242,10 +208,7 @@ export const KeyboardInlineComposer = forwardRef<
               editable={!disabled}
               maxLength={1000}
               blurOnSubmit={dismissKeyboardOnSubmit}
-              className={cn(
-                "min-w-0 flex-1 py-2 text-sm [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
-                market ? "text-market-ink" : "text-foreground",
-              )}
+              className="min-w-0 flex-1 py-2 text-sm text-foreground [-rn-include-font-padding:false] [-rn-text-align-vertical:center]"
               onChangeText={onChangeText}
               onSubmitEditing={submit}
               placeholder={
@@ -253,13 +216,11 @@ export const KeyboardInlineComposer = forwardRef<
                   ? largeTextPlaceholder
                   : placeholder
               }
-              placeholderTextColor={
-                market ? palette.mutedInk : colors.mutedForeground
-              }
+              placeholderTextColor={colors.mutedForeground}
               keyboardType={keyboardType}
               ref={ref}
               returnKeyType="done"
-              selectionColor={market ? palette.accentInk : colors.primary}
+              selectionColor={colors.primary}
               showSoftInputOnFocus
               submitBehavior={
                 dismissKeyboardOnSubmit ? "blurAndSubmit" : "submit"
@@ -273,15 +234,6 @@ export const KeyboardInlineComposer = forwardRef<
               onPress={submit}
               disabled={!canSubmit}
               icon={submitIconName}
-              foregroundColor={market ? palette.onPalm : undefined}
-              disabledForegroundColor={market ? palette.mutedInk : undefined}
-              className={
-                market
-                  ? canSubmit
-                    ? "bg-market-palm active:bg-market-hero-pressed"
-                    : "bg-market-line active:bg-market-line"
-                  : undefined
-              }
             >
               {submitLabel}
             </ActionButton>
@@ -292,13 +244,7 @@ export const KeyboardInlineComposer = forwardRef<
                 largeTextLayout
                   ? "min-h-12 w-full flex-row items-center justify-center gap-2 rounded-full px-5"
                   : "h-12 w-12 items-center justify-center rounded-full",
-                canSubmit
-                  ? market
-                    ? "bg-market-palm"
-                    : "bg-primary"
-                  : market
-                    ? "bg-market-line"
-                    : "bg-muted",
+                canSubmit ? "bg-primary" : "bg-muted",
               )}
               accessibilityState={{ busy: loading, disabled: !canSubmit }}
               disabled={!canSubmit}
@@ -312,12 +258,8 @@ export const KeyboardInlineComposer = forwardRef<
                   className={cn(
                     "size-sm",
                     canSubmit
-                      ? market
-                        ? "text-market-on-palm"
-                        : "text-primary-foreground"
-                      : market
-                        ? "text-market-muted-ink"
-                        : "text-muted-foreground",
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground",
                   )}
                   name={submitIconName}
                 />

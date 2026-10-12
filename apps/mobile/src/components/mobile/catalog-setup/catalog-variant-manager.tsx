@@ -6,14 +6,11 @@ import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { VariableContextProvider } from "nativewind"
 import { useMemo, useState } from "react"
 import { Modal as NativeModal, View, useWindowDimensions } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import { CatalogVariantFields } from "./catalog-variant-fields"
 import { CatalogVariantList } from "./catalog-variant-list"
 import {
@@ -26,8 +23,6 @@ export type { CatalogVariantDraft } from "./catalog-variant-model"
 
 export function CatalogVariantManager(props: CatalogVariantManagerProps) {
   const model = useCatalogVariants(props)
-  const market = useMobileDesign("first-product") === "market-day"
-  const palette = useMarketDayPalette()
   const { height } = useWindowDimensions()
   const [footerHeight, setFooterHeight] = useState(88)
   const rows = useMemo(
@@ -66,7 +61,6 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
       <CatalogVariantList
         rows={rows}
         kind={props.kind}
-        market={market}
         disabled={disabled}
         onEdit={model.openEditor}
         onMenu={model.openActions}
@@ -81,18 +75,10 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
         hideHeader
       >
         <BottomSheetScrollView keyboardShouldPersistTaps="handled">
-          <View
-            className={catalogSetupClassName(
-              "gap-2 bg-card px-5 pt-4 pb-6",
-              market,
-            )}
-          >
+          <View className="gap-2 bg-card px-5 pt-4 pb-6">
             <Text
               accessibilityRole="header"
-              className={catalogSetupClassName(
-                "text-lg font-extrabold text-foreground",
-                market,
-              )}
+              className="text-lg font-extrabold text-foreground"
             >
               {[combination?.name, actionUnit?.name]
                 .filter(Boolean)
@@ -101,14 +87,12 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
             {combination ? (
               <>
                 <VariantMenuAction
-                  market={market}
                   disabled={disabled}
                   icon="Pencil"
                   label="Edit"
                   onPress={model.editFromActions}
                 />
                 <VariantMenuAction
-                  market={market}
                   disabled={disabled}
                   icon={
                     model.getDraft(combination.key).enabled ? "EyeOff" : "Check"
@@ -136,7 +120,6 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
         onRequestClose={model.closeEditor}
       >
         <MobileWorkflowChrome
-          screen="first-product"
           hideHeader={false}
           keyboardBottomOffset={footerHeight + 12}
           title={editorTitle}
@@ -157,15 +140,10 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
                 keyboardShouldPersistTaps="handled"
               >
                 <View className="pb-[var(--variant-editor-footer)]">
-                  <CatalogVariantFields
-                    {...props}
-                    model={model}
-                    market={market}
-                  />
+                  <CatalogVariantFields {...props} model={model} />
                 </View>
               </KeyboardAwareScrollView>
               <BottomSearchFooter
-                variant={market ? "market-day" : "default"}
                 accessibilityLabel="Option editor actions"
                 onHeightChange={setFooterHeight}
                 searchVisible={false}
@@ -180,16 +158,7 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
                     message={model.editorError}
                   />
                 ) : null}
-                <ActionButton
-                  disabled={disabled}
-                  onPress={model.saveEditor}
-                  foregroundColor={market ? palette.onPalm : undefined}
-                  className={
-                    market
-                      ? "bg-market-palm active:bg-market-hero-pressed"
-                      : undefined
-                  }
-                >
+                <ActionButton disabled={disabled} onPress={model.saveEditor}>
                   Save option changes
                 </ActionButton>
               </BottomSearchFooter>
@@ -202,13 +171,11 @@ export function CatalogVariantManager(props: CatalogVariantManagerProps) {
 }
 
 function VariantMenuAction({
-  market,
   disabled,
   icon,
   label,
   onPress,
 }: {
-  market: boolean
   disabled: boolean
   icon: "Check" | "EyeOff" | "Pencil"
   label: string
@@ -222,31 +189,13 @@ function VariantMenuAction({
       disabled={disabled}
       onPress={onPress}
       haptic
-      className={catalogSetupClassName(
-        "min-h-14 flex-row items-start gap-3 border-b border-border py-3 last:border-b-0",
-        market,
-      )}
+      className="min-h-14 flex-row items-start gap-3 border-b border-border py-3 last:border-b-0"
     >
-      <View
-        className={catalogSetupClassName(
-          "size-10 shrink-0 items-center justify-center rounded-full bg-muted",
-          market,
-        )}
-      >
-        <Icon
-          name={icon}
-          className={catalogSetupClassName("size-sm text-foreground", market)}
-        />
+      <View className="size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+        <Icon name={icon} className="size-sm text-foreground" />
       </View>
       <View className="min-h-10 min-w-0 flex-1 justify-center">
-        <Text
-          className={catalogSetupClassName(
-            "font-semibold text-foreground",
-            market,
-          )}
-        >
-          {label}
-        </Text>
+        <Text className="font-semibold text-foreground">{label}</Text>
       </View>
     </Pressable>
   )

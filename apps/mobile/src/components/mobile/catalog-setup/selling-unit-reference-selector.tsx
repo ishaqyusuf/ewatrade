@@ -9,7 +9,6 @@ import {
 import { type RefObject, createContext, useContext } from "react"
 import { View, useWindowDimensions } from "react-native"
 import type { SellingUnitEditorFieldsProps } from "./catalog-setup-model"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 
 export const SellingUnitReferenceSheetContext = createContext<{
   ref: RefObject<BottomSheetModal | null>
@@ -21,13 +20,11 @@ export const SellingUnitReferenceSheetContext = createContext<{
 
 export function SellingUnitReferenceSelector({
   fields,
-  market,
 }: {
   fields: Pick<
     SellingUnitEditorFieldsProps,
     "referenceUnits" | "unitEditorDraft" | "onChangeDraft" | "unitName"
   >
-  market: boolean
 }) {
   const sheet = useContext(SellingUnitReferenceSheetContext)
   const { height } = useWindowDimensions()
@@ -59,12 +56,7 @@ export function SellingUnitReferenceSelector({
   ]
   return (
     <View className="gap-2">
-      <Text
-        className={catalogSetupClassName(
-          "text-sm font-bold text-foreground",
-          market,
-        )}
-      >
+      <Text className="text-sm font-bold text-foreground">
         Build this unit from
       </Text>
       <Pressable
@@ -72,23 +64,10 @@ export function SellingUnitReferenceSelector({
         accessibilityLabel={`Reference unit: ${name}`}
         accessibilityState={{ expanded: sheet.open }}
         onPress={sheet.present}
-        className={catalogSetupClassName(
-          "min-h-12 flex-row items-center gap-3 rounded-xl border border-border bg-card px-4 py-3",
-          market,
-        )}
+        className="min-h-12 flex-row items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
       >
-        <Text
-          className={catalogSetupClassName("flex-1 text-foreground", market)}
-        >
-          {name}
-        </Text>
-        <Icon
-          name="ChevronDown"
-          className={catalogSetupClassName(
-            "size-sm text-muted-foreground",
-            market,
-          )}
-        />
+        <Text className="flex-1 text-foreground">{name}</Text>
+        <Icon name="ChevronDown" className="size-sm text-muted-foreground" />
       </Pressable>
       <Modal
         ref={sheet.ref}
@@ -129,10 +108,7 @@ export function SellingUnitReferenceSelector({
                   accessibilityState={{
                     selected: current.referenceUnitId === unit.id,
                   }}
-                  className={catalogSetupClassName(
-                    "min-h-12 flex-row items-center justify-between rounded-xl px-4 py-3 active:bg-accent",
-                    market,
-                  )}
+                  className="min-h-12 flex-row items-center justify-between rounded-xl px-4 py-3 active:bg-accent"
                   onPress={() => {
                     if (current.referenceUnitId !== unit.id)
                       fields.onChangeDraft({
@@ -152,13 +128,7 @@ export function SellingUnitReferenceSelector({
                     </Text>
                   </View>
                   {current.referenceUnitId === unit.id ? (
-                    <Icon
-                      name="Check"
-                      className={catalogSetupClassName(
-                        "size-sm text-primary",
-                        market,
-                      )}
-                    />
+                    <Icon name="Check" className="size-sm text-primary" />
                   ) : null}
                 </Pressable>
               ))}
@@ -166,12 +136,7 @@ export function SellingUnitReferenceSelector({
           </View>
         </BottomSheetScrollView>
       </Modal>
-      <Text
-        className={catalogSetupClassName(
-          "text-xs text-muted-foreground",
-          market,
-        )}
-      >
+      <Text className="text-xs text-muted-foreground">
         For example: 1 carton contains 6 trays. Choosing a different reference
         clears the count so you can confirm the new relationship.
       </Text>

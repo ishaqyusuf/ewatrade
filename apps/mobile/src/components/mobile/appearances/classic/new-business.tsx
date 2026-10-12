@@ -6,7 +6,7 @@ import type {
   BusinessChoiceProps,
   BusinessProfileRowProps,
 } from "@/components/mobile/new-business/new-business-presentation"
-import { SetupSection, SetupSummaryRow } from "@/components/mobile/setup-flow"
+import { SetupSection } from "@/components/mobile/setup-flow"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
@@ -14,7 +14,6 @@ import { View } from "react-native"
 import { SettingsScreen } from "../../settings-screen"
 
 export const BusinessSection = SetupSection
-export const BusinessSummary = SetupSummaryRow
 export function BusinessHeader({ step }: { step: number }) {
   return (
     <View className="gap-5">

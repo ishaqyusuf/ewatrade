@@ -1,11 +1,5 @@
 import type { ExpoConfig } from "expo/config"
 
-const designRelease =
-  require("./src/lib/mobile-design/release-config.json") as {
-    defaultDesign: string
-    screens: Record<string, string>
-  }
-
 const { withGoogleSignInModularHeaders } =
   require("./plugins/with-google-signin-modular-headers.cjs") as {
     withGoogleSignInModularHeaders: (config: ExpoConfig) => ExpoConfig
@@ -50,8 +44,6 @@ if (isTestFlightPreview && normalizedAppVariant !== "preview") {
 const isDevelopmentBuild =
   normalizedAppVariant === "development" || normalizedAppVariant === "dev"
 const isPreviewBuild = normalizedAppVariant === "preview"
-const nativeSplashDesign =
-  designRelease.screens["startup-splash"] ?? designRelease.defaultDesign
 const autoUpdateOnForeground =
   process.env.EXPO_PUBLIC_AUTO_UPDATE_ON_FOREGROUND !== "false"
 const autoUpdateForegroundCooldownMs = Number(
@@ -133,8 +125,7 @@ const variantConfig = isDevelopmentBuild
 const nativeSplashImageLight = variantConfig.icons.splashDark
 const nativeSplashImageDark = variantConfig.icons.splashDark
 const nativeSplashBackgroundColor = "#17684F"
-const nativeSplashDarkBackgroundColor =
-  nativeSplashDesign === "market-day" ? "#17684F" : "#17543F"
+const nativeSplashDarkBackgroundColor = "#17543F"
 
 // App-owned data sent to the EwaTrade API. SDK-owned collection remains in
 // each SDK's manifest and the final Xcode privacy report.

@@ -1,5 +1,4 @@
 import { ClassicLoginScreen } from "@/components/mobile/appearances/classic/login-screen"
-import { MarketDayLoginScreen } from "@/components/mobile/appearances/market-day/login-screen"
 import { AppleAuthButton } from "@/components/mobile/apple-auth-button"
 import {
   AuthActionButton,
@@ -9,13 +8,11 @@ import {
 } from "@/components/mobile/auth-header"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import { SESSION_ENDED_NOTICE } from "@/lib/session-expiry"
 import { useOnboardingStore } from "@/store/onboardingStore"
@@ -25,9 +22,6 @@ import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
 
 export function LoginScreen() {
-  const design = useMobileDesign("login")
-  const Presentation =
-    design === "market-day" ? MarketDayLoginScreen : ClassicLoginScreen
   const router = useRouter()
   const params = useLocalSearchParams<{
     email?: string
@@ -138,7 +132,7 @@ export function LoginScreen() {
   }
 
   return (
-    <Presentation
+    <ClassicLoginScreen
       footer={
         <AuthFooterAction
           eyebrow="New to ẸwáTrade?"
@@ -159,12 +153,11 @@ export function LoginScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           label="Email address"
-          leadingIcon={design === "classic" ? undefined : "Mail"}
           onChangeText={setEmail}
           placeholder="Enter your email address"
           textContentType="emailAddress"
           value={email}
-          variant={design === "classic" ? "green-gate" : "auth"}
+          variant="green-gate"
         />
         {usePassword ? (
           <FormField
@@ -177,11 +170,10 @@ export function LoginScreen() {
             secureTextEntry
             textContentType="password"
             value={password}
-            variant={design === "classic" ? "green-gate" : "auth"}
+            variant="green-gate"
           />
         ) : null}
         <AuthActionButton
-          appearance={design === "market-day" ? "market-day" : "default"}
           disabled={!normalizedEmail || (usePassword && !password)}
           isLoading={requestOtpMutation.isPending || passwordMutation.isPending}
           loadingLabel={usePassword ? "Signing in" : "Sending code"}
@@ -212,10 +204,7 @@ export function LoginScreen() {
             tone="destructive"
           />
         ) : null}
-        <AuthDivider
-          label={design === "market-day" ? "Or Continue With" : "or"}
-          plain={design !== "market-day"}
-        />
+        <AuthDivider label="or" plain />
         <AppleAuthButton
           onPress={appleAuth.startAppleAuth}
           disabled={appleAuth.isPending}
@@ -223,21 +212,13 @@ export function LoginScreen() {
         <AuthMethodButton
           brandIcon="google"
           disabled={googleAuth.isPending}
-          label={design === "market-day" ? "Google" : "Continue with Google"}
-          variant={design === "market-day" ? "default" : "sso"}
+          label="Continue with Google"
+          variant="sso"
           loadingLabel="Connecting to Google"
           onPress={continueWithGoogle}
           pending={googleAuth.isPending}
         />
-        {design === "market-day" ? (
-          <View className="flex-row items-center justify-center gap-2 pt-1">
-            <Icon className="size-[15px] text-market-ink" name="ShieldCheck" />
-            <Text className="text-xs font-semibold text-market-muted-ink">
-              Secure account sign in
-            </Text>
-          </View>
-        ) : null}
       </View>
-    </Presentation>
+    </ClassicLoginScreen>
   )
 }

@@ -8,16 +8,6 @@ import {
   ClassicCatalogMasthead,
   ClassicCatalogRow,
 } from "@/components/mobile/appearances/classic/catalog-screen"
-import {
-  MarketDayCatalogAddButton,
-  MarketDayCatalogChoices,
-  MarketDayCatalogFilter,
-  MarketDayCatalogFirstItemGate,
-  MarketDayCatalogFrame,
-  MarketDayCatalogMasthead,
-  MarketDayCatalogRow,
-  MarketDayCatalogSummary,
-} from "@/components/mobile/appearances/market-day/catalog-screen"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
@@ -34,7 +24,6 @@ import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import {
@@ -42,7 +31,6 @@ import {
   shouldFetchNextListPage,
   shouldShowListSearch,
 } from "@/lib/list-pagination"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
@@ -78,7 +66,6 @@ import {
 const CATALOG_SORT = { field: "name", direction: "asc" } as const
 
 export function CatalogItemsContent({
-  designScreen = "catalog",
   dockHidden = false,
   onAddItem,
   onAddProduct = onAddItem,
@@ -87,17 +74,6 @@ export function CatalogItemsContent({
   onScroll,
   presentation = "modal",
 }: CatalogItemsContentProps) {
-  const isMarketDay = useMobileDesign(designScreen) === "market-day"
-  const palette = useMarketDayPalette()
-  const Frame = isMarketDay ? MarketDayCatalogFrame : ClassicCatalogFrame
-  const Masthead = isMarketDay
-    ? MarketDayCatalogMasthead
-    : ClassicCatalogMasthead
-  const FirstItemGate = isMarketDay
-    ? MarketDayCatalogFirstItemGate
-    : ClassicCatalogFirstItemGate
-  const Row = isMarketDay ? MarketDayCatalogRow : ClassicCatalogRow
-  const Filter = isMarketDay ? MarketDayCatalogFilter : ClassicCatalogFilter
   const canEdit = canEditMobileCatalog(useAuthContext().profile)
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -115,15 +91,6 @@ export function CatalogItemsContent({
   const deferredQuery = useDeferredValue(query)
   const addSheet = useModal()
   const pendingAdd = useRef<"product" | "service" | null>(null)
-  // The appearance change resets measurements even though only the effect's
-  // trigger depends on it.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset when appearance changes
-  useEffect(() => {
-    setShowCanvasStatusBar(false)
-    setMastheadHeight(0)
-    pendingAdd.current = null
-    addSheet.dismiss()
-  }, [isMarketDay, addSheet.dismiss])
   const availabilityQuery = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, { retry: false }),
   )
@@ -165,7 +132,7 @@ export function CatalogItemsContent({
   const rows = filterCatalogShelf(loadedRows, {
     query: isOffline ? deferredQuery : "",
     kind: isOffline ? kindFilter : "all",
-    attention: isMarketDay ? null : attention,
+    attention,
   })
   const totalCount = visibleQuery.data?.pages[0]?.totalCount ?? 0
   // Online, the type switch and search filter on the server, so counts are kept
@@ -197,7 +164,6 @@ export function CatalogItemsContent({
         minute: "2-digit",
       })
     : null
-  const Choices = isMarketDay ? MarketDayCatalogChoices : ClassicCatalogChoices
   // Search stays put when a type filter narrows the list.
   const showSearch =
     shouldShowListSearch(Math.max(totalCount, counts?.all ?? 0)) ||
@@ -211,12 +177,9 @@ export function CatalogItemsContent({
     rowCount: rows.length,
   })
   const showBottomSearch =
-    !showFirstItemGate &&
-    (isMarketDay || (presentation === "modal" && showSearch))
-  const footerOffset =
-    isMarketDay && presentation === "tab" && !dockHidden ? 84 : 0
+    !showFirstItemGate && presentation === "modal" && showSearch
   const bottomSpace = showBottomSearch
-    ? footerHeight + footerOffset + 24
+    ? footerHeight + 24
     : presentation === "tab"
       ? Math.max(insets.bottom + 116, 152)
       : 24
@@ -249,7 +212,7 @@ export function CatalogItemsContent({
     setShowCanvasStatusBar((current) => (current === canvas ? current : canvas))
   }
   return (
-    <Frame
+    <ClassicCatalogFrame
       presentation={presentation}
       bottomSpace={bottomSpace}
       showCanvasStatusBar={showCanvasStatusBar}
@@ -267,7 +230,7 @@ export function CatalogItemsContent({
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View className="gap-4 pb-4">
-            <Masthead
+            <ClassicCatalogMasthead
               title={catalogTitle}
               countLabel={
                 counts
@@ -283,9 +246,6 @@ export function CatalogItemsContent({
                 setMastheadHeight(event.nativeEvent.layout.height)
               }
             />
-            {isMarketDay && rows.length > 0 ? (
-              <MarketDayCatalogSummary rows={rows} />
-            ) : null}
             <View className="gap-4 px-[18px]">
               {isOffline ? (
                 <StatusBanner
@@ -304,7 +264,7 @@ export function CatalogItemsContent({
                   tone="destructive"
                 />
               ) : null}
-              {!isMarketDay && presentation === "tab" && showSearch ? (
+              {presentation === "tab" && showSearch ? (
                 <FormField
                   accessibilityLabel="Search catalog"
                   autoCapitalize="words"
@@ -320,46 +280,38 @@ export function CatalogItemsContent({
                   variant="till-search"
                 />
               ) : null}
-              {availabilityQuery.data?.hasCatalogItems &&
-              (isMarketDay || mixedCatalog) ? (
-                <View
-                  className={
-                    isMarketDay
-                      ? "flex-row flex-wrap gap-2"
-                      : "flex-row rounded-[13px] border border-border bg-muted p-[3px]"
-                  }
-                >
-                  <Filter
+              {availabilityQuery.data?.hasCatalogItems && mixedCatalog ? (
+                <View className="flex-row rounded-[13px] border border-border bg-muted p-[3px]">
+                  <ClassicCatalogFilter
                     active={kindFilter === "all"}
-                    count={isMarketDay ? undefined : counts?.all}
+                    count={counts?.all}
                     label="All"
                     onPress={() => setKindFilter("all")}
                   />
                   {availabilityQuery.data.hasProductItems ? (
-                    <Filter
+                    <ClassicCatalogFilter
                       active={kindFilter === "product"}
-                      count={isMarketDay ? undefined : counts?.product}
+                      count={counts?.product}
                       label="Products"
                       onPress={() => setKindFilter("product")}
                     />
                   ) : null}
                   {availabilityQuery.data.hasServiceItems ? (
-                    <Filter
+                    <ClassicCatalogFilter
                       active={kindFilter === "service"}
-                      count={isMarketDay ? undefined : counts?.service}
+                      count={counts?.service}
                       label="Services"
                       onPress={() => setKindFilter("service")}
                     />
                   ) : null}
                 </View>
               ) : null}
-              {!isMarketDay && !canEdit ? (
+              {!canEdit ? (
                 <Text className="text-xs text-muted-foreground">
                   View only · Ask an owner to add or edit items.
                 </Text>
               ) : null}
-              {!isMarketDay &&
-              (attention || loadedRows.some((row) => row.problem)) ? (
+              {attention || loadedRows.some((row) => row.problem) ? (
                 <View className="gap-2">
                   {counts ? null : (
                     <Text className="text-xs text-muted-foreground">
@@ -454,10 +406,10 @@ export function CatalogItemsContent({
           </View>
         }
         ListEmptyComponent={
-          !isMarketDay && visibleQuery.isPending && !isOffline ? (
+          visibleQuery.isPending && !isOffline ? (
             <CatalogShelfSkeleton />
           ) : showFirstItemGate ? (
-            <FirstItemGate
+            <ClassicCatalogFirstItemGate
               disabled={isOffline || !canEdit}
               onAddProduct={() => {
                 if (!isOffline && canEdit) onAddProduct()
@@ -501,10 +453,7 @@ export function CatalogItemsContent({
         }
         ListFooterComponent={
           <View className="gap-3 px-4 pt-4 pb-8">
-            {!isMarketDay &&
-            attention &&
-            itemsQuery.hasNextPage &&
-            !isOffline ? (
+            {attention && itemsQuery.hasNextPage && !isOffline ? (
               <ActionButton
                 variant="outline"
                 disabled={itemsQuery.isFetchingNextPage}
@@ -519,16 +468,7 @@ export function CatalogItemsContent({
               </Text>
             ) : null}
             {onComplete ? (
-              <ActionButton
-                onPress={onComplete}
-                variant="outline"
-                foregroundColor={isMarketDay ? palette.ink : undefined}
-                className={
-                  isMarketDay
-                    ? "border-market-line bg-market-field active:bg-market-line"
-                    : undefined
-                }
-              >
+              <ActionButton onPress={onComplete} variant="outline">
                 Done
               </ActionButton>
             ) : null}
@@ -536,7 +476,7 @@ export function CatalogItemsContent({
         }
         renderItem={({ item, index }) => (
           <RevealItem active={revealRows} index={index}>
-            <Row
+            <ClassicCatalogRow
               item={item}
               index={index}
               last={index === rows.length - 1}
@@ -565,27 +505,17 @@ export function CatalogItemsContent({
       {showBottomSearch ? (
         <BottomSearchFooter
           accessibilityLabel="Search catalog items"
-          alwaysShowSearch={isMarketDay || query.length > 0}
-          bottomOffset={footerOffset}
+          alwaysShowSearch={query.length > 0}
           hidden={scrollHide.hidden}
           onHeightChange={setFooterHeight}
           maxLength={160}
-          layout={isMarketDay ? "inline" : "stacked"}
           onChangeText={setQuery}
           placeholder="Find item, type, or unit"
           totalCount={totalCount}
           value={query}
-          variant={isMarketDay ? "market-day" : "default"}
-        >
-          {isMarketDay && canEdit ? (
-            <MarketDayCatalogAddButton
-              disabled={isOffline || !canEdit}
-              onPress={openAdd}
-            />
-          ) : null}
-        </BottomSearchFooter>
+        />
       ) : null}
-      {canEdit && !isMarketDay && !showFirstItemGate ? (
+      {canEdit && !showFirstItemGate ? (
         <ListCreateFab
           tone="gold"
           accessibilityLabel="Add catalog item"
@@ -611,28 +541,22 @@ export function CatalogItemsContent({
       >
         <BottomSheetScrollView keyboardShouldPersistTaps="handled">
           <View className="gap-3 px-5 pb-6">
-            <Text
-              className={
-                isMarketDay
-                  ? "text-sm text-market-muted-ink"
-                  : "text-[13px] text-muted-foreground"
-              }
-            >
+            <Text className="text-[13px] text-muted-foreground">
               What are you adding?
             </Text>
-            <Choices
+            <ClassicCatalogChoices
               disabled={isOffline || !canEdit}
               onAddProduct={() => chooseAdd("product")}
               onAddService={() => chooseAdd("service")}
             />
             {isOffline ? (
-              <Text className="text-xs text-market-muted-ink">
+              <Text className="text-xs text-muted-foreground">
                 Reconnect to add an item.
               </Text>
             ) : null}
           </View>
         </BottomSheetScrollView>
       </Modal>
-    </Frame>
+    </ClassicCatalogFrame>
   )
 }

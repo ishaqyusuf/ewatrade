@@ -37,7 +37,6 @@ import { stackTransitions } from "@/lib/screen-transitions"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
 import { initMobileObservability } from "@/observability/sentry"
-import { hydrateMobileDesign } from "@/store/mobile-design-store"
 import {
   pendingOfflineCommands,
   useOfflineCommandStore,
@@ -87,14 +86,12 @@ function RootLayout() {
 
   useEffect(() => {
     let mounted = true
-    void Promise.all([
-      getThemeOverride()
-        .then(applyThemeOverride)
-        .catch(() => applyThemeOverride("system")),
-      hydrateMobileDesign(),
-    ]).finally(() => {
-      if (mounted) setThemeReady(true)
-    })
+    void getThemeOverride()
+      .then(applyThemeOverride)
+      .catch(() => applyThemeOverride("system"))
+      .finally(() => {
+        if (mounted) setThemeReady(true)
+      })
     return () => {
       mounted = false
     }

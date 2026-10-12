@@ -1,5 +1,4 @@
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
-import * as Market from "@/components/mobile/appearances/market-day/catalog-setup"
 import { SetupCheckboxRow } from "@/components/mobile/setup-flow"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
@@ -11,14 +10,10 @@ import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { getCatalogOptionValueHint } from "@ewatrade/utils/business-catalog-guidance"
 import { Text as NativeText, TextInput, View } from "react-native"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogVariantDraft } from "./catalog-variant-model"
 import type { CatalogSetupModel } from "./use-catalog-setup"
 
-export function CatalogSetupOptions({
-  model,
-  market,
-}: { model: CatalogSetupModel; market: boolean }) {
+export function CatalogSetupOptions({ model }: { model: CatalogSetupModel }) {
   const {
     kind,
     formGuidance,
@@ -37,7 +32,7 @@ export function CatalogSetupOptions({
     ProductFirstOptionAction,
     ProductFirstOptionValueAction,
     ProductUseOnePriceAction,
-  } = market ? Market : Classic
+  } = Classic
   if (!kind) return null
   return (
     <>
@@ -51,12 +46,7 @@ export function CatalogSetupOptions({
       ) : null}
 
       {showAdvanced ? (
-        <View
-          className={catalogSetupClassName(
-            "mt-3 gap-5 border-t border-border pt-7",
-            market,
-          )}
-        >
+        <View className="mt-3 gap-5 border-t border-border pt-7">
           {kind === "service" ? (
             <ServiceChoicesSectionHeader
               helperText={formGuidance.options.helperText}
@@ -70,17 +60,10 @@ export function CatalogSetupOptions({
             />
           )}
 
-          <View
-            className={catalogSetupClassName("border-t border-border", market)}
-          >
+          <View className="border-t border-border">
             {optionGroups.length === 0 ? (
               kind === "service" ? (
-                <Text
-                  className={catalogSetupClassName(
-                    "border-b border-border py-5 text-sm text-muted-foreground",
-                    market,
-                  )}
-                >
+                <Text className="border-b border-border py-5 text-sm text-muted-foreground">
                   {formGuidance.options.helperText}
                 </Text>
               ) : (
@@ -92,38 +75,15 @@ export function CatalogSetupOptions({
             ) : null}
             {optionGroups.map((group, index) => (
               <View
-                className={catalogSetupClassName(
-                  "gap-3 border-b border-border py-4",
-                  market,
-                )}
+                className="gap-3 border-b border-border py-4"
                 key={group.id}
               >
-                <View
-                  className={catalogSetupClassName(
-                    "flex-row items-center gap-3",
-                    market,
-                  )}
-                >
-                  <View
-                    className={catalogSetupClassName(
-                      "min-w-0 flex-1 gap-0.5",
-                      market,
-                    )}
-                  >
-                    <Text
-                      className={catalogSetupClassName(
-                        "text-base font-extrabold text-foreground",
-                        market,
-                      )}
-                    >
+                <View className="flex-row items-center gap-3">
+                  <View className="min-w-0 flex-1 gap-0.5">
+                    <Text className="text-base font-extrabold text-foreground">
                       {group.name || `Option ${index + 1}`}
                     </Text>
-                    <Text
-                      className={catalogSetupClassName(
-                        "text-xs text-muted-foreground",
-                        market,
-                      )}
-                    >
+                    <Text className="text-xs text-muted-foreground">
                       {group.values.length}{" "}
                       {kind === "service"
                         ? group.values.length === 1
@@ -137,10 +97,7 @@ export function CatalogSetupOptions({
                   {optionGroups.length > 1 ? (
                     <Pressable
                       accessibilityLabel={`Remove ${group.name || `option ${index + 1}`}`}
-                      className={catalogSetupClassName(
-                        "min-h-11 min-w-16 items-center justify-center rounded-full px-4 active:bg-destructive/10",
-                        market,
-                      )}
+                      className="min-h-11 min-w-16 items-center justify-center rounded-full px-4 active:bg-destructive/10"
                       haptic
                       onPress={() =>
                         model.requestConfirmation({
@@ -150,33 +107,19 @@ export function CatalogSetupOptions({
                         })
                       }
                     >
-                      <Text
-                        className={catalogSetupClassName(
-                          "text-xs font-bold text-destructive",
-                          market,
-                        )}
-                      >
+                      <Text className="text-xs font-bold text-destructive">
                         Remove
                       </Text>
                     </Pressable>
                   ) : null}
                   <Pressable
                     accessibilityLabel={`Edit ${group.name || `option ${index + 1}`} name`}
-                    className={catalogSetupClassName(
-                      "h-11 w-11 items-center justify-center rounded-full bg-muted",
-                      market,
-                    )}
+                    className="h-11 w-11 items-center justify-center rounded-full bg-muted"
                     haptic
                     onPress={() => openOptionNameEditor(group)}
                     transition
                   >
-                    <Icon
-                      className={catalogSetupClassName(
-                        "size-sm text-foreground",
-                        market,
-                      )}
-                      name="Pencil"
-                    />
+                    <Icon className="size-sm text-foreground" name="Pencil" />
                   </Pressable>
                 </View>
 
@@ -195,42 +138,23 @@ export function CatalogSetupOptions({
                     onAddFirstChoice={() => openVariantValueComposer(group.id)}
                   />
                 ) : (
-                  <View
-                    className={catalogSetupClassName(
-                      "flex-row flex-wrap gap-2",
-                      market,
-                    )}
-                  >
+                  <View className="flex-row flex-wrap gap-2">
                     {group.values.map((value) => (
                       <View
-                        className={catalogSetupClassName(
-                          "min-h-10 flex-row items-center gap-2 rounded-full bg-primary px-3",
-                          market,
-                        )}
+                        className="min-h-10 flex-row items-center gap-2 rounded-full bg-primary px-3"
                         key={value.id}
                       >
-                        <Text
-                          className={catalogSetupClassName(
-                            "text-xs font-bold text-primary-foreground",
-                            market,
-                          )}
-                        >
+                        <Text className="text-xs font-bold text-primary-foreground">
                           {value.label}
                         </Text>
                         <Pressable
                           accessibilityLabel={`Remove ${value.label}`}
-                          className={catalogSetupClassName(
-                            "h-7 w-7 items-center justify-center rounded-full",
-                            market,
-                          )}
+                          className="h-7 w-7 items-center justify-center rounded-full"
                           haptic
                           onPress={() => removeOptionValue(group.id, value.id)}
                         >
                           <Icon
-                            className={catalogSetupClassName(
-                              "size-xs text-primary-foreground",
-                              market,
-                            )}
+                            className="size-xs text-primary-foreground"
                             name="X"
                           />
                         </Pressable>
@@ -238,27 +162,13 @@ export function CatalogSetupOptions({
                     ))}
                     <Pressable
                       accessibilityLabel={`Add values to ${group.name || `option ${index + 1}`}`}
-                      className={catalogSetupClassName(
-                        "min-h-10 flex-row items-center gap-2 rounded-full bg-muted px-3",
-                        market,
-                      )}
+                      className="min-h-10 flex-row items-center gap-2 rounded-full bg-muted px-3"
                       haptic
                       onPress={() => openVariantValueComposer(group.id)}
                       transition
                     >
-                      <Icon
-                        className={catalogSetupClassName(
-                          "size-xs text-foreground",
-                          market,
-                        )}
-                        name="Plus"
-                      />
-                      <Text
-                        className={catalogSetupClassName(
-                          "text-xs font-bold text-foreground",
-                          market,
-                        )}
-                      >
+                      <Icon className="size-xs text-foreground" name="Plus" />
+                      <Text className="text-xs font-bold text-foreground">
                         {kind === "service"
                           ? group.values.length === 0
                             ? "Add first choice"
@@ -281,21 +191,13 @@ export function CatalogSetupOptions({
           ) : (
             <Pressable
               accessibilityLabel="Remove all service choices"
-              className={catalogSetupClassName(
-                "-mx-2 min-h-16 flex-row items-center gap-3 rounded-2xl px-3 py-3 active:bg-destructive/10",
-                market,
-              )}
+              className="-mx-2 min-h-16 flex-row items-center gap-3 rounded-2xl px-3 py-3 active:bg-destructive/10"
               haptic
               onPress={() =>
                 model.requestConfirmation({ kind: "remove-options" })
               }
             >
-              <Text
-                className={catalogSetupClassName(
-                  "text-xs font-extrabold text-destructive",
-                  market,
-                )}
-              >
+              <Text className="text-xs font-extrabold text-destructive">
                 Remove all service choices
               </Text>
             </Pressable>

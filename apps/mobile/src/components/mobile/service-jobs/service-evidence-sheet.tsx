@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react"
 import { Keyboard, useWindowDimensions } from "react-native"
 import { ServiceAction } from "./service-action"
 import type { WorkJob } from "./service-jobs-model"
-import { useServiceAppearance } from "./use-service-appearance"
 
 type EvidenceKind = "photo" | "video"
 export function useServiceEvidenceChooser(
@@ -50,7 +49,6 @@ export function ServiceEvidenceSheet({
   allowed: boolean
   scopeChanged: boolean
 }) {
-  const { market } = useServiceAppearance()
   const { height } = useWindowDimensions()
   return (
     <Modal
@@ -63,13 +61,7 @@ export function ServiceEvidenceSheet({
     >
       <BottomSheetScrollView keyboardShouldPersistTaps="handled">
         <View className="gap-4 px-5 pb-6 pt-2">
-          <Text
-            className={
-              market
-                ? "text-sm text-market-muted-ink"
-                : "text-sm text-muted-foreground"
-            }
-          >
+          <Text className="text-sm text-muted-foreground">
             {scopeChanged
               ? "Return to the original account and Store before continuing."
               : `${chooser.job?.orderNumber ?? ""} · Capture a photo or a video up to 60 seconds. The file stays private on this device; capture is not an upload or publication.`}

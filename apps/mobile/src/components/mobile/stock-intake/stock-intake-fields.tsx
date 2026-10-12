@@ -1,42 +1,21 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import * as Classic from "@/components/mobile/appearances/classic/stock-intake"
-import * as Market from "@/components/mobile/appearances/market-day/stock-intake"
+import {
+  StockChoice as Choice,
+  StockRow as Row,
+  StockSection as Section,
+} from "@/components/mobile/appearances/classic/stock-intake"
 import { FormField } from "@/components/mobile/form-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { ExactQuantityStepper } from "./exact-quantity-stepper"
 import { StockCategoriesInput } from "./stock-categories-input"
-import { stockCustodyLabel } from "./stock-intake-model"
 import type { StockIntakeModel } from "./use-stock-intake"
 
-export function StockIntakeFields({
-  model,
-  market,
-}: { model: StockIntakeModel; market: boolean }) {
-  const {
-    StockSection: Section,
-    StockChoice: Choice,
-    StockRow: Row,
-  } = market ? Market : Classic
-  const palette = useMarketDayPalette()
+export function StockIntakeFields({ model }: { model: StockIntakeModel }) {
   const { draft, selected } = model
-  const muted = market ? "text-market-muted-ink" : "text-muted-foreground"
   return (
     <View className="gap-6 pt-6">
-      {selected && market ? (
-        <Section
-          title="Selected balance"
-          description={`${selected.productName} · ${selected.variantName}`}
-        >
-          <Text className={`text-sm ${muted}`}>
-            {selected.inventoryUnitName} ·{" "}
-            {stockCustodyLabel(selected, model.people)} · Revision{" "}
-            {selected.revision}
-          </Text>
-        </Section>
-      ) : null}
       {draft.mode === "adjustment" ? (
         <Section title="Adjustment direction">
           <View
@@ -81,14 +60,16 @@ export function StockIntakeFields({
             <View className="gap-3">
               <FormField
                 label="Find team member"
-                variant={market ? "market-search" : "search"}
+                variant="search"
                 value={model.personQuery}
                 maxLength={160}
                 onChangeText={model.setPersonQuery}
                 editable={!model.locked}
               />
               {model.peopleLoading ? (
-                <Text className={muted}>Loading team members…</Text>
+                <Text className="text-muted-foreground">
+                  Loading team members…
+                </Text>
               ) : model.peopleError ? (
                 <StatusBanner
                   tone="destructive"
@@ -114,21 +95,19 @@ export function StockIntakeFields({
                   ))}
                 </View>
               ) : (
-                <Text className={muted}>No matching team members.</Text>
+                <Text className="text-muted-foreground">
+                  No matching team members.
+                </Text>
               )}
               {model.personPageCount > 1 ? (
                 <View className="gap-2">
-                  <Text className={muted}>
+                  <Text className="text-muted-foreground">
                     Team page {model.personPage + 1} of {model.personPageCount}
                   </Text>
                   <ActionButton
                     variant="outline"
                     disabled={model.personPage === 0 || model.locked}
                     onPress={() => model.setPersonPage(model.personPage - 1)}
-                    foregroundColor={market ? palette.ink : undefined}
-                    className={
-                      market ? "border-market-line bg-market-field" : undefined
-                    }
                   >
                     Previous members
                   </ActionButton>
@@ -139,17 +118,13 @@ export function StockIntakeFields({
                       model.locked
                     }
                     onPress={() => model.setPersonPage(model.personPage + 1)}
-                    foregroundColor={market ? palette.ink : undefined}
-                    className={
-                      market ? "border-market-line bg-market-field" : undefined
-                    }
                   >
                     Next members
                   </ActionButton>
                 </View>
               ) : null}
               {draft.targetCustodyReferenceId ? (
-                <Text className={`text-xs ${muted}`}>
+                <Text className="text-xs text-muted-foreground">
                   Selected:{" "}
                   {model.people.find(
                     (person) => person.id === draft.targetCustodyReferenceId,
@@ -168,44 +143,29 @@ export function StockIntakeFields({
             : "Select a balance before entering its quantity."
         }
       >
-        {!market ? (
-          <View className="gap-2 rounded-[20px] bg-card p-4 shadow-sm">
-            <ExactQuantityStepper
-              label={
-                draft.mode === "count"
-                  ? "Counted on hand"
-                  : draft.mode === "receipt"
-                    ? "Quantity received"
-                    : draft.mode === "adjustment"
-                      ? "Quantity to adjust"
-                      : "Quantity to move"
-              }
-              value={draft.quantity}
-              onChange={(quantity) => model.edit({ quantity })}
-              disabled={model.locked || !selected}
-            />
-            {selected ? (
-              <Text className="text-center text-xs text-muted-foreground">
-                In {selected.inventoryUnitName}
-              </Text>
-            ) : null}
-          </View>
-        ) : (
-          <FormField
-            label={draft.mode === "count" ? "Observed quantity" : "Quantity"}
-            keyboardType="decimal-pad"
-            maxLength={40}
-            variant="filled"
-            value={draft.quantity}
-            editable={!model.locked && Boolean(selected)}
-            onChangeText={(quantity) => model.edit({ quantity })}
-            placeholder={
-              selected ? `In ${selected.inventoryUnitName}` : "Choose a balance"
+        <View className="gap-2 rounded-[20px] bg-card p-4 shadow-sm">
+          <ExactQuantityStepper
+            label={
+              draft.mode === "count"
+                ? "Counted on hand"
+                : draft.mode === "receipt"
+                  ? "Quantity received"
+                  : draft.mode === "adjustment"
+                    ? "Quantity to adjust"
+                    : "Quantity to move"
             }
+            value={draft.quantity}
+            onChange={(quantity) => model.edit({ quantity })}
+            disabled={model.locked || !selected}
           />
-        )}
+          {selected ? (
+            <Text className="text-center text-xs text-muted-foreground">
+              In {selected.inventoryUnitName}
+            </Text>
+          ) : null}
+        </View>
         {draft.mode === "count" ? (
-          <Text className={`text-xs ${muted}`}>
+          <Text className="text-xs text-muted-foreground">
             Count sets the observed quantity, not an additional receipt. The
             current API requires a positive observation.
           </Text>
@@ -215,7 +175,6 @@ export function StockIntakeFields({
             value={draft.categories}
             input={draft.categoryInput}
             disabled={model.locked}
-            market={market}
             onChange={(categories) => model.edit({ categories })}
             onInputChange={(categoryInput) => model.edit({ categoryInput })}
           />

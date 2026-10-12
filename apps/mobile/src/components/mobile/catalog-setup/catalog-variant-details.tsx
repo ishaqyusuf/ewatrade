@@ -1,22 +1,17 @@
-import { BarcodeField } from "@/components/mobile/barcode-field"
-import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { View } from "react-native"
-import { catalogSetupClassName } from "./catalog-setup-presentation"
 import type { CatalogVariantManagerProps } from "./catalog-variant-model"
 import type { CatalogVariantsModel } from "./use-catalog-variants"
 
 export function CatalogVariantDetails({
   model,
-  market,
   ...props
 }: CatalogVariantManagerProps & {
   model: CatalogVariantsModel
-  market: boolean
 }) {
   const { editor, updateEditor, updateEditorUnitPrice, collapseEditor } = model
   const { kind, currencyCode, units, stores, optionPricingOnly = false } = props
@@ -28,66 +23,28 @@ export function CatalogVariantDetails({
 
   if (!editor) return null
   return (
-    <View className={catalogSetupClassName("gap-5", market)}>
+    <View className="gap-5">
       {kind === "product" ? (
-        <Text
-          className={catalogSetupClassName(
-            "text-sm [-rn-line-height:24] text-muted-foreground",
-            market,
-          )}
-        >
-          {market
-            ? "Optional customer image, inventory codes, and Store availability."
-            : "Choices use the item’s image. Choose where this choice is available."}
+        <Text className="text-sm [-rn-line-height:24] text-muted-foreground">
+          Choices use the item’s image. Choose where this choice is available.
         </Text>
       ) : (
-        <View className={catalogSetupClassName("gap-1", market)}>
-          <Text
-            className={catalogSetupClassName(
-              "text-lg font-extrabold text-foreground",
-              market,
-            )}
-          >
+        <View className="gap-1">
+          <Text className="text-lg font-extrabold text-foreground">
             More details
           </Text>
-          <Text
-            className={catalogSetupClassName(
-              "text-sm [-rn-line-height:24] text-muted-foreground",
-              market,
-            )}
-          >
-            {market
-              ? "Optional customer-facing media and where this choice can be requested."
-              : "Choices use the service image. Choose where this choice can be requested."}
+          <Text className="text-sm [-rn-line-height:24] text-muted-foreground">
+            Choices use the service image. Choose where this choice can be
+            requested.
           </Text>
         </View>
       )}
       {editorUnit ? (
-        <Text
-          className={catalogSetupClassName(
-            "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-            market,
-          )}
-        >
+        <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
           Full option combination settings
         </Text>
       ) : null}
-      {market ? (
-        <FormField
-          inputClassName="bg-market-field text-market-ink"
-          autoCapitalize="none"
-          autoCorrect={false}
-          inputMode="url"
-          keyboardType="url"
-          helper="Use a secure image link customers can open."
-          label="Customer image link"
-          maxLength={2000}
-          leadingIcon="Globe"
-          onChangeText={(imageUrl) => updateEditor({ imageUrl })}
-          placeholder="https://example.com/image.jpg"
-          value={editor.draft.imageUrl}
-        />
-      ) : editor.draft.imageUrl.trim() ? (
+      {editor.draft.imageUrl.trim() ? (
         <View className="gap-3">
           <Text className="text-sm text-muted-foreground">
             Remove the older image link to use the image selected in Images.
@@ -104,89 +61,19 @@ export function CatalogVariantDetails({
         </View>
       ) : null}
 
-      {kind === "product" && market ? (
-        <View className={catalogSetupClassName("gap-3", market)}>
-          <View className={catalogSetupClassName("gap-1", market)}>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-                market,
-              )}
-            >
-              Inventory codes
-            </Text>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs [-rn-line-height:20] text-muted-foreground",
-                market,
-              )}
-            >
-              Optional codes for finding and scanning this exact combination.
-            </Text>
-          </View>
-          <View
-            className={catalogSetupClassName(
-              largeTextLayout ? "gap-3" : "flex-row gap-3",
-              market,
-            )}
-          >
-            <FormField
-              inputClassName={
-                market ? "bg-market-field text-market-ink" : undefined
-              }
-              autoCapitalize="characters"
-              containerClassName={
-                largeTextLayout ? undefined : "min-w-0 flex-1"
-              }
-              label="SKU"
-              maxLength={120}
-              onChangeText={(sku) => updateEditor({ sku })}
-              placeholder="SKU"
-              value={editor.draft.sku}
-            />
-            <BarcodeField
-              inputClassName={
-                market ? "bg-market-field text-market-ink" : undefined
-              }
-              containerClassName={
-                largeTextLayout ? undefined : "min-w-0 flex-1"
-              }
-              label="Barcode"
-              maxLength={120}
-              onChangeText={(barcode) => updateEditor({ barcode })}
-              placeholder="Barcode"
-              value={editor.draft.barcode}
-            />
-          </View>
-        </View>
-      ) : null}
-
       {kind === "product" && units.length > 0 ? (
-        <View className={catalogSetupClassName("gap-4", market)}>
-          <View className={catalogSetupClassName("gap-1", market)}>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-                market,
-              )}
-            >
+        <View className="gap-4">
+          <View className="gap-1">
+            <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
               Prices by unit
             </Text>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs [-rn-line-height:20] text-muted-foreground",
-                market,
-              )}
-            >
+            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
               Each unit keeps its own price. Leave blank only when that unit has
               a default price.
             </Text>
           </View>
           {units.map((unit) => (
             <MoneyField
-              inputClassName={
-                market ? "bg-market-field text-market-ink" : undefined
-              }
               currencyCode={currencyCode}
               helper={
                 optionPricingOnly
@@ -208,40 +95,27 @@ export function CatalogVariantDetails({
       ) : null}
 
       {stores.length > 0 ? (
-        <View className={catalogSetupClassName("gap-3", market)}>
-          <View className={catalogSetupClassName("gap-1", market)}>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground",
-                market,
-              )}
-            >
+        <View className="gap-3">
+          <View className="gap-1">
+            <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
               Availability
             </Text>
-            <Text
-              className={catalogSetupClassName(
-                "text-xs [-rn-line-height:20] text-muted-foreground",
-                market,
-              )}
-            >
+            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
               Choose where this choice is available.
             </Text>
           </View>
-          <View
-            className={catalogSetupClassName("border-y border-border", market)}
-          >
+          <View className="border-y border-border">
             {stores.map((store) => {
               const available = editor.draft.storeIds.includes(store.id)
               return (
                 <Pressable
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: available }}
-                  className={catalogSetupClassName(
+                  className={
                     available
                       ? "min-h-16 flex-row items-center gap-3 border-b border-border bg-muted px-3 py-3 last:border-b-0"
-                      : "min-h-16 flex-row items-center gap-3 border-b border-border px-3 py-3 last:border-b-0",
-                    market,
-                  )}
+                      : "min-h-16 flex-row items-center gap-3 border-b border-border px-3 py-3 last:border-b-0"
+                  }
                   key={store.id}
                   onPress={() =>
                     updateEditor({
@@ -253,42 +127,22 @@ export function CatalogVariantDetails({
                     })
                   }
                 >
-                  <View
-                    className={catalogSetupClassName(
-                      "h-10 w-10 items-center justify-center rounded-full bg-muted",
-                      market,
-                    )}
-                  >
-                    <Icon
-                      className={catalogSetupClassName(
-                        "size-sm text-primary",
-                        market,
-                      )}
-                      name="Building2"
-                    />
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-muted">
+                    <Icon className="size-sm text-primary" name="Building2" />
                   </View>
-                  <Text
-                    className={catalogSetupClassName(
-                      "min-w-0 flex-1 font-bold text-foreground",
-                      market,
-                    )}
-                  >
+                  <Text className="min-w-0 flex-1 font-bold text-foreground">
                     {store.name}
                   </Text>
                   <View
-                    className={catalogSetupClassName(
+                    className={
                       available
                         ? "h-7 w-7 items-center justify-center rounded-full bg-primary"
-                        : "h-7 w-7 rounded-full border border-border",
-                      market,
-                    )}
+                        : "h-7 w-7 rounded-full border border-border"
+                    }
                   >
                     {available ? (
                       <Icon
-                        className={catalogSetupClassName(
-                          "size-xs text-primary-foreground",
-                          market,
-                        )}
+                        className="size-xs text-primary-foreground"
                         name="Check"
                       />
                     ) : null}
@@ -306,59 +160,39 @@ export function CatalogVariantDetails({
             ? "Back to stock, price, and description"
             : "Back to pricing and description"
         }
-        className={catalogSetupClassName(
+        className={
           kind === "product"
             ? "-mx-2 min-h-16 flex-row items-center gap-3 border-y border-border px-4 py-3 active:bg-muted"
             : largeTextLayout
               ? "-mx-2 min-h-16 flex-row items-start gap-3 border-y border-border px-3 py-3 pr-3"
-              : "-mx-2 min-h-16 flex-row items-center gap-3 border-y border-border px-3 py-3 pr-3",
-          market,
-        )}
+              : "-mx-2 min-h-16 flex-row items-center gap-3 border-y border-border px-3 py-3 pr-3"
+        }
         haptic
         onPress={collapseEditor}
         transition
       >
         <Icon
-          className={catalogSetupClassName(
+          className={
             largeTextLayout
               ? "mt-1 size-xs text-muted-foreground"
-              : "size-xs text-muted-foreground",
-            market,
-          )}
+              : "size-xs text-muted-foreground"
+          }
           name="ChevronLeft"
         />
-        <View
-          className={catalogSetupClassName("min-w-0 flex-1 gap-0.5", market)}
-        >
-          <Text
-            className={catalogSetupClassName(
-              "font-bold text-foreground",
-              market,
-            )}
-          >
+        <View className="min-w-0 flex-1 gap-0.5">
+          <Text className="font-bold text-foreground">
             {kind === "product"
               ? "Stock, price, and description"
               : "Pricing and description"}
           </Text>
-          <Text
-            className={catalogSetupClassName(
-              "text-xs [-rn-line-height:20] text-muted-foreground",
-              market,
-            )}
-          >
+          <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
             {kind === "product"
               ? `Return to the main ${editorTitle || "combination"} settings.`
               : "Return to the main choice settings."}
           </Text>
         </View>
         {kind === "product" ? (
-          <Icon
-            className={catalogSetupClassName(
-              "size-xs text-muted-foreground",
-              market,
-            )}
-            name="ChevronRight"
-          />
+          <Icon className="size-xs text-muted-foreground" name="ChevronRight" />
         ) : null}
       </Pressable>
     </View>

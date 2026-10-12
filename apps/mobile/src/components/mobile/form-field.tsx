@@ -4,7 +4,6 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { COMPACT_CONTROL_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import type { ComponentProps, ReactNode } from "react"
@@ -30,8 +29,6 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
     | "green-gate"
     | "filled"
     | "line"
-    | "market"
-    | "market-search"
     | "search"
     /** Green Till list search: borderless card field, 46 tall. */
     | "till-search"
@@ -58,13 +55,9 @@ export function FormField({
 }: FormFieldProps) {
   const isAuthVariant = variant === "auth"
   const isGreenGate = variant === "green-gate"
-  const isMarketSearchVariant = variant === "market-search"
-  const isMarketVariant = variant === "market"
   const isTillSearch = variant === "till-search"
-  const isSearchVariant =
-    variant === "search" || isMarketSearchVariant || isTillSearch
+  const isSearchVariant = variant === "search" || isTillSearch
   const colors = useColors()
-  const marketDay = useMarketDayPalette()
   const largeTextLayout = useLargeTextLayout()
   const [isFocused, setIsFocused] = useState(false)
   const activeBorderColor = error
@@ -87,13 +80,9 @@ export function FormField({
     "size-sm",
     error
       ? "text-destructive"
-      : isMarketVariant
-        ? isFocused
-          ? "text-market-accent-ink"
-          : "text-market-muted-ink"
-        : isFocused && !isSearchVariant
-          ? "text-primary"
-          : "text-muted-foreground",
+      : isFocused && !isSearchVariant
+        ? "text-primary"
+        : "text-muted-foreground",
   )
   const shouldShowLabel =
     !isSearchVariant && (!isAuthVariant || largeTextLayout)
@@ -131,13 +120,9 @@ export function FormField({
                 (largeTextLayout ? "leading-7" : "leading-[18px]"),
               error
                 ? "text-destructive"
-                : isMarketVariant
-                  ? isFocused
-                    ? "text-market-accent-ink"
-                    : "text-market-muted-ink"
-                  : isFocused
-                    ? "text-primary"
-                    : "text-muted-foreground",
+                : isFocused
+                  ? "text-primary"
+                  : "text-muted-foreground",
             )}
             maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}
           >
@@ -151,13 +136,7 @@ export function FormField({
               haptic
               onPress={onActionPress}
             >
-              <Text
-                className={
-                  isMarketVariant
-                    ? "text-xs font-bold text-market-accent-ink"
-                    : "text-xs font-bold text-primary"
-                }
-              >
+              <Text className="text-xs font-bold text-primary">
                 {actionLabel}
               </Text>
             </Pressable>
@@ -167,41 +146,15 @@ export function FormField({
       <View
         style={{
           alignItems: isMultiline ? "flex-start" : "center",
-          backgroundColor:
-            isMarketSearchVariant || isMarketVariant
-              ? marketDay.field
-              : isTillSearch
-                ? colors.card
-                : isSearchVariant || isGreenGate
-                  ? colors.muted
-                  : colors.card,
-          borderColor: isMarketVariant
-            ? error
-              ? colors.destructive
-              : isFocused
-                ? marketDay.accentInk
-                : marketDay.line
-            : isMarketSearchVariant
-              ? marketDay.ink
-              : activeBorderColor,
-          borderRadius:
-            isMarketSearchVariant || isMarketVariant
-              ? 16
-              : isGreenGate || isTillSearch
-                ? 14
-                : 12,
-          borderWidth: isMarketSearchVariant
-            ? 2
-            : isSearchVariant
-              ? 0
-              : isFocused || error
-                ? 1.5
-                : 1,
-          boxShadow: isMarketSearchVariant
-            ? `5px 5px 0 ${marketDay.marigold}`
-            : isTillSearch
-              ? "0 1px 2px rgba(0, 0, 0, 0.06)"
-              : undefined,
+          backgroundColor: isTillSearch
+            ? colors.card
+            : isSearchVariant || isGreenGate
+              ? colors.muted
+              : colors.card,
+          borderColor: activeBorderColor,
+          borderRadius: isGreenGate || isTillSearch ? 14 : 12,
+          borderWidth: isSearchVariant ? 0 : isFocused || error ? 1.5 : 1,
+          boxShadow: isTillSearch ? "0 1px 2px rgba(0, 0, 0, 0.06)" : undefined,
           flexDirection: "row",
           gap: 10,
           minHeight: isMultiline
@@ -247,23 +200,16 @@ export function FormField({
                       : "h-[48px] flex-1 border-0 bg-transparent px-0",
                   inputClassName,
                   isGreenGate && "text-[15px] font-semibold",
-                  isMarketVariant && "text-market-ink",
                 ),
               })}
           expand
           unstyled
           {...sharedInputProps}
-          foregroundColor={
-            isMarketVariant ? marketDay.ink : inputProps.foregroundColor
-          }
+          foregroundColor={inputProps.foregroundColor}
           placeholderTextColor={
-            inputProps.placeholderTextColor ??
-            (isMarketVariant ? marketDay.mutedInk : colors.mutedForeground)
+            inputProps.placeholderTextColor ?? colors.mutedForeground
           }
-          selectionColor={
-            inputProps.selectionColor ??
-            (isMarketVariant ? marketDay.accentInk : colors.primary)
-          }
+          selectionColor={inputProps.selectionColor ?? colors.primary}
           numberOfLines={isMultiline ? inputProps.numberOfLines : 1}
           {...(embeddedStyle ? { style: embeddedStyle } : {})}
         />
@@ -274,15 +220,7 @@ export function FormField({
       {error ? (
         <Text className="text-xs font-medium text-destructive">{error}</Text>
       ) : helper ? (
-        <Text
-          className={
-            isMarketVariant
-              ? "text-xs text-market-muted-ink"
-              : "text-xs text-muted-foreground"
-          }
-        >
-          {helper}
-        </Text>
+        <Text className="text-xs text-muted-foreground">{helper}</Text>
       ) : null}
     </View>
   )

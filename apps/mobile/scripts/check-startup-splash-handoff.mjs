@@ -13,10 +13,6 @@ const splashSurface = readFileSync(
   join(mobileDir, "src/components/mobile/startup-splash.tsx"),
   "utf8",
 )
-const marketDayTheme = readFileSync(
-  join(mobileDir, "src/lib/market-day-theme.ts"),
-  "utf8",
-)
 const gatePath = join(
   mobileDir,
   "src/components/mobile/startup-splash-gate.tsx",
@@ -72,13 +68,6 @@ if (indexRoute.includes("MINIMUM_STARTUP_SPLASH_MS")) {
   )
 }
 
-const marketDaySplash = readFileSync(
-  join(
-    mobileDir,
-    "src/components/mobile/appearances/market-day/startup-splash.tsx",
-  ),
-  "utf8",
-)
 const classicSplash = readFileSync(
   join(
     mobileDir,
@@ -86,23 +75,8 @@ const classicSplash = readFileSync(
   ),
   "utf8",
 )
-for (const marker of [
-  "MarketDayStartupSplash",
-  "ClassicStartupSplash",
-  'useMobileDesign("startup-splash")',
-]) {
-  if (!splashSurface.includes(marker))
-    failures.push(`splash router is missing ${marker}`)
-}
-for (const marker of [
-  "<BrandMark",
-  "<BrandWordmark reverse",
-  "Market day, every day",
-  "Opening your market",
-]) {
-  if (!marketDaySplash.includes(marker))
-    failures.push(`Market Day splash is missing ${marker}`)
-}
+if (!splashSurface.includes("ClassicStartupSplash"))
+  failures.push("splash router is missing ClassicStartupSplash")
 for (const marker of [
   "GREEN_TILL_THEME[colorScheme]",
   "<BrandMark",
@@ -120,17 +94,6 @@ if (
   !indexRoute.includes("accessProfile.refetch()")
 ) {
   failures.push("startup access failures must keep a real retry action")
-}
-
-for (const marker of [
-  "BRAND_THEME.light.primary",
-  "BRAND_THEME.light.primaryForeground",
-  "#FFBD3E",
-  "#E94F2F",
-  "#79C8E8",
-]) {
-  if (!marketDayTheme.includes(marker))
-    failures.push(`Market Day palette is missing ${marker}`)
 }
 
 for (const marker of [

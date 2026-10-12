@@ -5,7 +5,7 @@ import { CatalogSetupView } from "./catalog-setup-view"
 import { useCatalogSetup } from "./use-catalog-setup"
 
 export function CatalogSetupWorkflowChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="first-product" />
+  return <MobileWorkflowChrome {...props} />
 }
 
 export function SimpleCatalogItemScreen(props: SimpleCatalogItemScreenProps) {

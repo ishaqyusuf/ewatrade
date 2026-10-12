@@ -17,14 +17,12 @@ export function StockCategoriesInput({
   onChange,
   onInputChange,
   disabled,
-  market,
 }: {
   value: StockCategoryDraft[]
   input: string
   onChange: (value: StockCategoryDraft[]) => void
   onInputChange: (value: string) => void
   disabled: boolean
-  market: boolean
 }) {
   const trpc = useTRPC()
   const [error, setError] = useState<string | undefined>()
@@ -74,10 +72,6 @@ export function StockCategoriesInput({
             normalizeStockCategoryName(category.name).normalizedName,
         ),
     ) ?? []
-  const ink = market ? "text-market-ink" : "text-foreground"
-  const pill = market
-    ? "border-market-line bg-market-canvas"
-    : "border-border bg-muted"
   return (
     <View className="gap-2">
       <View className="flex-row flex-wrap gap-2">
@@ -87,12 +81,12 @@ export function StockCategoriesInput({
             accessibilityRole="button"
             accessibilityLabel={`Remove ${category.name}`}
             disabled={disabled}
-            className={`min-h-11 justify-center rounded-full border px-3 ${pill}`}
+            className="min-h-11 justify-center rounded-full border border-border bg-muted px-3"
             onPress={() =>
               onChange(value.filter((_, position) => position !== index))
             }
           >
-            <Text className={`text-sm ${ink}`}>{category.name} ×</Text>
+            <Text className="text-sm text-foreground">{category.name} ×</Text>
           </Pressable>
         ))}
       </View>
@@ -101,7 +95,7 @@ export function StockCategoriesInput({
         value={input}
         editable={!disabled}
         maxLength={810}
-        variant={market ? "market" : "filled"}
+        variant="filled"
         placeholder="Egg collection, Row 1, Morning collection"
         onChangeText={change}
         onSubmitEditing={() => add()}
@@ -117,12 +111,12 @@ export function StockCategoriesInput({
             accessibilityRole="button"
             accessibilityLabel={`Select ${category.name}`}
             disabled={disabled}
-            className={`min-h-11 justify-center rounded-full border px-3 ${pill}`}
+            className="min-h-11 justify-center rounded-full border border-border bg-muted px-3"
             onPress={() =>
               add({ categoryNameId: category.id, name: category.name })
             }
           >
-            <Text className={`text-sm ${ink}`}>{category.name}</Text>
+            <Text className="text-sm text-foreground">{category.name}</Text>
           </Pressable>
         ))}
       </View>

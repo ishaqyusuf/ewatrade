@@ -15,7 +15,7 @@ type OtpInputProps = {
   length?: number
   onChange: (value: string) => void
   value: string
-  variant?: "default" | "market-tally" | "reference" | "green-till"
+  variant?: "default" | "reference" | "green-till"
   /** Marks every box as wrong after a rejected code (green-till only). */
   invalid?: boolean
 }
@@ -33,7 +33,6 @@ export function OtpInput({
   const largeTextLayout = useLargeTextLayout()
   const refs = useRef<Array<TextInput | null>>([])
   const isReferenceVariant = variant === "reference"
-  const isMarketTallyVariant = variant === "market-tally"
   const isGreenTill = variant === "green-till"
   const digits = Array.from({ length }, (_, index) => value[index] ?? "")
   const cells = digits.map((digit, index) => ({
@@ -72,17 +71,11 @@ export function OtpInput({
   }
 
   return (
-    <View
-      className={
-        isMarketTallyVariant
-          ? "w-full border-2 border-market-ink bg-market-field px-2 py-[9px]"
-          : undefined
-      }
-    >
+    <View>
       <View
         className={cn(
           "flex-row justify-between",
-          isMarketTallyVariant ? "gap-0" : isGreenTill ? "gap-[7px]" : "gap-2",
+          isGreenTill ? "gap-[7px]" : "gap-2",
           className,
         )}
       >
@@ -120,44 +113,23 @@ export function OtpInput({
                           ? "border-primary bg-muted text-foreground"
                           : "border-border bg-muted text-foreground",
                     )
-                  : isMarketTallyVariant
-                    ? cn(
-                        "flex-1 rounded-none border-0 border-b-[5px] bg-market-field text-[22px] font-extrabold tabular-nums text-market-ink [-rn-include-font-padding:false]",
-                        largeTextLayout ? "h-[72px]" : "h-[62px]",
-                        index < length - 1 && "border-r",
-                        isActive
-                          ? "border-market-marigold"
-                          : "border-market-line",
-                      )
-                    : cn(
-                        "rounded-xl border text-foreground",
-                        isReferenceVariant
-                          ? "bg-muted text-[21px] [-rn-include-font-padding:false]"
-                          : "h-14 flex-1 bg-card text-xl",
-                        isReferenceVariant &&
-                          (largeTextLayout ? "h-16 w-12" : "h-14 w-10"),
-                        isReferenceVariant && isActive
-                          ? "border-primary"
-                          : "border-border",
-                      ),
+                  : cn(
+                      "rounded-xl border text-foreground",
+                      isReferenceVariant
+                        ? "bg-muted text-[21px] [-rn-include-font-padding:false]"
+                        : "h-14 flex-1 bg-card text-xl",
+                      isReferenceVariant &&
+                        (largeTextLayout ? "h-16 w-12" : "h-14 w-10"),
+                      isReferenceVariant && isActive
+                        ? "border-primary"
+                        : "border-border",
+                    ),
               )}
               value={digit}
             />
           )
         })}
       </View>
-      {isMarketTallyVariant ? (
-        <>
-          <View
-            pointerEvents="none"
-            className="absolute -left-[11px] top-1/2 -mt-[9px] size-[18px] rounded-full bg-market-canvas"
-          />
-          <View
-            pointerEvents="none"
-            className="absolute -right-[11px] top-1/2 -mt-[9px] size-[18px] rounded-full bg-market-canvas"
-          />
-        </>
-      ) : null}
     </View>
   )
 }

@@ -1,5 +1,5 @@
 import type { MobileAppShell } from "@/components/mobile/app-shell"
-import type { ComponentProps, ReactNode } from "react"
+import type { ComponentProps } from "react"
 
 export type DashboardScreenProps = Pick<
   ComponentProps<typeof MobileAppShell>,
@@ -60,29 +60,3 @@ export type DashboardSectionProps = {
   onActionPress?: () => void
   title: string
 }
-
-export type DashboardEmptyOrdersProps = {
-  actionDisabled?: boolean
-  actionLabel?: string
-  message: string
-  onActionPress?: () => void
-}
-
-export type SalesRepOverviewProps = {
-  catalogFactDetail: string
-  catalogFactValue: string
-  onCloseoutPress: () => void
-  onCustomerBookPress?: () => void
-  onStartSalePress: () => void
-  onSyncPress: () => void
-  readinessLabel: string
-  recentOrderCount: string
-  recentOrderValue: string
-  saleActionDetail: string
-  saleActionDisabled: boolean
-  saleActionLabel: string
-  syncLabel: string
-  syncTone: "attention" | "ready"
-}
-
-export type SalesRepSectionProps = { children: ReactNode; title: string }

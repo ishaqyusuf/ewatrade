@@ -4,10 +4,6 @@ import {
   ClassicCloseoutRow,
   signedVariance,
 } from "@/components/mobile/appearances/classic/closeout-screen"
-import {
-  MarketDayCloseoutHeader,
-  MarketDayCloseoutRow,
-} from "@/components/mobile/appearances/market-day/closeout-screen"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
@@ -19,9 +15,6 @@ import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { useMobileDesign } from "@/hooks/use-mobile-design"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
-import { cn } from "@/lib/utils"
 import { VariableContextProvider } from "nativewind"
 import { useState } from "react"
 import type { ScrollViewProps } from "react-native"
@@ -32,22 +25,15 @@ import { CloseoutReviewSheet } from "./closeout-review-sheet"
 import { useCloseout } from "./use-closeout"
 
 export function CloseoutWorkflowChrome(props: WorkflowModalChromeProps) {
-  return <MobileWorkflowChrome {...props} screen="closeout" />
+  return <MobileWorkflowChrome {...props} />
 }
 export function CloseoutContent(props: CloseoutContentProps) {
   const model = useCloseout(props)
-  const appearance = useMobileDesign("closeout")
-  const market = appearance === "market-day"
-  const palette = useMarketDayPalette()
   const [footerHeight, setFooterHeight] = useState(88)
-  const Header = market ? MarketDayCloseoutHeader : ClassicCloseoutHeader
-  const Row = market ? MarketDayCloseoutRow : ClassicCloseoutRow
   const completed = model.phase === "complete"
   return (
     <VariableContextProvider value={{ "--closeout-footer": footerHeight + 24 }}>
-      <View
-        className={cn("flex-1", market ? "bg-market-canvas" : "bg-background")}
-      >
+      <View className="flex-1 bg-background">
         <FlatList
           className="flex-1"
           contentContainerClassName="grow px-[18px] pb-[var(--closeout-footer)]"
@@ -65,7 +51,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
           )}
           ListHeaderComponent={
             <View className="gap-4 pb-4">
-              <Header
+              <ClassicCloseoutHeader
                 attendantName={model.attendantName}
                 loading={model.loading}
                 offline={model.offline}
@@ -145,7 +131,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
                   onUndo={model.undo}
                 />
               ) : null}
-              {!market && model.lines.length > 0 && !completed ? (
+              {model.lines.length > 0 && !completed ? (
                 <View className="-mb-4">
                   <SectionHeader
                     title="What you counted"
@@ -196,7 +182,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
             ) : null
           }
           renderItem={({ item, index }) => (
-            <Row
+            <ClassicCloseoutRow
               line={item}
               index={index}
               last={index === model.lines.length - 1}
@@ -214,18 +200,10 @@ export function CloseoutContent(props: CloseoutContentProps) {
                   multiline
                   maxLength={500}
                   editable={!model.locked}
-                  inputClassName={
-                    market ? "bg-market-field text-market-ink" : undefined
-                  }
                   onChangeText={model.editReason}
                   value={model.reason}
                 />
-                <Text
-                  className={cn(
-                    "text-xs [-rn-line-height:18]",
-                    market ? "text-market-muted-ink" : "text-muted-foreground",
-                  )}
-                >
+                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
                   Expected quantities are prefilled. Check each declaration.
                   Different units are kept separate.
                 </Text>
@@ -235,7 +213,6 @@ export function CloseoutContent(props: CloseoutContentProps) {
         />
         {!completed ? (
           <BottomSearchFooter
-            variant={market ? "market-day" : "default"}
             accessibilityLabel="Closeout actions"
             onHeightChange={setFooterHeight}
             onChangeText={() => undefined}
@@ -248,15 +225,6 @@ export function CloseoutContent(props: CloseoutContentProps) {
               disabled={!model.canReview}
               isLoading={model.pending}
               loadingLabel="Confirming closeout"
-              foregroundColor={market ? palette.onPalm : undefined}
-              disabledForegroundColor={market ? palette.mutedInk : undefined}
-              className={
-                market
-                  ? model.canReview
-                    ? "bg-market-palm active:bg-market-hero-pressed"
-                    : "bg-market-line active:bg-market-line"
-                  : undefined
-              }
               onPress={model.openReview}
               trailingIcon="ArrowRight"
             >
@@ -268,7 +236,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
             </ActionButton>
           </BottomSearchFooter>
         ) : null}
-        <CloseoutReviewSheet model={model} appearance={appearance} />
+        <CloseoutReviewSheet model={model} />
       </View>
     </VariableContextProvider>
   )

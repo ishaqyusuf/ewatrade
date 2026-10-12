@@ -13,7 +13,6 @@ import {
   onboardingLinkConfiguration,
   savePendingOnboarding,
 } from "@/lib/onboarding-continuation-store"
-import { resolveOnboardingMarketDayQaPath } from "@/lib/onboarding-market-day-qa"
 
 let continuationAttempt = 0
 
@@ -41,12 +40,6 @@ export async function redirectSystemPath({
     // Never drop into a different signup session when secure persistence fails.
     return "/continue-onboarding?error=storage"
   }
-  const onboardingMarketDayQaPath = resolveOnboardingMarketDayQaPath(
-    path,
-    __DEV__,
-  )
-  if (onboardingMarketDayQaPath) return onboardingMarketDayQaPath
-
   const qaPath = resolveCustomerConversationQaPath(path, __DEV__)
   if (qaPath) return qaPath
 

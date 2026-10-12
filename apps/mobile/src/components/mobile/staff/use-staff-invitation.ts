@@ -25,7 +25,7 @@ type InvitationContext = {
   onComplete?: () => void
 }
 
-// One command owner for both appearances. The bounded server replay cache is
+// One command owner for the invitation. The bounded server replay cache is
 // not a durable retry contract: an uncertain command is never submitted again.
 export function useStaffInvitation(context: InvitationContext) {
   const trpc = useTRPC()

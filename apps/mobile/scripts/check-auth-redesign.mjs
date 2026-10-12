@@ -12,9 +12,6 @@ const requiredMarkers = [
       "isGreenGate",
       "leadingIcon",
       "trailingIcon",
-      "isMarketSearchVariant",
-      "marketDay.field",
-      "marketDay.marigold",
       "minHeight: isMultiline ? 92 : largeTextLayout ? 64 : 50",
       "numberOfLines={isMultiline ? inputProps.numberOfLines : 1}",
       "accessibilityLabel={inputProps.accessibilityLabel ?? label}",
@@ -60,18 +57,7 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/startup-splash.tsx",
-    markers: ["MarketDayStartupSplash", "ClassicStartupSplash"],
-  },
-  {
-    file: "components/mobile/appearances/market-day/startup-splash.tsx",
-    markers: [
-      "bg-market-palm",
-      "--splash-pulse-size",
-      "bg-market-marigold",
-      "Opening your market",
-      "ẸwáTrade",
-      "text-market-ink",
-    ],
+    markers: ["ClassicStartupSplash"],
   },
   {
     file: "components/mobile/floating-qa-button.tsx",
@@ -86,7 +72,6 @@ const requiredMarkers = [
     markers: [
       "AuthMethodButton",
       "StatusBanner",
-      "Or Continue With",
       '"Continue with Google"',
       "Send login code",
       "Create a business account",
@@ -96,28 +81,12 @@ const requiredMarkers = [
     ],
   },
   {
-    file: "components/mobile/appearances/market-day/login-screen.tsx",
-    markers: [
-      "ẸwáTrade",
-      "Good to see you again.",
-      "Sign in once, then we will open the work or Store conversations",
-    ],
-  },
-  {
     file: "app/no-access.tsx",
-    markers: [
-      "ClassicNoAccessScreen",
-      "Create your business account",
-      "Check again",
-    ],
+    markers: ["ClassicNoAccessScreen"],
   },
   {
     file: "app/onboarding.tsx",
     markers: ["OnboardingScreen", "<OnboardingScreen />"],
-  },
-  {
-    file: "components/mobile/appearances/market-day/onboarding-screen.tsx",
-    markers: ["Get started"],
   },
   {
     file: "app/sign-up.tsx",
@@ -137,7 +106,6 @@ const requiredMarkers = [
     markers: [
       "AuthMethodButton",
       "StatusBanner",
-      "Or Continue With",
       '"Continue with Google"',
       "Send verification code",
       'placeholder="Enter your business name"',
@@ -145,17 +113,6 @@ const requiredMarkers = [
       'placeholder="Enter your email address"',
       "Your business details",
       "Create your owner account",
-      "MarketDaySignUpScreen",
-      "MarketDaySignUpCategories",
-    ],
-  },
-  {
-    file: "components/mobile/appearances/market-day/sign-up-screen.tsx",
-    markers: [
-      "SignUpMarketHeader",
-      "SignUpMarketStall",
-      "canopyScrolledAway",
-      "bg-market-canvas",
     ],
   },
   {
@@ -164,23 +121,7 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/verify-email/verify-email-screen.tsx",
-    markers: [
-      "OtpInput",
-      "OtpKeypad",
-      "MarketDayVerifyEmailScreen",
-      "VerificationResendLine",
-    ],
-  },
-  {
-    file: "components/mobile/appearances/market-day/verify-email-screen.tsx",
-    markers: [
-      "MobileScreen",
-      "Check your inbox.",
-      "Email check • 6 digits",
-      "Enter the market tally we sent to",
-      "Verify and continue",
-      "Use another email",
-    ],
+    markers: ["OtpInput", "OtpKeypad", "VerificationResendLine"],
   },
   {
     file: "components/mobile/verify-email/verification-resend-line.tsx",
@@ -194,7 +135,7 @@ const requiredMarkers = [
       "Delete last digit",
       "Enter digit",
       "haptic",
-      'variant?: "default" | "market-tally"',
+      'variant?: "default" | "green-till"',
     ],
   },
 ]

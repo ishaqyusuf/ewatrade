@@ -6,7 +6,6 @@ import {
   animateDock,
 } from "@/lib/dock-motion"
 import { shouldShowListSearch } from "@/lib/list-pagination"
-import { useMarketDayPalette } from "@/lib/market-day-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
@@ -42,7 +41,7 @@ type BottomSearchFooterProps = {
   totalCount: number
   value: string
   /** action-bar: Green Till card bar with a rounded top for step actions. */
-  variant?: "default" | "market-day" | "action-bar"
+  variant?: "default" | "action-bar"
 }
 
 export function BottomSearchFooter({
@@ -68,7 +67,6 @@ export function BottomSearchFooter({
 }: BottomSearchFooterProps) {
   const insets = useSafeAreaInsets()
   const colors = useColors()
-  const marketDay = useMarketDayPalette()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const paddingBottom = includeSafeArea ? Math.max(insets.bottom, 8) : 8
   const reduceMotion = useReducedMotion()
@@ -133,12 +131,7 @@ export function BottomSearchFooter({
                 borderTopRightRadius: 24,
                 boxShadow: "0 -10px 30px rgba(24, 36, 32, 0.10)",
               }
-            : {
-                backgroundColor:
-                  variant === "market-day"
-                    ? marketDay.canvas
-                    : colors.background,
-              },
+            : { backgroundColor: colors.background },
           slideStyle,
         ]}
       >
@@ -174,9 +167,7 @@ export function BottomSearchFooter({
                   placeholder={placeholder}
                   returnKeyType="search"
                   value={value}
-                  variant={
-                    variant === "market-day" ? "market-search" : "search"
-                  }
+                  variant="search"
                 />
               ) : null}
               {children}
