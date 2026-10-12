@@ -65,7 +65,9 @@ accepted milestone is recorded; it does not assert that no related source exists
 
 Current delivery split: root owns acceptance review, necessary targeted web/mobile checks and screenshots, acceptance bookmarks and serialized main commits. Existing D05/S04/G03 workers finish their current implementation packets, including G03's unfinished central integration, then hand off for review and archive. The next implementation agent receives the twelve pending tickets including reopened A04 through [the implementation instruction prompt](IMPLEMENTATION_HANDOFF.md). No new agent has been dispatched by this document. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending. Historical web-only/deferred snapshots below remain evidence of their original scope.
 
-Latest source checkpoint: [integrated work editors, original global objects and exact assigned workload](runs/2026-10-12-service-work-dashboard-integration.md). Focused checks and affected-source compilation pass; authenticated web/signed acceptance remains pending. No additional ticket accepted.
+Latest verifier checkpoint: [D05 completion source review](runs/2026-10-12-service-work-completion-verifier-review.md). Eight provider-free cases/50 assertions and corrected scoped compilation pass.13 connected cases remain unexecuted/unscheduled; D05 stays partial and unbookmarked. Finished worker handoff is preserved before archive. No additional web or native ticket accepted.
+
+Earlier source checkpoint: [integrated work editors, original global objects and exact assigned workload](runs/2026-10-12-service-work-dashboard-integration.md). Focused checks and affected-source compilation pass; authenticated web/signed acceptance remains pending. No additional ticket accepted.
 
 E05 purchase fact reversal now passes signed rollback/stale refusal,
 full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;

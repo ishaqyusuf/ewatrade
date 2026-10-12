@@ -1,5 +1,7 @@
 # Assistant conversation evaluations
 
+[D05 completion verifier source review](runs/2026-10-12-service-work-completion-verifier-review.md): eight provider-free cases/50 assertions and scoped compilation pass;13 connected cases remain unscheduled, with no parent acceptance.
+
 [Bookmarked 45-ticket status board](TICKETS.md): implementation versus acceptance,
 including pending and deferred work.
 
