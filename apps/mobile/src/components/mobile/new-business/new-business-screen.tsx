@@ -6,6 +6,7 @@ import {
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Text } from "@/components/ui/text"
@@ -75,6 +76,7 @@ export function NewBusinessOnboardingScreen() {
   const limit = useBusinessLimit(!model.local && !model.isOffline)
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const searchFold = useSearchFold(model.profileQuery, model.step === 1)
   const scrollRef = useRef<ScrollView>(null)
   useEffect(() => {
     if (model.error) scrollRef.current?.scrollTo({ y: 0, animated: true })
@@ -91,7 +93,7 @@ export function NewBusinessOnboardingScreen() {
     )
   const header = (
     <View className="gap-6 pb-6 pt-3">
-      <BusinessHeader step={model.step} />
+      <BusinessHeader folded={searchFold.folded} step={model.step} />
       {model.error ? (
         <StatusBanner
           tone={model.status === "uncertain" ? "warning" : "destructive"}
@@ -199,6 +201,7 @@ export function NewBusinessOnboardingScreen() {
           hidden={model.step === 1 && scrollHide.hidden}
           searchVisible={model.step === 1}
           maxLength={160}
+          onFocusChange={searchFold.onFocusChange}
           onHeightChange={setFooterHeight}
           onChangeText={model.setProfileQuery}
           placeholder="Search business types"

@@ -6,6 +6,7 @@ import type {
   BusinessChoiceProps,
   BusinessProfileRowProps,
 } from "@/components/mobile/new-business/new-business-presentation"
+import { SearchFold } from "@/components/mobile/search-fold"
 import { SetupSection } from "@/components/mobile/setup-flow"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -14,13 +15,23 @@ import { View } from "react-native"
 import { SettingsScreen } from "../../settings-screen"
 
 export const BusinessSection = SetupSection
-export function BusinessHeader({ step }: { step: number }) {
+/** `folded` hides the title card while the business type search is in use;
+ * the step bar stays. */
+export function BusinessHeader({
+  folded = false,
+  step,
+}: {
+  folded?: boolean
+  step: number
+}) {
   return (
     <View className="gap-5">
-      <SettingsScreen
-        title={BUSINESS_SETUP_TITLES[step - 1]}
-        sub="A separate workspace with its own catalog, customers, staff and reports."
-      />
+      <SearchFold folded={folded}>
+        <SettingsScreen
+          title={BUSINESS_SETUP_TITLES[step - 1]}
+          sub="A separate workspace with its own catalog, customers, staff and reports."
+        />
+      </SearchFold>
       <View className="flex-row gap-2">
         {BUSINESS_SETUP_STEPS.map((label, index) => (
           <View className="min-w-0 flex-1 gap-2" key={label}>
