@@ -38,6 +38,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier entry reversal signed checks, 12 October 2026](runs/2026-10-12-supplier-entry-reversal-signed.md): all three original source kinds reach signed completion rollback in11.027–11.330s; valid stale approvals refuse in10.554–10.847s with saved facts unchanged. One original proof read per transaction; affected types pass. Persistent action remains planned; saved web acceptance and approval for source visibility/API restart remain pending. E05 partial.
+
 - [Supplier entry reversal source, canonical rollback and editor, 12 October 2026](runs/2026-10-12-supplier-entry-reversal-source.md): strict original-entry/private locked review, eight tests267 assertions and scoped types pass. All three canonical source kinds reverse/read back/replay in9.775–10.328s with forced rollback and unchanged saved facts. Dashboard target/timestamp/acknowledgement pass; signed assistant/full saved web acceptance pending, capability planned, E05 partial.
 
 - [Purchase fact reversal saved web acceptance, 12 October 2026](runs/2026-10-12-purchase-fact-reversal-web.md): real signed ownership13.653s/invoice15.093s completion rollback and stale refusal preserve facts; actual dashboard Edit/re-review/Confirm/Open/Close/reload, exact original journals/history, invoice void/payable1300→0, unchanged goods/stock and concurrent completed recovery pass. Source-available; E05 partial with three canonical procedures pending.

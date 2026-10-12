@@ -36,7 +36,8 @@ export async function verifySupplierSettlementProposalRollback(
     app.payload.action !== "purchase_payment" &&
     app.payload.action !== "supplier_allocation_release" &&
     app.payload.action !== "purchase_payment_reverse" &&
-    app.payload.action !== "purchase_recognition_reverse"
+    app.payload.action !== "purchase_recognition_reverse" &&
+    app.payload.action !== "supplier_entry_reverse"
   )
     throw Error("An exact pending supplier settlement proposal is required")
   const bookId = app.payload.bookId
@@ -79,7 +80,36 @@ export async function verifySupplierSettlementProposalRollback(
     where: { id: bookId, tenantId },
     select: { id: true },
   })
+  const supplierId =
+    app.payload.action === "supplier_entry_reverse"
+      ? (
+          await db.financeSupplierEntry.findFirstOrThrow({
+            where: { id: app.payload.entryId, bookId },
+            select: { supplierId: true },
+          })
+        ).supplierId
+      : app.payload.action === "supplier_advance"
+        ? app.payload.supplierId
+        : null
   const facts = async () => ({
+    supplierHistory:
+      app.payload.action === "supplier_entry_reverse"
+        ? (
+            await db.financeSupplierEntry.findMany({
+              where: { bookId, supplierId: supplierId! },
+              orderBy: { id: "asc" },
+            })
+          ).map((entry) => ({
+            ...entry,
+            amountMinor: entry.amountMinor.toString(),
+          }))
+        : null,
+    supplierLabel: supplierId
+      ? await db.financeSupplierAccount.findFirstOrThrow({
+          where: { id: supplierId, bookId },
+          select: { id: true, name: true, code: true },
+        })
+      : null,
     events: await db.financePurchaseRecognitionEvent.count({
       where: { bookId },
     }),
@@ -215,15 +245,17 @@ export async function verifySupplierSettlementProposalRollback(
                     injected = true
                     expect(write.data.executedResult).toMatchObject({
                       kind:
-                        app.payload.action === "supplier_advance"
+                        app.payload.action === "supplier_advance" ||
+                        app.payload.action === "supplier_entry_reverse"
                           ? "finance_supplier"
                           : app.payload.action ===
                               "purchase_recognition_reverse"
                             ? "finance_purchase_registration"
                             : "finance_purchase_bill",
                       recordId:
-                        app.payload.action === "supplier_advance"
-                          ? app.payload.supplierId
+                        app.payload.action === "supplier_advance" ||
+                        app.payload.action === "supplier_entry_reverse"
+                          ? supplierId
                           : app.payload.action ===
                               "purchase_recognition_reverse"
                             ? app.payload.recognitionId
@@ -359,6 +391,59 @@ export async function verifySupplierSettlementProposalRollback(
               })
               await run(tx)
               throw Error("STALE_PURCHASE_FACT_DID_NOT_REFUSE")
+            }, options)
+        const value = Reflect.get(target, key)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+    })
+    const staleStarted = performance.now()
+    let staleFailure: unknown
+    try {
+      await decideGeneralProposal(
+        { ...ctx, db: changedDb },
+        {
+          proposalId,
+          revision: app.revision,
+          decision: "confirm",
+          approvalToken: app.approvalToken,
+        },
+      )
+    } catch (error) {
+      staleFailure = error
+    }
+    expect(staleFailure).toMatchObject({ code: "CONFLICT" })
+    expect(
+      staleFailure instanceof Error
+        ? staleFailure.message
+        : String(staleFailure),
+    ).toContain("Review again")
+    expect(await facts()).toEqual(before)
+    staleProof = {
+      elapsedMs: performance.now() - staleStarted,
+      savedFactsUnchanged: true,
+    }
+  }
+  if (app.payload.action === "supplier_entry_reverse") {
+    if (!supplierId) throw Error("Exact owning supplier required")
+    const changedDb = new Proxy(db, {
+      get(target, key) {
+        if (key === "$transaction")
+          return <T>(
+            run: (tx: Prisma.TransactionClient) => Promise<T>,
+            options?: Parameters<typeof db.$transaction>[1],
+          ) =>
+            target.$transaction(async (tx) => {
+              const supplier = await tx.financeSupplierAccount.findFirstOrThrow(
+                {
+                  where: { id: supplierId, bookId },
+                },
+              )
+              await tx.financeSupplierAccount.update({
+                where: { id: supplier.id },
+                data: { name: supplier.name + " QA stale review" },
+              })
+              await run(tx)
+              throw Error("STALE_SUPPLIER_ENTRY_DID_NOT_REFUSE")
             }, options)
         const value = Reflect.get(target, key)
         return typeof value === "function" ? value.bind(target) : value
