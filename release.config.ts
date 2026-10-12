@@ -42,6 +42,7 @@ const apiOnly = [
   "ASSISTANT_APPROVAL_SIGNING_KEY",
   "ASSISTANT_VOICE_PUBLISH_SECRET",
   "BLOB_READ_WRITE_TOKEN",
+  "BLOB_STORE_ID", // catalog photo queries in packages/db run only in the API
 ]
 // Each app's Logly project; the others never send to it.
 const loglyMarketing = [
@@ -125,7 +126,6 @@ export default {
           ...notNeeded,
           ...apiOnly,
           "LOGLY_DASHBOARD_PROJECT_KEY",
-          "BLOB_STORE_ID", // catalog photos are read by the API and dashboard
           "ALLOWED_API_ORIGINS", // extra API/auth origins; same-origin pages don't need them
           "BETTER_AUTH_TRUSTED_ORIGINS",
           "NEXT_PUBLIC_PLATFORM_DOMAIN",
