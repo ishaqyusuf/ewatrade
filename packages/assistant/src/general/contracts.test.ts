@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { generalActionSchema, generalActionSummary } from "./contracts"
 import { respondGeneralRehearsal } from "./rehearsal"
+import { canonicalStatedMoneyDraft } from "./stated-money"
 test("price drafts require exact offering and reason, permit zero and reject client authority", () => {
   const draft = {
     action: "product_price_update",
@@ -127,7 +128,9 @@ test("rehearsal is deterministic and does not treat injected record instructions
     const turn = respondGeneralRehearsal([{ role: "user", content }])
     expect(turn.kind === "tool" && turn.input).toMatchObject({ action })
     expect(
-      turn.kind === "tool" && generalActionSchema.safeParse(turn.input).success,
+      turn.kind === "tool" &&
+        generalActionSchema.safeParse(canonicalStatedMoneyDraft(turn.input))
+          .success,
     ).toBe(true)
   }
   expect(
@@ -336,8 +339,8 @@ test("rehearsal drafts typed-price sales and receipt attachments", () => {
     kind: "tool",
     input: {
       action: "order_create",
-      initialPayment: { amountMinor: 250_000, method: "cash" },
-      lines: [{ amountMinor: 250_000, custom: "quick_sale", description: "Fresh fish" }],
+      initialPayment: { amount: "2500", method: "cash" },
+      lines: [{ amount: "2500", custom: "quick_sale", description: "Fresh fish" }],
     },
   })
   const attach = respondGeneralRehearsal([

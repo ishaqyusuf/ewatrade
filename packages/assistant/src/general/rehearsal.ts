@@ -80,14 +80,14 @@ export function respondGeneralRehearsal(
         lines: [
           {
             custom: "quick_sale",
-            amountMinor: minor(typedSale[2]),
+            amount: typedSale[2],
             description: typedSale[1],
           },
         ],
         ...(typedSale[3]
           ? {
               initialPayment: {
-                amountMinor: minor(typedSale[2]),
+                amount: typedSale[2],
                 method: typedSale[3].toLowerCase(),
               },
             }
@@ -375,7 +375,7 @@ export function respondGeneralRehearsal(
           {
             offeringId: itemTotalSale[2],
             quantity: itemTotalSale[1],
-            enteredTotalMinor: minor(itemTotalSale[3]),
+            enteredTotal: itemTotalSale[3],
           },
         ],
       },
@@ -394,7 +394,7 @@ export function respondGeneralRehearsal(
         ...(sale[4] && sale[5]
           ? {
               initialPayment: {
-                amountMinor: minor(sale[4]),
+                amount: sale[4],
                 method: sale[5].toLowerCase(),
               },
             }
@@ -419,7 +419,7 @@ export function respondGeneralRehearsal(
       input: {
         action: "payment_record",
         orderId: payment[1],
-        amountMinor: minor(payment[2]),
+        amount: payment[2],
         method: payment[3].toLowerCase(),
       },
     }

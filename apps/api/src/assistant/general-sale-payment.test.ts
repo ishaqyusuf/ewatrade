@@ -31,7 +31,7 @@ test("initial payment has explicit positive amount/method and no client command 
     ]),
   ).toMatchObject({
     toolName: "draftAction",
-    input: { ...sale, initialPayment: { amountMinor: 150, method: "cash" } },
+    input: { ...sale, initialPayment: { amount: "1.50", method: "cash" } },
   })
 })
 
@@ -69,7 +69,7 @@ test("saved customer rehearsal uses only an explicit ID; snapshot fields remain 
     input: {
       ...sale,
       customerId: "customer-id",
-      initialPayment: { amountMinor: 150, method: "cash" },
+      initialPayment: { amount: "1.50", method: "cash" },
     },
   })
   expect(
@@ -90,7 +90,7 @@ test("item-total rehearsal preserves total rather than multiplying it by quantit
     input: {
       action: "order_create",
       lines: [
-        { offeringId: "offering", quantity: "3", enteredTotalMinor: 175 },
+        { offeringId: "offering", quantity: "3", enteredTotal: "1.75" },
       ],
     },
   })

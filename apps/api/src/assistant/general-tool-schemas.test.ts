@@ -67,3 +67,35 @@ test("draftAction still validates the exact action shape", async () => {
   const bad = await schema.validate?.({ action: "customer_create" })
   expect(bad?.success).toBe(false)
 })
+
+// 12 Oct 2026: "paid 3,000 cash" was drafted as amountMinor 3000 (₦30.00).
+test("draftAction takes stated sale and payment money in major units", async () => {
+  const tools = createGeneralTools(
+    owner,
+    "conversation",
+    () => {},
+    () => {},
+  )
+  const schema = asSchema(tools.draftAction?.inputSchema)
+  const line = {
+    offeringId: "o",
+    quantity: "2",
+    expectedFixedPriceMinor: 240000,
+  }
+  const stated = await schema.validate?.({
+    action: "order_create",
+    lines: [line],
+    initialPayment: { amount: "3,000", method: "cash" },
+  })
+  expect(stated?.success).toBe(true)
+  const minor = await schema.validate?.({
+    action: "order_create",
+    lines: [line],
+    initialPayment: { amountMinor: 3000, method: "cash" },
+  })
+  expect(minor?.success).toBe(false)
+  const json = JSON.stringify(
+    await asSchema(tools.draftAction?.inputSchema).jsonSchema,
+  )
+  expect(json).toContain("Never convert to kobo/cents")
+})

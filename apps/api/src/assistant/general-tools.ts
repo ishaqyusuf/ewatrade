@@ -37,6 +37,10 @@ import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/serv
 import { quoteDecisionAction } from "@ewatrade/assistant/general/quote-decision"
 import { reviewGeneralQuoteDecision } from "./general-quote-decision"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
+import {
+  canonicalStatedMoneyDraft,
+  statedMoneyDraftSchemas,
+} from "@ewatrade/assistant/general/stated-money"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
@@ -285,7 +289,10 @@ export function createGeneralTools(
     canUseCapability(ctx, capability),
   )
   const allowedActions = availableWriteCapabilities.map(
-    (capability) => capability.schema,
+    (capability) =>
+      statedMoneyDraftSchemas[
+        capability.action as keyof typeof statedMoneyDraftSchemas
+      ] ?? capability.schema,
   )
   const availableWriteActions = new Set<string>(
     availableWriteCapabilities.map((capability) => capability.action),
@@ -1804,7 +1811,7 @@ export function createGeneralTools(
           const result = await draftGeneralProposal(
             fresh,
             conversationId,
-            input,
+            canonicalStatedMoneyDraft(input),
           )
           onProposal(result.proposalId)
           return result
