@@ -23,7 +23,25 @@ afterEach(async () => {
 const exactBuildId = "00000000-0000-4000-8000-000000000001"
 const reviewedCommit = "c".repeat(40)
 
-for (const [expectedExitCode, platform, operation, mismatch] of [
+for (const [
+  expectedExitCode,
+  platform,
+  operation,
+  mismatch,
+  validationOnly,
+] of [
+  [0, "android", "build", undefined, true],
+  [1, "android", "build", "api", true],
+  [1, "android", "build", "dirty", true],
+  [1, "android", "build", "dirty_after_login", true],
+  [1, "android", "build", "attachment", true],
+  [1, "android", "build", "auto_submit", true],
+  [1, "android", "build", "validation_duplicate", true],
+  [1, "ios", "build", undefined, true],
+  [1, "android", "build", "preview", true],
+  [1, "android", "build", "dev", true],
+  [1, "android", "submit", undefined, true],
+  [1, "android", "update", undefined, true],
   [0, "android", "build"],
   [23, "android", "build"],
   [0, "android", "build", "dev"],
@@ -78,7 +96,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
   [1, "android", "update", "missing_expected_commit"],
   [1, "android", "update", "dirty_after_login"],
 ] as const) {
-  test(`handles ${platform} ${operation} with expected exit ${expectedExitCode}${mismatch ? ` (${mismatch})` : ""} and isolates EAS authentication`, async () => {
+  test(`handles ${platform} ${operation} with expected exit ${expectedExitCode}${mismatch ? ` (${mismatch})` : ""}${validationOnly ? " (validation only)" : ""} and isolates EAS authentication`, async () => {
     const root = await mkdtemp(path.join(tmpdir(), "ewatrade-eas-test-"))
     runDirs.push(root)
     const cli = path.join(root, "node_modules", "eas-cli")
@@ -203,6 +221,8 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         path.join(root, "scripts", "eas-account-runner.ts"),
         operation,
         development ? "--dev" : preview ? "--preview" : "--prod",
+        ...(validationOnly ? ["--validation-only"] : []),
+        ...(mismatch === "validation_duplicate" ? ["--validation-only"] : []),
         ...(platform !== "android" ? [`--platform=${platform}`] : []),
         ...((operation === "update" ||
           (operation === "build" && !development)) &&
@@ -250,19 +270,23 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         EAS_TEST_AUTH_CAPTURE: authCapturePath,
         EAS_TEST_PREFLIGHT_CAPTURE: preflightCapturePath,
         EAS_TEST_PREFLIGHT_FAIL:
-          mismatch === "attachment" ||
-          mismatch === "preview_attachment" ||
-          mismatch === "preview_quick_attachment"
-            ? "attachment"
-            : mismatch === "teen"
+          mismatch === "api"
+            ? "api"
+            : validationOnly && mismatch === undefined
               ? "teen"
-              : mismatch === "ios_identity"
-                ? "ios-identity"
-                : expectedExitCode === 1 &&
-                    platform === "ios" &&
-                    mismatch === undefined
-                  ? "legal"
-                  : undefined,
+              : mismatch === "attachment" ||
+                  mismatch === "preview_attachment" ||
+                  mismatch === "preview_quick_attachment"
+                ? "attachment"
+                : mismatch === "teen"
+                  ? "teen"
+                  : mismatch === "ios_identity"
+                    ? "ios-identity"
+                    : expectedExitCode === 1 &&
+                        platform === "ios" &&
+                        mismatch === undefined
+                      ? "legal"
+                      : undefined,
         EAS_TEST_DIRTY_AFTER_ATTACHMENT:
           mismatch === "dirty_after_login" ? "1" : undefined,
         EAS_TEST_GIT_REVISION_MISMATCH:
@@ -289,6 +313,19 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
     const exitCode = await proc.exited
     const stderr = await stderrPromise
     expect(exitCode, stderr).toBe(expectedExitCode)
+    if (
+      validationOnly &&
+      (operation !== "build" ||
+        platform !== "android" ||
+        preview ||
+        development ||
+        mismatch === "validation_duplicate")
+    ) {
+      expect(stderr).toContain("--validation-only is available only")
+      for (const file of [capturePath, authCapturePath, preflightCapturePath])
+        await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
+      return
+    }
     if (expectedExitCode === 1 && mismatch?.includes("simulator")) {
       for (const file of [capturePath, authCapturePath, preflightCapturePath])
         await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
@@ -314,13 +351,16 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
           code: "ENOENT",
         })
       } else {
-        const ordinary = preview
-          ? ""
-          : platform === "ios"
-            ? "teen\napi\nlegal\nios-login\nios-identity\n"
-            : "teen\napi\nlegal\n"
+        const ordinary = validationOnly
+          ? "api\n"
+          : preview
+            ? ""
+            : platform === "ios"
+              ? "teen\napi\nlegal\nios-login\nios-identity\n"
+              : "teen\napi\nlegal\n"
         const events =
           mismatch === "ios_identity" ||
+          mismatch === "api" ||
           mismatch === "revision" ||
           mismatch === "dirty"
             ? ordinary
@@ -494,7 +534,7 @@ for (const [expectedExitCode, platform, operation, mismatch] of [
         })
       else
         expect(await readFile(preflightCapturePath, "utf8")).toBe(
-          `${mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
+          `${validationOnly ? "api\n" : mismatch === "preview_testflight" ? "testflight\n" : preview ? "" : platform === "ios" ? "teen\napi\nlegal\nios-login\nios-identity\n" : "teen\napi\nlegal\n"}attachment\n`,
         )
     }
     if (operation === "update") {

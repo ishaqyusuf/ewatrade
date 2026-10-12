@@ -100,6 +100,18 @@ const target = resolveTarget(operation, actionArgs)
 const buildPlatform = resolveBuildPlatform(operation, actionArgs)
 const iosSimulator = actionArgs.includes("--ios-simulator")
 const iosTestFlight = actionArgs.includes("--ios-testflight")
+const validationOnly = actionArgs.includes("--validation-only")
+if (
+  validationOnly &&
+  (operation !== "build" ||
+    target !== "prod" ||
+    buildPlatform !== "android" ||
+    actionArgs.filter((arg) => arg === "--validation-only").length !== 1)
+) {
+  throw new Error(
+    "--validation-only is available only for a Production Android build; it cannot submit or publish updates.",
+  )
+}
 if (
   iosTestFlight &&
   (target !== "preview" ||
@@ -225,11 +237,19 @@ if (
   (operation === "submit" ||
     ((operation === "build" || operation === "update") && target === "prod"))
 ) {
-  const checks: Array<[string, string]> = [
-    ["teen audience", "scripts/check-teen-release-readiness.mjs"],
-    ["production API", "apps/mobile/scripts/check-production-api-live.mjs"],
-    ["public legal publication", "scripts/check-production-legal-live.mjs"],
-  ]
+  // Owner-authorized private artifact creation gathers signed-client evidence.
+  // Submission and OTA publication retain every release-policy check.
+  const checks: Array<[string, string]> = validationOnly
+    ? [["production API", "apps/mobile/scripts/check-production-api-live.mjs"]]
+    : [
+        ["teen audience", "scripts/check-teen-release-readiness.mjs"],
+        ["production API", "apps/mobile/scripts/check-production-api-live.mjs"],
+        ["public legal publication", "scripts/check-production-legal-live.mjs"],
+      ]
+  if (validationOnly)
+    console.log(
+      "Production Android validation artifact only: release approval is not established; store submission and OTA remain gated.",
+    )
   if (operation === "submit") {
     checks.push(["store billing", "scripts/check-store-billing-readiness.mjs"])
   }
@@ -913,6 +933,7 @@ function getForwardedArgs(args: string[]): string[] {
         "--prod",
         "--ios-simulator",
         "--ios-testflight",
+        "--validation-only",
       ].includes(arg)
     ) {
       continue
@@ -956,6 +977,7 @@ function toEnvKey(value: string): string {
 function getUsage(): string {
   return [
     "Usage:",
+    "  bun run eas:build --prod --platform android --validation-only --expected-commit <full-sha> (artifact only; no store submission)",
     "  bun run eas:build --preview --platform ios --ios-testflight --expected-commit <full-sha>",
     "  bun run eas:submit --preview --platform ios --ios-testflight --id <build-id> --expected-version <version> --expected-commit <full-sha>",
     "  bun run eas:auth [--account <name>]",
