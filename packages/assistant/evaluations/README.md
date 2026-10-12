@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Staff suspend/reactivate | [1](fixtures/staff-status.v1.md) | Whole-business status, acceptance/current grant/plan guards, revision/reason, actor refusal, signed recovery and global original history | None yet |
 | Saved history compatibility | [1](fixtures/chat-history-compatibility.v1.json) | Unknown/retired action and receipt notices, preserved valid history, no approval and propagated authority failure | None yet |
 | Staff directory/history | [Directory 1](fixtures/staff-directory.v1.json), [History 1](fixtures/staff-history.v1.json), [Member sheet 1](fixtures/staff-member-sheet.v1.json), [Directory sheet 1](fixtures/staff-directory-sheet.v1.json) | Exact identities, current membership vs recorded events, filters/continuation, partial legacy coverage and fresh access | None yet |
 | Direct purchase recording | [1](fixtures/purchase-recording.v1.md) | Combined invoice/received goods, full1–10 sources, exact stock/value/payable, stale/rollback/replay and owning bill | None yet |
@@ -293,3 +294,5 @@ S02 signed lifecycle milestone:8real signed resend/revoke completion/replay and 
 - [S02 verified invitation provider reconciliation](runs/2026-10-12-staff-invitation-reconciliation.md) — real signed HTTP/canonical rollback, replay/refusal,31tests216assertions and receipt source screenshots; parent partial/planned, no actual provider.
 
 S02 privacy inventory source: new durable command/outbox/attempt families included in count-only original subject/contact review; profile/completion refuse unhandled records.146focused tests408assertions/scoped types/Biome and exact-QA15.619s rollback preserve saved facts; source object screenshots captured. Positive-data retention/disposal and full saved web/provider acceptance remain open. S02partial/planned/unbookmarked;13/45accepted. [Evidence](runs/2026-10-12-staff-invitation-privacy-inventory.md).
+
+S03 canonical status foundation:18focused tests83assertions/scoped types and actual owned-QA INVITED suspension/revision/history/refusal forced rollback13.826s pass. Full saved facts unchanged, ACTIVE staff grants0/provider0. Actual canonical history source screenshot captured; saved web acceptance pending. Signed assistant/global original receipt/saved web/concurrency remain pending, S03partial/planned/unbookmarked;13/45accepted. [Run](runs/2026-10-12-staff-status-foundation.md).

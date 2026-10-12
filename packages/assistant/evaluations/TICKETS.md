@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 13 are partial, 18 are pending implementation, and
+Of the 32 not yet accepted: 14 are partial, 17 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -41,7 +41,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | E05 | Suppliers and purchasing | ◐ Partial | Pending |
 | S01 | Staff directory and history | ◐ Partial | Pending |
 | S02 | Staff invitations and lifecycle | ◐ Partial | Pending |
-| S03 | Suspend/reactivate staff | ○ Pending | Pending |
+| S03 | Suspend/reactivate staff | ◐ Partial | Pending |
 | S04 | Roles, Store assignments and handover | ○ Pending | Pending |
 | S05 | Daily staff activity history | ○ Pending | Pending |
 | F01 | Collection source contract | ○ Pending | Pending |
@@ -60,7 +60,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current implementation focus: S02 invitation review/confirmation/recovery; S01 saved web acceptance and E05 activation/API restart approval remain pending.
+Current implementation focus: S03 staff status and coordinated D04 service intake, G01 reporting and G02 financial cash/day close. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending.
 
 E05 purchase fact reversal now passes signed rollback/stale refusal,
 full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;
@@ -147,3 +147,5 @@ S02 signed lifecycle milestone:8real signed resend/revoke completion/replay and 
 S02 verified reconciliation source: default-off raw signed callback, original destination/notification binding, six provider outcomes and monotonic safe issue projection implemented.31focused tests216assertions/scoped types/Biome, three actual signed HTTP-to-canonical forced rollback cases and desktop native DTO state screenshots pass; full saved staff/auth/chat/budget unchanged. No actual provider or saved web acceptance. S02partial/planned/unbookmarked;13/45accepted. [Evidence](runs/2026-10-12-staff-invitation-reconciliation.md).
 
 S02 privacy inventory source: new durable command/outbox/attempt families included in count-only original subject/contact review; profile/completion refuse unhandled records.146focused tests408assertions/scoped types/Biome and exact-QA15.619s rollback preserve saved facts; source object screenshots captured. Positive-data retention/disposal and full saved web/provider acceptance remain open. S02partial/planned/unbookmarked;13/45accepted. [Evidence](runs/2026-10-12-staff-invitation-privacy-inventory.md).
+
+S03 canonical foundation: locked fresh status authority preserves native LEGACY Manager policy; unaccepted reactivation refused, current grants/plan revalidated, revision increment and reason/original durable event required.18focused tests83assertions/scoped types and exact-QA13.826s suspend/refusal forced rollback preserve all saved staff/auth/chat/budget facts. Assistant signed/global receipt/web acceptance pending; S03partial/planned/unbookmarked. [Evidence](runs/2026-10-12-staff-status-foundation.md).

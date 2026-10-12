@@ -36,6 +36,8 @@ export const retailOpsUpdateStaffStatusSchema =
   retailOpsStoreScopeSchema.extend({
     staffUserId: z.string().trim().min(1),
     status: z.enum(["active", "suspended"]),
+    expectedRevision: z.number().int().positive().optional(),
+    reason: z.string().trim().min(1).max(500).optional(),
   })
 
 export const retailOpsCompleteStaffOnboardingSchema = z.object({

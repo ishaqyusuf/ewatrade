@@ -373,9 +373,16 @@ export const retailOpsStaffRouter = createTRPCRouter({
           actorUserId: ctx.session.user.id,
           staffUserId: input.staffUserId,
           status: input.status,
+          expectedRevision: input.expectedRevision,
+          reason: input.reason,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
+        if (error instanceof StaffStoreAccessError)
+          throw new TRPCError({
+            code: error.code === "INVALID_INPUT" ? "BAD_REQUEST" : error.code,
+            message: error.message,
+          })
         if (error instanceof RetailOpsStaffError) {
           throw new TRPCError({
             code: getStaffErrorCode(error),

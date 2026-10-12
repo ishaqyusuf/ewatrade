@@ -20,6 +20,7 @@ import {
   assertStaffStoreAccessAuthority,
 } from "./staff-store-access"
 import { releaseStoreConversationsForIneligibleMembership } from "./store-conversations-assignments"
+import { prepareStaffStatusChangeInTransaction } from "./staff-status-change"
 
 export type RetailOpsStaffInviteRole = "cashier" | "operator" | "manager"
 export type RetailOpsStaffListRoleFilter =
@@ -49,6 +50,8 @@ export type InviteRetailOpsStaffInput = {
 export type RetailOpsStaffLifecycleStatus = "active" | "suspended"
 
 export type UpdateRetailOpsStaffStatusInput = {
+  expectedRevision?: number
+  reason?: string
   actorUserId: string
   staffUserId: string
   status: RetailOpsStaffLifecycleStatus
@@ -115,6 +118,9 @@ export type RetailOpsStaffMember = {
 
 export type UpdatedRetailOpsStaffStatus = {
   acceptedAt: Date | null
+  staffAccessRevision: number
+  lifecycleEventId: string
+  reason: string | null
   id: string
   previousStatus: string
   role: string
@@ -390,12 +396,6 @@ function mapStaffListStatus(
   return ["ACTIVE", "INVITED", "SUSPENDED"]
 }
 
-function mapStaffLifecycleStatus(
-  status: RetailOpsStaffLifecycleStatus,
-): MembershipStatus {
-  return status === "active" ? "ACTIVE" : "SUSPENDED"
-}
-
 function isMutableStaffRole(role: MembershipRole) {
   return ["CASHIER", "MANAGER", "OPERATOR"].includes(role)
 }
@@ -522,6 +522,7 @@ async function writeDurableRetailOpsStaffLifecycleEvent(
     happenedAt: Date
     membershipId: string
     metadata?: Prisma.InputJsonValue
+    reason?: string | null
     staffProfileId: string
     staffUserId: string
     tenantId: string
@@ -535,7 +536,7 @@ async function writeDurableRetailOpsStaffLifecycleEvent(
       | typeof DurableRetailOpsStaffLifecycleEventType.SUSPENDED
   },
 ) {
-  await db.retailOpsStaffLifecycleEvent.create({
+  return db.retailOpsStaffLifecycleEvent.create({
     data: {
       actorUserId: input.actorUserId,
       fromRole: input.fromRole ?? null,
@@ -543,6 +544,7 @@ async function writeDurableRetailOpsStaffLifecycleEvent(
       happenedAt: input.happenedAt,
       membershipId: input.membershipId,
       metadata: input.metadata ?? Prisma.JsonNull,
+      reason: input.reason ?? null,
       staffProfileId: input.staffProfileId,
       staffUserId: input.staffUserId,
       tenantId: input.tenantId,
@@ -665,6 +667,7 @@ async function writeDurableRetailOpsStaffStatusChange(
     happenedAt: Date
     invitedAt: Date | null
     membershipId: string
+    reason: string | null
     previousStatus: MembershipStatus
     role: MembershipRole
     staffUserId: string
@@ -672,44 +675,40 @@ async function writeDurableRetailOpsStaffStatusChange(
     tenantId: string
   },
 ) {
-  try {
-    const profile = await upsertDurableRetailOpsStaffProfile(db, {
-      acceptedAt: input.acceptedAt,
-      displayName: input.displayName,
-      invitedAt: input.invitedAt,
-      membershipId: input.membershipId,
-      role: input.role,
-      status: input.status,
-      suspendedAt: input.status === "SUSPENDED" ? input.happenedAt : null,
-      tenantId: input.tenantId,
-      userId: input.staffUserId,
-    })
+  const profile = await upsertDurableRetailOpsStaffProfile(db, {
+    acceptedAt: input.acceptedAt,
+    displayName: input.displayName,
+    invitedAt: input.invitedAt,
+    membershipId: input.membershipId,
+    role: input.role,
+    status: input.status,
+    suspendedAt: input.status === "SUSPENDED" ? input.happenedAt : null,
+    tenantId: input.tenantId,
+    userId: input.staffUserId,
+  })
 
-    await writeDurableRetailOpsStaffLifecycleEvent(db, {
-      actorUserId: input.actorUserId,
-      fromStatus: input.previousStatus,
-      happenedAt: input.happenedAt,
-      membershipId: input.membershipId,
-      metadata: {
-        retailOps: {
-          source: "retail_ops_staff_status_update",
-        },
-      } as Prisma.InputJsonValue,
-      staffProfileId: profile.id,
-      staffUserId: input.staffUserId,
-      tenantId: input.tenantId,
-      toRole: input.role,
-      toStatus: input.status,
-      type:
-        input.status === "ACTIVE"
-          ? DurableRetailOpsStaffLifecycleEventType.REACTIVATED
-          : DurableRetailOpsStaffLifecycleEventType.SUSPENDED,
-    })
-  } catch (error) {
-    if (isDurableStaffProfileTableUnavailable(error)) return
-
-    throw error
-  }
+  return writeDurableRetailOpsStaffLifecycleEvent(db, {
+    actorUserId: input.actorUserId,
+    fromRole: input.role,
+    fromStatus: input.previousStatus,
+    reason: input.reason,
+    happenedAt: input.happenedAt,
+    membershipId: input.membershipId,
+    metadata: {
+      retailOps: {
+        source: "retail_ops_staff_status_update",
+      },
+    } as Prisma.InputJsonValue,
+    staffProfileId: profile.id,
+    staffUserId: input.staffUserId,
+    tenantId: input.tenantId,
+    toRole: input.role,
+    toStatus: input.status,
+    type:
+      input.status === "ACTIVE"
+        ? DurableRetailOpsStaffLifecycleEventType.REACTIVATED
+        : DurableRetailOpsStaffLifecycleEventType.SUSPENDED,
+  })
 }
 
 async function writeDurableRetailOpsStaffOnboardingComplete(
@@ -1304,154 +1303,83 @@ export async function updateRetailOpsStaffStatus(
   db: PrismaClient,
   input: UpdateRetailOpsStaffStatusInput,
 ): Promise<UpdatedRetailOpsStaffStatus> {
-  if (input.actorUserId === input.staffUserId) {
-    throw new RetailOpsStaffError(
-      "STAFF_SELF_UPDATE_FORBIDDEN",
-      "You cannot change your own staff status.",
-    )
-  }
+  return db.$transaction(
+    (tx) => updateRetailOpsStaffStatusInTransaction(tx, input),
+    {
+      maxWait: 10_000,
+      timeout: 30_000,
+    },
+  )
+}
 
-  const nextStatus = mapStaffLifecycleStatus(input.status)
+export async function updateRetailOpsStaffStatusInTransaction(
+  tx: Prisma.TransactionClient,
+  input: UpdateRetailOpsStaffStatusInput,
+): Promise<UpdatedRetailOpsStaffStatus> {
+  const { membership, actorMembershipId, nextStatus, reason } =
+    await prepareStaffStatusChangeInTransaction(tx, input)
   const updatedAt = new Date()
-
-  return db.$transaction(async (tx) => {
-    const [membership, actorMembership] = await Promise.all([
-      tx.membership.findUnique({
-        where: {
-          tenantId_userId: {
-            tenantId: input.tenantId,
-            userId: input.staffUserId,
-          },
-        },
-        select: {
-          acceptedAt: true,
-          id: true,
-          invitedAt: true,
-          role: true,
-          status: true,
-          user: {
-            select: {
-              displayName: true,
-              email: true,
-              id: true,
-              name: true,
-            },
-          },
-        },
-      }),
-      tx.membership.findUnique({
-        select: { id: true },
-        where: {
-          tenantId_userId: {
-            tenantId: input.tenantId,
-            userId: input.actorUserId,
-          },
-        },
-      }),
-    ])
-
-    if (
-      !membership ||
-      !isMutableStaffRole(membership.role) ||
-      membership.status === "REMOVED"
-    ) {
-      throw new RetailOpsStaffError(
-        "STAFF_NOT_FOUND",
-        "Active or suspended Retail Ops staff member not found.",
-      )
-    }
-
-    if (membership.status === nextStatus) {
-      throw new RetailOpsStaffError(
-        "STAFF_STATUS_UNCHANGED",
-        "This staff member already has that status.",
-      )
-    }
-
-    if (nextStatus === "ACTIVE" && membership.status !== "SUSPENDED") {
-      throw new RetailOpsStaffError(
-        "STAFF_STATUS_NOT_ALLOWED",
-        "Only suspended staff can be reactivated from this action.",
-      )
-    }
-
-    if (
-      nextStatus === "SUSPENDED" &&
-      !["ACTIVE", "INVITED"].includes(membership.status)
-    ) {
-      throw new RetailOpsStaffError(
-        "STAFF_STATUS_NOT_ALLOWED",
-        "Only active or invited staff can be suspended from this action.",
-      )
-    }
-
-    const updatedMembership = await tx.membership.update({
-      where: {
-        id: membership.id,
+  const updatedMembership = await tx.membership.update({
+    where: {
+      id: membership.id,
+      tenantId: input.tenantId,
+      status: membership.status,
+      staffAccessRevision: membership.staffAccessRevision,
+    },
+    data: { status: nextStatus, staffAccessRevision: { increment: 1 } },
+    select: {
+      acceptedAt: true,
+      id: true,
+      role: true,
+      status: true,
+      staffAccessRevision: true,
+      updatedAt: true,
+      user: {
+        select: { displayName: true, email: true, id: true, name: true },
       },
-      data: {
-        acceptedAt:
-          nextStatus === "ACTIVE"
-            ? (membership.acceptedAt ?? updatedAt)
-            : membership.acceptedAt,
-        status: nextStatus,
-      },
-      select: {
-        acceptedAt: true,
-        id: true,
-        role: true,
-        status: true,
-        updatedAt: true,
-        user: {
-          select: {
-            displayName: true,
-            email: true,
-            id: true,
-            name: true,
-          },
-        },
-      },
-    })
-
-    await writeDurableRetailOpsStaffStatusChange(tx, {
-      acceptedAt: updatedMembership.acceptedAt,
-      actorUserId: input.actorUserId,
-      displayName: getDisplayName(updatedMembership.user),
-      happenedAt: updatedAt,
-      invitedAt: membership.invitedAt,
+    },
+  })
+  const event = await writeDurableRetailOpsStaffStatusChange(tx, {
+    acceptedAt: updatedMembership.acceptedAt,
+    actorUserId: input.actorUserId,
+    displayName: getDisplayName(updatedMembership.user),
+    happenedAt: updatedAt,
+    invitedAt: membership.invitedAt,
+    membershipId: updatedMembership.id,
+    previousStatus: membership.status,
+    reason,
+    role: updatedMembership.role,
+    staffUserId: updatedMembership.user.id,
+    status: updatedMembership.status,
+    tenantId: input.tenantId,
+  })
+  if (nextStatus === "SUSPENDED") {
+    await releaseStoreConversationsForIneligibleMembership(tx, {
+      actorMembershipId,
       membershipId: updatedMembership.id,
-      previousStatus: membership.status,
-      role: updatedMembership.role,
-      staffUserId: updatedMembership.user.id,
-      status: updatedMembership.status,
+      now: updatedAt,
+      reasonCode: "membership_suspended",
       tenantId: input.tenantId,
     })
-    if (nextStatus === "SUSPENDED") {
-      await releaseStoreConversationsForIneligibleMembership(tx, {
-        actorMembershipId: actorMembership?.id,
-        membershipId: updatedMembership.id,
-        now: updatedAt,
-        reasonCode: "membership_suspended",
-        tenantId: input.tenantId,
-      })
-    }
-
-    return {
-      acceptedAt: updatedMembership.acceptedAt,
-      id: updatedMembership.id,
-      previousStatus: membership.status,
-      role: updatedMembership.role,
-      status: updatedMembership.status,
-      updatedAt: updatedMembership.updatedAt,
-      updatedByUserId: input.actorUserId,
-      user: {
-        displayName: getDisplayName(updatedMembership.user),
-        email: updatedMembership.user.email,
-        id: updatedMembership.user.id,
-        name: updatedMembership.user.name,
-      },
-    }
-  })
+  }
+  return {
+    acceptedAt: updatedMembership.acceptedAt,
+    id: updatedMembership.id,
+    lifecycleEventId: event.id,
+    staffAccessRevision: updatedMembership.staffAccessRevision,
+    reason,
+    previousStatus: membership.status,
+    role: updatedMembership.role,
+    status: updatedMembership.status,
+    updatedAt: updatedMembership.updatedAt,
+    updatedByUserId: input.actorUserId,
+    user: {
+      displayName: getDisplayName(updatedMembership.user),
+      email: updatedMembership.user.email,
+      id: updatedMembership.user.id,
+      name: updatedMembership.user.name,
+    },
+  }
 }
 
 export async function resolveRetailOpsStaffInviteToken(
