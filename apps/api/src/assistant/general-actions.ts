@@ -1,3 +1,4 @@
+import { purchaseRecord } from "./general-purchase-recording"
 import { supplierOpening } from "./general-supplier-opening"
 import { supplierEntryReverse } from "./general-supplier-entry-reversal"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
@@ -593,6 +594,7 @@ const adapters: {
   money_movement: moneyMovement,
   expense_record: expenseRecord,
   bill_payment: billPayment,
+  purchase_record: purchaseRecord,
   purchase_register: purchaseRegister,
   purchase_recognize: purchaseRecognize,
   supplier_create: supplierCreate,

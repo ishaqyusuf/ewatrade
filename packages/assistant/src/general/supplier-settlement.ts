@@ -1,3 +1,4 @@
+import { purchaseRecordingDraftInstructions } from "./purchase-recording"
 import { supplierOpeningDraftInstructions } from "./supplier-opening"
 import { supplierEntryReversalDraftInstructions } from "./supplier-entry-reversal"
 import { z } from "zod"
@@ -58,4 +59,5 @@ export const supplierSettlementDraftInstructions =
   supplierAllocationReleaseDraftInstructions +
   purchasePaymentReversalDraftInstructions +
   supplierEntryReversalDraftInstructions +
-  supplierOpeningDraftInstructions
+  supplierOpeningDraftInstructions +
+  purchaseRecordingDraftInstructions

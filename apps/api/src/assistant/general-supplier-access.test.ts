@@ -155,3 +155,25 @@ test("supplier opening stays planned and keeps Owner/Admin finance authority", (
   } as GeneralContext["tenantContext"]["staffAccess"]
   expect(canUseCapability(suspended, source)).toBe(false)
 })
+
+test("direct purchase stays planned and retains Owner/Admin finance scope", () => {
+  const capability = capabilityManifest.find(
+    (c) => c.id === "finance.purchase.record",
+  )
+  if (!capability) throw Error("Direct purchase capability required")
+  expect(capability.rollout).toBe("planned")
+  expect(canUseCapability(actor("OWNER"), capability)).toBe(false)
+  const source = { ...capability, rollout: "source" as const }
+  for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"])
+    expect(canUseCapability(actor(role), source)).toBe(
+      role === "OWNER" || role === "ADMIN",
+    )
+  expect(canUseCapability(actor("OWNER", "free"), source)).toBe(false)
+  expect(canUseCapability(actor("MANAGER", "pro", true), source)).toBe(false)
+  const suspended = actor("OWNER")
+  suspended.tenantContext.staffAccess = {
+    ...suspended.tenantContext.staffAccess,
+    status: "SUSPENDED",
+  } as GeneralContext["tenantContext"]["staffAccess"]
+  expect(canUseCapability(suspended, source)).toBe(false)
+})

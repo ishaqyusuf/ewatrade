@@ -40,6 +40,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Direct purchase assistant source/editor, 12 October 2026](runs/2026-10-12-direct-purchase-source.md): strict combined receipt/invoice/ownership proposal, private approved-digest preparation and global owning bill receipt;8 tests254 assertions/scoped types pass. Actual1/10-line editor acknowledgement/exact amount/timestamp/date refusal/Cancel and screenshots pass. Planned, signed/saved chat pending; E05 partial.
+
 - [Direct purchase canonical review/posting, 12 October 2026](runs/2026-10-12-direct-purchase-canonical.md):13 tests290 assertions; one/ten mixed goods with10/100 categories complete exact canonical rollback/readback/replay in18.787/18.869s. Four real stale-source refusal probes preserve facts. Assistant action/editor/signed/saved web pending, E05 partial.
 
 - [Supplier opening signed checks, 12 October 2026](runs/2026-10-12-supplier-opening-signed.md): PAYABLE/ADVANCE actual signed completion rollback9.446–9.617s and authentic stale-review refusal9.236–9.303s preserve saved facts; exact owning supplier receipts/one history proof read per transaction, scoped helper/script types pass. Planned; full saved dashboard acceptance pending, E05 partial.

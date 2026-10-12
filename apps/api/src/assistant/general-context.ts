@@ -88,6 +88,7 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "finance.supplier.allocation.release": tenant => assertFinanceAccess(tenant),
   "finance.bills.read": tenant => assertFinanceAccess(tenant),
   "finance.purchase.recognize": tenant => assertFinanceAccess(tenant),
+  "finance.purchase.record": tenant => assertFinanceAccess(tenant),
   "finance.purchase.register": tenant => assertFinanceAccess(tenant),
   "finance.supplier.advance": tenant => assertFinanceAccess(tenant),
   "finance.supplier.advance.allocate": tenant => assertFinanceAccess(tenant),

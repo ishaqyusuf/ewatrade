@@ -1,6 +1,8 @@
 # Direct purchase recording v1 conversation fixture
 
-Canonical procedure `finance.recordPurchase`; assistant action/editor are pending.
+Canonical procedure `finance.recordPurchase`; action `purchase_record`, capability
+`finance.purchase.record` v1 and dashboard editor are implemented with rollout planned.
+Authentic signed/saved assistant acceptance remains pending.
 Planned dashboard scope: active Owner/Admin, authenticated Tenant/Store and Finance
 Book. This fixture records scenarios, not a successful model evaluation.
 
